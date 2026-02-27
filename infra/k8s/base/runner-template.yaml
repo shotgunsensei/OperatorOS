@@ -1,0 +1,68 @@
+##
+## Runner template — not applied directly.
+## Used as a reference by the runner-gateway provisioner module.
+## Placeholders: WORKSPACE_ID, PROFILE_IMAGE, GIT_URL, GIT_REF, PVC_SIZE
+##
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ws-WORKSPACE_ID
+  namespace: veridian-runners
+  labels:
+    app.kubernetes.io/part-of: veridian-cde
+    veridian.dev/workspace: WORKSPACE_ID
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: PVC_SIZE
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ws-WORKSPACE_ID
+  namespace: veridian-runners
+  labels:
+    app.kubernetes.io/part-of: veridian-cde
+    veridian.dev/workspace: WORKSPACE_ID
+    veridian.dev/component: runner
+spec:
+  serviceAccountName: default
+  restartPolicy: Never
+  initContainers:
+    - name: git-clone
+      image: alpine/git:latest
+      command:
+        - sh
+        - -c
+        - |
+          if [ -z "$(ls -A /workspace)" ]; then
+            echo "Cloning GIT_URL @ GIT_REF into /workspace..."
+            git clone --depth 1 --branch GIT_REF GIT_URL /workspace
+          else
+            echo "/workspace is not empty, skipping clone."
+          fi
+      volumeMounts:
+        - name: workspace-vol
+          mountPath: /workspace
+  containers:
+    - name: runner
+      image: PROFILE_IMAGE
+      command: ["sleep", "infinity"]
+      workingDir: /workspace
+      volumeMounts:
+        - name: workspace-vol
+          mountPath: /workspace
+      resources:
+        requests:
+          cpu: 250m
+          memory: 256Mi
+        limits:
+          cpu: "1"
+          memory: 1Gi
+  volumes:
+    - name: workspace-vol
+      persistentVolumeClaim:
+        claimName: ws-WORKSPACE_ID

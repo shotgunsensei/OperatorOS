@@ -1,0 +1,76 @@
+You are building veridian-cde (AI-native CDE). Implement local Kubernetes runner infrastructure using k3d and PVC-per-workspace.
+
+Repo is a pnpm monorepo with:
+- apps/api (Fastify control plane)
+- apps/runner-gateway (Fastify + WebSocket)
+- apps/web (minimal UI, can be placeholder)
+- packages/sdk
+- packages/profiles
+
+Task: implement an end-to-end “Runner MVP” with PVC storage.
+
+Requirements:
+
+1) Add infra scripts:
+- infra/k3d/create-cluster.sh: creates a k3d cluster named veridian with:
+  - 1 server, 1 agent
+  - local registry (k3d registry) if easy
+  - exposes ports needed for api/runner-gateway (or just use port-forward)
+- infra/k8s/base/namespace.yaml for namespaces: veridian-control, veridian-runners
+- infra/k8s/base/rbac.yaml: minimal ServiceAccount + Role/RoleBinding that allows creating pods, pvc, services in veridian-runners only
+- infra/k8s/base/storage.yaml: a default storageclass exists in k3d; document assumptions
+- infra/k8s/base/runner-template.yaml: template manifest (not applied directly) for a workspace runner pod + pvc
+
+2) In apps/runner-gateway:
+- Create a Kubernetes provisioner module that can:
+  - createWorkspaceRunner(workspaceId, profileId, gitUrl, gitRef)
+  - stopWorkspaceRunner(workspaceId)
+  - getWorkspaceRunnerStatus(workspaceId)
+- Provisioner must:
+  - Create a PVC named ws-<workspaceId> in veridian-runners
+  - Create a Pod named ws-<workspaceId> in veridian-runners using the profile image (node20 for now)
+  - Mount PVC at /workspace
+  - On first start, clone the git repo into /workspace (if empty) using an initContainer (git image)
+  - Main container runs a tiny “runner agent” process that can exec commands and stream logs
+
+3) Runner command execution:
+- Implement POST /v1/runner/exec { workspaceId, cmd: string, timeoutSec?: number }
+  - Finds the runner pod and executes the command inside /workspace
+  - Streams stdout/stderr line-by-line over WebSocket channel /v1/runner/stream/:workspaceId
+  - Returns { exitCode, stdout, stderr, durationMs }
+- Implement WebSocket /v1/runner/stream/:workspaceId
+  - clients subscribe and receive JSON events:
+    { type: "stdout"|"stderr"|"status", message, ts }
+- Enforce safety:
+  - denylist commands matching /(curl|wget|ssh|scp|sudo|docker|kubectl)/i unless env ALLOW_UNSAFE_COMMANDS=true
+  - max timeout 300s, max output size 1MB (truncate with flag)
+
+4) Profiles:
+- In packages/profiles, define node20 profile:
+  - image: a public image that includes node 20 + git + bash (or add an initContainer that installs deps)
+  - verify commands:
+    lint: try pnpm lint, fallback npm run lint if pnpm-lock not present
+    typecheck: pnpm check or npm run check or tsc
+    test: pnpm test or npm test
+- Add a helper that, given a workspace, returns the verify command list for the chosen profile.
+
+5) API wiring (minimal):
+- apps/api should include endpoints:
+  - POST /v1/workspaces { gitUrl, gitRef, profileId } -> returns workspaceId
+  - POST /v1/workspaces/:id/start -> calls runner-gateway to create runner
+  - POST /v1/workspaces/:id/exec -> proxies to runner-gateway exec
+- Persist workspace records in Postgres using Drizzle (basic schema only: workspaces table with id, gitUrl, gitRef, profileId, status)
+
+6) Developer experience:
+- Add README section “Local k3d setup” with steps:
+  - run create-cluster.sh
+  - kubectl apply -f infra/k8s/base/*.yaml
+  - pnpm dev
+  - curl examples to create workspace and run “node -v”
+- Ensure TypeScript builds and pnpm dev works.
+
+Output:
+- File tree changes
+- Code for provisioner + endpoints
+- YAML manifests and scripts
+- README instructions

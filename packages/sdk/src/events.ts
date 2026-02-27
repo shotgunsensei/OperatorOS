@@ -3,6 +3,10 @@ export type WebSocketEventType =
   | 'runner:disconnect'
   | 'runner:output'
   | 'runner:error'
+  | 'stream:stdout'
+  | 'stream:stderr'
+  | 'stream:status'
+  | 'stream:exit'
   | 'task:created'
   | 'task:status'
   | 'task:step'
@@ -28,6 +32,18 @@ export interface RunnerOutputPayload {
   sessionId: string;
   stream: 'stdout' | 'stderr';
   data: string;
+}
+
+export interface StreamEventPayload {
+  workspaceId: string;
+  message: string;
+  ts: string;
+}
+
+export interface StreamExitPayload {
+  workspaceId: string;
+  exitCode: number;
+  durationMs: number;
 }
 
 export interface TaskStatusPayload {

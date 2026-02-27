@@ -1,0 +1,26 @@
+##
+## Storage assumptions for VeridianCDE on k3d
+##
+## k3d ships with Rancher's local-path-provisioner which provides a default
+## StorageClass named "local-path". This SC is already marked as default, so
+## PVCs that omit storageClassName will bind automatically.
+##
+## The PVCs created by the runner provisioner (ws-<workspaceId>) use
+## ReadWriteOnce access mode and request 1Gi by default. These are backed
+## by host-path volumes on the k3d agent node.
+##
+## For production, replace local-path with a CSI driver (e.g. EBS, GCE PD,
+## Longhorn) and update the storageClassName in runner-template.yaml.
+##
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: storage-config
+  namespace: veridian-control
+  labels:
+    app.kubernetes.io/part-of: veridian-cde
+data:
+  default-storage-class: "local-path"
+  default-pvc-size: "1Gi"
+  access-mode: "ReadWriteOnce"

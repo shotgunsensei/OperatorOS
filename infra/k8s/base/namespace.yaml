@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: veridian-control
+  labels:
+    app.kubernetes.io/part-of: veridian-cde
+    veridian.dev/plane: control
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: veridian-runners
+  labels:
+    app.kubernetes.io/part-of: veridian-cde
+    veridian.dev/plane: runners

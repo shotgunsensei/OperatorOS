@@ -17,12 +17,40 @@ export interface RunnerSession {
 
 export interface Workspace {
   id: string;
-  name: string;
-  ownerId: string;
-  templateId?: string;
-  status: 'provisioning' | 'ready' | 'suspended' | 'archived';
+  gitUrl: string;
+  gitRef: string;
+  profileId: string;
+  status: 'pending' | 'provisioning' | 'running' | 'stopped' | 'error';
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CreateWorkspaceRequest {
+  gitUrl: string;
+  gitRef: string;
+  profileId: string;
+}
+
+export interface ExecRequest {
+  workspaceId: string;
+  cmd: string;
+  timeoutSec?: number;
+}
+
+export interface ExecResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  durationMs: number;
+  truncated?: boolean;
+}
+
+export interface RunnerStatus {
+  workspaceId: string;
+  podName: string;
+  phase: string;
+  ready: boolean;
+  startedAt?: string;
 }
 
 export interface User {
