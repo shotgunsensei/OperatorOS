@@ -1,0 +1,34 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    ports:
+      - "4000:4000"
+    environment:
+      - API_PORT=4000
+      - NODE_ENV=production
+
+  runner-gateway:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.runner-gateway
+    ports:
+      - "4001:4001"
+    environment:
+      - GATEWAY_PORT=4001
+      - NODE_ENV=production
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.web
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - api
+      - runner-gateway

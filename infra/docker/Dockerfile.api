@@ -1,0 +1,25 @@
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@9 --activate
+WORKDIR /app
+
+FROM base AS deps
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/api/package.json apps/api/
+COPY packages/sdk/package.json packages/sdk/
+RUN pnpm install --frozen-lockfile --filter @veridian/api...
+
+FROM base AS build
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=deps /app/packages/sdk/node_modules ./packages/sdk/node_modules
+COPY . .
+RUN pnpm --filter @veridian/sdk build && pnpm --filter @veridian/api build
+
+FROM node:20-alpine AS runtime
+WORKDIR /app
+COPY --from=build /app/apps/api/dist ./dist
+COPY --from=build /app/apps/api/package.json ./
+COPY --from=build /app/node_modules ./node_modules
+ENV NODE_ENV=production
+EXPOSE 4000
+CMD ["node", "dist/index.js"]
