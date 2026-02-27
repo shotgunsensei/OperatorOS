@@ -6,15 +6,6 @@ export interface HealthResponse {
   uptime: number;
 }
 
-export interface RunnerSession {
-  id: string;
-  userId: string;
-  workspaceId: string;
-  status: 'pending' | 'running' | 'stopped' | 'error';
-  createdAt: string;
-  lastActiveAt: string;
-}
-
 export interface Workspace {
   id: string;
   gitUrl: string;
@@ -35,6 +26,7 @@ export interface ExecRequest {
   workspaceId: string;
   cmd: string;
   timeoutSec?: number;
+  stdin?: string;
 }
 
 export interface ExecResult {
@@ -47,37 +39,76 @@ export interface ExecResult {
 
 export interface RunnerStatus {
   workspaceId: string;
-  podName: string;
+  podName?: string;
+  containerId?: string;
   phase: string;
   ready: boolean;
   startedAt?: string;
+  mode: 'k8s' | 'docker';
 }
 
-export interface User {
-  id: string;
-  email: string;
-  displayName: string;
-  avatarUrl?: string;
-  createdAt: string;
+export interface ApplyPatchRequest {
+  diff: string;
 }
 
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
-  outputSchema: Record<string, unknown>;
-}
-
-export interface ToolCall {
-  id: string;
-  toolName: string;
-  input: Record<string, unknown>;
-  sessionId: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  output?: Record<string, unknown>;
+export interface ApplyPatchResult {
+  success: boolean;
+  changedFiles: string[];
+  gitStatus: string;
   error?: string;
-  startedAt?: string;
-  completedAt?: string;
+}
+
+export interface VerifyResult {
+  checks: VerifyCheckResult[];
+  allPassed: boolean;
+}
+
+export interface VerifyCheckResult {
+  name: string;
+  label: string;
+  passed: boolean;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  durationMs: number;
+  skipped?: boolean;
+}
+
+export interface CreateTaskRequest {
+  workspaceId: string;
+  title: string;
+}
+
+export interface Task {
+  id: string;
+  workspaceId: string;
+  title: string;
+  status: 'pending' | 'running' | 'succeeded' | 'failed';
+  requiredChecks: string[] | null;
+  checkResults: Record<string, { passed: boolean; output: string }> | null;
+  resultSummary: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+export interface TaskEvent {
+  id: string;
+  taskId: string;
+  ts: string;
+  type: string;
+  payload: Record<string, unknown> | null;
+}
+
+export interface ToolTrace {
+  id: string;
+  taskId: string;
+  ts: string;
+  toolName: string;
+  input: Record<string, unknown> | null;
+  output: Record<string, unknown> | null;
+  success: boolean | null;
+  durationMs: number | null;
 }
 
 export interface AgentTask {
@@ -119,82 +150,31 @@ export interface TaskResult {
   verificationPassed: boolean;
 }
 
-export const BUILTIN_TOOLS: ToolDefinition[] = [
-  {
-    name: 'file_read',
-    description: 'Read contents of a file in the workspace',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        path: { type: 'string', description: 'Relative file path' },
-      },
-      required: ['path'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        content: { type: 'string' },
-        encoding: { type: 'string' },
-      },
-    },
-  },
-  {
-    name: 'file_write',
-    description: 'Write contents to a file in the workspace',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        path: { type: 'string', description: 'Relative file path' },
-        content: { type: 'string', description: 'File content to write' },
-      },
-      required: ['path', 'content'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        bytesWritten: { type: 'number' },
-      },
-    },
-  },
-  {
-    name: 'shell_exec',
-    description: 'Execute a shell command in the workspace',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        command: { type: 'string', description: 'Shell command to execute' },
-        cwd: { type: 'string', description: 'Working directory (optional)' },
-        timeout: { type: 'number', description: 'Timeout in milliseconds' },
-      },
-      required: ['command'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        stdout: { type: 'string' },
-        stderr: { type: 'string' },
-        exitCode: { type: 'number' },
-      },
-    },
-  },
-  {
-    name: 'terminal_snapshot',
-    description: 'Capture current terminal output for verification',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        sessionId: { type: 'string', description: 'Terminal session ID' },
-        lines: { type: 'number', description: 'Number of lines to capture' },
-      },
-      required: ['sessionId'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        output: { type: 'string' },
-        timestamp: { type: 'string' },
-      },
-    },
-  },
+export const PATCH_DENY_PATTERNS = [
+  /^\.env/,
+  /\.pem$/,
+  /\.key$/,
+  /^node_modules\//,
+  /^dist\//,
+  /^build\//,
+  /^\.git\//,
 ];
+
+export const MAX_PATCH_SIZE = 20 * 1024;
+
+export function validatePatchPaths(diff: string): { valid: boolean; deniedPaths: string[] } {
+  const denied: string[] = [];
+  const pathRegex = /^(?:\+\+\+|---)\s+[ab]\/(.+)$/gm;
+  let match: RegExpExecArray | null;
+  while ((match = pathRegex.exec(diff)) !== null) {
+    const filePath = match[1];
+    if (filePath === '/dev/null') continue;
+    for (const pattern of PATCH_DENY_PATTERNS) {
+      if (pattern.test(filePath)) {
+        denied.push(filePath);
+        break;
+      }
+    }
+  }
+  return { valid: denied.length === 0, deniedPaths: denied };
+}

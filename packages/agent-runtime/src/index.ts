@@ -1,149 +1,91 @@
-import type { AgentTask, TaskStep, VerificationResult, VerificationCheck, TaskResult } from '@veridian/sdk';
-
-export interface TaskLoopConfig {
+export interface TaskRunnerConfig {
+  apiBaseUrl: string;
   maxRetries: number;
-  verificationRequired: boolean;
   timeoutMs: number;
 }
 
-const DEFAULT_CONFIG: TaskLoopConfig = {
-  maxRetries: 3,
-  verificationRequired: true,
+const DEFAULT_CONFIG: TaskRunnerConfig = {
+  apiBaseUrl: 'http://localhost:5000',
+  maxRetries: 1,
   timeoutMs: 300_000,
 };
 
-export type StepExecutor = (step: TaskStep) => Promise<TaskStep>;
-export type StepVerifier = (step: TaskStep) => Promise<VerificationResult>;
-export type TaskPlanner = (prompt: string) => Promise<TaskStep[]>;
+export interface TaskRunResult {
+  taskId: string;
+  status: 'succeeded' | 'failed';
+  summary: string;
+  checkResults: Record<string, { passed: boolean; output: string }>;
+  events: TaskRunEvent[];
+}
 
-export class AgentTaskLoop {
-  private config: TaskLoopConfig;
-  private planner: TaskPlanner;
-  private executor: StepExecutor;
-  private verifier: StepVerifier;
-  private abortController: AbortController | null = null;
+export interface TaskRunEvent {
+  type: string;
+  ts: string;
+  payload: Record<string, unknown>;
+}
 
-  constructor(
-    planner: TaskPlanner,
-    executor: StepExecutor,
-    verifier: StepVerifier,
-    config: Partial<TaskLoopConfig> = {},
-  ) {
+export class DeterministicTaskRunner {
+  private config: TaskRunnerConfig;
+
+  constructor(config: Partial<TaskRunnerConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.planner = planner;
-    this.executor = executor;
-    this.verifier = verifier;
   }
 
-  async run(task: AgentTask): Promise<TaskResult> {
-    this.abortController = new AbortController();
+  async run(taskId: string): Promise<TaskRunResult> {
+    const events: TaskRunEvent[] = [];
+    const emit = (type: string, payload: Record<string, unknown> = {}) => {
+      events.push({ type, ts: new Date().toISOString(), payload });
+    };
 
     try {
-      task.status = 'planning';
-      task.plan = await this.planner(task.prompt);
-      task.status = 'executing';
+      emit('PLAN', { message: 'Starting deterministic verification task' });
 
-      for (const step of task.plan) {
-        if (this.abortController.signal.aborted) {
-          step.status = 'skipped';
-          continue;
-        }
-
-        let attempts = 0;
-        let stepPassed = false;
-
-        while (attempts < this.config.maxRetries && !stepPassed) {
-          attempts++;
-          step.status = 'running';
-
-          const executedStep = await this.executor(step);
-          Object.assign(step, executedStep);
-
-          if (step.status === 'failed') {
-            if (attempts >= this.config.maxRetries) break;
-            continue;
-          }
-
-          if (this.config.verificationRequired) {
-            task.status = 'verifying';
-            const verification = await this.verifier(step);
-            step.verificationResult = verification;
-
-            if (verification.passed) {
-              step.status = 'completed';
-              stepPassed = true;
-            } else if (attempts >= this.config.maxRetries) {
-              step.status = 'failed';
-            }
-          } else {
-            step.status = 'completed';
-            stepPassed = true;
-          }
-        }
-
-        if (step.status === 'failed') {
-          task.status = 'failed';
-          return this.buildResult(task, false);
-        }
+      const runResp = await fetch(`${this.config.apiBaseUrl}/v1/tasks/${taskId}/run`, { method: 'POST' });
+      if (!runResp.ok) {
+        emit('ERROR', { message: `Failed to start task: ${runResp.status}` });
+        return {
+          taskId,
+          status: 'failed',
+          summary: 'Failed to start task run',
+          checkResults: {},
+          events,
+        };
       }
 
-      task.status = 'completed';
-      return this.buildResult(task, true);
-    } catch (error) {
-      task.status = 'failed';
-      return this.buildResult(task, false, error instanceof Error ? error.message : 'Unknown error');
+      emit('COMMAND', { message: 'Task run initiated, polling for completion' });
+
+      let task: any = null;
+      const deadline = Date.now() + this.config.timeoutMs;
+
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const taskResp = await fetch(`${this.config.apiBaseUrl}/v1/tasks/${taskId}`);
+        task = await taskResp.json();
+
+        if (task.status === 'succeeded' || task.status === 'failed') {
+          break;
+        }
+        emit('VERIFY', { message: `Task status: ${task.status}` });
+      }
+
+      if (!task || (task.status !== 'succeeded' && task.status !== 'failed')) {
+        emit('ERROR', { message: 'Task timed out' });
+        return { taskId, status: 'failed', summary: 'Task timed out', checkResults: {}, events };
+      }
+
+      emit('DONE', { status: task.status, summary: task.resultSummary });
+
+      return {
+        taskId,
+        status: task.status,
+        summary: task.resultSummary || '',
+        checkResults: task.checkResults || {},
+        events,
+      };
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      emit('ERROR', { error: errMsg });
+      return { taskId, status: 'failed', summary: `Error: ${errMsg}`, checkResults: {}, events };
     }
   }
-
-  abort(): void {
-    this.abortController?.abort();
-  }
-
-  private buildResult(task: AgentTask, success: boolean, errorMessage?: string): TaskResult {
-    const steps = task.plan ?? [];
-    const completedSteps = steps.filter((s) => s.status === 'completed');
-    const allVerified = completedSteps.every((s) =>
-      s.verificationResult ? s.verificationResult.passed : true,
-    );
-
-    return {
-      success,
-      summary: errorMessage
-        ? `Task failed: ${errorMessage}`
-        : `Completed ${completedSteps.length}/${steps.length} steps`,
-      artifacts: [],
-      verificationPassed: allVerified,
-    };
-  }
-}
-
-export function createNoopVerifier(): StepVerifier {
-  return async (_step: TaskStep): Promise<VerificationResult> => ({
-    passed: true,
-    checks: [
-      {
-        name: 'noop',
-        passed: true,
-        message: 'No verification configured',
-        severity: 'info',
-      },
-    ],
-    summary: 'Verification skipped (noop)',
-  });
-}
-
-export function createChecklistVerifier(
-  checkFns: Array<(step: TaskStep) => Promise<VerificationCheck>>,
-): StepVerifier {
-  return async (step: TaskStep): Promise<VerificationResult> => {
-    const checks = await Promise.all(checkFns.map((fn) => fn(step)));
-    const passed = checks.every((c) => c.severity !== 'error' || c.passed);
-    return {
-      passed,
-      checks,
-      summary: passed
-        ? `All ${checks.length} checks passed`
-        : `${checks.filter((c) => !c.passed).length} check(s) failed`,
-    };
-  };
 }

@@ -4,37 +4,37 @@ metadata:
   name: runner-provisioner
   namespace: veridian-control
   labels:
-    app.kubernetes.io/part-of: veridian-cde
+    app.kubernetes.io/part-of: operatoros
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: runner-provisioner
+  name: runner-manager
   namespace: veridian-runners
   labels:
-    app.kubernetes.io/part-of: veridian-cde
+    app.kubernetes.io/part-of: operatoros
 rules:
   - apiGroups: [""]
     resources: ["pods", "pods/exec", "pods/log", "pods/status"]
-    verbs: ["get", "list", "watch", "create", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
-    verbs: ["get", "list", "watch", "create", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: [""]
     resources: ["services"]
-    verbs: ["get", "list", "watch", "create", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: runner-provisioner
+  name: runner-provisioner-binding
   namespace: veridian-runners
   labels:
-    app.kubernetes.io/part-of: veridian-cde
+    app.kubernetes.io/part-of: operatoros
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: runner-provisioner
+  name: runner-manager
 subjects:
   - kind: ServiceAccount
     name: runner-provisioner

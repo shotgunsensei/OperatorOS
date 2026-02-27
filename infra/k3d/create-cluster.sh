@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLUSTER_NAME="${CLUSTER_NAME:-veridian}"
-REGISTRY_NAME="${REGISTRY_NAME:-veridian-registry}"
+CLUSTER_NAME="${CLUSTER_NAME:-operatoros}"
+REGISTRY_NAME="${REGISTRY_NAME:-operatoros-registry}"
 REGISTRY_PORT="${REGISTRY_PORT:-5111}"
 
 echo "==> Creating k3d cluster: ${CLUSTER_NAME}"
@@ -33,5 +33,3 @@ echo "  kubectl apply -f infra/k8s/base/rbac.yaml"
 echo "  kubectl apply -f infra/k8s/base/storage.yaml"
 echo ""
 echo "Registry available at: k3d-${REGISTRY_NAME}:${REGISTRY_PORT}"
-echo "  Tag and push images:  docker tag myimg k3d-${REGISTRY_NAME}:${REGISTRY_PORT}/myimg"
-echo "                        docker push k3d-${REGISTRY_NAME}:${REGISTRY_PORT}/myimg"

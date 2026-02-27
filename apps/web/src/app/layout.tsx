@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'VeridianCDE',
-  description: 'AI-native Cloud Development Environment',
+  title: 'OperatorOS',
+  description: 'AI-native Cloud Development Environment — Powered by Shotgun Ninjas',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -15,13 +15,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             display: 'flex',
             alignItems: 'center',
             padding: '0 16px',
-            borderBottom: '1px solid #e2e2e2',
-            background: '#fafafa',
+            borderBottom: '1px solid #222',
+            background: '#111',
+            color: '#fff',
+            justifyContent: 'space-between',
           }}
         >
           <span style={{ fontWeight: 700, fontSize: 16, letterSpacing: '-0.02em' }}>
-            VeridianCDE
+            OperatorOS
           </span>
+          <span style={{ fontSize: 11, color: '#666' }}>Powered by Shotgun Ninjas</span>
         </header>
         <main>{children}</main>
       </body>

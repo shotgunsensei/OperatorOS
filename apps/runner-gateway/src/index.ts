@@ -8,6 +8,7 @@ import {
   stopWorkspaceRunner,
   getWorkspaceRunnerStatus,
   execInRunner,
+  getRunnerMode,
 } from './provisioner.js';
 import { isCommandAllowed, clampTimeout, truncateOutput } from './safety.js';
 
@@ -30,8 +31,8 @@ const streamSubscribers = new Map<string, Set<import('ws').WebSocket>>();
 app.get('/healthz', async (_req, reply) => {
   const response: HealthResponse = {
     status: 'healthy',
-    service: 'veridian-runner-gateway',
-    version: '0.1.0',
+    service: 'operatoros-runner-gateway',
+    version: '0.2.0',
     timestamp: new Date().toISOString(),
     uptime: Math.floor((Date.now() - startTime) / 1000),
   };
@@ -49,7 +50,6 @@ app.post<{ Body: { workspaceId: string; profileId: string; profileImage: string;
     if (!workspaceId || !profileImage || !gitUrl || !gitRef) {
       return reply.status(400).send({ error: 'Missing required fields' });
     }
-
     const result = await createWorkspaceRunner(workspaceId, profileId, profileImage, gitUrl, gitRef);
     return reply.status(result.success ? 201 : 500).send(result);
   },
@@ -59,10 +59,7 @@ app.post<{ Body: { workspaceId: string } }>(
   '/v1/runner/stop',
   async (req, reply) => {
     const { workspaceId } = req.body;
-    if (!workspaceId) {
-      return reply.status(400).send({ error: 'Missing workspaceId' });
-    }
-
+    if (!workspaceId) return reply.status(400).send({ error: 'Missing workspaceId' });
     const result = await stopWorkspaceRunner(workspaceId);
     return reply.status(result.success ? 200 : 500).send(result);
   },
@@ -73,9 +70,7 @@ app.get<{ Params: { workspaceId: string } }>(
   async (req, reply) => {
     const { workspaceId } = req.params;
     const status = await getWorkspaceRunnerStatus(workspaceId);
-    if (!status) {
-      return reply.status(404).send({ error: 'Runner not found' });
-    }
+    if (!status) return reply.status(404).send({ error: 'Runner not found' });
     return reply.send(status);
   },
 );
@@ -83,18 +78,13 @@ app.get<{ Params: { workspaceId: string } }>(
 app.post<{ Body: ExecRequest }>(
   '/v1/runner/exec',
   async (req, reply) => {
-    const { workspaceId, cmd, timeoutSec } = req.body;
-    if (!workspaceId || !cmd) {
-      return reply.status(400).send({ error: 'Missing workspaceId or cmd' });
-    }
+    const { workspaceId, cmd, timeoutSec, stdin } = req.body as ExecRequest & { stdin?: string };
+    if (!workspaceId || !cmd) return reply.status(400).send({ error: 'Missing workspaceId or cmd' });
 
     const safety = isCommandAllowed(cmd);
-    if (!safety.allowed) {
-      return reply.status(403).send({ error: safety.reason });
-    }
+    if (!safety.allowed) return reply.status(403).send({ error: safety.reason });
 
     const timeout = clampTimeout(timeoutSec);
-
     const subscribers = streamSubscribers.get(workspaceId);
 
     const broadcast = (type: string, message: string) => {
@@ -116,6 +106,7 @@ app.post<{ Body: ExecRequest }>(
       timeout,
       (line) => broadcast('stream:stdout', line),
       (line) => broadcast('stream:stderr', line),
+      stdin,
     );
 
     const stdoutResult = truncateOutput(result.stdout);
@@ -148,12 +139,10 @@ app.get<{ Params: { workspaceId: string } }>(
   { websocket: true },
   (socket, req) => {
     const workspaceId = (req.params as { workspaceId: string }).workspaceId;
-
     if (!streamSubscribers.has(workspaceId)) {
       streamSubscribers.set(workspaceId, new Set());
     }
     streamSubscribers.get(workspaceId)!.add(socket);
-
     app.log.info({ workspaceId }, 'Stream subscriber connected');
 
     const ack: WebSocketMessage = {
@@ -184,8 +173,9 @@ app.get('/v1/runner/sessions/active', async (_req, reply) => {
 
 app.get('/', async (_req, reply) => {
   return reply.send({
-    name: 'VeridianCDE Runner Gateway',
-    version: '0.1.0',
+    name: 'OperatorOS Runner Gateway',
+    version: '0.2.0',
+    runnerMode: getRunnerMode(),
     endpoints: {
       health: '/healthz',
       ready: '/readyz',
@@ -203,7 +193,7 @@ const host = '0.0.0.0';
 
 try {
   await app.listen({ port, host });
-  console.info(`VeridianCDE Runner Gateway listening on http://${host}:${port}`);
+  console.info(`OperatorOS Runner Gateway listening on http://${host}:${port} [mode=${getRunnerMode()}]`);
 } catch (err) {
   app.log.error(err);
   process.exit(1);

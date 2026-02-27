@@ -1,0 +1,192 @@
+You are Replit Agent acting as a principal engineer. Your job: transform THIS repository into a working MVP of “OperatorOS” (AI-native CDE control plane) in ONE PASS. Be concrete. Do not explain concepts. Do not propose phases. Implement everything required for a runnable MVP with Kubernetes (k3d), PVC-per-workspace runners, multi-language runner profiles, command execution + websocket log streaming, patch-only repo editing, verification pipeline, and a minimal web UI to operate it.
+
+HARD REQUIREMENTS (MVP DEFINITION OF DONE)
+- A user can: (1) create a workspace from a Git URL + ref + profile, (2) start runner (k8s pod + PVC), (3) stream terminal logs live, (4) run commands, (5) apply unified diffs safely, (6) run verification (lint/typecheck/test + optional preview healthcheck) based on profile, (7) create a “task” that automatically runs verify and records results/events, (8) view task timeline + diff summary in the UI.
+- Multi-language out the gate via profiles: node20, python311, go122, dotnet8, java21.
+- Determinism: runners use pinned images per profile; workspace code persists on PVC; git clone happens via initContainer only if /workspace is empty.
+- Safety: patch validator (denylist paths), command denylist (curl/wget/ssh/scp/sudo/docker/kubectl) unless ALLOW_UNSAFE_COMMANDS=true, max timeout 300s, max output 1MB with truncation flag.
+- Storage: Postgres + Drizzle for workspaces, tasks, task_events, tool_traces, workspace_ports.
+- Local infra: k3d cluster bootstrap script + k8s manifests (namespaces, RBAC, minimal network policy optional) and README instructions. If k3d isn’t available on Replit runtime, still include scripts and allow a LOCAL_DOCKER fallback runner mode (docker exec) but keep k8s as primary.
+
+PROJECT STRUCTURE (must become a real mono-repo)
+Convert repo into pnpm workspace monorepo:
+
+operatoros/
+  apps/
+    web/                 # Next.js minimal operator UI (workspace/task/terminal)
+    api/                 # Fastify control plane API (auth optional)
+    runner-gateway/      # Fastify + WS; provisions pods/PVC; exec + stream; git init container
+  packages/
+    sdk/                 # shared types + zod schemas
+    profiles/            # runner profiles + verify commands
+    agent-runtime/       # verification-first task runner (no LLM calls yet; deterministic)
+  infra/
+    k3d/
+      create-cluster.sh
+      destroy-cluster.sh
+    k8s/
+      base/
+        namespaces.yaml
+        rbac.yaml
+        runner-service.yaml        # internal service for exec (if needed)
+      templates/
+        runner-pod.yaml            # template used by gateway
+  docker/
+    runner-images/                 # optional Dockerfiles for profiles if needed
+  README.md
+  LICENSE (Apache-2.0)
+  .gitignore
+
+STACK (use these; do not debate)
+- pnpm workspaces
+- TypeScript throughout
+- Fastify for api + runner-gateway
+- ws for websockets
+- Drizzle ORM + Postgres (use docker-compose for local Postgres when not on Replit)
+- Next.js (App Router) + Tailwind (optional) for web UI
+- Kubernetes client: @kubernetes/client-node
+- Git operations: use initContainer image alpine/git for clone; server-side patch apply via `git apply` within the runner
+- Exec into pod: use Kubernetes API exec (not shelling out to kubectl) when possible; if too hard, shell out to kubectl as MVP fallback but keep code structured to swap to K8s exec stream later.
+
+IMPLEMENTATION TASKS (DO ALL OF THEM)
+1) Monorepo setup
+- Create pnpm-workspace.yaml, root package.json scripts: dev, build, lint, db:migrate.
+- Add shared tsconfig base.
+- Ensure `pnpm dev` runs: apps/api, apps/runner-gateway, apps/web concurrently.
+
+2) Database
+- Add docker-compose.yml for Postgres locally (if not provided by Replit).
+- Drizzle config and migrations:
+  Tables:
+    workspaces(id uuid pk, git_url text, git_ref text, profile_id text, status enum, created_at, updated_at)
+    runners(workspace_id uuid pk fk, mode enum(k8s|docker), pod_name text, namespace text, pvc_name text, started_at, stopped_at, status enum)
+    tasks(id uuid pk, workspace_id uuid fk, title text, status enum, required_checks jsonb, check_results jsonb, result_summary text, created_at, started_at, finished_at)
+    task_events(id uuid pk, task_id uuid fk, ts, type text, payload jsonb)
+    tool_traces(id uuid pk, task_id uuid fk, ts, tool_name text, input jsonb, output jsonb, success boolean, duration_ms int)
+    workspace_ports(id uuid pk, workspace_id uuid fk, port int, protocol text, is_primary boolean, health_path text, updated_at)
+- Add indexes on workspaces.status, tasks.workspace_id, task_events.task_id+ts, tool_traces.task_id+ts.
+
+3) Profiles (packages/profiles)
+Define profiles with:
+- id, displayName
+- image (pinned tag)
+- workspaceDir (/workspace)
+- verifyCommands: { lint: string[], typecheck: string[], test: string[], preview?: { start: string[], port: number, healthPath: string } }
+Provide helpers:
+- detectPackageManager(workspace): if pnpm-lock then pnpm else npm, etc (for node20)
+- getVerifyPlan(profileId): returns ordered list of checks.
+Profiles:
+- node20: image node:20-bookworm (ensure git installed or add apt-get via init container)
+- python311: python:3.11-bookworm
+- go122: golang:1.22-bookworm
+- dotnet8: mcr.microsoft.com/dotnet/sdk:8.0
+- java21: eclipse-temurin:21-jdk
+For non-node profiles, lint/typecheck can be optional or mapped to “build”:
+- python: `python -m compileall .` as typecheck; tests: `pytest -q` if present else `python -m unittest`
+- go: typecheck: `go test ./...` (counts as test); or `go test` for both
+- dotnet: `dotnet build` and `dotnet test`
+- java: `mvn -q test` if pom.xml, else `gradle test` if build.gradle; if neither, return “no-op” and mark check skipped.
+
+4) Runner Gateway (apps/runner-gateway)
+Implement:
+- POST /v1/runner/provision { workspaceId }:
+  - Looks up workspace in DB (via api call or shared DB access; choose one and keep consistent)
+  - Creates PVC `ws-<id>` in namespace veridian-runners
+  - Creates Pod `ws-<id>` with:
+    initContainer: alpine/git cloning git_url at git_ref into /workspace if empty
+    main container: profile image, command `sleep infinity` (so it stays alive)
+    volume mount: /workspace
+    resources limits: cpu/mem reasonable
+- POST /v1/runner/stop { workspaceId } -> delete pod (keep PVC)
+- GET  /v1/runner/status/:workspaceId -> pod phase + ready status + last start time
+- POST /v1/runner/exec { workspaceId, cmd, timeoutSec? }:
+  - Validate cmd against denylist unless ALLOW_UNSAFE_COMMANDS=true
+  - Execute inside pod at /workspace (use k8s exec stream or kubectl fallback)
+  - Capture stdout/stderr (truncate to 1MB each)
+  - Emit WS events to subscribers on channel workspaceId
+  - Return JSON { exitCode, stdout, stderr, durationMs, truncated }
+- WS /v1/runner/stream/:workspaceId:
+  - Clients subscribe; keep a map workspaceId -> set of sockets; broadcast stdout/stderr/status events.
+
+Also implement a docker fallback runner mode (only if k3d unavailable):
+- Create per-workspace docker container named ws-<id> from profile image, mount a local volume path to /workspace, clone git if empty, exec via docker exec.
+- Abstract runner interface: RunnerProvider { provision, stop, status, exec } with K8sRunnerProvider and DockerRunnerProvider; select via env RUNNER_MODE=k8s|docker.
+
+5) Control Plane API (apps/api)
+Implement Fastify API with routes:
+- POST /v1/workspaces { gitUrl, gitRef, profileId } -> create workspace record status=CREATED
+- POST /v1/workspaces/:id/start -> call runner-gateway /v1/runner/provision ; update status=RUNNING or ERROR
+- GET  /v1/workspaces/:id -> workspace + runner status
+- POST /v1/workspaces/:id/exec { cmd, timeoutSec? } -> proxy to runner-gateway exec
+- POST /v1/workspaces/:id/apply-patch { diff }:
+  - Validate unified diff:
+    - max 20KB
+    - deny paths: .env*, *.pem, *.key, node_modules/**, dist/**, build/**, .git/**, package-lock.json? (allow), pnpm-lock.yaml? (allow), yarn.lock? (allow)
+  - Apply patch by calling runner exec: `bash -lc "cd /workspace && git apply --whitespace=nowarn -"` with diff piped in (implement safe temp file method if piping is hard)
+  - Return git status porcelain + list of changed files
+- POST /v1/workspaces/:id/git-status -> exec `git status --porcelain`
+- POST /v1/workspaces/:id/create-branch { name } -> exec `git checkout -b <name>`
+- POST /v1/workspaces/:id/commit { message } -> exec `git add -A && git commit -m "<message>"` (handle “nothing to commit”)
+- POST /v1/workspaces/:id/verify -> runs verification plan from profile:
+  - sequentially call runner exec for each check, store structured results in DB (workspace_ports used if preview)
+  - return results
+- Tasks:
+  - POST /v1/tasks { workspaceId, title } -> create task required_checks from profile verify plan
+  - POST /v1/tasks/:taskId/run -> execute deterministic task runner (packages/agent-runtime) that:
+      - creates branch task/<id>
+      - runs verify
+      - records task_events + tool_traces
+      - sets SUCCEEDED/FAILED
+  - GET /v1/tasks/:taskId -> task record
+  - GET /v1/tasks/:taskId/events -> ordered events
+
+6) Agent Runtime (packages/agent-runtime)
+Implement a deterministic “verification-first task runner” (NO LLM):
+- create branch `task/<taskId>`
+- run verify pipeline using API calls or shared modules
+- record task_events for each step: PLAN, COMMAND, VERIFY, DONE, ERROR
+- record tool_traces for each exec/apply_patch/verify call (input/output)
+This is the scaffolding for LLM later but MVP should run without it.
+
+7) Web UI (apps/web) — minimal Operator Console
+Next.js pages:
+- /workspaces: list + create workspace form (git url/ref/profile)
+- /workspaces/[id]: buttons: Start Runner, Open Terminal (shows WS stream), Run Command, Apply Patch (textarea), Verify, Create Task, Run Task; show runner status and git status
+- /tasks/[id]: show task status, results, and event timeline
+Terminal:
+- Connect to runner-gateway WS stream; render lines.
+Preview:
+- OPTIONAL MVP: if profile has preview defined, provide “Start preview” and show URL or iframe; otherwise skip.
+
+8) Infra (k3d + k8s)
+Add infra/k3d/create-cluster.sh that:
+- creates cluster “operatoros” with 1 server 1 agent
+- sets kubeconfig
+- applies namespaces + rbac
+Add infra/k8s/base manifests:
+- namespaces.yaml (veridian-control, veridian-runners)
+- rbac.yaml for runner-gateway SA in veridian-control with permissions in veridian-runners (pods, pvcs)
+Include README commands for local use.
+
+9) Cleanup / Rename / Branding
+- Rename product in UI to OperatorOS (Powered by Shotgun Ninjas) with tactical minimal styling.
+- Keep the old documentation pages only if they don’t block; otherwise move them to /docs route or delete.
+
+10) Ensure it runs
+- Add root README with exact commands:
+  - pnpm i
+  - docker compose up -d (postgres) (if needed)
+  - ./infra/k3d/create-cluster.sh (optional if local)
+  - pnpm db:migrate
+  - pnpm dev
+  - curl examples for workspace creation and node -v
+- Provide default env example .env.example for api and runner-gateway.
+
+OUTPUT EXPECTATION
+- Apply all file changes directly in this repo
+- Make it runnable
+- Provide final “How to test MVP” section in README with curl commands and UI paths
+- Do not leave TODOs for core MVP functions
+- If any part is impossible in Replit environment (k3d), still implement code and scripts and make Docker runner mode the default there, but keep K8s mode complete for local/prod.
+
+NOW EXECUTE: modify the repository accordingly and return only (1) what you changed at a high level and (2) exact run instructions.
