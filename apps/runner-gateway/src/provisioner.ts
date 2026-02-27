@@ -6,8 +6,20 @@ import {
   dockerGetStatus,
   dockerExec,
 } from './docker-provider.js';
+import {
+  localCreateRunner,
+  localStopRunner,
+  localGetStatus,
+  localExec,
+} from './local-provider.js';
 
-const RUNNER_MODE = (process.env.RUNNER_MODE ?? 'docker') as 'k8s' | 'docker';
+function detectRunnerMode(): 'k8s' | 'docker' | 'local' {
+  const env = process.env.RUNNER_MODE;
+  if (env === 'k8s' || env === 'docker' || env === 'local') return env;
+  return 'local';
+}
+
+const RUNNER_MODE = detectRunnerMode();
 const NAMESPACE = 'veridian-runners';
 const SAFE_REF_PATTERN = /^[a-zA-Z0-9._\-/]+$/;
 const SAFE_URL_PATTERN = /^https?:\/\/[a-zA-Z0-9._\-/:@]+$/;
@@ -216,7 +228,7 @@ async function k8sExec(
   });
 }
 
-export function getRunnerMode(): 'k8s' | 'docker' {
+export function getRunnerMode(): 'k8s' | 'docker' | 'local' {
   return RUNNER_MODE;
 }
 
@@ -227,6 +239,9 @@ export async function createWorkspaceRunner(
   gitUrl: string,
   gitRef: string,
 ): Promise<{ success: boolean; message: string; containerId?: string }> {
+  if (RUNNER_MODE === 'local') {
+    return localCreateRunner(workspaceId, profileId, profileImage, gitUrl, gitRef);
+  }
   if (RUNNER_MODE === 'docker') {
     return dockerCreateRunner(workspaceId, profileId, profileImage, gitUrl, gitRef);
   }
@@ -236,6 +251,9 @@ export async function createWorkspaceRunner(
 export async function stopWorkspaceRunner(
   workspaceId: string,
 ): Promise<{ success: boolean; message: string }> {
+  if (RUNNER_MODE === 'local') {
+    return localStopRunner(workspaceId);
+  }
   if (RUNNER_MODE === 'docker') {
     return dockerStopRunner(workspaceId);
   }
@@ -245,6 +263,9 @@ export async function stopWorkspaceRunner(
 export async function getWorkspaceRunnerStatus(
   workspaceId: string,
 ): Promise<RunnerStatus | null> {
+  if (RUNNER_MODE === 'local') {
+    return localGetStatus(workspaceId);
+  }
   if (RUNNER_MODE === 'docker') {
     return dockerGetStatus(workspaceId);
   }
@@ -259,6 +280,9 @@ export async function execInRunner(
   onStderr?: (line: string) => void,
   stdin?: string,
 ): Promise<{ exitCode: number; stdout: string; stderr: string; durationMs: number }> {
+  if (RUNNER_MODE === 'local') {
+    return localExec(workspaceId, command, timeoutSec, onStdout, onStderr, stdin);
+  }
   if (RUNNER_MODE === 'docker') {
     return dockerExec(workspaceId, command, timeoutSec, onStdout, onStderr, stdin);
   }

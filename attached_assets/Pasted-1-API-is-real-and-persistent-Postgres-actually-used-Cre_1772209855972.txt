@@ -1,0 +1,106 @@
+1) API is real and persistent (Postgres actually used)
+Create workspace
+curl -sS -X POST http://localhost:5000/v1/workspaces \
+  -H 'Content-Type: application/json' \
+  -d '{"gitUrl":"https://github.com/expressjs/express","gitRef":"master","profileId":"node20"}'
+
+Copy the returned id.
+
+Restart API and re-fetch
+
+Restart the server process, then:
+
+curl -sS http://localhost:5000/v1/workspaces/<ID>
+
+✅ Workspace should still exist after restart.
+❌ If it disappears, you’re still in-memory.
+
+2) Runner actually provisions and code persists (PVC/volume)
+Start runner
+curl -sS -X POST http://localhost:5000/v1/workspaces/<ID>/start
+Exec into workspace
+curl -sS -X POST http://localhost:5000/v1/workspaces/<ID>/exec \
+  -H 'Content-Type: application/json' \
+  -d '{"cmd":"bash -lc \"ls -la /workspace && test -d /workspace/.git && echo OK\""}'
+
+✅ Must print OK.
+
+Persistence check
+curl -sS -X POST http://localhost:5000/v1/workspaces/<ID>/exec \
+  -H 'Content-Type: application/json' \
+  -d '{"cmd":"bash -lc \"echo hi > /workspace/.persist && cat /workspace/.persist\""}'
+
+Now stop/start (whatever endpoint you have) and re-run:
+
+curl -sS -X POST http://localhost:5000/v1/workspaces/<ID>/exec \
+  -H 'Content-Type: application/json' \
+  -d '{"cmd":"bash -lc \"cat /workspace/.persist\""}'
+
+✅ Must still print hi.
+
+In Replit you’re likely in RUNNER_MODE=docker. In local k3d, verify PVC/pod:
+
+kubectl -n veridian-runners get pods,pvc | grep <ID>
+3) WebSocket streaming is truly “live”
+
+Open /ui/workspace/<ID> and run this in the terminal box (or via exec):
+
+curl -sS -X POST http://localhost:5000/v1/workspaces/<ID>/exec \
+  -H 'Content-Type: application/json' \
+  -d '{"cmd":"bash -lc \"for i in {1..30}; do echo line-$i; sleep 0.1; done\""}'
+
+✅ Lines should appear progressively, not all at the end.
+If it buffers, your “streaming” is fake or buffered at the exec layer.
+
+4) Patch-only editing is safe
+Denylisted patch should fail
+curl -sS -X POST http://localhost:5000/v1/workspaces/<ID>/apply-patch \
+  -H 'Content-Type: application/json' \
+  -d '{"diff":"diff --git a/.env b/.env\nnew file mode 100644\nindex 0000000..e69de29\n"}'
+
+✅ Must reject.
+
+Valid patch should apply
+curl -sS -X POST http://localhost:5000/v1/workspaces/<ID>/apply-patch \
+  -H 'Content-Type: application/json' \
+  -d '{"diff":"diff --git a/README.md b/README.md\nindex 1111111..2222222 100644\n--- a/README.md\n+++ b/README.md\n@@ -1,1 +1,2 @@\n # Express\n+patched\n"}'
+
+Then:
+
+curl -sS -X POST http://localhost:5000/v1/workspaces/<ID>/git-status
+
+✅ Should show README.md modified.
+
+5) Verification pipeline works (and doesn’t “cheat”)
+
+Run:
+
+curl -sS -X POST http://localhost:5000/v1/workspaces/<ID>/verify
+
+✅ Must return structured results per check.
+
+Watch out for this common bug:
+If your “fallback tries each command until one succeeds,” it can incorrectly treat “command not found” as success. You want outcomes like:
+
+PASS
+
+FAIL
+
+SKIPPED (tool missing / project doesn’t have that step)
+
+6) Task system produces a timeline + traces
+# Create task
+curl -sS -X POST http://localhost:5000/v1/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{"workspaceId":"<ID>","title":"Verify Express"}'
+
+# Run task
+curl -sS -X POST http://localhost:5000/v1/tasks/<TASK_ID>/run
+
+# Events
+curl -sS http://localhost:5000/v1/tasks/<TASK_ID>/events
+
+# Traces
+curl -sS http://localhost:5000/v1/tasks/<TASK_ID>/traces
+
+✅ You must see step-by-step events including verify steps + final success/failure.

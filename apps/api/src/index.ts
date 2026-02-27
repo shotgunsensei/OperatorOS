@@ -1,7 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
-import WebSocket from 'ws';
 import { eq, desc } from 'drizzle-orm';
 import type {
   HealthResponse,
@@ -11,13 +10,21 @@ import type {
   VerifyCheckResult,
 } from '../../../packages/sdk/src/index.js';
 import { validatePatchPaths, MAX_PATCH_SIZE } from '../../../packages/sdk/src/index.js';
+import type { WebSocketMessage } from '../../../packages/sdk/src/events.js';
 import { getProfile, getProfileImage, getVerifyPlan, listProfiles } from '../../../packages/profiles/src/index.js';
+import {
+  createWorkspaceRunner,
+  stopWorkspaceRunner,
+  getWorkspaceRunnerStatus,
+  execInRunner,
+  getRunnerMode,
+} from '../../../apps/runner-gateway/src/provisioner.js';
+import { isCommandAllowed, clampTimeout, truncateOutput } from '../../../apps/runner-gateway/src/safety.js';
 import { db } from './db.js';
 import { workspaces, runners, tasks, taskEvents, toolTraces } from './schema.js';
 import { serveUI } from './ui.js';
 
 const startTime = Date.now();
-const GATEWAY_URL = process.env.GATEWAY_URL ?? 'http://localhost:4001';
 
 const app = Fastify({
   logger: {
@@ -105,22 +112,63 @@ async function ensureTables() {
 
 await ensureTables();
 
-async function gatewayFetch(path: string, opts?: RequestInit) {
-  const resp = await fetch(`${GATEWAY_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
-  });
-  return resp;
+const streamSubscribers = new Map<string, Set<import('ws').WebSocket>>();
+
+function broadcastToStream(workspaceId: string, type: string, message: string) {
+  const subs = streamSubscribers.get(workspaceId);
+  if (!subs || subs.size === 0) return;
+  const event: WebSocketMessage = {
+    type: type as WebSocketMessage['type'],
+    payload: { workspaceId, message, ts: new Date().toISOString() },
+    timestamp: new Date().toISOString(),
+  };
+  const data = JSON.stringify(event);
+  for (const ws of subs) {
+    if (ws.readyState === 1) ws.send(data);
+  }
 }
 
-async function gatewayExec(workspaceId: string, cmd: string, timeoutSec = 30, stdin?: string) {
-  const body: Record<string, unknown> = { workspaceId, cmd, timeoutSec };
-  if (stdin) body.stdin = stdin;
-  const resp = await gatewayFetch('/v1/runner/exec', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
-  return resp.json() as Promise<{ exitCode: number; stdout: string; stderr: string; durationMs: number; truncated?: boolean }>;
+function broadcastExitEvent(workspaceId: string, exitCode: number, durationMs: number) {
+  const subs = streamSubscribers.get(workspaceId);
+  if (!subs || subs.size === 0) return;
+  const event: WebSocketMessage = {
+    type: 'stream:exit',
+    payload: { workspaceId, exitCode, durationMs },
+    timestamp: new Date().toISOString(),
+  };
+  const data = JSON.stringify(event);
+  for (const ws of subs) {
+    if (ws.readyState === 1) ws.send(data);
+  }
+}
+
+async function localExec(workspaceId: string, cmd: string, timeoutSec = 30, stdin?: string) {
+  const safety = isCommandAllowed(cmd);
+  if (!safety.allowed) {
+    return { exitCode: 126, stdout: '', stderr: safety.reason ?? 'Command blocked', durationMs: 0, truncated: false };
+  }
+  const timeout = clampTimeout(timeoutSec);
+  const result = await execInRunner(
+    workspaceId,
+    cmd,
+    timeout,
+    (line) => broadcastToStream(workspaceId, 'stream:stdout', line),
+    (line) => broadcastToStream(workspaceId, 'stream:stderr', line),
+    stdin,
+  );
+
+  const stdoutResult = truncateOutput(result.stdout);
+  const stderrResult = truncateOutput(result.stderr);
+
+  broadcastExitEvent(workspaceId, result.exitCode, result.durationMs);
+
+  return {
+    exitCode: result.exitCode,
+    stdout: stdoutResult.text,
+    stderr: stderrResult.text,
+    durationMs: result.durationMs,
+    truncated: stdoutResult.truncated || stderrResult.truncated,
+  };
 }
 
 async function addTaskEvent(taskId: string, type: string, payload: Record<string, unknown> = {}) {
@@ -134,7 +182,7 @@ async function addToolTrace(taskId: string, toolName: string, input: Record<stri
 async function runVerifyWithFallbacks(workspaceId: string, commands: string[]): Promise<{ exitCode: number; stdout: string; stderr: string; durationMs: number }> {
   let lastResult: { exitCode: number; stdout: string; stderr: string; durationMs: number } | null = null;
   for (const cmd of commands) {
-    lastResult = await gatewayExec(workspaceId, `cd /workspace && ${cmd}`, 120);
+    lastResult = await localExec(workspaceId, `cd /workspace && ${cmd}`, 120);
     if (lastResult.exitCode === 0) return lastResult;
   }
   return lastResult!;
@@ -145,6 +193,7 @@ app.get('/', async (_req, reply) => {
     name: 'OperatorOS API',
     version: '0.2.0',
     tagline: 'Powered by Shotgun Ninjas',
+    runnerMode: getRunnerMode(),
     endpoints: {
       health: '/healthz',
       ui: '/ui',
@@ -164,6 +213,7 @@ app.get('/', async (_req, reply) => {
       runTask: 'POST /v1/tasks/:taskId/run',
       getTask: 'GET /v1/tasks/:taskId',
       taskEvents: 'GET /v1/tasks/:taskId/events',
+      stream: 'WS /v1/runner/stream/:workspaceId',
     },
   });
 });
@@ -221,8 +271,7 @@ app.get<{ Params: { id: string } }>(
 
     let runnerStatus = null;
     try {
-      const resp = await gatewayFetch(`/v1/runner/status/${id}`);
-      if (resp.ok) runnerStatus = await resp.json();
+      runnerStatus = await getWorkspaceRunnerStatus(id);
     } catch {}
 
     return reply.send({ ...ws, runner: runnerStatus });
@@ -240,32 +289,28 @@ app.post<{ Params: { id: string } }>(
     await db.update(workspaces).set({ status: 'provisioning', updatedAt: new Date() }).where(eq(workspaces.id, id));
 
     try {
-      const resp = await gatewayFetch('/v1/runner/create', {
-        method: 'POST',
-        body: JSON.stringify({ workspaceId: id, profileId: ws.profileId, profileImage, gitUrl: ws.gitUrl, gitRef: ws.gitRef }),
-      });
-      const result = await resp.json() as { success: boolean; message: string; containerId?: string };
+      const result = await createWorkspaceRunner(id, ws.profileId, profileImage, ws.gitUrl, ws.gitRef);
       const newStatus = result.success ? 'running' : 'error';
       await db.update(workspaces).set({ status: newStatus, updatedAt: new Date() }).where(eq(workspaces.id, id));
 
       if (result.success) {
         await db.insert(runners).values({
           workspaceId: id,
-          mode: 'docker',
-          containerId: (result as any).containerId ?? null,
+          mode: getRunnerMode(),
+          containerId: result.containerId ?? null,
           status: 'running',
           startedAt: new Date(),
         }).onConflictDoUpdate({
           target: runners.workspaceId,
-          set: { status: 'running', containerId: (result as any).containerId ?? null, startedAt: new Date(), stoppedAt: null },
+          set: { status: 'running', containerId: result.containerId ?? null, startedAt: new Date(), stoppedAt: null },
         });
       }
 
-      return reply.status(resp.status).send(result);
+      return reply.status(result.success ? 201 : 500).send(result);
     } catch (err) {
       await db.update(workspaces).set({ status: 'error', updatedAt: new Date() }).where(eq(workspaces.id, id));
-      return reply.status(502).send({
-        error: 'Failed to contact runner-gateway',
+      return reply.status(500).send({
+        error: 'Runner provisioning failed',
         detail: err instanceof Error ? err.message : 'Unknown error',
       });
     }
@@ -280,20 +325,16 @@ app.post<{ Params: { id: string } }>(
     if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
 
     try {
-      const resp = await gatewayFetch('/v1/runner/stop', {
-        method: 'POST',
-        body: JSON.stringify({ workspaceId: id }),
-      });
-      const result = await resp.json() as { success: boolean; message: string };
+      const result = await stopWorkspaceRunner(id);
       if (result.success) {
         await db.update(workspaces).set({ status: 'stopped', updatedAt: new Date() }).where(eq(workspaces.id, id));
         try {
           await db.update(runners).set({ status: 'stopped', stoppedAt: new Date() }).where(eq(runners.workspaceId, id));
         } catch {}
       }
-      return reply.status(resp.status).send(result);
+      return reply.status(result.success ? 200 : 500).send(result);
     } catch (err) {
-      return reply.status(502).send({ error: 'Failed to contact runner-gateway', detail: err instanceof Error ? err.message : 'Unknown' });
+      return reply.status(500).send({ error: 'Failed to stop runner', detail: err instanceof Error ? err.message : 'Unknown' });
     }
   },
 );
@@ -307,10 +348,10 @@ app.post<{ Params: { id: string }; Body: { cmd: string; timeoutSec?: number } }>
     if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
 
     try {
-      const result = await gatewayExec(id, cmd, timeoutSec);
+      const result = await localExec(id, cmd, timeoutSec);
       return reply.send(result);
     } catch (err) {
-      return reply.status(502).send({ error: 'Failed to contact runner-gateway', detail: err instanceof Error ? err.message : 'Unknown' });
+      return reply.status(500).send({ error: 'Exec failed', detail: err instanceof Error ? err.message : 'Unknown' });
     }
   },
 );
@@ -335,22 +376,22 @@ app.post<{ Params: { id: string }; Body: { diff: string } }>(
     if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
 
     try {
-      const writeTemp = await gatewayExec(id, `cat > /tmp/_patch.diff`, 10, diff);
+      const writeTemp = await localExec(id, `cat > /tmp/_patch.diff`, 10, diff);
       if (writeTemp.exitCode !== 0) {
         return reply.send({ success: false, changedFiles: [], gitStatus: '', error: `Failed to write patch: ${writeTemp.stderr}` } as ApplyPatchResult);
       }
 
-      const applyResult = await gatewayExec(id, 'cd /workspace && git apply --whitespace=nowarn /tmp/_patch.diff && rm /tmp/_patch.diff', 30);
+      const applyResult = await localExec(id, 'cd /workspace && git apply --whitespace=nowarn /tmp/_patch.diff && rm /tmp/_patch.diff', 30);
       if (applyResult.exitCode !== 0) {
         return reply.send({ success: false, changedFiles: [], gitStatus: '', error: applyResult.stderr || applyResult.stdout } as ApplyPatchResult);
       }
 
-      const statusResult = await gatewayExec(id, 'cd /workspace && git status --porcelain', 10);
+      const statusResult = await localExec(id, 'cd /workspace && git status --porcelain', 10);
       const changedFiles = statusResult.stdout.split('\n').filter(Boolean).map((l) => l.trim().split(/\s+/).slice(1).join(' '));
 
       return reply.send({ success: true, changedFiles, gitStatus: statusResult.stdout } as ApplyPatchResult);
     } catch (err) {
-      return reply.status(502).send({ error: 'Gateway error', detail: err instanceof Error ? err.message : 'Unknown' });
+      return reply.status(500).send({ error: 'Exec failed', detail: err instanceof Error ? err.message : 'Unknown' });
     }
   },
 );
@@ -363,10 +404,10 @@ app.post<{ Params: { id: string } }>(
     if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
 
     try {
-      const result = await gatewayExec(id, 'cd /workspace && git status --porcelain', 10);
+      const result = await localExec(id, 'cd /workspace && git status --porcelain', 10);
       return reply.send({ exitCode: result.exitCode, status: result.stdout });
     } catch (err) {
-      return reply.status(502).send({ error: 'Gateway error' });
+      return reply.status(500).send({ error: 'Exec failed' });
     }
   },
 );
@@ -382,10 +423,10 @@ app.post<{ Params: { id: string }; Body: { name: string } }>(
     if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
 
     try {
-      const result = await gatewayExec(id, `cd /workspace && git checkout -b '${name.replace(/'/g, "'\\''")}'`, 10);
+      const result = await localExec(id, `cd /workspace && git checkout -b '${name.replace(/'/g, "'\\''")}'`, 10);
       return reply.send({ exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr });
     } catch (err) {
-      return reply.status(502).send({ error: 'Gateway error' });
+      return reply.status(500).send({ error: 'Exec failed' });
     }
   },
 );
@@ -402,10 +443,10 @@ app.post<{ Params: { id: string }; Body: { message: string } }>(
 
     try {
       const safeMsg = message.replace(/'/g, "'\\''");
-      const result = await gatewayExec(id, `cd /workspace && git add -A && git diff --cached --quiet && echo "nothing to commit" || git commit -m '${safeMsg}'`, 30);
+      const result = await localExec(id, `cd /workspace && git add -A && git diff --cached --quiet && echo "nothing to commit" || git commit -m '${safeMsg}'`, 30);
       return reply.send({ exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr });
     } catch (err) {
-      return reply.status(502).send({ error: 'Gateway error' });
+      return reply.status(500).send({ error: 'Exec failed' });
     }
   },
 );
@@ -440,7 +481,7 @@ app.post<{ Params: { id: string } }>(
           passed: false,
           exitCode: -1,
           stdout: '',
-          stderr: 'Gateway unreachable',
+          stderr: 'Runner unreachable',
           durationMs: 0,
           skipped: true,
         });
@@ -495,7 +536,7 @@ app.post<{ Params: { taskId: string } }>(
     (async () => {
       try {
         const branchName = `task/${taskId}`;
-        const branchResult = await gatewayExec(ws.id, `cd /workspace && git checkout -b '${branchName}' 2>/dev/null || git checkout '${branchName}'`, 10);
+        const branchResult = await localExec(ws.id, `cd /workspace && git checkout -b '${branchName}' 2>/dev/null || git checkout '${branchName}'`, 10);
         await addTaskEvent(taskId, 'COMMAND', { tool: 'create-branch', branch: branchName, exitCode: branchResult.exitCode });
 
         const profile = getProfile(ws.profileId);
@@ -586,39 +627,28 @@ app.get<{ Params: { workspaceId: string } }>(
   { websocket: true },
   (socket, req) => {
     const workspaceId = (req.params as { workspaceId: string }).workspaceId;
-    const gwWsUrl = GATEWAY_URL.replace(/^http/, 'ws') + `/v1/runner/stream/${workspaceId}`;
 
-    let upstream: WebSocket | null = null;
-    try {
-      upstream = new WebSocket(gwWsUrl);
-    } catch {
-      socket.send(JSON.stringify({ type: 'stream:status', payload: { message: 'Gateway unreachable' }, timestamp: new Date().toISOString() }));
-      socket.close();
-      return;
+    if (!streamSubscribers.has(workspaceId)) {
+      streamSubscribers.set(workspaceId, new Set());
     }
+    streamSubscribers.get(workspaceId)!.add(socket);
 
-    upstream.on('open', () => {
-      app.log.info({ workspaceId }, 'WS proxy connected to gateway');
-    });
+    app.log.info({ workspaceId }, 'Stream subscriber connected');
 
-    upstream.on('message', (data: Buffer) => {
-      if (socket.readyState === 1) socket.send(data.toString());
-    });
-
-    upstream.on('close', () => {
-      if (socket.readyState === 1) socket.close();
-    });
-
-    upstream.on('error', () => {
-      socket.send(JSON.stringify({ type: 'stream:status', payload: { message: 'Gateway connection error' }, timestamp: new Date().toISOString() }));
-    });
-
-    socket.on('message', (data: Buffer) => {
-      if (upstream && upstream.readyState === 1) upstream.send(data.toString());
-    });
+    const ack: WebSocketMessage = {
+      type: 'stream:status',
+      payload: { workspaceId, message: 'subscribed', ts: new Date().toISOString() },
+      timestamp: new Date().toISOString(),
+    };
+    socket.send(JSON.stringify(ack));
 
     socket.on('close', () => {
-      if (upstream && upstream.readyState === 1) upstream.close();
+      const subs = streamSubscribers.get(workspaceId);
+      if (subs) {
+        subs.delete(socket);
+        if (subs.size === 0) streamSubscribers.delete(workspaceId);
+      }
+      app.log.info({ workspaceId }, 'Stream subscriber disconnected');
     });
   },
 );
@@ -630,7 +660,7 @@ const host = '0.0.0.0';
 
 try {
   await app.listen({ port, host });
-  console.info(`OperatorOS API listening on http://${host}:${port}`);
+  console.info(`OperatorOS API listening on http://${host}:${port} [runner=${getRunnerMode()}]`);
 } catch (err) {
   app.log.error(err);
   process.exit(1);

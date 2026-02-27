@@ -44,7 +44,7 @@ export interface RunnerStatus {
   phase: string;
   ready: boolean;
   startedAt?: string;
-  mode: 'k8s' | 'docker';
+  mode: 'k8s' | 'docker' | 'local';
 }
 
 export interface ApplyPatchRequest {
