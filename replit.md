@@ -10,7 +10,7 @@ pnpm monorepo:
 apps/
   api/              - Fastify control plane API (port 5001, Postgres-backed, serves legacy web UI at /ui)
   web/              - Next.js GUI (port 5000, 4-panel layout: workspace, file explorer, editor, terminal/preview)
-  runner-gateway/   - Runner execution providers (local, Docker, K8s) + safety module
+  runner-gateway/   - Runner execution providers (local, Docker, K8s) + safety module (port 5002)
 packages/
   sdk/              - Shared TypeScript types, patch validation helpers
   agent-runtime/    - Deterministic verification-first task runner
@@ -20,18 +20,34 @@ infra/
   k8s/base/         - Namespace, RBAC manifests
   k8s/              - App deployment manifests
   docker/           - Dockerfiles and docker-compose
+scripts/
+  dev.mjs           - Dev orchestrator: spawns all 3 services with correct ports
 ```
 
 ## Running
 
-The workflow runs both services:
-- `API_PORT=5001 tsx apps/api/src/index.ts` (API on port 5001)
-- `cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:5001 npx next dev -p 5000` (GUI on port 5000, webview)
+### Development (3 services)
+The workflow starts all 3 services:
+- **API** on port 5001: `PORT=5001 tsx apps/api/src/index.ts`
+- **Runner Gateway** on port 5002: `PORT=5002 tsx apps/runner-gateway/src/index.ts`
+- **Web (Next.js)** on port 5000: `NEXT_PUBLIC_API_URL=http://localhost:5001 npx next dev -p 5000` (webview)
+
+Alternative: `node scripts/dev.mjs` (starts all 3 with correct PORT env vars and colored output)
 
 The Next.js app proxies API calls via rewrites: `/api/*` -> `localhost:5001/v1/*`
 
+### Production (deployment)
+Only the API runs on port 5000 with its built-in UI at `/ui`. Browser visitors to `/` are redirected to `/ui`.
+
+### Port Map
+| Service | Dev Port | Notes |
+|---------|----------|-------|
+| Web (Next.js) | 5000 | Replit webview, proxies /api/* to API |
+| API | 5001 | Fastify control plane |
+| Runner Gateway | 5002 | Standalone runner service |
+
 ### API Endpoints (apps/api on port 5001)
-- `GET /` - API info (includes runnerMode)
+- `GET /` - API info (redirects browsers to /ui)
 - `GET /healthz` - Health check
 - `GET /readyz` - Readiness probe
 - `GET /v1/profiles` - List runner profiles
@@ -100,7 +116,7 @@ Set `RUNNER_MODE` env var:
 
 ## Architecture
 
-The API (apps/api) directly imports provisioner and safety modules from apps/runner-gateway (no HTTP proxy). The provisioner dispatches to the appropriate provider (local, docker, or k8s) based on RUNNER_MODE. The Next.js GUI communicates with the API through Next.js rewrites proxy (/api/* -> localhost:5001/v1/*).
+The API (apps/api) directly imports provisioner and safety modules from apps/runner-gateway (no HTTP proxy between them). The runner-gateway also runs as a standalone Fastify service on port 5002 for potential distributed deployments. The provisioner dispatches to the appropriate provider (local, docker, or k8s) based on RUNNER_MODE. The Next.js GUI communicates with the API through Next.js rewrites proxy (/api/* -> localhost:5001/v1/*).
 
 ## Profiles
 
@@ -112,6 +128,16 @@ The API (apps/api) directly imports provisioner and safety modules from apps/run
 - Patch denylist: .env*, *.pem, *.key, node_modules/, dist/, build/, .git/
 - Max patch size: 20KB, max timeout: 300s, max output: 1MB
 - Tree/read-file endpoints validate paths against traversal (no .., no absolute paths)
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| PORT | 5001 (api), 5002 (gateway) | Service port |
+| RUNNER_MODE | local | Runner provider: local, docker, k8s |
+| DATABASE_URL | (from Replit) | PostgreSQL connection string |
+| NEXT_PUBLIC_API_URL | http://localhost:5001 | API URL for Next.js server-side + rewrites |
+| ALLOW_UNSAFE_COMMANDS | false | Override command denylist |
 
 ## Dependencies
 

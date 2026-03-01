@@ -188,7 +188,7 @@ app.get('/', async (_req, reply) => {
   });
 });
 
-const port = parseInt(process.env.GATEWAY_PORT ?? '5000', 10);
+const port = parseInt(process.env.PORT ?? '5002', 10);
 const host = '0.0.0.0';
 
 try {

@@ -4,11 +4,13 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "tsx script/build.ts",
-    "start": "NODE_ENV=production node dist/index.cjs",
-    "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "dev": "pnpm -r --parallel --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web dev",
+    "dev:api": "pnpm --dir apps/api dev",
+    "dev:runner": "pnpm --dir apps/runner-gateway dev",
+    "dev:web": "pnpm --dir apps/web dev",
+    "build": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web build",
+    "start": "pnpm -r --parallel --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web start",
+    "typecheck": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web typecheck"
   },
   "dependencies": {
     "@fastify/cors": "^11.2.0",

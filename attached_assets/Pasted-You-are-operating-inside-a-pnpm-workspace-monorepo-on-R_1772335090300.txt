@@ -1,0 +1,130 @@
+You are operating inside a pnpm workspace monorepo on Replit. Current state:
+- Root package.json used to be a Replit template (rest-express). We already updated root scripts to run apps in ./apps/api, ./apps/runner-gateway, ./apps/web.
+- apps/api and apps/runner-gateway both start with "tsx watch src/index.ts".
+- apps/web starts with "next dev -p 3001" and the GUI already loads at the repl domain.
+- Current failure: both apps/api and apps/runner-gateway try to listen on 0.0.0.0:5000, causing EADDRINUSE. Web starts fine.
+Goal: Fix ports + wire GUI + finish MVP workflows with minimal changes.
+
+ABSOLUTE OBJECTIVES (in this exact order):
+1) Make "pnpm dev" at repo root reliably start 3 services:
+   - API on port 5000
+   - Runner Gateway on port 5001
+   - Web UI on port 3001
+   No port collisions. No manual shell steps needed.
+
+2) Make the Web UI (apps/web) fully functional for MVP:
+   - Create a workspace by GitHub repo URL
+   - Show workspace list and status
+   - Start/Stop a workspace runner
+   - Run a command and see streamed output in the UI terminal
+   - Read a file and apply a patch (unified diff) safely
+   - (Basic) Verify button: run a profile pipeline and show step-by-step results
+
+CONSTRAINTS:
+- Do not introduce large architectural refactors (no org/RBAC/billing).
+- Prefer environment variables and small, targeted edits.
+- No breaking API changes without updating the web client.
+- Keep security sane: deny dangerous commands by default; patch path normalization; no writing outside workspace root.
+
+TASK A — PORTS + ROOT DEV ORCHESTRATION (must solve EADDRINUSE)
+A1) Update apps/api/src/index.ts and apps/runner-gateway/src/index.ts so they bind to:
+    const port = Number(process.env.PORT ?? <default>);
+    app.listen({ host: "0.0.0.0", port })
+    Defaults: API default 5000, runner-gateway default 5001.
+A2) Update root package.json so:
+    - "pnpm dev" starts all 3 apps in parallel WITH the correct PORT env for api and runner-gateway.
+    - Do not rely on shell-specific syntax that might fail on Windows; use a Node-based runner script if needed.
+    Recommended approach:
+      - Create scripts/dev.mjs that spawns 3 child processes with env PORT set per service.
+      - Root "dev": "node scripts/dev.mjs"
+      - Root "dev:api": "PORT=5000 pnpm --dir apps/api dev" etc (optional)
+A3) Ensure Replit Run button runs root dev: update .replit to run = "pnpm dev" (or "node scripts/dev.mjs") so the GUI and backend come up together.
+
+TASK B — API <-> RUNNER WIRING
+B1) Standardize service URLs via env:
+    - API: PORT=5000
+    - Runner Gateway: RUNNER_GATEWAY_URL=http://127.0.0.1:5001 (or similar)
+    - Web: NEXT_PUBLIC_API_URL should point to API in a way that works in Replit browser:
+       If direct localhost calls from browser fail, create a Next.js proxy route under apps/web that forwards /api/* -> API.
+       Preference: implement /api proxy in Next so browser always calls same origin.
+B2) Confirm API exposes health route:
+    - GET /healthz returns { ok: true }
+    Runner gateway also: GET /healthz returns { ok: true }
+
+TASK C — MINIMUM MVP ENDPOINTS (create/start/stop/exec + streaming)
+Implement or confirm these endpoints in apps/api (acting as control plane):
+C1) POST /v1/workspaces
+    body: { gitUrl: string, gitRef?: string }
+    returns: { id, status }
+    - Clone repo into workspace storage (local filesystem path per workspace)
+    - Persist workspace metadata (prefer sqlite/postgres if already present; otherwise simplest file-based JSON store, but persistence across restart is required)
+C2) GET /v1/workspaces
+    returns list of workspaces
+C3) GET /v1/workspaces/:id
+    returns workspace details including status and runner info
+C4) POST /v1/workspaces/:id/start
+    idempotent:
+      - if RUNNING/PROVISIONING return existing runner
+      - else provision runner via runner-gateway
+C5) POST /v1/workspaces/:id/stop
+    idempotent
+C6) POST /v1/workspaces/:id/exec
+    body: { cmd: string, timeoutSec?: number }
+    - routes execution to runner-gateway for that workspace
+    - returns { execId, startedAt }
+C7) Streaming:
+    Provide SSE or WebSocket endpoint that UI can consume:
+      - GET /v1/workspaces/:id/exec/:execId/stream (SSE preferred)
+    API can proxy runner-gateway stream.
+
+Runner-gateway must support:
+- exec requests scoped to a workspace path/container and emit stdout/stderr streaming.
+- one exec at a time per workspace (queue or reject overlapping).
+- deny risky commands by default: curl/wget/ssh/scp/sudo/docker/kubectl, etc.
+- enforce timeout.
+
+TASK D — FILE READ + PATCH APPLY (safe)
+In apps/api implement:
+D1) POST /v1/repo/read { workspaceId, path } -> { content }
+D2) POST /v1/repo/apply-patch { workspaceId, diff } -> { patchApplied, changedFiles, gitStatus }
+Validation:
+- Reject absolute paths and any path with ..
+- Reject edits to .env*, .git/**, node_modules/**, .next/**, .local/**, .config/**
+- Limit diff size (20KB) and max files (20)
+Apply using git apply in the workspace directory.
+Return meaningful errors for patch conflicts.
+
+TASK E — VERIFY PIPELINE (basic but real)
+Implement:
+E1) packages/profiles defines a default profile (or just hardcode a default for MVP) with:
+    installCmd, lintCmd, typecheckCmd, testCmd, (optional) devCmd + healthPath
+E2) POST /v1/verify/run { workspaceId, profileId? } runs steps in order:
+    install -> lint -> typecheck -> test
+Return JSON:
+  { ok: boolean, steps: [{name, ok, exitCode, durationMs, topErrors, tail}] }
+Show first meaningful errors and last output tail.
+
+TASK F — WEB UI WIRING
+In apps/web:
+F1) Ensure UI uses a typed client in src/lib/api.ts.
+F2) On load: fetch GET /v1/workspaces and render list.
+F3) Workspace page/panels:
+    - Create workspace form (gitUrl)
+    - Buttons: Start / Stop / Verify / Run Command / Apply Patch
+    - Terminal panel consumes stream endpoint and shows live output + exit code.
+    - Editor panel reads file + applies patch
+If direct browser->localhost API calls fail on Replit, implement Next.js route handlers under apps/web/src/app/api/[...path]/route.ts to proxy requests to API, and set NEXT_PUBLIC_API_URL to "" (same origin), so the frontend uses /api/...
+F4) Confirm the GUI loads and all buttons actually function against backend.
+
+DELIVERABLES:
+- "pnpm dev" from root starts API(5000), runner-gateway(5001), web(3001) without collisions.
+- /healthz works for API and runner-gateway.
+- From GUI I can create a workspace from a GitHub repo URL, start it, run a command and see output stream, edit/apply patch, and run Verify.
+- Update README or replit.md with exact run instructions and env vars.
+
+DO NOT STOP EARLY:
+- After implementing, run the stack and self-test with curl:
+  curl http://localhost:5000/healthz
+  curl http://localhost:5001/healthz
+  curl http://localhost:5000/v1/workspaces
+- Ensure the GUI actions do not 404 and return meaningful errors when they fail.

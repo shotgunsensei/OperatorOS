@@ -715,7 +715,7 @@ app.get<{ Params: { workspaceId: string } }>(
 
 serveUI(app);
 
-const port = parseInt(process.env.API_PORT ?? '5000', 10);
+const port = parseInt(process.env.PORT ?? '5001', 10);
 const host = '0.0.0.0';
 
 try {
