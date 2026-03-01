@@ -188,7 +188,11 @@ async function runVerifyWithFallbacks(workspaceId: string, commands: string[]): 
   return lastResult!;
 }
 
-app.get('/', async (_req, reply) => {
+app.get('/', async (req, reply) => {
+  const accept = req.headers.accept ?? '';
+  if (accept.includes('text/html')) {
+    return reply.redirect('/ui');
+  }
   return reply.send({
     name: 'OperatorOS API',
     version: '0.2.0',
