@@ -396,6 +396,62 @@ app.post<{ Params: { id: string }; Body: { diff: string } }>(
   },
 );
 
+app.get<{ Params: { id: string }; Querystring: { path?: string; depth?: string } }>(
+  '/v1/workspaces/:id/tree',
+  async (req, reply) => {
+    const { id } = req.params;
+    const subPath = req.query.path ?? '.';
+    const depth = Math.min(parseInt(req.query.depth ?? '2', 10), 5);
+
+    if (subPath.includes('..') || subPath.startsWith('/')) {
+      return reply.status(400).send({ error: 'Invalid path: must be relative, no ..' });
+    }
+    if (!/^[a-zA-Z0-9._\-/]+$/.test(subPath) && subPath !== '.') {
+      return reply.status(400).send({ error: 'Invalid path characters' });
+    }
+
+    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
+    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+
+    try {
+      const safePath = subPath.replace(/'/g, "'\\''");
+      const result = await localExec(id, `cd /workspace && find '${safePath}' -maxdepth ${depth} -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/.next/*' -printf '%y %p\\n' | head -500 | sort -k2`, 10);
+      const entries = result.stdout.split('\n').filter(Boolean).map((line) => {
+        const typeChar = line.charAt(0);
+        const path = line.substring(2);
+        return { path, type: typeChar === 'd' ? 'dir' as const : 'file' as const };
+      }).filter((e) => e.path !== subPath && e.path !== '.');
+      return reply.send({ entries });
+    } catch (err) {
+      return reply.status(500).send({ error: 'Tree failed' });
+    }
+  },
+);
+
+app.post<{ Params: { id: string }; Body: { path: string } }>(
+  '/v1/workspaces/:id/read-file',
+  async (req, reply) => {
+    const { id } = req.params;
+    const { path: filePath } = req.body;
+    if (!filePath) return reply.status(400).send({ error: 'path is required' });
+    if (filePath.includes('..') || filePath.startsWith('/')) {
+      return reply.status(400).send({ error: 'Invalid path' });
+    }
+    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
+    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+
+    try {
+      const result = await localExec(id, `cd /workspace && cat ${JSON.stringify(filePath)}`, 10);
+      if (result.exitCode !== 0) {
+        return reply.status(404).send({ error: 'File not found or unreadable', stderr: result.stderr });
+      }
+      return reply.send({ path: filePath, content: result.stdout });
+    } catch (err) {
+      return reply.status(500).send({ error: 'Read failed' });
+    }
+  },
+);
+
 app.post<{ Params: { id: string } }>(
   '/v1/workspaces/:id/git-status',
   async (req, reply) => {

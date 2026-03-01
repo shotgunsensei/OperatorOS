@@ -8,8 +8,8 @@ pnpm monorepo:
 
 ```
 apps/
-  api/              - Fastify control plane API (port 5000, Postgres-backed, serves web UI)
-  web/              - Next.js standalone UI (optional, not used in workflow)
+  api/              - Fastify control plane API (port 5001, Postgres-backed, serves legacy web UI at /ui)
+  web/              - Next.js GUI (port 5000, 4-panel layout: workspace, file explorer, editor, terminal/preview)
   runner-gateway/   - Runner execution providers (local, Docker, K8s) + safety module
 packages/
   sdk/              - Shared TypeScript types, patch validation helpers
@@ -24,10 +24,13 @@ infra/
 
 ## Running
 
-The primary workflow runs `tsx apps/api/src/index.ts` on port 5000.
-The API serves both the REST endpoints and the web UI at `/ui`.
+The workflow runs both services:
+- `API_PORT=5001 tsx apps/api/src/index.ts` (API on port 5001)
+- `cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:5001 npx next dev -p 5000` (GUI on port 5000, webview)
 
-### API Endpoints (apps/api)
+The Next.js app proxies API calls via rewrites: `/api/*` -> `localhost:5001/v1/*`
+
+### API Endpoints (apps/api on port 5001)
 - `GET /` - API info (includes runnerMode)
 - `GET /healthz` - Health check
 - `GET /readyz` - Readiness probe
@@ -38,6 +41,8 @@ The API serves both the REST endpoints and the web UI at `/ui`.
 - `POST /v1/workspaces/:id/start` - Start runner
 - `POST /v1/workspaces/:id/stop` - Stop runner
 - `POST /v1/workspaces/:id/exec` - Exec command `{ cmd, timeoutSec? }`
+- `GET /v1/workspaces/:id/tree` - File tree (query: path, depth; validated against traversal)
+- `POST /v1/workspaces/:id/read-file` - Read file `{ path }` (validated against traversal)
 - `POST /v1/workspaces/:id/apply-patch` - Apply unified diff `{ diff }`
 - `POST /v1/workspaces/:id/git-status` - Git status porcelain
 - `POST /v1/workspaces/:id/create-branch` - Create branch `{ name }`
@@ -50,10 +55,26 @@ The API serves both the REST endpoints and the web UI at `/ui`.
 - `GET /v1/tasks/:taskId/traces` - Tool traces
 - `GET /v1/tasks` - List all tasks
 
-### Web UI Routes
+### Web GUI (apps/web on port 5000)
+4-panel layout:
+- Left sidebar: WorkspacePanel (list, create, start/stop)
+- Top-left: FileExplorer (tree navigation)
+- Top-right: Editor (file viewer + apply patch)
+- Bottom (tabs): TerminalStream (exec commands) / PreviewPanel (iframe for dev server)
+
+Components:
+- `apps/web/src/app/page.tsx` - Main 4-panel layout
+- `apps/web/src/lib/api.ts` - Typed API client with proxy support
+- `apps/web/src/components/WorkspacePanel.tsx` - Workspace CRUD sidebar
+- `apps/web/src/components/FileExplorer.tsx` - File tree browser
+- `apps/web/src/components/Editor.tsx` - File viewer + patch application
+- `apps/web/src/components/TerminalStream.tsx` - Command execution terminal
+- `apps/web/src/components/PreviewPanel.tsx` - Dev server preview iframe
+
+### Legacy Web UI Routes (served by API)
 - `/ui` - Workspace list + create form
-- `/ui/workspace/:id` - Workspace detail (terminal, exec, patch, git, verify, tasks)
-- `/ui/task/:taskId` - Task detail (results, timeline, traces)
+- `/ui/workspace/:id` - Workspace detail
+- `/ui/task/:taskId` - Task detail
 - `/ui/tasks` - All tasks
 - `/ui/profiles` - Profile browser
 
@@ -79,7 +100,7 @@ Set `RUNNER_MODE` env var:
 
 ## Architecture
 
-The API (apps/api) directly imports provisioner and safety modules from apps/runner-gateway (no HTTP proxy). The provisioner dispatches to the appropriate provider (local, docker, or k8s) based on RUNNER_MODE.
+The API (apps/api) directly imports provisioner and safety modules from apps/runner-gateway (no HTTP proxy). The provisioner dispatches to the appropriate provider (local, docker, or k8s) based on RUNNER_MODE. The Next.js GUI communicates with the API through Next.js rewrites proxy (/api/* -> localhost:5001/v1/*).
 
 ## Profiles
 
@@ -90,6 +111,7 @@ The API (apps/api) directly imports provisioner and safety modules from apps/run
 - Command denylist: curl, wget, ssh, scp, sudo, docker, kubectl (override: ALLOW_UNSAFE_COMMANDS=true)
 - Patch denylist: .env*, *.pem, *.key, node_modules/, dist/, build/, .git/
 - Max patch size: 20KB, max timeout: 300s, max output: 1MB
+- Tree/read-file endpoints validate paths against traversal (no .., no absolute paths)
 
 ## Dependencies
 
@@ -97,3 +119,4 @@ The API (apps/api) directly imports provisioner and safety modules from apps/run
 - drizzle-orm, pg - Database
 - pino-pretty - Logging
 - tsx - TypeScript execution
+- next, react, react-dom - Web GUI
