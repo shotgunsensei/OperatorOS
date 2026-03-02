@@ -213,6 +213,7 @@ app.get('/', async (req, reply) => {
       createBranch: 'POST /v1/workspaces/:id/create-branch',
       commit: 'POST /v1/workspaces/:id/commit',
       verify: 'POST /v1/workspaces/:id/verify',
+      verifyRun: 'POST /v1/verify/run',
       createTask: 'POST /v1/tasks',
       runTask: 'POST /v1/tasks/:taskId/run',
       getTask: 'GET /v1/tasks/:taskId',
@@ -553,6 +554,45 @@ app.post<{ Params: { id: string } }>(
       allPassed: results.every((r) => r.passed || r.skipped),
     };
     return reply.send(verifyResult);
+  },
+);
+
+app.post<{ Body: { workspaceId: string; profileId?: string } }>(
+  '/v1/verify/run',
+  async (req, reply) => {
+    const { workspaceId, profileId } = req.body;
+    if (!workspaceId) return reply.status(400).send({ error: 'workspaceId required' });
+
+    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
+    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+
+    const profile = getProfile(profileId ?? ws.profileId);
+    if (!profile) return reply.status(400).send({ error: `Unknown profile: ${profileId ?? ws.profileId}` });
+
+    const steps: Array<{ name: string; ok: boolean; exitCode: number; durationMs: number; tail: string }> = [];
+    for (const vc of profile.verifyCommands) {
+      try {
+        const result = await runVerifyWithFallbacks(workspaceId, vc.commands);
+        const tail = (result.stdout + '\n' + result.stderr).trim().split('\n').slice(-20).join('\n');
+        steps.push({
+          name: vc.name,
+          ok: result.exitCode === 0,
+          exitCode: result.exitCode,
+          durationMs: result.durationMs,
+          tail,
+        });
+      } catch {
+        steps.push({
+          name: vc.name,
+          ok: false,
+          exitCode: -1,
+          durationMs: 0,
+          tail: 'Runner unreachable',
+        });
+      }
+    }
+
+    return reply.send({ ok: steps.every((s) => s.ok), steps });
   },
 );
 

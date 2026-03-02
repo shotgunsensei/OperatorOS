@@ -1,0 +1,116 @@
+We are finalizing OperatorOS MVP inside a pnpm workspace monorepo.
+
+Current state:
+- apps/api and apps/runner-gateway both bind to port 5000, causing EADDRINUSE.
+- apps/web runs Next.js on port 3001.
+- Root package.json dev script runs all three.
+- GUI loads but backend port collisions prevent full functionality.
+
+Your job is to finish the MVP cleanly and deterministically.
+
+PHASE 1 — FIX PORT ARCHITECTURE (NO COLLISIONS)
+
+1) In apps/api/src/index.ts:
+   - Replace any hardcoded port (5000) with:
+     const port = Number(process.env.PORT ?? 5000);
+     await app.listen({ host: "0.0.0.0", port });
+
+2) In apps/runner-gateway/src/index.ts:
+   - Replace any hardcoded port (5000) with:
+     const port = Number(process.env.PORT ?? 5001);
+     await app.listen({ host: "0.0.0.0", port });
+
+3) Update root package.json dev script to use a Node-based orchestrator:
+
+   Create scripts/dev.mjs that:
+   - spawns 3 child processes:
+     API with PORT=5000
+     Runner with PORT=5001
+     Web (no custom port, already 3001)
+   - streams stdout/stderr clearly prefixed
+   - exits if any child exits with error
+
+   Then set root:
+   "dev": "node scripts/dev.mjs"
+
+4) Update .replit so Run button executes:
+   run = "pnpm dev"
+
+PHASE 2 — SERVICE WIRING
+
+5) In apps/api:
+   - Add RUNNER_GATEWAY_URL env var default:
+     const RUNNER_URL = process.env.RUNNER_GATEWAY_URL ?? "http://127.0.0.1:5001";
+   - Ensure all runner calls use this URL.
+
+6) Add GET /healthz in both api and runner-gateway returning { ok: true }.
+
+PHASE 3 — ENSURE MVP ENDPOINTS WORK
+
+Confirm or implement:
+
+API:
+- POST /v1/workspaces
+- GET /v1/workspaces
+- GET /v1/workspaces/:id
+- POST /v1/workspaces/:id/start (idempotent)
+- POST /v1/workspaces/:id/stop (idempotent)
+- POST /v1/workspaces/:id/exec
+- Streaming endpoint (SSE preferred)
+
+Runner:
+- POST /exec
+- SSE or WebSocket streaming
+- Single exec per workspace
+- Timeout enforcement
+- Basic denylist (curl, wget, ssh, docker, kubectl, etc.)
+
+PHASE 4 — WEB PROXY (REPLIT SAFE)
+
+If browser cannot access localhost:5000 directly,
+create a Next.js proxy route:
+
+apps/web/src/app/api/[...path]/route.ts
+
+Proxy requests to:
+http://127.0.0.1:5000
+
+Then set:
+NEXT_PUBLIC_API_URL=""
+
+Frontend should call relative /api/...
+
+PHASE 5 — VERIFY PIPELINE (MINIMAL)
+
+Implement:
+POST /v1/verify/run
+
+Runs:
+- install (if package.json present)
+- lint (if available)
+- typecheck
+- test
+
+Return structured JSON:
+{
+  ok,
+  steps: [{ name, ok, exitCode, durationMs, tail }]
+}
+
+PHASE 6 — SELF TEST
+
+After implementing:
+- Start stack
+- Confirm:
+  curl http://localhost:5000/healthz
+  curl http://localhost:5001/healthz
+- Confirm GUI can:
+  create workspace
+  start runner
+  exec command
+  stream output
+  run verify
+
+Do not stop early.
+Fix errors if startup fails.
+Deliver working dev environment.
