@@ -33,6 +33,7 @@ export const tasks = pgTable('tasks', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar('workspace_id', { length: 36 }).notNull().references(() => workspaces.id),
   title: text('title').notNull(),
+  goal: text('goal'),
   status: text('status', {
     enum: ['pending', 'running', 'succeeded', 'failed'],
   }).notNull().default('pending'),

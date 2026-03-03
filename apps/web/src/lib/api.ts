@@ -113,6 +113,50 @@ export const api = {
     ),
 };
 
+export interface AgentTask {
+  taskId: string;
+  id: string;
+  workspaceId: string;
+  title: string;
+  goal?: string;
+  status: string;
+  resultSummary?: string;
+  createdAt: string;
+  startedAt?: string;
+  finishedAt?: string;
+}
+
+export interface AgentEventData {
+  type: string;
+  payload: Record<string, unknown>;
+  ts?: string;
+}
+
+export const agentApi = {
+  createTask: (workspaceId: string, goal: string) =>
+    request<AgentTask>('/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ workspaceId, goal }),
+    }),
+
+  runTask: (taskId: string) =>
+    request<{ status: string; taskId: string }>(`/tasks/${taskId}/run`, { method: 'POST' }),
+
+  getTask: (taskId: string) =>
+    request<AgentTask>(`/tasks/${taskId}`),
+
+  getTaskEvents: (taskId: string) =>
+    request<{ events: AgentEventData[]; total: number }>(`/tasks/${taskId}/events`),
+
+  listTasks: (workspaceId: string) =>
+    request<{ tasks: AgentTask[]; total: number }>(`/tasks?workspaceId=${workspaceId}`),
+
+  streamEvents: (taskId: string): EventSource => {
+    const base = getApiBase();
+    return new EventSource(`${base}/tasks/${taskId}/events/stream`);
+  },
+};
+
 export function wsStreamUrl(workspaceId: string): string {
   if (typeof window !== 'undefined') {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

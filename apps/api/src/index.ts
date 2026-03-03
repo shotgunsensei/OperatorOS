@@ -23,6 +23,8 @@ import { isCommandAllowed, clampTimeout, truncateOutput } from '../../../apps/ru
 import { db } from './db.js';
 import { workspaces, runners, tasks, taskEvents, toolTraces } from './schema.js';
 import { serveUI } from './ui.js';
+import { runAgentLoop } from './agent.js';
+import type { AgentEvent } from './agent.js';
 
 const startTime = Date.now();
 
@@ -67,6 +69,7 @@ async function ensureTables() {
       id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
       workspace_id VARCHAR(36) NOT NULL REFERENCES workspaces(id),
       title TEXT NOT NULL,
+      goal TEXT,
       status TEXT NOT NULL DEFAULT 'pending',
       required_checks JSONB,
       check_results JSONB,
@@ -596,27 +599,41 @@ app.post<{ Body: { workspaceId: string; profileId?: string } }>(
   },
 );
 
-app.post<{ Body: { workspaceId: string; title: string } }>(
+app.post<{ Body: { workspaceId: string; title?: string; goal?: string; profileId?: string } }>(
   '/v1/tasks',
   async (req, reply) => {
-    const { workspaceId, title } = req.body;
-    if (!workspaceId || !title) return reply.status(400).send({ error: 'workspaceId and title required' });
+    const { workspaceId, title, goal, profileId } = req.body;
+    if (!workspaceId) return reply.status(400).send({ error: 'workspaceId required' });
+    if (!goal && !title) return reply.status(400).send({ error: 'goal or title required' });
 
     const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
     if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
 
-    const plan = getVerifyPlan(ws.profileId);
+    const pid = profileId ?? ws.profileId;
+    const plan = getVerifyPlan(pid);
     const requiredChecks = plan.map((p) => p.name);
 
     const [task] = await db.insert(tasks).values({
       workspaceId,
-      title,
+      title: title ?? (goal ? `Agent: ${goal.slice(0, 80)}` : 'Untitled task'),
+      goal: goal ?? null,
       requiredChecks,
     }).returning();
 
-    return reply.status(201).send(task);
+    return reply.send({ taskId: task.id, ...task });
   },
 );
+
+const taskEventSubscribers = new Map<string, Set<(event: string) => void>>();
+
+function broadcastTaskEvent(taskId: string, eventData: Record<string, unknown>) {
+  const subs = taskEventSubscribers.get(taskId);
+  if (!subs) return;
+  const data = `data: ${JSON.stringify(eventData)}\n\n`;
+  for (const send of subs) {
+    try { send(data); } catch { /* ignore closed */ }
+  }
+}
 
 app.post<{ Params: { taskId: string } }>(
   '/v1/tasks/:taskId/run',
@@ -625,61 +642,150 @@ app.post<{ Params: { taskId: string } }>(
     const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
     if (!task) return reply.status(404).send({ error: 'Task not found' });
 
+    if (task.status === 'running') return reply.status(409).send({ error: 'Task already running' });
+
     const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, task.workspaceId));
     if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
 
     await db.update(tasks).set({ status: 'running', startedAt: new Date() }).where(eq(tasks.id, taskId));
-    await addTaskEvent(taskId, 'PLAN', { message: 'Starting verification task', checks: task.requiredChecks });
 
     reply.send({ status: 'running', taskId });
 
-    (async () => {
-      try {
-        const branchName = `task/${taskId}`;
-        const branchResult = await localExec(ws.id, `cd /workspace && git checkout -b '${branchName}' 2>/dev/null || git checkout '${branchName}'`, 10);
-        await addTaskEvent(taskId, 'COMMAND', { tool: 'create-branch', branch: branchName, exitCode: branchResult.exitCode });
+    if (task.goal) {
+      (async () => {
+        try {
+          const branchName = `agent/${taskId.slice(0, 8)}`;
+          await localExec(ws.id, `cd /workspace && git checkout -b '${branchName}' 2>/dev/null || git checkout '${branchName}'`, 10);
+          await addTaskEvent(taskId, 'PLAN', { message: `Agent starting: ${task.goal}`, branch: branchName });
+          broadcastTaskEvent(taskId, { type: 'PLAN', payload: { message: `Agent starting: ${task.goal}` } });
 
-        const profile = getProfile(ws.profileId);
-        if (!profile) throw new Error(`Unknown profile: ${ws.profileId}`);
+          const profileId = ws.profileId;
 
-        const checkResults: Record<string, { passed: boolean; output: string }> = {};
+          const executeTool = async (name: string, args: Record<string, unknown>) => {
+            const start = Date.now();
+            let result = { success: false, output: '', changedFiles: [] as string[] };
 
-        for (const vc of profile.verifyCommands) {
-          await addTaskEvent(taskId, 'VERIFY', { check: vc.name, label: vc.label, status: 'running' });
-          const start = Date.now();
-          const result = await runVerifyWithFallbacks(ws.id, vc.commands);
-          const durationMs = Date.now() - start;
+            try {
+              if (name === 'read_file') {
+                const filePath = String(args.path ?? '');
+                if (!filePath || filePath.includes('..') || filePath.startsWith('/') || /\.(env|pem|key)/.test(filePath) || filePath.includes('.git/')) {
+                  result = { success: false, output: 'Path blocked: unsafe or forbidden path', changedFiles: [] };
+                } else {
+                  const fileResult = await localExec(ws.id, `cat /workspace/${filePath}`, 15);
+                  result = { success: fileResult.exitCode === 0, output: fileResult.stdout || fileResult.stderr, changedFiles: [] };
+                }
+              } else if (name === 'apply_patch') {
+                const diff = String(args.diff ?? '');
+                if (diff.length > MAX_PATCH_SIZE) {
+                  result = { success: false, output: `Patch exceeds ${MAX_PATCH_SIZE / 1024}KB limit`, changedFiles: [] };
+                } else {
+                  const pathValidation = validatePatchPaths(diff);
+                  if (!pathValidation.valid) {
+                    result = { success: false, output: `Patch path blocked: ${pathValidation.reason}`, changedFiles: [] };
+                  } else {
+                    const patchResult = await localExec(ws.id, `cd /workspace && git apply --stat -`, 30, diff);
+                    const applyResult = await localExec(ws.id, `cd /workspace && git apply -`, 30, diff);
+                    const changedFiles = patchResult.stdout.split('\n').filter(Boolean).map((l: string) => l.trim().split('|')[0]?.trim()).filter(Boolean);
+                    result = { success: applyResult.exitCode === 0, output: applyResult.exitCode === 0 ? `Patch applied: ${changedFiles.join(', ')}` : applyResult.stderr, changedFiles };
+                  }
+                }
+              } else if (name === 'run_verify') {
+                const profile = getProfile(profileId);
+                if (!profile) {
+                  result = { success: false, output: `Unknown profile: ${profileId}`, changedFiles: [] };
+                } else {
+                  const steps: Array<{ name: string; ok: boolean; exitCode: number; tail: string }> = [];
+                  for (const vc of profile.verifyCommands) {
+                    const r = await runVerifyWithFallbacks(ws.id, vc.commands);
+                    const tail = (r.stdout + '\n' + r.stderr).trim().split('\n').slice(-15).join('\n');
+                    steps.push({ name: vc.name, ok: r.exitCode === 0, exitCode: r.exitCode, tail });
+                  }
+                  const allOk = steps.every((s) => s.ok);
+                  result = { success: true, output: JSON.stringify({ ok: allOk, steps }), changedFiles: [] };
+                }
+              } else if (name === 'exec') {
+                const cmd = String(args.cmd ?? '');
+                const execResult = await localExec(ws.id, `cd /workspace && ${cmd}`, 60);
+                result = { success: execResult.exitCode === 0, output: (execResult.stdout + '\n' + execResult.stderr).trim(), changedFiles: [] };
+              } else {
+                result = { success: false, output: `Unknown tool: ${name}`, changedFiles: [] };
+              }
+            } catch (err) {
+              result = { success: false, output: err instanceof Error ? err.message : 'Tool error', changedFiles: [] };
+            }
 
-          const passed = result.exitCode === 0;
-          checkResults[vc.name] = { passed, output: (result.stdout + '\n' + result.stderr).trim() };
+            const durationMs = Date.now() - start;
+            await addToolTrace(taskId, name, args, { success: result.success, output: result.output.slice(0, 500) }, result.success, durationMs);
+            return result;
+          };
 
-          await addToolTrace(taskId, `verify:${vc.name}`, { commands: vc.commands }, { exitCode: result.exitCode, stdout: result.stdout.slice(0, 500), stderr: result.stderr.slice(0, 500) }, passed, durationMs);
-          await addTaskEvent(taskId, 'VERIFY', { check: vc.name, passed, durationMs });
+          const onEvent = async (event: AgentEvent) => {
+            await addTaskEvent(taskId, event.type, event.payload);
+            broadcastTaskEvent(taskId, { type: event.type, payload: event.payload, ts: new Date().toISOString() });
+          };
+
+          const agentResult = await runAgentLoop(task.goal, profileId, {}, onEvent, executeTool);
+
+          await db.update(tasks).set({
+            status: agentResult.success ? 'succeeded' : 'failed',
+            resultSummary: agentResult.success
+              ? `Agent fixed issues in ${agentResult.iterations} iterations. Changed: ${agentResult.changedFiles.join(', ') || 'none'}`
+              : `Agent exhausted after ${agentResult.iterations} iterations (${agentResult.totalTokens} tokens)`,
+            finishedAt: new Date(),
+          }).where(eq(tasks.id, taskId));
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : 'Unknown error';
+          await db.update(tasks).set({ status: 'failed', resultSummary: `Error: ${errMsg}`, finishedAt: new Date() }).where(eq(tasks.id, taskId));
+          await addTaskEvent(taskId, 'ERROR', { error: errMsg });
+          broadcastTaskEvent(taskId, { type: 'ERROR', payload: { error: errMsg } });
         }
+      })();
+    } else {
+      await addTaskEvent(taskId, 'PLAN', { message: 'Starting verification task', checks: task.requiredChecks });
+      (async () => {
+        try {
+          const branchName = `task/${taskId}`;
+          const branchResult = await localExec(ws.id, `cd /workspace && git checkout -b '${branchName}' 2>/dev/null || git checkout '${branchName}'`, 10);
+          await addTaskEvent(taskId, 'COMMAND', { tool: 'create-branch', branch: branchName, exitCode: branchResult.exitCode });
 
-        const allPassed = Object.values(checkResults).every((r) => r.passed);
-        const summary = allPassed
-          ? `All ${Object.keys(checkResults).length} checks passed`
-          : `${Object.values(checkResults).filter((r) => !r.passed).length} check(s) failed`;
+          const profile = getProfile(ws.profileId);
+          if (!profile) throw new Error(`Unknown profile: ${ws.profileId}`);
 
-        await db.update(tasks).set({
-          status: allPassed ? 'succeeded' : 'failed',
-          checkResults,
-          resultSummary: summary,
-          finishedAt: new Date(),
-        }).where(eq(tasks.id, taskId));
+          const checkResults: Record<string, { passed: boolean; output: string }> = {};
 
-        await addTaskEvent(taskId, 'DONE', { allPassed, summary });
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : 'Unknown error';
-        await db.update(tasks).set({
-          status: 'failed',
-          resultSummary: `Error: ${errMsg}`,
-          finishedAt: new Date(),
-        }).where(eq(tasks.id, taskId));
-        await addTaskEvent(taskId, 'ERROR', { error: errMsg });
-      }
-    })();
+          for (const vc of profile.verifyCommands) {
+            await addTaskEvent(taskId, 'VERIFY', { check: vc.name, label: vc.label, status: 'running' });
+            const start = Date.now();
+            const result = await runVerifyWithFallbacks(ws.id, vc.commands);
+            const durationMs = Date.now() - start;
+
+            const passed = result.exitCode === 0;
+            checkResults[vc.name] = { passed, output: (result.stdout + '\n' + result.stderr).trim() };
+
+            await addToolTrace(taskId, `verify:${vc.name}`, { commands: vc.commands }, { exitCode: result.exitCode, stdout: result.stdout.slice(0, 500), stderr: result.stderr.slice(0, 500) }, passed, durationMs);
+            await addTaskEvent(taskId, 'VERIFY', { check: vc.name, passed, durationMs });
+          }
+
+          const allPassed = Object.values(checkResults).every((r) => r.passed);
+          const summary = allPassed
+            ? `All ${Object.keys(checkResults).length} checks passed`
+            : `${Object.values(checkResults).filter((r) => !r.passed).length} check(s) failed`;
+
+          await db.update(tasks).set({
+            status: allPassed ? 'succeeded' : 'failed',
+            checkResults,
+            resultSummary: summary,
+            finishedAt: new Date(),
+          }).where(eq(tasks.id, taskId));
+
+          await addTaskEvent(taskId, 'DONE', { allPassed, summary });
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : 'Unknown error';
+          await db.update(tasks).set({ status: 'failed', resultSummary: `Error: ${errMsg}`, finishedAt: new Date() }).where(eq(tasks.id, taskId));
+          await addTaskEvent(taskId, 'ERROR', { error: errMsg });
+        }
+      })();
+    }
   },
 );
 
@@ -699,6 +805,67 @@ app.get<{ Params: { taskId: string } }>(
     const { taskId } = req.params;
     const events = await db.select().from(taskEvents).where(eq(taskEvents.taskId, taskId)).orderBy(taskEvents.ts);
     return reply.send({ events, total: events.length });
+  },
+);
+
+app.get<{ Params: { taskId: string } }>(
+  '/v1/tasks/:taskId/events/stream',
+  async (req, reply) => {
+    const { taskId } = req.params;
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+    if (!task) return reply.status(404).send({ error: 'Task not found' });
+
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    });
+
+    const existingEvents = await db.select().from(taskEvents).where(eq(taskEvents.taskId, taskId)).orderBy(taskEvents.ts);
+    for (const evt of existingEvents) {
+      reply.raw.write(`data: ${JSON.stringify({ type: evt.type, payload: evt.payload, ts: evt.ts })}\n\n`);
+    }
+
+    if (task.status === 'succeeded' || task.status === 'failed') {
+      reply.raw.write(`data: ${JSON.stringify({ type: 'STREAM_END', payload: { status: task.status, summary: task.resultSummary } })}\n\n`);
+      reply.raw.end();
+      return;
+    }
+
+    if (!taskEventSubscribers.has(taskId)) {
+      taskEventSubscribers.set(taskId, new Set());
+    }
+
+    const send = (data: string) => {
+      reply.raw.write(data);
+    };
+    taskEventSubscribers.get(taskId)!.add(send);
+
+    const cleanup = () => {
+      const subs = taskEventSubscribers.get(taskId);
+      if (subs) {
+        subs.delete(send);
+        if (subs.size === 0) taskEventSubscribers.delete(taskId);
+      }
+    };
+
+    req.raw.on('close', cleanup);
+    req.raw.on('error', cleanup);
+
+    const checkInterval = setInterval(async () => {
+      try {
+        const [current] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+        if (current && (current.status === 'succeeded' || current.status === 'failed')) {
+          reply.raw.write(`data: ${JSON.stringify({ type: 'STREAM_END', payload: { status: current.status, summary: current.resultSummary } })}\n\n`);
+          clearInterval(checkInterval);
+          cleanup();
+          reply.raw.end();
+        }
+      } catch { /* ignore */ }
+    }, 3000);
+
+    req.raw.on('close', () => clearInterval(checkInterval));
   },
 );
 

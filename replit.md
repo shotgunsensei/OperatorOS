@@ -64,10 +64,12 @@ Only the API runs on port 5000 with its built-in UI at `/ui`. Browser visitors t
 - `POST /v1/workspaces/:id/create-branch` - Create branch `{ name }`
 - `POST /v1/workspaces/:id/commit` - Git commit `{ message }`
 - `POST /v1/workspaces/:id/verify` - Run verification pipeline
-- `POST /v1/tasks` - Create task `{ workspaceId, title }`
-- `POST /v1/tasks/:taskId/run` - Run task (async)
+- `POST /v1/verify/run` - Run verify pipeline `{ workspaceId, profileId? }` -> `{ ok, steps[] }`
+- `POST /v1/tasks` - Create task `{ workspaceId, goal?, title?, profileId? }` -> `{ taskId }`
+- `POST /v1/tasks/:taskId/run` - Run task (async; uses AI agent if goal is set)
 - `GET /v1/tasks/:taskId` - Get task
-- `GET /v1/tasks/:taskId/events` - Task event timeline
+- `GET /v1/tasks/:taskId/events` - Task event timeline (JSON)
+- `GET /v1/tasks/:taskId/events/stream` - SSE stream of task events (real-time)
 - `GET /v1/tasks/:taskId/traces` - Tool traces
 - `GET /v1/tasks` - List all tasks
 
@@ -80,12 +82,13 @@ Only the API runs on port 5000 with its built-in UI at `/ui`. Browser visitors t
 
 Components:
 - `apps/web/src/app/page.tsx` - Main 4-panel layout
-- `apps/web/src/lib/api.ts` - Typed API client with proxy support
+- `apps/web/src/lib/api.ts` - Typed API client with proxy support (includes agentApi)
 - `apps/web/src/components/WorkspacePanel.tsx` - Workspace CRUD sidebar
 - `apps/web/src/components/FileExplorer.tsx` - File tree browser
 - `apps/web/src/components/Editor.tsx` - File viewer + patch application
 - `apps/web/src/components/TerminalStream.tsx` - Command execution terminal
 - `apps/web/src/components/PreviewPanel.tsx` - Dev server preview iframe
+- `apps/web/src/components/AgentPanel.tsx` - AI Agent: goal input, run agent, event timeline, past runs
 
 ### Legacy Web UI Routes (served by API)
 - `/ui` - Workspace list + create form
@@ -129,6 +132,18 @@ The API (apps/api) directly imports provisioner and safety modules from apps/run
 - Max patch size: 20KB, max timeout: 300s, max output: 1MB
 - Tree/read-file endpoints validate paths against traversal (no .., no absolute paths)
 
+## AI Agent
+
+The agent system (`apps/api/src/agent.ts`) implements a "Junior Developer Agent" that can fix issues in a workspace:
+
+- Uses OpenAI GPT-4o with function calling
+- Tools: read_file, apply_patch (unified diff), run_verify (pipeline), exec (safe commands only)
+- Budgets: maxIterations=12, maxPatchKB=20, maxTotalTokens=200,000
+- Agent loop: verify -> read errors -> propose patch -> apply -> re-verify -> repeat until green or budget exhausted
+- Events persisted to task_events table: LLM_THOUGHT_SUMMARY, TOOL_CALL, TOOL_RESULT, VERIFY_RESULT, PATCH_APPLIED, DONE, ERROR
+- SSE streaming at `/v1/tasks/:taskId/events/stream` for real-time UI updates
+- Security: paths validated (no .., no absolute, no .env/.pem/.key/.git), patches validated via validatePatchPaths, commands filtered via isCommandAllowed
+
 ## Environment Variables
 
 | Variable | Default | Description |
@@ -138,6 +153,7 @@ The API (apps/api) directly imports provisioner and safety modules from apps/run
 | DATABASE_URL | (from Replit) | PostgreSQL connection string |
 | NEXT_PUBLIC_API_URL | http://localhost:5001 | API URL for Next.js server-side + rewrites |
 | ALLOW_UNSAFE_COMMANDS | false | Override command denylist |
+| OPENAI_API_KEY | (secret) | OpenAI API key for AI Agent |
 
 ## Dependencies
 
@@ -146,3 +162,4 @@ The API (apps/api) directly imports provisioner and safety modules from apps/run
 - pino-pretty - Logging
 - tsx - TypeScript execution
 - next, react, react-dom - Web GUI
+- openai - OpenAI SDK for AI Agent
