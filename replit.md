@@ -9,7 +9,7 @@ pnpm monorepo:
 ```
 apps/
   api/              - Fastify control plane API (port 5001, Postgres-backed, serves legacy web UI at /ui)
-  web/              - Next.js GUI (port 5000, 4-panel layout: workspace, file explorer, editor, terminal/preview)
+  web/              - Next.js GUI (port 5000, 4-panel layout: workspace, file explorer, editor, terminal/preview/agent/publish)
   runner-gateway/   - Runner execution providers (local, Docker, K8s) + safety module (port 5002)
 packages/
   sdk/              - Shared TypeScript types, patch validation helpers
@@ -131,6 +131,23 @@ The API (apps/api) directly imports provisioner and safety modules from apps/run
 - Patch denylist: .env*, *.pem, *.key, node_modules/, dist/, build/, .git/
 - Max patch size: 20KB, max timeout: 300s, max output: 1MB
 - Tree/read-file endpoints validate paths against traversal (no .., no absolute paths)
+
+## Publish Assistant
+
+The Publish Assistant (`apps/api/src/publish/`) helps deploy workspaces to production:
+
+- **Analyze** (`POST /v1/publish/analyze`): Detects framework, language, existing configs, risks, recommendations
+- **Plan** (`POST /v1/publish/plan`): Generates deployment plan with steps, env vars, DNS/store guides
+- **Artifacts** (`POST /v1/publish/artifacts`): Generates deployment config files as unified diffs (Dockerfile, vercel.json, render.yaml, fly.toml)
+- **Proof** (`POST /v1/publish/proof`): Runs install+build+test to validate deployment readiness
+- **Explain** (`POST /v1/publish/explain`): Optional LLM-powered plain-English explanation (requires OPENAI_API_KEY)
+- **Runs** (`GET /v1/publish/runs/:workspaceId`): Lists past publish analysis runs
+
+DB table: `publish_runs` (workspaceId, status, detectedJson, planJson, proofJson)
+UI: PublishPanel component as 4th tab in bottom panel (Terminal | Agent | Publish | Preview)
+
+Supported frameworks: nextjs, react-vite, fastapi, express, go, dotnet, expo
+Supported platforms: vercel, netlify, render, railway, fly, docker-vps, expo-eas
 
 ## AI Agent
 

@@ -1,0 +1,178 @@
+You are implementing a new feature: **Publish Assistant** for OperatorOS.
+
+Repo context (important):
+- Monorepo pnpm workspace under /apps
+- apps/api is Fastify and currently imports runner-gateway provisioner/safety modules directly (no HTTP RUNNER_GATEWAY_URL).
+- apps/web is Next.js UI with panels for workspace, editor, terminal, preview.
+- Workspaces already support: create/list/get, start/stop, exec (with streaming), repo read, apply patch, verify.
+- There is already an agent loop file in apps/api/src/agent.ts (do not break it).
+
+Goal:
+Add a **Publish Assistant** that helps end-users go from “working workspace” → “deployed to a domain or app store,” with deterministic steps, generated deployment artifacts, and a guided UI.
+
+Core requirements:
+1) Detect project type and deployment targets from a workspace repo.
+2) Generate a recommended deployment plan (platform + steps) with minimal user friction.
+3) Optionally generate/patch required config files (vercel.json, Dockerfile, render.yaml, etc.) using the existing patch-only workflow and safe path validation.
+4) Provide a “Proof” step: run build/verify and return output that can be shown to the user.
+5) Provide UI panel: “Publish Assistant” with an interactive wizard and copyable steps.
+
+========== PHASE 1: Publish Detection + Plan Engine (API) ==========
+
+Create a new module in apps/api:
+- apps/api/src/publish/index.ts (or publish.ts)
+- Export functions: analyzeWorkspace(), generatePlan(), generateArtifacts()
+
+Add API endpoints:
+A) POST /v1/publish/analyze
+   body: { workspaceId: string }
+   returns:
+   {
+     workspaceId,
+     detected: {
+       framework: "nextjs"|"react-vite"|"fastapi"|"express"|"go"|"dotnet"|"expo"|"flutter"|"unknown",
+       language: "ts"|"js"|"py"|"go"|"cs"|"dart"|"unknown",
+       hasDockerfile: boolean,
+       hasVercel: boolean,
+       hasRender: boolean,
+       hasRailway: boolean,
+       hasFly: boolean,
+       hasSupabase: boolean,
+       hasStripe: boolean,
+       scripts: { install?: string, build?: string, start?: string, test?: string },
+       portsHint?: number,
+     },
+     risks: [{ code, message, fixable: boolean }],
+     recommendations: [{ target: string, reason: string }]
+   }
+
+Detection logic (must be deterministic and file-based):
+- Read package.json, next.config.*, vite.config.*, server entrypoints, requirements.txt, pyproject.toml, go.mod, *.csproj, app.json (expo), android/ios folders.
+- Infer scripts from package.json.
+- Identify if it’s frontend-only or fullstack.
+- Identify if it needs a DB (presence of prisma/drizzle/migrations) and whether env vars are required.
+
+B) POST /v1/publish/plan
+   body: { workspaceId: string, intent: "web-domain"|"mobile-store"|"pwa", preferences?: { platform?: string } }
+   returns:
+   {
+     ok: true,
+     planId,
+     selectedTarget: {
+       platform: "vercel"|"netlify"|"render"|"railway"|"fly"|"docker-vps"|"expo-eas"|"play-store"|"app-store",
+       type: "web"|"mobile",
+     },
+     steps: [
+       { id, title, description, userAction: boolean, canAutoFix: boolean, autoFixAction?: "generateArtifacts"|"applyPatch"|"runCommand", verification?: "build"|"verify"|"healthcheck" }
+     ],
+     requiredEnvVars: [{ key, description, example? }],
+     dnsGuide?: { records: [{ type: "A"|"CNAME"|"TXT", name, value }], notes: string[] },
+     storeGuide?: { tracks: string[], assets: string[] },
+   }
+
+Plan rules:
+- Next.js: default recommendation = Vercel, alternate = Render/Railway/Docker.
+- React/Vite static: Netlify/Vercel.
+- API only: Render/Railway/Fly/Docker.
+- Expo: EAS + Play/App Store.
+- Always include a “Proof” step that runs: install + build + verify/test.
+- Always include a final “Publish checklist” (domain / store steps).
+
+C) POST /v1/publish/artifacts
+   body: { workspaceId: string, platform: string }
+   returns:
+   {
+     ok: true,
+     proposedChanges: {
+       files: [{ path, purpose }],
+       diff: string,
+     },
+     notes: string[]
+   }
+
+Artifacts generation MUST:
+- Only propose patch changes (return unified diff), do NOT directly write files.
+- Use existing validatePatchPaths + MAX_PATCH_SIZE.
+- Default to minimal artifacts, e.g.:
+  - vercel.json for Next
+  - render.yaml / Dockerfile for backend or fullstack
+  - Procfile (optional) for Heroku-like
+  - .env.example updates (NEVER add secrets)
+  - README “Deploy” section injection
+
+D) POST /v1/publish/proof
+   body: { workspaceId: string, planId?: string }
+   returns:
+   {
+     ok: boolean,
+     build: { ok, tail, durationMs },
+     verify: { ok, steps:[{name, ok, tail}] },
+     nextActions: string[]
+   }
+
+Proof execution rules:
+- Use your existing exec + safety allowlist.
+- Commands should be inferred:
+  - Node: pnpm install && pnpm build (or npm) based on lockfile
+  - Python: pip install -r requirements.txt && pytest (if present)
+  - Go: go test ./... && go build ./...
+  - Dotnet: dotnet restore && dotnet test && dotnet publish
+- Clamp timeouts and return truncated logs.
+
+Persist publish runs:
+- Add a DB table publish_runs (workspaceId, createdAt, detectedJson, planJson, status)
+- Store only structured summaries + log tails (not huge logs).
+
+========== PHASE 2: Publish Assistant UI Wizard (apps/web) ==========
+
+Add a new UI section/panel: “Publish Assistant”.
+User flow:
+1) Select workspace
+2) Click “Analyze”
+3) Show detected framework + recommendations + risks
+4) Let user pick intent: Web Domain / Mobile Store / PWA
+5) Generate plan and render steps as a checklist
+6) Buttons:
+   - “Generate artifacts” -> calls /v1/publish/artifacts
+   - Show diff preview -> then user clicks “Apply Patch” using existing patch endpoint
+   - “Run Proof (build/verify)” -> calls /v1/publish/proof and shows streaming or progress
+7) Provide final “Deploy Steps” section with copy buttons:
+   - Vercel steps (import repo, set env vars, deploy)
+   - DNS steps (CNAME/A records)
+   - Store steps (EAS build, upload, screenshots list)
+
+Technical UI notes:
+- Create a client file: apps/web/src/lib/publish.ts with typed API calls.
+- Reuse existing toast/loading patterns.
+- Keep UI deterministic: show step statuses (pending/running/done/fail).
+
+========== PHASE 3: Minimal LLM “Explain + Customize” (Optional but high value) ==========
+
+If OPENAI_API_KEY exists, add an optional enhancement:
+- Endpoint: POST /v1/publish/explain
+  input: { workspaceId, planId }
+  output: { plainEnglishSummary, risksExplained, recommendedEnvVarsExplained }
+Rules:
+- LLM is advisory only; it must not generate or apply patches directly from this endpoint.
+- No secrets in prompts.
+- If key absent, UI hides “Explain” button.
+
+========== DELIVERABLES / ACCEPTANCE TESTS ==========
+
+After implementing:
+1) Run pnpm dev and ensure no port collisions.
+2) From UI:
+   - Open Publish Assistant
+   - Analyze a known Next.js repo workspace
+   - Generate plan for “web-domain”
+   - Generate artifacts and show diff
+   - Apply patch successfully
+   - Run Proof and get ok=true (or clear error)
+3) API tests via curl:
+   - POST /v1/publish/analyze
+   - POST /v1/publish/plan
+   - POST /v1/publish/artifacts
+   - POST /v1/publish/proof
+4) Update README with a section “Publish Assistant” that explains how users deploy.
+
+Do not stop early. Fix broken imports/types. Keep changes minimal and consistent with existing patterns in apps/api and apps/web.

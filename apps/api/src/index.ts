@@ -21,10 +21,12 @@ import {
 } from '../../../apps/runner-gateway/src/provisioner.js';
 import { isCommandAllowed, clampTimeout, truncateOutput } from '../../../apps/runner-gateway/src/safety.js';
 import { db } from './db.js';
-import { workspaces, runners, tasks, taskEvents, toolTraces } from './schema.js';
+import { workspaces, runners, tasks, taskEvents, toolTraces, publishRuns } from './schema.js';
 import { serveUI } from './ui.js';
 import { runAgentLoop } from './agent.js';
 import type { AgentEvent } from './agent.js';
+import { analyzeWorkspace, generatePlan, generateArtifacts, runProof } from './publish/index.js';
+import type { DetectionResult } from './publish/types.js';
 
 const startTime = Date.now();
 
@@ -110,6 +112,18 @@ async function ensureTables() {
       health_path TEXT,
       updated_at TIMESTAMP DEFAULT NOW() NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS publish_runs (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      workspace_id VARCHAR(36) NOT NULL REFERENCES workspaces(id),
+      status TEXT NOT NULL DEFAULT 'analyzing',
+      detected_json JSONB,
+      plan_json JSONB,
+      proof_json JSONB,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_publish_runs_workspace ON publish_runs(workspace_id);
   `);
 }
 
@@ -917,6 +931,210 @@ app.get<{ Params: { workspaceId: string } }>(
       }
       app.log.info({ workspaceId }, 'Stream subscriber disconnected');
     });
+  },
+);
+
+app.post<{ Body: { workspaceId: string } }>(
+  '/v1/publish/analyze',
+  async (req, reply) => {
+    const { workspaceId } = req.body;
+    if (!workspaceId) return reply.status(400).send({ error: 'workspaceId is required' });
+
+    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
+    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+
+    const exec = async (cmd: string, timeoutSec = 30) => {
+      const r = await localExec(workspaceId, cmd, timeoutSec);
+      return { exitCode: r.exitCode, stdout: r.stdout, stderr: r.stderr, durationMs: r.durationMs };
+    };
+
+    const detection = await analyzeWorkspace(workspaceId, exec);
+
+    const [run] = await db.insert(publishRuns).values({
+      workspaceId,
+      status: 'analyzing',
+      detectedJson: detection as any,
+    }).returning();
+
+    return reply.send(detection);
+  },
+);
+
+app.post<{ Body: { workspaceId: string; intent: 'web-domain' | 'mobile-store' | 'pwa'; preferences?: { platform?: string } } }>(
+  '/v1/publish/plan',
+  async (req, reply) => {
+    const { workspaceId, intent, preferences } = req.body;
+    if (!workspaceId || !intent) return reply.status(400).send({ error: 'workspaceId and intent are required' });
+
+    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
+    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+
+    const existingRuns = await db.select().from(publishRuns)
+      .where(eq(publishRuns.workspaceId, workspaceId))
+      .orderBy(desc(publishRuns.createdAt))
+      .limit(1);
+
+    if (!existingRuns.length || !existingRuns[0].detectedJson) {
+      return reply.status(400).send({ error: 'Run /v1/publish/analyze first' });
+    }
+
+    const detection = existingRuns[0].detectedJson as unknown as DetectionResult;
+    const plan = generatePlan(detection, intent, preferences);
+
+    await db.update(publishRuns)
+      .set({ status: 'planned', planJson: plan as any, updatedAt: new Date() })
+      .where(eq(publishRuns.id, existingRuns[0].id));
+
+    return reply.send(plan);
+  },
+);
+
+app.post<{ Body: { workspaceId: string; platform: string } }>(
+  '/v1/publish/artifacts',
+  async (req, reply) => {
+    const { workspaceId, platform } = req.body;
+    if (!workspaceId || !platform) return reply.status(400).send({ error: 'workspaceId and platform are required' });
+
+    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
+    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+
+    const existingRuns = await db.select().from(publishRuns)
+      .where(eq(publishRuns.workspaceId, workspaceId))
+      .orderBy(desc(publishRuns.createdAt))
+      .limit(1);
+
+    if (!existingRuns.length || !existingRuns[0].detectedJson) {
+      return reply.status(400).send({ error: 'Run /v1/publish/analyze first' });
+    }
+
+    const detection = existingRuns[0].detectedJson as unknown as DetectionResult;
+    const artifacts = generateArtifacts(detection, platform);
+
+    if (artifacts.proposedChanges.diff) {
+      if (Buffer.byteLength(artifacts.proposedChanges.diff) > MAX_PATCH_SIZE) {
+        return reply.status(400).send({ error: `Generated artifacts exceed max patch size of ${MAX_PATCH_SIZE} bytes` });
+      }
+      const pathCheck = validatePatchPaths(artifacts.proposedChanges.diff);
+      if (!pathCheck.valid) {
+        return reply.status(400).send({ error: 'Generated artifacts modify denied paths', deniedPaths: pathCheck.deniedPaths });
+      }
+    }
+
+    await db.update(publishRuns)
+      .set({ status: 'artifacts_generated', updatedAt: new Date() })
+      .where(eq(publishRuns.id, existingRuns[0].id));
+
+    return reply.send(artifacts);
+  },
+);
+
+app.post<{ Body: { workspaceId: string; planId?: string } }>(
+  '/v1/publish/proof',
+  async (req, reply) => {
+    const { workspaceId } = req.body;
+    if (!workspaceId) return reply.status(400).send({ error: 'workspaceId is required' });
+
+    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
+    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+
+    const existingRuns = await db.select().from(publishRuns)
+      .where(eq(publishRuns.workspaceId, workspaceId))
+      .orderBy(desc(publishRuns.createdAt))
+      .limit(1);
+
+    let detection: DetectionResult;
+    if (existingRuns.length && existingRuns[0].detectedJson) {
+      detection = existingRuns[0].detectedJson as unknown as DetectionResult;
+    } else {
+      const exec = async (cmd: string, timeoutSec = 30) => {
+        const r = await localExec(workspaceId, cmd, timeoutSec);
+        return { exitCode: r.exitCode, stdout: r.stdout, stderr: r.stderr, durationMs: r.durationMs };
+      };
+      detection = await analyzeWorkspace(workspaceId, exec);
+    }
+
+    const runId = existingRuns.length ? existingRuns[0].id : undefined;
+    if (runId) {
+      await db.update(publishRuns)
+        .set({ status: 'proof_running', updatedAt: new Date() })
+        .where(eq(publishRuns.id, runId));
+    }
+
+    const exec = async (cmd: string, timeoutSec = 30) => {
+      const r = await localExec(workspaceId, cmd, timeoutSec);
+      return { exitCode: r.exitCode, stdout: r.stdout, stderr: r.stderr, durationMs: r.durationMs };
+    };
+
+    const proof = await runProof(workspaceId, exec, detection);
+
+    if (runId) {
+      await db.update(publishRuns)
+        .set({ status: proof.ok ? 'proof_done' : 'failed', proofJson: proof as any, updatedAt: new Date() })
+        .where(eq(publishRuns.id, runId));
+    }
+
+    return reply.send(proof);
+  },
+);
+
+app.post<{ Body: { workspaceId: string; planId: string } }>(
+  '/v1/publish/explain',
+  async (req, reply) => {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) return reply.status(501).send({ error: 'OPENAI_API_KEY not configured' });
+
+    const { workspaceId, planId } = req.body;
+    if (!workspaceId) return reply.status(400).send({ error: 'workspaceId is required' });
+
+    const existingRuns = await db.select().from(publishRuns)
+      .where(eq(publishRuns.workspaceId, workspaceId))
+      .orderBy(desc(publishRuns.createdAt))
+      .limit(1);
+
+    if (!existingRuns.length) return reply.status(400).send({ error: 'No publish analysis found' });
+
+    const run = existingRuns[0];
+    const detection = run.detectedJson as unknown as DetectionResult;
+    const plan = run.planJson as any;
+
+    const { default: OpenAI } = await import('openai');
+    const openai = new OpenAI({ apiKey });
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a deployment advisor. Explain deployment plans in plain English. Be concise. Never mention secrets or API keys in your response.',
+        },
+        {
+          role: 'user',
+          content: `Explain this deployment plan for a ${detection.detected.framework} project:\n\nDetection: ${JSON.stringify(detection.detected, null, 2)}\nRisks: ${JSON.stringify(detection.risks)}\nPlan: ${JSON.stringify(plan, null, 2)}`,
+        },
+      ],
+      max_tokens: 800,
+    });
+
+    const text = response.choices[0]?.message?.content ?? 'No explanation generated';
+    const risks = detection.risks.map((r) => r.message);
+
+    return reply.send({
+      plainEnglishSummary: text,
+      risksExplained: risks,
+      recommendedEnvVarsExplained: plan?.requiredEnvVars?.map((e: any) => `${e.key}: ${e.description}`) ?? [],
+    });
+  },
+);
+
+app.get<{ Params: { workspaceId: string } }>(
+  '/v1/publish/runs/:workspaceId',
+  async (req, reply) => {
+    const { workspaceId } = req.params;
+    const runs = await db.select().from(publishRuns)
+      .where(eq(publishRuns.workspaceId, workspaceId))
+      .orderBy(desc(publishRuns.createdAt))
+      .limit(10);
+    return reply.send(runs);
   },
 );
 

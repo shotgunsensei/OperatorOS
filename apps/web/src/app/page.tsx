@@ -7,11 +7,12 @@ import Editor from '@/components/Editor';
 import TerminalStream from '@/components/TerminalStream';
 import PreviewPanel from '@/components/PreviewPanel';
 import AgentPanel from '@/components/AgentPanel';
+import PublishPanel from '@/components/PublishPanel';
 
 export default function Home() {
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [bottomTab, setBottomTab] = useState<'terminal' | 'preview' | 'agent'>('terminal');
+  const [bottomTab, setBottomTab] = useState<'terminal' | 'preview' | 'agent' | 'publish'>('terminal');
 
   return (
     <div data-testid="app-root" style={{ display: 'flex', height: 'calc(100vh - 48px)', background: '#010409', color: '#c9d1d9' }}>
@@ -32,7 +33,7 @@ export default function Home() {
 
           <div style={{ height: '40%', minHeight: 180, borderTop: '1px solid #21262d', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', borderBottom: '1px solid #21262d' }}>
-              {(['terminal', 'agent', 'preview'] as const).map((tab) => (
+              {(['terminal', 'agent', 'publish', 'preview'] as const).map((tab) => (
                 <button
                   key={tab}
                   data-testid={`tab-${tab}`}
@@ -48,13 +49,14 @@ export default function Home() {
                     fontWeight: 600,
                   }}
                 >
-                  {tab === 'agent' ? '🤖 Agent' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === 'agent' ? '🤖 Agent' : tab === 'publish' ? '🚀 Publish' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
             </div>
             <div style={{ flex: 1, minHeight: 0 }}>
               {bottomTab === 'terminal' && <TerminalStream workspaceId={workspaceId} />}
               {bottomTab === 'agent' && <AgentPanel workspaceId={workspaceId} />}
+              {bottomTab === 'publish' && <PublishPanel workspaceId={workspaceId} />}
               {bottomTab === 'preview' && <PreviewPanel workspaceId={workspaceId} />}
             </div>
           </div>

@@ -80,6 +80,23 @@ export const workspacePorts = pgTable('workspace_ports', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export const publishRuns = pgTable('publish_runs', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar('workspace_id', { length: 36 }).notNull().references(() => workspaces.id),
+  status: text('status', {
+    enum: ['analyzing', 'planned', 'artifacts_generated', 'proof_running', 'proof_done', 'failed'],
+  }).notNull().default('analyzing'),
+  detectedJson: jsonb('detected_json'),
+  planJson: jsonb('plan_json'),
+  proofJson: jsonb('proof_json'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_publish_runs_workspace').on(t.workspaceId),
+]);
+
+export type PublishRunRow = typeof publishRuns.$inferSelect;
+
 export type WorkspaceRow = typeof workspaces.$inferSelect;
 export type InsertWorkspace = typeof workspaces.$inferInsert;
 export type RunnerRow = typeof runners.$inferSelect;
