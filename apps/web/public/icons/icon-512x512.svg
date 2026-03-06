@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="77" fill="#0d1117"/>
+    <rect x="41" y="41" width="430" height="430" rx="51" fill="#161b22" stroke="#30363d" stroke-width="10"/>
+    <text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="143" fill="#58a6ff">OS</text>
+    <text x="50%" y="78%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-weight="400" font-size="41" fill="#8b949e">OperatorOS</text>
+  </svg>

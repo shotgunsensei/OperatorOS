@@ -13,6 +13,11 @@
     "typecheck": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web typecheck"
   },
   "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/cli": "^7.6.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.1",
     "@fastify/cors": "^11.2.0",
     "@fastify/websocket": "^11.2.0",
     "@hookform/resolvers": "^3.10.0",

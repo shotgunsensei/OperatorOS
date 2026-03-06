@@ -1,8 +1,26 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 
 export const metadata: Metadata = {
   title: 'OperatorOS',
   description: 'AI-native Cloud Development Environment — Powered by Shotgun Ninjas',
+  manifest: '/manifest.json',
+  icons: [
+    { rel: 'icon', url: '/favicon.svg', type: 'image/svg+xml' },
+    { rel: 'apple-touch-icon', url: '/icons/icon-192x192.svg' },
+  ],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'OperatorOS',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0d1117',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

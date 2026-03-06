@@ -9,3 +9,9 @@ dist/
 .DS_Store
 coverage/
 .turbo/
+apps/web/out/
+apps/web/android/app/build/
+apps/web/android/.gradle/
+apps/web/android/local.properties
+*.keystore
+*.jks

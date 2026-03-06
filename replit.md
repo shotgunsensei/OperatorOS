@@ -149,6 +149,19 @@ UI: PublishPanel component as 4th tab in bottom panel (Terminal | Agent | Publis
 Supported frameworks: nextjs, react-vite, fastapi, express, go, dotnet, expo
 Supported platforms: vercel, netlify, render, railway, fly, docker-vps, expo-eas
 
+## Mobile (Android / Capacitor)
+
+The web app is wrapped for Android using Capacitor:
+
+- Config: `apps/web/capacitor.config.ts` (app ID: `com.shotgunninjas.operatoros`)
+- Android project: `apps/web/android/`
+- Build script: `apps/web/scripts/build-android.sh`
+- Store guide: `apps/web/PLAY_STORE_GUIDE.md`
+- Static export: `MOBILE_BUILD=1` env var triggers Next.js `output: 'export'` to `apps/web/out/`
+- API routing: Mobile builds inject `window.__CAPACITOR_API_URL__` to point API calls to deployed server
+- Packages: @capacitor/core, @capacitor/cli, @capacitor/android, @capacitor/splash-screen, @capacitor/status-bar
+- Build flow: `pnpm build:android` → static export → cap sync → gradle build
+
 ## AI Agent
 
 The agent system (`apps/api/src/agent.ts`) implements a "Junior Developer Agent" that can fix issues in a workspace:

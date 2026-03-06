@@ -1,5 +1,7 @@
 function getApiBase(): string {
   if (typeof window !== 'undefined') {
+    const mobileApiUrl = (window as any).__CAPACITOR_API_URL__;
+    if (mobileApiUrl) return mobileApiUrl + '/v1';
     return '/api';
   }
   return (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001') + '/v1';
@@ -159,6 +161,10 @@ export const agentApi = {
 
 export function wsStreamUrl(workspaceId: string): string {
   if (typeof window !== 'undefined') {
+    const mobileApiUrl = (window as any).__CAPACITOR_API_URL__;
+    if (mobileApiUrl) {
+      return `${mobileApiUrl.replace(/^http/, 'ws')}/v1/runner/stream/${workspaceId}`;
+    }
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${proto}//${window.location.host}/ws/runner/stream/${workspaceId}`;
   }
