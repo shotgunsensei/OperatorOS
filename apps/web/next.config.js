@@ -3,7 +3,7 @@ const isMobileBuild = process.env.MOBILE_BUILD === '1';
 
 const nextConfig = {
   reactStrictMode: false,
-  transpilePackages: ['@veridian/sdk'],
+  transpilePackages: ['@operatoros/sdk'],
   ...(isMobileBuild ? {
     output: 'export',
     distDir: 'out',

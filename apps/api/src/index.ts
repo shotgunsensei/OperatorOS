@@ -23,6 +23,8 @@ import { isCommandAllowed, clampTimeout, truncateOutput } from '../../../apps/ru
 import { db } from './db.js';
 import { workspaces, runners, tasks, taskEvents, toolTraces, publishRuns } from './schema.js';
 import { serveUI } from './ui.js';
+import { ensureExtendedTables } from './lib/db-init.js';
+import { registerOsRoutes } from './routes/os-routes.js';
 import { runAgentLoop } from './agent.js';
 import type { AgentEvent } from './agent.js';
 import { analyzeWorkspace, generatePlan, generateArtifacts, runProof } from './publish/index.js';
@@ -41,6 +43,7 @@ const app = Fastify({
 
 await app.register(cors, { origin: true });
 await app.register(websocket);
+await registerOsRoutes(app);
 
 async function ensureTables() {
   await db.execute(`
@@ -128,6 +131,7 @@ async function ensureTables() {
 }
 
 await ensureTables();
+await ensureExtendedTables();
 
 const streamSubscribers = new Map<string, Set<import('ws').WebSocket>>();
 

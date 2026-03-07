@@ -20,7 +20,7 @@ function detectRunnerMode(): 'k8s' | 'docker' | 'local' {
 }
 
 const RUNNER_MODE = detectRunnerMode();
-const NAMESPACE = 'veridian-runners';
+const NAMESPACE = 'operatoros-runners';
 const SAFE_REF_PATTERN = /^[a-zA-Z0-9._\-/]+$/;
 const SAFE_URL_PATTERN = /^https?:\/\/[a-zA-Z0-9._\-/:@]+$/;
 

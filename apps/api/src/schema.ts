@@ -80,6 +80,93 @@ export const workspacePorts = pgTable('workspace_ports', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export const workspaceProcesses = pgTable('workspace_processes', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar('workspace_id', { length: 36 }).notNull().references(() => workspaces.id),
+  name: text('name').notNull(),
+  command: text('command').notNull(),
+  status: text('status').notNull().default('running'),
+  providerProcessId: text('provider_process_id'),
+  serviceId: varchar('service_id', { length: 36 }),
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  finishedAt: timestamp('finished_at'),
+  exitCode: integer('exit_code'),
+  durationMs: integer('duration_ms'),
+  logPath: text('log_path'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_workspace_processes_workspace_started').on(t.workspaceId, t.startedAt),
+]);
+
+export const workspaceServices = pgTable('workspace_services', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar('workspace_id', { length: 36 }).notNull().references(() => workspaces.id),
+  name: text('name').notNull(),
+  type: text('type').notNull().default('custom'),
+  command: text('command').notNull(),
+  status: text('status').notNull().default('stopped'),
+  port: integer('port'),
+  protocol: text('protocol').notNull().default('http'),
+  healthPath: text('health_path'),
+  processId: varchar('process_id', { length: 36 }),
+  startedAt: timestamp('started_at'),
+  stoppedAt: timestamp('stopped_at'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_workspace_services_workspace_updated').on(t.workspaceId, t.updatedAt),
+]);
+
+export const automationRules = pgTable('automation_rules', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar('workspace_id', { length: 36 }).notNull().references(() => workspaces.id),
+  name: text('name').notNull(),
+  triggerType: text('trigger_type').notNull(),
+  triggerJson: jsonb('trigger_json').$type<Record<string, unknown>>(),
+  actionType: text('action_type').notNull(),
+  actionJson: jsonb('action_json').$type<Record<string, unknown>>(),
+  enabled: boolean('enabled').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_automation_rules_workspace_updated').on(t.workspaceId, t.updatedAt),
+]);
+
+export const systemEvents = pgTable('system_events', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar('workspace_id', { length: 36 }).references(() => workspaces.id),
+  taskId: varchar('task_id', { length: 36 }),
+  source: text('source').notNull(),
+  type: text('type').notNull(),
+  severity: text('severity').notNull().default('info'),
+  payload: jsonb('payload').$type<Record<string, unknown>>(),
+  ts: timestamp('ts').defaultNow().notNull(),
+}, (t) => [
+  index('idx_system_events_workspace_ts').on(t.workspaceId, t.ts),
+]);
+
+export const systemNotifications = pgTable('system_notifications', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar('workspace_id', { length: 36 }).references(() => workspaces.id),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  level: text('level').notNull().default('info'),
+  read: boolean('read').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_system_notifications_workspace_created').on(t.workspaceId, t.createdAt),
+]);
+
+export const workspaceSnapshots = pgTable('workspace_snapshots', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar('workspace_id', { length: 36 }).notNull().references(() => workspaces.id),
+  label: text('label').notNull(),
+  gitRef: text('git_ref'),
+  metadataJson: jsonb('metadata_json').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_workspace_snapshots_workspace_created').on(t.workspaceId, t.createdAt),
+]);
+
 export const publishRuns = pgTable('publish_runs', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar('workspace_id', { length: 36 }).notNull().references(() => workspaces.id),
@@ -96,12 +183,9 @@ export const publishRuns = pgTable('publish_runs', {
 ]);
 
 export type PublishRunRow = typeof publishRuns.$inferSelect;
-
-export type WorkspaceRow = typeof workspaces.$inferSelect;
-export type InsertWorkspace = typeof workspaces.$inferInsert;
-export type RunnerRow = typeof runners.$inferSelect;
-export type InsertRunner = typeof runners.$inferInsert;
-export type TaskRow = typeof tasks.$inferSelect;
-export type InsertTask = typeof tasks.$inferInsert;
-export type TaskEventRow = typeof taskEvents.$inferSelect;
-export type ToolTraceRow = typeof toolTraces.$inferSelect;
+export type WorkspaceProcessRow = typeof workspaceProcesses.$inferSelect;
+export type WorkspaceServiceRow = typeof workspaceServices.$inferSelect;
+export type AutomationRuleRow = typeof automationRules.$inferSelect;
+export type SystemEventRow = typeof systemEvents.$inferSelect;
+export type SystemNotificationRow = typeof systemNotifications.$inferSelect;
+export type WorkspaceSnapshotRow = typeof workspaceSnapshots.$inferSelect;
