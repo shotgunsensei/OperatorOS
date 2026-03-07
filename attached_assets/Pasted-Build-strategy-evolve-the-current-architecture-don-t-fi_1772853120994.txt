@@ -1,0 +1,1300 @@
+Build strategy: evolve the current architecture, don’t fight it
+
+I would not rename or relocate the major top-level app folders. They’re already sensible.
+
+We should keep:
+
+apps/api
+
+apps/runner-gateway
+
+apps/web
+
+packages/sdk
+
+packages/profiles
+
+packages/agent-runtime
+
+Then add a small set of system modules that strengthen the OS claim without detonating the codebase.
+
+The target OperatorOS v1 architecture
+Conceptual model
+
+OperatorOS should present these system domains:
+
+Workspaces — project environments
+
+Processes — commands and running jobs
+
+Services — preview servers, background agents, databases, watchers
+
+Packages — installable templates/integrations/capabilities
+
+Automation — event-driven actions
+
+System — status, logs, settings, notifications
+
+That turns it from “AI app builder” into a software operations shell.
+
+Recommended file-by-file build plan
+
+I’m going to keep your naming style: short, direct, feature-based files inside the same app areas.
+
+Phase 1 — Refactor the API into system modules
+Change
+
+apps/api/src/index.ts
+
+Why
+
+This file is the current god-file. We want it to become the bootloader/router composition point.
+
+What to do
+
+Trim it down so it mostly:
+
+creates Fastify app
+
+registers plugins
+
+registers route modules
+
+starts server
+
+Result
+
+index.ts becomes the kernel entrypoint instead of the whole kernel.
+
+Add
+
+apps/api/src/routes/workspaces.ts
+
+Move all workspace endpoints here:
+
+GET /v1/workspaces
+
+POST /v1/workspaces
+
+GET /v1/workspaces/:id
+
+POST /v1/workspaces/:id/start
+
+POST /v1/workspaces/:id/stop
+
+POST /v1/workspaces/:id/exec
+
+POST /v1/workspaces/:id/apply-patch
+
+POST /v1/workspaces/:id/git-status
+
+file tree / file read endpoints
+
+This matches your current domain model and naming style.
+
+Add
+
+apps/api/src/routes/tasks.ts
+
+Move task APIs here:
+
+GET /v1/tasks
+
+POST /v1/tasks
+
+GET /v1/tasks/:taskId
+
+POST /v1/tasks/:taskId/run
+
+GET /v1/tasks/:taskId/events
+
+event stream endpoint
+
+Add
+
+apps/api/src/routes/publish.ts
+
+Move publish assistant endpoints here:
+
+analyze
+
+plan
+
+artifacts
+
+proof
+
+explain
+
+Add
+
+apps/api/src/routes/system.ts
+
+This is the first major OS-strengthening module.
+
+Add endpoints like:
+
+GET /v1/system/health
+
+GET /v1/system/status
+
+GET /v1/system/metrics
+
+GET /v1/system/events
+
+GET /v1/system/notifications
+
+This gives OperatorOS a visible “system plane.”
+
+Add
+
+apps/api/src/routes/processes.ts
+
+New OS-style primitive.
+
+Endpoints:
+
+GET /v1/workspaces/:id/processes
+
+POST /v1/workspaces/:id/processes
+
+POST /v1/workspaces/:id/processes/:processId/stop
+
+GET /v1/workspaces/:id/processes/:processId/logs
+
+You already have exec and stream behavior; this formalizes them into managed processes.
+
+Add
+
+apps/api/src/routes/services.ts
+
+New OS-style primitive.
+
+Endpoints:
+
+GET /v1/workspaces/:id/services
+
+POST /v1/workspaces/:id/services/start
+
+POST /v1/workspaces/:id/services/:serviceId/stop
+
+GET /v1/workspaces/:id/services/:serviceId/status
+
+A “service” is a named managed process:
+
+preview web server
+
+agent loop
+
+watcher
+
+db sidecar
+
+build daemon
+
+That’s a huge psychological shift toward OS.
+
+Add
+
+apps/api/src/routes/automation.ts
+
+New OS-style primitive.
+
+Endpoints:
+
+GET /v1/workspaces/:id/automations
+
+POST /v1/workspaces/:id/automations
+
+POST /v1/workspaces/:id/automations/:ruleId/toggle
+
+GET /v1/workspaces/:id/automations/events
+
+Examples:
+
+on patch applied → run verify
+
+on verify fail → create agent task
+
+on preview start → update primary port
+
+That makes OperatorOS feel alive instead of passive.
+
+Add
+
+apps/api/src/lib/stream.ts
+
+Move websocket subscriber logic here:
+
+streamSubscribers
+
+broadcastToStream
+
+broadcastExitEvent
+
+Keeps streaming as a reusable system utility.
+
+Add
+
+apps/api/src/lib/exec.ts
+
+Move:
+
+localExec
+
+timeout/safety wrapping
+
+stdout/stderr truncation plumbing
+
+This becomes the execution facade used by routes and services.
+
+Add
+
+apps/api/src/lib/db-init.ts
+
+Move ensureTables() here.
+
+Later this can be replaced by migrations cleanly.
+
+Add
+
+apps/api/src/lib/system-events.ts
+
+Central helper for writing normalized system events:
+
+workspace created
+
+runner started
+
+process started
+
+process exited
+
+verify passed
+
+verify failed
+
+publish analyzed
+
+automation triggered
+
+This is gold for “OS feel.”
+
+Phase 2 — Extend the database schema with real OS entities
+Change
+
+apps/api/src/schema.ts
+
+Keep current tables. Add these.
+
+Add table
+
+workspace_processes
+
+Purpose:
+Track managed command executions, not just ad hoc terminal history.
+
+Suggested columns:
+
+id
+
+workspaceId
+
+name
+
+command
+
+status
+
+pidHint / providerProcessId
+
+startedAt
+
+finishedAt
+
+exitCode
+
+serviceType nullable
+
+logsPath or logBuffer metadata
+
+This powers task manager / process monitor.
+
+Add table
+
+workspace_services
+
+Purpose:
+Track named services in each workspace.
+
+Suggested columns:
+
+id
+
+workspaceId
+
+name
+
+type
+
+command
+
+status
+
+port
+
+protocol
+
+healthPath
+
+startedAt
+
+updatedAt
+
+Examples:
+
+preview-web
+
+agent-runtime
+
+dev-server
+
+api-server
+
+This powers a Services panel and Preview auto-detection.
+
+Add table
+
+workspace_snapshots
+
+Purpose:
+Strengthens the “OS/filesystem” feel.
+
+Suggested columns:
+
+id
+
+workspaceId
+
+label
+
+gitRef
+
+createdAt
+
+metadataJson
+
+Even if snapshot v1 only stores git metadata, the concept matters.
+
+Add table
+
+automation_rules
+
+Purpose:
+Event → action system.
+
+Suggested columns:
+
+id
+
+workspaceId
+
+name
+
+triggerType
+
+triggerJson
+
+actionType
+
+actionJson
+
+enabled
+
+createdAt
+
+updatedAt
+
+Add table
+
+system_events
+
+Purpose:
+Unified event feed across workspace/task/process/service actions.
+
+Suggested columns:
+
+id
+
+workspaceId nullable
+
+taskId nullable
+
+source
+
+type
+
+severity
+
+payload
+
+ts
+
+Add table
+
+system_notifications
+
+Purpose:
+User-facing state changes.
+
+Suggested columns:
+
+id
+
+workspaceId nullable
+
+title
+
+message
+
+level
+
+read
+
+createdAt
+
+This enables the little OS notification center later.
+
+Phase 3 — Make runner-gateway act more like a real execution service
+
+Right now runner-gateway is basically provider code. That’s fine. We just need to formalize its role.
+
+Change
+
+apps/runner-gateway/src/index.ts
+
+Make it expose clean service methods / routes for:
+
+spawn managed process
+
+stop managed process
+
+stream logs
+
+list running processes
+
+register service ports
+
+Even if the API still imports it internally for now, we should shape it like a service contract.
+
+Change
+
+apps/runner-gateway/src/provisioner.ts
+
+Keep workspace runner lifecycle here, but separate:
+
+workspace container/pod lifecycle
+
+process execution lifecycle
+
+service lifecycle
+
+It should become the orchestrator for:
+
+runner provisioning
+
+process spawn/stop/status
+
+service spawn/stop/status
+
+port registration
+
+Add
+
+apps/runner-gateway/src/process-manager.ts
+
+New file.
+This is the biggest OS-feel upgrade on the backend.
+
+Responsibilities:
+
+spawn commands in workspace
+
+assign process IDs
+
+capture logs
+
+expose process status
+
+support background processes
+
+Your current exec is transactional. This makes it persistent and monitorable.
+
+Add
+
+apps/runner-gateway/src/service-manager.ts
+
+New file.
+Wraps managed named services.
+
+Examples:
+
+start preview server
+
+detect bound port
+
+mark service healthy/unhealthy
+
+stop service
+
+restart service
+
+Now OperatorOS can say “Start Preview Service” instead of “Run this command manually,” which is much more OS-like.
+
+Add
+
+apps/runner-gateway/src/port-discovery.ts
+
+New file.
+Auto-detect common ports from service output or known commands.
+
+This will improve the Preview panel massively.
+
+Keep / lightly change
+
+apps/runner-gateway/src/safety.ts
+
+Good file already.
+I’d only expand it with:
+
+safe background service rules
+
+maybe separate policies for interactive command vs managed service
+
+Phase 4 — Turn the web app into an actual “operator shell”
+
+This is where the OS illusion becomes visible.
+
+Change
+
+apps/web/src/app/page.tsx
+
+Right now it is:
+
+left workspace rail
+
+middle file/editor
+
+bottom terminal/agent/publish/preview tabs
+
+Keep that base layout. Add explicit OS shell elements:
+
+left nav for system sections
+
+top header system status
+
+bottom status bar
+
+optional command palette hook
+
+New sections in sidebar:
+
+Workspaces
+
+Files
+
+Processes
+
+Services
+
+Automations
+
+Publish
+
+System
+
+You do not need multi-page routing yet. Keep it in one shell if you want speed.
+
+Change
+
+apps/web/src/app/layout.tsx
+
+Add:
+
+status indicator in header
+
+notifications icon
+
+current workspace name
+
+runner mode badge
+
+maybe current service/preview status badge
+
+That little stuff matters more than people think. It’s the UI equivalent of fake wood paneling in an old station wagon, except useful.
+
+Change
+
+apps/web/src/components/WorkspacePanel.tsx
+
+Enhance it into a real workspace control panel:
+
+workspace create
+
+workspace select
+
+runner status
+
+active services count
+
+active processes count
+
+snapshot action
+
+settings action
+
+This becomes your “filesystem / environment manager” entrypoint.
+
+Add
+
+apps/web/src/components/ProcessesPanel.tsx
+
+New component.
+
+Show:
+
+active processes
+
+command
+
+runtime
+
+started time
+
+status
+
+stop button
+
+log view button
+
+This is your Task Manager.
+
+Add
+
+apps/web/src/components/ServicesPanel.tsx
+
+New component.
+
+Show:
+
+preview-web
+
+agent-runtime
+
+watcher
+
+api-server
+
+custom service
+
+Actions:
+
+start
+
+stop
+
+restart
+
+open preview
+
+This is your Services console.
+
+Add
+
+apps/web/src/components/SystemStatusBar.tsx
+
+New component.
+
+Bottom bar:
+
+workspace status
+
+runner mode
+
+active processes
+
+active services
+
+last verify result
+
+system health
+
+This one is low effort and high psychological payoff.
+
+Add
+
+apps/web/src/components/SystemNotifications.tsx
+
+New component.
+
+Small notifications drawer:
+
+verify failed
+
+preview ready
+
+agent completed
+
+publish proof failed
+
+OS vibes, no fake mustache required.
+
+Add
+
+apps/web/src/components/AutomationPanel.tsx
+
+New component.
+
+Allow user to create rules from simple forms:
+
+trigger
+
+action
+
+enabled toggle
+
+Examples:
+
+On patch apply → run verify
+
+On verify pass → start preview
+
+On preview fail → create agent task
+
+Add
+
+apps/web/src/components/CommandPalette.tsx
+
+New component.
+
+Global quick actions:
+
+Create workspace
+
+Start workspace
+
+Start preview service
+
+Run verify
+
+Open publish assistant
+
+Show processes
+
+Show services
+
+This is a very OS-ish move.
+
+Change
+
+apps/web/src/components/PreviewPanel.tsx
+
+Right now it’s manual URL/port entry.
+
+Upgrade it to:
+
+show detected services
+
+auto-open primary preview service
+
+list available ports from backend
+
+health status for current preview
+
+This turns Preview from “iframe wrapper” into a system-managed runtime view.
+
+Change
+
+apps/web/src/components/TerminalStream.tsx
+
+Keep current panel, but integrate with managed processes:
+
+optionally run in foreground or background
+
+save foreground commands into process history
+
+open logs for process
+
+show process ID after spawn
+
+That’s much closer to an OS terminal.
+
+Change
+
+apps/web/src/components/AgentPanel.tsx
+
+Reposition it slightly:
+not just “AI thing,” but a system service.
+
+Show:
+
+agent status
+
+active task
+
+recent task history
+
+agent as service badge
+
+That helps the OS framing a lot.
+
+Keep / enhance
+
+apps/web/src/components/PublishPanel.tsx
+
+This is already one of the best “OperatorOS” features because it feels like a system wizard.
+
+Enhance by:
+
+making it read from detected services/processes
+
+use system notifications
+
+write publish state into system event feed
+
+Phase 5 — Add frontend API bindings cleanly
+Change
+
+apps/web/src/lib/api.ts
+
+Keep this file as the primary client layer. Add new sections:
+
+systemApi
+
+processApi
+
+serviceApi
+
+automationApi
+
+maybe notificationApi
+
+Don’t smash everything into api. Group it the same way your route files are grouped.
+
+Example shape:
+
+workspaceApi
+
+taskApi
+
+publishApi
+
+processApi
+
+serviceApi
+
+systemApi
+
+automationApi
+
+That keeps the repo understandable.
+
+Add
+
+apps/web/src/lib/types.ts
+
+Shared local UI types if needed for panel state.
+
+You can also expand packages/sdk/src/index.ts, but for pure UI helper types, local is fine.
+
+Phase 6 — Promote shared contracts into the SDK
+Change
+
+packages/sdk/src/index.ts
+
+Add shared interfaces for:
+
+WorkspaceProcess
+
+WorkspaceService
+
+AutomationRule
+
+SystemEvent
+
+SystemNotification
+
+WorkspaceSnapshot
+
+SystemStatus
+
+This is the right home for those.
+
+Add
+
+packages/sdk/src/system.ts
+
+If you want to keep index.ts from becoming soup, split system contracts here.
+
+Suggested contents:
+
+system status
+
+events
+
+notifications
+
+process/service contracts
+
+Add
+
+packages/sdk/src/workspace.ts
+
+Optional, but useful if you want cleaner separation:
+
+workspace
+
+ports
+
+snapshots
+
+service references
+
+Phase 7 — Improve runner profiles and system packages
+Change
+
+packages/profiles/src/index.ts
+
+Profiles are already useful. Expand them slightly so they support service defaults.
+
+Add optional fields like:
+
+defaultDevCommand
+
+commonPorts
+
+serviceTemplates
+
+packageRecommendations
+
+Example:
+For node20:
+
+default preview service command
+
+default port candidates: 3000, 5173, 8080
+
+That helps Preview and Services panels feel smart.
+
+Add
+
+packages/system-packages/src/index.ts
+
+This is optional but powerful.
+
+If you really want the “OS package manager” angle, add a new package:
+
+packages/system-packages
+
+This can define installable capability bundles:
+
+postgres
+
+redis
+
+supabase-client
+
+stripe
+
+nextjs-web
+
+fastify-api
+
+Then later the UI can expose:
+
+“Install Package”
+
+“Attach Capability”
+
+This is a legit way to earn the OS branding.
+
+Phase 8 — Repository cleanup and naming consistency
+
+These are not flashy, but they matter.
+
+Change
+
+package.json
+Current root name is "rest-express".
+
+Change to:
+
+"name": "operatoros"
+
+That’s an easy win.
+
+Change
+
+apps/web/package.json
+Current name is @veridian/web.
+
+Change to:
+
+@operatoros/web
+
+Do the same pattern for:
+
+@operatoros/api
+
+@operatoros/runner-gateway
+
+@operatoros/sdk
+
+@operatoros/profiles
+
+@operatoros/agent-runtime
+
+This removes ghost-brand weirdness.
+
+Change
+
+README.md
+Update to match actual architecture:
+
+explicit system domains
+
+services/processes/automation
+
+clear ports
+
+cleaner startup instructions
+
+Change
+
+.gitignore
+Make sure these are firmly ignored if not already:
+
+.next/
+
+out/
+
+android build artifacts
+
+local generated files
+
+The zip you uploaded contains generated material, which tells me repo hygiene can use a tune-up.
+
+Exact recommended files to add
+
+Here’s the cleanest first-wave set.
+
+In apps/api/src/
+
+routes/workspaces.ts
+
+routes/tasks.ts
+
+routes/publish.ts
+
+routes/processes.ts
+
+routes/services.ts
+
+routes/system.ts
+
+routes/automation.ts
+
+lib/db-init.ts
+
+lib/exec.ts
+
+lib/stream.ts
+
+lib/system-events.ts
+
+In apps/runner-gateway/src/
+
+process-manager.ts
+
+service-manager.ts
+
+port-discovery.ts
+
+In apps/web/src/components/
+
+ProcessesPanel.tsx
+
+ServicesPanel.tsx
+
+AutomationPanel.tsx
+
+SystemStatusBar.tsx
+
+SystemNotifications.tsx
+
+CommandPalette.tsx
+
+In packages/sdk/src/
+
+system.ts
+
+workspace.ts
+
+Optional new package
+
+packages/system-packages/src/index.ts
+
+Exact recommended files to change first
+
+If I were doing this in the repo, this is the first pass order.
+
+Highest priority backend
+
+apps/api/src/index.ts
+
+apps/api/src/schema.ts
+
+apps/runner-gateway/src/provisioner.ts
+
+apps/runner-gateway/src/index.ts
+
+packages/sdk/src/index.ts
+
+packages/profiles/src/index.ts
+
+Highest priority frontend
+
+apps/web/src/app/page.tsx
+
+apps/web/src/app/layout.tsx
+
+apps/web/src/lib/api.ts
+
+apps/web/src/components/WorkspacePanel.tsx
+
+apps/web/src/components/PreviewPanel.tsx
+
+apps/web/src/components/TerminalStream.tsx
+
+apps/web/src/components/AgentPanel.tsx
+
+apps/web/src/components/PublishPanel.tsx
+
+Branding / consistency
+
+package.json
+
+apps/web/package.json
+
+README.md
+
+The fastest monetizable version of this plan
+
+Since you care about ROI first, I would not build everything at once.
+
+Build order for maximum value
+Step 1
+
+Add Services + Processes
+Why:
+This instantly makes OperatorOS feel more like an OS.
+
+Step 2
+
+Add System Status Bar + Notifications
+Why:
+Big perception boost with modest engineering cost.
+
+Step 3
+
+Add Automation Rules
+Why:
+This is where “AI builder” becomes “operator platform.”
+
+Step 4
+
+Add Snapshots
+Why:
+Helps sell the environment-management story.
+
+Step 5
+
+Add Package/Capability installs
+Why:
+This is premium-plan bait.
+
+My recommended v1 feature slice
+
+This is the version I would actually build first around your current repo:
+
+Backend
+
+process tracking
+
+service tracking
+
+system event feed
+
+notifications
+
+automation rules
+
+schema additions
+
+Frontend
+
+processes panel
+
+services panel
+
+status bar
+
+notifications drawer
+
+improved preview panel
+
+workspace panel upgrades
+
+Positioning
+
+OperatorOS becomes:
+
+“The AI Operating System for managing app workspaces, services, and deployments.”
+
+That statement becomes much less marketing goblin and much more defensible.
+
+Important architectural warning
+
+One thing I would avoid right now:
+
+Do not split everything into a dozen packages immediately.
+That’s how projects wander into the swamp wearing a clever microservice hat and never return.
+
+Your current monorepo is small enough that:
+
+route modules
+
+service modules
+
+schema growth
+
+UI panel additions
+
+will get you 80% of the gain without creating a maintenance circus.
+
+Bottom line
+
+Your current architecture is strong enough to evolve cleanly.
+The best path is:
+
+keep the monorepo layout
+
+modularize the API by domain
+
+introduce processes, services, automation, events, notifications
+
+upgrade the UI from IDE layout to operator shell
+
+standardize package naming and repo hygiene
+
+That gives you a repo update plan that fits your existing file structure and naming conventions instead of forcing some shiny new theoretical architecture from Planet Resume-Driven Development.
