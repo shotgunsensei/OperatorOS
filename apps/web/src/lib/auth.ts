@@ -108,6 +108,22 @@ export const billingApi = {
   getHistory: () => apiFetch('/billing/history'),
 };
 
+export const aiApi = {
+  getTools: () => apiFetch('/ai/tools'),
+  getUsage: () => apiFetch('/ai/usage'),
+  getHistory: (limit?: number) => apiFetch(`/ai/history${limit ? `?limit=${limit}` : ''}`),
+  execute: (toolType: string, input: string, templateId?: string) =>
+    apiFetch('/ai/execute', { method: 'POST', body: JSON.stringify({ toolType, input, templateId }) }),
+  checkAccess: (toolType: string) =>
+    apiFetch('/ai/check-access', { method: 'POST', body: JSON.stringify({ toolType }) }),
+  getTemplates: () => apiFetch('/ai/templates'),
+  createTemplate: (data: { name: string; description?: string; toolType: string; promptText: string }) =>
+    apiFetch('/ai/templates', { method: 'POST', body: JSON.stringify(data) }),
+  updateTemplate: (id: string, data: { name?: string; description?: string; promptText?: string }) =>
+    apiFetch(`/ai/templates/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTemplate: (id: string) => apiFetch(`/ai/templates/${id}`, { method: 'DELETE' }),
+};
+
 export const adminApi = {
   getUsers: (params?: { search?: string; status?: string; plan?: string; role?: string; sort?: string; order?: string; page?: number }) => {
     const qs = new URLSearchParams();

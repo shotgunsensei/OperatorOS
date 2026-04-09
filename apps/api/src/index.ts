@@ -31,6 +31,7 @@ import { registerAuthRoutes } from './routes/auth-routes.js';
 import { registerSaasRoutes } from './routes/saas-routes.js';
 import { registerAdminRoutes } from './routes/admin-routes.js';
 import { registerBillingRoutes } from './routes/billing-routes.js';
+import { registerAiRoutes } from './routes/ai-routes.js';
 import { runAgentLoop } from './agent.js';
 import type { AgentEvent } from './agent.js';
 import { analyzeWorkspace, generatePlan, generateArtifacts, runProof } from './publish/index.js';
@@ -55,6 +56,7 @@ await registerAuthRoutes(app);
 await registerSaasRoutes(app);
 await registerAdminRoutes(app);
 await registerBillingRoutes(app);
+await registerAiRoutes(app);
 
 async function ensureTables() {
   await db.execute(`

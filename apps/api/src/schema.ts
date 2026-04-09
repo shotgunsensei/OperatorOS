@@ -392,6 +392,38 @@ export const adminNotes = pgTable('admin_notes', {
 
 export type AdminNoteRow = typeof adminNotes.$inferSelect;
 
+export const aiPromptTemplates = pgTable('ai_prompt_templates', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  name: text('name').notNull(),
+  description: text('description'),
+  toolType: text('tool_type').notNull(),
+  promptText: text('prompt_text').notNull(),
+  isShared: boolean('is_shared').notNull().default(false),
+  usageCount: integer('usage_count').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_ai_templates_user').on(t.userId),
+  index('idx_ai_templates_tool').on(t.toolType),
+]);
+
+export const aiActionsLog = pgTable('ai_actions_log', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  toolType: text('tool_type').notNull(),
+  input: jsonb('input'),
+  output: jsonb('output'),
+  tokenCount: integer('token_count').notNull().default(0),
+  durationMs: integer('duration_ms').notNull().default(0),
+  status: text('status', { enum: ['success', 'error', 'rate_limited'] }).notNull().default('success'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_ai_actions_user').on(t.userId),
+  index('idx_ai_actions_created').on(t.createdAt),
+  index('idx_ai_actions_tool').on(t.toolType),
+]);
+
 export type PublishRunRow = typeof publishRuns.$inferSelect;
 export type WorkspaceProcessRow = typeof workspaceProcesses.$inferSelect;
 export type WorkspaceServiceRow = typeof workspaceServices.$inferSelect;
@@ -407,3 +439,5 @@ export type SaasProjectRow = typeof saasProjects.$inferSelect;
 export type SaasTaskRow = typeof saasTasks.$inferSelect;
 export type NoteRow = typeof notes.$inferSelect;
 export type ActivityFeedRow = typeof activityFeed.$inferSelect;
+export type AiPromptTemplateRow = typeof aiPromptTemplates.$inferSelect;
+export type AiActionsLogRow = typeof aiActionsLog.$inferSelect;

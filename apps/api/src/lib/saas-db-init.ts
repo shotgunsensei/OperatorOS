@@ -202,6 +202,36 @@ export async function ensureSaasTables() {
       created_at TIMESTAMP DEFAULT NOW() NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
+
+    CREATE TABLE IF NOT EXISTS ai_prompt_templates (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      name TEXT NOT NULL,
+      description TEXT,
+      tool_type TEXT NOT NULL,
+      prompt_text TEXT NOT NULL,
+      is_shared BOOLEAN NOT NULL DEFAULT false,
+      usage_count INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_templates_user ON ai_prompt_templates(user_id);
+    CREATE INDEX IF NOT EXISTS idx_ai_templates_tool ON ai_prompt_templates(tool_type);
+
+    CREATE TABLE IF NOT EXISTS ai_actions_log (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      tool_type TEXT NOT NULL,
+      input JSONB,
+      output JSONB,
+      token_count INTEGER NOT NULL DEFAULT 0,
+      duration_ms INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'success',
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_actions_user ON ai_actions_log(user_id);
+    CREATE INDEX IF NOT EXISTS idx_ai_actions_created ON ai_actions_log(created_at);
+    CREATE INDEX IF NOT EXISTS idx_ai_actions_tool ON ai_actions_log(tool_type);
   `);
 }
 
