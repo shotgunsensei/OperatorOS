@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useAuth } from '../AuthProvider';
 import { authApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
+import { useToast } from '../Toast';
 
 export default function SettingsPage() {
   const { user, refresh, logout } = useAuth();
+  const { toast } = useToast();
   const [name, setName] = useState(user?.name || '');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -31,7 +33,8 @@ export default function SettingsPage() {
     try {
       await authApi.updateProfile({ name: name.trim() });
       await refresh();
-      setMessage('Profile updated');
+      toast('Profile updated');
+      setMessage('');
     } catch (err: any) {
       setMessage(err.error || 'Failed to update');
     } finally { setSaving(false); }
@@ -42,7 +45,8 @@ export default function SettingsPage() {
     setPwSaving(true); setPwMessage('');
     try {
       await authApi.changePassword(currentPassword, newPassword);
-      setPwMessage('Password changed successfully');
+      toast('Password changed successfully');
+      setPwMessage('');
       setCurrentPassword(''); setNewPassword('');
     } catch (err: any) {
       setPwMessage(err.error || 'Failed to change password');
@@ -57,7 +61,8 @@ export default function SettingsPage() {
       const data = await authApi.changeEmail(newEmail.trim(), emailPassword);
       if (data.token) localStorage.setItem('token', data.token);
       await refresh();
-      setEmailMessage('Email updated successfully');
+      toast('Email updated successfully');
+      setEmailMessage('');
       setNewEmail(''); setEmailPassword('');
     } catch (err: any) {
       setEmailMessage(err.error || 'Failed to change email');
@@ -101,7 +106,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 700 }} data-testid="settings-page">
+    <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 700 }} data-testid="settings-page">
       <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 32px' }}>Settings</h1>
 
       <div style={cardStyle}>

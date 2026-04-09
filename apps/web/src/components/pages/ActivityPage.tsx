@@ -17,7 +17,7 @@ export default function ActivityPage() {
   }, []);
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 900 }} data-testid="activity-page">
+    <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 900 }} data-testid="activity-page">
       <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Activity Feed</h1>
       <p style={{ fontSize: 14, color: colors.textMuted, margin: '0 0 24px' }}>Your recent actions across all workspaces</p>
 

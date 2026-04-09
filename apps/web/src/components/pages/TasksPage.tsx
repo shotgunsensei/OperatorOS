@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { saasApi, billingApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import UpgradeModal from '../UpgradeModal';
+import { useToast } from '../Toast';
 
 interface TasksPageProps {
   projectId?: string;
@@ -31,6 +32,7 @@ export default function TasksPage({ projectId, projectName, onBack }: TasksPageP
   const [usage, setUsage] = useState<any>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [upgradeMessage, setUpgradeMessage] = useState('');
+  const { toast } = useToast();
 
   const loadTasks = async () => {
     if (!projectId) { setLoading(false); return; }
@@ -60,6 +62,7 @@ export default function TasksPage({ projectId, projectName, onBack }: TasksPageP
     setError('');
     try {
       await saasApi.createTask(projectId, { title: title.trim(), description: description.trim(), priority });
+      toast('Task created');
       await loadTasks();
       setShowCreate(false);
       setTitle('');
@@ -79,20 +82,26 @@ export default function TasksPage({ projectId, projectName, onBack }: TasksPageP
   };
 
   const handleStatusChange = async (taskId: string, newStatus: string) => {
-    await saasApi.updateTask(taskId, { status: newStatus });
-    await loadTasks();
+    try {
+      await saasApi.updateTask(taskId, { status: newStatus });
+      toast(newStatus === 'done' ? 'Task completed' : 'Status updated');
+      await loadTasks();
+    } catch { toast('Failed to update task', 'error'); }
   };
 
   const handleDelete = async (taskId: string) => {
-    await saasApi.deleteTask(taskId);
-    setTasks(tasks.filter(t => t.id !== taskId));
+    try {
+      await saasApi.deleteTask(taskId);
+      toast('Task deleted');
+      setTasks(tasks.filter(t => t.id !== taskId));
+    } catch { toast('Failed to delete task', 'error'); }
   };
 
   const filtered = filter === 'all' ? tasks : tasks.filter(t => t.status === filter);
 
   if (!projectId) {
     return (
-      <div style={{ padding: '32px 40px', maxWidth: 1200 }} data-testid="tasks-page">
+      <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 1200 }} data-testid="tasks-page">
         <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Tasks</h1>
         <div style={{
           textAlign: 'center', padding: 60, background: colors.bgSecondary,
@@ -107,8 +116,8 @@ export default function TasksPage({ projectId, projectName, onBack }: TasksPageP
   }
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1200 }} data-testid="tasks-page">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+    <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 1200 }} data-testid="tasks-page">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           {onBack && (
             <button data-testid="button-back" onClick={onBack}

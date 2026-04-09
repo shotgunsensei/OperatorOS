@@ -1,6 +1,6 @@
 import { db } from '../db.js';
 import { hashPassword } from './auth.js';
-import { users, subscriptionPlans, subscriptions } from '../schema.js';
+import { users, subscriptionPlans, subscriptions, saasWorkspaces, saasProjects, saasTasks, notes, activityFeed, workspaceMemberships } from '../schema.js';
 import { eq } from 'drizzle-orm';
 import { PLAN_CONFIGS } from './plans.js';
 
@@ -253,5 +253,74 @@ export async function seedPlansAndAdmin() {
       });
     }
     console.log(`[seed] Created admin account: ${adminEmail}`);
+  }
+
+  const demoEmail = process.env.DEMO_EMAIL || 'demo@operatoros.com';
+  const existingDemo = await db.select().from(users).where(eq(users.email, demoEmail)).limit(1);
+  if (existingDemo.length === 0) {
+    const demoPassword = process.env.DEMO_PASSWORD || 'Demo1234!';
+    const demoHash = await hashPassword(demoPassword);
+    const [demoUser] = await db.insert(users).values({
+      email: demoEmail,
+      passwordHash: demoHash,
+      name: 'Demo User',
+      role: 'user',
+      status: 'active',
+    }).returning();
+
+    const [proPlan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.slug, 'pro')).limit(1);
+    if (proPlan && demoUser) {
+      await db.insert(subscriptions).values({
+        userId: demoUser.id,
+        planId: proPlan.id,
+        status: 'active',
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
+
+      const [ws] = await db.insert(saasWorkspaces).values({
+        ownerId: demoUser.id,
+        name: 'Demo Workspace',
+        slug: 'demo-workspace',
+        description: 'A sample workspace to explore OperatorOS',
+      }).returning();
+
+      if (ws) {
+        await db.insert(workspaceMemberships).values({
+          workspaceId: ws.id,
+          userId: demoUser.id,
+          role: 'owner',
+        });
+        const [proj] = await db.insert(saasProjects).values({
+          workspaceId: ws.id,
+          userId: demoUser.id,
+          name: 'Getting Started',
+          description: 'Your first project',
+          color: '#58a6ff',
+        }).returning();
+
+        if (proj) {
+          await db.insert(saasTasks).values([
+            { projectId: proj.id, userId: demoUser.id, title: 'Explore the dashboard', status: 'done', priority: 'low' },
+            { projectId: proj.id, userId: demoUser.id, title: 'Create a workspace', status: 'done', priority: 'medium' },
+            { projectId: proj.id, userId: demoUser.id, title: 'Set up your first project', status: 'in_progress', priority: 'high' },
+            { projectId: proj.id, userId: demoUser.id, title: 'Invite team members', status: 'todo', priority: 'medium' },
+            { projectId: proj.id, userId: demoUser.id, title: 'Try AI tools', status: 'todo', priority: 'low' },
+          ]);
+        }
+
+        await db.insert(notes).values([
+          { userId: demoUser.id, title: 'Welcome to OperatorOS', content: 'This is your personal note-taking space. Pin important notes, organize ideas, and keep track of anything you need.', isPinned: true },
+          { userId: demoUser.id, title: 'Quick Tips', content: '1. Use workspaces to separate different teams or clients\n2. Color-code projects for visual organization\n3. Set task priorities to stay focused on what matters\n4. Check the billing page to manage your subscription' },
+        ]);
+
+        await db.insert(activityFeed).values([
+          { userId: demoUser.id, action: 'created', entityType: 'workspace', metadata: { name: 'Demo Workspace' } },
+          { userId: demoUser.id, action: 'created', entityType: 'project', metadata: { name: 'Getting Started' } },
+          { userId: demoUser.id, action: 'registered', entityType: 'account', metadata: {} },
+        ]);
+      }
+    }
+    console.log(`[seed] Created demo account: ${demoEmail}`);
   }
 }

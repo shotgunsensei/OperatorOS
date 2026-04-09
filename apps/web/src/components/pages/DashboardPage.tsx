@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { saasApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
+import { useToast } from '../Toast';
 
 function StatCard({ label, value, icon, color }: { label: string; value: number | string; icon: string; color: string }) {
   return (
@@ -45,18 +46,31 @@ function UsageGauge({ label, used, limit, percentage }: { label: string; used: n
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    saasApi.dashboard().then(setData).catch(console.error).finally(() => setLoading(false));
+    saasApi.dashboard().then(setData).catch(() => toast('Failed to load dashboard', 'error')).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div style={{ padding: 40, color: colors.textMuted }}>Loading dashboard...</div>;
+  if (loading) return (
+    <div style={{ padding: '32px 24px' }}>
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ width: 200, height: 24, background: colors.bgSecondary, borderRadius: 6, marginBottom: 12 }} />
+        <div style={{ width: 300, height: 14, background: colors.bgSecondary, borderRadius: 4 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        {[1,2,3,4].map(i => (
+          <div key={i} style={{ flex: '1 1 200px', minWidth: 180, height: 88, background: colors.bgSecondary, borderRadius: 12, border: `1px solid ${colors.border}` }} />
+        ))}
+      </div>
+    </div>
+  );
   if (!data) return <div style={{ padding: 40, color: colors.accentRed }}>Failed to load dashboard</div>;
 
   const { stats, limits, usage, features, recentActivity } = data;
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1200 }} data-testid="dashboard-page">
+    <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 1200 }} data-testid="dashboard-page">
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Dashboard</h1>
         <p style={{ fontSize: 14, color: colors.textMuted, margin: 0 }}>

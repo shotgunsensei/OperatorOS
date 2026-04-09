@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { saasApi, billingApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import UpgradeModal from '../UpgradeModal';
+import { useToast } from '../Toast';
 
 export default function WorkspacesPage() {
   const [workspaces, setWorkspaces] = useState<any[]>([]);
@@ -16,6 +17,7 @@ export default function WorkspacesPage() {
   const [usage, setUsage] = useState<any>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [upgradeMessage, setUpgradeMessage] = useState('');
+  const { toast } = useToast();
 
   const loadData = async () => {
     try {
@@ -25,7 +27,7 @@ export default function WorkspacesPage() {
       ]);
       setWorkspaces(wsData.workspaces);
       setUsage(usageData.usage);
-    } catch {} finally { setLoading(false); }
+    } catch { toast('Failed to load workspaces', 'error'); } finally { setLoading(false); }
   };
 
   useEffect(() => { loadData(); }, []);
@@ -46,6 +48,7 @@ export default function WorkspacesPage() {
     setCreating(true); setError('');
     try {
       await saasApi.createWorkspace(name.trim(), description.trim());
+      toast('Workspace created');
       await loadData();
       setShowCreate(false); setName(''); setDescription('');
     } catch (err: any) {
@@ -60,12 +63,15 @@ export default function WorkspacesPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this workspace and all associated data?')) return;
-    await saasApi.deleteWorkspace(id);
-    await loadData();
+    try {
+      await saasApi.deleteWorkspace(id);
+      toast('Workspace deleted');
+      await loadData();
+    } catch { toast('Failed to delete workspace', 'error'); }
   };
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1200 }} data-testid="workspaces-page">
+    <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 1200 }} data-testid="workspaces-page">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Workspaces</h1>
@@ -132,9 +138,23 @@ export default function WorkspacesPage() {
         <div style={{ padding: 40, color: colors.textMuted }}>Loading workspaces...</div>
       ) : workspaces.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12 }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>{'\u2b21'}</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 8 }}>No workspaces yet</div>
-          <div style={{ fontSize: 13, color: colors.textMuted }}>Create your first workspace to start organizing</div>
+          <div style={{
+            width: 64, height: 64, borderRadius: 16, margin: '0 auto 20px',
+            background: 'linear-gradient(135deg, rgba(88,166,255,0.15), rgba(188,140,255,0.15))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
+          }}>{'\u2b21'}</div>
+          <div style={{ fontSize: 18, fontWeight: 600, color: '#fff', marginBottom: 8 }}>Welcome to OperatorOS</div>
+          <div style={{ fontSize: 14, color: colors.textMuted, marginBottom: 20, maxWidth: 360, margin: '0 auto 20px' }}>
+            Workspaces are where you organize projects and collaborate with your team. Create one to get started.
+          </div>
+          <button data-testid="button-empty-create-workspace" onClick={() => setShowCreate(true)}
+            style={{
+              padding: '10px 24px', borderRadius: 8, border: 'none',
+              background: 'linear-gradient(135deg, #58a6ff, #bc8cff)', color: '#fff',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            }}>
+            Create your first workspace
+          </button>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>

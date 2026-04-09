@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import AuthProvider, { useAuth } from '@/components/AuthProvider';
+import { ToastProvider } from '@/components/Toast';
 import SaasLayout from '@/components/SaasLayout';
 import LoginPage from '@/components/pages/LoginPage';
 import RegisterPage from '@/components/pages/RegisterPage';
@@ -102,7 +103,9 @@ function AppContent() {
 export default function Home() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </AuthProvider>
   );
 }

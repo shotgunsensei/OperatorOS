@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { saasApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
+import { useToast } from '../Toast';
 
 export default function NotesPage() {
   const [notes, setNotes] = useState<any[]>([]);
@@ -11,35 +12,48 @@ export default function NotesPage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const { toast } = useToast();
 
   const loadNotes = async () => {
     setLoading(true);
-    try { const d = await saasApi.getNotes(); setNotes(d.notes); } catch {} finally { setLoading(false); }
+    try { const d = await saasApi.getNotes(); setNotes(d.notes); } catch { toast('Failed to load notes', 'error'); } finally { setLoading(false); }
   };
 
   useEffect(() => { loadNotes(); }, []);
 
   const handleCreate = async () => {
     if (!title.trim()) return;
-    await saasApi.createNote({ title: title.trim(), content: content.trim() });
-    setTitle(''); setContent(''); setShowCreate(false);
-    await loadNotes();
+    try {
+      await saasApi.createNote({ title: title.trim(), content: content.trim() });
+      toast('Note created');
+      setTitle(''); setContent(''); setShowCreate(false);
+      await loadNotes();
+    } catch { toast('Failed to create note', 'error'); }
   };
 
   const handleSave = async (id: string) => {
-    await saasApi.updateNote(id, { title, content });
-    setEditingId(null);
-    await loadNotes();
+    try {
+      await saasApi.updateNote(id, { title, content });
+      toast('Note saved');
+      setEditingId(null);
+      await loadNotes();
+    } catch { toast('Failed to save note', 'error'); }
   };
 
   const handleDelete = async (id: string) => {
-    await saasApi.deleteNote(id);
-    setNotes(notes.filter(n => n.id !== id));
+    try {
+      await saasApi.deleteNote(id);
+      toast('Note deleted');
+      setNotes(notes.filter(n => n.id !== id));
+    } catch { toast('Failed to delete note', 'error'); }
   };
 
   const handlePin = async (id: string, isPinned: boolean) => {
-    await saasApi.updateNote(id, { isPinned: !isPinned });
-    await loadNotes();
+    try {
+      await saasApi.updateNote(id, { isPinned: !isPinned });
+      toast(isPinned ? 'Note unpinned' : 'Note pinned');
+      await loadNotes();
+    } catch { toast('Failed to update note', 'error'); }
   };
 
   const startEdit = (note: any) => {
@@ -55,7 +69,7 @@ export default function NotesPage() {
   });
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1200 }} data-testid="notes-page">
+    <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 1200 }} data-testid="notes-page">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Notes</h1>
@@ -86,9 +100,23 @@ export default function NotesPage() {
         <div style={{ padding: 40, color: colors.textMuted }}>Loading notes...</div>
       ) : sorted.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12 }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>◪</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 8 }}>No notes yet</div>
-          <div style={{ fontSize: 13, color: colors.textMuted }}>Capture ideas, meeting notes, or anything you need</div>
+          <div style={{
+            width: 64, height: 64, borderRadius: 16, margin: '0 auto 20px',
+            background: 'rgba(188,140,255,0.1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
+          }}>{'\u270d'}</div>
+          <div style={{ fontSize: 18, fontWeight: 600, color: '#fff', marginBottom: 8 }}>No notes yet</div>
+          <div style={{ fontSize: 14, color: colors.textMuted, maxWidth: 360, margin: '0 auto 20px' }}>
+            Capture ideas, meeting notes, project plans, or anything you need to remember.
+          </div>
+          <button data-testid="button-empty-create-note" onClick={() => { setShowCreate(true); setTitle(''); setContent(''); }}
+            style={{
+              padding: '10px 24px', borderRadius: 8, border: 'none',
+              background: colors.accent, color: '#fff',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            }}>
+            Write your first note
+          </button>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>

@@ -988,7 +988,7 @@ export default function AdminPage() {
   ];
 
   return (
-    <div style={{ padding: '28px 36px', maxWidth: 1500 }} data-testid="admin-page">
+    <div style={{ padding: 'clamp(16px, 3vw, 36px)', maxWidth: 1500 }} data-testid="admin-page">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

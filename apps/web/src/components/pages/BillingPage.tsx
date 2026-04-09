@@ -127,7 +127,7 @@ export default function BillingPage() {
     : null;
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1200 }} data-testid="billing-page">
+    <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 1200 }} data-testid="billing-page">
       <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Billing & Subscription</h1>
       <p style={{ fontSize: 14, color: colors.textMuted, margin: '0 0 32px' }}>Manage your plan, usage, and billing history</p>
 
@@ -160,7 +160,7 @@ export default function BillingPage() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginBottom: 32 }}>
         <div style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 24 }}>
           <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Plan</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
@@ -242,7 +242,7 @@ export default function BillingPage() {
 
       <div style={{ marginBottom: 32 }}>
         <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 16px' }}>Plan Comparison</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
           {plans.sort((a: any, b: any) => a.price - b.price).map((p: any) => {
             const isCurrent = p.slug === currentSlug;
             const planIdx = planOrder.indexOf(p.slug);

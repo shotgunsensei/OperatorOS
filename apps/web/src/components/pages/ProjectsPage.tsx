@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { saasApi, billingApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import UpgradeModal from '../UpgradeModal';
+import { useToast } from '../Toast';
 
 interface ProjectsPageProps {
   onNavigateToTasks: (projectId: string, projectName: string) => void;
@@ -23,6 +24,7 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
   const [usage, setUsage] = useState<any>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [upgradeMessage, setUpgradeMessage] = useState('');
+  const { toast } = useToast();
 
   const loadUsage = async () => {
     try {
@@ -64,6 +66,7 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
     setError('');
     try {
       await saasApi.createProject(selectedWs, newName.trim(), newDesc.trim(), newColor);
+      toast('Project created');
       const d = await saasApi.getProjects(selectedWs);
       setProjects(d.projects);
       setShowCreate(false);
@@ -84,15 +87,18 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this project and all its tasks?')) return;
-    await saasApi.deleteProject(id);
-    setProjects(projects.filter(p => p.id !== id));
-    await loadUsage();
+    try {
+      await saasApi.deleteProject(id);
+      toast('Project deleted');
+      setProjects(projects.filter(p => p.id !== id));
+      await loadUsage();
+    } catch { toast('Failed to delete project', 'error'); }
   };
 
   const projectColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1200 }} data-testid="projects-page">
+    <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 1200 }} data-testid="projects-page">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Projects</h1>

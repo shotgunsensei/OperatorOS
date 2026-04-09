@@ -19,6 +19,7 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
   const [switching, setSwitching] = useState('');
   const [currentPlan, setCurrentPlan] = useState('');
   const [downgradeWarnings, setDowngradeWarnings] = useState<string[]>([]);
+  const [pendingDowngradeSlug, setPendingDowngradeSlug] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -42,6 +43,7 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
         const { violations } = await billingApi.checkDowngrade(slug);
         if (violations.length > 0) {
           setDowngradeWarnings(violations.map((v: any) => v.message));
+          setPendingDowngradeSlug(slug);
           setSwitching('');
           return;
         }
@@ -92,10 +94,19 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#fff', margin: 0 }}>Upgrade Your Plan</h2>
-            {message && <p style={{ fontSize: 13, color: colors.accentYellow, margin: '8px 0 0' }}>{message}</p>}
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#fff', margin: 0 }}>
+              <span style={{ background: 'linear-gradient(135deg, #58a6ff, #bc8cff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                Upgrade Your Plan
+              </span>
+            </h2>
+            {message ? (
+              <p style={{ fontSize: 13, color: colors.accentYellow, margin: '8px 0 0' }}>{message}</p>
+            ) : (
+              <p style={{ fontSize: 13, color: colors.textMuted, margin: '8px 0 0' }}>Unlock more power for your team</p>
+            )}
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: colors.textDim, fontSize: 20, cursor: 'pointer' }}>x</button>
+          <button onClick={onClose} data-testid="button-close-upgrade-modal"
+            style={{ background: 'none', border: 'none', color: colors.textDim, fontSize: 20, cursor: 'pointer', padding: 4 }}>{'\u2715'}</button>
         </div>
 
         {downgradeWarnings.length > 0 && (
@@ -105,12 +116,11 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
               <div key={i} style={{ fontSize: 12, color: colors.text, marginBottom: 4 }}>{w}</div>
             ))}
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button onClick={() => setDowngradeWarnings([])} style={{ padding: '6px 16px', borderRadius: 6, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.text, fontSize: 12, cursor: 'pointer' }}>
+              <button onClick={() => { setDowngradeWarnings([]); setPendingDowngradeSlug(''); }} style={{ padding: '6px 16px', borderRadius: 6, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.text, fontSize: 12, cursor: 'pointer' }}>
                 Cancel
               </button>
               <button onClick={() => {
-                const targetSlug = plans.find((p: any) => ['starter', 'pro', 'elite'].indexOf(p.slug) < ['starter', 'pro', 'elite'].indexOf(currentPlan))?.slug;
-                if (targetSlug) confirmDowngrade(targetSlug);
+                if (pendingDowngradeSlug) confirmDowngrade(pendingDowngradeSlug);
               }} style={{ padding: '6px 16px', borderRadius: 6, border: 'none', background: colors.accentYellow, color: '#000', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                 {switching ? 'Processing...' : 'Downgrade anyway'}
               </button>
@@ -121,7 +131,7 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
         {loading ? (
           <div style={{ padding: 40, textAlign: 'center', color: colors.textMuted }}>Loading plans...</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
             {plans.sort((a: any, b: any) => a.price - b.price).map((p: any) => {
               const isCurrent = p.slug === currentPlan;
               const isHighlighted = upgradeSlug ? p.slug === upgradeSlug : p.highlight;
