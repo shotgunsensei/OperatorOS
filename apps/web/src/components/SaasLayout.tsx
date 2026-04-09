@@ -25,17 +25,37 @@ interface NavItem {
   adminOnly?: boolean;
 }
 
-const navItems: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: '◫' },
-  { id: 'projects', label: 'Projects', icon: '◧' },
-  { id: 'tasks', label: 'Tasks', icon: '☑' },
-  { id: 'notes', label: 'Notes', icon: '◪' },
-  { id: 'activity', label: 'Activity', icon: '◉' },
-  { id: 'ai-tools', label: 'AI Tools', icon: '✦' },
-  { id: 'workspace', label: 'Workspaces', icon: '⬡' },
-  { id: 'billing', label: 'Billing', icon: '◈' },
-  { id: 'settings', label: 'Settings', icon: '⚙' },
-  { id: 'admin', label: 'Admin', icon: '⛊', adminOnly: true },
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+const navSections: NavSection[] = [
+  {
+    label: 'Work',
+    items: [
+      { id: 'workspace', label: 'Workspaces', icon: '⬡' },
+      { id: 'projects', label: 'Projects', icon: '◧' },
+      { id: 'tasks', label: 'Tasks', icon: '☑' },
+      { id: 'notes', label: 'Notes', icon: '◪' },
+    ],
+  },
+  {
+    label: 'Insights',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', icon: '◫' },
+      { id: 'activity', label: 'Activity', icon: '◉' },
+      { id: 'ai-tools', label: 'AI Assistant', icon: '✦' },
+    ],
+  },
+  {
+    label: 'Account',
+    items: [
+      { id: 'billing', label: 'Billing', icon: '◈' },
+      { id: 'settings', label: 'Settings', icon: '⚙' },
+      { id: 'admin', label: 'Admin', icon: '⛊', adminOnly: true },
+    ],
+  },
 ];
 
 interface SaasLayoutProps {
@@ -63,7 +83,10 @@ export default function SaasLayout({ activePage, onNavigate, children }: SaasLay
     if (isMobile) setMobileOpen(false);
   };
 
-  const filteredNavItems = navItems.filter(item => !item.adminOnly || user?.role === 'admin');
+  const filteredSections = navSections.map(section => ({
+    ...section,
+    items: section.items.filter(item => !item.adminOnly || user?.role === 'admin'),
+  })).filter(section => section.items.length > 0);
 
   const sidebarWidth = isMobile ? 260 : (collapsed ? 64 : 240);
 
@@ -119,39 +142,59 @@ export default function SaasLayout({ activePage, onNavigate, children }: SaasLay
         )}
       </div>
 
-      <div style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
-        {filteredNavItems.map(item => {
-          const isActive = activePage === item.id;
-          return (
-            <button
-              key={item.id}
-              data-testid={`nav-${item.id}`}
-              onClick={() => handleNavigate(item.id)}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: (!isMobile && collapsed) ? '10px 14px' : '10px 12px',
-                margin: '2px 0',
-                border: 'none',
-                borderRadius: 8,
-                background: isActive ? colors.bgHover : 'transparent',
-                color: isActive ? colors.accent : colors.text,
-                cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: isActive ? 600 : 400,
-                textAlign: 'left',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => { if (!isActive) (e.target as HTMLElement).style.background = colors.bgHover; }}
-              onMouseLeave={e => { if (!isActive) (e.target as HTMLElement).style.background = 'transparent'; }}
-            >
-              <span style={{ fontSize: 16, flexShrink: 0, width: 20, textAlign: 'center' }}>{item.icon}</span>
-              {(isMobile || !collapsed) && <span>{item.label}</span>}
-            </button>
-          );
-        })}
+      <div style={{ flex: 1, padding: '8px 8px', overflowY: 'auto' }}>
+        {filteredSections.map((section, sIdx) => (
+          <div key={section.label} style={{ marginTop: sIdx === 0 ? 0 : 8 }}>
+            {(isMobile || !collapsed) && (
+              <div style={{
+                padding: '6px 12px 4px',
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase' as const,
+                color: colors.textDim,
+                userSelect: 'none' as const,
+              }}>{section.label}</div>
+            )}
+            {collapsed && !isMobile && sIdx > 0 && (
+              <div style={{
+                height: 1, background: colors.border, margin: '4px 12px 6px',
+              }} />
+            )}
+            {section.items.map(item => {
+              const isActive = activePage === item.id;
+              return (
+                <button
+                  key={item.id}
+                  data-testid={`nav-${item.id}`}
+                  onClick={() => handleNavigate(item.id)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: (!isMobile && collapsed) ? '10px 14px' : '10px 12px',
+                    margin: '1px 0',
+                    border: 'none',
+                    borderRadius: 8,
+                    background: isActive ? colors.bgHover : 'transparent',
+                    color: isActive ? colors.accent : colors.text,
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: isActive ? 600 : 400,
+                    textAlign: 'left',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!isActive) (e.target as HTMLElement).style.background = colors.bgHover; }}
+                  onMouseLeave={e => { if (!isActive) (e.target as HTMLElement).style.background = 'transparent'; }}
+                >
+                  <span style={{ fontSize: 16, flexShrink: 0, width: 20, textAlign: 'center' }}>{item.icon}</span>
+                  {(isMobile || !collapsed) && <span>{item.label}</span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       <div style={{ padding: '12px 8px', borderTop: `1px solid ${colors.border}`, position: 'relative' }}>
