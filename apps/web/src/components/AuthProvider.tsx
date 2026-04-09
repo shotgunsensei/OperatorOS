@@ -16,19 +16,23 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  authError: { code: string; message: string } | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
+  clearAuthError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  authError: null,
   login: async () => {},
   register: async () => {},
   logout: async () => {},
   refresh: async () => {},
+  clearAuthError: () => {},
 });
 
 export function useAuth() {
@@ -38,14 +42,23 @@ export function useAuth() {
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<{ code: string; message: string } | null>(null);
+
+  const clearAuthError = useCallback(() => setAuthError(null), []);
 
   const refresh = useCallback(async () => {
     try {
       const { user } = await authApi.me();
       setUser(user);
-    } catch {
+      setAuthError(null);
+    } catch (err: any) {
       setUser(null);
       localStorage.removeItem('token');
+      if (err?.code === 'ACCOUNT_SUSPENDED') {
+        setAuthError({ code: 'ACCOUNT_SUSPENDED', message: err.error || 'Account suspended' });
+      } else if (err?.code === 'ACCOUNT_DELETED') {
+        setAuthError({ code: 'ACCOUNT_DELETED', message: err.error || 'Account deleted' });
+      }
     } finally {
       setLoading(false);
     }
@@ -56,12 +69,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, [refresh]);
 
   const login = async (email: string, password: string) => {
+    setAuthError(null);
     const data = await authApi.login(email, password);
     localStorage.setItem('token', data.token);
     setUser(data.user);
   };
 
   const register = async (email: string, password: string, name: string) => {
+    setAuthError(null);
     const data = await authApi.register(email, password, name);
     localStorage.setItem('token', data.token);
     setUser(data.user);
@@ -73,10 +88,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     } catch {}
     localStorage.removeItem('token');
     setUser(null);
+    setAuthError(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, authError, login, register, logout, refresh, clearAuthError }}>
       {children}
     </AuthContext.Provider>
   );

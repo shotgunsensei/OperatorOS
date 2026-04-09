@@ -65,13 +65,22 @@ The Next.js app proxies API calls via rewrites: `/api/*` -> `localhost:5001/v1/*
 | API | 5001 | Fastify control plane |
 | Runner Gateway | 5002 | Standalone runner service |
 
-## Authentication
+## Authentication & Authorization
 
-- **Method**: Email/password with bcrypt hashing + JWT tokens
+- **Method**: Email/password with bcrypt hashing (12 rounds) + JWT tokens (7-day expiry)
 - **Token storage**: localStorage (frontend) + httpOnly cookie (backend)
 - **JWT secret**: Uses SESSION_SECRET env var (fallback: 'operatoros-dev-secret')
 - **Seeded admin**: admin@operatoros.com / Admin123! (overridable via ADMIN_EMAIL/ADMIN_PASSWORD env vars)
 - **Cookie security**: `secure` flag enabled in production only
+- **Account lockout**: 5 failed login attempts = 15-minute lockout
+- **User statuses**: active, suspended, deleted, pending
+- **Middleware suite**:
+  - `authenticate` — JWT verification + user status checks (suspended/deleted/locked)
+  - `requireAdmin` — Verifies admin role
+  - `requireActiveSubscription` — Checks subscription status (blocks past_due/canceled/expired)
+  - `requirePlanFeature(featureKey)` — Gates features by plan (exports, automation, templates, advancedAnalytics)
+  - `requireUsageWithinLimit(resourceType)` — Enforces monthly usage limits (aiActions, etc.)
+- **Audit trail**: All auth events logged to admin_audit_logs (login success/failure, password changes, email changes, account deletion, admin actions)
 
 ## Subscription Plans
 
@@ -86,12 +95,16 @@ Plans are auto-seeded on startup. Stripe-ready billing endpoints exist but no li
 ## API Endpoints
 
 ### Auth (`/v1/auth/*`)
-- `POST /v1/auth/register` - Create account
-- `POST /v1/auth/login` - Sign in (returns JWT)
-- `POST /v1/auth/logout` - Sign out (clears cookie)
+- `POST /v1/auth/register` - Create account (validates email/password/name)
+- `POST /v1/auth/login` - Sign in (returns JWT, tracks failed attempts, lockout)
+- `POST /v1/auth/logout` - Sign out (clears cookie, audit logged)
 - `GET /v1/auth/me` - Get current user (requires auth)
+- `PUT /v1/auth/profile` - Update name/avatar
+- `PUT /v1/auth/change-password` - Change password (requires current password)
+- `PUT /v1/auth/change-email` - Change email (requires password, issues new JWT)
 - `POST /v1/auth/forgot-password` - Request password reset
 - `POST /v1/auth/reset-password` - Reset password with token
+- `POST /v1/auth/request-deletion` - Self-delete account (requires password, blocked for admins)
 
 ### SaaS CRUD (`/v1/saas/*`) — all require auth
 - `GET/POST /v1/saas/workspaces` - List/create workspaces
@@ -107,10 +120,15 @@ Plans are auto-seeded on startup. Stripe-ready billing endpoints exist but no li
 - `GET /v1/saas/plans` - List subscription plans
 
 ### Admin (`/v1/admin/*`) — require admin role
-- `GET /v1/admin/users` - List all users with subscriptions
-- `PUT /v1/admin/users/:id/role` - Change user role
-- `GET /v1/admin/metrics` - Platform metrics
-- `GET /v1/admin/audit` - Audit log
+- `GET /v1/admin/users` - List all users with subscriptions (search, filter by status)
+- `GET /v1/admin/users/:id` - User detail with stats, activity, audit history
+- `PUT /v1/admin/users/:id/status` - Suspend/reactivate/delete user (audit logged)
+- `PUT /v1/admin/users/:id/role` - Change user role (audit logged)
+- `PUT /v1/admin/users/:id/plan` - Change user plan (audit + billing event logged)
+- `PUT /v1/admin/users/:id/unlock` - Unlock locked account
+- `DELETE /v1/admin/users/:id` - Soft-delete user (audit logged)
+- `GET /v1/admin/metrics` - Platform metrics (users, subscriptions, content counts)
+- `GET /v1/admin/audit-log` - Audit log (filterable by action, userId)
 
 ### Billing (`/v1/billing/*`) — require auth
 - `GET /v1/billing/subscription` - Current subscription

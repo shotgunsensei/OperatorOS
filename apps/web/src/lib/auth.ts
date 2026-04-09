@@ -38,6 +38,12 @@ export const authApi = {
 
   changePassword: (currentPassword: string, newPassword: string) =>
     apiFetch('/auth/change-password', { method: 'PUT', body: JSON.stringify({ currentPassword, newPassword }) }),
+
+  changeEmail: (newEmail: string, password: string) =>
+    apiFetch('/auth/change-email', { method: 'PUT', body: JSON.stringify({ newEmail, password }) }),
+
+  requestDeletion: (password: string) =>
+    apiFetch('/auth/request-deletion', { method: 'POST', body: JSON.stringify({ password }) }),
 };
 
 export const saasApi = {
@@ -102,17 +108,21 @@ export const adminApi = {
     return apiFetch(`/admin/users?${qs.toString()}`);
   },
   getUser: (id: string) => apiFetch(`/admin/users/${id}`),
-  updateUserStatus: (id: string, status: string) =>
-    apiFetch(`/admin/users/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+  updateUserStatus: (id: string, status: string, reason?: string) =>
+    apiFetch(`/admin/users/${id}/status`, { method: 'PUT', body: JSON.stringify({ status, reason }) }),
   updateUserRole: (id: string, role: string) =>
     apiFetch(`/admin/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role }) }),
   updateUserPlan: (id: string, planSlug: string) =>
     apiFetch(`/admin/users/${id}/plan`, { method: 'PUT', body: JSON.stringify({ planSlug }) }),
+  unlockUser: (id: string) =>
+    apiFetch(`/admin/users/${id}/unlock`, { method: 'PUT' }),
   deleteUser: (id: string) => apiFetch(`/admin/users/${id}`, { method: 'DELETE' }),
   getMetrics: () => apiFetch('/admin/metrics'),
-  getAuditLog: (params?: { page?: number }) => {
+  getAuditLog: (params?: { page?: number; action?: string; userId?: string }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
+    if (params?.action) qs.set('action', params.action);
+    if (params?.userId) qs.set('userId', params.userId);
     return apiFetch(`/admin/audit-log?${qs.toString()}`);
   },
 };

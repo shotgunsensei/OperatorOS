@@ -14,12 +14,19 @@ export async function ensureSaasTables() {
       status TEXT NOT NULL DEFAULT 'active',
       avatar_url TEXT,
       plan_id VARCHAR(36),
+      failed_login_count INTEGER NOT NULL DEFAULT 0,
+      locked_until TIMESTAMP,
+      deleted_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT NOW() NOT NULL,
       updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
       last_login_at TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_count INTEGER DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
 
     CREATE TABLE IF NOT EXISTS subscription_plans (
       id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),

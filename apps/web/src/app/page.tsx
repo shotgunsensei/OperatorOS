@@ -6,6 +6,9 @@ import SaasLayout from '@/components/SaasLayout';
 import LoginPage from '@/components/pages/LoginPage';
 import RegisterPage from '@/components/pages/RegisterPage';
 import ForgotPasswordPage from '@/components/pages/ForgotPasswordPage';
+import ResetPasswordPage from '@/components/pages/ResetPasswordPage';
+import SuspendedPage from '@/components/pages/SuspendedPage';
+import UnauthorizedPage from '@/components/pages/UnauthorizedPage';
 import DashboardPage from '@/components/pages/DashboardPage';
 import ProjectsPage from '@/components/pages/ProjectsPage';
 import TasksPage from '@/components/pages/TasksPage';
@@ -18,8 +21,8 @@ import SettingsPage from '@/components/pages/SettingsPage';
 import AdminPage from '@/components/pages/AdminPage';
 
 function AppContent() {
-  const { user, loading } = useAuth();
-  const [authPage, setAuthPage] = useState<'login' | 'register' | 'forgot-password'>('login');
+  const { user, loading, authError, logout, clearAuthError } = useAuth();
+  const [authPage, setAuthPage] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>('login');
   const [activePage, setActivePage] = useState('dashboard');
   const [taskProject, setTaskProject] = useState<{ id: string; name: string } | null>(null);
 
@@ -42,10 +45,16 @@ function AppContent() {
     );
   }
 
+  if (authError?.code === 'ACCOUNT_SUSPENDED') {
+    return <SuspendedPage onLogout={async () => { clearAuthError(); await logout(); }} message={authError.message} />;
+  }
+
   if (!user) {
-    if (authPage === 'register') return <RegisterPage onSwitch={setAuthPage as any} />;
-    if (authPage === 'forgot-password') return <ForgotPasswordPage onSwitch={setAuthPage as any} />;
-    return <LoginPage onSwitch={setAuthPage as any} />;
+    const handleSwitch = (page: string) => setAuthPage(page as any);
+    if (authPage === 'register') return <RegisterPage onSwitch={handleSwitch} />;
+    if (authPage === 'forgot-password') return <ForgotPasswordPage onSwitch={handleSwitch} />;
+    if (authPage === 'reset-password') return <ResetPasswordPage onSwitch={handleSwitch} />;
+    return <LoginPage onSwitch={handleSwitch} />;
   }
 
   const handleNavigate = (page: string) => {
@@ -75,7 +84,10 @@ function AppContent() {
       case 'workspace': return <WorkspacesPage />;
       case 'billing': return <BillingPage />;
       case 'settings': return <SettingsPage />;
-      case 'admin': return user.role === 'admin' ? <AdminPage /> : <DashboardPage />;
+      case 'admin':
+        return user.role === 'admin'
+          ? <AdminPage />
+          : <UnauthorizedPage onGoBack={() => handleNavigate('dashboard')} message="Only administrators can access this page." />;
       default: return <DashboardPage />;
     }
   };
