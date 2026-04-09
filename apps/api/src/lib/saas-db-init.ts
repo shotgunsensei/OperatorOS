@@ -182,6 +182,17 @@ export async function ensureSaasTables() {
     );
     CREATE INDEX IF NOT EXISTS idx_billing_events_user ON billing_events(user_id);
 
+    CREATE TABLE IF NOT EXISTS admin_notes (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      admin_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      target_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      content TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_admin_notes_target ON admin_notes(target_user_id);
+    CREATE INDEX IF NOT EXISTS idx_admin_notes_created ON admin_notes(created_at DESC);
+
     CREATE TABLE IF NOT EXISTS password_reset_tokens (
       id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id VARCHAR(36) NOT NULL REFERENCES users(id),

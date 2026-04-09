@@ -378,6 +378,20 @@ export const passwordResetTokens = pgTable('password_reset_tokens', {
   index('idx_password_reset_tokens_token').on(t.token),
 ]);
 
+export const adminNotes = pgTable('admin_notes', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar('admin_id', { length: 36 }).notNull().references(() => users.id),
+  targetUserId: varchar('target_user_id', { length: 36 }).notNull().references(() => users.id),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_admin_notes_target').on(t.targetUserId),
+  index('idx_admin_notes_created').on(t.createdAt),
+]);
+
+export type AdminNoteRow = typeof adminNotes.$inferSelect;
+
 export type PublishRunRow = typeof publishRuns.$inferSelect;
 export type WorkspaceProcessRow = typeof workspaceProcesses.$inferSelect;
 export type WorkspaceServiceRow = typeof workspaceServices.$inferSelect;

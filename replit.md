@@ -127,16 +127,29 @@ Plans are auto-seeded on startup. Stripe-ready billing endpoints exist but no li
 - `GET /v1/saas/dashboard` - Dashboard stats + plan limits
 - `GET /v1/saas/plans` - List subscription plans
 
-### Admin (`/v1/admin/*`) — require admin role
-- `GET /v1/admin/users` - List all users with subscriptions (search, filter by status)
-- `GET /v1/admin/users/:id` - User detail with stats, activity, audit history
-- `PUT /v1/admin/users/:id/status` - Suspend/reactivate/delete user (audit logged)
-- `PUT /v1/admin/users/:id/role` - Change user role (audit logged)
+### Admin Control Center (`/v1/admin/*`) — require admin role
+- `GET /v1/admin/users` - List users (search, filter by status/plan/role, sort, paginate)
+- `GET /v1/admin/users/:id` - User detail with stats, activity, audit history, billing events, admin notes
+- `PUT /v1/admin/users/:id/status` - Suspend/reactivate/delete user (audit logged, self-lockout prevented)
+- `PUT /v1/admin/users/:id/role` - Change user role (audit logged, self-demotion prevented)
 - `PUT /v1/admin/users/:id/plan` - Change user plan (audit + billing event logged)
+- `PUT /v1/admin/users/:id/subscription-status` - Override subscription status (active/past_due/canceled/trialing/expired)
+- `PUT /v1/admin/users/:id/trial` - Set trial end date
 - `PUT /v1/admin/users/:id/unlock` - Unlock locked account
 - `DELETE /v1/admin/users/:id` - Soft-delete user (audit logged)
-- `GET /v1/admin/metrics` - Platform metrics (users, subscriptions, content counts)
-- `GET /v1/admin/audit-log` - Audit log (filterable by action, userId)
+- `DELETE /v1/admin/users/:id/hard` - Hard delete (requires soft-delete first, no remaining workspaces/projects)
+- `POST /v1/admin/users/:id/notes` - Add admin note to user
+- `DELETE /v1/admin/notes/:noteId` - Delete admin note
+- `GET /v1/admin/metrics` - Enhanced metrics (users by status, plan counts, content totals, recent signups, recent admin actions)
+- `GET /v1/admin/audit-log` - Audit log (search, filter by action/userId, enriched with user names)
+- `GET /v1/admin/billing-events` - Billing events log (filter by userId/eventType)
+
+**Admin UI** (AdminPage.tsx):
+- **Overview tab**: Stat cards, users by plan bars, platform usage, recent signups, recent admin actions
+- **Users tab**: Searchable/sortable/filterable table, click-into user detail panel with profile/activity/audit/billing/notes sub-tabs
+- **Audit Log tab**: Searchable/filterable log with action badges, admin names, metadata display
+- **Billing tab**: Billing events table with event type filter
+- **Confirmation modals** for all destructive actions (suspend, delete, plan change, role change)
 
 ### Billing (`/v1/billing/*`) — require auth
 - `GET /v1/billing/subscription` - Current subscription

@@ -104,10 +104,14 @@ export const billingApi = {
 };
 
 export const adminApi = {
-  getUsers: (params?: { search?: string; status?: string; page?: number }) => {
+  getUsers: (params?: { search?: string; status?: string; plan?: string; role?: string; sort?: string; order?: string; page?: number }) => {
     const qs = new URLSearchParams();
     if (params?.search) qs.set('search', params.search);
     if (params?.status) qs.set('status', params.status);
+    if (params?.plan) qs.set('plan', params.plan);
+    if (params?.role) qs.set('role', params.role);
+    if (params?.sort) qs.set('sort', params.sort);
+    if (params?.order) qs.set('order', params.order);
     if (params?.page) qs.set('page', String(params.page));
     return apiFetch(`/admin/users?${qs.toString()}`);
   },
@@ -118,15 +122,32 @@ export const adminApi = {
     apiFetch(`/admin/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role }) }),
   updateUserPlan: (id: string, planSlug: string) =>
     apiFetch(`/admin/users/${id}/plan`, { method: 'PUT', body: JSON.stringify({ planSlug }) }),
+  updateSubscriptionStatus: (id: string, status: string, reason?: string) =>
+    apiFetch(`/admin/users/${id}/subscription-status`, { method: 'PUT', body: JSON.stringify({ status, reason }) }),
+  setTrial: (id: string, trialEndDate: string) =>
+    apiFetch(`/admin/users/${id}/trial`, { method: 'PUT', body: JSON.stringify({ trialEndDate }) }),
   unlockUser: (id: string) =>
     apiFetch(`/admin/users/${id}/unlock`, { method: 'PUT' }),
   deleteUser: (id: string) => apiFetch(`/admin/users/${id}`, { method: 'DELETE' }),
+  hardDeleteUser: (id: string) => apiFetch(`/admin/users/${id}/hard`, { method: 'DELETE' }),
+  addNote: (userId: string, content: string) =>
+    apiFetch(`/admin/users/${userId}/notes`, { method: 'POST', body: JSON.stringify({ content }) }),
+  deleteNote: (noteId: string) =>
+    apiFetch(`/admin/notes/${noteId}`, { method: 'DELETE' }),
   getMetrics: () => apiFetch('/admin/metrics'),
-  getAuditLog: (params?: { page?: number; action?: string; userId?: string }) => {
+  getAuditLog: (params?: { page?: number; action?: string; userId?: string; search?: string }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
     if (params?.action) qs.set('action', params.action);
     if (params?.userId) qs.set('userId', params.userId);
+    if (params?.search) qs.set('search', params.search);
     return apiFetch(`/admin/audit-log?${qs.toString()}`);
+  },
+  getBillingEvents: (params?: { page?: number; userId?: string; eventType?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.userId) qs.set('userId', params.userId);
+    if (params?.eventType) qs.set('eventType', params.eventType);
+    return apiFetch(`/admin/billing-events?${qs.toString()}`);
   },
 };
