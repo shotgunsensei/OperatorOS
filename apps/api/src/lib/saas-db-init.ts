@@ -258,8 +258,8 @@ export async function seedPlansAndAdmin() {
     console.log('[seed] Created subscription plans from PLAN_CONFIGS:', PLAN_CONFIGS.map(p => p.name).join(', '));
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@operatoros.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
+  const adminEmail = process.env.ADMIN_EMAIL || 'john@shotgunninjas.com';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Dr0p$0fJup1t3r';
 
   const existingAdmin = await db.select().from(users).where(eq(users.email, adminEmail)).limit(1);
   if (existingAdmin.length === 0) {
@@ -267,7 +267,7 @@ export async function seedPlansAndAdmin() {
     const [admin] = await db.insert(users).values({
       email: adminEmail,
       passwordHash,
-      name: 'Admin',
+      name: 'John',
       role: 'admin',
       status: 'active',
     }).returning();

@@ -182,7 +182,7 @@ apps/
 
 | Account | Email | Password | Plan | Role |
 |---------|-------|----------|------|------|
-| Admin | admin@operatoros.com | Admin123! | Elite | admin |
+| Admin | john@shotgunninjas.com | Dr0p$0fJup1t3r | Elite | admin |
 | Demo | demo@operatoros.com | Demo1234! | Pro | user |
 
 The demo account comes pre-loaded with a workspace, project, tasks, notes, and activity for evaluation.

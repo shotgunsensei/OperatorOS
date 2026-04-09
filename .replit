@@ -52,3 +52,9 @@ outputType = "webview"
 task = "shell.exec"
 args = "PORT=5001 tsx apps/api/src/index.ts & PORT=5002 tsx apps/runner-gateway/src/index.ts & sleep 2 && cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:5001 npx next dev -p 5000"
 waitForPort = 5000
+
+[userenv]
+
+[userenv.shared]
+ADMIN_EMAIL = "john@shotgunninjas.com"
+ADMIN_PASSWORD = "Dr0p$0fJup1t3r"
