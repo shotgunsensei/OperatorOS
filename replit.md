@@ -1,17 +1,12 @@
 # OperatorOS
 
-AI-native Cloud Development Environment — the operating system for managing app workspaces, services, and deployments. Powered by Shotgun Ninjas.
+AI-native Cloud Development Environment and SaaS platform — the operating system for managing app workspaces, services, and deployments. Powered by Shotgun Ninjas.
 
-## System Domains
+## System Overview
 
-OperatorOS presents these system domains:
-
-- **Workspaces** — project environments (git-backed)
-- **Processes** — managed commands and running jobs
-- **Services** — preview servers, background agents, databases, watchers
-- **Automation** — event-driven rules (trigger → action)
-- **System** — status, events, notifications
-- **Publish** — deployment assistant (analyze → plan → artifacts → proof)
+OperatorOS has two layers:
+1. **SaaS Platform** — Auth, billing, workspaces, projects, tasks, notes, activity tracking, admin panel
+2. **CDE Operator Shell** — Terminal, processes, services, agent, publish, preview, automation (legacy)
 
 ## Project Structure
 
@@ -20,17 +15,29 @@ pnpm monorepo:
 ```
 apps/
   api/              - Fastify control plane API (port 5001, Postgres-backed)
-    src/index.ts    - Kernel entrypoint (registers plugins, existing routes)
-    src/routes/     - Modular route files
+    src/index.ts    - Server entrypoint (registers plugins, all routes)
+    src/routes/
       os-routes.ts  - OS primitives: processes, services, automation, system
-    src/lib/        - Shared utilities
-      db-init.ts    - Extended table creation
+      auth-routes.ts - Auth: register, login, logout, forgot/reset password
+      saas-routes.ts - SaaS CRUD: workspaces, projects, tasks, notes, activity, dashboard
+      admin-routes.ts - Admin panel: users, metrics, audit logs
+      billing-routes.ts - Billing: subscriptions, plan switching, usage
+    src/lib/
+      auth.ts       - JWT/bcrypt auth helpers, authenticate middleware, plan limits
+      saas-db-init.ts - SaaS table creation + plan/admin seeding
+      db-init.ts    - Extended table creation (OS tables)
       exec.ts       - Safe workspace execution facade
       system-events.ts - Event/notification emission helpers
     src/publish/    - Publish assistant module
     src/agent.ts    - AI agent loop (GPT-4o)
     src/schema.ts   - Drizzle ORM schema (all tables)
-  web/              - Next.js GUI (port 5000, operator shell layout)
+  web/              - Next.js GUI (port 5000)
+    src/app/page.tsx - Main SaaS app (state-based routing for all pages)
+    src/components/
+      SaasLayout.tsx - Collapsible sidebar nav with dark theme
+      AuthProvider.tsx - Auth context (JWT in localStorage)
+    src/lib/
+      auth.ts       - API helpers (authApi, saasApi, billingApi, adminApi)
   runner-gateway/   - Runner execution providers (local, Docker, K8s) + safety module (port 5002)
 packages/
   sdk/              - Shared TypeScript types, patch validation helpers
@@ -58,142 +65,128 @@ The Next.js app proxies API calls via rewrites: `/api/*` -> `localhost:5001/v1/*
 | API | 5001 | Fastify control plane |
 | Runner Gateway | 5002 | Standalone runner service |
 
+## Authentication
+
+- **Method**: Email/password with bcrypt hashing + JWT tokens
+- **Token storage**: localStorage (frontend) + httpOnly cookie (backend)
+- **JWT secret**: Uses SESSION_SECRET env var (fallback: 'operatoros-dev-secret')
+- **Seeded admin**: admin@operatoros.com / Admin123! (overridable via ADMIN_EMAIL/ADMIN_PASSWORD env vars)
+- **Cookie security**: `secure` flag enabled in production only
+
+## Subscription Plans
+
+| Plan | Price | Workspaces | Projects | Tasks |
+|------|-------|------------|----------|-------|
+| Starter | Free | 2 | 5 | 50 |
+| Pro | $29/mo | 10 | 50 | 1000 |
+| Elite | $99/mo | 999 | 9999 | 99999 |
+
+Plans are auto-seeded on startup. Stripe-ready billing endpoints exist but no live Stripe integration yet.
+
 ## API Endpoints
 
-### Core Workspace Endpoints (apps/api/src/index.ts)
+### Auth (`/v1/auth/*`)
+- `POST /v1/auth/register` - Create account
+- `POST /v1/auth/login` - Sign in (returns JWT)
+- `POST /v1/auth/logout` - Sign out (clears cookie)
+- `GET /v1/auth/me` - Get current user (requires auth)
+- `POST /v1/auth/forgot-password` - Request password reset
+- `POST /v1/auth/reset-password` - Reset password with token
+
+### SaaS CRUD (`/v1/saas/*`) — all require auth
+- `GET/POST /v1/saas/workspaces` - List/create workspaces
+- `GET/DELETE /v1/saas/workspaces/:id` - Get/delete workspace
+- `GET/POST /v1/saas/workspaces/:wsId/projects` - List/create projects (workspace-scoped)
+- `PUT/DELETE /v1/saas/projects/:id` - Update/delete project (ownership verified)
+- `GET/POST /v1/saas/projects/:projectId/tasks` - List/create tasks (project-scoped)
+- `PUT/DELETE /v1/saas/tasks/:id` - Update/delete task (ownership verified)
+- `GET/POST /v1/saas/notes` - List/create notes
+- `PUT/DELETE /v1/saas/notes/:id` - Update/delete note (ownership verified)
+- `GET /v1/saas/activity` - Activity feed
+- `GET /v1/saas/dashboard` - Dashboard stats + plan limits
+- `GET /v1/saas/plans` - List subscription plans
+
+### Admin (`/v1/admin/*`) — require admin role
+- `GET /v1/admin/users` - List all users with subscriptions
+- `PUT /v1/admin/users/:id/role` - Change user role
+- `GET /v1/admin/metrics` - Platform metrics
+- `GET /v1/admin/audit` - Audit log
+
+### Billing (`/v1/billing/*`) — require auth
+- `GET /v1/billing/subscription` - Current subscription
+- `POST /v1/billing/subscribe` - Subscribe to plan
+- `POST /v1/billing/cancel` - Cancel subscription
+
+### Core Workspace Endpoints
 - `GET /healthz` - Health check
 - `GET /readyz` - Readiness probe
-- `GET /v1/profiles` - List runner profiles
 - `POST /v1/workspaces` - Create workspace
 - `GET /v1/workspaces` - List workspaces
-- `GET /v1/workspaces/:id` - Get workspace + runner status
-- `POST /v1/workspaces/:id/start` - Start runner
-- `POST /v1/workspaces/:id/stop` - Stop runner
-- `POST /v1/workspaces/:id/exec` - Execute command
-- `GET /v1/workspaces/:id/tree` - File tree
-- `POST /v1/workspaces/:id/read-file` - Read file
-- `POST /v1/workspaces/:id/apply-patch` - Apply unified diff
-- `POST /v1/workspaces/:id/git-status` - Git status
-- `POST /v1/workspaces/:id/verify` - Run verification pipeline
+- Various workspace management endpoints (start/stop/exec/tree/git)
 
-### Task/Agent Endpoints
-- `POST /v1/tasks` - Create task
-- `POST /v1/tasks/:taskId/run` - Run agent task
-- `GET /v1/tasks/:taskId` - Get task
-- `GET /v1/tasks/:taskId/events` - Task events
-- `GET /v1/tasks/:taskId/events/stream` - SSE stream
-- `GET /v1/tasks/:taskId/traces` - Tool traces
-
-### OS Primitives (apps/api/src/routes/os-routes.ts)
-
-**System:**
-- `GET /v1/system/status` - System-wide counts (workspaces, processes, services, notifications)
-- `GET /v1/system/events` - System event feed
-- `GET /v1/system/notifications` - User-facing notifications
-- `POST /v1/system/notifications/:id/read` - Mark notification read
-
-**Processes:**
-- `GET /v1/workspaces/:id/processes` - List managed processes
-- `POST /v1/workspaces/:id/processes` - Start process (foreground or background)
-- `POST /v1/workspaces/:id/processes/:processId/stop` - Stop process
-- `GET /v1/workspaces/:id/processes/:processId/logs` - View process logs
-
-**Services:**
-- `GET /v1/workspaces/:id/services` - List services
-- `POST /v1/workspaces/:id/services/start` - Start named service
-- `POST /v1/workspaces/:id/services/:serviceId/stop` - Stop service
-- `GET /v1/workspaces/:id/services/:serviceId/status` - Service health
-
-**Automation:**
-- `GET /v1/workspaces/:id/automations` - List automation rules
-- `POST /v1/workspaces/:id/automations` - Create rule
-- `POST /v1/workspaces/:id/automations/:ruleId/toggle` - Toggle enabled/disabled
+### OS Primitives (`/v1/system/*`, `/v1/workspaces/:id/*`)
+- System status, events, notifications
+- Process management (start/stop/logs)
+- Service management (start/stop/health)
+- Automation rules (CRUD + toggle)
 
 ### Publish Assistant
-- `POST /v1/publish/analyze` - Detect framework/platform
-- `POST /v1/publish/plan` - Generate deployment plan
-- `POST /v1/publish/artifacts` - Generate deployment configs
-- `POST /v1/publish/proof` - Run pre-deployment checks
-- `POST /v1/publish/explain` - LLM-powered explanation
-- `GET /v1/publish/runs/:workspaceId` - Past publish runs
+- Analyze → Plan → Artifacts → Proof pipeline
 
-### WebSocket
-- `WS /v1/runner/stream/:workspaceId` - Stream stdout/stderr/exit events
+## Frontend Architecture
 
-## Web GUI (apps/web on port 5000)
-
-Operator shell layout with:
-- Left sidebar: WorkspacePanel (create, select, start/stop, process/service counts)
-- Top bar: SystemStatusBar (workspace state, runner mode, process/service counts)
-- Top right: SystemNotifications (dropdown drawer)
-- Main area: FileExplorer + Editor
-- Bottom panel (7 tabs): Terminal | Processes | Services | Agent | Publish | Preview | Automation
-
-Components:
-- `SystemStatusBar.tsx` - Live system status chips
-- `SystemNotifications.tsx` - Notification bell with drawer
-- `ProcessesPanel.tsx` - Task manager (start bg/fg, stop, view logs)
-- `ServicesPanel.tsx` - Service console (start/stop named services)
-- `AutomationPanel.tsx` - Rule CRUD (trigger → action, toggle)
-- `PreviewPanel.tsx` - Service-aware preview with auto-detection
-- `WorkspacePanel.tsx` - Enhanced with process/service counts
-- `AgentPanel.tsx` - AI agent with goal input and event stream
-- `PublishPanel.tsx` - Deployment wizard
+- **Routing**: State-based (activePage state in page.tsx), not Next.js router
+- **Styling**: Inline styles exclusively (no Tailwind/CSS modules), dark-first theme
+- **Auth flow**: Login → Dashboard (default), Register, Forgot Password pages
+- **SaaS pages**: Dashboard, Projects, Tasks, Notes, Activity, AI Tools, Workspaces, Billing, Settings, Admin
+- **Layout**: Collapsible sidebar with user info, plan badge, and nav items
 
 ## Database
 
 PostgreSQL via Drizzle ORM + raw SQL (auto-created on startup):
 
-**Core tables:**
-- `workspaces` - id, git_url, git_ref, profile_id, status, timestamps
-- `runners` - workspace_id (FK), mode, pod_name/container_id, status
-- `tasks` - id, workspace_id (FK), title, status, required_checks, check_results
-- `task_events` - id, task_id (FK), ts, type, payload
-- `tool_traces` - id, task_id (FK), ts, tool_name, input, output, success
-- `workspace_ports` - id, workspace_id (FK), port, protocol, is_primary
-- `publish_runs` - id, workspace_id (FK), status, detectedJson, planJson, proofJson
+**SaaS tables (created by ensureSaasTables):**
+- `users` - id, email, password_hash, name, role, status
+- `subscription_plans` - id, name, slug, price, limits (JSON)
+- `subscriptions` - user_id, plan_id, status, stripe fields
+- `saas_workspaces` - id, owner_id, name, slug, description
+- `workspace_memberships` - workspace_id, user_id, role
+- `saas_projects` - id, workspace_id, user_id, name, status, color
+- `saas_tasks` - id, project_id, user_id, title, status, priority
+- `notes` - id, user_id, title, content, workspace_id, project_id
+- `activity_feed` - id, user_id, action, entity_type, entity_id
+- `usage_tracking` - id, user_id, action_type, count
+- `admin_audit_logs` - id, admin_user_id, action, target
+- `billing_events` - id, user_id, event_type, amount
+- `password_reset_tokens` - id, user_id, token, expires_at
 
-**OS tables (created by ensureExtendedTables):**
-- `workspace_processes` - id, workspace_id, name, command, status, provider_process_id, exit_code, log_path
-- `workspace_services` - id, workspace_id, name, type, command, status, port, protocol, health_path, process_id
-- `automation_rules` - id, workspace_id, name, trigger_type, trigger_json, action_type, action_json, enabled
-- `system_events` - id, workspace_id, task_id, source, type, severity, payload, ts
-- `system_notifications` - id, workspace_id, title, message, level, read
-- `workspace_snapshots` - id, workspace_id, label, git_ref, metadata_json
+**Core tables:** workspaces, runners, tasks, task_events, tool_traces, workspace_ports, publish_runs
 
-## Runner Modes
+**OS tables:** workspace_processes, workspace_services, automation_rules, system_events, system_notifications, workspace_snapshots
 
-Set `RUNNER_MODE` env var:
-- `local` (default) - Direct filesystem execution, clones to /tmp/operatoros-workspaces/<id>
-- `docker` - Docker containers via docker CLI
-- `k8s` - Kubernetes pods/PVCs via kubectl
+## Security
 
-## Safety
-
-- Command denylist: curl, wget, ssh, scp, sudo, docker, kubectl (override: ALLOW_UNSAFE_COMMANDS=true)
-- Patch denylist: .env*, *.pem, *.key, node_modules/, dist/, build/, .git/
-- Max patch size: 20KB, max timeout: 300s, max output: 1MB
-
-## Mobile (Android / Capacitor)
-
-- Config: `apps/web/capacitor.config.ts` (app ID: `com.shotgunninjas.operatoros`)
-- Build: `pnpm build:android` → static export → cap sync → gradle build
-- Store guide: `apps/web/PLAY_STORE_GUIDE.md`
-
-## AI Agent
-
-GPT-4o agent with function calling (read_file, apply_patch, run_verify, exec). Budget: 12 iterations, 200K tokens.
+- Multi-tenant authorization: workspace membership verified on all CRUD operations
+- Ownership checks on project/task/note update/delete
+- Admin role bypass for all resource access
+- Input validation: enum validation for status/priority, length limits, type checks
+- Cookie secure flag: dynamic based on NODE_ENV
+- Command denylist for CDE shell (curl, wget, ssh, sudo, etc.)
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | PORT | 5001 (api), 5002 (gateway) | Service port |
-| RUNNER_MODE | local | Runner provider: local, docker, k8s |
 | DATABASE_URL | (from Replit) | PostgreSQL connection string |
+| SESSION_SECRET | operatoros-dev-secret | JWT signing secret |
 | NEXT_PUBLIC_API_URL | http://localhost:5001 | API URL for Next.js |
+| ADMIN_EMAIL | admin@operatoros.com | Seeded admin email |
+| ADMIN_PASSWORD | Admin123! | Seeded admin password |
+| RUNNER_MODE | local | Runner provider: local, docker, k8s |
 | ALLOW_UNSAFE_COMMANDS | false | Override command denylist |
 | OPENAI_API_KEY | (secret) | OpenAI API key for AI Agent |
+| MOBILE_BUILD | 0 | Set to 1 for static export |
 
 ## Package Names
 

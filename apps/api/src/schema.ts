@@ -182,6 +182,199 @@ export const publishRuns = pgTable('publish_runs', {
   index('idx_publish_runs_workspace').on(t.workspaceId),
 ]);
 
+export const users = pgTable('users', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  name: text('name').notNull(),
+  role: text('role', { enum: ['user', 'admin'] }).notNull().default('user'),
+  status: text('status', { enum: ['active', 'suspended', 'deleted'] }).notNull().default('active'),
+  avatarUrl: text('avatar_url'),
+  planId: varchar('plan_id', { length: 36 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  lastLoginAt: timestamp('last_login_at'),
+}, (t) => [
+  index('idx_users_email').on(t.email),
+  index('idx_users_status').on(t.status),
+]);
+
+export const subscriptionPlans = pgTable('subscription_plans', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  name: text('name').notNull().unique(),
+  slug: text('slug').notNull().unique(),
+  price: integer('price').notNull().default(0),
+  interval: text('interval', { enum: ['month', 'year'] }).notNull().default('month'),
+  maxWorkspaces: integer('max_workspaces').notNull().default(1),
+  maxProjects: integer('max_projects').notNull().default(3),
+  maxTasks: integer('max_tasks').notNull().default(50),
+  maxTeamMembers: integer('max_team_members').notNull().default(0),
+  maxAiActionsPerMonth: integer('max_ai_actions_per_month').notNull().default(10),
+  hasExports: boolean('has_exports').notNull().default(false),
+  hasAutomation: boolean('has_automation').notNull().default(false),
+  hasTemplates: boolean('has_templates').notNull().default(false),
+  hasAdvancedAnalytics: boolean('has_advanced_analytics').notNull().default(false),
+  stripePriceId: text('stripe_price_id'),
+  stripeProductId: text('stripe_product_id'),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const subscriptions = pgTable('subscriptions', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  planId: varchar('plan_id', { length: 36 }).notNull().references(() => subscriptionPlans.id),
+  status: text('status', {
+    enum: ['active', 'trialing', 'past_due', 'canceled', 'expired'],
+  }).notNull().default('active'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  stripeCustomerId: text('stripe_customer_id'),
+  currentPeriodStart: timestamp('current_period_start').defaultNow().notNull(),
+  currentPeriodEnd: timestamp('current_period_end'),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+  trialEnd: timestamp('trial_end'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_subscriptions_user').on(t.userId),
+  index('idx_subscriptions_status').on(t.status),
+]);
+
+export const saasWorkspaces = pgTable('saas_workspaces', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  ownerId: varchar('owner_id', { length: 36 }).notNull().references(() => users.id),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_saas_workspaces_owner').on(t.ownerId),
+]);
+
+export const workspaceMemberships = pgTable('workspace_memberships', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar('workspace_id', { length: 36 }).notNull().references(() => saasWorkspaces.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  role: text('role', { enum: ['owner', 'admin', 'member'] }).notNull().default('member'),
+  joinedAt: timestamp('joined_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_workspace_memberships_workspace').on(t.workspaceId),
+  index('idx_workspace_memberships_user').on(t.userId),
+]);
+
+export const saasProjects = pgTable('saas_projects', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar('workspace_id', { length: 36 }).notNull().references(() => saasWorkspaces.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  name: text('name').notNull(),
+  description: text('description'),
+  status: text('status', { enum: ['active', 'archived', 'completed'] }).notNull().default('active'),
+  color: text('color').default('#3b82f6'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_saas_projects_workspace').on(t.workspaceId),
+  index('idx_saas_projects_user').on(t.userId),
+]);
+
+export const saasTasks = pgTable('saas_tasks', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar('project_id', { length: 36 }).notNull().references(() => saasProjects.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  title: text('title').notNull(),
+  description: text('description'),
+  status: text('status', { enum: ['todo', 'in_progress', 'done', 'canceled'] }).notNull().default('todo'),
+  priority: text('priority', { enum: ['low', 'medium', 'high', 'urgent'] }).notNull().default('medium'),
+  dueDate: timestamp('due_date'),
+  assigneeId: varchar('assignee_id', { length: 36 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_saas_tasks_project').on(t.projectId),
+  index('idx_saas_tasks_user').on(t.userId),
+  index('idx_saas_tasks_status').on(t.status),
+]);
+
+export const notes = pgTable('notes', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  workspaceId: varchar('workspace_id', { length: 36 }).references(() => saasWorkspaces.id),
+  projectId: varchar('project_id', { length: 36 }).references(() => saasProjects.id),
+  title: text('title').notNull(),
+  content: text('content').default(''),
+  isPinned: boolean('is_pinned').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_notes_user').on(t.userId),
+  index('idx_notes_workspace').on(t.workspaceId),
+]);
+
+export const activityFeed = pgTable('activity_feed', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  workspaceId: varchar('workspace_id', { length: 36 }).references(() => saasWorkspaces.id),
+  action: text('action').notNull(),
+  entityType: text('entity_type').notNull(),
+  entityId: varchar('entity_id', { length: 36 }),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_activity_feed_user').on(t.userId),
+  index('idx_activity_feed_workspace_created').on(t.workspaceId, t.createdAt),
+]);
+
+export const usageTracking = pgTable('usage_tracking', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  actionType: text('action_type').notNull(),
+  count: integer('count').notNull().default(1),
+  periodStart: timestamp('period_start').notNull(),
+  periodEnd: timestamp('period_end').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_usage_tracking_user_period').on(t.userId, t.periodStart),
+]);
+
+export const adminAuditLogs = pgTable('admin_audit_logs', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar('admin_id', { length: 36 }).notNull().references(() => users.id),
+  action: text('action').notNull(),
+  targetUserId: varchar('target_user_id', { length: 36 }),
+  details: jsonb('details').$type<Record<string, unknown>>(),
+  ipAddress: text('ip_address'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_admin_audit_logs_admin').on(t.adminId),
+  index('idx_admin_audit_logs_created').on(t.createdAt),
+]);
+
+export const billingEvents = pgTable('billing_events', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  subscriptionId: varchar('subscription_id', { length: 36 }),
+  eventType: text('event_type').notNull(),
+  stripeEventId: text('stripe_event_id'),
+  amount: integer('amount'),
+  currency: text('currency').default('usd'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_billing_events_user').on(t.userId),
+]);
+
+export const passwordResetTokens = pgTable('password_reset_tokens', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  token: text('token').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_password_reset_tokens_token').on(t.token),
+]);
+
 export type PublishRunRow = typeof publishRuns.$inferSelect;
 export type WorkspaceProcessRow = typeof workspaceProcesses.$inferSelect;
 export type WorkspaceServiceRow = typeof workspaceServices.$inferSelect;
@@ -189,3 +382,11 @@ export type AutomationRuleRow = typeof automationRules.$inferSelect;
 export type SystemEventRow = typeof systemEvents.$inferSelect;
 export type SystemNotificationRow = typeof systemNotifications.$inferSelect;
 export type WorkspaceSnapshotRow = typeof workspaceSnapshots.$inferSelect;
+export type UserRow = typeof users.$inferSelect;
+export type SubscriptionPlanRow = typeof subscriptionPlans.$inferSelect;
+export type SubscriptionRow = typeof subscriptions.$inferSelect;
+export type SaasWorkspaceRow = typeof saasWorkspaces.$inferSelect;
+export type SaasProjectRow = typeof saasProjects.$inferSelect;
+export type SaasTaskRow = typeof saasTasks.$inferSelect;
+export type NoteRow = typeof notes.$inferSelect;
+export type ActivityFeedRow = typeof activityFeed.$inferSelect;

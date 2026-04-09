@@ -1,0 +1,149 @@
+Build OperatorOS into a production-style SaaS web application, not a mockup.
+
+Product identity:
+OperatorOS is a premium operations platform for entrepreneurs, technical operators, and small businesses. It should feel clean, modern, dark-professional, efficient, and highly usable. Think “command center for running a business.”
+
+Core requirements:
+1. Full authentication system
+   - email/password sign up
+   - secure login/logout
+   - password hashing
+   - forgot password / reset password flow scaffold
+   - protected routes
+   - session handling or JWT-based auth
+   - role-based access control
+
+2. User roles
+   - normal user
+   - admin user
+   - admin can view users, edit users, change subscription tiers, disable accounts, delete accounts, and reactivate accounts
+   - seed one admin account that can be changed later through environment variables or database seed
+
+3. Subscription plans
+   Create 3 tiers:
+   - Starter
+   - Pro
+   - Elite
+
+   Each plan must have feature gating enforced in both frontend and backend.
+   Do not only hide UI. Actually validate permissions server-side.
+
+4. SaaS billing architecture
+   - build billing/subscription structure so it is ready for Stripe integration
+   - include plan IDs, billing status, renewal date, cancellation state, trial status
+   - create abstraction layer so Stripe can be connected later without rewriting app logic
+   - build upgrade, downgrade, cancel, and re-activate subscription flows in app
+   - include webhook handler placeholders and billing event logging
+
+5. Admin control panel
+   Admin dashboard must allow:
+   - view all users
+   - search/filter users
+   - inspect user profile
+   - inspect subscription tier/status
+   - manually change plan
+   - manually suspend or restore account
+   - delete user
+   - view system metrics summary
+   - view subscription counts by plan
+   - view recent account activity
+   - log all admin actions in an audit log
+
+6. Product functionality
+   Create the core application as an operational dashboard SaaS with:
+   - dashboard
+   - projects
+   - tasks
+   - notes
+   - activity feed
+   - AI tools placeholder module
+   - settings page
+   - billing page
+   - team/workspace page
+   Make all pages functional with real CRUD connected to database.
+
+7. Plan-based capability gating
+   Starter:
+   - 1 workspace
+   - up to 3 projects
+   - limited task volume
+   - limited AI actions per month
+   - no team members
+   - no advanced exports
+   - no automation module access
+
+   Pro:
+   - 3 workspaces
+   - up to 25 projects
+   - higher task/item limits
+   - higher AI actions per month
+   - up to 5 team members
+   - export access
+   - template access
+   - basic automation tools
+
+   Elite:
+   - unlimited or very high soft limits
+   - unlimited projects/workspaces
+   - unlimited team members
+   - highest AI usage
+   - advanced automation access
+   - premium analytics
+   - advanced settings placeholders for future white-label support
+
+8. Database design
+   Create a proper relational schema for:
+   - users
+   - roles
+   - subscriptions
+   - plans
+   - workspaces
+   - memberships
+   - projects
+   - tasks
+   - notes
+   - usage tracking
+   - admin audit logs
+   - billing events
+   - password reset tokens or equivalent secure flow
+   - feature flags or permission matrix if useful
+
+9. UI/UX requirements
+   - polished SaaS look
+   - responsive
+   - dark-first premium UI
+   - clear sidebar navigation
+   - professional plan comparison page
+   - badges for current subscription
+   - locked feature states with upgrade prompts
+   - empty states that feel product-ready
+   - loading states and error states
+   - consistent typography and spacing
+
+10. Technical requirements
+   - keep code modular and production-minded
+   - separate frontend, backend, database, services, middleware, and auth logic cleanly
+   - include environment variable support
+   - include seed script for admin account and default plans
+   - include route guards and backend permission middleware
+   - include validation on all important forms and APIs
+   - include comments where needed for maintainability
+   - avoid fake placeholder-only implementation
+   - all key flows should function end-to-end locally in Replit
+
+11. Deliverables inside the project
+   Include:
+   - README with setup steps
+   - environment variable template
+   - seeded admin setup instructions
+   - subscription/permissions matrix
+   - notes showing where Stripe integration hooks in later
+
+12. Important product behavior
+   - if a user exceeds plan limits, block creation and show upgrade flow
+   - if a plan is downgraded, preserve data but restrict creation of new content beyond new plan limits
+   - if account is suspended, block app access except billing/account status screen
+   - admin accounts bypass normal plan restrictions where appropriate
+
+13. Security requirements
+   - hash
