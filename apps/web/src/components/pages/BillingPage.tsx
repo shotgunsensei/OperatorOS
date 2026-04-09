@@ -43,16 +43,20 @@ export default function BillingPage() {
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [downgradeCheck, setDowngradeCheck] = useState<{ slug: string; violations: any[] } | null>(null);
 
+  const [billingMode, setBillingMode] = useState<any>(null);
+
   const loadData = async () => {
     try {
-      const [usage, plansData, historyData] = await Promise.all([
+      const [usage, plansData, historyData, mode] = await Promise.all([
         billingApi.getUsage(),
         billingApi.getPlans(),
         billingApi.getHistory(),
+        billingApi.getMode(),
       ]);
       setUsageData(usage);
       setPlans(plansData.plans);
       setHistory(historyData.events);
+      setBillingMode(mode);
     } catch {} finally { setLoading(false); }
   };
 
@@ -80,9 +84,23 @@ export default function BillingPage() {
     setSwitching(slug);
     setDowngradeCheck(null);
     try {
-      await billingApi.subscribe(slug);
+      const result = await billingApi.subscribe(slug);
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+        return;
+      }
       await loadData();
     } catch {} finally { setSwitching(''); }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      const result = await billingApi.createPortalSession();
+      if (result.url) {
+        window.location.href = result.url;
+      }
+    } catch {
+    }
   };
 
   const handleCancel = async () => {
@@ -170,11 +188,17 @@ export default function BillingPage() {
             </>
           )}
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
             {currentSlug !== 'elite' && (
               <button data-testid="button-upgrade-plan" onClick={() => setShowUpgradeModal(true)}
                 style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #58a6ff, #bc8cff)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 Upgrade plan
+              </button>
+            )}
+            {billingMode?.mode === 'stripe' && (
+              <button data-testid="button-manage-stripe" onClick={handleManageSubscription}
+                style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.accent, fontSize: 13, cursor: 'pointer' }}>
+                Manage via Stripe
               </button>
             )}
             {subscription && !subscription.cancelAtPeriodEnd && currentSlug !== 'starter' && (

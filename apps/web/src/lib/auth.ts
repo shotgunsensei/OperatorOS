@@ -94,10 +94,15 @@ export const billingApi = {
   getSubscription: () => apiFetch('/billing/subscription'),
   getUsage: () => apiFetch('/billing/usage'),
   getPlans: () => apiFetch('/billing/plans'),
+  getMode: () => apiFetch('/billing/mode'),
   checkDowngrade: (planSlug: string) =>
     apiFetch('/billing/check-downgrade', { method: 'POST', body: JSON.stringify({ planSlug }) }),
   subscribe: (planSlug: string) =>
     apiFetch('/billing/subscribe', { method: 'POST', body: JSON.stringify({ planSlug }) }),
+  createCheckoutSession: (planSlug: string) =>
+    apiFetch('/billing/create-checkout-session', { method: 'POST', body: JSON.stringify({ planSlug }) }),
+  createPortalSession: () =>
+    apiFetch('/billing/create-portal-session', { method: 'POST' }),
   cancel: () => apiFetch('/billing/cancel', { method: 'POST' }),
   reactivate: () => apiFetch('/billing/reactivate', { method: 'POST' }),
   getHistory: () => apiFetch('/billing/history'),

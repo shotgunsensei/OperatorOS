@@ -1,15 +1,17 @@
 import type { FastifyInstance } from 'fastify';
 import { db } from '../db.js';
-import {
-  subscriptions, subscriptionPlans, billingEvents, activityFeed,
-} from '../schema.js';
-import { eq, and, desc } from 'drizzle-orm';
+import { subscriptions, subscriptionPlans, billingEvents } from '../schema.js';
+import { eq, desc } from 'drizzle-orm';
 import { authenticate, getUserPlanLimits } from '../lib/auth.js';
 import {
   getUserPlanConfig, getUserUsageSummary, getDowngradeViolations,
-  isUpgrade, isDowngrade, PLAN_CONFIGS, FEATURE_LABELS, LIMIT_LABELS,
-  formatLimit,
+  isDowngrade, PLAN_CONFIGS, FEATURE_LABELS, LIMIT_LABELS,
 } from '../lib/plans.js';
+import {
+  subscribeToPlan, cancelSubscription, reactivateSubscription,
+  createCheckoutSession, createPortalSession, processWebhookEvent,
+  verifyWebhookSignature, isStripeEnabled, getBillingMode,
+} from '../lib/billing-service.js';
 
 export async function registerBillingRoutes(app: FastifyInstance) {
   app.get('/v1/billing/subscription', { preHandler: [authenticate] }, async (request) => {
@@ -50,18 +52,17 @@ export async function registerBillingRoutes(app: FastifyInstance) {
   app.get('/v1/billing/plans', async () => {
     return {
       plans: PLAN_CONFIGS.map(p => ({
-        slug: p.slug,
-        name: p.name,
-        price: p.price,
-        interval: p.interval,
-        description: p.description,
-        highlight: p.highlight,
-        limits: p.limits,
-        features: p.features,
+        slug: p.slug, name: p.name, price: p.price, interval: p.interval,
+        description: p.description, highlight: p.highlight,
+        limits: p.limits, features: p.features,
       })),
       featureLabels: FEATURE_LABELS,
       limitLabels: LIMIT_LABELS,
     };
+  });
+
+  app.get('/v1/billing/mode', async () => {
+    return getBillingMode();
   });
 
   app.post('/v1/billing/check-downgrade', { preHandler: [authenticate] }, async (request) => {
@@ -81,113 +82,59 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     const user = (request as any).user;
     const { planSlug } = request.body as any;
 
-    const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.slug, planSlug)).limit(1);
-    if (!plan) return reply.code(404).send({ error: 'Plan not found' });
-
-    const { config: currentConfig, subscription: currentSub } = await getUserPlanConfig(user.id);
-    const isUpgrading = isUpgrade(currentConfig.slug, planSlug);
-    const isDowngrading = isDowngrade(currentConfig.slug, planSlug);
-
-    if (currentConfig.slug === planSlug) {
-      return reply.code(400).send({ error: 'You are already on this plan' });
+    try {
+      const result = await subscribeToPlan(user.id, planSlug);
+      return result;
+    } catch (err: any) {
+      return reply.code(400).send({ error: err.message });
     }
+  });
 
-    const [existingSub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id)).limit(1);
+  app.post('/v1/billing/create-checkout-session', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+    const { planSlug } = request.body as any;
 
-    if (existingSub) {
-      await db.update(subscriptions).set({
-        planId: plan.id,
-        status: 'active',
-        cancelAtPeriodEnd: false,
-        updatedAt: new Date(),
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      }).where(eq(subscriptions.id, existingSub.id));
-
-      const eventType = isUpgrading ? 'upgraded' : isDowngrading ? 'downgraded' : 'plan_changed';
-      await db.insert(billingEvents).values({
-        userId: user.id,
-        subscriptionId: existingSub.id,
-        eventType,
-        amount: plan.price,
-        metadata: { fromPlan: currentConfig.slug, toPlan: planSlug, action: eventType },
-      });
-    } else {
-      const [newSub] = await db.insert(subscriptions).values({
-        userId: user.id,
-        planId: plan.id,
-        status: 'active',
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      }).returning();
-
-      await db.insert(billingEvents).values({
-        userId: user.id,
-        subscriptionId: newSub.id,
-        eventType: 'subscribed',
-        amount: plan.price,
-        metadata: { planSlug },
+    if (!isStripeEnabled()) {
+      return reply.code(400).send({
+        error: 'Stripe is not configured. Subscriptions are managed locally.',
+        mode: 'local',
       });
     }
 
-    let downgradeWarnings: string[] = [];
-    if (isDowngrading) {
-      const violations = await getDowngradeViolations(user.id, planSlug);
-      downgradeWarnings = violations.map(v => v.message);
+    try {
+      const result = await createCheckoutSession(user.id, planSlug);
+      return result;
+    } catch (err: any) {
+      return reply.code(400).send({ error: err.message });
+    }
+  });
+
+  app.post('/v1/billing/create-portal-session', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+
+    if (!isStripeEnabled()) {
+      return reply.code(400).send({
+        error: 'Stripe is not configured. Use the in-app billing page to manage your subscription.',
+        mode: 'local',
+      });
     }
 
-    await db.insert(activityFeed).values({
-      userId: user.id,
-      action: isUpgrading ? 'upgraded' : isDowngrading ? 'downgraded' : 'subscribed',
-      entityType: 'subscription',
-      metadata: { planName: plan.name, planSlug, fromPlan: currentConfig.slug },
-    });
-
-    return {
-      ok: true,
-      plan: plan.name,
-      action: isUpgrading ? 'upgraded' : isDowngrading ? 'downgraded' : 'subscribed',
-      downgradeWarnings,
-    };
+    try {
+      const result = await createPortalSession(user.id);
+      return result;
+    } catch (err: any) {
+      return reply.code(400).send({ error: err.message });
+    }
   });
 
   app.post('/v1/billing/cancel', { preHandler: [authenticate] }, async (request) => {
     const user = (request as any).user;
-    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id)).limit(1);
-    if (!sub) return { ok: false, error: 'No active subscription' };
-
-    await db.update(subscriptions).set({
-      cancelAtPeriodEnd: true,
-      updatedAt: new Date(),
-    }).where(eq(subscriptions.id, sub.id));
-
-    await db.insert(billingEvents).values({
-      userId: user.id,
-      subscriptionId: sub.id,
-      eventType: 'cancel_scheduled',
-    });
-
-    return { ok: true, message: 'Subscription will cancel at end of billing period' };
+    return await cancelSubscription(user.id);
   });
 
   app.post('/v1/billing/reactivate', { preHandler: [authenticate] }, async (request) => {
     const user = (request as any).user;
-    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id)).limit(1);
-    if (!sub) return { ok: false, error: 'No subscription found' };
-
-    await db.update(subscriptions).set({
-      cancelAtPeriodEnd: false,
-      status: 'active',
-      updatedAt: new Date(),
-    }).where(eq(subscriptions.id, sub.id));
-
-    await db.insert(billingEvents).values({
-      userId: user.id,
-      subscriptionId: sub.id,
-      eventType: 'reactivated',
-    });
-
-    return { ok: true };
+    return await reactivateSubscription(user.id);
   });
 
   app.get('/v1/billing/history', { preHandler: [authenticate] }, async (request) => {
@@ -200,8 +147,33 @@ export async function registerBillingRoutes(app: FastifyInstance) {
   });
 
   app.post('/v1/billing/webhook', async (request, reply) => {
-    const { type, data } = request.body as any;
-    console.log('[billing webhook]', type, data);
-    return { received: true };
+    if (!isStripeEnabled()) {
+      console.log('[billing webhook] Stripe not enabled, ignoring webhook');
+      return { received: true, mode: 'local' };
+    }
+
+    try {
+      const signature = request.headers['stripe-signature'] as string;
+      if (!signature) {
+        return reply.code(400).send({ error: 'Missing stripe-signature header' });
+      }
+
+      const rawBody = (request as any).rawBody || request.body;
+      let event;
+      if (typeof rawBody === 'string' || Buffer.isBuffer(rawBody)) {
+        event = verifyWebhookSignature(rawBody, signature);
+      } else {
+        event = rawBody;
+        console.warn('[billing webhook] Raw body not available, skipping signature verification');
+      }
+
+      const result = await processWebhookEvent(event);
+
+      console.log(`[billing webhook] ${event.type}: handled=${result.handled} action=${result.action || 'none'}`);
+      return { received: true, ...result };
+    } catch (err: any) {
+      console.error('[billing webhook] Error:', err.message);
+      return reply.code(400).send({ error: err.message });
+    }
   });
 }

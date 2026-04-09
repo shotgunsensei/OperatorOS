@@ -176,9 +176,10 @@ export const LIMIT_LABELS: Record<keyof PlanLimits, string> = {
 };
 
 export async function getUserPlanConfig(userId: string): Promise<{ config: PlanConfig; subscription: any | null }> {
-  const [sub] = await db.select().from(subscriptions)
-    .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, 'active')))
-    .limit(1);
+  const allSubs = await db.select().from(subscriptions)
+    .where(eq(subscriptions.userId, userId))
+    .limit(5);
+  const sub = allSubs.find(s => s.status === 'active' || s.status === 'trialing') || allSubs[0] || null;
 
   if (!sub) {
     return { config: PLAN_CONFIGS[0], subscription: null };

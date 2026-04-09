@@ -98,7 +98,15 @@ The Next.js app proxies API calls via rewrites: `/api/*` -> `localhost:5001/v1/*
 
 **Frontend gating**: Workspaces/Projects/Tasks pages show lock icons + limit banners when at limit. UpgradeModal with plan comparison + downgrade pre-check. BillingPage has usage bars, plan grid, feature matrix, billing history.
 
-Plans are auto-seeded on startup. Stripe-ready billing endpoints exist but no live Stripe integration yet.
+Plans are auto-seeded on startup.
+
+**Stripe Integration (Abstraction Layer)**:
+- `apps/api/src/lib/billing-service.ts` — central billing service, auto-detects mode via `isStripeEnabled()` (requires `STRIPE_SECRET_KEY` + `STRIPE_MODE=live`)
+- **Local mode** (default): All subscription changes happen instantly in the database, no payment processing
+- **Stripe mode**: Redirects to Stripe Checkout for paid plans, uses Customer Portal for subscription management
+- **Webhook handler**: Processes checkout.session.completed, customer.subscription.created/updated/deleted, invoice.payment_failed, invoice.paid
+- **To activate Stripe**: Set these env vars: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_MODE=live`, `APP_URL`, `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_ELITE`
+- Frontend auto-detects billing mode and shows "Manage via Stripe" button when Stripe is active
 
 ## API Endpoints
 
@@ -151,13 +159,19 @@ Plans are auto-seeded on startup. Stripe-ready billing endpoints exist but no li
 - **Billing tab**: Billing events table with event type filter
 - **Confirmation modals** for all destructive actions (suspend, delete, plan change, role change)
 
-### Billing (`/v1/billing/*`) — require auth
+### Billing (`/v1/billing/*`) — require auth (except mode + webhook)
 - `GET /v1/billing/subscription` - Current subscription
 - `GET /v1/billing/usage` - Usage summary (workspaces/projects/tasks/team/AI counts vs limits)
 - `GET /v1/billing/plans` - All plans from PLAN_CONFIGS with features
-- `POST /v1/billing/subscribe` - Subscribe/upgrade/downgrade (returns downgradeWarnings)
+- `GET /v1/billing/mode` - Returns billing mode (local/stripe) + configuration status (no auth)
+- `POST /v1/billing/subscribe` - Subscribe/upgrade/downgrade (local mode: instant, Stripe mode: returns checkoutUrl)
 - `POST /v1/billing/check-downgrade` - Pre-check downgrade violations before committing
 - `POST /v1/billing/cancel` - Cancel subscription
+- `POST /v1/billing/reactivate` - Reactivate a canceled subscription
+- `POST /v1/billing/create-checkout-session` - Create Stripe Checkout session (Stripe mode only)
+- `POST /v1/billing/create-portal-session` - Create Stripe Customer Portal session (Stripe mode only)
+- `POST /v1/billing/webhook` - Stripe webhook endpoint (no auth, signature verified)
+- `GET /v1/billing/history` - Billing event history
 
 ### Core Workspace Endpoints
 - `GET /healthz` - Health check
