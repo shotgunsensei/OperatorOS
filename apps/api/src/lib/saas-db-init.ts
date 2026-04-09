@@ -2,6 +2,7 @@ import { db } from '../db.js';
 import { hashPassword } from './auth.js';
 import { users, subscriptionPlans, subscriptions } from '../schema.js';
 import { eq } from 'drizzle-orm';
+import { PLAN_CONFIGS } from './plans.js';
 
 export async function ensureSaasTables() {
   await db.execute(`
@@ -196,54 +197,24 @@ export async function ensureSaasTables() {
 export async function seedPlansAndAdmin() {
   const existingPlans = await db.select().from(subscriptionPlans).limit(1);
   if (existingPlans.length === 0) {
-    await db.insert(subscriptionPlans).values([
-      {
-        name: 'Starter',
-        slug: 'starter',
-        price: 0,
-        interval: 'month',
-        maxWorkspaces: 1,
-        maxProjects: 3,
-        maxTasks: 50,
-        maxTeamMembers: 0,
-        maxAiActionsPerMonth: 10,
-        hasExports: false,
-        hasAutomation: false,
-        hasTemplates: false,
-        hasAdvancedAnalytics: false,
-      },
-      {
-        name: 'Pro',
-        slug: 'pro',
-        price: 2900,
-        interval: 'month',
-        maxWorkspaces: 3,
-        maxProjects: 25,
-        maxTasks: 500,
-        maxTeamMembers: 5,
-        maxAiActionsPerMonth: 100,
-        hasExports: true,
-        hasAutomation: true,
-        hasTemplates: true,
-        hasAdvancedAnalytics: false,
-      },
-      {
-        name: 'Elite',
-        slug: 'elite',
-        price: 9900,
-        interval: 'month',
-        maxWorkspaces: 999,
-        maxProjects: 9999,
-        maxTasks: 99999,
-        maxTeamMembers: 999,
-        maxAiActionsPerMonth: 9999,
-        hasExports: true,
-        hasAutomation: true,
-        hasTemplates: true,
-        hasAdvancedAnalytics: true,
-      },
-    ]);
-    console.log('[seed] Created subscription plans: Starter, Pro, Elite');
+    await db.insert(subscriptionPlans).values(
+      PLAN_CONFIGS.map(p => ({
+        name: p.name,
+        slug: p.slug,
+        price: p.price,
+        interval: p.interval,
+        maxWorkspaces: p.limits.maxWorkspaces,
+        maxProjects: p.limits.maxProjects,
+        maxTasks: p.limits.maxTasks,
+        maxTeamMembers: p.limits.maxTeamMembers,
+        maxAiActionsPerMonth: p.limits.maxAiActionsPerMonth,
+        hasExports: p.features.exports,
+        hasAutomation: p.features.automation,
+        hasTemplates: p.features.templates,
+        hasAdvancedAnalytics: p.features.advancedAnalytics,
+      }))
+    );
+    console.log('[seed] Created subscription plans from PLAN_CONFIGS:', PLAN_CONFIGS.map(p => p.name).join(', '));
   }
 
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@operatoros.com';

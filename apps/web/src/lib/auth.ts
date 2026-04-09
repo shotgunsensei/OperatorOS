@@ -92,6 +92,10 @@ export const saasApi = {
 
 export const billingApi = {
   getSubscription: () => apiFetch('/billing/subscription'),
+  getUsage: () => apiFetch('/billing/usage'),
+  getPlans: () => apiFetch('/billing/plans'),
+  checkDowngrade: (planSlug: string) =>
+    apiFetch('/billing/check-downgrade', { method: 'POST', body: JSON.stringify({ planSlug }) }),
   subscribe: (planSlug: string) =>
     apiFetch('/billing/subscribe', { method: 'POST', body: JSON.stringify({ planSlug }) }),
   cancel: () => apiFetch('/billing/cancel', { method: 'POST' }),

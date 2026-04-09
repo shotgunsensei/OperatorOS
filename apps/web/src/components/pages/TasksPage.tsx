@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { saasApi } from '@/lib/auth';
+import { saasApi, billingApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
+import UpgradeModal from '../UpgradeModal';
 
 interface TasksPageProps {
   projectId?: string;
@@ -27,6 +28,9 @@ export default function TasksPage({ projectId, projectName, onBack }: TasksPageP
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
+  const [usage, setUsage] = useState<any>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState('');
 
   const loadTasks = async () => {
     if (!projectId) { setLoading(false); return; }
@@ -39,7 +43,16 @@ export default function TasksPage({ projectId, projectName, onBack }: TasksPageP
     }
   };
 
-  useEffect(() => { loadTasks(); }, [projectId]);
+  const loadUsage = async () => {
+    try {
+      const usageData = await billingApi.getUsage();
+      setUsage(usageData.usage);
+    } catch {}
+  };
+
+  useEffect(() => { loadTasks(); loadUsage(); }, [projectId]);
+
+  const isAtLimit = usage?.tasks && usage.tasks.used >= usage.tasks.limit && usage.tasks.limit < 99999;
 
   const handleCreate = async () => {
     if (!title.trim() || !projectId) return;
@@ -52,8 +65,14 @@ export default function TasksPage({ projectId, projectName, onBack }: TasksPageP
       setTitle('');
       setDescription('');
       setPriority('medium');
+      await loadUsage();
     } catch (err: any) {
-      setError(err.error || 'Failed to create task');
+      if (err.upgrade) {
+        setUpgradeMessage(err.error);
+        setShowUpgrade(true);
+      } else {
+        setError(err.error || 'Failed to create task');
+      }
     } finally {
       setCreating(false);
     }
@@ -100,8 +119,22 @@ export default function TasksPage({ projectId, projectName, onBack }: TasksPageP
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>{projectName || 'Tasks'}</h1>
           <p style={{ fontSize: 14, color: colors.textMuted, margin: '4px 0 0' }}>{filtered.length} tasks</p>
         </div>
-        <button data-testid="button-create-task" onClick={() => setShowCreate(true)}
-          style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: colors.accent, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+        <button data-testid="button-create-task" onClick={() => {
+          if (isAtLimit) {
+            setUpgradeMessage(`You've reached your task limit (${usage.tasks.limit}). Upgrade to create more.`);
+            setShowUpgrade(true);
+          } else {
+            setShowCreate(true);
+          }
+        }}
+          style={{
+            padding: '8px 16px', borderRadius: 8, border: 'none',
+            background: isAtLimit ? colors.bgHover : colors.accent,
+            color: isAtLimit ? colors.textMuted : '#fff',
+            fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+          {isAtLimit && <span style={{ fontSize: 12 }}>{'\ud83d\udd12'}</span>}
           New task
         </button>
       </div>
@@ -188,6 +221,14 @@ export default function TasksPage({ projectId, projectName, onBack }: TasksPageP
           ))}
         </div>
       )}
+
+      <UpgradeModal
+        isOpen={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        onUpgraded={() => loadUsage()}
+        message={upgradeMessage}
+        resource="tasks"
+      />
     </div>
   );
 }

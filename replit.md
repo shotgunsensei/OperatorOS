@@ -82,13 +82,21 @@ The Next.js app proxies API calls via rewrites: `/api/*` -> `localhost:5001/v1/*
   - `requireUsageWithinLimit(resourceType)` — Enforces monthly usage limits (aiActions, etc.)
 - **Audit trail**: All auth events logged to admin_audit_logs (login success/failure, password changes, email changes, account deletion, admin actions)
 
-## Subscription Plans
+## Subscription & Feature Gating
 
-| Plan | Price | Workspaces | Projects | Tasks |
-|------|-------|------------|----------|-------|
-| Starter | Free | 2 | 5 | 50 |
-| Pro | $29/mo | 10 | 50 | 1000 |
-| Elite | $99/mo | 999 | 9999 | 99999 |
+**Centralized plan config**: `apps/api/src/lib/plans.ts` is the single source of truth (PLAN_CONFIGS). DB seeds from this config.
+
+| Plan | Price | Workspaces | Projects | Tasks | Team | AI/mo | Features |
+|------|-------|------------|----------|-------|------|-------|----------|
+| Starter | Free | 1 | 3 | 50 | 0 | 10 | Basic |
+| Pro | $29/mo | 5 | 25 | 500 | 10 | 200 | Exports, Automation, Templates, API |
+| Elite | $99/mo | ∞ | ∞ | ∞ | ∞ | ∞ | All features + White Label, Priority Support |
+
+**Backend enforcement**: Resource creation (workspaces/projects/tasks) checked via `checkResourceLimit()`. Feature access via `checkFeatureAccess()`. Middleware: `requirePlanFeature(key)`, `requireUsageWithinLimit(type)`.
+
+**Downgrade flow**: `getDowngradeViolations()` checks if user exceeds target plan limits before downgrade. Existing data preserved but creation blocked until under limit.
+
+**Frontend gating**: Workspaces/Projects/Tasks pages show lock icons + limit banners when at limit. UpgradeModal with plan comparison + downgrade pre-check. BillingPage has usage bars, plan grid, feature matrix, billing history.
 
 Plans are auto-seeded on startup. Stripe-ready billing endpoints exist but no live Stripe integration yet.
 
@@ -132,7 +140,10 @@ Plans are auto-seeded on startup. Stripe-ready billing endpoints exist but no li
 
 ### Billing (`/v1/billing/*`) — require auth
 - `GET /v1/billing/subscription` - Current subscription
-- `POST /v1/billing/subscribe` - Subscribe to plan
+- `GET /v1/billing/usage` - Usage summary (workspaces/projects/tasks/team/AI counts vs limits)
+- `GET /v1/billing/plans` - All plans from PLAN_CONFIGS with features
+- `POST /v1/billing/subscribe` - Subscribe/upgrade/downgrade (returns downgradeWarnings)
+- `POST /v1/billing/check-downgrade` - Pre-check downgrade violations before committing
 - `POST /v1/billing/cancel` - Cancel subscription
 
 ### Core Workspace Endpoints

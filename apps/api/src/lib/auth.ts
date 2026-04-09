@@ -2,8 +2,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { db } from '../db.js';
-import { users, subscriptions, subscriptionPlans, adminAuditLogs, activityFeed, usageTracking } from '../schema.js';
-import { eq, and, gte, lte } from 'drizzle-orm';
+import { users, subscriptions, adminAuditLogs, activityFeed } from '../schema.js';
+import { eq, and } from 'drizzle-orm';
+import { getUserPlanConfig, checkResourceLimit, checkFeatureAccess, type PlanFeatures, type PlanLimits } from './plans.js';
 
 const JWT_SECRET = process.env.SESSION_SECRET || 'operatoros-dev-secret-change-me';
 const JWT_EXPIRY = '7d';
@@ -123,20 +124,15 @@ export function requirePlanFeature(featureKey: string) {
 
     if (user.role === 'admin') return;
 
-    const limits = await getUserPlanLimits(user.id);
-    const featureMap: Record<string, boolean> = {
-      exports: limits.hasExports,
-      automation: limits.hasAutomation,
-      templates: limits.hasTemplates,
-      advancedAnalytics: limits.hasAdvancedAnalytics,
-    };
-
-    if (featureMap[featureKey] === false) {
+    const result = await checkFeatureAccess(user.id, featureKey as keyof PlanFeatures);
+    if (!result.allowed) {
+      const { config } = await getUserPlanConfig(user.id);
       reply.code(403).send({
-        error: `This feature requires a higher plan. Upgrade to access ${featureKey}.`,
+        error: result.message,
         code: 'PLAN_FEATURE_REQUIRED',
         feature: featureKey,
-        currentPlan: limits.planSlug,
+        currentPlan: config.slug,
+        upgradeSlug: result.upgradeSlug,
         upgrade: true,
       });
     }
@@ -151,98 +147,52 @@ export function requireUsageWithinLimit(resourceType: string) {
 
     if (user.role === 'admin') return;
 
-    const limits = await getUserPlanLimits(user.id);
-    const limitMap: Record<string, number> = {
-      workspaces: limits.maxWorkspaces,
-      projects: limits.maxProjects,
-      tasks: limits.maxTasks,
-      teamMembers: limits.maxTeamMembers,
-      aiActions: limits.maxAiActionsPerMonth,
+    const resourceMap: Record<string, keyof PlanLimits> = {
+      workspaces: 'maxWorkspaces',
+      projects: 'maxProjects',
+      tasks: 'maxTasks',
+      teamMembers: 'maxTeamMembers',
+      aiActions: 'maxAiActionsPerMonth',
     };
 
-    const limit = limitMap[resourceType];
-    if (limit === undefined) return;
+    const limitKey = resourceMap[resourceType];
+    if (!limitKey) return;
 
-    if (resourceType === 'aiActions') {
-      const now = new Date();
-      const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-
-      const usageRows = await db.select().from(usageTracking).where(
-        and(
-          eq(usageTracking.userId, user.id),
-          eq(usageTracking.actionType, 'ai_action'),
-          gte(usageTracking.periodStart, periodStart),
-          lte(usageTracking.periodEnd, periodEnd),
-        )
-      );
-      const totalUsage = usageRows.reduce((sum, r) => sum + r.count, 0);
-      if (totalUsage >= limit) {
-        reply.code(429).send({
-          error: `Monthly ${resourceType} limit reached (${limit}). Upgrade for more.`,
-          code: 'USAGE_LIMIT_REACHED',
-          resource: resourceType,
-          limit,
-          used: totalUsage,
-          upgrade: true,
-        });
-      }
+    const result = await checkResourceLimit(user.id, limitKey);
+    if (!result.allowed) {
+      const statusCode = resourceType === 'aiActions' ? 429 : 403;
+      reply.code(statusCode).send({
+        error: result.message,
+        code: resourceType === 'aiActions' ? 'USAGE_LIMIT_REACHED' : 'RESOURCE_LIMIT_REACHED',
+        resource: resourceType,
+        limit: result.limit,
+        used: result.used,
+        upgradeSlug: result.upgradeSlug,
+        upgrade: true,
+      });
     }
   };
 }
 
-export interface PlanLimits {
-  maxWorkspaces: number;
-  maxProjects: number;
-  maxTasks: number;
-  maxTeamMembers: number;
-  maxAiActionsPerMonth: number;
-  hasExports: boolean;
-  hasAutomation: boolean;
-  hasTemplates: boolean;
-  hasAdvancedAnalytics: boolean;
-}
-
-const DEFAULT_LIMITS: PlanLimits = {
-  maxWorkspaces: 1,
-  maxProjects: 3,
-  maxTasks: 50,
-  maxTeamMembers: 0,
-  maxAiActionsPerMonth: 10,
-  hasExports: false,
-  hasAutomation: false,
-  hasTemplates: false,
-  hasAdvancedAnalytics: false,
-};
-
-export async function getUserPlanLimits(userId: string): Promise<PlanLimits & { planSlug: string; planName: string }> {
-  const [sub] = await db
-    .select()
-    .from(subscriptions)
-    .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, 'active')))
-    .limit(1);
-
-  if (!sub) {
-    return { ...DEFAULT_LIMITS, planSlug: 'starter', planName: 'Starter' };
-  }
-
-  const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, sub.planId)).limit(1);
-  if (!plan) {
-    return { ...DEFAULT_LIMITS, planSlug: 'starter', planName: 'Starter' };
-  }
-
+export async function getUserPlanLimits(userId: string): Promise<{
+  maxWorkspaces: number; maxProjects: number; maxTasks: number;
+  maxTeamMembers: number; maxAiActionsPerMonth: number;
+  hasExports: boolean; hasAutomation: boolean; hasTemplates: boolean;
+  hasAdvancedAnalytics: boolean; planSlug: string; planName: string;
+}> {
+  const { config } = await getUserPlanConfig(userId);
   return {
-    maxWorkspaces: plan.maxWorkspaces,
-    maxProjects: plan.maxProjects,
-    maxTasks: plan.maxTasks,
-    maxTeamMembers: plan.maxTeamMembers,
-    maxAiActionsPerMonth: plan.maxAiActionsPerMonth,
-    hasExports: plan.hasExports,
-    hasAutomation: plan.hasAutomation,
-    hasTemplates: plan.hasTemplates,
-    hasAdvancedAnalytics: plan.hasAdvancedAnalytics,
-    planSlug: plan.slug,
-    planName: plan.name,
+    maxWorkspaces: config.limits.maxWorkspaces,
+    maxProjects: config.limits.maxProjects,
+    maxTasks: config.limits.maxTasks,
+    maxTeamMembers: config.limits.maxTeamMembers,
+    maxAiActionsPerMonth: config.limits.maxAiActionsPerMonth,
+    hasExports: config.features.exports,
+    hasAutomation: config.features.automation,
+    hasTemplates: config.features.templates,
+    hasAdvancedAnalytics: config.features.advancedAnalytics,
+    planSlug: config.slug,
+    planName: config.name,
   };
 }
 

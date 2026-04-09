@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { saasApi } from '@/lib/auth';
+import { saasApi, billingApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
+import UpgradeModal from '../UpgradeModal';
 
 interface ProjectsPageProps {
   onNavigateToTasks: (projectId: string, projectName: string) => void;
@@ -19,12 +20,25 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
   const [newColor, setNewColor] = useState('#3b82f6');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
+  const [usage, setUsage] = useState<any>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState('');
+
+  const loadUsage = async () => {
+    try {
+      const usageData = await billingApi.getUsage();
+      setUsage(usageData.usage);
+    } catch {}
+  };
 
   useEffect(() => {
-    saasApi.getWorkspaces().then(d => {
-      setWorkspaces(d.workspaces);
-      if (d.workspaces.length > 0) setSelectedWs(d.workspaces[0].id);
-    }).finally(() => setLoading(false));
+    Promise.all([
+      saasApi.getWorkspaces().then(d => {
+        setWorkspaces(d.workspaces);
+        if (d.workspaces.length > 0) setSelectedWs(d.workspaces[0].id);
+      }),
+      loadUsage(),
+    ]).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -32,6 +46,17 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
     setLoading(true);
     saasApi.getProjects(selectedWs).then(d => setProjects(d.projects)).finally(() => setLoading(false));
   }, [selectedWs]);
+
+  const isAtLimit = usage?.projects && usage.projects.used >= usage.projects.limit && usage.projects.limit < 9999;
+
+  const handleCreateClick = () => {
+    if (isAtLimit) {
+      setUpgradeMessage(`You've reached your project limit (${usage.projects.limit}). Upgrade to create more.`);
+      setShowUpgrade(true);
+      return;
+    }
+    setShowCreate(true);
+  };
 
   const handleCreate = async () => {
     if (!newName.trim() || !selectedWs) return;
@@ -44,8 +69,14 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
       setShowCreate(false);
       setNewName('');
       setNewDesc('');
+      await loadUsage();
     } catch (err: any) {
-      setError(err.error || 'Failed to create project');
+      if (err.upgrade) {
+        setUpgradeMessage(err.error);
+        setShowUpgrade(true);
+      } else {
+        setError(err.error || 'Failed to create project');
+      }
     } finally {
       setCreating(false);
     }
@@ -55,6 +86,7 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
     if (!confirm('Delete this project and all its tasks?')) return;
     await saasApi.deleteProject(id);
     setProjects(projects.filter(p => p.id !== id));
+    await loadUsage();
   };
 
   const projectColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
@@ -64,7 +96,14 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Projects</h1>
-          <p style={{ fontSize: 14, color: colors.textMuted, margin: '4px 0 0' }}>Organize your work into projects</p>
+          <p style={{ fontSize: 14, color: colors.textMuted, margin: '4px 0 0' }}>
+            Organize your work into projects
+            {usage?.projects && (
+              <span style={{ marginLeft: 8, fontSize: 12, color: isAtLimit ? colors.accentYellow : colors.textDim }}>
+                ({usage.projects.used}/{usage.projects.limit >= 9999 ? '\u221e' : usage.projects.limit} used)
+              </span>
+            )}
+          </p>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           {workspaces.length > 1 && (
@@ -83,12 +122,18 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
           )}
           <button
             data-testid="button-create-project"
-            onClick={() => setShowCreate(true)}
+            onClick={handleCreateClick}
             style={{
               padding: '8px 16px', borderRadius: 8, border: 'none',
-              background: colors.accent, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              background: isAtLimit ? colors.bgHover : colors.accent,
+              color: isAtLimit ? colors.textMuted : '#fff',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
             }}
-          >New project</button>
+          >
+            {isAtLimit && <span style={{ fontSize: 12 }}>{'\ud83d\udd12'}</span>}
+            New project
+          </button>
         </div>
       </div>
 
@@ -98,6 +143,25 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
           background: 'rgba(248,81,73,0.1)', border: `1px solid ${colors.accentRed}`,
           color: colors.accentRed, fontSize: 13,
         }}>{error}</div>
+      )}
+
+      {isAtLimit && (
+        <div data-testid="limit-banner-projects" style={{
+          padding: '12px 16px', marginBottom: 20, borderRadius: 8,
+          background: 'rgba(210,153,34,0.08)', border: `1px solid ${colors.accentYellow}33`,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <div>
+            <span style={{ fontSize: 13, color: colors.accentYellow, fontWeight: 600 }}>Project limit reached</span>
+            <span style={{ fontSize: 12, color: colors.textMuted, marginLeft: 8 }}>
+              You're using {usage.projects.used} of {usage.projects.limit} projects.
+            </span>
+          </div>
+          <button onClick={() => { setUpgradeMessage(''); setShowUpgrade(true); }}
+            style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: 'linear-gradient(135deg, #58a6ff, #bc8cff)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            Upgrade
+          </button>
+        </div>
       )}
 
       {showCreate && (
@@ -144,7 +208,7 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
           textAlign: 'center', padding: 60, background: colors.bgSecondary,
           border: `1px solid ${colors.border}`, borderRadius: 12,
         }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>⬡</div>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>{'\u2b21'}</div>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 8 }}>No workspaces yet</div>
           <div style={{ fontSize: 13, color: colors.textMuted }}>Create a workspace first to start adding projects</div>
         </div>
@@ -155,7 +219,7 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
           textAlign: 'center', padding: 60, background: colors.bgSecondary,
           border: `1px solid ${colors.border}`, borderRadius: 12,
         }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>◧</div>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>{'\u25e7'}</div>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 8 }}>No projects yet</div>
           <div style={{ fontSize: 13, color: colors.textMuted }}>Create your first project to get started</div>
         </div>
@@ -194,12 +258,20 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
                   }}
                   onMouseEnter={e => (e.currentTarget.style.color = colors.accentRed)}
                   onMouseLeave={e => (e.currentTarget.style.color = colors.textDim)}
-                >×</button>
+                >x</button>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <UpgradeModal
+        isOpen={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        onUpgraded={() => { loadUsage(); }}
+        message={upgradeMessage}
+        resource="projects"
+      />
     </div>
   );
 }

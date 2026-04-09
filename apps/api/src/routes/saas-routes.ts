@@ -6,6 +6,7 @@ import {
 } from '../schema.js';
 import { eq, and, desc, count } from 'drizzle-orm';
 import { authenticate, getUserPlanLimits } from '../lib/auth.js';
+import { checkResourceLimit, getUserUsageSummary, getUserPlanConfig } from '../lib/plans.js';
 
 async function logActivity(userId: string, action: string, entityType: string, entityId?: string, workspaceId?: string, metadata?: Record<string, unknown>) {
   await db.insert(activityFeed).values({ userId, action, entityType, entityId, workspaceId, metadata });
@@ -67,10 +68,11 @@ export async function registerSaasRoutes(app: FastifyInstance) {
     if (!name || typeof name !== 'string' || name.trim().length === 0) return reply.code(400).send({ error: 'Name is required' });
     if (name.length > 100) return reply.code(400).send({ error: 'Name too long' });
 
-    const limits = await getUserPlanLimits(user.id);
-    const [{ value: currentCount }] = await db.select({ value: count() }).from(saasWorkspaces).where(eq(saasWorkspaces.ownerId, user.id));
-    if (currentCount >= limits.maxWorkspaces && user.role !== 'admin') {
-      return reply.code(403).send({ error: 'Workspace limit reached', limit: limits.maxWorkspaces, upgrade: true });
+    if (user.role !== 'admin') {
+      const check = await checkResourceLimit(user.id, 'maxWorkspaces');
+      if (!check.allowed) {
+        return reply.code(403).send({ error: check.message, code: 'RESOURCE_LIMIT_REACHED', resource: 'workspaces', limit: check.limit, used: check.used, upgradeSlug: check.upgradeSlug, upgrade: true });
+      }
     }
 
     const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -125,10 +127,11 @@ export async function registerSaasRoutes(app: FastifyInstance) {
     if (!name || typeof name !== 'string' || name.trim().length === 0) return reply.code(400).send({ error: 'Name is required' });
     if (name.length > 200) return reply.code(400).send({ error: 'Name too long' });
 
-    const limits = await getUserPlanLimits(user.id);
-    const [{ value: currentCount }] = await db.select({ value: count() }).from(saasProjects).where(eq(saasProjects.userId, user.id));
-    if (currentCount >= limits.maxProjects && user.role !== 'admin') {
-      return reply.code(403).send({ error: 'Project limit reached', limit: limits.maxProjects, upgrade: true });
+    if (user.role !== 'admin') {
+      const check = await checkResourceLimit(user.id, 'maxProjects');
+      if (!check.allowed) {
+        return reply.code(403).send({ error: check.message, code: 'RESOURCE_LIMIT_REACHED', resource: 'projects', limit: check.limit, used: check.used, upgradeSlug: check.upgradeSlug, upgrade: true });
+      }
     }
 
     const [project] = await db.insert(saasProjects).values({
@@ -188,10 +191,11 @@ export async function registerSaasRoutes(app: FastifyInstance) {
     if (title.length > 500) return reply.code(400).send({ error: 'Title too long' });
     if (priority && !VALID_PRIORITY.includes(priority)) return reply.code(400).send({ error: 'Invalid priority' });
 
-    const limits = await getUserPlanLimits(user.id);
-    const [{ value: taskCount }] = await db.select({ value: count() }).from(saasTasks).where(eq(saasTasks.userId, user.id));
-    if (taskCount >= limits.maxTasks && user.role !== 'admin') {
-      return reply.code(403).send({ error: 'Task limit reached', limit: limits.maxTasks, upgrade: true });
+    if (user.role !== 'admin') {
+      const check = await checkResourceLimit(user.id, 'maxTasks');
+      if (!check.allowed) {
+        return reply.code(403).send({ error: check.message, code: 'RESOURCE_LIMIT_REACHED', resource: 'tasks', limit: check.limit, used: check.used, upgradeSlug: check.upgradeSlug, upgrade: true });
+      }
     }
 
     const [task] = await db.insert(saasTasks).values({
@@ -298,10 +302,9 @@ export async function registerSaasRoutes(app: FastifyInstance) {
   app.get('/v1/saas/dashboard', { preHandler: [authenticate] }, async (request) => {
     const user = (request as any).user;
     const limits = await getUserPlanLimits(user.id);
+    const usage = await getUserUsageSummary(user.id);
+    const { config } = await getUserPlanConfig(user.id);
 
-    const [{ value: wsCount }] = await db.select({ value: count() }).from(saasWorkspaces).where(eq(saasWorkspaces.ownerId, user.id));
-    const [{ value: projCount }] = await db.select({ value: count() }).from(saasProjects).where(eq(saasProjects.userId, user.id));
-    const [{ value: taskCount }] = await db.select({ value: count() }).from(saasTasks).where(eq(saasTasks.userId, user.id));
     const [{ value: noteCount }] = await db.select({ value: count() }).from(notes).where(eq(notes.userId, user.id));
 
     const todoTasks = await db.select({ value: count() }).from(saasTasks).where(and(eq(saasTasks.userId, user.id), eq(saasTasks.status, 'todo')));
@@ -312,10 +315,15 @@ export async function registerSaasRoutes(app: FastifyInstance) {
 
     return {
       stats: {
-        workspaces: wsCount, projects: projCount, tasks: taskCount, notes: noteCount,
+        workspaces: usage.workspaces.used,
+        projects: usage.projects.used,
+        tasks: usage.tasks.used,
+        notes: noteCount,
         tasksByStatus: { todo: todoTasks[0].value, inProgress: inProgressTasks[0].value, done: doneTasks[0].value },
       },
       limits,
+      usage,
+      features: config.features,
       recentActivity,
     };
   });
