@@ -387,7 +387,7 @@ function ToolExecutor({
   selectedTemplate: string;
   setSelectedTemplate: (v: string) => void;
   plan: string;
-  resultRef: React.RefObject<HTMLDivElement | null>;
+  resultRef: React.RefObject<HTMLDivElement>;
   toast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }) {
   const toolTemplates = templates.filter(t => t.toolType === tool.type);
