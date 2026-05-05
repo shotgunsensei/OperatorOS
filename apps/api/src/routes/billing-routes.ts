@@ -12,6 +12,7 @@ import {
   createCheckoutSession, createPortalSession, processWebhookEvent,
   verifyWebhookSignature, isStripeEnabled, getBillingMode,
   subscribeToAddon, cancelAddon, processAddonWebhookEvent,
+  AddonNotPurchasableError,
 } from '../lib/billing-service.js';
 import { authenticate as authenticateImport } from '../lib/auth.js';
 
@@ -159,6 +160,12 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       const result = await subscribeToAddon(user.id, moduleSlug);
       return result;
     } catch (err: any) {
+      // Distinguish billing-not-configured (409 + code) from generic
+      // 400s (e.g. unknown module slug) so clients can react correctly
+      // and audit consumers can identify config-bypass attempts.
+      if (err instanceof AddonNotPurchasableError) {
+        return reply.code(err.httpStatus).send({ error: err.message, code: err.code });
+      }
       return reply.code(400).send({ error: err.message });
     }
   });

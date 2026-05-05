@@ -551,6 +551,38 @@ export function isAddonPurchasable(moduleSlug: string): boolean {
   return !!getAddonStripePriceId(moduleSlug);
 }
 
+// Typed error so the route layer can map to a clean 4xx with a code,
+// rather than leaking a generic Error.message into a 500.
+export class AddonNotPurchasableError extends Error {
+  code = 'ADDON_NOT_PURCHASABLE' as const;
+  httpStatus = 409 as const;
+  constructor(public moduleSlug: string, message: string) {
+    super(message);
+    this.name = 'AddonNotPurchasableError';
+  }
+}
+
+/**
+ * Single shared gate used by BOTH the CTA evaluator (via
+ * isAddonPurchasable) and the purchase endpoint (via subscribeToAddon).
+ *
+ * SECURITY: When Stripe is enabled in this environment, the addon MUST
+ * have a STRIPE_PRICE_ADDON_<SLUG> env var configured. Without it, the
+ * purchase endpoint MUST refuse the request — falling through to a
+ * "local mode" insert would create a free `addon_subscriptions` row
+ * (entitlement bypass + revenue leak). Local mode is allowed only when
+ * Stripe itself is not configured (dev/test environments).
+ */
+export function assertAddonPurchasableOrThrow(moduleSlug: string): void {
+  if (isStripeEnabled() && !getAddonStripePriceId(moduleSlug)) {
+    throw new AddonNotPurchasableError(
+      moduleSlug,
+      `Add-on for module "${moduleSlug}" is not configured for purchase in this environment. ` +
+      `Stripe is enabled but STRIPE_PRICE_ADDON_${moduleSlug.toUpperCase().replace(/-/g, '_')} is missing.`
+    );
+  }
+}
+
 export interface AddonSubscribeResult {
   ok: boolean;
   moduleSlug: string;
@@ -563,6 +595,16 @@ export async function subscribeToAddon(userId: string, moduleSlug: string): Prom
   if (!mod) throw new Error(`Module not found: ${moduleSlug}`);
   if (mod.status === 'disabled') throw new Error(`Module is disabled: ${moduleSlug}`);
   if (mod.status === 'coming_soon') throw new Error(`Module is not yet available: ${moduleSlug}`);
+
+  // SECURITY GATE — must be checked BEFORE any branch that could create
+  // an active addon row. When Stripe is enabled but the per-module price
+  // env is missing, the previous code fell through to the local-mode
+  // insert and granted free access. assertAddonPurchasableOrThrow makes
+  // that bypass impossible: it throws AddonNotPurchasableError (mapped
+  // by the route layer to 409 ADDON_NOT_PURCHASABLE) so the unpaid row
+  // is never inserted regardless of how the endpoint is reached
+  // (UI button, direct curl, automation).
+  assertAddonPurchasableOrThrow(moduleSlug);
 
   const existing = await db.select().from(addonSubscriptions)
     .where(and(eq(addonSubscriptions.userId, userId), eq(addonSubscriptions.moduleId, mod.id)));
@@ -600,7 +642,17 @@ export async function subscribeToAddon(userId: string, moduleSlug: string): Prom
     return { ok: true, moduleSlug, action: 'subscribed', checkoutUrl: session.url! };
   }
 
-  // Local mode: create active addon row immediately
+  // Local mode: create active addon row immediately. Only reachable
+  // when Stripe is NOT enabled — assertAddonPurchasableOrThrow above
+  // already refused any Stripe-enabled-but-misconfigured case.
+  if (isStripeEnabled()) {
+    // Defense in depth: should be unreachable thanks to the gate, but
+    // if some future refactor reorders the gate, fail closed here too.
+    throw new AddonNotPurchasableError(
+      moduleSlug,
+      `Refusing to create local addon row while Stripe is enabled (would bypass billing).`,
+    );
+  }
   await db.insert(addonSubscriptions).values({
     userId, moduleId: mod.id, status: 'active', amount: 0,
     currentPeriodStart: new Date(),
