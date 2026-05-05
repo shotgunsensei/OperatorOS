@@ -1,0 +1,152 @@
+1. CONSUME ENDPOINT — ADD RATE LIMIT + IP BINDING
+
+Right now:
+
+jti prevents replay
+atomic consume prevents duplication
+
+Good.
+
+Add:
+
+In sso_handoff_tokens:
+
+issued_ip
+consumed_ip
+
+Then enforce:
+
+if (abs(issued_ip - consumed_ip) > tolerance) reject
+
+👉 Not perfect (mobile users shift IPs), so:
+
+log mismatch
+optionally soft-allow first version
+
+But at minimum:
+
+rate limit /sso/consume per IP
+🔴 2. HANDOFF TOKEN SHOULD INCLUDE aud
+
+You already have:
+
+iss
+module_slug
+
+Add:
+
+"aud": "torqueshed"
+
+Then destination app verifies:
+
+if (token.aud !== "torqueshed") reject
+
+👉 This is cleaner than relying only on module_slug
+
+🔴 3. PREVENT CROSS-ENV TOKEN USAGE
+
+Right now:
+
+iss === OPERATOROS_BASE_URL
+
+Good.
+
+But add:
+
+"env": "prod" | "staging"
+
+Otherwise:
+
+staging token could be used in prod app
+🔴 4. STRIPE WEBHOOK — ADD DEAD LETTER QUEUE (LIGHT VERSION)
+
+You already have:
+
+idempotency
+logging
+resync endpoint
+
+Add:
+
+failed webhook events should be replayable
+
+Minimal version:
+add column: retry_count
+admin button: “Retry Event”
+🔴 5. MODULE STATUS GUARD AT DB LEVEL
+
+Right now:
+
+logic checks status
+
+Add DB-level safety:
+
+CHECK (status IN ('live','beta','coming_soon','disabled'))
+
+👉 Prevents bad admin edits from breaking access logic
+
+🔴 6. ACCESS SNAPSHOT FOR DEBUGGING
+
+Add:
+
+GET /v1/modules/debug
+
+Returns:
+
+{
+  user_id,
+  plan,
+  plan_modules,
+  addon_modules,
+  overrides,
+  effective_access
+}
+
+👉 This saves HOURS debugging entitlement issues
+
+🔴 7. ADD “ACCESS SOURCE” TAGS EVERYWHERE
+
+In your UI/admin:
+
+Show:
+
+plan
+addon
+override
+
+So instead of:
+
+“User has access”
+
+You see:
+
+“User has access via: Pro Plan”
+“User has access via: TorqueShed Add-on”
+
+🔴 8. CLEANUP JOB — MAKE IT AGGRESSIVE
+
+You said:
+
+delete tokens older than 1 hour
+
+Tighten it:
+
+delete tokens older than 10–15 minutes
+
+👉 You only need them for:
+
+replay prevention window
+audit trail (keep summarized logs elsewhere)
+🔴 9. FORCE FAIL-CLOSED AT ROUTE LEVEL
+
+You mentioned it, but enforce it like law:
+
+Every module handoff must check:
+
+if (!hasModuleAccess) throw 403
+if (!isLiveOrBeta) throw 400
+if (!tokenCreated) throw 500
+
+No soft fallback except:
+
+missing SSO secret → open URL (admin warning only)
