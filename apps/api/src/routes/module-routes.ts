@@ -60,6 +60,30 @@ function checkRate(map: Map<string, { count: number; resetAt: number }>, key: st
 const checkHandoffRate = (userId: string) => checkRate(handoffRate, userId, HANDOFF_RATE_LIMIT);
 const checkConsumeRate = (ip: string) => checkRate(consumeRate, ip, CONSUME_RATE_LIMIT);
 
+// Resolve the real client IP. Honors x-forwarded-for first hop when the
+// platform is behind a trusted proxy (Replit/Cloudflare/etc.) — Fastify's
+// `getClientIp(request)` only does this when `trustProxy` is configured, which we
+// do not assume here. Falls back to getClientIp(request), then to '0.0.0.0' so we
+// never insert NULL into audit/handoff IP columns.
+//
+// IMPORTANT: this helper takes the FIRST entry of x-forwarded-for, which
+// is the original client per RFC 7239 / common load-balancer convention.
+// Do NOT use later entries — they are intermediate proxies.
+export function getClientIp(request: FastifyRequest): string {
+  const xff = request.headers['x-forwarded-for'];
+  if (typeof xff === 'string' && xff.length > 0) {
+    const first = xff.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  if (Array.isArray(xff) && xff.length > 0) {
+    const first = String(xff[0]).split(',')[0]?.trim();
+    if (first) return first;
+  }
+  const real = request.headers['x-real-ip'];
+  if (typeof real === 'string' && real.length > 0) return real;
+  return request.ip || '0.0.0.0';
+}
+
 interface SsoClaims {
   iss: string;
   aud: string;
@@ -206,7 +230,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     if (!checkHandoffRate(user.id)) {
       await auditSsoReject({
         userId: user.id, action: 'module_handoff_rate_limited',
-        details: { moduleSlug: slug }, ip: request.ip,
+        details: { moduleSlug: slug }, ip: getClientIp(request),
       });
       return reply.code(429).send({ error: 'Too many launch attempts.', code: 'RATE_LIMITED' });
     }
@@ -215,7 +239,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     if (!mod) {
       await auditSsoReject({
         userId: user.id, action: 'module_handoff_module_not_found',
-        details: { moduleSlug: slug }, ip: request.ip,
+        details: { moduleSlug: slug }, ip: getClientIp(request),
       });
       return reply.code(404).send({ error: 'Module not found' });
     }
@@ -228,7 +252,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       await auditSsoReject({
         userId: user.id, action: 'module_handoff_access_denied',
         details: { moduleSlug: slug, source: access.source, reason: access.reason },
-        ip: request.ip,
+        ip: getClientIp(request),
       });
       return reply.code(403).send({
         error: 'You do not have access to this module.',
@@ -242,21 +266,21 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     if (mod.status === 'coming_soon') {
       await auditSsoReject({
         userId: user.id, action: 'module_handoff_module_coming_soon',
-        details: { moduleSlug: slug }, ip: request.ip,
+        details: { moduleSlug: slug }, ip: getClientIp(request),
       });
       return reply.code(400).send({ error: 'Module is coming soon.', code: 'MODULE_COMING_SOON' });
     }
     if (mod.status === 'disabled') {
       await auditSsoReject({
         userId: user.id, action: 'module_handoff_module_disabled',
-        details: { moduleSlug: slug }, ip: request.ip,
+        details: { moduleSlug: slug }, ip: getClientIp(request),
       });
       return reply.code(400).send({ error: 'Module is disabled.', code: 'MODULE_DISABLED' });
     }
     if (!mod.baseUrl) {
       await auditSsoReject({
         userId: user.id, action: 'module_handoff_no_base_url',
-        details: { moduleSlug: slug }, ip: request.ip,
+        details: { moduleSlug: slug }, ip: getClientIp(request),
       });
       return reply.code(400).send({ error: 'Module has no launch URL configured.', code: 'NO_BASE_URL' });
     }
@@ -303,7 +327,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
         moduleSlug: slug,
         aud: slug,
         env: APP_ENV,
-        issuedIp: request.ip,
+        issuedIp: getClientIp(request),
         issuedUserAgent: userAgent,
         issuedAt: new Date(now * 1000),
         expiresAt: new Date((now + SSO_TOKEN_TTL_SECONDS) * 1000),
@@ -324,7 +348,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
           stage: token ? 'persist' : 'sign',
           error: err?.message || String(err),
         },
-        ip: request.ip,
+        ip: getClientIp(request),
       });
       return reply.code(500).send({
         error: 'Internal error issuing handoff token.',
@@ -339,7 +363,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
         signed: !!token, fallback: SSO_FALLBACK,
         userAgent: userAgent ? userAgent.slice(0, 200) : null,
       },
-      ip: request.ip, level: 'info',
+      ip: getClientIp(request), level: 'info',
     });
 
     // Spec contract uses `redirect_url`; older clients (Apps UI in this
@@ -366,7 +390,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   //   200 ok | 400 bad_request|audience|env_mismatch | 404 unknown_jti
   //   409 replayed | 410 expired | 403 access_revoked | 429 rate_limited
   app.post('/v1/modules/sso/consume', async (request, reply) => {
-    const ip = request.ip;
+    const ip = getClientIp(request);
     const userAgent = (request.headers['user-agent'] as string) || null;
 
     if (!checkConsumeRate(ip)) {
@@ -608,7 +632,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       userId: user_id, moduleId: mod.id, grant: true,
       reason: reason ?? null, expiresAt: expires, createdByAdminId: user.id,
     }).returning();
-    await logAudit(user.id, 'module_override_grant', user_id, { moduleSlug: module_slug, reason, expires_at }, request.ip);
+    await logAudit(user.id, 'module_override_grant', user_id, { moduleSlug: module_slug, reason, expires_at }, getClientIp(request));
     return { override: row };
   });
 
@@ -633,7 +657,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       userId: user_id, moduleId: mod.id, grant: false,
       reason: reason ?? null, expiresAt: null, createdByAdminId: user.id,
     }).returning();
-    await logAudit(user.id, 'module_override_revoke', user_id, { moduleSlug: module_slug, reason }, request.ip);
+    await logAudit(user.id, 'module_override_revoke', user_id, { moduleSlug: module_slug, reason }, getClientIp(request));
     return { override: row };
   });
 
@@ -662,7 +686,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       .forEach(k => { if (body[k] !== undefined) updates[k] = body[k]; });
     const [updated] = await db.update(modules).set(updates).where(eq(modules.slug, slug)).returning();
     if (!updated) return reply.code(404).send({ error: 'Module not found' });
-    await logAudit(user.id, 'module_updated', undefined, { slug, updates }, request.ip);
+    await logAudit(user.id, 'module_updated', undefined, { slug, updates }, getClientIp(request));
     return { module: updated };
   });
 }
