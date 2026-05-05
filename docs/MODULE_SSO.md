@@ -161,7 +161,39 @@ The `jti` is also persisted in `sso_handoff_tokens` so consumption can
 mark the token spent. A 15-minute background job removes expired and
 already-consumed rows.
 
-## Receiving module integration
+## Receiving module — strict validation order
+
+Every receiving module MUST run these checks in this exact sequence on
+the inbound `?token=…` query before calling `/v1/modules/sso/consume`.
+Earlier failures must short-circuit; later checks must not run if an
+earlier check fails. Each gate maps to a redirect-back error code so
+the hub can surface a useful message.
+
+| # | Check | On failure |
+| - | --- | --- |
+| 1 | Token present in query (`?token=…`) | redirect with `launchError=no_token` |
+| 2 | JWT signature valid (HS256, secret = `MODULE_SSO_SECRET`) | redirect with `launchError=bad_signature` |
+| 3 | `iss` equals the configured OperatorOS base URL exactly | redirect with `launchError=bad_issuer` |
+| 4 | `aud` equals this module's own slug exactly | redirect with `launchError=bad_audience` |
+| 5 | `module_slug === aud` (defense-in-depth: claim self-consistency) | redirect with `launchError=bad_module_slug` |
+| 6 | `env` equals normalize(local `APP_ENV`) (`production`→`prod`, `staging`→`staging`, else `dev`) | redirect with `launchError=env_mismatch` |
+| 7 | `exp > now` (the JWT library will throw if not — treat as bad_token) | redirect with `launchError=token_expired` |
+| 8 | `POST /v1/modules/sso/consume` returns 200 (the hub atomically marks `jti` spent and re-checks entitlement) | redirect with `launchError=<consume.code>` |
+| 9 | Look up local user by `claims.email` (canonical key). If absent, provision a new local user from `{ email, name, role }`. Never trust `claims.sub` as a primary key in the destination DB — emails are the integration contract between hub and module. | continue to step 10 |
+| 10 | Establish a local session for the resolved/provisioned user and redirect to the post-login destination. | — |
+
+Notes:
+- **The signature check (step 2) MUST come before any claim is read.**
+  A claims-first read on an unverified token is a classic JWT bypass.
+- **Steps 3–6 are claim-validity checks**, not authorization checks.
+  Authorization is owned by the hub and re-checked at step 8.
+- **Step 9 is integration policy.** Even though `sub` is a stable
+  OperatorOS user id, modules SHOULD provision their local users by
+  email so the hub can re-key the underlying user record without
+  breaking sessions in every module.
+- The library calls in the examples below intentionally combine steps
+  2/4/7 (signature + audience + expiry) into a single `jwt.verify`
+  call; the explicit checks for steps 3, 5, and 6 follow.
 
 ### Node / TypeScript
 
@@ -171,40 +203,59 @@ import jwt from 'jsonwebtoken';
 const rawToken = new URL(req.url, 'http://x').searchParams.get('token');
 if (!rawToken) return res.redirect('https://operatoros.example.com/?launchError=no_token');
 
-let claims: any;
-try {
-  claims = jwt.verify(rawToken, process.env.MODULE_SSO_SECRET!, {
-    algorithms: ['HS256'],
-    audience: 'your-module-slug',
-  });
-} catch (e) {
-  return res.redirect('https://operatoros.example.com/?launchError=bad_token');
-}
-
-// Normalize env the same way OperatorOS does
-const normalize = (v: string | undefined) => {
+const HUB = 'https://operatoros.example.com';
+const MY_SLUG = 'your-module-slug';
+const normalize = (v?: string) => {
   const x = (v || '').toLowerCase().trim();
   if (x === 'prod' || x === 'production') return 'prod';
   if (x === 'staging' || x === 'stage') return 'staging';
   return 'dev';
 };
-if (claims.env !== normalize(process.env.APP_ENV)) {
-  return res.redirect('https://operatoros.example.com/?launchError=env_mismatch');
+
+// 2 + 4 + 7: signature, audience, expiry (jwt.verify enforces all three).
+let claims: any;
+try {
+  claims = jwt.verify(rawToken, process.env.MODULE_SSO_SECRET!, {
+    algorithms: ['HS256'],
+    audience: MY_SLUG,
+  });
+} catch (e: any) {
+  const code = e?.name === 'TokenExpiredError' ? 'token_expired' : 'bad_signature';
+  return res.redirect(`${HUB}/?launchError=${code}`);
 }
 
-const r = await fetch('https://operatoros.example.com/v1/modules/sso/consume', {
+// 3: iss must match the configured hub.
+if (claims.iss !== HUB) return res.redirect(`${HUB}/?launchError=bad_issuer`);
+// 5: claim self-consistency.
+if (claims.module_slug !== claims.aud) return res.redirect(`${HUB}/?launchError=bad_module_slug`);
+// 6: env binding.
+if (claims.env !== normalize(process.env.APP_ENV)) {
+  return res.redirect(`${HUB}/?launchError=env_mismatch`);
+}
+
+// 8: hub re-checks entitlement and atomically marks jti spent.
+const r = await fetch(`${HUB}/v1/modules/sso/consume`, {
   method: 'POST',
   headers: { 'content-type': 'application/json' },
   body: JSON.stringify({ jti: claims.jti, aud: claims.aud, env: claims.env }),
 });
-
 if (!r.ok) {
   const err = await r.json();
-  return res.redirect(`https://operatoros.example.com/?launchError=${err.code}`);
+  return res.redirect(`${HUB}/?launchError=${err.code}`);
 }
-
 const session = await r.json();
-await loginUser(session.user, { source: 'operatoros-sso', plan: session.planSlug });
+
+// 9: resolve local user by EMAIL (provision if absent), never by sub.
+const localUser =
+  (await db.user.findByEmail(session.user.email)) ??
+  (await db.user.create({
+    email: session.user.email,
+    name: session.user.name,
+    role: session.user.role,
+  }));
+
+// 10: establish local session.
+await loginUser(localUser, { source: 'operatoros-sso', plan: session.planSlug });
 res.redirect('/dashboard');
 ```
 
@@ -231,27 +282,46 @@ def handle_sso(request):
     if not raw:
         return redirect(f'{OPERATOROS}/?launchError=no_token')
 
+    MY_SLUG = 'your-module-slug'
+
+    # 2 + 4 + 7: signature, audience, expiry
     try:
         claims = jwt.decode(
             raw, MODULE_SSO_SECRET,
-            algorithms=['HS256'], audience='your-module-slug',
+            algorithms=['HS256'], audience=MY_SLUG,
         )
+    except jwt.ExpiredSignatureError:
+        return redirect(f'{OPERATOROS}/?launchError=token_expired')
     except jwt.PyJWTError:
-        return redirect(f'{OPERATOROS}/?launchError=bad_token')
+        return redirect(f'{OPERATOROS}/?launchError=bad_signature')
 
+    # 3: iss
+    if claims.get('iss') != OPERATOROS:
+        return redirect(f'{OPERATOROS}/?launchError=bad_issuer')
+    # 5: claim self-consistency
+    if claims.get('module_slug') != claims.get('aud'):
+        return redirect(f'{OPERATOROS}/?launchError=bad_module_slug')
+    # 6: env binding
     if claims.get('env') != APP_ENV:
         return redirect(f'{OPERATOROS}/?launchError=env_mismatch')
 
+    # 8: consume (hub atomically marks jti spent and re-checks entitlement)
     r = requests.post(f'{OPERATOROS}/v1/modules/sso/consume', json={
         'jti': claims['jti'], 'aud': claims['aud'], 'env': claims['env'],
     }, timeout=10)
-
     if not r.ok:
         code = r.json().get('code', 'unknown')
         return redirect(f'{OPERATOROS}/?launchError={quote(code)}')
-
     session = r.json()
-    login_user(session['user'], source='operatoros-sso', plan=session['planSlug'])
+
+    # 9: resolve/provision local user by EMAIL (never by sub).
+    email = session['user']['email']
+    local_user = User.query.filter_by(email=email).first() or User.create(
+        email=email, name=session['user']['name'], role=session['user']['role'],
+    )
+
+    # 10: establish local session
+    login_user(local_user, source='operatoros-sso', plan=session['planSlug'])
     return redirect('/dashboard')
 ```
 

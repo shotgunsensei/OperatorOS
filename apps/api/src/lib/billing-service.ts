@@ -4,7 +4,7 @@ import {
   users, subscriptions, subscriptionPlans, billingEvents, activityFeed,
   modules, addonSubscriptions,
 } from '../schema.js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import {
   getUserPlanConfig, getDowngradeViolations, isUpgrade, isDowngrade, PLAN_CONFIGS,
 } from './plans.js';
@@ -873,38 +873,81 @@ export async function resyncUserBilling(userId: string): Promise<{
   }
 
   let scanned = 0;
-  let reconciled = 0;
+  let reconciledAddons = 0;
+  let reconciledPlans = 0;
+
+  // Snapshot active plan-price -> plan_id mapping once per resync.
+  const allPlans = await db.select().from(subscriptionPlans);
+  const planByStripePriceId = new Map<string, typeof allPlans[number]>();
+  for (const p of allPlans) {
+    if (p.stripePriceId) planByStripePriceId.set(p.stripePriceId, p);
+  }
 
   for (const customerId of customerIds) {
     const list = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 });
     for (const sub of list.data ?? []) {
       scanned += 1;
-
-      // Build a synthetic event so we can reuse the addon idempotency machinery.
-      // Accept both legacy (kind) and spec (type) addon markers.
       const md = sub?.metadata ?? {};
       const isAddon = md.type === 'addon' || md.kind === 'addon';
-      if (!isAddon) continue;
-      const synthetic = {
-        id: `resync_${sub.id}_${Date.now()}`,
-        type: 'customer.subscription.updated' as const,
-        data: { object: { ...sub, metadata: { ...md, userId, user_id: userId, kind: 'addon', type: 'addon' } } },
-      };
-      const r = await processAddonWebhookEvent(synthetic);
-      if (r.handled) reconciled += 1;
+
+      if (isAddon) {
+        // Reuse the addon idempotency machinery via a synthetic event.
+        const synthetic = {
+          id: `resync_${sub.id}_${Date.now()}`,
+          type: 'customer.subscription.updated' as const,
+          data: { object: { ...sub, metadata: { ...md, userId, user_id: userId, kind: 'addon', type: 'addon' } } },
+        };
+        const r = await processAddonWebhookEvent(synthetic);
+        if (r.handled) reconciledAddons += 1;
+        continue;
+      }
+
+      // Base plan subscription: match by Stripe price id.
+      const stripePriceId = sub.items?.data?.[0]?.price?.id;
+      const plan = stripePriceId ? planByStripePriceId.get(stripePriceId) : null;
+      if (!plan) continue;
+
+      const status = (sub.status as any) ?? 'active';
+      const currentPeriodStart = sub.current_period_start
+        ? new Date(sub.current_period_start * 1000) : new Date();
+      const currentPeriodEnd = sub.current_period_end
+        ? new Date(sub.current_period_end * 1000) : null;
+
+      // Upsert the local subscriptions row keyed by stripeSubscriptionId.
+      const [existing] = await db.select().from(subscriptions)
+        .where(and(eq(subscriptions.userId, userId), eq(subscriptions.stripeSubscriptionId, sub.id)))
+        .limit(1);
+      if (existing) {
+        await db.update(subscriptions).set({
+          planId: plan.id,
+          status,
+          stripeCustomerId: customerId,
+          currentPeriodStart, currentPeriodEnd,
+          cancelAtPeriodEnd: !!sub.cancel_at_period_end,
+          updatedAt: new Date(),
+        }).where(eq(subscriptions.id, existing.id));
+      } else {
+        await db.insert(subscriptions).values({
+          userId, planId: plan.id, status,
+          stripeSubscriptionId: sub.id, stripeCustomerId: customerId,
+          currentPeriodStart, currentPeriodEnd,
+          cancelAtPeriodEnd: !!sub.cancel_at_period_end,
+        });
+      }
+      reconciledPlans += 1;
     }
   }
 
   await db.insert(billingEvents).values({
     userId, eventType: 'admin_resync',
-    metadata: { mode: 'stripe', scanned, reconciled },
+    metadata: { mode: 'stripe', scanned, reconciledAddons, reconciledPlans },
     processedAt: new Date(),
   });
 
   return {
     ok: true, mode: 'stripe',
-    message: `Resync complete. Scanned ${scanned} Stripe subscription(s), reconciled ${reconciled} addon record(s).`,
-    scanned, reconciled,
+    message: `Resync complete. Scanned ${scanned} Stripe subscription(s); reconciled ${reconciledPlans} plan + ${reconciledAddons} addon record(s).`,
+    scanned, reconciled: reconciledPlans + reconciledAddons,
   };
 }
 
