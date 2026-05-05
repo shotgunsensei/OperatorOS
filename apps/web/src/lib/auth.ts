@@ -172,7 +172,7 @@ export const adminApi = {
     return apiFetch(`/admin/billing-events?${qs.toString()}`);
   },
   retryBillingEvent: (id: string) =>
-    apiFetch(`/admin/billing-events/${id}/retry`, { method: 'POST' }),
+    apiFetch(`/admin/billing/events/${id}/retry`, { method: 'POST' }),
 
   getModules: () => apiFetch('/admin/modules'),
   upsertModule: (data: {
@@ -200,7 +200,7 @@ export const modulesApi = {
   list: () => apiFetch('/modules'),
   get: (slug: string) => apiFetch(`/modules/${slug}`),
   debug: (slug: string, userId?: string) =>
-    apiFetch(`/modules/debug/${slug}${userId ? `?userId=${userId}` : ''}`),
+    apiFetch(`/modules/debug/${slug}${userId ? `?user_id=${userId}` : ''}`),
   handoff: (slug: string) =>
     apiFetch(`/modules/${slug}/handoff`, { method: 'POST' }),
   subscribeAddon: (moduleSlug: string) =>

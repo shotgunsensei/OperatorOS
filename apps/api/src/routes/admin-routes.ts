@@ -474,14 +474,23 @@ export async function registerAdminRoutes(app: FastifyInstance) {
   // -------------------------------------------------------------------------
   // Billing-event DLQ retry
   // -------------------------------------------------------------------------
-  app.post('/v1/admin/billing-events/:id/retry', { preHandler: [requireAdmin] }, async (request, reply) => {
-    const admin = (request as any).user;
-    const { id } = request.params as any;
-    const result = await retryBillingEvent(id);
+  // Spec-canonical path: /v1/admin/billing/events/:eventId/retry. We keep
+  // the legacy /v1/admin/billing-events/:id/retry path registered too as
+  // a transitional alias so existing UI builds keep working — but every
+  // new caller MUST use the canonical path. Both routes share a single
+  // handler factory below.
+  const retryHandler = async (request: any, reply: any) => {
+    const admin = request.user;
+    const params = request.params as { id?: string; eventId?: string };
+    const eventId = params.eventId || params.id;
+    if (!eventId) return reply.code(400).send({ ok: false, message: 'eventId required' });
+    const result = await retryBillingEvent(eventId);
     if (!result.ok) return reply.code(400).send(result);
-    await logAudit(admin.id, 'billing_event_retried', null as any, { eventId: id }, request.ip);
+    await logAudit(admin.id, 'billing_event_retried', null as any, { eventId }, request.ip);
     return result;
-  });
+  };
+  app.post('/v1/admin/billing/events/:eventId/retry', { preHandler: [requireAdmin] }, retryHandler);
+  app.post('/v1/admin/billing-events/:id/retry', { preHandler: [requireAdmin] }, retryHandler);
 
   // -------------------------------------------------------------------------
   // Webhook-miss recovery: re-fetch a user's Stripe state and reconcile
@@ -614,11 +623,22 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         grant: o.grant, reason: o.reason, expiresAt: o.expiresAt,
       }));
 
+    // Spec: every user who has access — including admins via admin_role —
+    // must appear in the members list with the correct accessSource.
+    // Without this branch admins-only members are invisible in the UI,
+    // breaking "who has access" answers for support and audit.
+    const adminRows = await db.select().from(users).where(eq(users.role, 'admin'));
+    const adminUsers = adminRows
+      .filter(u => u.status === 'active')
+      .map(u => ({ userId: u.id, source: 'admin_role' as const, planSlug: null as string | null }));
+
     // Coalesce: pick the highest-precedence access source per user, mirroring
-    // the entitlement-service evaluation order (override > addon > plan).
+    // the entitlement-service evaluation order (admin_role > override > addon > plan).
+    // Lower-precedence sources are seeded first; higher-precedence sources
+    // overwrite. admin_role overwrites everything.
     type Row = {
       userId: string;
-      source: 'plan' | 'addon' | 'override';
+      source: 'plan' | 'addon' | 'override' | 'admin_role';
       planSlug: string | null;
       grant?: boolean;
       reason?: string | null;
@@ -629,6 +649,14 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     for (const r of planUsers as Row[]) byUser[r.userId] = r;
     for (const r of addonUsers as Row[]) byUser[r.userId] = r;
     for (const r of overrideUsers as Row[]) byUser[r.userId] = r;
+    for (const r of adminUsers as Row[]) {
+      // admin_role is the highest precedence; only OVERWRITE if existing
+      // entry isn't a revoke (revoke wins for visibility — admin still has
+      // access, but the revoke is the noteworthy state to surface).
+      const existing = byUser[r.userId];
+      if (existing && existing.source === 'override' && existing.grant === false) continue;
+      byUser[r.userId] = r;
+    }
 
     // Hydrate user rows
     const userIds = Object.keys(byUser);
@@ -672,6 +700,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         addon: members.filter(m => m.accessSource === 'addon').length,
         override_grant: members.filter(m => m.accessSource === 'override' && m.grant).length,
         override_revoke: members.filter(m => m.accessSource === 'override' && !m.grant).length,
+        admin_role: members.filter(m => m.accessSource === 'admin_role').length,
       },
     };
   });

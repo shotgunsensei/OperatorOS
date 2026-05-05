@@ -13,7 +13,25 @@ import {
   getAccessBreakdown, getModuleAccessTrace, evaluateUserEntitlement,
 } from '../lib/entitlement-service.js';
 
-const APP_ENV = process.env.APP_ENV || 'development';
+/**
+ * Normalize the runtime environment to the spec-mandated tri-state.
+ * Spec: env claim values MUST be one of `prod | staging | dev`. The
+ * receiver-side modules cross-check this exact value against their own
+ * normalized env, so cross-environment drift (a `production` token
+ * being honored in a `prod` receiver, or vice versa) is impossible.
+ *
+ * Mapping:
+ *   APP_ENV=production  -> prod
+ *   APP_ENV=staging     -> staging
+ *   anything else / unset -> dev
+ */
+function normalizeEnv(raw: string | undefined): 'prod' | 'staging' | 'dev' {
+  const v = (raw || '').toLowerCase().trim();
+  if (v === 'prod' || v === 'production') return 'prod';
+  if (v === 'staging' || v === 'stage') return 'staging';
+  return 'dev';
+}
+const APP_ENV: 'prod' | 'staging' | 'dev' = normalizeEnv(process.env.APP_ENV || process.env.NODE_ENV);
 const SSO_TOKEN_TTL_SECONDS = 90;
 const OPERATOROS_BASE_URL = process.env.OPERATOROS_BASE_URL || 'http://localhost:5000';
 
@@ -196,15 +214,36 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   // For per-module forensic detail (which evaluation step caused which
   // verdict) call `/v1/modules/debug/:slug` instead.
   // -------------------------------------------------------------------------
-  app.get('/v1/modules/debug', { preHandler: [authenticate] }, async (request) => {
+  app.get('/v1/modules/debug', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
-    const { userId: queryUserId } = request.query as { userId?: string };
-    const targetUserId = queryUserId && user.role === 'admin' ? queryUserId : user.id;
+    // Spec contract: query param is `user_id` (snake_case). Non-admins
+    // who attempt to target ANOTHER user MUST get 403 — silently falling
+    // back to self-introspection would let attackers probe whether the
+    // endpoint enforces authorization. Self-introspection (omitted param
+    // or matching own id) is always allowed.
+    const { user_id: queryUserId } = request.query as { user_id?: string };
+    if (queryUserId && queryUserId !== user.id && user.role !== 'admin') {
+      return reply.code(403).send({
+        error: 'Only admins may inspect another user\'s entitlement state.',
+        code: 'FORBIDDEN',
+      });
+    }
+    const targetUserId = queryUserId || user.id;
     const breakdown = await getAccessBreakdown(targetUserId);
+    // Spec response shape: snake_case keys, `plan` (not planSlug),
+    // `effective_access` (not effective). The receiver maps directly.
     return {
-      ...breakdown,
+      user_id: breakdown.userId,
+      plan: breakdown.planSlug,
+      is_admin: breakdown.isAdmin,
+      plan_modules: breakdown.plan_modules,
+      addon_modules: breakdown.addon_modules,
+      overrides: breakdown.overrides,
+      override_revokes: breakdown.override_revokes,
+      effective_access: breakdown.effective,
+      access_sources: breakdown.access_sources,
       env: APP_ENV,
-      ssoFallback: SSO_FALLBACK,
+      sso_fallback: SSO_FALLBACK,
     };
   });
 
@@ -225,11 +264,19 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   app.get('/v1/modules/debug/:slug', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     const { slug } = request.params as { slug: string };
-    const { userId: queryUserId } = request.query as { userId?: string };
-    const targetUserId = queryUserId && user.role === 'admin' ? queryUserId : user.id;
+    // Same authorization rule as the aggregate /debug endpoint: non-admin
+    // attempts to target another user are 403, never silently downgraded.
+    const { user_id: queryUserId } = request.query as { user_id?: string };
+    if (queryUserId && queryUserId !== user.id && user.role !== 'admin') {
+      return reply.code(403).send({
+        error: 'Only admins may inspect another user\'s entitlement state.',
+        code: 'FORBIDDEN',
+      });
+    }
+    const targetUserId = queryUserId || user.id;
     const breakdown = await getModuleAccessTrace(targetUserId, slug);
     if (!breakdown) return reply.code(404).send({ error: 'Module not found' });
-    return { breakdown, evaluatedFor: targetUserId, env: APP_ENV };
+    return { breakdown, evaluated_for: targetUserId, env: APP_ENV };
   });
 
   // -------------------------------------------------------------------------
@@ -262,27 +309,19 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Module not found' });
     }
 
-    // Spec-mandated order: hasModuleAccess() FIRST. This is the single
-    // authorization decision — if the user has no entitlement, we deny
-    // BEFORE leaking module status (coming_soon / disabled / no_base_url).
-    // hasModuleAccess() itself returns false for status='disabled' and
-    // status='coming_soon', but it returns true for entitled users on
-    // launchable statuses. We separate the two layers here so we can
-    // distinguish 403 (unauthorized) from 400 (not launchable yet).
+    // STRICT FAIL-CLOSED GATE — the spec is explicit:
+    //   "if !hasModuleAccess -> 403 before status checks"
+    //
+    // hasModuleAccess() is the single authorization decision and already
+    // folds in module-status checks (returns hasAccess=false for
+    // disabled/coming_soon). We trust its verdict here. Any failure -> 403
+    // with NO detail leaked in the response body (status reason stays
+    // strictly inside the audit log). This eliminates the launch endpoint
+    // as a module-status oracle, AND prevents the previous bypass where
+    // an entitled user got a 400-COMING_SOON differentiation that an
+    // unentitled user did not — which itself was a status oracle.
     const access = await hasModuleAccess(user.id, slug);
-    // Status-independent entitlement: did the user have a path to access
-    // this module if the module were launchable? Only used to distinguish
-    // 403 (no entitlement at all) from 400 (entitled, module not ready).
-    const entitlementSource = access.hasAccess
-      ? access.source
-      : await evaluateUserEntitlement(user.id, mod.id);
-    if (!entitlementSource) {
-      // Audit captures the FULL diagnostic detail (status reason included)
-      // for forensics, but the response body intentionally omits it. We
-      // must NOT leak module status (`coming_soon`, `module_disabled`,
-      // `no_base_url`) to an unauthorized caller — that turns the launch
-      // endpoint into a module-status oracle. Only "you don't have access"
-      // is surfaced to the client.
+    if (!access.hasAccess) {
       await auditSsoReject({
         userId: user.id, action: 'sso_handoff_access_denied',
         details: { moduleSlug: slug, source: access.source, reason: access.reason },
@@ -294,24 +333,13 @@ export async function registerModuleRoutes(app: FastifyInstance) {
         moduleSlug: slug,
       });
     }
+    const entitlementSource = access.source;
 
-    // Module-status checks AFTER authorization succeeded. Spec returns 400
-    // for not-yet-launchable conditions (the user IS entitled, the module
-    // just isn't ready).
-    if (mod.status === 'coming_soon') {
-      await auditSsoReject({
-        userId: user.id, action: 'sso_handoff_module_coming_soon',
-        details: { moduleSlug: slug }, ip: request.ip,
-      });
-      return reply.code(400).send({ error: 'Module is coming soon', code: 'MODULE_COMING_SOON' });
-    }
-    if (mod.status === 'disabled') {
-      await auditSsoReject({
-        userId: user.id, action: 'sso_handoff_module_disabled',
-        details: { moduleSlug: slug }, ip: request.ip,
-      });
-      return reply.code(400).send({ error: 'Module is disabled', code: 'MODULE_DISABLED' });
-    }
+    // Post-authorization configuration check. baseUrl missing is a 400
+    // (entitled user, module misconfigured by ops). hasModuleAccess does
+    // NOT cover this because a missing baseUrl is purely an issuance-side
+    // concern — the receiver can't even be reached. Safe to surface as
+    // 400 since by this point the caller IS entitled.
     if (!mod.baseUrl) {
       await auditSsoReject({
         userId: user.id, action: 'sso_handoff_no_base_url',
@@ -466,13 +494,19 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       });
     }
 
-    if (row.env !== env) {
+    // Normalize the receiver-supplied env using the same mapping used at
+    // issuance, so that a receiver running APP_ENV=production can still
+    // consume a token whose stored env is the canonical 'prod' (and vice
+    // versa). Without this we'd reject every token across legacy/new
+    // env-spelling boundaries.
+    const normalizedConsumeEnv = normalizeEnv(env);
+    if (row.env !== normalizedConsumeEnv) {
       await auditSsoReject({
         userId: row.userId, action: 'sso_consume_env_mismatch',
-        details: { jti, expected: row.env, got: env, ip }, ip,
+        details: { jti, expected: row.env, got: normalizedConsumeEnv, raw: env, ip }, ip,
       });
       return reply.code(400).send({
-        error: `Token env "${row.env}" does not match requested "${env}"`,
+        error: `Token env "${row.env}" does not match requested "${normalizedConsumeEnv}"`,
         code: 'ENV_MISMATCH',
       });
     }
