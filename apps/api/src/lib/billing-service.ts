@@ -582,8 +582,11 @@ export async function subscribeToAddon(userId: string, moduleSlug: string): Prom
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}?addon=success&module=${moduleSlug}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}?addon=canceled&module=${moduleSlug}`,
-      metadata: { userId, moduleSlug, kind: 'addon' },
-      subscription_data: { metadata: { userId, moduleSlug, kind: 'addon' } },
+      // Send BOTH metadata keysets so consumers on either contract work:
+      //   legacy: kind='addon', moduleSlug
+      //   spec:   type='addon', module_slug
+      metadata: { userId, user_id: userId, moduleSlug, module_slug: moduleSlug, kind: 'addon', type: 'addon' },
+      subscription_data: { metadata: { userId, user_id: userId, moduleSlug, module_slug: moduleSlug, kind: 'addon', type: 'addon' } },
     });
     return { ok: true, moduleSlug, action: 'subscribed', checkoutUrl: session.url! };
   }
@@ -652,10 +655,14 @@ export async function cancelAddon(userId: string, moduleSlug: string): Promise<{
 export async function processAddonWebhookEvent(event: { id: string; type: string; data: { object: any } }): Promise<WebhookProcessResult> {
   const { type, data, id: stripeEventId } = event;
   const obj = data.object;
-  const userId = obj.metadata?.userId;
-  const moduleSlug = obj.metadata?.moduleSlug;
-  const kind = obj.metadata?.kind;
-  if (kind !== 'addon' || !userId || !moduleSlug) {
+  // Accept both metadata contracts:
+  //   spec:   { type: 'addon', module_slug, user_id }
+  //   legacy: { kind: 'addon', moduleSlug, userId }
+  const md = obj.metadata ?? {};
+  const userId = md.user_id ?? md.userId;
+  const moduleSlug = md.module_slug ?? md.moduleSlug;
+  const isAddon = md.type === 'addon' || md.kind === 'addon';
+  if (!isAddon || !userId || !moduleSlug) {
     return { handled: false, error: 'Not an addon event or missing metadata' };
   }
 
@@ -896,13 +903,15 @@ export async function resyncUserBilling(userId: string): Promise<{
     for (const sub of list.data ?? []) {
       scanned += 1;
 
-      // Build a synthetic event so we can reuse the addon idempotency machinery
-      const isAddon = sub?.metadata?.kind === 'addon';
+      // Build a synthetic event so we can reuse the addon idempotency machinery.
+      // Accept both legacy (kind) and spec (type) addon markers.
+      const md = sub?.metadata ?? {};
+      const isAddon = md.type === 'addon' || md.kind === 'addon';
       if (!isAddon) continue;
       const synthetic = {
         id: `resync_${sub.id}_${Date.now()}`,
         type: 'customer.subscription.updated' as const,
-        data: { object: { ...sub, metadata: { ...sub.metadata, userId, kind: 'addon' } } },
+        data: { object: { ...sub, metadata: { ...md, userId, user_id: userId, kind: 'addon', type: 'addon' } } },
       };
       const r = await processAddonWebhookEvent(synthetic);
       if (r.handled) reconciled += 1;

@@ -252,7 +252,8 @@ function pickCta(args: {
   const { moduleStatus, hasAccess, hasBaseUrl, upgradeTarget, addonPriceCents } = args;
   if (moduleStatus === 'disabled') return 'disabled';
   if (moduleStatus === 'coming_soon') return 'coming_soon';
-  if (hasAccess && hasBaseUrl) return 'open';
+  // 'live' and 'beta' are both launchable for entitled users.
+  if (hasAccess && hasBaseUrl && (moduleStatus === 'live' || moduleStatus === 'beta')) return 'open';
   // Locked but live. Prefer `buy_addon` only if a price is configured;
   // otherwise nudge an upgrade.
   if (addonPriceCents && addonPriceCents > 0) return 'buy_addon';
@@ -293,7 +294,7 @@ export async function getUserModules(userId: string): Promise<UserModuleSummary[
         baseUrl: m.baseUrl,
         ord: m.ord,
       },
-      unlocked: access.hasAccess && m.status === 'live' && !!m.baseUrl,
+      unlocked: access.hasAccess && (m.status === 'live' || m.status === 'beta') && !!m.baseUrl,
       access_source: access.source,
       cta,
       upgrade_target_plan: upgradeTarget,
@@ -326,7 +327,7 @@ export async function getModuleForUser(userId: string, moduleSlug: string): Prom
       iconUrl: m.iconUrl, category: m.category, status: m.status,
       planMin: m.planMin, baseUrl: m.baseUrl, ord: m.ord,
     },
-    unlocked: access.hasAccess && m.status === 'live' && !!m.baseUrl,
+    unlocked: access.hasAccess && (m.status === 'live' || m.status === 'beta') && !!m.baseUrl,
     access_source: access.source,
     cta,
     upgrade_target_plan: upgradeTarget,

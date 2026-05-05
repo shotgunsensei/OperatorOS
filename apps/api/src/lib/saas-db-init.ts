@@ -317,6 +317,11 @@ export async function ensureSaasTables() {
     CREATE INDEX IF NOT EXISTS idx_addon_subs_user ON addon_subscriptions(user_id);
     CREATE INDEX IF NOT EXISTS idx_addon_subs_module ON addon_subscriptions(module_id);
     CREATE INDEX IF NOT EXISTS idx_addon_subs_status ON addon_subscriptions(status);
+    -- Hybrid billing constraint: one ACTIVE/TRIALING addon row per (user, module).
+    -- Cancelled/past_due rows remain for history; only live ones must be unique.
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_addon_active_per_user_module
+      ON addon_subscriptions(user_id, module_id)
+      WHERE status IN ('active', 'trialing');
 
     CREATE TABLE IF NOT EXISTS entitlement_overrides (
       id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
