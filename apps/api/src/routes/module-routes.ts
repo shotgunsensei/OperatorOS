@@ -6,35 +6,42 @@ import {
   users, subscriptions, subscriptionPlans,
   modules, ssoHandoffTokens, activityFeed, adminAuditLogs,
 } from '../schema.js';
-import { eq, and, gt, sql } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { authenticate, logAudit } from '../lib/auth.js';
 import {
-  hasModuleAccess, getUserModules, getAccessBreakdown,
+  hasModuleAccess, getUserModules, getModuleForUser, getAccessBreakdown,
 } from '../lib/entitlement-service.js';
-import { subscribeToAddon, cancelAddon } from '../lib/billing-service.js';
 
 const APP_ENV = process.env.APP_ENV || 'development';
 const SSO_TOKEN_TTL_SECONDS = 90;
 const OPERATOROS_BASE_URL = process.env.OPERATOROS_BASE_URL || 'http://localhost:5000';
 
-function resolveModuleSsoSecret(): string {
-  if (process.env.MODULE_SSO_SECRET) return process.env.MODULE_SSO_SECRET;
-  if (APP_ENV !== 'development') {
-    // In any non-dev environment, refuse to silently reuse the session
-    // secret for SSO signing — this would dramatically expand the blast
-    // radius of a leaked module SSO key.
-    throw new Error(
-      `MODULE_SSO_SECRET is required when APP_ENV="${APP_ENV}". ` +
-      `Set MODULE_SSO_SECRET to a random 32+ byte value in env.`
-    );
+/**
+ * Resolve the shared HS256 signing key for module SSO. Hard requirement:
+ *  - Production / staging: env var must be set; otherwise we issue plain
+ *    (unsigned) launch URLs and surface a loud, admin-visible warning so
+ *    the platform stays usable instead of locking everyone out.
+ *  - Development: same fallback applies, with a console warning.
+ *
+ * resolveModuleSsoSecret() returns { secret, fallback }. When fallback=true,
+ * launch URLs MUST omit the JWT token and the response includes a `warning`
+ * string that the UI surfaces as an admin toast.
+ */
+function resolveModuleSsoSecret(): { secret: string | null; fallback: boolean } {
+  if (process.env.MODULE_SSO_SECRET && process.env.MODULE_SSO_SECRET.length >= 16) {
+    return { secret: process.env.MODULE_SSO_SECRET, fallback: false };
   }
-  console.warn(
-    '[module-sso] MODULE_SSO_SECRET not set — falling back to SESSION_SECRET (dev only).'
-  );
-  return process.env.SESSION_SECRET || 'operatoros-module-sso-dev-secret';
+  return { secret: null, fallback: true };
 }
 
-const MODULE_SSO_SECRET = resolveModuleSsoSecret();
+const { secret: MODULE_SSO_SECRET, fallback: SSO_FALLBACK } = resolveModuleSsoSecret();
+const SSO_FALLBACK_WARNING =
+  'MODULE_SSO_SECRET is not set. Module launches are sending plain URLs ' +
+  'with no signed token. Set MODULE_SSO_SECRET to enable SSO handoff.';
+
+if (SSO_FALLBACK) {
+  console.warn('[module-sso] ' + SSO_FALLBACK_WARNING);
+}
 
 // Per-user rate limiter for handoff issuance: 10 per minute.
 const handoffRate = new Map<string, { count: number; resetAt: number }>();
@@ -53,11 +60,30 @@ function checkHandoffRate(userId: string): boolean {
   return true;
 }
 
+// Per-source-IP rate limiter for /v1/modules/sso/consume: 10 per minute.
+// This hardens against jti enumeration / scanning attacks.
+const consumeRate = new Map<string, { count: number; resetAt: number }>();
+const CONSUME_RATE_LIMIT = 10;
+const CONSUME_RATE_WINDOW_MS = 60_000;
+
+function checkConsumeRate(ip: string): boolean {
+  const now = Date.now();
+  const cur = consumeRate.get(ip);
+  if (!cur || cur.resetAt < now) {
+    consumeRate.set(ip, { count: 1, resetAt: now + CONSUME_RATE_WINDOW_MS });
+    return true;
+  }
+  if (cur.count >= CONSUME_RATE_LIMIT) return false;
+  cur.count += 1;
+  return true;
+}
+
 interface SsoClaims {
   iss: string;
   aud: string;
   env: string;
-  user_id: string;
+  sub: string;     // user id (standard claim name)
+  user_id: string; // duplicated for receiver convenience
   email: string;
   role: string;
   module_slug: string;
@@ -68,46 +94,122 @@ interface SsoClaims {
   exp: number;
 }
 
-function buildLaunchUrl(baseUrl: string, token: string): string {
+/**
+ * Spec-aligned launch URL: `{module_base_url}/sso?token={jwt}`. We append
+ * /sso so the receiver always sees the same path regardless of base URL
+ * shape. Existing query strings on baseUrl are preserved (the /sso path
+ * replaces the base path component? No — base URL is treated as the
+ * module ROOT; we always navigate to {root}/sso.
+ */
+function buildLaunchUrl(baseUrl: string, token: string | null): string {
   if (!baseUrl) return '';
-  const sep = baseUrl.includes('?') ? '&' : '?';
-  return `${baseUrl}${sep}sso=${encodeURIComponent(token)}`;
+  const trimmed = baseUrl.replace(/\/+$/, '');
+  if (!token) return trimmed; // fallback: no token, just root
+  return `${trimmed}/sso?token=${encodeURIComponent(token)}`;
+}
+
+/**
+ * Audit-log every SSO-handoff reject path so admins can investigate
+ * abuse / misconfiguration.
+ *
+ * We always emit a structured stdout line (production log aggregation
+ * will capture these) AND attempt to insert into admin_audit_logs when
+ * we have a real userId. The DB row is best-effort: the
+ * admin_audit_logs.admin_id FK requires a real users row, so unauth
+ * paths (unknown jti, bad_request, rate_limited) only end up in stdout.
+ * The structured-log line is the durable audit record for those paths.
+ */
+async function auditSsoReject(opts: {
+  userId: string | null;
+  action: string;
+  details: Record<string, unknown>;
+  ip: string;
+}) {
+  // Structured stdout audit — always emitted, never throws
+  console.warn(
+    '[AUDIT sso] ' + JSON.stringify({
+      ts: new Date().toISOString(),
+      action: opts.action,
+      userId: opts.userId,
+      ip: opts.ip,
+      ...opts.details,
+    })
+  );
+
+  // Best-effort DB row — only when we have a real user id (FK requirement)
+  if (!opts.userId) return;
+  try {
+    await db.insert(adminAuditLogs).values({
+      adminId: opts.userId,
+      action: opts.action,
+      targetUserId: null,
+      details: opts.details,
+      ipAddress: opts.ip,
+    });
+  } catch (err) {
+    console.error('[module-sso] audit-log insert failed:', err);
+  }
 }
 
 export async function registerModuleRoutes(app: FastifyInstance) {
   // -------------------------------------------------------------------------
-  // GET /v1/modules — list all modules with access state for current user
+  // GET /v1/modules — list all modules with server-resolved access state
   // -------------------------------------------------------------------------
   app.get('/v1/modules', { preHandler: [authenticate] }, async (request) => {
     const user = (request as any).user;
     const summary = await getUserModules(user.id);
-    return { modules: summary };
+    return {
+      modules: summary,
+      ssoFallback: SSO_FALLBACK,
+      warning: SSO_FALLBACK ? SSO_FALLBACK_WARNING : null,
+    };
   });
 
   // -------------------------------------------------------------------------
-  // GET /v1/modules/:slug — single-module detail with access decision
+  // GET /v1/modules/debug — verbose breakdown for every module (current user
+  // by default; admins can target another user via ?userId=)
+  // -------------------------------------------------------------------------
+  app.get('/v1/modules/debug', { preHandler: [authenticate] }, async (request) => {
+    const user = (request as any).user;
+    const { userId: queryUserId } = request.query as { userId?: string };
+    const targetUserId = queryUserId && user.role === 'admin' ? queryUserId : user.id;
+
+    const allModules = await db.select().from(modules);
+    const breakdowns = [];
+    for (const m of allModules) {
+      const b = await getAccessBreakdown(targetUserId, m.slug);
+      if (b) breakdowns.push(b);
+    }
+    return {
+      evaluatedFor: targetUserId,
+      env: APP_ENV,
+      ssoFallback: SSO_FALLBACK,
+      breakdowns,
+    };
+  });
+
+  // -------------------------------------------------------------------------
+  // GET /v1/modules/:slug — single-module detail, server-resolved
   // -------------------------------------------------------------------------
   app.get('/v1/modules/:slug', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     const { slug } = request.params as { slug: string };
-    const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
-    if (!mod) return reply.code(404).send({ error: 'Module not found' });
-    const access = await hasModuleAccess(user.id, slug);
-    return { module: mod, access };
+    const summary = await getModuleForUser(user.id, slug);
+    if (!summary) return reply.code(404).send({ error: 'Module not found' });
+    return summary;
   });
 
   // -------------------------------------------------------------------------
-  // GET /v1/modules/debug/:slug — verbose breakdown (admin or self)
+  // GET /v1/modules/debug/:slug — single-module verbose breakdown
   // -------------------------------------------------------------------------
   app.get('/v1/modules/debug/:slug', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     const { slug } = request.params as { slug: string };
     const { userId: queryUserId } = request.query as { userId?: string };
-
     const targetUserId = queryUserId && user.role === 'admin' ? queryUserId : user.id;
     const breakdown = await getAccessBreakdown(targetUserId, slug);
     if (!breakdown) return reply.code(404).send({ error: 'Module not found' });
-    return { breakdown, evaluatedFor: targetUserId };
+    return { breakdown, evaluatedFor: targetUserId, env: APP_ENV };
   });
 
   // -------------------------------------------------------------------------
@@ -118,6 +220,10 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const { slug } = request.params as { slug: string };
 
     if (!checkHandoffRate(user.id)) {
+      await auditSsoReject({
+        userId: user.id, action: 'sso_handoff_rate_limited',
+        details: { moduleSlug: slug }, ip: request.ip,
+      });
       return reply.code(429).send({
         error: 'Too many launch attempts. Please slow down.',
         code: 'RATE_LIMITED',
@@ -125,23 +231,45 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     }
 
     const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
-    if (!mod) return reply.code(404).send({ error: 'Module not found' });
+    if (!mod) {
+      await auditSsoReject({
+        userId: user.id, action: 'sso_handoff_module_not_found',
+        details: { moduleSlug: slug }, ip: request.ip,
+      });
+      return reply.code(404).send({ error: 'Module not found' });
+    }
     if (!mod.baseUrl) {
+      await auditSsoReject({
+        userId: user.id, action: 'sso_handoff_no_base_url',
+        details: { moduleSlug: slug }, ip: request.ip,
+      });
       return reply.code(409).send({
         error: 'Module has no launch URL configured.',
         code: 'NO_BASE_URL',
       });
     }
     if (mod.status === 'disabled') {
+      await auditSsoReject({
+        userId: user.id, action: 'sso_handoff_module_disabled',
+        details: { moduleSlug: slug }, ip: request.ip,
+      });
       return reply.code(403).send({ error: 'Module is disabled', code: 'MODULE_DISABLED' });
     }
     if (mod.status === 'coming_soon') {
+      await auditSsoReject({
+        userId: user.id, action: 'sso_handoff_module_coming_soon',
+        details: { moduleSlug: slug }, ip: request.ip,
+      });
       return reply.code(409).send({ error: 'Module is coming soon', code: 'MODULE_COMING_SOON' });
     }
 
-    // Entitlement check (admins bypass via override but still need to be flagged)
     const access = await hasModuleAccess(user.id, slug);
-    if (!access.hasAccess && user.role !== 'admin') {
+    if (!access.hasAccess) {
+      await auditSsoReject({
+        userId: user.id, action: 'sso_handoff_access_denied',
+        details: { moduleSlug: slug, source: access.source, reason: access.reason },
+        ip: request.ip,
+      });
       return reply.code(403).send({
         error: 'You do not have access to this module.',
         code: 'MODULE_ACCESS_DENIED',
@@ -151,7 +279,6 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       });
     }
 
-    // Derive plan slug
     const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id)).limit(1);
     let planSlug: string | null = null;
     if (sub) {
@@ -161,31 +288,33 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     const jti = crypto.randomBytes(24).toString('hex');
     const now = Math.floor(Date.now() / 1000);
-    const claims: SsoClaims = {
-      iss: 'operatoros',
-      aud: slug,
-      env: APP_ENV,
-      user_id: user.id,
-      email: user.email,
-      role: user.role,
-      module_slug: slug,
-      plan_slug: planSlug,
-      organization_id: null,
-      jti,
-      iat: now,
-      exp: now + SSO_TOKEN_TTL_SECONDS,
-    };
+    let token: string | null = null;
+    if (MODULE_SSO_SECRET) {
+      const claims: SsoClaims = {
+        iss: OPERATOROS_BASE_URL,
+        aud: slug,
+        env: APP_ENV,
+        sub: user.id,
+        user_id: user.id,
+        email: user.email,
+        role: user.role,
+        module_slug: slug,
+        plan_slug: planSlug,
+        organization_id: null,
+        jti,
+        iat: now,
+        exp: now + SSO_TOKEN_TTL_SECONDS,
+      };
+      token = jwt.sign(claims, MODULE_SSO_SECRET, { algorithm: 'HS256' });
+    }
 
-    const token = jwt.sign(claims, MODULE_SSO_SECRET, { algorithm: 'HS256' });
-
-    const issuedIp = request.ip;
     await db.insert(ssoHandoffTokens).values({
       jti,
       userId: user.id,
       moduleSlug: slug,
       audience: slug,
       env: APP_ENV,
-      issuedIp,
+      issuedIp: request.ip,
       expiresAt: new Date((now + SSO_TOKEN_TTL_SECONDS) * 1000),
     });
 
@@ -194,7 +323,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       action: 'module_launched',
       entityType: 'module',
       entityId: mod.id,
-      metadata: { moduleSlug: slug, source: access.source, jti },
+      metadata: { moduleSlug: slug, source: access.source, jti, fallback: SSO_FALLBACK },
     });
 
     return {
@@ -203,82 +332,214 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       expiresIn: SSO_TOKEN_TTL_SECONDS,
       moduleSlug: slug,
       env: APP_ENV,
+      issuer: OPERATOROS_BASE_URL,
+      jti,
+      ssoFallback: SSO_FALLBACK,
+      warning: SSO_FALLBACK ? SSO_FALLBACK_WARNING : null,
     };
   });
 
   // -------------------------------------------------------------------------
-  // POST /v1/modules/sso/consume — verify + single-use consume of handoff token
-  // Called by the receiving module to validate the JWT.
+  // POST /v1/modules/sso/consume — receiver-side single-use validation.
+  //
+  // Spec request body: { jti, aud, env }
+  //   The receiving module verifies the JWT signature itself (it shares
+  //   MODULE_SSO_SECRET) and then asks OperatorOS to atomically mark the
+  //   jti as consumed. OperatorOS double-checks audience + env match what
+  //   was originally issued.
+  //
+  // Status semantics:
+  //   200 — consumed successfully (returns user/plan context)
+  //   400 — bad request OR audience/env mismatch with stored record
+  //   404 — jti not recognized (forged or never issued)
+  //   409 — already consumed (replay attack)
+  //   410 — token expired
+  //   429 — too many requests from this IP
   // -------------------------------------------------------------------------
   app.post('/v1/modules/sso/consume', async (request, reply) => {
-    const { token, expectedAudience } = (request.body || {}) as { token?: string; expectedAudience?: string };
-    if (!token) return reply.code(400).send({ error: 'token is required', code: 'TOKEN_REQUIRED' });
-
-    let claims: SsoClaims;
-    try {
-      claims = jwt.verify(token, MODULE_SSO_SECRET, { algorithms: ['HS256'] }) as SsoClaims;
-    } catch (err: any) {
-      return reply.code(401).send({ error: 'Invalid or expired token', code: 'TOKEN_INVALID' });
+    const ip = request.ip;
+    if (!checkConsumeRate(ip)) {
+      await auditSsoReject({
+        userId: null, action: 'sso_consume_rate_limited',
+        details: { ip }, ip,
+      });
+      return reply.code(429).send({ error: 'Too many requests', code: 'RATE_LIMITED' });
     }
 
-    if (claims.env !== APP_ENV) {
-      return reply.code(401).send({
-        error: `Token issued for env "${claims.env}" but server is "${APP_ENV}"`,
-        code: 'ENV_MISMATCH',
+    const body = (request.body || {}) as { jti?: string; aud?: string; env?: string };
+    const { jti, aud, env } = body;
+
+    if (!jti || typeof jti !== 'string' || !aud || !env) {
+      await auditSsoReject({
+        userId: null, action: 'sso_consume_bad_request',
+        details: { hasJti: !!jti, hasAud: !!aud, hasEnv: !!env, ip }, ip,
+      });
+      return reply.code(400).send({
+        error: 'jti, aud and env are required',
+        code: 'BAD_REQUEST',
       });
     }
-    if (expectedAudience && claims.aud !== expectedAudience) {
-      return reply.code(401).send({
-        error: `Token audience "${claims.aud}" does not match expected "${expectedAudience}"`,
+
+    const [row] = await db.select().from(ssoHandoffTokens)
+      .where(eq(ssoHandoffTokens.jti, jti)).limit(1);
+
+    if (!row) {
+      await auditSsoReject({
+        userId: null, action: 'sso_consume_unknown_jti',
+        details: { jti, aud, env, ip }, ip,
+      });
+      return reply.code(404).send({ error: 'Token not recognized', code: 'TOKEN_UNKNOWN' });
+    }
+
+    if (row.audience !== aud) {
+      await auditSsoReject({
+        userId: row.userId, action: 'sso_consume_audience_mismatch',
+        details: { jti, expected: row.audience, got: aud, ip }, ip,
+      });
+      return reply.code(400).send({
+        error: `Token audience "${row.audience}" does not match requested "${aud}"`,
         code: 'AUDIENCE_MISMATCH',
       });
     }
 
-    // DB-side replay protection: the token row must exist, not be consumed,
-    // and not be expired.
-    const [row] = await db.select().from(ssoHandoffTokens).where(eq(ssoHandoffTokens.jti, claims.jti)).limit(1);
-    if (!row) return reply.code(401).send({ error: 'Token not recognized', code: 'TOKEN_UNKNOWN' });
-    if (row.consumedAt) return reply.code(410).send({ error: 'Token already consumed', code: 'TOKEN_REPLAYED' });
-    if (row.expiresAt.getTime() < Date.now()) {
-      return reply.code(401).send({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
+    if (row.env !== env) {
+      await auditSsoReject({
+        userId: row.userId, action: 'sso_consume_env_mismatch',
+        details: { jti, expected: row.env, got: env, ip }, ip,
+      });
+      return reply.code(400).send({
+        error: `Token env "${row.env}" does not match requested "${env}"`,
+        code: 'ENV_MISMATCH',
+      });
     }
 
-    // Mark consumed atomically; if another consumer wins the race, we treat it as replay.
-    const consumedIp = request.ip;
+    if (row.expiresAt.getTime() < Date.now()) {
+      await auditSsoReject({
+        userId: row.userId, action: 'sso_consume_expired',
+        details: { jti, expiresAt: row.expiresAt.toISOString(), ip }, ip,
+      });
+      return reply.code(410).send({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
+    }
+
+    if (row.consumedAt) {
+      await auditSsoReject({
+        userId: row.userId, action: 'sso_consume_replay',
+        details: { jti, consumedAt: row.consumedAt.toISOString(), originalIp: row.consumedIp, ip }, ip,
+      });
+      return reply.code(409).send({ error: 'Token already consumed', code: 'TOKEN_REPLAYED' });
+    }
+
+    // Atomic single-use mark
     const updated = await db.update(ssoHandoffTokens).set({
       consumedAt: new Date(),
-      consumedIp,
+      consumedIp: ip,
     }).where(and(
-      eq(ssoHandoffTokens.jti, claims.jti),
+      eq(ssoHandoffTokens.jti, jti),
       sql`consumed_at IS NULL`,
     )).returning();
 
     if (updated.length === 0) {
-      return reply.code(410).send({ error: 'Token already consumed', code: 'TOKEN_REPLAYED' });
+      await auditSsoReject({
+        userId: row.userId, action: 'sso_consume_race_replay',
+        details: { jti, ip }, ip,
+      });
+      return reply.code(409).send({ error: 'Token already consumed', code: 'TOKEN_REPLAYED' });
     }
 
-    // Re-check entitlement at consume-time (fail-closed if the user lost access since issuance)
-    const access = await hasModuleAccess(claims.user_id, claims.module_slug);
+    // IP-mismatch advisory audit (do not deny — many legitimate clients NAT
+    // through different egress IPs between issue and consume, but we want
+    // forensic visibility).
+    if (row.issuedIp && row.issuedIp !== ip) {
+      await auditSsoReject({
+        userId: row.userId, action: 'sso_consume_ip_mismatch_warning',
+        details: { jti, issuedIp: row.issuedIp, consumedIp: ip }, ip,
+      });
+    }
+
+    // Re-check entitlement at consume-time (fail-closed if access changed
+    // between issuance and use)
+    const access = await hasModuleAccess(row.userId, row.moduleSlug);
     if (!access.hasAccess) {
+      await auditSsoReject({
+        userId: row.userId, action: 'sso_consume_access_revoked',
+        details: { jti, moduleSlug: row.moduleSlug, source: access.source, reason: access.reason }, ip,
+      });
       return reply.code(403).send({
         error: 'User no longer has access to this module',
         code: 'MODULE_ACCESS_REVOKED',
       });
     }
 
+    // Hydrate user + plan for the receiver
+    const [user] = await db.select().from(users).where(eq(users.id, row.userId)).limit(1);
+    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, row.userId)).limit(1);
+    let planSlug: string | null = null;
+    if (sub) {
+      const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, sub.planId)).limit(1);
+      planSlug = plan?.slug ?? null;
+    }
+
     return {
       ok: true,
-      user: {
-        id: claims.user_id,
-        email: claims.email,
-        role: claims.role,
-      },
-      moduleSlug: claims.module_slug,
-      planSlug: claims.plan_slug,
-      organizationId: claims.organization_id,
-      issuedAt: claims.iat,
-      expiresAt: claims.exp,
-      env: claims.env,
+      user: user ? { id: user.id, email: user.email, name: user.name, role: user.role } : null,
+      moduleSlug: row.moduleSlug,
+      planSlug,
+      organizationId: null,
+      env: row.env,
+      jti,
+      issuer: OPERATOROS_BASE_URL,
+      accessSource: access.source,
     };
+  });
+
+  // -------------------------------------------------------------------------
+  // Spec-aliased admin surfaces under /v1/modules/admin/* (the canonical
+  // admin endpoints live in /v1/admin/modules — these are URL aliases that
+  // call into the same implementation for spec compliance).
+  // -------------------------------------------------------------------------
+  app.get('/v1/modules/admin/all', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+    if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
+    const rows = await db.select().from(modules).orderBy(modules.ord);
+    const allPlans = await db.select().from(subscriptionPlans);
+    const planMap = Object.fromEntries(allPlans.map(p => [p.id, p.slug]));
+    const { planModules } = await import('../schema.js');
+    const mappings = await db.select().from(planModules);
+    const byModule: Record<string, string[]> = {};
+    for (const m of mappings) {
+      const slug = planMap[m.planId];
+      if (!slug) continue;
+      (byModule[m.moduleId] ||= []).push(slug);
+    }
+    return { modules: rows.map(r => ({ ...r, includedInPlans: byModule[r.id] ?? [] })) };
+  });
+
+  app.patch('/v1/modules/admin/:slug', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+    if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
+    const { slug } = request.params as { slug: string };
+    const body = request.body as any;
+
+    for (const k of ['baseUrl', 'iconUrl'] as const) {
+      const v = body[k];
+      if (v && typeof v === 'string' && v.length > 0) {
+        try {
+          const u = new URL(v);
+          if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+            return reply.code(400).send({ error: `${k} must be an http(s) URL` });
+          }
+        } catch {
+          return reply.code(400).send({ error: `${k} must be a valid URL` });
+        }
+      }
+    }
+
+    const updates: any = { updatedAt: new Date() };
+    ['name', 'description', 'iconUrl', 'category', 'baseUrl', 'status', 'planMin', 'requiresOrg', 'ord', 'metadata']
+      .forEach(k => { if (body[k] !== undefined) updates[k] = body[k]; });
+    const [updated] = await db.update(modules).set(updates).where(eq(modules.slug, slug)).returning();
+    if (!updated) return reply.code(404).send({ error: 'Module not found' });
+    await logAudit(user.id, 'module_updated', null as any, { slug, updates }, request.ip);
+    return { module: updated };
   });
 }

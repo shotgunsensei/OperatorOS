@@ -5,6 +5,9 @@ import { modulesApi } from '@/lib/auth';
 import { useToast } from '@/components/Toast';
 import { colors } from '../SaasLayout';
 
+type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
+type ModuleCta = 'launch' | 'upgrade' | 'subscribe_addon' | 'coming_soon' | 'disabled';
+
 interface ModuleSummary {
   module: {
     id: string;
@@ -18,17 +21,26 @@ interface ModuleSummary {
     baseUrl: string;
     ord: number;
   };
-  hasAccess: boolean;
-  source: 'plan' | 'addon' | 'override_grant' | 'override_revoke' | 'denied';
+  unlocked: boolean;
+  access_source: AccessSource;
+  cta: ModuleCta;
+  upgrade_target_plan: string | null;
+  addon_price_cents: number | null;
   reason?: string;
 }
 
+interface ModuleListResponse {
+  modules: ModuleSummary[];
+  ssoFallback: boolean;
+  warning: string | null;
+}
+
 const sourceLabel: Record<string, { label: string; color: string; bg: string }> = {
-  plan:           { label: 'Included',     color: '#3fb950', bg: 'rgba(63,185,80,0.15)' },
-  addon:          { label: 'Add-on',       color: '#bc8cff', bg: 'rgba(188,140,255,0.15)' },
-  override_grant: { label: 'Granted',      color: '#58a6ff', bg: 'rgba(88,166,255,0.15)' },
-  override_revoke:{ label: 'Revoked',      color: '#f85149', bg: 'rgba(248,81,73,0.15)' },
-  denied:         { label: 'Locked',       color: '#8b949e', bg: 'rgba(139,148,158,0.15)' },
+  plan:       { label: 'Included',  color: '#3fb950', bg: 'rgba(63,185,80,0.15)' },
+  addon:      { label: 'Add-on',    color: '#bc8cff', bg: 'rgba(188,140,255,0.15)' },
+  override:   { label: 'Granted',   color: '#58a6ff', bg: 'rgba(88,166,255,0.15)' },
+  admin_role: { label: 'Admin',     color: '#f0b400', bg: 'rgba(240,180,0,0.15)' },
+  locked:     { label: 'Locked',    color: '#8b949e', bg: 'rgba(139,148,158,0.15)' },
 };
 
 const planTierLabel: Record<string, string> = {
@@ -44,17 +56,28 @@ const statusLabel: Record<string, { label: string; color: string }> = {
   disabled:    { label: 'Disabled',    color: '#f85149' },
 };
 
+function priceLabel(cents: number | null): string {
+  if (!cents || cents <= 0) return '';
+  const dollars = cents / 100;
+  return dollars % 1 === 0 ? `$${dollars}/mo` : `$${dollars.toFixed(2)}/mo`;
+}
+
 export default function AppsPage() {
   const [modules, setModules] = useState<ModuleSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [launching, setLaunching] = useState<string | null>(null);
+  const [warningShown, setWarningShown] = useState(false);
   const { toast } = useToast();
 
   const load = async () => {
     try {
       setLoading(true);
-      const data = await modulesApi.list();
+      const data = (await modulesApi.list()) as ModuleListResponse;
       setModules(data.modules);
+      if (data.ssoFallback && data.warning && !warningShown) {
+        toast(data.warning, 'error');
+        setWarningShown(true);
+      }
     } catch (err: any) {
       toast(`Failed to load modules: ${err.error || err.message}`, 'error');
     } finally {
@@ -62,13 +85,11 @@ export default function AppsPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const launch = (slug: string) => {
-    // Open the popup synchronously (inside the click handler) so browsers
-    // do not flag it as a popup. We then navigate it once the handoff
-    // token is back. This avoids the "window.open after await" pop-up
-    // blocker that all major browsers enforce.
+    // Open the popup synchronously so browsers don't flag it as a popup,
+    // then navigate it once the handoff token is back.
     const popup = window.open('about:blank', '_blank', 'noopener,noreferrer');
     if (!popup) {
       toast('Popup blocked — please allow popups for OperatorOS', 'error');
@@ -76,7 +97,8 @@ export default function AppsPage() {
     }
     setLaunching(slug);
     modulesApi.handoff(slug)
-      .then(result => {
+      .then((result: any) => {
+        if (result.warning) toast(result.warning, 'error');
         if (result.launchUrl) popup.location.replace(result.launchUrl);
         else { popup.close(); toast('No launch URL configured', 'error'); }
       })
@@ -122,11 +144,10 @@ export default function AppsPage() {
         display: 'grid', gap: 16,
         gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
       }}>
-        {modules.map(({ module: m, hasAccess, source, reason }) => {
-          const src = sourceLabel[source] || sourceLabel.denied;
+        {modules.map(({ module: m, unlocked, access_source, cta, upgrade_target_plan, addon_price_cents, reason }) => {
+          const srcKey = unlocked && access_source ? access_source : 'locked';
+          const src = sourceLabel[srcKey] || sourceLabel.locked;
           const status = statusLabel[m.status] || statusLabel.coming_soon;
-          const isComingSoon = m.status === 'coming_soon';
-          const isLaunchable = hasAccess && m.status === 'live' && !!m.baseUrl;
 
           return (
             <div
@@ -140,7 +161,7 @@ export default function AppsPage() {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 12,
-                opacity: hasAccess ? 1 : 0.85,
+                opacity: unlocked ? 1 : 0.85,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -166,7 +187,7 @@ export default function AppsPage() {
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: colors.textDim }}>
                 <span>Min plan: <strong style={{ color: colors.text }}>{planTierLabel[m.planMin] || m.planMin}</strong></span>
-                {!hasAccess && reason && (
+                {!unlocked && reason && (
                   <span data-testid={`module-reason-${m.slug}`} style={{ fontStyle: 'italic' }}>
                     {reason.replace(/_/g, ' ')}
                   </span>
@@ -174,7 +195,7 @@ export default function AppsPage() {
               </div>
 
               <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
-                {isLaunchable && (
+                {cta === 'launch' && (
                   <button
                     data-testid={`button-launch-${m.slug}`}
                     onClick={() => launch(m.slug)}
@@ -188,7 +209,7 @@ export default function AppsPage() {
                     {launching === m.slug ? 'Launching…' : 'Launch'}
                   </button>
                 )}
-                {!isLaunchable && isComingSoon && (
+                {cta === 'coming_soon' && (
                   <button
                     data-testid={`button-comingsoon-${m.slug}`}
                     disabled
@@ -198,7 +219,7 @@ export default function AppsPage() {
                     }}
                   >Coming Soon</button>
                 )}
-                {!isLaunchable && !isComingSoon && !hasAccess && (
+                {cta === 'subscribe_addon' && (
                   <button
                     data-testid={`button-subscribe-${m.slug}`}
                     onClick={() => subscribe(m.slug)}
@@ -207,9 +228,24 @@ export default function AppsPage() {
                       border: `1px solid ${colors.accent}`, background: 'transparent',
                       color: colors.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
                     }}
-                  >Add to plan</button>
+                  >
+                    {priceLabel(addon_price_cents) ? `Add-on — ${priceLabel(addon_price_cents)}` : 'Add to plan'}
+                  </button>
                 )}
-                {!isLaunchable && !isComingSoon && hasAccess && (
+                {cta === 'upgrade' && (
+                  <button
+                    data-testid={`button-upgrade-${m.slug}`}
+                    onClick={() => { window.location.href = '/?tab=billing'; }}
+                    style={{
+                      flex: 1, padding: '8px 14px', borderRadius: 8,
+                      border: `1px solid ${colors.accent}`, background: 'transparent',
+                      color: colors.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    Upgrade to {planTierLabel[upgrade_target_plan || ''] || 'higher plan'}
+                  </button>
+                )}
+                {cta === 'disabled' && (
                   <button
                     data-testid={`button-disabled-${m.slug}`}
                     disabled

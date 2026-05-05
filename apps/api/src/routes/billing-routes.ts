@@ -11,7 +11,7 @@ import {
   subscribeToPlan, cancelSubscription, reactivateSubscription,
   createCheckoutSession, createPortalSession, processWebhookEvent,
   verifyWebhookSignature, isStripeEnabled, getBillingMode,
-  subscribeToAddon, cancelAddon,
+  subscribeToAddon, cancelAddon, processAddonWebhookEvent,
 } from '../lib/billing-service.js';
 import { authenticate as authenticateImport } from '../lib/auth.js';
 
@@ -197,10 +197,18 @@ export async function registerBillingRoutes(app: FastifyInstance) {
         console.warn('[billing webhook] Raw body not available, skipping signature verification');
       }
 
-      const result = await processWebhookEvent(event);
+      // Route addon-tagged events to the addon-specific processor; everything
+      // else goes to the base subscription processor. Add-on events are
+      // identified by metadata.kind === 'addon' on the underlying object.
+      const obj = event.data?.object || {};
+      const isAddon = obj?.metadata?.kind === 'addon';
 
-      console.log(`[billing webhook] ${event.type}: handled=${result.handled} action=${result.action || 'none'}`);
-      return { received: true, ...result };
+      const result = isAddon
+        ? await processAddonWebhookEvent(event)
+        : await processWebhookEvent(event);
+
+      console.log(`[billing webhook] ${event.type} (${isAddon ? 'addon' : 'plan'}): handled=${result.handled} action=${result.action || 'none'}`);
+      return { received: true, kind: isAddon ? 'addon' : 'plan', ...result };
     } catch (err: any) {
       console.error('[billing webhook] Error:', err.message);
       return reply.code(400).send({ error: err.message });

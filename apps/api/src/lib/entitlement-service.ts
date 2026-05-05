@@ -3,20 +3,22 @@ import {
   users, subscriptions, subscriptionPlans,
   modules, planModules, addonSubscriptions, entitlementOverrides,
 } from '../schema.js';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { authenticate } from './auth.js';
 
 /**
- * Access source attribution. The first source that grants/denies access wins,
- * but the order matters for fail-closed law:
- *   1. admin override (deny) — hard block
- *   2. admin override (grant) — explicit allow
- *   3. addon subscription — paid add-on
- *   4. plan inclusion — comes with the user's current plan
- *   5. fail-closed — no access
+ * Access-source taxonomy — the single source of truth for how a user got
+ * (or did not get) access to a module. The order matches evaluation order:
+ *   1. admin_role  — server-side superadmin allow
+ *   2. override    — explicit per-user grant or revoke
+ *   3. addon       — paid per-module subscription
+ *   4. plan        — comes with the user's active plan
+ *   5. null        — no access (locked / coming_soon / disabled / no entitlement)
  */
-export type AccessSource = 'override_grant' | 'override_revoke' | 'addon' | 'plan' | 'denied';
+export type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
+
+export type ModuleCta = 'launch' | 'upgrade' | 'subscribe_addon' | 'coming_soon' | 'disabled';
 
 export interface ModuleAccess {
   moduleSlug: string;
@@ -39,8 +41,12 @@ export interface UserModuleSummary {
     baseUrl: string;
     ord: number;
   };
-  hasAccess: boolean;
-  source: AccessSource;
+  // Server-authoritative rendering hints. The UI MUST NOT recompute these.
+  unlocked: boolean;
+  access_source: AccessSource;
+  cta: ModuleCta;
+  upgrade_target_plan: string | null;
+  addon_price_cents: number | null;
   reason?: string;
 }
 
@@ -52,9 +58,12 @@ export interface AccessBreakdown {
   planGrants: boolean;
   addonGrants: boolean;
   overrideGrants: boolean | null; // null = no override; true=grant; false=revoke
+  isAdmin: boolean;
   moduleStatus: string;
   reason?: string;
 }
+
+const PLAN_RANK: Record<string, number> = { starter: 0, pro: 1, elite: 2 };
 
 async function getUserPlanSlug(userId: string): Promise<string | null> {
   const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
@@ -87,7 +96,6 @@ async function activeOverrideForUser(userId: string, moduleId: string) {
       eq(entitlementOverrides.moduleId, moduleId),
     ));
   const now = new Date();
-  // Pick the most recent non-expired one
   const valid = rows
     .filter(r => !r.expiresAt || r.expiresAt > now)
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -97,37 +105,52 @@ async function activeOverrideForUser(userId: string, moduleId: string) {
 /**
  * The single source of truth for module access. Fail-closed: any unexpected
  * state results in denial.
+ *
+ * Evaluation order is strict and documented above on AccessSource.
  */
 export async function hasModuleAccess(userId: string, moduleSlug: string): Promise<ModuleAccess> {
   try {
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (!user || user.status !== 'active') {
-      return { moduleSlug, hasAccess: false, source: 'denied', reason: 'user_inactive' };
+      return { moduleSlug, hasAccess: false, source: null, reason: 'user_inactive' };
     }
 
     const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
-    if (!mod) return { moduleSlug, hasAccess: false, source: 'denied', reason: 'module_not_found' };
-    if (mod.status === 'disabled') return { moduleSlug, hasAccess: false, source: 'denied', reason: 'module_disabled' };
+    if (!mod) return { moduleSlug, hasAccess: false, source: null, reason: 'module_not_found' };
+    if (mod.status === 'disabled') return { moduleSlug, hasAccess: false, source: null, reason: 'module_disabled' };
+    if (mod.status === 'coming_soon') {
+      // Even admins shouldn't be considered "having access" to launch a
+      // coming-soon module — but they will see the card. Source is null.
+      return { moduleSlug, hasAccess: false, source: null, reason: 'coming_soon' };
+    }
 
-    // 1. Admin override takes precedence
+    // 1. Admin role allow — superadmins can launch any live module
+    if (user.role === 'admin') {
+      return { moduleSlug, hasAccess: true, source: 'admin_role' };
+    }
+
+    // 2. Per-user override (revoke wins, then grant)
     const override = await activeOverrideForUser(userId, mod.id);
     if (override) {
       if (!override.grant) {
-        return { moduleSlug, hasAccess: false, source: 'override_revoke', reason: override.reason ?? 'admin_revoked', expiresAt: override.expiresAt };
+        return {
+          moduleSlug, hasAccess: false, source: 'override',
+          reason: override.reason ?? 'admin_revoked', expiresAt: override.expiresAt,
+        };
       }
-      // Even with grant override, coming_soon modules cannot be launched (UX)
-      // — but admins still get a launch-able "preview". Spec says preview-only
-      // for coming_soon. We allow the grant; the route can refuse handoff.
-      return { moduleSlug, hasAccess: true, source: 'override_grant', reason: override.reason ?? 'admin_granted', expiresAt: override.expiresAt };
+      return {
+        moduleSlug, hasAccess: true, source: 'override',
+        reason: override.reason ?? 'admin_granted', expiresAt: override.expiresAt,
+      };
     }
 
-    // 2. Active addon
+    // 3. Active addon
     const addon = await activeAddonForUser(userId, mod.id);
     if (addon) {
       return { moduleSlug, hasAccess: true, source: 'addon' };
     }
 
-    // 3. Plan inclusion
+    // 4. Plan inclusion
     const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
     if (sub && ['active', 'trialing'].includes(sub.status)) {
       const granted = await planGrantsModule(sub.planId, mod.id);
@@ -136,17 +159,58 @@ export async function hasModuleAccess(userId: string, moduleSlug: string): Promi
       }
     }
 
-    // 4. Fail-closed
-    return { moduleSlug, hasAccess: false, source: 'denied', reason: 'no_entitlement' };
+    // 5. Fail-closed
+    return { moduleSlug, hasAccess: false, source: null, reason: 'no_entitlement' };
   } catch (err) {
     console.error('[entitlement] hasModuleAccess error:', err);
-    return { moduleSlug, hasAccess: false, source: 'denied', reason: 'evaluation_error' };
+    return { moduleSlug, hasAccess: false, source: null, reason: 'evaluation_error' };
   }
 }
 
 /**
- * Returns every module in the catalog with the user's access state attached.
- * UI consumes this directly — never compute access on the client.
+ * Compute the smallest plan slug that grants this module via plan inclusion,
+ * for the "Upgrade to X" CTA. Returns null if no plan grants the module.
+ */
+async function smallestUpgradeTarget(moduleId: string): Promise<string | null> {
+  const mappings = await db.select().from(planModules).where(eq(planModules.moduleId, moduleId));
+  if (mappings.length === 0) return null;
+  const plans = await db.select().from(subscriptionPlans);
+  const planById = Object.fromEntries(plans.map(p => [p.id, p.slug]));
+  const slugs = mappings
+    .map(m => planById[m.planId])
+    .filter((s): s is string => !!s)
+    .sort((a, b) => (PLAN_RANK[a] ?? 99) - (PLAN_RANK[b] ?? 99));
+  return slugs[0] ?? null;
+}
+
+function readAddonPriceCents(mod: { metadata: any }): number | null {
+  const md = mod.metadata as Record<string, unknown> | null | undefined;
+  const v = md?.addonPriceCents;
+  return typeof v === 'number' ? v : null;
+}
+
+function pickCta(args: {
+  moduleStatus: string;
+  hasAccess: boolean;
+  hasBaseUrl: boolean;
+  upgradeTarget: string | null;
+  addonPriceCents: number | null;
+}): ModuleCta {
+  const { moduleStatus, hasAccess, hasBaseUrl, upgradeTarget, addonPriceCents } = args;
+  if (moduleStatus === 'disabled') return 'disabled';
+  if (moduleStatus === 'coming_soon') return 'coming_soon';
+  if (hasAccess && hasBaseUrl) return 'launch';
+  // Locked but live. Prefer "subscribe_addon" only if a price is configured;
+  // otherwise nudge an upgrade.
+  if (addonPriceCents && addonPriceCents > 0) return 'subscribe_addon';
+  if (upgradeTarget) return 'upgrade';
+  return 'disabled';
+}
+
+/**
+ * Returns every module in the catalog with the user's access state attached
+ * AND server-resolved rendering fields (unlocked / cta / upgrade target /
+ * addon price). UI consumes this directly — never compute access on the client.
  */
 export async function getUserModules(userId: string): Promise<UserModuleSummary[]> {
   const allModules = await db.select().from(modules);
@@ -154,6 +218,15 @@ export async function getUserModules(userId: string): Promise<UserModuleSummary[
   const out: UserModuleSummary[] = [];
   for (const m of sorted) {
     const access = await hasModuleAccess(userId, m.slug);
+    const upgradeTarget = await smallestUpgradeTarget(m.id);
+    const addonPriceCents = readAddonPriceCents(m);
+    const cta = pickCta({
+      moduleStatus: m.status,
+      hasAccess: access.hasAccess,
+      hasBaseUrl: !!m.baseUrl,
+      upgradeTarget,
+      addonPriceCents,
+    });
     out.push({
       module: {
         id: m.id,
@@ -167,12 +240,46 @@ export async function getUserModules(userId: string): Promise<UserModuleSummary[
         baseUrl: m.baseUrl,
         ord: m.ord,
       },
-      hasAccess: access.hasAccess,
-      source: access.source,
+      unlocked: access.hasAccess,
+      access_source: access.source,
+      cta,
+      upgrade_target_plan: upgradeTarget,
+      addon_price_cents: addonPriceCents,
       reason: access.reason,
     });
   }
   return out;
+}
+
+/**
+ * Single-module summary with the same server-resolved shape as getUserModules.
+ */
+export async function getModuleForUser(userId: string, moduleSlug: string): Promise<UserModuleSummary | null> {
+  const [m] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
+  if (!m) return null;
+  const access = await hasModuleAccess(userId, moduleSlug);
+  const upgradeTarget = await smallestUpgradeTarget(m.id);
+  const addonPriceCents = readAddonPriceCents(m);
+  const cta = pickCta({
+    moduleStatus: m.status,
+    hasAccess: access.hasAccess,
+    hasBaseUrl: !!m.baseUrl,
+    upgradeTarget,
+    addonPriceCents,
+  });
+  return {
+    module: {
+      id: m.id, slug: m.slug, name: m.name, description: m.description,
+      iconUrl: m.iconUrl, category: m.category, status: m.status,
+      planMin: m.planMin, baseUrl: m.baseUrl, ord: m.ord,
+    },
+    unlocked: access.hasAccess,
+    access_source: access.source,
+    cta,
+    upgrade_target_plan: upgradeTarget,
+    addon_price_cents: addonPriceCents,
+    reason: access.reason,
+  };
 }
 
 /**
@@ -182,6 +289,7 @@ export async function getAccessBreakdown(userId: string, moduleSlug: string): Pr
   const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
   if (!mod) return null;
 
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   const planSlug = await getUserPlanSlug(userId);
   const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
   const planGrants = sub ? await planGrantsModule(sub.planId, mod.id) : false;
@@ -202,6 +310,7 @@ export async function getAccessBreakdown(userId: string, moduleSlug: string): Pr
     planGrants,
     addonGrants,
     overrideGrants,
+    isAdmin: user?.role === 'admin',
     moduleStatus: mod.status,
     reason: access.reason,
   };
@@ -209,14 +318,14 @@ export async function getAccessBreakdown(userId: string, moduleSlug: string): Pr
 
 /**
  * Fastify pre-handler factory. Use as `{ preHandler: [requireModuleAccess('snapproofos')] }`.
- * 403 with structured payload on denial.
+ * 403 with structured payload on denial. Admins are allowed by hasModuleAccess
+ * itself (source='admin_role') so this stays simple.
  */
 export function requireModuleAccess(moduleSlug: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     await authenticate(request, reply);
     if (reply.sent) return;
     const user = (request as any).user;
-    if (user.role === 'admin') return; // admins bypass entitlement gates
 
     const access = await hasModuleAccess(user.id, moduleSlug);
     if (!access.hasAccess) {

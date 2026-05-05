@@ -659,7 +659,7 @@ export async function processAddonWebhookEvent(event: { id: string; type: string
   const payloadHash = crypto.createHash('sha256').update(JSON.stringify(obj)).digest('hex');
   const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
   if (!mod) {
-    await recordBillingFailure(userId, type, stripeEventId, payloadHash, `Module ${moduleSlug} not found`);
+    await recordBillingFailure(userId, type, stripeEventId, payloadHash, `Module ${moduleSlug} not found`, event);
     return { handled: false, error: 'Module not found' };
   }
 
@@ -718,50 +718,90 @@ export async function processAddonWebhookEvent(event: { id: string; type: string
     await db.insert(billingEvents).values({
       userId, eventType: `addon_${type.replace(/\./g, '_')}`,
       stripeEventId, payloadHash, processedAt: new Date(),
-      metadata: { moduleSlug, mode: 'stripe' },
+      metadata: { moduleSlug, mode: 'stripe', rawEvent: event },
     });
     return { handled: true, action: type };
   } catch (err: any) {
-    await recordBillingFailure(userId, type, stripeEventId, payloadHash, err.message);
+    await recordBillingFailure(userId, type, stripeEventId, payloadHash, err.message, event);
     return { handled: false, error: err.message };
   }
 }
 
-async function recordBillingFailure(userId: string, eventType: string, stripeEventId: string, payloadHash: string, errorMessage: string) {
+async function recordBillingFailure(
+  userId: string, eventType: string, stripeEventId: string,
+  payloadHash: string, errorMessage: string, rawEvent: any,
+) {
   await db.insert(billingEvents).values({
     userId, eventType: `addon_${eventType.replace(/\./g, '_')}_failed`,
     stripeEventId, payloadHash, errorMessage,
-    metadata: { mode: 'stripe', failed: true },
+    metadata: { mode: 'stripe', failed: true, rawEvent },
   });
 }
 
 /**
- * Admin DLQ "mark resolved": acknowledges a failed billing event so it stops
- * showing in the unprocessed queue, increments retry_count for forensics,
- * and clears the error message.
+ * Admin DLQ retry — TRUE REPLAY of the original webhook payload.
  *
- * NOTE: This does NOT re-run the original Stripe webhook handler — we don't
- * persist the raw payload, so true replay is impossible. To actually re-run
- * the event, replay it from the Stripe Dashboard which will hit /v1/billing/webhook
- * with full payload + signature. This endpoint is for clearing the DLQ once
- * the underlying issue has been manually resolved (e.g. fixed customer state
- * in Stripe directly).
+ * When a Stripe addon webhook fails, we persist the raw event in
+ * billing_events.metadata.rawEvent. This endpoint reads it back, re-runs
+ * processAddonWebhookEvent, marks the original failure event resolved,
+ * and increments retry_count.
+ *
+ * If no raw payload was captured (legacy rows), we degrade to a simple
+ * "mark resolved" for forensics.
  */
-export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean; message: string }> {
+export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean; message: string; replayed?: boolean; replayResult?: any }> {
   const [evt] = await db.select().from(billingEvents).where(eq(billingEvents.id, eventId)).limit(1);
   if (!evt) return { ok: false, message: 'Event not found' };
   if (evt.processedAt) return { ok: false, message: 'Event already processed' };
 
   const next = (evt.retryCount ?? 0) + 1;
+  const rawEvent = (evt.metadata as any)?.rawEvent;
+
+  // No raw payload → just mark resolved (legacy / non-replayable)
+  if (!rawEvent || typeof rawEvent !== 'object' || !rawEvent.type) {
+    await db.update(billingEvents).set({
+      retryCount: next, processedAt: new Date(), errorMessage: null,
+    }).where(eq(billingEvents.id, eventId));
+    return {
+      ok: true,
+      message: `Event marked resolved (attempts=${next}). No raw payload was captured for true replay.`,
+      replayed: false,
+    };
+  }
+
+  // True replay
+  let replayResult: WebhookProcessResult;
+  try {
+    replayResult = await processAddonWebhookEvent(rawEvent);
+  } catch (err: any) {
+    await db.update(billingEvents).set({
+      retryCount: next,
+      errorMessage: `replay_error: ${err.message}`,
+    }).where(eq(billingEvents.id, eventId));
+    return { ok: false, message: `Replay threw: ${err.message}` };
+  }
+
+  if (replayResult.handled) {
+    await db.update(billingEvents).set({
+      retryCount: next, processedAt: new Date(), errorMessage: null,
+    }).where(eq(billingEvents.id, eventId));
+    return {
+      ok: true,
+      message: `Event replayed successfully (attempts=${next}, action=${replayResult.action || 'handled'}).`,
+      replayed: true,
+      replayResult,
+    };
+  }
+
   await db.update(billingEvents).set({
     retryCount: next,
-    processedAt: new Date(),
-    errorMessage: null,
+    errorMessage: `replay_failed: ${replayResult.error || 'not_handled'}`,
   }).where(eq(billingEvents.id, eventId));
-
   return {
-    ok: true,
-    message: `Event marked resolved (attempts=${next}). To actually replay the webhook, re-send it from Stripe.`,
+    ok: false,
+    message: `Replay failed: ${replayResult.error || 'not handled'}. Attempts=${next}.`,
+    replayed: false,
+    replayResult,
   };
 }
 
