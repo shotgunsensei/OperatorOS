@@ -683,7 +683,7 @@ function UserDetailPanel({ userId, onClose, onRefresh }: { userId: string; onClo
                   if (!confirm(`Resync this user's plan + add-on subscriptions from Stripe?\n\nThis is the recovery path when a Stripe webhook was missed or processed out of order. It will reconcile DB state to Stripe's source of truth and may downgrade plans / cancel add-ons that no longer exist in Stripe.`)) return;
                   try {
                     const res: any = await adminApi.resyncUserBilling(detail.user.id);
-                    alert(`Resync complete.\n\nPlan: ${res.plan?.action ?? 'no change'}\nAdd-ons: ${res.addons?.length ?? 0} reconciled`);
+                    alert(`${res.message ?? 'Resync complete.'}\n\nMode: ${res.mode ?? 'unknown'}\nScanned: ${res.scanned ?? 0}\nReconciled: ${res.reconciled ?? 0}`);
                     await loadDetail();
                     onRefresh();
                   } catch (err: any) {
