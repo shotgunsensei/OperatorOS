@@ -291,6 +291,109 @@ export function verifyWebhookSignature(payload: string | Buffer, signature: stri
   return stripe.webhooks.constructEvent(payload, signature, STRIPE_WEBHOOK_SECRET);
 }
 
+// Classify a Stripe event as addon vs plan. Looks at metadata in
+// multiple places because Stripe puts it on different objects depending
+// on the event family:
+//   - customer.subscription.*: object.metadata
+//   - checkout.session.completed: object.metadata + subscription_data.metadata
+//   - invoice.*: object.subscription_details?.metadata, plus
+//     object.lines.data[].metadata for line-level tagging.
+// Returns a structured classification and the user_id/module_slug it
+// resolved (when present) so the caller doesn't have to re-parse.
+export interface WebhookClassification {
+  isAddon: boolean;
+  userId: string | null;
+  moduleSlug: string | null;
+  matchedAt: 'object' | 'subscription_data' | 'subscription_details' | 'invoice_line' | 'none';
+}
+
+export function classifyWebhookEvent(event: { type: string; data: { object: any } }): WebhookClassification {
+  const obj = event.data?.object || {};
+  const candidates: Array<{ md: any; at: WebhookClassification['matchedAt'] }> = [];
+  if (obj.metadata) candidates.push({ md: obj.metadata, at: 'object' });
+  if (obj.subscription_data?.metadata) candidates.push({ md: obj.subscription_data.metadata, at: 'subscription_data' });
+  if (obj.subscription_details?.metadata) candidates.push({ md: obj.subscription_details.metadata, at: 'subscription_details' });
+  if (Array.isArray(obj.lines?.data)) {
+    for (const line of obj.lines.data) {
+      if (line?.metadata) candidates.push({ md: line.metadata, at: 'invoice_line' });
+    }
+  }
+  for (const { md, at } of candidates) {
+    const isAddon = md.type === 'addon' || md.kind === 'addon';
+    if (isAddon) {
+      return {
+        isAddon: true,
+        userId: md.user_id ?? md.userId ?? null,
+        moduleSlug: md.module_slug ?? md.moduleSlug ?? null,
+        matchedAt: at,
+      };
+    }
+  }
+  // Plan path: surface user_id when present so the claim row can be
+  // attributed to the right user.
+  const planMd = candidates[0]?.md ?? {};
+  return {
+    isAddon: false,
+    userId: planMd.user_id ?? planMd.userId ?? null,
+    moduleSlug: null,
+    matchedAt: candidates.length ? candidates[0].at : 'none',
+  };
+}
+
+// Single source of idempotency for ALL Stripe webhook events (plan and
+// addon alike). The route layer calls this BEFORE running any handler:
+//   - Inserts a billing_events row keyed by event.id with the raw
+//     payload + payload_hash so admin DLQ retry can replay it later.
+//   - ON CONFLICT DO NOTHING (matches partial unique index
+//     uq_billing_events_stripe_event_id) makes redelivery a no-op.
+//   - Returns the claim row id for the route to update with
+//     processed_at / error_message after the handler runs.
+export async function claimStripeEvent(
+  event: { id: string; type: string; data: { object: any } },
+  classification: WebhookClassification,
+): Promise<{ claimedRowId: string | null; isDuplicate: boolean }> {
+  const payloadHash = crypto.createHash('sha256').update(JSON.stringify(event)).digest('hex');
+  const userId = classification.userId; // may be null for plan events without metadata
+  const eventTypeLabel = `${classification.isAddon ? 'addon' : 'plan'}_${event.type.replace(/\./g, '_')}`;
+
+  const claim = await db.insert(billingEvents).values({
+    userId,
+    eventType: eventTypeLabel,
+    stripeEventId: event.id,
+    payloadHash,
+    metadata: {
+      mode: 'stripe',
+      kind: classification.isAddon ? 'addon' : 'plan',
+      moduleSlug: classification.moduleSlug,
+      classifiedAt: classification.matchedAt,
+      rawEvent: event,
+    },
+  }).onConflictDoNothing({
+    target: billingEvents.stripeEventId,
+    where: sql`stripe_event_id IS NOT NULL`,
+  }).returning({ id: billingEvents.id });
+
+  if (claim.length === 0) {
+    return { claimedRowId: null, isDuplicate: true };
+  }
+  return { claimedRowId: claim[0].id, isDuplicate: false };
+}
+
+export async function markStripeEventProcessed(claimedRowId: string, action: string | undefined) {
+  await db.update(billingEvents).set({
+    processedAt: new Date(),
+    errorMessage: null,
+    metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ lastAction: action ?? 'handled' })}::jsonb`,
+  }).where(eq(billingEvents.id, claimedRowId));
+}
+
+export async function markStripeEventFailed(claimedRowId: string, errorMessage: string) {
+  await db.update(billingEvents).set({
+    errorMessage,
+    metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ lastFailureAt: new Date().toISOString() })}::jsonb`,
+  }).where(eq(billingEvents.id, claimedRowId));
+}
+
 export async function processWebhookEvent(event: { type: string; data: { object: any } }): Promise<WebhookProcessResult> {
   const { type, data } = event;
   const obj = data.object;
@@ -351,12 +454,8 @@ async function handleCheckoutCompleted(session: any): Promise<WebhookProcessResu
     });
   }
 
-  await db.insert(billingEvents).values({
-    userId, eventType: 'checkout_completed',
-    stripeEventId: session.id,
-    metadata: { planSlug, stripeSubscriptionId, stripeCustomerId, mode: 'stripe' },
-  });
-
+  // Idempotency lives at the route layer (claimStripeEvent). The
+  // user-facing activity feed entry is still useful here.
   await db.insert(activityFeed).values({
     userId, action: 'subscribed', entityType: 'subscription',
     metadata: { planName: plan.name, planSlug, via: 'stripe_checkout' },
@@ -383,12 +482,6 @@ async function handleSubscriptionCreated(subscription: any): Promise<WebhookProc
       currentPeriodEnd: new Date(subscription.current_period_end * 1000),
     }).where(eq(subscriptions.id, existingSub.id));
   }
-
-  await db.insert(billingEvents).values({
-    userId, eventType: 'stripe_subscription_created',
-    stripeEventId: stripeSubId,
-    metadata: { status, customerId, mode: 'stripe' },
-  });
 
   console.log(`[billing-service] Subscription created: user=${userId} stripe_sub=${stripeSubId}`);
   return { handled: true, action: 'subscription_created' };
@@ -423,12 +516,6 @@ async function handleSubscriptionUpdated(subscription: any): Promise<WebhookProc
     updatedAt: new Date(),
   }).where(eq(subscriptions.id, existingSub.id));
 
-  await db.insert(billingEvents).values({
-    userId: existingSub.userId, eventType: 'stripe_subscription_updated',
-    stripeEventId: stripeSubId,
-    metadata: { status, cancelAtEnd, priceId, mode: 'stripe' },
-  });
-
   console.log(`[billing-service] Subscription updated: stripe_sub=${stripeSubId} status=${status}`);
   return { handled: true, action: 'subscription_updated' };
 }
@@ -452,12 +539,6 @@ async function handleSubscriptionDeleted(subscription: any): Promise<WebhookProc
     updatedAt: new Date(),
   }).where(eq(subscriptions.id, existingSub.id));
 
-  await db.insert(billingEvents).values({
-    userId: existingSub.userId, eventType: 'stripe_subscription_deleted',
-    stripeEventId: stripeSubId,
-    metadata: { mode: 'stripe' },
-  });
-
   await db.insert(activityFeed).values({
     userId: existingSub.userId, action: 'subscription_canceled',
     entityType: 'subscription', metadata: { via: 'stripe' },
@@ -480,13 +561,6 @@ async function handlePaymentFailed(invoice: any): Promise<WebhookProcessResult> 
     status: 'past_due', updatedAt: new Date(),
   }).where(eq(subscriptions.id, existingSub.id));
 
-  await db.insert(billingEvents).values({
-    userId: existingSub.userId, eventType: 'payment_failed',
-    stripeEventId: invoice.id,
-    amount: invoice.amount_due,
-    metadata: { attemptCount: invoice.attempt_count, mode: 'stripe' },
-  });
-
   console.log(`[billing-service] Payment failed: stripe_sub=${stripeSubId}`);
   return { handled: true, action: 'payment_failed' };
 }
@@ -503,13 +577,6 @@ async function handleInvoicePaid(invoice: any): Promise<WebhookProcessResult> {
   await db.update(subscriptions).set({
     status: 'active', updatedAt: new Date(),
   }).where(eq(subscriptions.id, existingSub.id));
-
-  await db.insert(billingEvents).values({
-    userId: existingSub.userId, eventType: 'invoice_paid',
-    stripeEventId: invoice.id,
-    amount: invoice.amount_paid,
-    metadata: { invoiceNumber: invoice.number, mode: 'stripe' },
-  });
 
   console.log(`[billing-service] Invoice paid: stripe_sub=${stripeSubId}`);
   return { handled: true, action: 'invoice_paid' };
@@ -678,10 +745,10 @@ export async function cancelAddon(userId: string, moduleSlug: string): Promise<{
   return { ok: true, message: 'Add-on cancellation scheduled' };
 }
 
-// Idempotent addon webhook processor. Race-safe via partial unique index
-// uq_billing_events_stripe_event_id (WHERE stripe_event_id IS NOT NULL).
+// Pure addon webhook processor — idempotency is owned by claimStripeEvent
+// at the route layer. This function only performs side effects.
 export async function processAddonWebhookEvent(event: { id: string; type: string; data: { object: any } }): Promise<WebhookProcessResult> {
-  const { type, data, id: stripeEventId } = event;
+  const { type, data } = event;
   const obj = data.object;
   // Accept both metadata contracts: spec ({ type, module_slug, user_id })
   // and legacy ({ kind, moduleSlug, userId }).
@@ -693,99 +760,58 @@ export async function processAddonWebhookEvent(event: { id: string; type: string
     return { handled: false, error: 'Not an addon event or missing metadata' };
   }
 
-  const payloadHash = crypto.createHash('sha256').update(JSON.stringify(obj)).digest('hex');
   const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
+  if (!mod) return { handled: false, error: `Module ${moduleSlug} not found` };
 
-  // ON CONFLICT must include the same predicate as the partial unique index
-  // so PostgreSQL can infer it; otherwise the insert errors instead of no-op.
-  const claim = await db.insert(billingEvents).values({
-    userId, eventType: `addon_${type.replace(/\./g, '_')}`,
-    stripeEventId, payloadHash,
-    metadata: { moduleSlug, mode: 'stripe', rawEvent: event },
-  }).onConflictDoNothing({
-    target: billingEvents.stripeEventId,
-    where: sql`stripe_event_id IS NOT NULL`,
-  }).returning({ id: billingEvents.id });
+  switch (type) {
+    case 'checkout.session.completed':
+    case 'customer.subscription.created': {
+      const stripeSubId = obj.subscription || obj.id;
+      const customerId = obj.customer;
+      const periodStart = obj.current_period_start ? new Date(obj.current_period_start * 1000) : new Date();
+      const periodEnd = obj.current_period_end
+        ? new Date(obj.current_period_end * 1000)
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  // Empty claim => another worker owns this event id; skip side effects.
-  if (claim.length === 0) {
-    return { handled: true, action: 'duplicate_ignored' };
-  }
-  const claimedId = claim[0].id;
-
-  if (!mod) {
-    await db.update(billingEvents).set({
-      errorMessage: `Module ${moduleSlug} not found`,
-    }).where(eq(billingEvents.id, claimedId));
-    return { handled: false, error: 'Module not found' };
-  }
-
-  try {
-    switch (type) {
-      case 'checkout.session.completed':
-      case 'customer.subscription.created': {
-        const stripeSubId = obj.subscription || obj.id;
-        const customerId = obj.customer;
-        const periodStart = obj.current_period_start ? new Date(obj.current_period_start * 1000) : new Date();
-        const periodEnd = obj.current_period_end
-          ? new Date(obj.current_period_end * 1000)
-          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-        const existingAddon = await db.select().from(addonSubscriptions)
-          .where(and(eq(addonSubscriptions.userId, userId), eq(addonSubscriptions.moduleId, mod.id)));
-        const active = existingAddon.find(a => ['active', 'trialing'].includes(a.status));
-        if (active) {
-          await db.update(addonSubscriptions).set({
-            stripeSubscriptionId: stripeSubId, stripeCustomerId: customerId,
-            status: 'active', updatedAt: new Date(),
-            currentPeriodStart: periodStart, currentPeriodEnd: periodEnd,
-          }).where(eq(addonSubscriptions.id, active.id));
-        } else {
-          await db.insert(addonSubscriptions).values({
-            userId, moduleId: mod.id, status: 'active',
-            stripeSubscriptionId: stripeSubId, stripeCustomerId: customerId,
-            amount: obj.amount_total ?? 0,
-            currentPeriodStart: periodStart, currentPeriodEnd: periodEnd,
-          });
-        }
-        break;
-      }
-      case 'customer.subscription.updated': {
-        const stripeSubId = obj.id;
-        const status = mapStripeStatus(obj.status);
+      const existingAddon = await db.select().from(addonSubscriptions)
+        .where(and(eq(addonSubscriptions.userId, userId), eq(addonSubscriptions.moduleId, mod.id)));
+      const active = existingAddon.find(a => ['active', 'trialing'].includes(a.status));
+      if (active) {
         await db.update(addonSubscriptions).set({
-          status, cancelAtPeriodEnd: obj.cancel_at_period_end,
-          currentPeriodStart: new Date(obj.current_period_start * 1000),
-          currentPeriodEnd: new Date(obj.current_period_end * 1000),
-          updatedAt: new Date(),
-        }).where(eq(addonSubscriptions.stripeSubscriptionId, stripeSubId));
-        break;
+          stripeSubscriptionId: stripeSubId, stripeCustomerId: customerId,
+          status: 'active', updatedAt: new Date(),
+          currentPeriodStart: periodStart, currentPeriodEnd: periodEnd,
+        }).where(eq(addonSubscriptions.id, active.id));
+      } else {
+        await db.insert(addonSubscriptions).values({
+          userId, moduleId: mod.id, status: 'active',
+          stripeSubscriptionId: stripeSubId, stripeCustomerId: customerId,
+          amount: obj.amount_total ?? 0,
+          currentPeriodStart: periodStart, currentPeriodEnd: periodEnd,
+        });
       }
-      case 'customer.subscription.deleted': {
-        const stripeSubId = obj.id;
-        await db.update(addonSubscriptions).set({
-          status: 'canceled', updatedAt: new Date(),
-        }).where(eq(addonSubscriptions.stripeSubscriptionId, stripeSubId));
-        break;
-      }
-      default:
-        // Unknown event type — keep the claim row but mark as not-handled
-        // so admins can see what arrived.
-        await db.update(billingEvents).set({
-          errorMessage: `Unhandled event type: ${type}`,
-        }).where(eq(billingEvents.id, claimedId));
-        return { handled: false };
+      return { handled: true, action: type };
     }
-
-    await db.update(billingEvents).set({
-      processedAt: new Date(), errorMessage: null,
-    }).where(eq(billingEvents.id, claimedId));
-    return { handled: true, action: type };
-  } catch (err: any) {
-    await db.update(billingEvents).set({
-      errorMessage: err.message,
-    }).where(eq(billingEvents.id, claimedId));
-    return { handled: false, error: err.message };
+    case 'customer.subscription.updated': {
+      const stripeSubId = obj.id;
+      const status = mapStripeStatus(obj.status);
+      await db.update(addonSubscriptions).set({
+        status, cancelAtPeriodEnd: obj.cancel_at_period_end,
+        currentPeriodStart: new Date(obj.current_period_start * 1000),
+        currentPeriodEnd: new Date(obj.current_period_end * 1000),
+        updatedAt: new Date(),
+      }).where(eq(addonSubscriptions.stripeSubscriptionId, stripeSubId));
+      return { handled: true, action: type };
+    }
+    case 'customer.subscription.deleted': {
+      const stripeSubId = obj.id;
+      await db.update(addonSubscriptions).set({
+        status: 'canceled', updatedAt: new Date(),
+      }).where(eq(addonSubscriptions.stripeSubscriptionId, stripeSubId));
+      return { handled: true, action: type };
+    }
+    default:
+      return { handled: false, error: `Unhandled event type: ${type}` };
   }
 }
 

@@ -12,7 +12,8 @@ import {
   createCheckoutSession, createPortalSession, processWebhookEvent,
   verifyWebhookSignature, isStripeEnabled, getBillingMode,
   subscribeToAddon, cancelAddon, processAddonWebhookEvent,
-  AddonNotPurchasableError,
+  AddonNotPurchasableError, classifyWebhookEvent, claimStripeEvent,
+  markStripeEventProcessed, markStripeEventFailed,
 } from '../lib/billing-service.js';
 import { authenticate as authenticateImport } from '../lib/auth.js';
 
@@ -204,19 +205,40 @@ export async function registerBillingRoutes(app: FastifyInstance) {
         console.warn('[billing webhook] Raw body not available, skipping signature verification');
       }
 
-      // Route addon-tagged events to the addon-specific processor; everything
-      // else goes to the base subscription processor. Accept both metadata
-      // contracts: spec ({ type: 'addon' }) and legacy ({ kind: 'addon' }).
-      const obj = event.data?.object || {};
-      const md = obj?.metadata ?? {};
-      const isAddon = md.type === 'addon' || md.kind === 'addon';
+      // Single idempotency point for ALL Stripe webhook events. Classify
+      // first (checks metadata in object / subscription_data /
+      // subscription_details / invoice line items), then claim by event.id
+      // with ON CONFLICT DO NOTHING. Duplicate => return early without
+      // running side effects. Handler outcome updates the claim row with
+      // processed_at or error_message so admin DLQ retry can see it.
+      const classification = classifyWebhookEvent(event);
+      const { claimedRowId, isDuplicate } = await claimStripeEvent(event, classification);
 
-      const result = isAddon
-        ? await processAddonWebhookEvent(event)
-        : await processWebhookEvent(event);
+      if (isDuplicate) {
+        console.log(`[billing webhook] ${event.type} (${classification.isAddon ? 'addon' : 'plan'}): duplicate event.id=${event.id}, no-op`);
+        return { received: true, kind: classification.isAddon ? 'addon' : 'plan', handled: true, action: 'duplicate_ignored' };
+      }
 
-      console.log(`[billing webhook] ${event.type} (${isAddon ? 'addon' : 'plan'}): handled=${result.handled} action=${result.action || 'none'}`);
-      return { received: true, kind: isAddon ? 'addon' : 'plan', ...result };
+      let result: { handled: boolean; action?: string; error?: string };
+      try {
+        result = classification.isAddon
+          ? await processAddonWebhookEvent(event)
+          : await processWebhookEvent(event);
+      } catch (err: any) {
+        if (claimedRowId) await markStripeEventFailed(claimedRowId, err.message ?? String(err));
+        throw err;
+      }
+
+      if (claimedRowId) {
+        if (result.handled) {
+          await markStripeEventProcessed(claimedRowId, result.action);
+        } else {
+          await markStripeEventFailed(claimedRowId, result.error ?? 'not_handled');
+        }
+      }
+
+      console.log(`[billing webhook] ${event.type} (${classification.isAddon ? 'addon' : 'plan'}): handled=${result.handled} action=${result.action || 'none'} matched=${classification.matchedAt}`);
+      return { received: true, kind: classification.isAddon ? 'addon' : 'plan', ...result };
     } catch (err: any) {
       console.error('[billing webhook] Error:', err.message);
       return reply.code(400).send({ error: err.message });

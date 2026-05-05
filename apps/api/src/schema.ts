@@ -357,7 +357,10 @@ export const adminAuditLogs = pgTable('admin_audit_logs', {
 
 export const billingEvents = pgTable('billing_events', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  // Nullable: webhook claim rows are written before user resolution so
+  // even unattributed events get an idempotency record + raw payload for
+  // admin DLQ replay. Side-effect inserts continue to set this.
+  userId: varchar('user_id', { length: 36 }).references(() => users.id),
   subscriptionId: varchar('subscription_id', { length: 36 }),
   eventType: text('event_type').notNull(),
   stripeEventId: text('stripe_event_id'),

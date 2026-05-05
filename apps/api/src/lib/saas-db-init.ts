@@ -262,6 +262,9 @@ export async function ensureSaasTables() {
     ALTER TABLE billing_events ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE billing_events ADD COLUMN IF NOT EXISTS processed_at TIMESTAMP;
     ALTER TABLE billing_events ADD COLUMN IF NOT EXISTS error_message TEXT;
+    -- Webhook claim rows may not yet have a resolved user (raw event captured
+    -- pre-attribution for DLQ replay). Side-effect inserts still set user_id.
+    ALTER TABLE billing_events ALTER COLUMN user_id DROP NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_billing_events_processed ON billing_events(processed_at);
 
     CREATE TABLE IF NOT EXISTS modules (
