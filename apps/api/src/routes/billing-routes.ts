@@ -15,7 +15,6 @@ import {
   AddonNotPurchasableError, classifyWebhookEvent, claimStripeEvent,
   markStripeEventProcessed, markStripeEventFailed,
 } from '../lib/billing-service.js';
-import { authenticate as authenticateImport } from '../lib/auth.js';
 
 export async function registerBillingRoutes(app: FastifyInstance) {
   app.get('/v1/billing/subscription', { preHandler: [authenticate] }, async (request) => {
