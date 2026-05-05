@@ -196,14 +196,17 @@ export async function registerBillingRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: 'Missing stripe-signature header' });
       }
 
-      const rawBody = (request as any).rawBody || request.body;
-      let event;
-      if (typeof rawBody === 'string' || Buffer.isBuffer(rawBody)) {
-        event = verifyWebhookSignature(rawBody, signature);
-      } else {
-        event = rawBody;
-        console.warn('[billing webhook] Raw body not available, skipping signature verification');
+      // Fail-closed: signature verification REQUIRES the exact bytes Stripe
+      // sent. If raw body capture is unavailable (mis-config, wrong content
+      // type, proxy stripped it), reject the request rather than trust the
+      // parsed JSON — accepting it would let an attacker forge subscription
+      // state mutations and grant module entitlements.
+      const rawBody = (request as any).rawBody;
+      if (!Buffer.isBuffer(rawBody) && typeof rawBody !== 'string') {
+        console.error('[billing webhook] Raw body unavailable; rejecting unverifiable webhook');
+        return reply.code(400).send({ error: 'Raw body unavailable for signature verification' });
       }
+      const event = verifyWebhookSignature(rawBody, signature);
 
       // Single idempotency point for ALL Stripe webhook events. Classify
       // first (checks metadata in object / subscription_data /

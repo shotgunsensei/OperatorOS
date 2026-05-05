@@ -52,6 +52,20 @@ const app = Fastify({
 
 await app.register(cors, { origin: true, credentials: true });
 await app.register(cookie, { secret: process.env.SESSION_SECRET || 'operatoros-dev-secret' });
+
+// Replace the default JSON parser with one that preserves the raw buffer on
+// the request. This is required for Stripe webhook signature verification
+// (constructEvent must hash over the EXACT bytes Stripe sent). Without raw
+// body capture the webhook route would have to fail-closed on every request.
+app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, done) => {
+  (req as any).rawBody = body;
+  try {
+    if (!body || (body as Buffer).length === 0) return done(null, undefined);
+    done(null, JSON.parse((body as Buffer).toString('utf8')));
+  } catch (err) {
+    done(err as Error);
+  }
+});
 await app.register(websocket);
 await registerOsRoutes(app);
 await registerAuthRoutes(app);
