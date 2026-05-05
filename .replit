@@ -58,3 +58,6 @@ waitForPort = 5000
 [userenv.shared]
 ADMIN_EMAIL = "john@shotgunninjas.com"
 ADMIN_PASSWORD = "Dr0p$0fJup1t3r"
+
+[userenv.production]
+OPERATOROS_BASE_URL = "https://operatoros.net"
