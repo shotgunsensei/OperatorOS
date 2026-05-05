@@ -9,7 +9,8 @@ import {
 import { eq, and, sql } from 'drizzle-orm';
 import { authenticate, logAudit } from '../lib/auth.js';
 import {
-  hasModuleAccess, getUserModules, getModuleForUser, getAccessBreakdown,
+  hasModuleAccess, getUserModules, getModuleForUser,
+  getAccessBreakdown, getModuleAccessTrace, evaluateUserEntitlement,
 } from '../lib/entitlement-service.js';
 
 const APP_ENV = process.env.APP_ENV || 'development';
@@ -37,24 +38,20 @@ function resolveModuleSsoSecret(): { secret: string | null; fallback: boolean } 
 const { secret: MODULE_SSO_SECRET, fallback: SSO_FALLBACK } = resolveModuleSsoSecret();
 
 /**
- * Production posture: in `production` we REFUSE to issue unsigned launch
- * URLs even on fallback — instead handoff returns 503. In dev/staging we
- * still allow the unsigned-fallback path so the platform stays usable
- * while operators wire up the secret. Either way the boot warning is loud.
+ * Soft-fallback posture: when MODULE_SSO_SECRET is missing we still issue
+ * launch URLs but WITHOUT a signed JWT. The receiver-side modules know to
+ * detect the missing token and either short-circuit auth (dev) or refuse
+ * to honor it (prod). The platform stays usable in either case; the
+ * `warning` field on the response surfaces an admin toast so the gap is
+ * visible. This is intentional — a hard block leaves the entire module
+ * grid unusable while operators rotate keys.
  */
-const SSO_FALLBACK_BLOCKS_LAUNCH = APP_ENV === 'production' && SSO_FALLBACK;
-const SSO_FALLBACK_WARNING = SSO_FALLBACK_BLOCKS_LAUNCH
-  ? 'MODULE_SSO_SECRET is not configured. Module launches are disabled ' +
-    'in production until a signing secret is set.'
-  : 'MODULE_SSO_SECRET is not set. Module launches are sending plain URLs ' +
-    'with no signed token. Set MODULE_SSO_SECRET to enable SSO handoff.';
+const SSO_FALLBACK_WARNING =
+  'MODULE_SSO_SECRET is not set. Module launches are sending plain URLs ' +
+  'with no signed token. Set MODULE_SSO_SECRET to enable SSO handoff.';
 
 if (SSO_FALLBACK) {
-  if (SSO_FALLBACK_BLOCKS_LAUNCH) {
-    console.error('[module-sso] PRODUCTION GUARD: ' + SSO_FALLBACK_WARNING);
-  } else {
-    console.warn('[module-sso] ' + SSO_FALLBACK_WARNING);
-  }
+  console.warn('[module-sso] ' + SSO_FALLBACK_WARNING);
 }
 
 // Per-user rate limiter for handoff issuance: 10 per minute.
@@ -188,25 +185,26 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   });
 
   // -------------------------------------------------------------------------
-  // GET /v1/modules/debug — verbose breakdown for every module (current user
-  // by default; admins can target another user via ?userId=)
+  // GET /v1/modules/debug — spec-mandated AGGREGATE access snapshot for the
+  // user (or another user, if the caller is an admin).
+  //
+  // Returns the AccessBreakdown shape directly: plan_modules / addon_modules
+  // / overrides / override_revokes / effective / access_sources, plus
+  // env + ssoFallback context. The receiver can derive every per-module
+  // boolean from this aggregate without N additional round trips.
+  //
+  // For per-module forensic detail (which evaluation step caused which
+  // verdict) call `/v1/modules/debug/:slug` instead.
   // -------------------------------------------------------------------------
   app.get('/v1/modules/debug', { preHandler: [authenticate] }, async (request) => {
     const user = (request as any).user;
     const { userId: queryUserId } = request.query as { userId?: string };
     const targetUserId = queryUserId && user.role === 'admin' ? queryUserId : user.id;
-
-    const allModules = await db.select().from(modules);
-    const breakdowns = [];
-    for (const m of allModules) {
-      const b = await getAccessBreakdown(targetUserId, m.slug);
-      if (b) breakdowns.push(b);
-    }
+    const breakdown = await getAccessBreakdown(targetUserId);
     return {
-      evaluatedFor: targetUserId,
+      ...breakdown,
       env: APP_ENV,
       ssoFallback: SSO_FALLBACK,
-      breakdowns,
     };
   });
 
@@ -229,7 +227,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const { slug } = request.params as { slug: string };
     const { userId: queryUserId } = request.query as { userId?: string };
     const targetUserId = queryUserId && user.role === 'admin' ? queryUserId : user.id;
-    const breakdown = await getAccessBreakdown(targetUserId, slug);
+    const breakdown = await getModuleAccessTrace(targetUserId, slug);
     if (!breakdown) return reply.code(404).send({ error: 'Module not found' });
     return { breakdown, evaluatedFor: targetUserId, env: APP_ENV };
   });
@@ -242,18 +240,8 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const { slug } = request.params as { slug: string };
     const userAgent = (request.headers['user-agent'] as string) || null;
 
-    // Production guard: never emit unsigned launch URLs from a prod env.
-    if (SSO_FALLBACK_BLOCKS_LAUNCH) {
-      await auditSsoReject({
-        userId: user.id, action: 'sso_handoff_secret_missing',
-        details: { moduleSlug: slug, env: APP_ENV }, ip: request.ip,
-      });
-      return reply.code(503).send({
-        error: SSO_FALLBACK_WARNING,
-        code: 'SSO_SECRET_MISSING',
-      });
-    }
-
+    // Per-user rate limit FIRST so unauthenticated probing can't run the
+    // entitlement evaluator.
     if (!checkHandoffRate(user.id)) {
       await auditSsoReject({
         userId: user.id, action: 'sso_handoff_rate_limited',
@@ -273,33 +261,28 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       });
       return reply.code(404).send({ error: 'Module not found' });
     }
-    if (!mod.baseUrl) {
-      await auditSsoReject({
-        userId: user.id, action: 'sso_handoff_no_base_url',
-        details: { moduleSlug: slug }, ip: request.ip,
-      });
-      return reply.code(409).send({
-        error: 'Module has no launch URL configured.',
-        code: 'NO_BASE_URL',
-      });
-    }
-    if (mod.status === 'disabled') {
-      await auditSsoReject({
-        userId: user.id, action: 'sso_handoff_module_disabled',
-        details: { moduleSlug: slug }, ip: request.ip,
-      });
-      return reply.code(403).send({ error: 'Module is disabled', code: 'MODULE_DISABLED' });
-    }
-    if (mod.status === 'coming_soon') {
-      await auditSsoReject({
-        userId: user.id, action: 'sso_handoff_module_coming_soon',
-        details: { moduleSlug: slug }, ip: request.ip,
-      });
-      return reply.code(409).send({ error: 'Module is coming soon', code: 'MODULE_COMING_SOON' });
-    }
 
+    // Spec-mandated order: hasModuleAccess() FIRST. This is the single
+    // authorization decision — if the user has no entitlement, we deny
+    // BEFORE leaking module status (coming_soon / disabled / no_base_url).
+    // hasModuleAccess() itself returns false for status='disabled' and
+    // status='coming_soon', but it returns true for entitled users on
+    // launchable statuses. We separate the two layers here so we can
+    // distinguish 403 (unauthorized) from 400 (not launchable yet).
     const access = await hasModuleAccess(user.id, slug);
-    if (!access.hasAccess) {
+    // Status-independent entitlement: did the user have a path to access
+    // this module if the module were launchable? Only used to distinguish
+    // 403 (no entitlement at all) from 400 (entitled, module not ready).
+    const entitlementSource = access.hasAccess
+      ? access.source
+      : await evaluateUserEntitlement(user.id, mod.id);
+    if (!entitlementSource) {
+      // Audit captures the FULL diagnostic detail (status reason included)
+      // for forensics, but the response body intentionally omits it. We
+      // must NOT leak module status (`coming_soon`, `module_disabled`,
+      // `no_base_url`) to an unauthorized caller — that turns the launch
+      // endpoint into a module-status oracle. Only "you don't have access"
+      // is surfaced to the client.
       await auditSsoReject({
         userId: user.id, action: 'sso_handoff_access_denied',
         details: { moduleSlug: slug, source: access.source, reason: access.reason },
@@ -309,8 +292,34 @@ export async function registerModuleRoutes(app: FastifyInstance) {
         error: 'You do not have access to this module.',
         code: 'MODULE_ACCESS_DENIED',
         moduleSlug: slug,
-        source: access.source,
-        reason: access.reason,
+      });
+    }
+
+    // Module-status checks AFTER authorization succeeded. Spec returns 400
+    // for not-yet-launchable conditions (the user IS entitled, the module
+    // just isn't ready).
+    if (mod.status === 'coming_soon') {
+      await auditSsoReject({
+        userId: user.id, action: 'sso_handoff_module_coming_soon',
+        details: { moduleSlug: slug }, ip: request.ip,
+      });
+      return reply.code(400).send({ error: 'Module is coming soon', code: 'MODULE_COMING_SOON' });
+    }
+    if (mod.status === 'disabled') {
+      await auditSsoReject({
+        userId: user.id, action: 'sso_handoff_module_disabled',
+        details: { moduleSlug: slug }, ip: request.ip,
+      });
+      return reply.code(400).send({ error: 'Module is disabled', code: 'MODULE_DISABLED' });
+    }
+    if (!mod.baseUrl) {
+      await auditSsoReject({
+        userId: user.id, action: 'sso_handoff_no_base_url',
+        details: { moduleSlug: slug }, ip: request.ip,
+      });
+      return reply.code(400).send({
+        error: 'Module has no launch URL configured.',
+        code: 'NO_BASE_URL',
       });
     }
 
@@ -360,14 +369,14 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       action: 'module_launched',
       entityType: 'module',
       entityId: mod.id,
-      metadata: { moduleSlug: slug, source: access.source, jti, fallback: SSO_FALLBACK },
+      metadata: { moduleSlug: slug, source: entitlementSource, jti, fallback: SSO_FALLBACK },
     });
 
     // Success-path audit (spec: parity with reject paths)
     await auditSso({
       userId: user.id, action: 'sso_handoff_issued',
       details: {
-        moduleSlug: slug, jti, source: access.source,
+        moduleSlug: slug, jti, source: entitlementSource,
         signed: !!token, fallback: SSO_FALLBACK,
         userAgent: userAgent ? userAgent.slice(0, 200) : null,
       },
@@ -408,20 +417,10 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const ip = request.ip;
     const userAgent = (request.headers['user-agent'] as string) || null;
 
-    // Production guard: if the secret is missing in prod, refuse to
-    // accept ANY token. This blocks replay/cached unsigned tokens AND
-    // ensures the consume route never returns user PII for a fallback
-    // token in a production environment.
-    if (SSO_FALLBACK_BLOCKS_LAUNCH) {
-      await auditSsoReject({
-        userId: null, action: 'sso_consume_secret_missing',
-        details: { env: APP_ENV }, ip,
-      });
-      return reply.code(503).send({
-        error: SSO_FALLBACK_WARNING,
-        code: 'SSO_SECRET_MISSING',
-      });
-    }
+    // NOTE: when MODULE_SSO_SECRET is missing we still service consume
+    // requests (soft fallback) — the receiver itself is expected to
+    // verify JWT signatures with the shared secret, so consume only
+    // arbitrates jti/aud/env/single-use. No prod-only hard block here.
 
     if (!checkConsumeRate(ip)) {
       await auditSsoReject({

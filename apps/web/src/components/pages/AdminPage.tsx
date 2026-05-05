@@ -1096,10 +1096,24 @@ interface AdminModule {
   includedInPlans: string[];
 }
 
+interface ModuleMember {
+  userId: string;
+  email: string;
+  name: string | null;
+  role: string;
+  status: string;
+  accessSource: 'plan' | 'addon' | 'override';
+  planSlug: string | null;
+  grant: boolean;
+  reason: string | null;
+  expiresAt: string | null;
+}
+
 function ModulesTab() {
   const [modules, setModules] = useState<AdminModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<AdminModule | null>(null);
+  const [membersFor, setMembersFor] = useState<AdminModule | null>(null);
   const { toast } = useToast();
 
   const load = useCallback(async () => {
@@ -1211,7 +1225,12 @@ function ModulesTab() {
                 );
               })}
             </div>
-            <div style={{ textAlign: 'right' }}>
+            <div style={{ textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+              <button
+                data-testid={`button-members-module-${m.slug}`}
+                onClick={() => setMembersFor(m)}
+                style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.text, fontSize: 11, cursor: 'pointer' }}
+              >Members</button>
               <button
                 data-testid={`button-edit-module-${m.slug}`}
                 onClick={() => setEditing(m)}
@@ -1229,6 +1248,212 @@ function ModulesTab() {
           onSaved={() => { setEditing(null); load(); }}
         />
       )}
+
+      {membersFor && (
+        <ModuleMembersDrawer
+          mod={membersFor}
+          onClose={() => setMembersFor(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function accessSourceBadge(source: 'plan' | 'addon' | 'override' | 'admin_role' | string, grant?: boolean) {
+  const map: Record<string, { color: string; bg: string; label: string }> = {
+    plan: { color: colors.accent, bg: adminColors.badgeBlue, label: 'plan' },
+    addon: { color: colors.accentGreen, bg: adminColors.badgeGreen, label: 'addon' },
+    override: grant === false
+      ? { color: colors.accentRed, bg: adminColors.badgeRed, label: 'revoked' }
+      : { color: colors.accentPurple, bg: adminColors.badgePurple, label: 'override' },
+    admin_role: { color: colors.accentYellow, bg: adminColors.badgeYellow, label: 'admin' },
+  };
+  const meta = map[source] ?? { color: colors.textMuted, bg: 'rgba(139,148,158,0.15)', label: source };
+  return (
+    <span data-testid={`badge-source-${source}${grant === false ? '-revoke' : ''}`} style={{
+      display: 'inline-block', padding: '2px 8px', borderRadius: 6,
+      background: meta.bg, color: meta.color, fontSize: 10, fontWeight: 700,
+      textTransform: 'uppercase', letterSpacing: 0.4,
+    }}>{meta.label}</span>
+  );
+}
+
+function ModuleMembersDrawer({ mod, onClose }: { mod: AdminModule; onClose: () => void }) {
+  const [data, setData] = useState<{ members: ModuleMember[]; counts: any } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busyUser, setBusyUser] = useState<string | null>(null);
+  const [grantEmail, setGrantEmail] = useState('');
+  const [grantReason, setGrantReason] = useState('');
+  const { toast } = useToast();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const d = await adminApi.getModuleMembers(mod.slug);
+      setData({ members: d.members, counts: d.counts });
+    } catch (err: any) {
+      toast(`Failed to load members: ${err.error || err.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [mod.slug, toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const grantOverride = async (userId: string, grant: boolean, reason?: string) => {
+    setBusyUser(userId);
+    try {
+      await adminApi.setUserModuleOverride(userId, { moduleSlug: mod.slug, grant, reason: reason || (grant ? 'admin_grant' : 'admin_revoke') });
+      toast(`${grant ? 'Granted' : 'Revoked'} ${mod.name} for user`, 'success');
+      await load();
+    } catch (err: any) {
+      toast(`Failed: ${err.error || err.message}`, 'error');
+    } finally {
+      setBusyUser(null);
+    }
+  };
+
+  const grantByEmail = async () => {
+    if (!grantEmail.trim()) { toast('Enter an email first', 'error'); return; }
+    try {
+      const found = await adminApi.getUsers({ search: grantEmail.trim() });
+      const u = (found.users || []).find((x: any) => x.email.toLowerCase() === grantEmail.trim().toLowerCase());
+      if (!u) { toast(`No user found for ${grantEmail}`, 'error'); return; }
+      await grantOverride(u.id, true, grantReason || 'admin_grant');
+      setGrantEmail(''); setGrantReason('');
+    } catch (err: any) {
+      toast(`Failed: ${err.error || err.message}`, 'error');
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }} onClick={onClose}>
+      <div data-testid="module-members-drawer" style={{
+        background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 16,
+        padding: 28, width: 720, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto',
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{mod.name} · members</div>
+          <button onClick={onClose} data-testid="button-close-members" style={{ background: 'transparent', border: 'none', color: colors.textMuted, fontSize: 18, cursor: 'pointer' }}>×</button>
+        </div>
+        <div style={{ fontSize: 12, color: colors.textDim, fontFamily: 'monospace', marginBottom: 16 }}>{mod.slug}</div>
+
+        {loading && <div data-testid="members-loading" style={{ color: colors.textMuted }}>Loading…</div>}
+
+        {data && (
+          <>
+            <div style={{ display: 'flex', gap: 16, marginBottom: 16, fontSize: 12, color: colors.textMuted }}>
+              <span data-testid="count-total"><strong style={{ color: '#fff' }}>{data.counts.total}</strong> total</span>
+              <span data-testid="count-plan">plan: <strong style={{ color: colors.accent }}>{data.counts.plan}</strong></span>
+              <span data-testid="count-addon">addon: <strong style={{ color: colors.accentGreen }}>{data.counts.addon}</strong></span>
+              <span data-testid="count-grants">grants: <strong style={{ color: colors.accentPurple }}>{data.counts.override_grant}</strong></span>
+              <span data-testid="count-revokes">revokes: <strong style={{ color: colors.accentRed }}>{data.counts.override_revoke}</strong></span>
+            </div>
+
+            <div style={{
+              background: adminColors.cardBg, border: `1px solid ${colors.border}`,
+              borderRadius: 10, padding: 12, marginBottom: 16,
+            }}>
+              <div style={{ fontSize: 11, color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase', marginBottom: 8 }}>
+                Grant access by email
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  data-testid="input-grant-email"
+                  placeholder="user@example.com"
+                  value={grantEmail}
+                  onChange={e => setGrantEmail(e.target.value)}
+                  style={{ flex: 1, padding: '7px 10px', borderRadius: 6, border: `1px solid ${colors.border}`, background: colors.bg, color: colors.text, fontSize: 12, outline: 'none' }}
+                />
+                <input
+                  data-testid="input-grant-reason"
+                  placeholder="reason (optional)"
+                  value={grantReason}
+                  onChange={e => setGrantReason(e.target.value)}
+                  style={{ flex: 1, padding: '7px 10px', borderRadius: 6, border: `1px solid ${colors.border}`, background: colors.bg, color: colors.text, fontSize: 12, outline: 'none' }}
+                />
+                <button
+                  data-testid="button-grant-by-email"
+                  onClick={grantByEmail}
+                  style={{ padding: '7px 14px', borderRadius: 6, border: 'none', background: colors.accent, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                >Grant</button>
+              </div>
+            </div>
+
+            <div style={{ background: adminColors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{
+                display: 'grid', gridTemplateColumns: '2fr 0.7fr 1fr 1fr 1.4fr',
+                padding: '10px 14px', background: adminColors.headerBg,
+                borderBottom: `1px solid ${colors.border}`, fontSize: 11, color: colors.textDim,
+                fontWeight: 600, textTransform: 'uppercase',
+              }}>
+                <div>User</div>
+                <div>Role</div>
+                <div>Source</div>
+                <div>Plan</div>
+                <div style={{ textAlign: 'right' }}>Action</div>
+              </div>
+
+              {data.members.length === 0 && (
+                <div data-testid="members-empty" style={{ padding: 20, textAlign: 'center', color: colors.textMuted, fontSize: 13 }}>
+                  No members yet. Use the form above to grant access.
+                </div>
+              )}
+
+              {data.members.map(m => (
+                <div key={m.userId} data-testid={`member-row-${m.userId}`} style={{
+                  display: 'grid', gridTemplateColumns: '2fr 0.7fr 1fr 1fr 1.4fr',
+                  padding: '10px 14px', borderBottom: `1px solid ${colors.border}`, alignItems: 'center', gap: 8,
+                }}>
+                  <div>
+                    <div style={{ fontSize: 13, color: '#fff' }}>{m.name || m.email}</div>
+                    <div style={{ fontSize: 11, color: colors.textDim }}>{m.email}</div>
+                  </div>
+                  <div data-testid={`text-role-${m.userId}`}>
+                    <span style={{
+                      display: 'inline-block', padding: '2px 8px', borderRadius: 6,
+                      background: m.role === 'admin' ? adminColors.badgeYellow : 'rgba(139,148,158,0.15)',
+                      color: m.role === 'admin' ? colors.accentYellow : colors.textMuted,
+                      fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4,
+                    }}>{m.role}</span>
+                  </div>
+                  <div>{accessSourceBadge(m.accessSource, m.grant)}</div>
+                  <div style={{ fontSize: 12, color: colors.textMuted }}>{m.planSlug || '—'}</div>
+                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    {m.accessSource !== 'override' && (
+                      <button
+                        data-testid={`button-revoke-${m.userId}`}
+                        disabled={busyUser === m.userId}
+                        onClick={() => grantOverride(m.userId, false, 'admin_revoke')}
+                        style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${colors.accentRed}`, background: 'transparent', color: colors.accentRed, fontSize: 11, fontWeight: 600, cursor: busyUser === m.userId ? 'wait' : 'pointer' }}
+                      >Revoke</button>
+                    )}
+                    {m.accessSource === 'override' && !m.grant && (
+                      <button
+                        data-testid={`button-restore-${m.userId}`}
+                        disabled={busyUser === m.userId}
+                        onClick={() => grantOverride(m.userId, true, 'admin_restore')}
+                        style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${colors.accentGreen}`, background: 'transparent', color: colors.accentGreen, fontSize: 11, fontWeight: 600, cursor: busyUser === m.userId ? 'wait' : 'pointer' }}
+                      >Restore</button>
+                    )}
+                    {m.accessSource === 'override' && m.grant && (
+                      <button
+                        data-testid={`button-revoke-${m.userId}`}
+                        disabled={busyUser === m.userId}
+                        onClick={() => grantOverride(m.userId, false, 'admin_revoke')}
+                        style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${colors.accentRed}`, background: 'transparent', color: colors.accentRed, fontSize: 11, fontWeight: 600, cursor: busyUser === m.userId ? 'wait' : 'pointer' }}
+                      >Revoke</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

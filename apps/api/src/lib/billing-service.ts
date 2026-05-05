@@ -637,8 +637,17 @@ export async function cancelAddon(userId: string, moduleSlug: string): Promise<{
 }
 
 /**
- * Process an addon-related Stripe webhook event with idempotency + retry/DLQ
- * tracking on billing_events.
+ * Process an addon-related Stripe webhook event with DB-level idempotency
+ * via a UNIQUE(stripe_event_id) partial index + ON CONFLICT DO NOTHING.
+ *
+ * Concurrency model: each webhook delivery first attempts to *claim* the
+ * event by inserting a billing_events row keyed on stripe_event_id. If
+ * the insert is a no-op (conflict) some other worker already owns the
+ * event — we fast-path return without touching subscription state.
+ *
+ * The same row is then UPDATEd in place with `processed_at` on success or
+ * with `error_message` on failure (no second row is ever written for the
+ * same event id, so retries always operate on a single mutable record).
  */
 export async function processAddonWebhookEvent(event: { id: string; type: string; data: { object: any } }): Promise<WebhookProcessResult> {
   const { type, data, id: stripeEventId } = event;
@@ -650,16 +659,29 @@ export async function processAddonWebhookEvent(event: { id: string; type: string
     return { handled: false, error: 'Not an addon event or missing metadata' };
   }
 
-  // Idempotency: if we've already processed this stripe event id, no-op.
-  const existing = await db.select().from(billingEvents).where(eq(billingEvents.stripeEventId, stripeEventId)).limit(1);
-  if (existing.length > 0 && existing[0].processedAt) {
-    return { handled: true, action: 'duplicate_ignored' };
-  }
-
   const payloadHash = crypto.createHash('sha256').update(JSON.stringify(obj)).digest('hex');
   const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
+
+  // Atomic claim — race-free thanks to UNIQUE(stripe_event_id) partial index.
+  const claim = await db.insert(billingEvents).values({
+    userId, eventType: `addon_${type.replace(/\./g, '_')}`,
+    stripeEventId, payloadHash,
+    metadata: { moduleSlug, mode: 'stripe', rawEvent: event },
+  }).onConflictDoNothing({ target: billingEvents.stripeEventId }).returning({ id: billingEvents.id });
+
+  // No claim returned → another worker already owns this event id. We
+  // explicitly *do not* touch subscription state. The owning worker is
+  // either still processing (write will land soon) or already done. Either
+  // way a duplicate side-effect would be a bug.
+  if (claim.length === 0) {
+    return { handled: true, action: 'duplicate_ignored' };
+  }
+  const claimedId = claim[0].id;
+
   if (!mod) {
-    await recordBillingFailure(userId, type, stripeEventId, payloadHash, `Module ${moduleSlug} not found`, event);
+    await db.update(billingEvents).set({
+      errorMessage: `Module ${moduleSlug} not found`,
+    }).where(eq(billingEvents.id, claimedId));
     return { handled: false, error: 'Module not found' };
   }
 
@@ -712,30 +734,24 @@ export async function processAddonWebhookEvent(event: { id: string; type: string
         break;
       }
       default:
+        // Unknown event type — keep the claim row but mark as not-handled
+        // so admins can see what arrived.
+        await db.update(billingEvents).set({
+          errorMessage: `Unhandled event type: ${type}`,
+        }).where(eq(billingEvents.id, claimedId));
         return { handled: false };
     }
 
-    await db.insert(billingEvents).values({
-      userId, eventType: `addon_${type.replace(/\./g, '_')}`,
-      stripeEventId, payloadHash, processedAt: new Date(),
-      metadata: { moduleSlug, mode: 'stripe', rawEvent: event },
-    });
+    await db.update(billingEvents).set({
+      processedAt: new Date(), errorMessage: null,
+    }).where(eq(billingEvents.id, claimedId));
     return { handled: true, action: type };
   } catch (err: any) {
-    await recordBillingFailure(userId, type, stripeEventId, payloadHash, err.message, event);
+    await db.update(billingEvents).set({
+      errorMessage: err.message,
+    }).where(eq(billingEvents.id, claimedId));
     return { handled: false, error: err.message };
   }
-}
-
-async function recordBillingFailure(
-  userId: string, eventType: string, stripeEventId: string,
-  payloadHash: string, errorMessage: string, rawEvent: any,
-) {
-  await db.insert(billingEvents).values({
-    userId, eventType: `addon_${eventType.replace(/\./g, '_')}_failed`,
-    stripeEventId, payloadHash, errorMessage,
-    metadata: { mode: 'stripe', failed: true, rawEvent },
-  });
 }
 
 /**
@@ -769,7 +785,17 @@ export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean;
     };
   }
 
-  // True replay
+  // True replay. The DLQ row already owns this stripe_event_id. We
+  // release the slot (set NULL) so processAddonWebhookEvent can claim
+  // its own NEW row — and we keep the linkage to this DLQ row in
+  // metadata.replayedFromEventId. The DLQ row's stripe_event_id stays
+  // NULL forever after this point so it can never collide with the
+  // unique partial index on (stripe_event_id) WHERE NOT NULL.
+  await db.update(billingEvents).set({
+    stripeEventId: null,
+    metadata: { ...(evt.metadata as any || {}), replayInProgress: true },
+  }).where(eq(billingEvents.id, eventId));
+
   let replayResult: WebhookProcessResult;
   try {
     replayResult = await processAddonWebhookEvent(rawEvent);
@@ -777,6 +803,7 @@ export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean;
     await db.update(billingEvents).set({
       retryCount: next,
       errorMessage: `replay_error: ${err.message}`,
+      metadata: { ...(evt.metadata as any || {}), replayedAt: new Date().toISOString(), replayError: err.message },
     }).where(eq(billingEvents.id, eventId));
     return { ok: false, message: `Replay threw: ${err.message}` };
   }
@@ -784,6 +811,11 @@ export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean;
   if (replayResult.handled) {
     await db.update(billingEvents).set({
       retryCount: next, processedAt: new Date(), errorMessage: null,
+      metadata: {
+        ...(evt.metadata as any || {}),
+        replayedAt: new Date().toISOString(),
+        replayedAction: replayResult.action || 'handled',
+      },
     }).where(eq(billingEvents.id, eventId));
     return {
       ok: true,
@@ -796,6 +828,11 @@ export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean;
   await db.update(billingEvents).set({
     retryCount: next,
     errorMessage: `replay_failed: ${replayResult.error || 'not_handled'}`,
+    metadata: {
+      ...(evt.metadata as any || {}),
+      replayedAt: new Date().toISOString(),
+      replayError: replayResult.error || 'not_handled',
+    },
   }).where(eq(billingEvents.id, eventId));
   return {
     ok: false,

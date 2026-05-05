@@ -59,7 +59,12 @@ export interface UserModuleSummary {
   reason?: string;
 }
 
-export interface AccessBreakdown {
+/**
+ * Per-module trace — used by the per-slug debug surface
+ * (`/v1/modules/debug/:slug`) and by admin tooling that wants to know
+ * exactly why a single module resolved the way it did for a given user.
+ */
+export interface ModuleAccessTrace {
   moduleSlug: string;
   hasAccess: boolean;
   finalSource: AccessSource;
@@ -70,6 +75,34 @@ export interface AccessBreakdown {
   isAdmin: boolean;
   moduleStatus: string;
   reason?: string;
+}
+
+/**
+ * Spec-mandated aggregate snapshot returned by `getAccessBreakdown(userId)`
+ * and surfaced verbatim by `GET /v1/modules/debug`.
+ *
+ * Each list contains module slugs, NOT booleans, so the receiver can
+ * trivially compute set-difference views ("which addon modules are NOT
+ * already covered by my plan?"). `effective` is the union of every grant
+ * source, minus revokes. `accessSources` is a per-module map showing the
+ * single source that ultimately won, mirroring `hasModuleAccess.source`.
+ */
+export interface AccessBreakdown {
+  userId: string;
+  planSlug: string | null;
+  isAdmin: boolean;
+  /** Modules granted by the user's active plan inclusion. */
+  plan_modules: string[];
+  /** Modules granted by an active per-module addon subscription. */
+  addon_modules: string[];
+  /** Modules with an active grant override (admin-issued). */
+  overrides: string[];
+  /** Modules with an active revoke override (admin-revoked). */
+  override_revokes: string[];
+  /** Final per-user effective module set after applying all sources + revokes. */
+  effective: string[];
+  /** Per-module winning AccessSource ('plan' | 'addon' | 'override' | 'admin_role' | null). */
+  access_sources: Record<string, AccessSource>;
 }
 
 const PLAN_RANK: Record<string, number> = { starter: 0, pro: 1, elite: 2 };
@@ -109,6 +142,34 @@ async function activeOverrideForUser(userId: string, moduleId: string) {
     .filter(r => !r.expiresAt || r.expiresAt > now)
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   return valid[0] ?? null;
+}
+
+/**
+ * Pure entitlement check — does the user have ANY path to access this
+ * module (admin role, override grant, active addon, plan inclusion)?
+ * IGNORES module status (live/coming_soon/disabled). Used by the launch
+ * route to separate "the user is unauthorized" (403) from "the user is
+ * authorized but the module isn't launchable yet" (400).
+ *
+ * Returns the AccessSource that won, or null when the user has no
+ * entitlement (or has been explicitly revoked).
+ */
+export async function evaluateUserEntitlement(userId: string, moduleId: string): Promise<AccessSource> {
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user || user.status !== 'active') return null;
+  if (user.role === 'admin') return 'admin_role';
+
+  const override = await activeOverrideForUser(userId, moduleId);
+  if (override) return override.grant ? 'override' : null;
+
+  const addon = await activeAddonForUser(userId, moduleId);
+  if (addon) return 'addon';
+
+  const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
+  if (sub && ['active', 'trialing'].includes(sub.status)) {
+    if (await planGrantsModule(sub.planId, moduleId)) return 'plan';
+  }
+  return null;
 }
 
 /**
@@ -292,9 +353,10 @@ export async function getModuleForUser(userId: string, moduleSlug: string): Prom
 }
 
 /**
- * Verbose breakdown for /modules/debug — shows every layer of evaluation.
+ * Per-module trace for `/v1/modules/debug/:slug` and admin per-module
+ * inspection. Returns null when the module slug does not exist.
  */
-export async function getAccessBreakdown(userId: string, moduleSlug: string): Promise<AccessBreakdown | null> {
+export async function getModuleAccessTrace(userId: string, moduleSlug: string): Promise<ModuleAccessTrace | null> {
   const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
   if (!mod) return null;
 
@@ -322,6 +384,87 @@ export async function getAccessBreakdown(userId: string, moduleSlug: string): Pr
     isAdmin: user?.role === 'admin',
     moduleStatus: mod.status,
     reason: access.reason,
+  };
+}
+
+/**
+ * Spec-mandated aggregate access breakdown for a single user. Used by
+ * `GET /v1/modules/debug`. Computes plan/addon/override sets in bulk
+ * (one query per source, not one per module) so it scales with catalog
+ * size. The aggregate IS the contract — `/v1/modules/debug` returns this
+ * shape verbatim.
+ */
+export async function getAccessBreakdown(userId: string): Promise<AccessBreakdown> {
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  const isAdmin = user?.role === 'admin';
+  const planSlug = await getUserPlanSlug(userId);
+
+  const allModules = await db.select().from(modules);
+  const modById = Object.fromEntries(allModules.map(m => [m.id, m]));
+  const launchable = (m: { status: string }) => m.status !== 'disabled' && m.status !== 'coming_soon';
+
+  // Plan inclusions (bulk)
+  const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
+  let planModuleSlugs: string[] = [];
+  if (sub && ['active', 'trialing'].includes(sub.status)) {
+    const mappings = await db.select().from(planModules).where(eq(planModules.planId, sub.planId));
+    planModuleSlugs = mappings.map(m => modById[m.moduleId]?.slug).filter((s): s is string => !!s);
+  }
+
+  // Active addons (bulk)
+  const allAddons = await db.select().from(addonSubscriptions).where(eq(addonSubscriptions.userId, userId));
+  const addonModuleSlugs = allAddons
+    .filter(a => ['active', 'trialing'].includes(a.status))
+    .map(a => modById[a.moduleId]?.slug)
+    .filter((s): s is string => !!s);
+
+  // Overrides (bulk; latest wins per module)
+  const allOverrides = await db.select().from(entitlementOverrides).where(eq(entitlementOverrides.userId, userId));
+  const now = new Date();
+  const latestOverrideByMod = new Map<string, typeof allOverrides[number]>();
+  for (const o of allOverrides) {
+    if (o.expiresAt && o.expiresAt <= now) continue;
+    const prev = latestOverrideByMod.get(o.moduleId);
+    if (!prev || o.createdAt.getTime() > prev.createdAt.getTime()) {
+      latestOverrideByMod.set(o.moduleId, o);
+    }
+  }
+  const overrides: string[] = [];
+  const override_revokes: string[] = [];
+  for (const [modId, o] of latestOverrideByMod) {
+    const slug = modById[modId]?.slug;
+    if (!slug) continue;
+    if (o.grant) overrides.push(slug); else override_revokes.push(slug);
+  }
+
+  // Compose `effective` + `access_sources` honoring the same source-precedence
+  // as `hasModuleAccess`: admin_role > override (revoke wins) > addon > plan.
+  // A module that is `disabled` or `coming_soon` is never effective.
+  const access_sources: Record<string, AccessSource> = {};
+  const effective: string[] = [];
+  for (const m of allModules) {
+    if (!launchable(m)) { access_sources[m.slug] = null; continue; }
+    if (isAdmin) { access_sources[m.slug] = 'admin_role'; effective.push(m.slug); continue; }
+    const o = latestOverrideByMod.get(m.id);
+    if (o) {
+      if (!o.grant) { access_sources[m.slug] = null; continue; }
+      access_sources[m.slug] = 'override'; effective.push(m.slug); continue;
+    }
+    if (addonModuleSlugs.includes(m.slug)) { access_sources[m.slug] = 'addon'; effective.push(m.slug); continue; }
+    if (planModuleSlugs.includes(m.slug)) { access_sources[m.slug] = 'plan'; effective.push(m.slug); continue; }
+    access_sources[m.slug] = null;
+  }
+
+  return {
+    userId,
+    planSlug,
+    isAdmin,
+    plan_modules: planModuleSlugs,
+    addon_modules: addonModuleSlugs,
+    overrides,
+    override_revokes,
+    effective,
+    access_sources,
   };
 }
 

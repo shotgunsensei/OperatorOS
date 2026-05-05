@@ -181,6 +181,26 @@ export async function ensureSaasTables() {
       created_at TIMESTAMP DEFAULT NOW() NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_billing_events_user ON billing_events(user_id);
+    -- Spec: webhook idempotency at the DB level. A non-null stripe_event_id
+    -- is the unique key for the *processed* webhook; we still allow
+    -- multiple internal rows (e.g. local-mode events) where stripe_event_id
+    -- is NULL via a partial unique index.
+    --
+    -- Backfill: legacy rows (created before idempotency was a hard rule)
+    -- may carry duplicate stripe_event_id values. Keep the oldest row's
+    -- id intact and NULL out the duplicates so the unique index can be
+    -- built without losing forensic history.
+    UPDATE billing_events SET stripe_event_id = NULL
+      WHERE id IN (
+        SELECT id FROM (
+          SELECT id, ROW_NUMBER() OVER (PARTITION BY stripe_event_id ORDER BY created_at ASC) AS rn
+          FROM billing_events
+          WHERE stripe_event_id IS NOT NULL
+        ) t
+        WHERE t.rn > 1
+      );
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_billing_events_stripe_event_id
+      ON billing_events(stripe_event_id) WHERE stripe_event_id IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS admin_notes (
       id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -427,7 +447,7 @@ export async function seedModules() {
       //   - defaultStatus !== 'live'                   → leave whatever the
       //     admin chose (so admins can promote a `coming_soon` module to
       //     `beta` without us stomping it on every restart).
-      const updates: Partial<ModuleSeed> & { updatedAt: Date } = { updatedAt: new Date() };
+      const updates: Record<string, unknown> = { updatedAt: new Date() };
       updates.baseUrl = m.baseUrl || existing[0].baseUrl;
       if (spec.defaultStatus === 'live') {
         updates.status = spec.envUrl ? 'live' : 'coming_soon';

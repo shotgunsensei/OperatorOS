@@ -189,6 +189,11 @@ export const adminApi = {
     apiFetch(`/admin/users/${userId}/module-overrides`, { method: 'POST', body: JSON.stringify(data) }),
   removeUserModuleOverride: (userId: string, overrideId: string) =>
     apiFetch(`/admin/users/${userId}/module-overrides/${overrideId}`, { method: 'DELETE' }),
+
+  getModuleMembers: (slug: string) =>
+    apiFetch(`/admin/modules/${slug}/members`),
+  resyncUserBilling: (userId: string) =>
+    apiFetch(`/admin/billing/resync/${userId}`, { method: 'POST' }),
 };
 
 export const modulesApi = {

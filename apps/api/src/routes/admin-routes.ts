@@ -9,7 +9,7 @@ import {
 import { eq, desc, count, gte, and, or, ilike } from 'drizzle-orm';
 import { requireAdmin, sanitizeUser, logAudit } from '../lib/auth.js';
 import { retryBillingEvent, resyncUserBilling } from '../lib/billing-service.js';
-import { getAccessBreakdown } from '../lib/entitlement-service.js';
+import { getAccessBreakdown, getModuleAccessTrace } from '../lib/entitlement-service.js';
 
 export async function registerAdminRoutes(app: FastifyInstance) {
   app.get('/v1/admin/users', { preHandler: [requireAdmin] }, async (request) => {
@@ -725,7 +725,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     // And the per-module access breakdown for every module
     const breakdowns = [];
     for (const m of allModules) {
-      const b = await getAccessBreakdown(id, m.slug);
+      const b = await getModuleAccessTrace(id, m.slug);
       if (b) breakdowns.push(b);
     }
 
