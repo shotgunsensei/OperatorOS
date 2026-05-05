@@ -35,12 +35,26 @@ function resolveModuleSsoSecret(): { secret: string | null; fallback: boolean } 
 }
 
 const { secret: MODULE_SSO_SECRET, fallback: SSO_FALLBACK } = resolveModuleSsoSecret();
-const SSO_FALLBACK_WARNING =
-  'MODULE_SSO_SECRET is not set. Module launches are sending plain URLs ' +
-  'with no signed token. Set MODULE_SSO_SECRET to enable SSO handoff.';
+
+/**
+ * Production posture: in `production` we REFUSE to issue unsigned launch
+ * URLs even on fallback — instead handoff returns 503. In dev/staging we
+ * still allow the unsigned-fallback path so the platform stays usable
+ * while operators wire up the secret. Either way the boot warning is loud.
+ */
+const SSO_FALLBACK_BLOCKS_LAUNCH = APP_ENV === 'production' && SSO_FALLBACK;
+const SSO_FALLBACK_WARNING = SSO_FALLBACK_BLOCKS_LAUNCH
+  ? 'MODULE_SSO_SECRET is not configured. Module launches are disabled ' +
+    'in production until a signing secret is set.'
+  : 'MODULE_SSO_SECRET is not set. Module launches are sending plain URLs ' +
+    'with no signed token. Set MODULE_SSO_SECRET to enable SSO handoff.';
 
 if (SSO_FALLBACK) {
-  console.warn('[module-sso] ' + SSO_FALLBACK_WARNING);
+  if (SSO_FALLBACK_BLOCKS_LAUNCH) {
+    console.error('[module-sso] PRODUCTION GUARD: ' + SSO_FALLBACK_WARNING);
+  } else {
+    console.warn('[module-sso] ' + SSO_FALLBACK_WARNING);
+  }
 }
 
 // Per-user rate limiter for handoff issuance: 10 per minute.
@@ -109,34 +123,38 @@ function buildLaunchUrl(baseUrl: string, token: string | null): string {
 }
 
 /**
- * Audit-log every SSO-handoff reject path so admins can investigate
- * abuse / misconfiguration.
+ * Single audit-log helper for the entire SSO lifecycle — both reject
+ * paths and success paths. Spec: "every reject path is audit-logged;
+ * success-path parity is required."
  *
- * We always emit a structured stdout line (production log aggregation
- * will capture these) AND attempt to insert into admin_audit_logs when
- * we have a real userId. The DB row is best-effort: the
+ * Always emits a structured stdout line (production log aggregation
+ * captures these durably) AND attempts to insert into admin_audit_logs
+ * when we have a real userId. The DB row is best-effort: the
  * admin_audit_logs.admin_id FK requires a real users row, so unauth
  * paths (unknown jti, bad_request, rate_limited) only end up in stdout.
- * The structured-log line is the durable audit record for those paths.
+ *
+ * The `level` argument lets us tell `info` (success) apart from `warn`
+ * (reject) in log streams.
  */
-async function auditSsoReject(opts: {
+async function auditSso(opts: {
   userId: string | null;
   action: string;
   details: Record<string, unknown>;
   ip: string;
+  level?: 'info' | 'warn';
 }) {
-  // Structured stdout audit — always emitted, never throws
-  console.warn(
-    '[AUDIT sso] ' + JSON.stringify({
-      ts: new Date().toISOString(),
-      action: opts.action,
-      userId: opts.userId,
-      ip: opts.ip,
-      ...opts.details,
-    })
-  );
+  // Spread `details` FIRST so the authoritative envelope fields
+  // (ts/action/userId/ip) cannot be silently overwritten by a caller
+  // that happens to pass one of those keys inside `details`.
+  const line = '[AUDIT sso] ' + JSON.stringify({
+    ...opts.details,
+    ts: new Date().toISOString(),
+    action: opts.action,
+    userId: opts.userId,
+    ip: opts.ip,
+  });
+  if ((opts.level ?? 'warn') === 'info') console.log(line); else console.warn(line);
 
-  // Best-effort DB row — only when we have a real user id (FK requirement)
   if (!opts.userId) return;
   try {
     await db.insert(adminAuditLogs).values({
@@ -150,6 +168,10 @@ async function auditSsoReject(opts: {
     console.error('[module-sso] audit-log insert failed:', err);
   }
 }
+
+// Backwards-compatible alias kept for the reject paths (clarity at call site).
+const auditSsoReject = (opts: { userId: string | null; action: string; details: Record<string, unknown>; ip: string }) =>
+  auditSso({ ...opts, level: 'warn' });
 
 export async function registerModuleRoutes(app: FastifyInstance) {
   // -------------------------------------------------------------------------
@@ -218,6 +240,19 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   app.post('/v1/modules/:slug/handoff', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     const { slug } = request.params as { slug: string };
+    const userAgent = (request.headers['user-agent'] as string) || null;
+
+    // Production guard: never emit unsigned launch URLs from a prod env.
+    if (SSO_FALLBACK_BLOCKS_LAUNCH) {
+      await auditSsoReject({
+        userId: user.id, action: 'sso_handoff_secret_missing',
+        details: { moduleSlug: slug, env: APP_ENV }, ip: request.ip,
+      });
+      return reply.code(503).send({
+        error: SSO_FALLBACK_WARNING,
+        code: 'SSO_SECRET_MISSING',
+      });
+    }
 
     if (!checkHandoffRate(user.id)) {
       await auditSsoReject({
@@ -315,6 +350,8 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       audience: slug,
       env: APP_ENV,
       issuedIp: request.ip,
+      issuedUserAgent: userAgent,
+      issuedAt: new Date(now * 1000),
       expiresAt: new Date((now + SSO_TOKEN_TTL_SECONDS) * 1000),
     });
 
@@ -324,6 +361,17 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       entityType: 'module',
       entityId: mod.id,
       metadata: { moduleSlug: slug, source: access.source, jti, fallback: SSO_FALLBACK },
+    });
+
+    // Success-path audit (spec: parity with reject paths)
+    await auditSso({
+      userId: user.id, action: 'sso_handoff_issued',
+      details: {
+        moduleSlug: slug, jti, source: access.source,
+        signed: !!token, fallback: SSO_FALLBACK,
+        userAgent: userAgent ? userAgent.slice(0, 200) : null,
+      },
+      ip: request.ip, level: 'info',
     });
 
     return {
@@ -358,6 +406,23 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   // -------------------------------------------------------------------------
   app.post('/v1/modules/sso/consume', async (request, reply) => {
     const ip = request.ip;
+    const userAgent = (request.headers['user-agent'] as string) || null;
+
+    // Production guard: if the secret is missing in prod, refuse to
+    // accept ANY token. This blocks replay/cached unsigned tokens AND
+    // ensures the consume route never returns user PII for a fallback
+    // token in a production environment.
+    if (SSO_FALLBACK_BLOCKS_LAUNCH) {
+      await auditSsoReject({
+        userId: null, action: 'sso_consume_secret_missing',
+        details: { env: APP_ENV }, ip,
+      });
+      return reply.code(503).send({
+        error: SSO_FALLBACK_WARNING,
+        code: 'SSO_SECRET_MISSING',
+      });
+    }
+
     if (!checkConsumeRate(ip)) {
       await auditSsoReject({
         userId: null, action: 'sso_consume_rate_limited',
@@ -433,6 +498,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const updated = await db.update(ssoHandoffTokens).set({
       consumedAt: new Date(),
       consumedIp: ip,
+      consumedUserAgent: userAgent,
     }).where(and(
       eq(ssoHandoffTokens.jti, jti),
       sql`consumed_at IS NULL`,
@@ -478,6 +544,16 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, sub.planId)).limit(1);
       planSlug = plan?.slug ?? null;
     }
+
+    // Success-path audit (spec: parity with reject paths)
+    await auditSso({
+      userId: row.userId, action: 'sso_consume_success',
+      details: {
+        jti, moduleSlug: row.moduleSlug, accessSource: access.source,
+        userAgent: userAgent ? userAgent.slice(0, 200) : null,
+      },
+      ip, level: 'info',
+    });
 
     return {
       ok: true,

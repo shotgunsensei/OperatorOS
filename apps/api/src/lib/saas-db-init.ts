@@ -321,10 +321,18 @@ export async function ensureSaasTables() {
       env TEXT NOT NULL,
       issued_ip TEXT,
       consumed_ip TEXT,
+      issued_user_agent TEXT,
+      consumed_user_agent TEXT,
+      issued_at TIMESTAMP DEFAULT NOW() NOT NULL,
       expires_at TIMESTAMP NOT NULL,
       consumed_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT NOW() NOT NULL
     );
+    ALTER TABLE sso_handoff_tokens ADD COLUMN IF NOT EXISTS issued_user_agent TEXT;
+    ALTER TABLE sso_handoff_tokens ADD COLUMN IF NOT EXISTS consumed_user_agent TEXT;
+    ALTER TABLE sso_handoff_tokens ADD COLUMN IF NOT EXISTS issued_at TIMESTAMP DEFAULT NOW();
+    UPDATE sso_handoff_tokens SET issued_at = COALESCE(issued_at, created_at) WHERE issued_at IS NULL;
+    ALTER TABLE sso_handoff_tokens ALTER COLUMN issued_at SET NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_sso_tokens_expires ON sso_handoff_tokens(expires_at);
     CREATE INDEX IF NOT EXISTS idx_sso_tokens_user ON sso_handoff_tokens(user_id);
   `);
@@ -345,21 +353,61 @@ interface ModuleSeed {
   ord: number;
 }
 
-export const MODULE_SEEDS: ModuleSeed[] = [
-  { slug: 'tradeflowkit', name: 'TradeFlowKit', description: 'Job tracker for trade & service businesses', category: 'ops', status: 'live', baseUrl: process.env.TRADEFLOWKIT_URL || 'https://tradeflowkit.com', planMin: 'starter', ord: 1 },
-  { slug: 'torqueshed', name: 'TorqueShed', description: 'Mechanic shop dashboard & invoicing', category: 'ops', status: 'live', baseUrl: process.env.TORQUESHED_URL || 'https://torqueshed.pro', planMin: 'starter', ord: 2 },
-  { slug: 'techdeck', name: 'TechDeck', description: 'Onsite tech command center', category: 'ops', status: 'live', baseUrl: process.env.TECHDECK_URL || 'https://techdeck.app', planMin: 'starter', ord: 3 },
-  { slug: 'pulsedesk', name: 'PulseDesk', description: 'Lightweight ticketing for small teams', category: 'support', status: 'live', baseUrl: process.env.PULSEDESK_URL || 'https://pulsedesk.support', planMin: 'pro', ord: 4 },
-  { slug: 'faultlinelab', name: 'FaultlineLab', description: 'Diagnostic + RCA workflow', category: 'support', status: 'live', baseUrl: process.env.FAULTLINELAB_URL || 'https://faultlinelab.com', planMin: 'pro', ord: 5 },
-  { slug: 'bf-os', name: 'BF-OS', description: 'Body shop / collision OS', category: 'ops', status: 'live', baseUrl: process.env.BF_OS_URL || 'https://bf-os.com', planMin: 'pro', ord: 6 },
-  { slug: 'snapproofos', name: 'SnapProofOS', description: 'Photo-based proof of work', category: 'ops', status: 'live', baseUrl: process.env.SNAPPROOFOS_URL || 'https://snapproofos.com', planMin: 'elite', ord: 7 },
-  { slug: 'studyforge-ai', name: 'StudyForge AI', description: 'AI study & training partner', category: 'ai', status: 'coming_soon', baseUrl: process.env.STUDYFORGE_URL || '', planMin: 'elite', ord: 8 },
-  { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Build & ship internal tools fast', category: 'ai', status: 'coming_soon', baseUrl: process.env.NINJA_LAUNCH_KIT_URL || '', planMin: 'elite', ord: 9 },
+/**
+ * Module catalog seed.
+ *
+ * Spec: each live module must have its launch base URL provided via env
+ * (e.g. TRADEFLOWKIT_URL). When the env var is missing we DEFAULT TO
+ * `coming_soon` rather than guessing a public URL — a missing env value
+ * means the module is not yet wired up in this environment, and pointing
+ * the launch button at a guessed URL would silently leak unsigned SSO
+ * traffic to the wrong place. Status flips back to `live` automatically
+ * the moment the env var is configured and the server restarts.
+ *
+ * `defaultStatus` is the status the module *would* have if its URL is
+ * configured. The actual `status` column is computed as:
+ *   - `coming_soon` if defaultStatus === 'coming_soon'
+ *   - `coming_soon` if defaultStatus === 'live' but envUrl is missing
+ *   - defaultStatus otherwise
+ */
+interface ModuleSeedSpec {
+  slug: string;
+  name: string;
+  description: string;
+  category: string;
+  defaultStatus: 'live' | 'beta' | 'coming_soon';
+  envUrl: string | undefined;
+  planMin: 'starter' | 'pro' | 'elite';
+  ord: number;
+}
+
+const MODULE_SEED_SPECS: ModuleSeedSpec[] = [
+  { slug: 'tradeflowkit',     name: 'TradeFlowKit',     description: 'Job tracker for trade & service businesses', category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TRADEFLOWKIT_URL,    planMin: 'starter', ord: 1 },
+  { slug: 'torqueshed',       name: 'TorqueShed',       description: 'Mechanic shop dashboard & invoicing',        category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TORQUESHED_URL,      planMin: 'starter', ord: 2 },
+  { slug: 'techdeck',         name: 'TechDeck',         description: 'Onsite tech command center',                  category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TECHDECK_URL,        planMin: 'starter', ord: 3 },
+  { slug: 'pulsedesk',        name: 'PulseDesk',        description: 'Lightweight ticketing for small teams',      category: 'support', defaultStatus: 'live',        envUrl: process.env.PULSEDESK_URL,       planMin: 'pro',     ord: 4 },
+  { slug: 'faultlinelab',     name: 'FaultlineLab',     description: 'Diagnostic + RCA workflow',                   category: 'support', defaultStatus: 'live',        envUrl: process.env.FAULTLINELAB_URL,    planMin: 'pro',     ord: 5 },
+  { slug: 'bf-os',            name: 'BF-OS',            description: 'Body shop / collision OS',                    category: 'ops',     defaultStatus: 'live',        envUrl: process.env.BF_OS_URL,           planMin: 'pro',     ord: 6 },
+  { slug: 'snapproofos',      name: 'SnapProofOS',      description: 'Photo-based proof of work',                   category: 'ops',     defaultStatus: 'live',        envUrl: process.env.SNAPPROOFOS_URL,     planMin: 'elite',   ord: 7 },
+  { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                 category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.STUDYFORGE_AI_URL,   planMin: 'elite',   ord: 8 },
+  { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Build & ship internal tools fast',            category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.NINJA_LAUNCH_KIT_URL, planMin: 'elite',  ord: 9 },
 ];
 
+export const MODULE_SEEDS: ModuleSeed[] = MODULE_SEED_SPECS.map(s => ({
+  slug: s.slug,
+  name: s.name,
+  description: s.description,
+  category: s.category,
+  status: s.defaultStatus === 'live' && !s.envUrl ? 'coming_soon' : s.defaultStatus,
+  baseUrl: s.envUrl ?? '',
+  planMin: s.planMin,
+  ord: s.ord,
+}));
+
 export async function seedModules() {
-  for (const m of MODULE_SEEDS) {
-    const existing = await db.select().from(modules).where(eq(modules.slug, m.slug)).limit(1);
+  for (const spec of MODULE_SEED_SPECS) {
+    const m = MODULE_SEEDS.find(x => x.slug === spec.slug)!;
+    const existing = await db.select().from(modules).where(eq(modules.slug, spec.slug)).limit(1);
     if (existing.length === 0) {
       await db.insert(modules).values({
         slug: m.slug, name: m.name, description: m.description,
@@ -367,11 +415,24 @@ export async function seedModules() {
         planMin: m.planMin, ord: m.ord,
       });
     } else {
-      // Refresh baseUrl/status/planMin in case env vars changed (but don't overwrite admin-edited fields)
-      await db.update(modules).set({
-        baseUrl: m.baseUrl || existing[0].baseUrl,
-        updatedAt: new Date(),
-      }).where(eq(modules.slug, m.slug));
+      // Re-apply env-derived fields so adding/removing an env URL between
+      // restarts is reflected on existing rows. We deliberately scope this
+      // re-apply to the *env-derived* fields (`baseUrl` + the derived
+      // `status` for live-default modules) — admin-edited fields like
+      // `planMin`, `ord`, `description`, `name`, `iconUrl` are preserved.
+      //
+      // Status policy:
+      //   - defaultStatus === 'live' + envUrl present  → flip to 'live'
+      //   - defaultStatus === 'live' + envUrl missing  → flip to 'coming_soon'
+      //   - defaultStatus !== 'live'                   → leave whatever the
+      //     admin chose (so admins can promote a `coming_soon` module to
+      //     `beta` without us stomping it on every restart).
+      const updates: Partial<ModuleSeed> & { updatedAt: Date } = { updatedAt: new Date() };
+      updates.baseUrl = m.baseUrl || existing[0].baseUrl;
+      if (spec.defaultStatus === 'live') {
+        updates.status = spec.envUrl ? 'live' : 'coming_soon';
+      }
+      await db.update(modules).set(updates).where(eq(modules.slug, spec.slug));
     }
   }
   console.log(`[seed] Modules: ${MODULE_SEEDS.length} seeded/updated`);

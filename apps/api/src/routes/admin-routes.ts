@@ -8,7 +8,7 @@ import {
 } from '../schema.js';
 import { eq, desc, count, gte, and, or, ilike } from 'drizzle-orm';
 import { requireAdmin, sanitizeUser, logAudit } from '../lib/auth.js';
-import { retryBillingEvent } from '../lib/billing-service.js';
+import { retryBillingEvent, resyncUserBilling } from '../lib/billing-service.js';
 import { getAccessBreakdown } from '../lib/entitlement-service.js';
 
 export async function registerAdminRoutes(app: FastifyInstance) {
@@ -484,6 +484,25 @@ export async function registerAdminRoutes(app: FastifyInstance) {
   });
 
   // -------------------------------------------------------------------------
+  // Webhook-miss recovery: re-fetch a user's Stripe state and reconcile
+  // local subscription rows. Use this when webhooks were missed (endpoint
+  // down, signature secret rotated, etc.). Idempotent.
+  // -------------------------------------------------------------------------
+  app.post('/v1/admin/billing/resync/:userId', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const admin = (request as any).user;
+    const { userId } = request.params as { userId: string };
+
+    const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!target) return reply.code(404).send({ error: 'User not found' });
+
+    const result = await resyncUserBilling(userId);
+    await logAudit(admin.id, 'billing_resync_triggered', userId, {
+      mode: result.mode, scanned: result.scanned, reconciled: result.reconciled,
+    }, request.ip);
+    return result;
+  });
+
+  // -------------------------------------------------------------------------
   // Module catalog admin
   // -------------------------------------------------------------------------
   app.get('/v1/admin/modules', { preHandler: [requireAdmin] }, async () => {
@@ -556,6 +575,105 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     }).returning();
     await logAudit(admin.id, 'module_created', null as any, { slug }, request.ip);
     return { module: created, action: 'created' };
+  });
+
+  // -------------------------------------------------------------------------
+  // Per-module member access view: who has access to module X, by what
+  // route. Powers the admin "Modules → Members" surface.
+  // -------------------------------------------------------------------------
+  app.get('/v1/admin/modules/:slug/members', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const { slug } = request.params as { slug: string };
+    const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+    if (!mod) return reply.code(404).send({ error: 'Module not found' });
+
+    // Plan-included plan_ids → user ids
+    const allPlans = await db.select().from(subscriptionPlans);
+    const planIdToSlug = Object.fromEntries(allPlans.map(p => [p.id, p.slug]));
+    const includedMappings = await db.select().from(planModules).where(eq(planModules.moduleId, mod.id));
+    const includedPlanIds = new Set(includedMappings.map(m => m.planId));
+
+    // Pull every relevant user in one go to avoid N+1 lookups in big tenants
+    const planSubs = includedPlanIds.size > 0
+      ? await db.select().from(subscriptions)
+      : [];
+    const planUsers = planSubs
+      .filter(s => includedPlanIds.has(s.planId) && ['active', 'trialing'].includes(s.status))
+      .map(s => ({ userId: s.userId, source: 'plan' as const, planSlug: planIdToSlug[s.planId] }));
+
+    const addons = await db.select().from(addonSubscriptions).where(eq(addonSubscriptions.moduleId, mod.id));
+    const addonUsers = addons
+      .filter(a => ['active', 'trialing'].includes(a.status))
+      .map(a => ({ userId: a.userId, source: 'addon' as const, planSlug: null as string | null, addonId: a.id }));
+
+    const overrides = await db.select().from(entitlementOverrides).where(eq(entitlementOverrides.moduleId, mod.id));
+    const now = new Date();
+    const overrideUsers = overrides
+      .filter(o => !o.expiresAt || o.expiresAt > now)
+      .map(o => ({
+        userId: o.userId, source: 'override' as const, planSlug: null as string | null,
+        grant: o.grant, reason: o.reason, expiresAt: o.expiresAt,
+      }));
+
+    // Coalesce: pick the highest-precedence access source per user, mirroring
+    // the entitlement-service evaluation order (override > addon > plan).
+    type Row = {
+      userId: string;
+      source: 'plan' | 'addon' | 'override';
+      planSlug: string | null;
+      grant?: boolean;
+      reason?: string | null;
+      expiresAt?: Date | null;
+      addonId?: string;
+    };
+    const byUser: Record<string, Row> = {};
+    for (const r of planUsers as Row[]) byUser[r.userId] = r;
+    for (const r of addonUsers as Row[]) byUser[r.userId] = r;
+    for (const r of overrideUsers as Row[]) byUser[r.userId] = r;
+
+    // Hydrate user rows
+    const userIds = Object.keys(byUser);
+    const userRows = userIds.length > 0
+      ? await db.select().from(users)
+      : [];
+    const userById = Object.fromEntries(
+      userRows.filter(u => userIds.includes(u.id)).map(u => [u.id, u])
+    );
+
+    const members = userIds
+      .map(uid => {
+        const u = userById[uid];
+        const r = byUser[uid];
+        if (!u) return null;
+        // Override-revoke users still appear in the list, marked grant=false,
+        // so admins can see *and remove* the revoke.
+        return {
+          userId: u.id,
+          email: u.email,
+          name: u.name,
+          role: u.role,
+          status: u.status,
+          accessSource: r.source,
+          planSlug: r.planSlug,
+          grant: r.grant ?? true,
+          reason: r.reason ?? null,
+          expiresAt: r.expiresAt ?? null,
+          addonId: r.addonId ?? null,
+        };
+      })
+      .filter((m): m is NonNullable<typeof m> => m !== null)
+      .sort((a, b) => a.email.localeCompare(b.email));
+
+    return {
+      module: { id: mod.id, slug: mod.slug, name: mod.name, status: mod.status, planMin: mod.planMin },
+      members,
+      counts: {
+        total: members.length,
+        plan: members.filter(m => m.accessSource === 'plan').length,
+        addon: members.filter(m => m.accessSource === 'addon').length,
+        override_grant: members.filter(m => m.accessSource === 'override' && m.grant).length,
+        override_revoke: members.filter(m => m.accessSource === 'override' && !m.grant).length,
+      },
+    };
   });
 
   app.post('/v1/admin/modules/:slug/plan-mapping', { preHandler: [requireAdmin] }, async (request, reply) => {

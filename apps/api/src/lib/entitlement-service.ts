@@ -18,7 +18,16 @@ import { authenticate } from './auth.js';
  */
 export type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
 
-export type ModuleCta = 'launch' | 'upgrade' | 'subscribe_addon' | 'coming_soon' | 'disabled';
+/**
+ * Spec-aligned CTA taxonomy. Frontends MUST match on these literals
+ * exactly — they drive button copy and click handlers.
+ *   open         — user is entitled and module is launchable
+ *   upgrade      — locked; cheapest plan that grants access exists
+ *   buy_addon    — locked; per-module addon is available for purchase
+ *   coming_soon  — module is not yet launchable for anyone
+ *   disabled     — module is administratively off
+ */
+export type ModuleCta = 'open' | 'upgrade' | 'buy_addon' | 'coming_soon' | 'disabled';
 
 export interface ModuleAccess {
   moduleSlug: string;
@@ -199,10 +208,10 @@ function pickCta(args: {
   const { moduleStatus, hasAccess, hasBaseUrl, upgradeTarget, addonPriceCents } = args;
   if (moduleStatus === 'disabled') return 'disabled';
   if (moduleStatus === 'coming_soon') return 'coming_soon';
-  if (hasAccess && hasBaseUrl) return 'launch';
-  // Locked but live. Prefer "subscribe_addon" only if a price is configured;
+  if (hasAccess && hasBaseUrl) return 'open';
+  // Locked but live. Prefer `buy_addon` only if a price is configured;
   // otherwise nudge an upgrade.
-  if (addonPriceCents && addonPriceCents > 0) return 'subscribe_addon';
+  if (addonPriceCents && addonPriceCents > 0) return 'buy_addon';
   if (upgradeTarget) return 'upgrade';
   return 'disabled';
 }

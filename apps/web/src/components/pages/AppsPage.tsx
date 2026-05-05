@@ -6,7 +6,7 @@ import { useToast } from '@/components/Toast';
 import { colors } from '../SaasLayout';
 
 type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
-type ModuleCta = 'launch' | 'upgrade' | 'subscribe_addon' | 'coming_soon' | 'disabled';
+type ModuleCta = 'open' | 'upgrade' | 'buy_addon' | 'coming_soon' | 'disabled';
 
 interface ModuleSummary {
   module: {
@@ -195,7 +195,7 @@ export default function AppsPage() {
               </div>
 
               <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
-                {cta === 'launch' && (
+                {cta === 'open' && (
                   <button
                     data-testid={`button-launch-${m.slug}`}
                     onClick={() => launch(m.slug)}
@@ -206,7 +206,7 @@ export default function AppsPage() {
                       fontSize: 13, cursor: launching === m.slug ? 'wait' : 'pointer',
                     }}
                   >
-                    {launching === m.slug ? 'Launching…' : 'Launch'}
+                    {launching === m.slug ? 'Launching…' : 'Open'}
                   </button>
                 )}
                 {cta === 'coming_soon' && (
@@ -219,7 +219,7 @@ export default function AppsPage() {
                     }}
                   >Coming Soon</button>
                 )}
-                {cta === 'subscribe_addon' && (
+                {cta === 'buy_addon' && (
                   <button
                     data-testid={`button-subscribe-${m.slug}`}
                     onClick={() => subscribe(m.slug)}

@@ -238,7 +238,7 @@ entitlement compute is permitted:
 | --- | --- | --- |
 | `unlocked` | server | Whether the user can launch this module right now |
 | `access_source` | server | One of `plan` / `addon` / `override` / `admin_role` / `null` |
-| `cta` | server | One of `launch` / `subscribe_addon` / `upgrade` / `coming_soon` / `disabled` |
+| `cta` | server | One of `open` / `buy_addon` / `upgrade` / `coming_soon` / `disabled` (the prior `launch` / `subscribe_addon` literals were renamed to `open` / `buy_addon` in the spec freeze — pin frontends to the new values). |
 | `upgrade_target_plan` | server | Smallest plan slug that grants the module via plan inclusion |
 | `addon_price_cents` | server | Per-module addon price (from `modules.metadata.addonPriceCents`) |
 

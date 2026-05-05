@@ -805,6 +805,86 @@ export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean;
   };
 }
 
+/**
+ * Admin recovery hook: re-fetches the user's Stripe state and reconciles
+ * local subscriptions + addon_subscriptions rows. This is the primary
+ * tool for recovering from missed webhooks (e.g. webhook endpoint was
+ * down, signature secret rotated mid-flight).
+ *
+ * In local mode this is a no-op (there is no upstream state to fetch).
+ * In stripe mode it lists the customer's subscriptions and replays each
+ * one through the local idempotent processors so the local DB ends up
+ * matching upstream regardless of whatever webhooks were missed.
+ */
+export async function resyncUserBilling(userId: string): Promise<{
+  ok: boolean;
+  mode: 'stripe' | 'local';
+  message: string;
+  scanned?: number;
+  reconciled?: number;
+}> {
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) return { ok: false, mode: 'local', message: 'User not found' };
+
+  if (!isStripeEnabled()) {
+    return {
+      ok: true, mode: 'local',
+      message: 'Stripe is not enabled in this environment; nothing to resync.',
+      scanned: 0, reconciled: 0,
+    };
+  }
+
+  const stripe = getStripe();
+
+  // Find every customer id we already know for this user
+  const localPlanSub = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
+  const localAddonSubs = await db.select().from(addonSubscriptions).where(eq(addonSubscriptions.userId, userId));
+  const customerIds = new Set<string>();
+  for (const s of localPlanSub) if (s.stripeCustomerId) customerIds.add(s.stripeCustomerId);
+  for (const a of localAddonSubs) if (a.stripeCustomerId) customerIds.add(a.stripeCustomerId);
+
+  if (customerIds.size === 0) {
+    return {
+      ok: true, mode: 'stripe',
+      message: 'No Stripe customer is associated with this user yet; nothing to resync.',
+      scanned: 0, reconciled: 0,
+    };
+  }
+
+  let scanned = 0;
+  let reconciled = 0;
+
+  for (const customerId of customerIds) {
+    const list = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 });
+    for (const sub of list.data ?? []) {
+      scanned += 1;
+
+      // Build a synthetic event so we can reuse the addon idempotency machinery
+      const isAddon = sub?.metadata?.kind === 'addon';
+      if (!isAddon) continue;
+      const synthetic = {
+        id: `resync_${sub.id}_${Date.now()}`,
+        type: 'customer.subscription.updated' as const,
+        data: { object: { ...sub, metadata: { ...sub.metadata, userId, kind: 'addon' } } },
+      };
+      const r = await processAddonWebhookEvent(synthetic);
+      if (r.handled) reconciled += 1;
+    }
+  }
+
+  await db.insert(billingEvents).values({
+    userId, eventType: 'admin_resync',
+    metadata: { mode: 'stripe', scanned, reconciled },
+    processedAt: new Date(),
+  });
+
+  return {
+    ok: true, mode: 'stripe',
+    message: `Resync complete. Scanned ${scanned} Stripe subscription(s), reconciled ${reconciled} addon record(s).`,
+    scanned, reconciled,
+  };
+}
+
 export function getBillingMode() {
   return {
     mode: isStripeEnabled() ? 'stripe' : 'local',
