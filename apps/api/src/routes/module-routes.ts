@@ -480,21 +480,73 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   });
 
   // Spec-aliased admin surfaces under /v1/modules/admin/*.
+  // Returns the catalog plus per-module entitlement counts grouped by source
+  // (plan / addon / override) and a deduplicated total. Used by the admin
+  // Modules tab to surface adoption per module.
   app.get('/v1/modules/admin/all', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
+    const { planModules, addonSubscriptions, entitlementOverrides, subscriptions } = await import('../schema.js');
     const rows = await db.select().from(modules).orderBy(modules.ord);
     const allPlans = await db.select().from(subscriptionPlans);
     const planMap = Object.fromEntries(allPlans.map(p => [p.id, p.slug]));
-    const { planModules } = await import('../schema.js');
     const mappings = await db.select().from(planModules);
     const byModule: Record<string, string[]> = {};
+    const planIdsByModule: Record<string, string[]> = {};
     for (const m of mappings) {
       const slug = planMap[m.planId];
       if (!slug) continue;
       (byModule[m.moduleId] ||= []).push(slug);
+      (planIdsByModule[m.moduleId] ||= []).push(m.planId);
     }
-    return { modules: rows.map(r => ({ ...r, includedInPlans: byModule[r.id] ?? [] })) };
+
+    // addon counts: distinct users with active/trialing addon per module
+    const addonRows = await db
+      .select({ moduleId: addonSubscriptions.moduleId, userId: addonSubscriptions.userId })
+      .from(addonSubscriptions)
+      .where(sql`${addonSubscriptions.status} IN ('active','trialing')`);
+    const addonByModule: Record<string, Set<string>> = {};
+    for (const r of addonRows) (addonByModule[r.moduleId] ||= new Set()).add(r.userId);
+
+    // override counts: granted=true, not expired
+    const overrideRows = await db
+      .select({ moduleId: entitlementOverrides.moduleId, userId: entitlementOverrides.userId })
+      .from(entitlementOverrides)
+      .where(sql`${entitlementOverrides.grant} = true AND (${entitlementOverrides.expiresAt} IS NULL OR ${entitlementOverrides.expiresAt} > NOW())`);
+    const overrideByModule: Record<string, Set<string>> = {};
+    for (const r of overrideRows) (overrideByModule[r.moduleId] ||= new Set()).add(r.userId);
+
+    // plan counts: distinct users with an active/trialing subscription whose
+    // plan includes the module. One scan over active subs is enough.
+    const subRows = await db
+      .select({ userId: subscriptions.userId, planId: subscriptions.planId })
+      .from(subscriptions)
+      .where(sql`${subscriptions.status} IN ('active','trialing')`);
+    const planByModule: Record<string, Set<string>> = {};
+    for (const s of subRows) {
+      for (const [moduleId, planIds] of Object.entries(planIdsByModule)) {
+        if (planIds.includes(s.planId)) (planByModule[moduleId] ||= new Set()).add(s.userId);
+      }
+    }
+
+    return {
+      modules: rows.map(r => {
+        const planUsers = planByModule[r.id] ?? new Set<string>();
+        const addonUsers = addonByModule[r.id] ?? new Set<string>();
+        const overrideUsers = overrideByModule[r.id] ?? new Set<string>();
+        const total = new Set<string>([...planUsers, ...addonUsers, ...overrideUsers]);
+        return {
+          ...r,
+          includedInPlans: byModule[r.id] ?? [],
+          entitlementCounts: {
+            plan: planUsers.size,
+            addon: addonUsers.size,
+            override: overrideUsers.size,
+            total: total.size,
+          },
+        };
+      }),
+    };
   });
 
   // POST /v1/modules/admin/grant — admin grants a per-user module override.
@@ -576,7 +628,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       .forEach(k => { if (body[k] !== undefined) updates[k] = body[k]; });
     const [updated] = await db.update(modules).set(updates).where(eq(modules.slug, slug)).returning();
     if (!updated) return reply.code(404).send({ error: 'Module not found' });
-    await logAudit(user.id, 'module_updated', null as any, { slug, updates }, request.ip);
+    await logAudit(user.id, 'module_updated', undefined, { slug, updates }, request.ip);
     return { module: updated };
   });
 }

@@ -328,7 +328,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     await db.delete(subscriptions).where(eq(subscriptions.userId, id));
     await db.delete(users).where(eq(users.id, id));
 
-    await logAudit(admin.id, 'user_hard_deleted', null as any, { email: targetUser.email, userId: id }, request.ip);
+    await logAudit(admin.id, 'user_hard_deleted', undefined, { email: targetUser.email, userId: id }, request.ip);
     return { ok: true, message: 'User permanently deleted' };
   });
 
@@ -486,7 +486,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     if (!eventId) return reply.code(400).send({ ok: false, message: 'eventId required' });
     const result = await retryBillingEvent(eventId);
     if (!result.ok) return reply.code(400).send(result);
-    await logAudit(admin.id, 'billing_event_retried', null as any, { eventId }, request.ip);
+    await logAudit(admin.id, 'billing_event_retried', undefined, { eventId }, request.ip);
     return result;
   };
   app.post('/v1/admin/billing/events/:eventId/retry', { preHandler: [requireAdmin] }, retryHandler);
@@ -567,7 +567,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       ['name', 'description', 'iconUrl', 'category', 'baseUrl', 'status', 'planMin', 'requiresOrg', 'ord']
         .forEach(k => { if (body[k] !== undefined) updates[k] = body[k]; });
       const [updated] = await db.update(modules).set(updates).where(eq(modules.slug, slug)).returning();
-      await logAudit(admin.id, 'module_updated', null as any, { slug, updates }, request.ip);
+      await logAudit(admin.id, 'module_updated', undefined, { slug, updates }, request.ip);
       return { module: updated, action: 'updated' };
     }
 
@@ -582,7 +582,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       requiresOrg: body.requiresOrg ?? false,
       ord: body.ord ?? 99,
     }).returning();
-    await logAudit(admin.id, 'module_created', null as any, { slug }, request.ip);
+    await logAudit(admin.id, 'module_created', undefined, { slug }, request.ip);
     return { module: created, action: 'created' };
   });
 
@@ -725,7 +725,7 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       await db.insert(planModules).values({ planId: plan.id, moduleId: mod.id });
     }
 
-    await logAudit(admin.id, 'module_plan_mapping_changed', null as any, { slug, planSlugs }, request.ip);
+    await logAudit(admin.id, 'module_plan_mapping_changed', undefined, { slug, planSlugs }, request.ip);
     return { ok: true, slug, planSlugs };
   });
 

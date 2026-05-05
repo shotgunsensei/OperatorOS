@@ -198,10 +198,11 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       }
 
       // Route addon-tagged events to the addon-specific processor; everything
-      // else goes to the base subscription processor. Add-on events are
-      // identified by metadata.kind === 'addon' on the underlying object.
+      // else goes to the base subscription processor. Accept both metadata
+      // contracts: spec ({ type: 'addon' }) and legacy ({ kind: 'addon' }).
       const obj = event.data?.object || {};
-      const isAddon = obj?.metadata?.kind === 'addon';
+      const md = obj?.metadata ?? {};
+      const isAddon = md.type === 'addon' || md.kind === 'addon';
 
       const result = isAddon
         ? await processAddonWebhookEvent(event)
