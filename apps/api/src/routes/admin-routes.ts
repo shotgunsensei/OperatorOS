@@ -666,13 +666,14 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       userRows.filter(u => userIds.includes(u.id)).map(u => [u.id, u])
     );
 
-    const members = userIds
+    // "Members" = users who currently HAVE access. Override-revoke rows are
+    // separated out into `revoked` and excluded from the members list / total
+    // so admins reading "who has access" get the truthful answer.
+    const allRows = userIds
       .map(uid => {
         const u = userById[uid];
         const r = byUser[uid];
         if (!u) return null;
-        // Override-revoke users still appear in the list, marked grant=false,
-        // so admins can see *and remove* the revoke.
         return {
           userId: u.id,
           email: u.email,
@@ -690,15 +691,19 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       .filter((m): m is NonNullable<typeof m> => m !== null)
       .sort((a, b) => a.email.localeCompare(b.email));
 
+    const members = allRows.filter(m => !(m.accessSource === 'override' && !m.grant));
+    const revoked = allRows.filter(m => m.accessSource === 'override' && !m.grant);
+
     return {
       module: { id: mod.id, slug: mod.slug, name: mod.name, status: mod.status, planMin: mod.planMin },
       members,
+      revoked,
       counts: {
         total: members.length,
         plan: members.filter(m => m.accessSource === 'plan').length,
         addon: members.filter(m => m.accessSource === 'addon').length,
         override_grant: members.filter(m => m.accessSource === 'override' && m.grant).length,
-        override_revoke: members.filter(m => m.accessSource === 'override' && !m.grant).length,
+        override_revoke: revoked.length,
         admin_role: members.filter(m => m.accessSource === 'admin_role').length,
       },
     };

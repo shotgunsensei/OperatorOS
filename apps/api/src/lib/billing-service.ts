@@ -789,9 +789,20 @@ export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean;
     metadata: { ...(evt.metadata as any || {}), replayInProgress: true },
   }).where(eq(billingEvents.id, eventId));
 
+  // Dispatch by event family. Stripe's webhook router tags addon flows via
+  // metadata.type==='addon' || metadata.kind==='addon' on the affected object;
+  // everything else is a plan/base-subscription event handled by
+  // processWebhookEvent. Without this branch, plan-side failures could not be
+  // replayed and would stay stuck in the DLQ forever.
+  const replayObj = rawEvent?.data?.object || {};
+  const replayMd = (replayObj.metadata || {}) as Record<string, string>;
+  const isAddonReplay = replayMd.type === 'addon' || replayMd.kind === 'addon';
+
   let replayResult: WebhookProcessResult;
   try {
-    replayResult = await processAddonWebhookEvent(rawEvent);
+    replayResult = isAddonReplay
+      ? await processAddonWebhookEvent(rawEvent)
+      : await processWebhookEvent(rawEvent);
   } catch (err: any) {
     await db.update(billingEvents).set({
       retryCount: next,
