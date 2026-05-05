@@ -127,10 +127,15 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   app.get('/v1/modules', { preHandler: [authenticate] }, async (request) => {
     const user = (request as any).user;
     const summary = await getUserModules(user.id);
+    // SSO fallback is an operator concern (missing MODULE_SSO_SECRET),
+    // not an end-user concern. Surface the human-readable warning to
+    // admins only; non-admins get the boolean so the UI can still adapt
+    // its launch flow without exposing internal misconfiguration.
+    const isAdmin = user.role === 'admin';
     return {
       modules: summary,
       ssoFallback: SSO_FALLBACK,
-      warning: SSO_FALLBACK ? SSO_FALLBACK_WARNING : null,
+      warning: SSO_FALLBACK && isAdmin ? SSO_FALLBACK_WARNING : null,
     };
   });
 
@@ -265,44 +270,66 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const jti = crypto.randomBytes(24).toString('hex');
     const now = Math.floor(Date.now() / 1000);
     let token: string | null = null;
-    if (MODULE_SSO_SECRET) {
-      const claims: SsoClaims = {
-        iss: OPERATOROS_BASE_URL,
+    // Wrap the signing + persistence + activity insert in a single try
+    // so any internal failure (sign error, DB outage, FK violation) is
+    // explicitly audited instead of falling through Fastify's generic
+    // 500 handler. Re-throws so the client still gets a 5xx; the audit
+    // trail captures *which* user attempted *which* module *when* and
+    // *why* it failed — required for handoff reject-path observability.
+    try {
+      if (MODULE_SSO_SECRET) {
+        const claims: SsoClaims = {
+          iss: OPERATOROS_BASE_URL,
+          aud: slug,
+          env: APP_ENV,
+          sub: user.id,
+          user_id: user.id,
+          email: user.email,
+          role: user.role,
+          module_slug: slug,
+          plan_slug: planSlug,
+          organization_id: null,
+          jti,
+          iat: now,
+          exp: now + SSO_TOKEN_TTL_SECONDS,
+        };
+        token = jwt.sign(claims, MODULE_SSO_SECRET, { algorithm: 'HS256' });
+      }
+
+      await db.insert(ssoHandoffTokens).values({
+        jti,
+        userId: user.id,
+        moduleSlug: slug,
         aud: slug,
         env: APP_ENV,
-        sub: user.id,
-        user_id: user.id,
-        email: user.email,
-        role: user.role,
-        module_slug: slug,
-        plan_slug: planSlug,
-        organization_id: null,
-        jti,
-        iat: now,
-        exp: now + SSO_TOKEN_TTL_SECONDS,
-      };
-      token = jwt.sign(claims, MODULE_SSO_SECRET, { algorithm: 'HS256' });
+        issuedIp: request.ip,
+        issuedUserAgent: userAgent,
+        issuedAt: new Date(now * 1000),
+        expiresAt: new Date((now + SSO_TOKEN_TTL_SECONDS) * 1000),
+      });
+
+      await db.insert(activityFeed).values({
+        userId: user.id,
+        action: 'module_launched',
+        entityType: 'module',
+        entityId: mod.id,
+        metadata: { moduleSlug: slug, source: entitlementSource, jti, fallback: SSO_FALLBACK },
+      });
+    } catch (err: any) {
+      await auditSsoReject({
+        userId: user.id, action: 'module_handoff_internal_error',
+        details: {
+          moduleSlug: slug, jti,
+          stage: token ? 'persist' : 'sign',
+          error: err?.message || String(err),
+        },
+        ip: request.ip,
+      });
+      return reply.code(500).send({
+        error: 'Internal error issuing handoff token.',
+        code: 'MODULE_HANDOFF_INTERNAL_ERROR',
+      });
     }
-
-    await db.insert(ssoHandoffTokens).values({
-      jti,
-      userId: user.id,
-      moduleSlug: slug,
-      audience: slug,
-      env: APP_ENV,
-      issuedIp: request.ip,
-      issuedUserAgent: userAgent,
-      issuedAt: new Date(now * 1000),
-      expiresAt: new Date((now + SSO_TOKEN_TTL_SECONDS) * 1000),
-    });
-
-    await db.insert(activityFeed).values({
-      userId: user.id,
-      action: 'module_launched',
-      entityType: 'module',
-      entityId: mod.id,
-      metadata: { moduleSlug: slug, source: entitlementSource, jti, fallback: SSO_FALLBACK },
-    });
 
     await auditSso({
       userId: user.id, action: 'module_handoff_issued',
@@ -314,16 +341,22 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       ip: request.ip, level: 'info',
     });
 
+    // Spec contract uses `redirect_url`; older clients (Apps UI in this
+    // repo) consume `launchUrl`. Emit both so the spec name is
+    // canonical and the existing UI keeps working.
+    const launchUrl = buildLaunchUrl(mod.baseUrl, token);
+    const isAdmin = user.role === 'admin';
     return {
       token,
-      launchUrl: buildLaunchUrl(mod.baseUrl, token),
+      redirect_url: launchUrl,
+      launchUrl,
       expiresIn: SSO_TOKEN_TTL_SECONDS,
       moduleSlug: slug,
       env: APP_ENV,
       issuer: OPERATOROS_BASE_URL,
       jti,
       ssoFallback: SSO_FALLBACK,
-      warning: SSO_FALLBACK ? SSO_FALLBACK_WARNING : null,
+      warning: SSO_FALLBACK && isAdmin ? SSO_FALLBACK_WARNING : null,
     };
   });
 
@@ -368,13 +401,13 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Token not recognized', code: 'TOKEN_UNKNOWN' });
     }
 
-    if (row.audience !== aud) {
+    if (row.aud !== aud) {
       await auditSsoReject({
         userId: row.userId, action: 'module_consume_audience_mismatch',
-        details: { jti, expected: row.audience, got: aud, ip }, ip,
+        details: { jti, expected: row.aud, got: aud, ip }, ip,
       });
       return reply.code(400).send({
-        error: `Token audience "${row.audience}" does not match requested "${aud}"`,
+        error: `Token audience "${row.aud}" does not match requested "${aud}"`,
         code: 'AUDIENCE_MISMATCH',
       });
     }
@@ -413,7 +446,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const updated = await db.update(ssoHandoffTokens).set({
       consumedAt: new Date(),
       consumedIp: ip,
-      consumedUserAgent: userAgent,
+      consumedByUserAgent: userAgent,
     }).where(and(
       eq(ssoHandoffTokens.jti, jti),
       sql`consumed_at IS NULL`,

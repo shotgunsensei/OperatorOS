@@ -342,25 +342,49 @@ export async function ensureSaasTables() {
       jti VARCHAR(64) PRIMARY KEY,
       user_id VARCHAR(36) NOT NULL REFERENCES users(id),
       module_slug TEXT NOT NULL,
-      audience TEXT NOT NULL,
+      aud TEXT NOT NULL,
       env TEXT NOT NULL,
       issued_ip TEXT,
       consumed_ip TEXT,
       issued_user_agent TEXT,
-      consumed_user_agent TEXT,
+      consumed_by_user_agent TEXT,
       issued_at TIMESTAMP DEFAULT NOW() NOT NULL,
       expires_at TIMESTAMP NOT NULL,
       consumed_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT NOW() NOT NULL
     );
     ALTER TABLE sso_handoff_tokens ADD COLUMN IF NOT EXISTS issued_user_agent TEXT;
-    ALTER TABLE sso_handoff_tokens ADD COLUMN IF NOT EXISTS consumed_user_agent TEXT;
+    ALTER TABLE sso_handoff_tokens ADD COLUMN IF NOT EXISTS consumed_by_user_agent TEXT;
     ALTER TABLE sso_handoff_tokens ADD COLUMN IF NOT EXISTS issued_at TIMESTAMP DEFAULT NOW();
     UPDATE sso_handoff_tokens SET issued_at = COALESCE(issued_at, created_at) WHERE issued_at IS NULL;
     ALTER TABLE sso_handoff_tokens ALTER COLUMN issued_at SET NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_sso_tokens_expires ON sso_handoff_tokens(expires_at);
     CREATE INDEX IF NOT EXISTS idx_sso_tokens_user ON sso_handoff_tokens(user_id);
   `);
+
+  // Spec contract: sso_handoff_tokens columns are `aud` (matches JWT claim)
+  // and `consumed_by_user_agent` (mirrors `issued_user_agent`). Earlier
+  // rounds shipped `audience` and `consumed_user_agent`; rename in place
+  // when the legacy names are still present. Run as separate statements so
+  // we don't depend on PL/pgSQL DO blocks (esbuild template-literal quirks
+  // around `$$ ... $$`) and can swallow the "column does not exist" error
+  // on fresh installs where the legacy column was never created.
+  await renameLegacyColumnIfPresent('sso_handoff_tokens', 'audience', 'aud');
+  await renameLegacyColumnIfPresent('sso_handoff_tokens', 'consumed_user_agent', 'consumed_by_user_agent');
+}
+
+async function renameLegacyColumnIfPresent(table: string, fromCol: string, toCol: string) {
+  const cols = await db.execute(
+    `SELECT column_name FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = '${table}'
+       AND column_name IN ('${fromCol}', '${toCol}')`
+  );
+  const rows: any[] = (cols as any).rows ?? (cols as any) ?? [];
+  const present = new Set(rows.map((r: any) => r.column_name));
+  if (present.has(fromCol) && !present.has(toCol)) {
+    await db.execute(`ALTER TABLE ${table} RENAME COLUMN ${fromCol} TO ${toCol}`);
+    console.log(`[saas-db-init] Renamed ${table}.${fromCol} -> ${toCol}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
