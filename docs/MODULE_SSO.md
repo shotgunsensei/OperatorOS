@@ -121,9 +121,16 @@ On success (200):
 | 4 | Stored `audience` equals body `aud` | 400 | `AUDIENCE_MISMATCH` |
 | 5 | Stored `env` equals normalized body `env` | 400 | `ENV_MISMATCH` |
 | 6 | `now < exp` | 410 | `TOKEN_EXPIRED` |
-| 7 | `consumed_at IS NULL` (atomic UPDATE) | 409 | `TOKEN_REPLAYED` |
-| 8 | IP-mismatch advisory (logged, not denied) | — | — |
-| 9 | Re-check `hasModuleAccess` at consume time | 403 | `MODULE_ACCESS_REVOKED` |
+| 7 | Re-check `hasModuleAccess` (entitlement may have been revoked) | 410 | `TOKEN_EXPIRED` |
+| 8 | `consumed_at IS NULL` (atomic UPDATE — single-use claim) | 409 | `TOKEN_REPLAYED` |
+| 9 | IP-mismatch advisory (logged, not denied) | — | — |
+
+Step 7 is performed **before** the atomic claim in step 8 — this is the
+fail-closed contract: if entitlement was revoked between issue and
+consume, the token is **not** burned and the user can simply re-launch
+(the next `/handoff` call will surface the canonical 403
+`MODULE_ACCESS_DENIED`). Returning 410 here keeps the consume status set
+small and unambiguous: 410 means "this token is dead, ask for a new one".
 
 Note: the receiver-supplied `env` value is normalized server-side
 (`production` → `prod`, `staging` → `staging`, anything else → `dev`)
@@ -347,7 +354,9 @@ All four require `role='admin'` and write `admin_audit_logs` rows.
 4. **Audience binding.** A token issued for TorqueShed cannot be
    redeemed by TradeFlowKit.
 5. **Re-check at consume.** Even with a valid token, OperatorOS
-   re-checks entitlement at consume-time.
+   re-checks entitlement at consume-time, **before** the single-use
+   claim, so a revoked user cannot consume but the token is also not
+   burned by the deny.
 6. **Separate signing key.** `MODULE_SSO_SECRET` is independent of
    `SESSION_SECRET`.
 7. **Per-user issue rate limit.** 10 handoffs/minute/user.

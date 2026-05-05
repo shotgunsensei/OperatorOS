@@ -60,15 +60,9 @@ function checkRate(map: Map<string, { count: number; resetAt: number }>, key: st
 const checkHandoffRate = (userId: string) => checkRate(handoffRate, userId, HANDOFF_RATE_LIMIT);
 const checkConsumeRate = (ip: string) => checkRate(consumeRate, ip, CONSUME_RATE_LIMIT);
 
-// Resolve the real client IP. Honors x-forwarded-for first hop when the
-// platform is behind a trusted proxy (Replit/Cloudflare/etc.) — Fastify's
-// `getClientIp(request)` only does this when `trustProxy` is configured, which we
-// do not assume here. Falls back to getClientIp(request), then to '0.0.0.0' so we
-// never insert NULL into audit/handoff IP columns.
-//
-// IMPORTANT: this helper takes the FIRST entry of x-forwarded-for, which
-// is the original client per RFC 7239 / common load-balancer convention.
-// Do NOT use later entries — they are intermediate proxies.
+// Resolve the original client IP from x-forwarded-for (first hop) or
+// x-real-ip when present, falling back to request.ip. Used so audit
+// rows reflect the real client even when Fastify trustProxy is off.
 export function getClientIp(request: FastifyRequest): string {
   const xff = request.headers['x-forwarded-for'];
   if (typeof xff === 'string' && xff.length > 0) {
@@ -388,7 +382,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   // POST /v1/modules/sso/consume — receiver-side single-use validation.
   // Body: { jti, aud, env }. Status semantics:
   //   200 ok | 400 bad_request|audience|env_mismatch | 404 unknown_jti
-  //   409 replayed | 410 expired | 403 access_revoked | 429 rate_limited
+  //   409 replayed | 410 expired_or_revoked | 429 rate_limited
   app.post('/v1/modules/sso/consume', async (request, reply) => {
     const ip = getClientIp(request);
     const userAgent = (request.headers['user-agent'] as string) || null;
@@ -467,7 +461,26 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: 'Token already consumed', code: 'TOKEN_REPLAYED' });
     }
 
-    // Atomic single-use mark
+    // Re-check entitlement BEFORE the atomic consume mark. If access was
+    // revoked between issue and consume, we must NOT burn the token —
+    // otherwise a transient revocation permanently invalidates an
+    // unconsumed handoff. Returning 410 (TOKEN_EXPIRED) keeps the consume
+    // contract within the documented status set (200/400/404/409/410/429)
+    // and lets the user simply re-launch (the next handoff will fail at
+    // issue time with 403, the canonical entitlement-deny surface).
+    const access = await hasModuleAccess(row.userId, row.moduleSlug);
+    if (!access.hasAccess) {
+      await auditSsoReject({
+        userId: row.userId, action: 'module_consume_access_revoked',
+        details: { jti, moduleSlug: row.moduleSlug, source: access.source, reason: access.reason }, ip,
+      });
+      return reply.code(410).send({
+        error: 'Token no longer valid',
+        code: 'TOKEN_EXPIRED',
+      });
+    }
+
+    // Atomic single-use claim. Loses the race => 409 replay.
     const updated = await db.update(ssoHandoffTokens).set({
       consumedAt: new Date(),
       consumedIp: ip,
@@ -485,7 +498,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: 'Token already consumed', code: 'TOKEN_REPLAYED' });
     }
 
-    // IP-mismatch advisory audit (do not deny — NAT/mobile roaming).
+    // Advisory audit only — do not deny on IP mismatch (NAT, mobile roaming).
     if (row.issuedIp && row.issuedIp !== ip) {
       await auditSsoReject({
         userId: row.userId, action: 'module_handoff_ip_mismatch',
@@ -493,20 +506,6 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       });
     }
 
-    // Re-check entitlement at consume-time (fail-closed if access changed).
-    const access = await hasModuleAccess(row.userId, row.moduleSlug);
-    if (!access.hasAccess) {
-      await auditSsoReject({
-        userId: row.userId, action: 'module_consume_access_revoked',
-        details: { jti, moduleSlug: row.moduleSlug, source: access.source, reason: access.reason }, ip,
-      });
-      return reply.code(403).send({
-        error: 'User no longer has access to this module',
-        code: 'MODULE_ACCESS_REVOKED',
-      });
-    }
-
-    // Hydrate user + plan for the receiver
     const [user] = await db.select().from(users).where(eq(users.id, row.userId)).limit(1);
     const sub = await getActiveSubscription(row.userId);
     let planSlug: string | null = null;
