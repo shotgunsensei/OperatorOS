@@ -61,3 +61,7 @@ ADMIN_PASSWORD = "Dr0p$0fJup1t3r"
 
 [userenv.production]
 OPERATOROS_BASE_URL = "https://operatoros.net"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000

@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@veridian/sdk": "workspace:*"
+    "@operatoros/sdk": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.6.3"
