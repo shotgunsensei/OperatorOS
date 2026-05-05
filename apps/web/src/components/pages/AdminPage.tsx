@@ -1423,7 +1423,19 @@ function ModuleMembersDrawer({ mod, onClose }: { mod: AdminModule; onClose: () =
                   <div>{accessSourceBadge(m.accessSource, m.grant)}</div>
                   <div style={{ fontSize: 12, color: colors.textMuted }}>{m.planSlug || '—'}</div>
                   <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                    {m.accessSource !== 'override' && (
+                    {m.accessSource === 'admin_role' && (
+                      // Admin-role users cannot be per-module revoked: the
+                      // role grants global access and entitlement evaluation
+                      // short-circuits on `admin_role` before considering
+                      // overrides. Surface the constraint instead of showing
+                      // a button that silently no-ops.
+                      <span
+                        data-testid={`text-revoke-disabled-${m.userId}`}
+                        title="Admin role grants access globally. Demote the user from admin to control per-module access."
+                        style={{ padding: '5px 10px', borderRadius: 6, border: `1px dashed ${colors.border}`, color: colors.textDim, fontSize: 11, fontWeight: 600, cursor: 'not-allowed' }}
+                      >Admin (global)</span>
+                    )}
+                    {m.accessSource !== 'override' && m.accessSource !== 'admin_role' && (
                       <button
                         data-testid={`button-revoke-${m.userId}`}
                         disabled={busyUser === m.userId}

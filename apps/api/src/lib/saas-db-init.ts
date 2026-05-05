@@ -428,18 +428,37 @@ interface ModuleSeedSpec {
   envUrl: string | undefined;
   planMin: 'starter' | 'pro' | 'elite';
   ord: number;
+  /**
+   * Default add-on price in USD cents seeded into modules.metadata
+   * on first insert. After insert, admins can edit modules.metadata
+   * to override; we never stomp admin-edited values on restart.
+   *
+   * Pricing rule (matches Stripe price catalog):
+   *   starter-tier addon = $19/mo (1900 cents)
+   *   pro-tier addon     = $29/mo (2900 cents)
+   *   elite-tier addon   = $49/mo (4900 cents)
+   */
+  addonPriceCents: number;
 }
 
+// Default addon prices keyed by plan tier. The buy_addon CTA needs a
+// non-null `addon_price_cents` from the API to render — without these
+// seeded into `modules.metadata.addonPriceCents`, the UI silently
+// suppresses the "Buy Add-on" button even when STRIPE_PRICE_ADDON_<SLUG>
+// is configured. Per-tier defaults are baked into the seed; admins can
+// edit `modules.metadata` to set custom prices per module.
+const ADDON_DEFAULT_CENTS = { starter: 1900, pro: 2900, elite: 4900 } as const;
+
 const MODULE_SEED_SPECS: ModuleSeedSpec[] = [
-  { slug: 'tradeflowkit',     name: 'TradeFlowKit',     description: 'Job tracker for trade & service businesses', category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TRADEFLOWKIT_URL,    planMin: 'starter', ord: 1 },
-  { slug: 'torqueshed',       name: 'TorqueShed',       description: 'Mechanic shop dashboard & invoicing',        category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TORQUESHED_URL,      planMin: 'starter', ord: 2 },
-  { slug: 'techdeck',         name: 'TechDeck',         description: 'Onsite tech command center',                  category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TECHDECK_URL,        planMin: 'starter', ord: 3 },
-  { slug: 'pulsedesk',        name: 'PulseDesk',        description: 'Lightweight ticketing for small teams',      category: 'support', defaultStatus: 'live',        envUrl: process.env.PULSEDESK_URL,       planMin: 'pro',     ord: 4 },
-  { slug: 'faultlinelab',     name: 'FaultlineLab',     description: 'Diagnostic + RCA workflow',                   category: 'support', defaultStatus: 'live',        envUrl: process.env.FAULTLINELAB_URL,    planMin: 'pro',     ord: 5 },
-  { slug: 'bf-os',            name: 'BF-OS',            description: 'Body shop / collision OS',                    category: 'ops',     defaultStatus: 'live',        envUrl: process.env.BF_OS_URL,           planMin: 'pro',     ord: 6 },
-  { slug: 'snapproofos',      name: 'SnapProofOS',      description: 'Photo-based proof of work',                   category: 'ops',     defaultStatus: 'live',        envUrl: process.env.SNAPPROOFOS_URL,     planMin: 'elite',   ord: 7 },
-  { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                 category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.STUDYFORGE_AI_URL,   planMin: 'elite',   ord: 8 },
-  { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Build & ship internal tools fast',            category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.NINJA_LAUNCH_KIT_URL, planMin: 'elite',  ord: 9 },
+  { slug: 'tradeflowkit',     name: 'TradeFlowKit',     description: 'Job tracker for trade & service businesses', category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TRADEFLOWKIT_URL,    planMin: 'starter', ord: 1, addonPriceCents: ADDON_DEFAULT_CENTS.starter },
+  { slug: 'torqueshed',       name: 'TorqueShed',       description: 'Mechanic shop dashboard & invoicing',        category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TORQUESHED_URL,      planMin: 'starter', ord: 2, addonPriceCents: ADDON_DEFAULT_CENTS.starter },
+  { slug: 'techdeck',         name: 'TechDeck',         description: 'Onsite tech command center',                  category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TECHDECK_URL,        planMin: 'starter', ord: 3, addonPriceCents: ADDON_DEFAULT_CENTS.starter },
+  { slug: 'pulsedesk',        name: 'PulseDesk',        description: 'Lightweight ticketing for small teams',      category: 'support', defaultStatus: 'live',        envUrl: process.env.PULSEDESK_URL,       planMin: 'pro',     ord: 4, addonPriceCents: ADDON_DEFAULT_CENTS.pro     },
+  { slug: 'faultlinelab',     name: 'FaultlineLab',     description: 'Diagnostic + RCA workflow',                   category: 'support', defaultStatus: 'live',        envUrl: process.env.FAULTLINELAB_URL,    planMin: 'pro',     ord: 5, addonPriceCents: ADDON_DEFAULT_CENTS.pro     },
+  { slug: 'bf-os',            name: 'BF-OS',            description: 'Body shop / collision OS',                    category: 'ops',     defaultStatus: 'live',        envUrl: process.env.BF_OS_URL,           planMin: 'pro',     ord: 6, addonPriceCents: ADDON_DEFAULT_CENTS.pro     },
+  { slug: 'snapproofos',      name: 'SnapProofOS',      description: 'Photo-based proof of work',                   category: 'ops',     defaultStatus: 'live',        envUrl: process.env.SNAPPROOFOS_URL,     planMin: 'elite',   ord: 7, addonPriceCents: ADDON_DEFAULT_CENTS.elite   },
+  { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                 category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.STUDYFORGE_AI_URL,   planMin: 'elite',   ord: 8, addonPriceCents: ADDON_DEFAULT_CENTS.elite   },
+  { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Build & ship internal tools fast',            category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.NINJA_LAUNCH_KIT_URL, planMin: 'elite',  ord: 9, addonPriceCents: ADDON_DEFAULT_CENTS.elite   },
 ];
 
 export const MODULE_SEEDS: ModuleSeed[] = MODULE_SEED_SPECS.map(s => ({
@@ -462,6 +481,9 @@ export async function seedModules() {
         slug: m.slug, name: m.name, description: m.description,
         category: m.category, status: m.status, baseUrl: m.baseUrl,
         planMin: m.planMin, ord: m.ord,
+        // Seed default addon price into metadata so the buy_addon CTA
+        // surfaces in the UI on first install. Admin can edit later.
+        metadata: { addonPriceCents: spec.addonPriceCents },
       });
     } else {
       // Re-apply env-derived fields so adding/removing an env URL between
@@ -478,6 +500,13 @@ export async function seedModules() {
       //     `beta` without us stomping it on every restart).
       const updates: Record<string, unknown> = { updatedAt: new Date() };
       updates.baseUrl = m.baseUrl || existing[0].baseUrl;
+      // Back-fill metadata.addonPriceCents on rows that pre-date the
+      // addon-price seeding (existing.metadata is null OR missing the
+      // key). Never overwrite a value an admin has already set.
+      const existingMd = (existing[0].metadata ?? {}) as Record<string, unknown>;
+      if (existingMd.addonPriceCents == null) {
+        updates.metadata = { ...existingMd, addonPriceCents: spec.addonPriceCents };
+      }
       if (spec.defaultStatus === 'live') {
         updates.status = spec.envUrl ? 'live' : 'coming_soon';
       }
