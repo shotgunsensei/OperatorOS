@@ -1102,7 +1102,7 @@ interface ModuleMember {
   name: string | null;
   role: string;
   status: string;
-  accessSource: 'plan' | 'addon' | 'override';
+  accessSource: 'plan' | 'addon' | 'override' | 'admin_role';
   planSlug: string | null;
   grant: boolean;
   reason: string | null;
