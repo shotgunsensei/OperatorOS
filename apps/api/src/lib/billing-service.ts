@@ -639,25 +639,13 @@ export async function cancelAddon(userId: string, moduleSlug: string): Promise<{
   return { ok: true, message: 'Add-on cancellation scheduled' };
 }
 
-/**
- * Process an addon-related Stripe webhook event with DB-level idempotency
- * via a UNIQUE(stripe_event_id) partial index + ON CONFLICT DO NOTHING.
- *
- * Concurrency model: each webhook delivery first attempts to *claim* the
- * event by inserting a billing_events row keyed on stripe_event_id. If
- * the insert is a no-op (conflict) some other worker already owns the
- * event — we fast-path return without touching subscription state.
- *
- * The same row is then UPDATEd in place with `processed_at` on success or
- * with `error_message` on failure (no second row is ever written for the
- * same event id, so retries always operate on a single mutable record).
- */
+// Idempotent addon webhook processor. Race-safe via partial unique index
+// uq_billing_events_stripe_event_id (WHERE stripe_event_id IS NOT NULL).
 export async function processAddonWebhookEvent(event: { id: string; type: string; data: { object: any } }): Promise<WebhookProcessResult> {
   const { type, data, id: stripeEventId } = event;
   const obj = data.object;
-  // Accept both metadata contracts:
-  //   spec:   { type: 'addon', module_slug, user_id }
-  //   legacy: { kind: 'addon', moduleSlug, userId }
+  // Accept both metadata contracts: spec ({ type, module_slug, user_id })
+  // and legacy ({ kind, moduleSlug, userId }).
   const md = obj.metadata ?? {};
   const userId = md.user_id ?? md.userId;
   const moduleSlug = md.module_slug ?? md.moduleSlug;
@@ -669,17 +657,18 @@ export async function processAddonWebhookEvent(event: { id: string; type: string
   const payloadHash = crypto.createHash('sha256').update(JSON.stringify(obj)).digest('hex');
   const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
 
-  // Atomic claim — race-free thanks to UNIQUE(stripe_event_id) partial index.
+  // ON CONFLICT must include the same predicate as the partial unique index
+  // so PostgreSQL can infer it; otherwise the insert errors instead of no-op.
   const claim = await db.insert(billingEvents).values({
     userId, eventType: `addon_${type.replace(/\./g, '_')}`,
     stripeEventId, payloadHash,
     metadata: { moduleSlug, mode: 'stripe', rawEvent: event },
-  }).onConflictDoNothing({ target: billingEvents.stripeEventId }).returning({ id: billingEvents.id });
+  }).onConflictDoNothing({
+    target: billingEvents.stripeEventId,
+    where: sql`stripe_event_id IS NOT NULL`,
+  }).returning({ id: billingEvents.id });
 
-  // No claim returned → another worker already owns this event id. We
-  // explicitly *do not* touch subscription state. The owning worker is
-  // either still processing (write will land soon) or already done. Either
-  // way a duplicate side-effect would be a bug.
+  // Empty claim => another worker owns this event id; skip side effects.
   if (claim.length === 0) {
     return { handled: true, action: 'duplicate_ignored' };
   }
@@ -761,17 +750,9 @@ export async function processAddonWebhookEvent(event: { id: string; type: string
   }
 }
 
-/**
- * Admin DLQ retry — TRUE REPLAY of the original webhook payload.
- *
- * When a Stripe addon webhook fails, we persist the raw event in
- * billing_events.metadata.rawEvent. This endpoint reads it back, re-runs
- * processAddonWebhookEvent, marks the original failure event resolved,
- * and increments retry_count.
- *
- * If no raw payload was captured (legacy rows), we degrade to a simple
- * "mark resolved" for forensics.
- */
+// Admin DLQ retry: replay the persisted raw event through
+// processAddonWebhookEvent. Falls back to "mark resolved" when the original
+// row predates raw-payload capture.
 export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean; message: string; replayed?: boolean; replayResult?: any }> {
   const [evt] = await db.select().from(billingEvents).where(eq(billingEvents.id, eventId)).limit(1);
   if (!evt) return { ok: false, message: 'Event not found' };
@@ -792,12 +773,8 @@ export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean;
     };
   }
 
-  // True replay. The DLQ row already owns this stripe_event_id. We
-  // release the slot (set NULL) so processAddonWebhookEvent can claim
-  // its own NEW row — and we keep the linkage to this DLQ row in
-  // metadata.replayedFromEventId. The DLQ row's stripe_event_id stays
-  // NULL forever after this point so it can never collide with the
-  // unique partial index on (stripe_event_id) WHERE NOT NULL.
+  // Release the stripe_event_id slot so the replay can re-claim it via the
+  // partial unique index. The DLQ row's stripe_event_id stays NULL.
   await db.update(billingEvents).set({
     stripeEventId: null,
     metadata: { ...(evt.metadata as any || {}), replayInProgress: true },
