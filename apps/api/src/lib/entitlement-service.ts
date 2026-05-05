@@ -6,6 +6,7 @@ import {
 import { eq, and } from 'drizzle-orm';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { authenticate } from './auth.js';
+import { isAddonPurchasable } from './billing-service.js';
 
 /**
  * Access-source taxonomy — the single source of truth for how a user got
@@ -248,15 +249,17 @@ function pickCta(args: {
   hasBaseUrl: boolean;
   upgradeTarget: string | null;
   addonPriceCents: number | null;
+  addonPurchasable: boolean;
 }): ModuleCta {
-  const { moduleStatus, hasAccess, hasBaseUrl, upgradeTarget, addonPriceCents } = args;
+  const { moduleStatus, hasAccess, hasBaseUrl, upgradeTarget, addonPriceCents, addonPurchasable } = args;
   if (moduleStatus === 'disabled') return 'disabled';
   if (moduleStatus === 'coming_soon') return 'coming_soon';
   // 'live' and 'beta' are both launchable for entitled users.
   if (hasAccess && hasBaseUrl && (moduleStatus === 'live' || moduleStatus === 'beta')) return 'open';
-  // Locked but live. Prefer `buy_addon` only if a price is configured;
-  // otherwise nudge an upgrade.
-  if (addonPriceCents && addonPriceCents > 0) return 'buy_addon';
+  // Locked but live. Show `buy_addon` only when both a price IS configured
+  // (so the UI can render the price) AND the addon is actually purchasable
+  // in this environment (Stripe price id present, or local-mode for dev).
+  if (addonPurchasable && addonPriceCents && addonPriceCents > 0) return 'buy_addon';
   if (upgradeTarget) return 'upgrade';
   return 'disabled';
 }
@@ -280,6 +283,7 @@ export async function getUserModules(userId: string): Promise<UserModuleSummary[
       hasBaseUrl: !!m.baseUrl,
       upgradeTarget,
       addonPriceCents,
+      addonPurchasable: isAddonPurchasable(m.slug),
     });
     out.push({
       module: {
@@ -320,6 +324,7 @@ export async function getModuleForUser(userId: string, moduleSlug: string): Prom
     hasBaseUrl: !!m.baseUrl,
     upgradeTarget,
     addonPriceCents,
+    addonPurchasable: isAddonPurchasable(m.slug),
   });
   return {
     module: {

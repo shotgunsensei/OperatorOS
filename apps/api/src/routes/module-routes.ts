@@ -199,7 +199,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     if (!checkHandoffRate(user.id)) {
       await auditSsoReject({
-        userId: user.id, action: 'sso_handoff_rate_limited',
+        userId: user.id, action: 'module_handoff_rate_limited',
         details: { moduleSlug: slug }, ip: request.ip,
       });
       return reply.code(429).send({ error: 'Too many launch attempts.', code: 'RATE_LIMITED' });
@@ -208,7 +208,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
     if (!mod) {
       await auditSsoReject({
-        userId: user.id, action: 'sso_handoff_module_not_found',
+        userId: user.id, action: 'module_handoff_module_not_found',
         details: { moduleSlug: slug }, ip: request.ip,
       });
       return reply.code(404).send({ error: 'Module not found' });
@@ -220,7 +220,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const access = await hasModuleAccess(user.id, slug);
     if (!access.hasAccess) {
       await auditSsoReject({
-        userId: user.id, action: 'sso_handoff_access_denied',
+        userId: user.id, action: 'module_handoff_access_denied',
         details: { moduleSlug: slug, source: access.source, reason: access.reason },
         ip: request.ip,
       });
@@ -235,21 +235,21 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // 2. Module-status gate (400) — entitled callers see why launch failed.
     if (mod.status === 'coming_soon') {
       await auditSsoReject({
-        userId: user.id, action: 'sso_handoff_module_coming_soon',
+        userId: user.id, action: 'module_handoff_module_coming_soon',
         details: { moduleSlug: slug }, ip: request.ip,
       });
       return reply.code(400).send({ error: 'Module is coming soon.', code: 'MODULE_COMING_SOON' });
     }
     if (mod.status === 'disabled') {
       await auditSsoReject({
-        userId: user.id, action: 'sso_handoff_module_disabled',
+        userId: user.id, action: 'module_handoff_module_disabled',
         details: { moduleSlug: slug }, ip: request.ip,
       });
       return reply.code(400).send({ error: 'Module is disabled.', code: 'MODULE_DISABLED' });
     }
     if (!mod.baseUrl) {
       await auditSsoReject({
-        userId: user.id, action: 'sso_handoff_no_base_url',
+        userId: user.id, action: 'module_handoff_no_base_url',
         details: { moduleSlug: slug }, ip: request.ip,
       });
       return reply.code(400).send({ error: 'Module has no launch URL configured.', code: 'NO_BASE_URL' });
@@ -305,7 +305,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     });
 
     await auditSso({
-      userId: user.id, action: 'sso_handoff_issued',
+      userId: user.id, action: 'module_handoff_issued',
       details: {
         moduleSlug: slug, jti, source: entitlementSource,
         signed: !!token, fallback: SSO_FALLBACK,
@@ -337,7 +337,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     if (!checkConsumeRate(ip)) {
       await auditSsoReject({
-        userId: null, action: 'sso_consume_rate_limited',
+        userId: null, action: 'module_consume_rate_limited',
         details: { ip }, ip,
       });
       return reply.code(429).send({ error: 'Too many requests', code: 'RATE_LIMITED' });
@@ -348,7 +348,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     if (!jti || typeof jti !== 'string' || !aud || !env) {
       await auditSsoReject({
-        userId: null, action: 'sso_consume_bad_request',
+        userId: null, action: 'module_consume_bad_request',
         details: { hasJti: !!jti, hasAud: !!aud, hasEnv: !!env, ip }, ip,
       });
       return reply.code(400).send({
@@ -362,7 +362,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     if (!row) {
       await auditSsoReject({
-        userId: null, action: 'sso_consume_unknown_jti',
+        userId: null, action: 'module_consume_unknown_jti',
         details: { jti, aud, env, ip }, ip,
       });
       return reply.code(404).send({ error: 'Token not recognized', code: 'TOKEN_UNKNOWN' });
@@ -370,7 +370,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     if (row.audience !== aud) {
       await auditSsoReject({
-        userId: row.userId, action: 'sso_consume_audience_mismatch',
+        userId: row.userId, action: 'module_consume_audience_mismatch',
         details: { jti, expected: row.audience, got: aud, ip }, ip,
       });
       return reply.code(400).send({
@@ -384,7 +384,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const normalizedConsumeEnv = normalizeEnv(env);
     if (row.env !== normalizedConsumeEnv) {
       await auditSsoReject({
-        userId: row.userId, action: 'sso_consume_env_mismatch',
+        userId: row.userId, action: 'module_consume_env_mismatch',
         details: { jti, expected: row.env, got: normalizedConsumeEnv, raw: env, ip }, ip,
       });
       return reply.code(400).send({
@@ -395,7 +395,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     if (row.expiresAt.getTime() < Date.now()) {
       await auditSsoReject({
-        userId: row.userId, action: 'sso_consume_expired',
+        userId: row.userId, action: 'module_consume_expired',
         details: { jti, expiresAt: row.expiresAt.toISOString(), ip }, ip,
       });
       return reply.code(410).send({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
@@ -403,7 +403,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     if (row.consumedAt) {
       await auditSsoReject({
-        userId: row.userId, action: 'sso_consume_replay',
+        userId: row.userId, action: 'module_consume_replay',
         details: { jti, consumedAt: row.consumedAt.toISOString(), originalIp: row.consumedIp, ip }, ip,
       });
       return reply.code(409).send({ error: 'Token already consumed', code: 'TOKEN_REPLAYED' });
@@ -421,7 +421,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     if (updated.length === 0) {
       await auditSsoReject({
-        userId: row.userId, action: 'sso_consume_race_replay',
+        userId: row.userId, action: 'module_consume_race_replay',
         details: { jti, ip }, ip,
       });
       return reply.code(409).send({ error: 'Token already consumed', code: 'TOKEN_REPLAYED' });
@@ -430,7 +430,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // IP-mismatch advisory audit (do not deny — NAT/mobile roaming).
     if (row.issuedIp && row.issuedIp !== ip) {
       await auditSsoReject({
-        userId: row.userId, action: 'sso_consume_ip_mismatch_warning',
+        userId: row.userId, action: 'module_consume_ip_mismatch_warning',
         details: { jti, issuedIp: row.issuedIp, consumedIp: ip }, ip,
       });
     }
@@ -439,7 +439,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const access = await hasModuleAccess(row.userId, row.moduleSlug);
     if (!access.hasAccess) {
       await auditSsoReject({
-        userId: row.userId, action: 'sso_consume_access_revoked',
+        userId: row.userId, action: 'module_consume_access_revoked',
         details: { jti, moduleSlug: row.moduleSlug, source: access.source, reason: access.reason }, ip,
       });
       return reply.code(403).send({
@@ -458,7 +458,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     }
 
     await auditSso({
-      userId: row.userId, action: 'sso_consume_success',
+      userId: row.userId, action: 'module_consume_success',
       details: {
         jti, moduleSlug: row.moduleSlug, accessSource: access.source,
         userAgent: userAgent ? userAgent.slice(0, 200) : null,

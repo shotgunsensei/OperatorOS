@@ -650,11 +650,10 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     for (const r of addonUsers as Row[]) byUser[r.userId] = r;
     for (const r of overrideUsers as Row[]) byUser[r.userId] = r;
     for (const r of adminUsers as Row[]) {
-      // admin_role is the highest precedence; only OVERWRITE if existing
-      // entry isn't a revoke (revoke wins for visibility — admin still has
-      // access, but the revoke is the noteworthy state to surface).
-      const existing = byUser[r.userId];
-      if (existing && existing.source === 'override' && existing.grant === false) continue;
+      // admin_role is the highest precedence in hasModuleAccess
+      // (admin_role > override > addon > plan), so it MUST also win here —
+      // otherwise the members list reports the wrong accessSource for
+      // admins who also have a revoke override. Always overwrite.
       byUser[r.userId] = r;
     }
 

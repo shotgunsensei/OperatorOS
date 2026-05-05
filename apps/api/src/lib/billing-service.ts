@@ -537,9 +537,18 @@ function mapStripeStatus(stripeStatus: string): string {
 // Add-on Subscriptions (per-module purchase on top of the base plan)
 // ---------------------------------------------------------------------------
 
-function getAddonStripePriceId(moduleSlug: string): string {
+export function getAddonStripePriceId(moduleSlug: string): string {
   const key = `STRIPE_PRICE_ADDON_${moduleSlug.toUpperCase().replace(/-/g, '_')}`;
   return process.env[key] || '';
+}
+
+// True when the module is purchasable as an add-on in this environment:
+// Stripe is configured AND a STRIPE_PRICE_ADDON_<SLUG> env var is set.
+// In local-mode (no Stripe) we still allow the buy_addon CTA so dev can
+// drive the local addon path; the env-var requirement only gates Stripe.
+export function isAddonPurchasable(moduleSlug: string): boolean {
+  if (!isStripeEnabled()) return true;
+  return !!getAddonStripePriceId(moduleSlug);
 }
 
 export interface AddonSubscribeResult {
