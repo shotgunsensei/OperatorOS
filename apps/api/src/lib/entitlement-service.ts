@@ -172,12 +172,9 @@ export async function evaluateUserEntitlement(userId: string, moduleId: string):
   return null;
 }
 
-/**
- * The single source of truth for module access. Fail-closed: any unexpected
- * state results in denial.
- *
- * Evaluation order is strict and documented above on AccessSource.
- */
+// Entitlement-only access check. Order: admin_role > override > addon > plan.
+// Module runtime status (live/coming_soon/disabled) and baseUrl are NOT
+// considered here — callers gate launchability separately.
 export async function hasModuleAccess(userId: string, moduleSlug: string): Promise<ModuleAccess> {
   try {
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -187,19 +184,11 @@ export async function hasModuleAccess(userId: string, moduleSlug: string): Promi
 
     const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
     if (!mod) return { moduleSlug, hasAccess: false, source: null, reason: 'module_not_found' };
-    if (mod.status === 'disabled') return { moduleSlug, hasAccess: false, source: null, reason: 'module_disabled' };
-    if (mod.status === 'coming_soon') {
-      // Even admins shouldn't be considered "having access" to launch a
-      // coming-soon module — but they will see the card. Source is null.
-      return { moduleSlug, hasAccess: false, source: null, reason: 'coming_soon' };
-    }
 
-    // 1. Admin role allow — superadmins can launch any live module
     if (user.role === 'admin') {
       return { moduleSlug, hasAccess: true, source: 'admin_role' };
     }
 
-    // 2. Per-user override (revoke wins, then grant)
     const override = await activeOverrideForUser(userId, mod.id);
     if (override) {
       if (!override.grant) {
@@ -214,22 +203,16 @@ export async function hasModuleAccess(userId: string, moduleSlug: string): Promi
       };
     }
 
-    // 3. Active addon
     const addon = await activeAddonForUser(userId, mod.id);
-    if (addon) {
-      return { moduleSlug, hasAccess: true, source: 'addon' };
-    }
+    if (addon) return { moduleSlug, hasAccess: true, source: 'addon' };
 
-    // 4. Plan inclusion
     const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
     if (sub && ['active', 'trialing'].includes(sub.status)) {
-      const granted = await planGrantsModule(sub.planId, mod.id);
-      if (granted) {
+      if (await planGrantsModule(sub.planId, mod.id)) {
         return { moduleSlug, hasAccess: true, source: 'plan' };
       }
     }
 
-    // 5. Fail-closed
     return { moduleSlug, hasAccess: false, source: null, reason: 'no_entitlement' };
   } catch (err) {
     console.error('[entitlement] hasModuleAccess error:', err);
@@ -310,7 +293,7 @@ export async function getUserModules(userId: string): Promise<UserModuleSummary[
         baseUrl: m.baseUrl,
         ord: m.ord,
       },
-      unlocked: access.hasAccess,
+      unlocked: access.hasAccess && m.status === 'live' && !!m.baseUrl,
       access_source: access.source,
       cta,
       upgrade_target_plan: upgradeTarget,
@@ -343,7 +326,7 @@ export async function getModuleForUser(userId: string, moduleSlug: string): Prom
       iconUrl: m.iconUrl, category: m.category, status: m.status,
       planMin: m.planMin, baseUrl: m.baseUrl, ord: m.ord,
     },
-    unlocked: access.hasAccess,
+    unlocked: access.hasAccess && m.status === 'live' && !!m.baseUrl,
     access_source: access.source,
     cta,
     upgrade_target_plan: upgradeTarget,

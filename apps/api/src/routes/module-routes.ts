@@ -13,18 +13,7 @@ import {
   getAccessBreakdown, getModuleAccessTrace, evaluateUserEntitlement,
 } from '../lib/entitlement-service.js';
 
-/**
- * Normalize the runtime environment to the spec-mandated tri-state.
- * Spec: env claim values MUST be one of `prod | staging | dev`. The
- * receiver-side modules cross-check this exact value against their own
- * normalized env, so cross-environment drift (a `production` token
- * being honored in a `prod` receiver, or vice versa) is impossible.
- *
- * Mapping:
- *   APP_ENV=production  -> prod
- *   APP_ENV=staging     -> staging
- *   anything else / unset -> dev
- */
+// Map APP_ENV/NODE_ENV to the spec env tri-state: prod | staging | dev.
 function normalizeEnv(raw: string | undefined): 'prod' | 'staging' | 'dev' {
   const v = (raw || '').toLowerCase().trim();
   if (v === 'prod' || v === 'production') return 'prod';
@@ -35,77 +24,40 @@ const APP_ENV: 'prod' | 'staging' | 'dev' = normalizeEnv(process.env.APP_ENV || 
 const SSO_TOKEN_TTL_SECONDS = 90;
 const OPERATOROS_BASE_URL = process.env.OPERATOROS_BASE_URL || 'http://localhost:5000';
 
-/**
- * Resolve the shared HS256 signing key for module SSO. Hard requirement:
- *  - Production / staging: env var must be set; otherwise we issue plain
- *    (unsigned) launch URLs and surface a loud, admin-visible warning so
- *    the platform stays usable instead of locking everyone out.
- *  - Development: same fallback applies, with a console warning.
- *
- * resolveModuleSsoSecret() returns { secret, fallback }. When fallback=true,
- * launch URLs MUST omit the JWT token and the response includes a `warning`
- * string that the UI surfaces as an admin toast.
- */
+// Shared HS256 signing key. When unset we fall back to issuing unsigned
+// launch URLs (the response carries `ssoFallback: true` + a warning) so
+// the platform stays usable while operators rotate keys.
 function resolveModuleSsoSecret(): { secret: string | null; fallback: boolean } {
   if (process.env.MODULE_SSO_SECRET && process.env.MODULE_SSO_SECRET.length >= 16) {
     return { secret: process.env.MODULE_SSO_SECRET, fallback: false };
   }
   return { secret: null, fallback: true };
 }
-
 const { secret: MODULE_SSO_SECRET, fallback: SSO_FALLBACK } = resolveModuleSsoSecret();
-
-/**
- * Soft-fallback posture: when MODULE_SSO_SECRET is missing we still issue
- * launch URLs but WITHOUT a signed JWT. The receiver-side modules know to
- * detect the missing token and either short-circuit auth (dev) or refuse
- * to honor it (prod). The platform stays usable in either case; the
- * `warning` field on the response surfaces an admin toast so the gap is
- * visible. This is intentional — a hard block leaves the entire module
- * grid unusable while operators rotate keys.
- */
 const SSO_FALLBACK_WARNING =
-  'MODULE_SSO_SECRET is not set. Module launches are sending plain URLs ' +
-  'with no signed token. Set MODULE_SSO_SECRET to enable SSO handoff.';
+  'MODULE_SSO_SECRET is not set. Module launches are sending plain URLs with no signed token.';
+if (SSO_FALLBACK) console.warn('[module-sso] ' + SSO_FALLBACK_WARNING);
 
-if (SSO_FALLBACK) {
-  console.warn('[module-sso] ' + SSO_FALLBACK_WARNING);
-}
-
-// Per-user rate limiter for handoff issuance: 10 per minute.
-const handoffRate = new Map<string, { count: number; resetAt: number }>();
+// 10 handoffs / user / minute, 10 consumes / source-IP / minute.
 const HANDOFF_RATE_LIMIT = 10;
-const HANDOFF_RATE_WINDOW_MS = 60_000;
-
-function checkHandoffRate(userId: string): boolean {
-  const now = Date.now();
-  const cur = handoffRate.get(userId);
-  if (!cur || cur.resetAt < now) {
-    handoffRate.set(userId, { count: 1, resetAt: now + HANDOFF_RATE_WINDOW_MS });
-    return true;
-  }
-  if (cur.count >= HANDOFF_RATE_LIMIT) return false;
-  cur.count += 1;
-  return true;
-}
-
-// Per-source-IP rate limiter for /v1/modules/sso/consume: 10 per minute.
-// This hardens against jti enumeration / scanning attacks.
-const consumeRate = new Map<string, { count: number; resetAt: number }>();
 const CONSUME_RATE_LIMIT = 10;
-const CONSUME_RATE_WINDOW_MS = 60_000;
+const RATE_WINDOW_MS = 60_000;
+const handoffRate = new Map<string, { count: number; resetAt: number }>();
+const consumeRate = new Map<string, { count: number; resetAt: number }>();
 
-function checkConsumeRate(ip: string): boolean {
+function checkRate(map: Map<string, { count: number; resetAt: number }>, key: string, limit: number): boolean {
   const now = Date.now();
-  const cur = consumeRate.get(ip);
+  const cur = map.get(key);
   if (!cur || cur.resetAt < now) {
-    consumeRate.set(ip, { count: 1, resetAt: now + CONSUME_RATE_WINDOW_MS });
+    map.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
     return true;
   }
-  if (cur.count >= CONSUME_RATE_LIMIT) return false;
+  if (cur.count >= limit) return false;
   cur.count += 1;
   return true;
 }
+const checkHandoffRate = (userId: string) => checkRate(handoffRate, userId, HANDOFF_RATE_LIMIT);
+const checkConsumeRate = (ip: string) => checkRate(consumeRate, ip, CONSUME_RATE_LIMIT);
 
 interface SsoClaims {
   iss: string;
@@ -123,34 +75,18 @@ interface SsoClaims {
   exp: number;
 }
 
-/**
- * Spec-aligned launch URL: `{module_base_url}/sso?token={jwt}`. We append
- * /sso so the receiver always sees the same path regardless of base URL
- * shape. Existing query strings on baseUrl are preserved (the /sso path
- * replaces the base path component? No — base URL is treated as the
- * module ROOT; we always navigate to {root}/sso.
- */
+// Launch URL shape: `{module_base_url}/sso?token={jwt}`. baseUrl is the
+// module ROOT; we always navigate to {root}/sso. Token-less fallback
+// returns the bare root.
 function buildLaunchUrl(baseUrl: string, token: string | null): string {
   if (!baseUrl) return '';
   const trimmed = baseUrl.replace(/\/+$/, '');
-  if (!token) return trimmed; // fallback: no token, just root
+  if (!token) return trimmed;
   return `${trimmed}/sso?token=${encodeURIComponent(token)}`;
 }
 
-/**
- * Single audit-log helper for the entire SSO lifecycle — both reject
- * paths and success paths. Spec: "every reject path is audit-logged;
- * success-path parity is required."
- *
- * Always emits a structured stdout line (production log aggregation
- * captures these durably) AND attempts to insert into admin_audit_logs
- * when we have a real userId. The DB row is best-effort: the
- * admin_audit_logs.admin_id FK requires a real users row, so unauth
- * paths (unknown jti, bad_request, rate_limited) only end up in stdout.
- *
- * The `level` argument lets us tell `info` (success) apart from `warn`
- * (reject) in log streams.
- */
+// Audit helper. Always writes a structured stdout line; best-effort DB
+// insert when a real userId is present (admin_audit_logs.admin_id FK).
 async function auditSso(opts: {
   userId: string | null;
   action: string;
@@ -158,9 +94,7 @@ async function auditSso(opts: {
   ip: string;
   level?: 'info' | 'warn';
 }) {
-  // Spread `details` FIRST so the authoritative envelope fields
-  // (ts/action/userId/ip) cannot be silently overwritten by a caller
-  // that happens to pass one of those keys inside `details`.
+  // Envelope fields go LAST so callers can't overwrite them via `details`.
   const line = '[AUDIT sso] ' + JSON.stringify({
     ...opts.details,
     ts: new Date().toISOString(),
@@ -183,8 +117,6 @@ async function auditSso(opts: {
     console.error('[module-sso] audit-log insert failed:', err);
   }
 }
-
-// Backwards-compatible alias kept for the reject paths (clarity at call site).
 const auditSsoReject = (opts: { userId: string | null; action: string; details: Record<string, unknown>; ip: string }) =>
   auditSso({ ...opts, level: 'warn' });
 
@@ -202,25 +134,10 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     };
   });
 
-  // -------------------------------------------------------------------------
-  // GET /v1/modules/debug — spec-mandated AGGREGATE access snapshot for the
-  // user (or another user, if the caller is an admin).
-  //
-  // Returns the AccessBreakdown shape directly: plan_modules / addon_modules
-  // / overrides / override_revokes / effective / access_sources, plus
-  // env + ssoFallback context. The receiver can derive every per-module
-  // boolean from this aggregate without N additional round trips.
-  //
-  // For per-module forensic detail (which evaluation step caused which
-  // verdict) call `/v1/modules/debug/:slug` instead.
-  // -------------------------------------------------------------------------
+  // GET /v1/modules/debug?user_id=… — aggregate access breakdown for self
+  // or (admin only) another user. Spec-shaped response (snake_case keys).
   app.get('/v1/modules/debug', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
-    // Spec contract: query param is `user_id` (snake_case). Non-admins
-    // who attempt to target ANOTHER user MUST get 403 — silently falling
-    // back to self-introspection would let attackers probe whether the
-    // endpoint enforces authorization. Self-introspection (omitted param
-    // or matching own id) is always allowed.
     const { user_id: queryUserId } = request.query as { user_id?: string };
     if (queryUserId && queryUserId !== user.id && user.role !== 'admin') {
       return reply.code(403).send({
@@ -230,8 +147,6 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     }
     const targetUserId = queryUserId || user.id;
     const breakdown = await getAccessBreakdown(targetUserId);
-    // Spec response shape: snake_case keys, `plan` (not planSlug),
-    // `effective_access` (not effective). The receiver maps directly.
     return {
       user_id: breakdown.userId,
       plan: breakdown.planSlug,
@@ -258,14 +173,10 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     return summary;
   });
 
-  // -------------------------------------------------------------------------
-  // GET /v1/modules/debug/:slug — single-module verbose breakdown
-  // -------------------------------------------------------------------------
+  // GET /v1/modules/debug/:slug — single-module verbose breakdown.
   app.get('/v1/modules/debug/:slug', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     const { slug } = request.params as { slug: string };
-    // Same authorization rule as the aggregate /debug endpoint: non-admin
-    // attempts to target another user are 403, never silently downgraded.
     const { user_id: queryUserId } = request.query as { user_id?: string };
     if (queryUserId && queryUserId !== user.id && user.role !== 'admin') {
       return reply.code(403).send({
@@ -279,25 +190,19 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     return { breakdown, evaluated_for: targetUserId, env: APP_ENV };
   });
 
-  // -------------------------------------------------------------------------
-  // POST /v1/modules/:slug/handoff — issue short-lived signed JWT + launch URL
-  // -------------------------------------------------------------------------
+  // POST /v1/modules/:slug/handoff — issue short-lived signed JWT + launch URL.
+  // Order: rate-limit -> module exists -> entitlement (403) -> status (400) -> issue.
   app.post('/v1/modules/:slug/handoff', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     const { slug } = request.params as { slug: string };
     const userAgent = (request.headers['user-agent'] as string) || null;
 
-    // Per-user rate limit FIRST so unauthenticated probing can't run the
-    // entitlement evaluator.
     if (!checkHandoffRate(user.id)) {
       await auditSsoReject({
         userId: user.id, action: 'sso_handoff_rate_limited',
         details: { moduleSlug: slug }, ip: request.ip,
       });
-      return reply.code(429).send({
-        error: 'Too many launch attempts. Please slow down.',
-        code: 'RATE_LIMITED',
-      });
+      return reply.code(429).send({ error: 'Too many launch attempts.', code: 'RATE_LIMITED' });
     }
 
     const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
@@ -309,17 +214,9 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: 'Module not found' });
     }
 
-    // STRICT FAIL-CLOSED GATE — the spec is explicit:
-    //   "if !hasModuleAccess -> 403 before status checks"
-    //
-    // hasModuleAccess() is the single authorization decision and already
-    // folds in module-status checks (returns hasAccess=false for
-    // disabled/coming_soon). We trust its verdict here. Any failure -> 403
-    // with NO detail leaked in the response body (status reason stays
-    // strictly inside the audit log). This eliminates the launch endpoint
-    // as a module-status oracle, AND prevents the previous bypass where
-    // an entitled user got a 400-COMING_SOON differentiation that an
-    // unentitled user did not — which itself was a status oracle.
+    // 1. Entitlement gate (403). hasModuleAccess is entitlement-only — it
+    // does NOT consider module status, so coming_soon/disabled modules
+    // surface their status through the next gate (400) for entitled users.
     const access = await hasModuleAccess(user.id, slug);
     if (!access.hasAccess) {
       await auditSsoReject({
@@ -335,20 +232,27 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     }
     const entitlementSource = access.source;
 
-    // Post-authorization configuration check. baseUrl missing is a 400
-    // (entitled user, module misconfigured by ops). hasModuleAccess does
-    // NOT cover this because a missing baseUrl is purely an issuance-side
-    // concern — the receiver can't even be reached. Safe to surface as
-    // 400 since by this point the caller IS entitled.
+    // 2. Module-status gate (400) — entitled callers see why launch failed.
+    if (mod.status === 'coming_soon') {
+      await auditSsoReject({
+        userId: user.id, action: 'sso_handoff_module_coming_soon',
+        details: { moduleSlug: slug }, ip: request.ip,
+      });
+      return reply.code(400).send({ error: 'Module is coming soon.', code: 'MODULE_COMING_SOON' });
+    }
+    if (mod.status === 'disabled') {
+      await auditSsoReject({
+        userId: user.id, action: 'sso_handoff_module_disabled',
+        details: { moduleSlug: slug }, ip: request.ip,
+      });
+      return reply.code(400).send({ error: 'Module is disabled.', code: 'MODULE_DISABLED' });
+    }
     if (!mod.baseUrl) {
       await auditSsoReject({
         userId: user.id, action: 'sso_handoff_no_base_url',
         details: { moduleSlug: slug }, ip: request.ip,
       });
-      return reply.code(400).send({
-        error: 'Module has no launch URL configured.',
-        code: 'NO_BASE_URL',
-      });
+      return reply.code(400).send({ error: 'Module has no launch URL configured.', code: 'NO_BASE_URL' });
     }
 
     const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id)).limit(1);
@@ -400,7 +304,6 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       metadata: { moduleSlug: slug, source: entitlementSource, jti, fallback: SSO_FALLBACK },
     });
 
-    // Success-path audit (spec: parity with reject paths)
     await auditSso({
       userId: user.id, action: 'sso_handoff_issued',
       details: {
@@ -424,31 +327,13 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     };
   });
 
-  // -------------------------------------------------------------------------
   // POST /v1/modules/sso/consume — receiver-side single-use validation.
-  //
-  // Spec request body: { jti, aud, env }
-  //   The receiving module verifies the JWT signature itself (it shares
-  //   MODULE_SSO_SECRET) and then asks OperatorOS to atomically mark the
-  //   jti as consumed. OperatorOS double-checks audience + env match what
-  //   was originally issued.
-  //
-  // Status semantics:
-  //   200 — consumed successfully (returns user/plan context)
-  //   400 — bad request OR audience/env mismatch with stored record
-  //   404 — jti not recognized (forged or never issued)
-  //   409 — already consumed (replay attack)
-  //   410 — token expired
-  //   429 — too many requests from this IP
-  // -------------------------------------------------------------------------
+  // Body: { jti, aud, env }. Status semantics:
+  //   200 ok | 400 bad_request|audience|env_mismatch | 404 unknown_jti
+  //   409 replayed | 410 expired | 403 access_revoked | 429 rate_limited
   app.post('/v1/modules/sso/consume', async (request, reply) => {
     const ip = request.ip;
     const userAgent = (request.headers['user-agent'] as string) || null;
-
-    // NOTE: when MODULE_SSO_SECRET is missing we still service consume
-    // requests (soft fallback) — the receiver itself is expected to
-    // verify JWT signatures with the shared secret, so consume only
-    // arbitrates jti/aud/env/single-use. No prod-only hard block here.
 
     if (!checkConsumeRate(ip)) {
       await auditSsoReject({
@@ -494,11 +379,8 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       });
     }
 
-    // Normalize the receiver-supplied env using the same mapping used at
-    // issuance, so that a receiver running APP_ENV=production can still
-    // consume a token whose stored env is the canonical 'prod' (and vice
-    // versa). Without this we'd reject every token across legacy/new
-    // env-spelling boundaries.
+    // Normalize so APP_ENV=production / staging / dev all match their
+    // canonical prod / staging / dev counterparts.
     const normalizedConsumeEnv = normalizeEnv(env);
     if (row.env !== normalizedConsumeEnv) {
       await auditSsoReject({
@@ -545,9 +427,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       return reply.code(409).send({ error: 'Token already consumed', code: 'TOKEN_REPLAYED' });
     }
 
-    // IP-mismatch advisory audit (do not deny — many legitimate clients NAT
-    // through different egress IPs between issue and consume, but we want
-    // forensic visibility).
+    // IP-mismatch advisory audit (do not deny — NAT/mobile roaming).
     if (row.issuedIp && row.issuedIp !== ip) {
       await auditSsoReject({
         userId: row.userId, action: 'sso_consume_ip_mismatch_warning',
@@ -555,8 +435,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       });
     }
 
-    // Re-check entitlement at consume-time (fail-closed if access changed
-    // between issuance and use)
+    // Re-check entitlement at consume-time (fail-closed if access changed).
     const access = await hasModuleAccess(row.userId, row.moduleSlug);
     if (!access.hasAccess) {
       await auditSsoReject({
@@ -578,7 +457,6 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       planSlug = plan?.slug ?? null;
     }
 
-    // Success-path audit (spec: parity with reject paths)
     await auditSso({
       userId: row.userId, action: 'sso_consume_success',
       details: {
@@ -601,11 +479,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     };
   });
 
-  // -------------------------------------------------------------------------
-  // Spec-aliased admin surfaces under /v1/modules/admin/* (the canonical
-  // admin endpoints live in /v1/admin/modules — these are URL aliases that
-  // call into the same implementation for spec compliance).
-  // -------------------------------------------------------------------------
+  // Spec-aliased admin surfaces under /v1/modules/admin/*.
   app.get('/v1/modules/admin/all', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
@@ -621,6 +495,60 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       (byModule[m.moduleId] ||= []).push(slug);
     }
     return { modules: rows.map(r => ({ ...r, includedInPlans: byModule[r.id] ?? [] })) };
+  });
+
+  // POST /v1/modules/admin/grant — admin grants a per-user module override.
+  // Body: { user_id, module_slug, reason?, expires_at? }
+  app.post('/v1/modules/admin/grant', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+    if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
+    const { user_id, module_slug, reason, expires_at } = (request.body ?? {}) as {
+      user_id?: string; module_slug?: string; reason?: string; expires_at?: string;
+    };
+    if (!user_id || !module_slug) {
+      return reply.code(400).send({ error: 'user_id and module_slug are required', code: 'BAD_REQUEST' });
+    }
+    const [targetUser] = await db.select().from(users).where(eq(users.id, user_id)).limit(1);
+    if (!targetUser) return reply.code(404).send({ error: 'User not found' });
+    const [mod] = await db.select().from(modules).where(eq(modules.slug, module_slug)).limit(1);
+    if (!mod) return reply.code(404).send({ error: 'Module not found' });
+
+    const { entitlementOverrides } = await import('../schema.js');
+    const expires = expires_at ? new Date(expires_at) : null;
+    if (expires && Number.isNaN(expires.getTime())) {
+      return reply.code(400).send({ error: 'expires_at must be a valid ISO date', code: 'BAD_REQUEST' });
+    }
+    const [row] = await db.insert(entitlementOverrides).values({
+      userId: user_id, moduleId: mod.id, grant: true,
+      reason: reason ?? null, expiresAt: expires, createdByAdminId: user.id,
+    }).returning();
+    await logAudit(user.id, 'module_override_grant', user_id, { moduleSlug: module_slug, reason, expires_at }, request.ip);
+    return { override: row };
+  });
+
+  // POST /v1/modules/admin/revoke — admin revokes a per-user module override.
+  // Body: { user_id, module_slug, reason? }
+  app.post('/v1/modules/admin/revoke', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+    if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
+    const { user_id, module_slug, reason } = (request.body ?? {}) as {
+      user_id?: string; module_slug?: string; reason?: string;
+    };
+    if (!user_id || !module_slug) {
+      return reply.code(400).send({ error: 'user_id and module_slug are required', code: 'BAD_REQUEST' });
+    }
+    const [targetUser] = await db.select().from(users).where(eq(users.id, user_id)).limit(1);
+    if (!targetUser) return reply.code(404).send({ error: 'User not found' });
+    const [mod] = await db.select().from(modules).where(eq(modules.slug, module_slug)).limit(1);
+    if (!mod) return reply.code(404).send({ error: 'Module not found' });
+
+    const { entitlementOverrides } = await import('../schema.js');
+    const [row] = await db.insert(entitlementOverrides).values({
+      userId: user_id, moduleId: mod.id, grant: false,
+      reason: reason ?? null, expiresAt: null, createdByAdminId: user.id,
+    }).returning();
+    await logAudit(user.id, 'module_override_revoke', user_id, { moduleSlug: module_slug, reason }, request.ip);
+    return { override: row };
   });
 
   app.patch('/v1/modules/admin/:slug', { preHandler: [authenticate] }, async (request, reply) => {
