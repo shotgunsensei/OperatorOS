@@ -62,7 +62,7 @@ function priceLabel(cents: number | null): string {
   return dollars % 1 === 0 ? `$${dollars}/mo` : `$${dollars.toFixed(2)}/mo`;
 }
 
-export default function AppsPage() {
+export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) => void } = {}) {
   const [modules, setModules] = useState<ModuleSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [launching, setLaunching] = useState<string | null>(null);
@@ -206,7 +206,7 @@ export default function AppsPage() {
                       fontSize: 13, cursor: launching === m.slug ? 'wait' : 'pointer',
                     }}
                   >
-                    {launching === m.slug ? 'Launching…' : 'Open'}
+                    {launching === m.slug ? 'Launching…' : 'Open App'}
                   </button>
                 )}
                 {cta === 'coming_soon' && (
@@ -235,7 +235,7 @@ export default function AppsPage() {
                 {cta === 'upgrade' && (
                   <button
                     data-testid={`button-upgrade-${m.slug}`}
-                    onClick={() => { window.location.href = '/?tab=billing'; }}
+                    onClick={() => onNavigate ? onNavigate('billing') : (window.location.href = '/')}
                     style={{
                       flex: 1, padding: '8px 14px', borderRadius: 8,
                       border: `1px solid ${colors.accent}`, background: 'transparent',

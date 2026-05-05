@@ -84,7 +84,7 @@ function AppContent() {
       case 'activity': return <ActivityPage />;
       case 'ai-tools': return <AiToolsPage />;
       case 'workspace': return <WorkspacesPage />;
-      case 'apps': return <AppsPage />;
+      case 'apps': return <AppsPage onNavigate={setActivePage} />;
       case 'billing': return <BillingPage />;
       case 'settings': return <SettingsPage />;
       case 'admin':

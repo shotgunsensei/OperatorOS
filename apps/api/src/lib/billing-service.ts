@@ -747,18 +747,18 @@ export async function cancelAddon(userId: string, moduleSlug: string): Promise<{
 
 // Pure addon webhook processor — idempotency is owned by claimStripeEvent
 // at the route layer. This function only performs side effects.
+// Reuses classifyWebhookEvent so processor and route agree on metadata
+// source: object.metadata, subscription_data, subscription_details, and
+// invoice line items are all considered (spec + legacy contracts).
 export async function processAddonWebhookEvent(event: { id: string; type: string; data: { object: any } }): Promise<WebhookProcessResult> {
   const { type, data } = event;
   const obj = data.object;
-  // Accept both metadata contracts: spec ({ type, module_slug, user_id })
-  // and legacy ({ kind, moduleSlug, userId }).
-  const md = obj.metadata ?? {};
-  const userId = md.user_id ?? md.userId;
-  const moduleSlug = md.module_slug ?? md.moduleSlug;
-  const isAddon = md.type === 'addon' || md.kind === 'addon';
-  if (!isAddon || !userId || !moduleSlug) {
+  const cls = classifyWebhookEvent(event);
+  if (!cls.isAddon || !cls.userId || !cls.moduleSlug) {
     return { handled: false, error: 'Not an addon event or missing metadata' };
   }
+  const userId = cls.userId;
+  const moduleSlug = cls.moduleSlug;
 
   const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
   if (!mod) return { handled: false, error: `Module ${moduleSlug} not found` };
