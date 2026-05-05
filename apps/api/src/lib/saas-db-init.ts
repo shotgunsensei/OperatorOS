@@ -258,6 +258,22 @@ export async function ensureSaasTables() {
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS organization_id VARCHAR(36);
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS scope_type TEXT NOT NULL DEFAULT 'user';
 
+    -- Hybrid billing constraint: at most ONE live base subscription per user.
+    -- Migration-safe dedupe: keep the most recently updated active/trialing row,
+    -- demote older duplicates to 'canceled' so the partial unique index can be
+    -- created without errors on existing data.
+    WITH ranked AS (
+      SELECT id,
+             ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY updated_at DESC, created_at DESC) AS rn
+      FROM subscriptions
+      WHERE status IN ('active', 'trialing')
+    )
+    UPDATE subscriptions s SET status = 'canceled', updated_at = NOW()
+      FROM ranked r WHERE s.id = r.id AND r.rn > 1;
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_subscription_active_per_user
+      ON subscriptions(user_id)
+      WHERE status IN ('active', 'trialing');
+
     ALTER TABLE billing_events ADD COLUMN IF NOT EXISTS payload_hash TEXT;
     ALTER TABLE billing_events ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE billing_events ADD COLUMN IF NOT EXISTS processed_at TIMESTAMP;

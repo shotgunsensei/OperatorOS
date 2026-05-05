@@ -60,21 +60,27 @@ function checkRate(map: Map<string, { count: number; resetAt: number }>, key: st
 const checkHandoffRate = (userId: string) => checkRate(handoffRate, userId, HANDOFF_RATE_LIMIT);
 const checkConsumeRate = (ip: string) => checkRate(consumeRate, ip, CONSUME_RATE_LIMIT);
 
-// Resolve the original client IP from x-forwarded-for (first hop) or
-// x-real-ip when present, falling back to request.ip. Used so audit
-// rows reflect the real client even when Fastify trustProxy is off.
+// Resolve the original client IP. Forwarding headers (x-forwarded-for,
+// x-real-ip) are TRUSTED ONLY when TRUST_PROXY=1 (explicit deployment
+// opt-in behind a known reverse proxy). Otherwise we use request.ip,
+// because an unauthenticated endpoint that trusts client-supplied
+// headers lets an attacker bypass per-IP rate limits and audit
+// attribution by spoofing forwarding metadata.
+const TRUST_PROXY = process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true';
 export function getClientIp(request: FastifyRequest): string {
-  const xff = request.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.length > 0) {
-    const first = xff.split(',')[0]?.trim();
-    if (first) return first;
+  if (TRUST_PROXY) {
+    const xff = request.headers['x-forwarded-for'];
+    if (typeof xff === 'string' && xff.length > 0) {
+      const first = xff.split(',')[0]?.trim();
+      if (first) return first;
+    }
+    if (Array.isArray(xff) && xff.length > 0) {
+      const first = String(xff[0]).split(',')[0]?.trim();
+      if (first) return first;
+    }
+    const real = request.headers['x-real-ip'];
+    if (typeof real === 'string' && real.length > 0) return real;
   }
-  if (Array.isArray(xff) && xff.length > 0) {
-    const first = String(xff[0]).split(',')[0]?.trim();
-    if (first) return first;
-  }
-  const real = request.headers['x-real-ip'];
-  if (typeof real === 'string' && real.length > 0) return real;
   return request.ip || '0.0.0.0';
 }
 
