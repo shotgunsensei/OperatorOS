@@ -20,6 +20,7 @@ import WorkspacesPage from '@/components/pages/WorkspacesPage';
 import BillingPage from '@/components/pages/BillingPage';
 import SettingsPage from '@/components/pages/SettingsPage';
 import AdminPage from '@/components/pages/AdminPage';
+import AppsPage from '@/components/pages/AppsPage';
 
 function AppContent() {
   const { user, loading, authError, logout, clearAuthError } = useAuth();
@@ -83,6 +84,7 @@ function AppContent() {
       case 'activity': return <ActivityPage />;
       case 'ai-tools': return <AiToolsPage />;
       case 'workspace': return <WorkspacesPage />;
+      case 'apps': return <AppsPage />;
       case 'billing': return <BillingPage />;
       case 'settings': return <SettingsPage />;
       case 'admin':

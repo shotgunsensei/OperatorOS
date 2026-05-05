@@ -171,4 +171,35 @@ export const adminApi = {
     if (params?.eventType) qs.set('eventType', params.eventType);
     return apiFetch(`/admin/billing-events?${qs.toString()}`);
   },
+  retryBillingEvent: (id: string) =>
+    apiFetch(`/admin/billing-events/${id}/retry`, { method: 'POST' }),
+
+  getModules: () => apiFetch('/admin/modules'),
+  upsertModule: (data: {
+    slug: string; name: string; description?: string; iconUrl?: string;
+    category?: string; baseUrl?: string; status?: string; planMin?: string;
+    requiresOrg?: boolean; ord?: number;
+  }) => apiFetch('/admin/modules', { method: 'POST', body: JSON.stringify(data) }),
+  setModulePlanMapping: (slug: string, planSlugs: string[]) =>
+    apiFetch(`/admin/modules/${slug}/plan-mapping`, { method: 'POST', body: JSON.stringify({ planSlugs }) }),
+
+  getUserModuleOverrides: (userId: string) =>
+    apiFetch(`/admin/users/${userId}/module-overrides`),
+  setUserModuleOverride: (userId: string, data: { moduleSlug: string; grant: boolean; reason?: string; expiresAt?: string }) =>
+    apiFetch(`/admin/users/${userId}/module-overrides`, { method: 'POST', body: JSON.stringify(data) }),
+  removeUserModuleOverride: (userId: string, overrideId: string) =>
+    apiFetch(`/admin/users/${userId}/module-overrides/${overrideId}`, { method: 'DELETE' }),
+};
+
+export const modulesApi = {
+  list: () => apiFetch('/modules'),
+  get: (slug: string) => apiFetch(`/modules/${slug}`),
+  debug: (slug: string, userId?: string) =>
+    apiFetch(`/modules/debug/${slug}${userId ? `?userId=${userId}` : ''}`),
+  handoff: (slug: string) =>
+    apiFetch(`/modules/${slug}/handoff`, { method: 'POST' }),
+  subscribeAddon: (moduleSlug: string) =>
+    apiFetch('/billing/addons/subscribe', { method: 'POST', body: JSON.stringify({ moduleSlug }) }),
+  cancelAddon: (moduleSlug: string) =>
+    apiFetch('/billing/addons/cancel', { method: 'POST', body: JSON.stringify({ moduleSlug }) }),
 };

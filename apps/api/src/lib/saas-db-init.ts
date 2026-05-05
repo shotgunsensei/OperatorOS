@@ -1,7 +1,7 @@
 import { db } from '../db.js';
 import { hashPassword } from './auth.js';
-import { users, subscriptionPlans, subscriptions, saasWorkspaces, saasProjects, saasTasks, notes, activityFeed, workspaceMemberships } from '../schema.js';
-import { eq } from 'drizzle-orm';
+import { users, subscriptionPlans, subscriptions, saasWorkspaces, saasProjects, saasTasks, notes, activityFeed, workspaceMemberships, modules, planModules } from '../schema.js';
+import { eq, and } from 'drizzle-orm';
 import { PLAN_CONFIGS } from './plans.js';
 
 export async function ensureSaasTables() {
@@ -232,7 +232,175 @@ export async function ensureSaasTables() {
     CREATE INDEX IF NOT EXISTS idx_ai_actions_user ON ai_actions_log(user_id);
     CREATE INDEX IF NOT EXISTS idx_ai_actions_created ON ai_actions_log(created_at);
     CREATE INDEX IF NOT EXISTS idx_ai_actions_tool ON ai_actions_log(tool_type);
+
+    -- Shotgun OS Hub: modules, entitlements & SSO -------------------------------
+
+    ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS organization_id VARCHAR(36);
+    ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS scope_type TEXT NOT NULL DEFAULT 'user';
+
+    ALTER TABLE billing_events ADD COLUMN IF NOT EXISTS payload_hash TEXT;
+    ALTER TABLE billing_events ADD COLUMN IF NOT EXISTS retry_count INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE billing_events ADD COLUMN IF NOT EXISTS processed_at TIMESTAMP;
+    ALTER TABLE billing_events ADD COLUMN IF NOT EXISTS error_message TEXT;
+    CREATE INDEX IF NOT EXISTS idx_billing_events_processed ON billing_events(processed_at);
+
+    CREATE TABLE IF NOT EXISTS modules (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      icon_url TEXT,
+      category TEXT DEFAULT 'app',
+      base_url TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'coming_soon',
+      plan_min TEXT NOT NULL DEFAULT 'elite',
+      requires_org BOOLEAN NOT NULL DEFAULT false,
+      ord INTEGER NOT NULL DEFAULT 0,
+      metadata JSONB,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_modules_slug ON modules(slug);
+    CREATE INDEX IF NOT EXISTS idx_modules_status ON modules(status);
+    DO $$ BEGIN
+      ALTER TABLE modules ADD CONSTRAINT modules_status_check
+        CHECK (status IN ('live', 'beta', 'coming_soon', 'disabled'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    CREATE TABLE IF NOT EXISTS plan_modules (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      plan_id VARCHAR(36) NOT NULL REFERENCES subscription_plans(id),
+      module_id VARCHAR(36) NOT NULL REFERENCES modules(id),
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      UNIQUE(plan_id, module_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_plan_modules_plan ON plan_modules(plan_id);
+    CREATE INDEX IF NOT EXISTS idx_plan_modules_module ON plan_modules(module_id);
+
+    CREATE TABLE IF NOT EXISTS addon_subscriptions (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      organization_id VARCHAR(36),
+      scope_type TEXT NOT NULL DEFAULT 'user',
+      module_id VARCHAR(36) NOT NULL REFERENCES modules(id),
+      status TEXT NOT NULL DEFAULT 'active',
+      stripe_subscription_id TEXT,
+      stripe_customer_id TEXT,
+      stripe_price_id TEXT,
+      amount INTEGER NOT NULL DEFAULT 0,
+      current_period_start TIMESTAMP DEFAULT NOW() NOT NULL,
+      current_period_end TIMESTAMP,
+      cancel_at_period_end BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_addon_subs_user ON addon_subscriptions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_addon_subs_module ON addon_subscriptions(module_id);
+    CREATE INDEX IF NOT EXISTS idx_addon_subs_status ON addon_subscriptions(status);
+
+    CREATE TABLE IF NOT EXISTS entitlement_overrides (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      organization_id VARCHAR(36),
+      module_id VARCHAR(36) NOT NULL REFERENCES modules(id),
+      "grant" BOOLEAN NOT NULL DEFAULT true,
+      reason TEXT,
+      created_by_admin_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      expires_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_overrides_user ON entitlement_overrides(user_id);
+    CREATE INDEX IF NOT EXISTS idx_overrides_module ON entitlement_overrides(module_id);
+
+    CREATE TABLE IF NOT EXISTS sso_handoff_tokens (
+      jti VARCHAR(64) PRIMARY KEY,
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      module_slug TEXT NOT NULL,
+      audience TEXT NOT NULL,
+      env TEXT NOT NULL,
+      issued_ip TEXT,
+      consumed_ip TEXT,
+      expires_at TIMESTAMP NOT NULL,
+      consumed_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_sso_tokens_expires ON sso_handoff_tokens(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_sso_tokens_user ON sso_handoff_tokens(user_id);
   `);
+}
+
+// ---------------------------------------------------------------------------
+// Module catalog seeding
+// ---------------------------------------------------------------------------
+
+interface ModuleSeed {
+  slug: string;
+  name: string;
+  description: string;
+  category: string;
+  status: 'live' | 'beta' | 'coming_soon' | 'disabled';
+  baseUrl: string;
+  planMin: 'starter' | 'pro' | 'elite';
+  ord: number;
+}
+
+export const MODULE_SEEDS: ModuleSeed[] = [
+  { slug: 'tradeflowkit', name: 'TradeFlowKit', description: 'Job tracker for trade & service businesses', category: 'ops', status: 'live', baseUrl: process.env.TRADEFLOWKIT_URL || 'https://tradeflowkit.com', planMin: 'starter', ord: 1 },
+  { slug: 'torqueshed', name: 'TorqueShed', description: 'Mechanic shop dashboard & invoicing', category: 'ops', status: 'live', baseUrl: process.env.TORQUESHED_URL || 'https://torqueshed.pro', planMin: 'starter', ord: 2 },
+  { slug: 'techdeck', name: 'TechDeck', description: 'Onsite tech command center', category: 'ops', status: 'live', baseUrl: process.env.TECHDECK_URL || 'https://techdeck.app', planMin: 'starter', ord: 3 },
+  { slug: 'pulsedesk', name: 'PulseDesk', description: 'Lightweight ticketing for small teams', category: 'support', status: 'live', baseUrl: process.env.PULSEDESK_URL || 'https://pulsedesk.support', planMin: 'pro', ord: 4 },
+  { slug: 'faultlinelab', name: 'FaultlineLab', description: 'Diagnostic + RCA workflow', category: 'support', status: 'live', baseUrl: process.env.FAULTLINELAB_URL || 'https://faultlinelab.com', planMin: 'pro', ord: 5 },
+  { slug: 'bf-os', name: 'BF-OS', description: 'Body shop / collision OS', category: 'ops', status: 'live', baseUrl: process.env.BF_OS_URL || 'https://bf-os.com', planMin: 'pro', ord: 6 },
+  { slug: 'snapproofos', name: 'SnapProofOS', description: 'Photo-based proof of work', category: 'ops', status: 'live', baseUrl: process.env.SNAPPROOFOS_URL || 'https://snapproofos.com', planMin: 'elite', ord: 7 },
+  { slug: 'studyforge-ai', name: 'StudyForge AI', description: 'AI study & training partner', category: 'ai', status: 'coming_soon', baseUrl: process.env.STUDYFORGE_URL || '', planMin: 'elite', ord: 8 },
+  { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Build & ship internal tools fast', category: 'ai', status: 'coming_soon', baseUrl: process.env.NINJA_LAUNCH_KIT_URL || '', planMin: 'elite', ord: 9 },
+];
+
+export async function seedModules() {
+  for (const m of MODULE_SEEDS) {
+    const existing = await db.select().from(modules).where(eq(modules.slug, m.slug)).limit(1);
+    if (existing.length === 0) {
+      await db.insert(modules).values({
+        slug: m.slug, name: m.name, description: m.description,
+        category: m.category, status: m.status, baseUrl: m.baseUrl,
+        planMin: m.planMin, ord: m.ord,
+      });
+    } else {
+      // Refresh baseUrl/status/planMin in case env vars changed (but don't overwrite admin-edited fields)
+      await db.update(modules).set({
+        baseUrl: m.baseUrl || existing[0].baseUrl,
+        updatedAt: new Date(),
+      }).where(eq(modules.slug, m.slug));
+    }
+  }
+  console.log(`[seed] Modules: ${MODULE_SEEDS.length} seeded/updated`);
+
+  // Plan -> module mapping (idempotent)
+  const allPlans = await db.select().from(subscriptionPlans);
+  const planBySlug = Object.fromEntries(allPlans.map(p => [p.slug, p]));
+  const allModules = await db.select().from(modules);
+  const modBySlug = Object.fromEntries(allModules.map(m => [m.slug, m]));
+
+  // tier hierarchy: starter < pro < elite. A plan grants every module whose plan_min <= plan tier.
+  const tierRank: Record<string, number> = { starter: 1, pro: 2, elite: 3 };
+
+  for (const plan of allPlans) {
+    const planRank = tierRank[plan.slug] ?? 0;
+    if (planRank === 0) continue;
+    for (const m of allModules) {
+      const modRank = tierRank[m.planMin] ?? 99;
+      if (planRank >= modRank) {
+        const exists = await db.select().from(planModules)
+          .where(and(eq(planModules.planId, plan.id), eq(planModules.moduleId, m.id)))
+          .limit(1);
+        if (exists.length === 0) {
+          await db.insert(planModules).values({ planId: plan.id, moduleId: m.id });
+        }
+      }
+    }
+  }
+  console.log('[seed] plan_modules mapping refreshed (starter=3, pro=6, elite=9)');
 }
 
 export async function seedPlansAndAdmin() {

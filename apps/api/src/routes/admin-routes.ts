@@ -4,9 +4,12 @@ import {
   users, subscriptions, subscriptionPlans, saasWorkspaces, saasProjects,
   saasTasks, notes, adminAuditLogs, billingEvents, activityFeed, adminNotes,
   workspaceMemberships,
+  modules, planModules, addonSubscriptions, entitlementOverrides,
 } from '../schema.js';
 import { eq, desc, count, gte, and, or, ilike } from 'drizzle-orm';
 import { requireAdmin, sanitizeUser, logAudit } from '../lib/auth.js';
+import { retryBillingEvent } from '../lib/billing-service.js';
+import { getAccessBreakdown } from '../lib/entitlement-service.js';
 
 export async function registerAdminRoutes(app: FastifyInstance) {
   app.get('/v1/admin/users', { preHandler: [requireAdmin] }, async (request) => {
@@ -466,5 +469,200 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     const paginated = enriched.slice(offset, offset + limit);
 
     return { events: paginated, total, page: parseInt(pg) || 1 };
+  });
+
+  // -------------------------------------------------------------------------
+  // Billing-event DLQ retry
+  // -------------------------------------------------------------------------
+  app.post('/v1/admin/billing-events/:id/retry', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const admin = (request as any).user;
+    const { id } = request.params as any;
+    const result = await retryBillingEvent(id);
+    if (!result.ok) return reply.code(400).send(result);
+    await logAudit(admin.id, 'billing_event_retried', null as any, { eventId: id }, request.ip);
+    return result;
+  });
+
+  // -------------------------------------------------------------------------
+  // Module catalog admin
+  // -------------------------------------------------------------------------
+  app.get('/v1/admin/modules', { preHandler: [requireAdmin] }, async () => {
+    const rows = await db.select().from(modules).orderBy(modules.ord);
+    const allPlans = await db.select().from(subscriptionPlans);
+    const planMap = Object.fromEntries(allPlans.map(p => [p.id, p.slug]));
+    const mappings = await db.select().from(planModules);
+    const byModule: Record<string, string[]> = {};
+    for (const m of mappings) {
+      const slug = planMap[m.planId];
+      if (!slug) continue;
+      if (!byModule[m.moduleId]) byModule[m.moduleId] = [];
+      byModule[m.moduleId].push(slug);
+    }
+    const enriched = rows.map(r => ({ ...r, includedInPlans: byModule[r.id] ?? [] }));
+    return { modules: enriched };
+  });
+
+  app.post('/v1/admin/modules', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const admin = (request as any).user;
+    const body = request.body as any;
+    const { slug, name } = body;
+    if (!slug || !name) return reply.code(400).send({ error: 'slug and name are required' });
+
+    const validStatuses = ['live', 'beta', 'coming_soon', 'disabled'];
+    if (body.status && !validStatuses.includes(body.status)) {
+      return reply.code(400).send({ error: `status must be one of ${validStatuses.join(', ')}` });
+    }
+    const validPlans = ['starter', 'pro', 'elite'];
+    if (body.planMin && !validPlans.includes(body.planMin)) {
+      return reply.code(400).send({ error: `planMin must be one of ${validPlans.join(', ')}` });
+    }
+
+    // Reject non-http(s) URLs to prevent javascript: / data: smuggling into
+    // the launch button on the Apps page.
+    for (const k of ['baseUrl', 'iconUrl'] as const) {
+      const v = body[k];
+      if (v && typeof v === 'string' && v.length > 0) {
+        try {
+          const u = new URL(v);
+          if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+            return reply.code(400).send({ error: `${k} must be an http(s) URL` });
+          }
+        } catch {
+          return reply.code(400).send({ error: `${k} must be a valid URL` });
+        }
+      }
+    }
+
+    const existing = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+    if (existing.length > 0) {
+      const updates: any = { updatedAt: new Date() };
+      ['name', 'description', 'iconUrl', 'category', 'baseUrl', 'status', 'planMin', 'requiresOrg', 'ord']
+        .forEach(k => { if (body[k] !== undefined) updates[k] = body[k]; });
+      const [updated] = await db.update(modules).set(updates).where(eq(modules.slug, slug)).returning();
+      await logAudit(admin.id, 'module_updated', null as any, { slug, updates }, request.ip);
+      return { module: updated, action: 'updated' };
+    }
+
+    const [created] = await db.insert(modules).values({
+      slug, name,
+      description: body.description ?? '',
+      iconUrl: body.iconUrl ?? null,
+      category: body.category ?? 'app',
+      baseUrl: body.baseUrl ?? '',
+      status: body.status ?? 'coming_soon',
+      planMin: body.planMin ?? 'elite',
+      requiresOrg: body.requiresOrg ?? false,
+      ord: body.ord ?? 99,
+    }).returning();
+    await logAudit(admin.id, 'module_created', null as any, { slug }, request.ip);
+    return { module: created, action: 'created' };
+  });
+
+  app.post('/v1/admin/modules/:slug/plan-mapping', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const admin = (request as any).user;
+    const { slug } = request.params as any;
+    const { planSlugs } = request.body as { planSlugs: string[] };
+    if (!Array.isArray(planSlugs)) return reply.code(400).send({ error: 'planSlugs must be an array' });
+
+    const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+    if (!mod) return reply.code(404).send({ error: 'Module not found' });
+
+    const allPlans = await db.select().from(subscriptionPlans);
+    const planBySlug = Object.fromEntries(allPlans.map(p => [p.slug, p]));
+
+    // Replace mappings: delete then insert
+    await db.delete(planModules).where(eq(planModules.moduleId, mod.id));
+    for (const ps of planSlugs) {
+      const plan = planBySlug[ps];
+      if (!plan) continue;
+      await db.insert(planModules).values({ planId: plan.id, moduleId: mod.id });
+    }
+
+    await logAudit(admin.id, 'module_plan_mapping_changed', null as any, { slug, planSlugs }, request.ip);
+    return { ok: true, slug, planSlugs };
+  });
+
+  // -------------------------------------------------------------------------
+  // Per-user module entitlement overrides
+  // -------------------------------------------------------------------------
+  app.get('/v1/admin/users/:id/module-overrides', { preHandler: [requireAdmin] }, async (request) => {
+    const { id } = request.params as any;
+    const overrides = await db.select().from(entitlementOverrides).where(eq(entitlementOverrides.userId, id));
+    const allModules = await db.select().from(modules);
+    const modById = Object.fromEntries(allModules.map(m => [m.id, m]));
+    const enriched = overrides.map(o => ({
+      ...o,
+      moduleSlug: modById[o.moduleId]?.slug,
+      moduleName: modById[o.moduleId]?.name,
+    }));
+
+    // Also return the user's add-ons for the admin UI
+    const addons = await db.select().from(addonSubscriptions).where(eq(addonSubscriptions.userId, id));
+    const enrichedAddons = addons.map(a => ({
+      ...a,
+      moduleSlug: modById[a.moduleId]?.slug,
+      moduleName: modById[a.moduleId]?.name,
+    }));
+
+    // And the per-module access breakdown for every module
+    const breakdowns = [];
+    for (const m of allModules) {
+      const b = await getAccessBreakdown(id, m.slug);
+      if (b) breakdowns.push(b);
+    }
+
+    return { overrides: enriched, addons: enrichedAddons, breakdowns };
+  });
+
+  app.post('/v1/admin/users/:id/module-overrides', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const admin = (request as any).user;
+    const { id } = request.params as any;
+    const { moduleSlug, grant, reason, expiresAt } = request.body as any;
+
+    if (!moduleSlug) return reply.code(400).send({ error: 'moduleSlug is required' });
+    if (typeof grant !== 'boolean') return reply.code(400).send({ error: 'grant must be a boolean' });
+
+    const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
+    if (!mod) return reply.code(404).send({ error: 'Module not found' });
+
+    const [targetUser] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    if (!targetUser) return reply.code(404).send({ error: 'User not found' });
+
+    // Replace any existing override for this user/module pair
+    await db.delete(entitlementOverrides)
+      .where(and(eq(entitlementOverrides.userId, id), eq(entitlementOverrides.moduleId, mod.id)));
+
+    const [created] = await db.insert(entitlementOverrides).values({
+      userId: id,
+      moduleId: mod.id,
+      grant,
+      reason: reason ?? null,
+      createdByAdminId: admin.id,
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+    }).returning();
+
+    await logAudit(admin.id, grant ? 'module_override_granted' : 'module_override_revoked', id, {
+      moduleSlug, reason, expiresAt: expiresAt ?? null,
+    }, request.ip);
+
+    await db.insert(activityFeed).values({
+      userId: id, action: grant ? 'module_granted' : 'module_revoked',
+      entityType: 'module', entityId: mod.id,
+      metadata: { moduleSlug, by: admin.email, reason },
+    });
+
+    return { override: created };
+  });
+
+  app.delete('/v1/admin/users/:id/module-overrides/:overrideId', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const admin = (request as any).user;
+    const { id, overrideId } = request.params as any;
+
+    const [ov] = await db.select().from(entitlementOverrides).where(eq(entitlementOverrides.id, overrideId)).limit(1);
+    if (!ov || ov.userId !== id) return reply.code(404).send({ error: 'Override not found' });
+
+    await db.delete(entitlementOverrides).where(eq(entitlementOverrides.id, overrideId));
+    await logAudit(admin.id, 'module_override_removed', id, { overrideId, moduleId: ov.moduleId }, request.ip);
+    return { ok: true };
   });
 }

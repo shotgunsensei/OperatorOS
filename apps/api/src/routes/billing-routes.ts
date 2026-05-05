@@ -11,7 +11,9 @@ import {
   subscribeToPlan, cancelSubscription, reactivateSubscription,
   createCheckoutSession, createPortalSession, processWebhookEvent,
   verifyWebhookSignature, isStripeEnabled, getBillingMode,
+  subscribeToAddon, cancelAddon,
 } from '../lib/billing-service.js';
+import { authenticate as authenticateImport } from '../lib/auth.js';
 
 export async function registerBillingRoutes(app: FastifyInstance) {
   app.get('/v1/billing/subscription', { preHandler: [authenticate] }, async (request) => {
@@ -144,6 +146,34 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       .orderBy(desc(billingEvents.createdAt))
       .limit(50);
     return { events };
+  });
+
+  // -------------------------------------------------------------------------
+  // Add-on subscriptions (per-module)
+  // -------------------------------------------------------------------------
+  app.post('/v1/billing/addons/subscribe', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+    const { moduleSlug } = request.body as any;
+    if (!moduleSlug) return reply.code(400).send({ error: 'moduleSlug is required' });
+    try {
+      const result = await subscribeToAddon(user.id, moduleSlug);
+      return result;
+    } catch (err: any) {
+      return reply.code(400).send({ error: err.message });
+    }
+  });
+
+  app.post('/v1/billing/addons/cancel', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+    const { moduleSlug } = request.body as any;
+    if (!moduleSlug) return reply.code(400).send({ error: 'moduleSlug is required' });
+    try {
+      const result = await cancelAddon(user.id, moduleSlug);
+      if (!result.ok) return reply.code(400).send(result);
+      return result;
+    } catch (err: any) {
+      return reply.code(400).send({ error: err.message });
+    }
   });
 
   app.post('/v1/billing/webhook', async (request, reply) => {

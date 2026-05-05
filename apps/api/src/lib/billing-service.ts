@@ -1,6 +1,8 @@
 import { db } from '../db.js';
+import crypto from 'node:crypto';
 import {
   users, subscriptions, subscriptionPlans, billingEvents, activityFeed,
+  modules, addonSubscriptions,
 } from '../schema.js';
 import { eq, and } from 'drizzle-orm';
 import {
@@ -530,6 +532,238 @@ function mapStripeStatus(stripeStatus: string): string {
 // ---------------------------------------------------------------------------
 // Billing mode info for frontend
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Add-on Subscriptions (per-module purchase on top of the base plan)
+// ---------------------------------------------------------------------------
+
+function getAddonStripePriceId(moduleSlug: string): string {
+  const key = `STRIPE_PRICE_ADDON_${moduleSlug.toUpperCase().replace(/-/g, '_')}`;
+  return process.env[key] || '';
+}
+
+export interface AddonSubscribeResult {
+  ok: boolean;
+  moduleSlug: string;
+  action: 'subscribed' | 'already_active';
+  checkoutUrl?: string;
+}
+
+export async function subscribeToAddon(userId: string, moduleSlug: string): Promise<AddonSubscribeResult> {
+  const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
+  if (!mod) throw new Error(`Module not found: ${moduleSlug}`);
+  if (mod.status === 'disabled') throw new Error(`Module is disabled: ${moduleSlug}`);
+  if (mod.status === 'coming_soon') throw new Error(`Module is not yet available: ${moduleSlug}`);
+
+  const existing = await db.select().from(addonSubscriptions)
+    .where(and(eq(addonSubscriptions.userId, userId), eq(addonSubscriptions.moduleId, mod.id)));
+  const active = existing.find(a => ['active', 'trialing'].includes(a.status));
+  if (active) return { ok: true, moduleSlug, action: 'already_active' };
+
+  const priceId = getAddonStripePriceId(moduleSlug);
+  if (isStripeEnabled() && priceId) {
+    const stripe = getStripe();
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!user) throw new Error('User not found');
+
+    // Reuse existing customer if there is a base subscription
+    const [baseSub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
+    let customerId = baseSub?.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email, name: user.name, metadata: { userId },
+      });
+      customerId = customer.id;
+    }
+    const appUrl = process.env.APP_URL || 'http://localhost:5000';
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${appUrl}?addon=success&module=${moduleSlug}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}?addon=canceled&module=${moduleSlug}`,
+      metadata: { userId, moduleSlug, kind: 'addon' },
+      subscription_data: { metadata: { userId, moduleSlug, kind: 'addon' } },
+    });
+    return { ok: true, moduleSlug, action: 'subscribed', checkoutUrl: session.url! };
+  }
+
+  // Local mode: create active addon row immediately
+  await db.insert(addonSubscriptions).values({
+    userId, moduleId: mod.id, status: 'active', amount: 0,
+    currentPeriodStart: new Date(),
+    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  });
+  await db.insert(billingEvents).values({
+    userId, eventType: 'addon_subscribed',
+    metadata: { moduleSlug, mode: 'local' },
+    processedAt: new Date(),
+  });
+  await db.insert(activityFeed).values({
+    userId, action: 'addon_subscribed', entityType: 'module',
+    entityId: mod.id, metadata: { moduleSlug, mode: 'local' },
+  });
+  return { ok: true, moduleSlug, action: 'subscribed' };
+}
+
+export async function cancelAddon(userId: string, moduleSlug: string): Promise<{ ok: boolean; message: string }> {
+  const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
+  if (!mod) throw new Error(`Module not found: ${moduleSlug}`);
+
+  const rows = await db.select().from(addonSubscriptions)
+    .where(and(eq(addonSubscriptions.userId, userId), eq(addonSubscriptions.moduleId, mod.id)));
+  const active = rows.find(a => ['active', 'trialing'].includes(a.status));
+  if (!active) return { ok: false, message: 'No active add-on for this module' };
+
+  if (isStripeEnabled() && active.stripeSubscriptionId) {
+    const stripe = getStripe();
+    await stripe.subscriptions.update(active.stripeSubscriptionId, { cancel_at_period_end: true });
+    await db.update(addonSubscriptions).set({
+      cancelAtPeriodEnd: true, updatedAt: new Date(),
+    }).where(eq(addonSubscriptions.id, active.id));
+  } else {
+    await db.update(addonSubscriptions).set({
+      status: 'canceled', cancelAtPeriodEnd: false, updatedAt: new Date(),
+    }).where(eq(addonSubscriptions.id, active.id));
+  }
+
+  await db.insert(billingEvents).values({
+    userId, eventType: 'addon_cancel_scheduled',
+    metadata: { moduleSlug, mode: isStripeEnabled() ? 'stripe' : 'local' },
+    processedAt: new Date(),
+  });
+
+  return { ok: true, message: 'Add-on cancellation scheduled' };
+}
+
+/**
+ * Process an addon-related Stripe webhook event with idempotency + retry/DLQ
+ * tracking on billing_events.
+ */
+export async function processAddonWebhookEvent(event: { id: string; type: string; data: { object: any } }): Promise<WebhookProcessResult> {
+  const { type, data, id: stripeEventId } = event;
+  const obj = data.object;
+  const userId = obj.metadata?.userId;
+  const moduleSlug = obj.metadata?.moduleSlug;
+  const kind = obj.metadata?.kind;
+  if (kind !== 'addon' || !userId || !moduleSlug) {
+    return { handled: false, error: 'Not an addon event or missing metadata' };
+  }
+
+  // Idempotency: if we've already processed this stripe event id, no-op.
+  const existing = await db.select().from(billingEvents).where(eq(billingEvents.stripeEventId, stripeEventId)).limit(1);
+  if (existing.length > 0 && existing[0].processedAt) {
+    return { handled: true, action: 'duplicate_ignored' };
+  }
+
+  const payloadHash = crypto.createHash('sha256').update(JSON.stringify(obj)).digest('hex');
+  const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
+  if (!mod) {
+    await recordBillingFailure(userId, type, stripeEventId, payloadHash, `Module ${moduleSlug} not found`);
+    return { handled: false, error: 'Module not found' };
+  }
+
+  try {
+    switch (type) {
+      case 'checkout.session.completed':
+      case 'customer.subscription.created': {
+        const stripeSubId = obj.subscription || obj.id;
+        const customerId = obj.customer;
+        const periodStart = obj.current_period_start ? new Date(obj.current_period_start * 1000) : new Date();
+        const periodEnd = obj.current_period_end
+          ? new Date(obj.current_period_end * 1000)
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+        const existingAddon = await db.select().from(addonSubscriptions)
+          .where(and(eq(addonSubscriptions.userId, userId), eq(addonSubscriptions.moduleId, mod.id)));
+        const active = existingAddon.find(a => ['active', 'trialing'].includes(a.status));
+        if (active) {
+          await db.update(addonSubscriptions).set({
+            stripeSubscriptionId: stripeSubId, stripeCustomerId: customerId,
+            status: 'active', updatedAt: new Date(),
+            currentPeriodStart: periodStart, currentPeriodEnd: periodEnd,
+          }).where(eq(addonSubscriptions.id, active.id));
+        } else {
+          await db.insert(addonSubscriptions).values({
+            userId, moduleId: mod.id, status: 'active',
+            stripeSubscriptionId: stripeSubId, stripeCustomerId: customerId,
+            amount: obj.amount_total ?? 0,
+            currentPeriodStart: periodStart, currentPeriodEnd: periodEnd,
+          });
+        }
+        break;
+      }
+      case 'customer.subscription.updated': {
+        const stripeSubId = obj.id;
+        const status = mapStripeStatus(obj.status);
+        await db.update(addonSubscriptions).set({
+          status, cancelAtPeriodEnd: obj.cancel_at_period_end,
+          currentPeriodStart: new Date(obj.current_period_start * 1000),
+          currentPeriodEnd: new Date(obj.current_period_end * 1000),
+          updatedAt: new Date(),
+        }).where(eq(addonSubscriptions.stripeSubscriptionId, stripeSubId));
+        break;
+      }
+      case 'customer.subscription.deleted': {
+        const stripeSubId = obj.id;
+        await db.update(addonSubscriptions).set({
+          status: 'canceled', updatedAt: new Date(),
+        }).where(eq(addonSubscriptions.stripeSubscriptionId, stripeSubId));
+        break;
+      }
+      default:
+        return { handled: false };
+    }
+
+    await db.insert(billingEvents).values({
+      userId, eventType: `addon_${type.replace(/\./g, '_')}`,
+      stripeEventId, payloadHash, processedAt: new Date(),
+      metadata: { moduleSlug, mode: 'stripe' },
+    });
+    return { handled: true, action: type };
+  } catch (err: any) {
+    await recordBillingFailure(userId, type, stripeEventId, payloadHash, err.message);
+    return { handled: false, error: err.message };
+  }
+}
+
+async function recordBillingFailure(userId: string, eventType: string, stripeEventId: string, payloadHash: string, errorMessage: string) {
+  await db.insert(billingEvents).values({
+    userId, eventType: `addon_${eventType.replace(/\./g, '_')}_failed`,
+    stripeEventId, payloadHash, errorMessage,
+    metadata: { mode: 'stripe', failed: true },
+  });
+}
+
+/**
+ * Admin DLQ "mark resolved": acknowledges a failed billing event so it stops
+ * showing in the unprocessed queue, increments retry_count for forensics,
+ * and clears the error message.
+ *
+ * NOTE: This does NOT re-run the original Stripe webhook handler — we don't
+ * persist the raw payload, so true replay is impossible. To actually re-run
+ * the event, replay it from the Stripe Dashboard which will hit /v1/billing/webhook
+ * with full payload + signature. This endpoint is for clearing the DLQ once
+ * the underlying issue has been manually resolved (e.g. fixed customer state
+ * in Stripe directly).
+ */
+export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean; message: string }> {
+  const [evt] = await db.select().from(billingEvents).where(eq(billingEvents.id, eventId)).limit(1);
+  if (!evt) return { ok: false, message: 'Event not found' };
+  if (evt.processedAt) return { ok: false, message: 'Event already processed' };
+
+  const next = (evt.retryCount ?? 0) + 1;
+  await db.update(billingEvents).set({
+    retryCount: next,
+    processedAt: new Date(),
+    errorMessage: null,
+  }).where(eq(billingEvents.id, eventId));
+
+  return {
+    ok: true,
+    message: `Event marked resolved (attempts=${next}). To actually replay the webhook, re-send it from Stripe.`,
+  };
+}
 
 export function getBillingMode() {
   return {

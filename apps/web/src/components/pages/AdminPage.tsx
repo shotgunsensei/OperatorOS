@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { adminApi } from '@/lib/auth';
+import { useToast } from '../Toast';
 import { colors } from '../SaasLayout';
 
-type Tab = 'overview' | 'users' | 'audit' | 'billing';
+type Tab = 'overview' | 'users' | 'audit' | 'billing' | 'modules';
 
 const adminColors = {
   cardBg: 'rgba(30,33,40,0.95)',
@@ -891,6 +892,8 @@ function BillingTab() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [eventTypeFilter, setEventTypeFilter] = useState('');
+  const [retrying, setRetrying] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const loadEvents = useCallback(async () => {
     setLoading(true);
@@ -904,9 +907,23 @@ function BillingTab() {
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
 
+  const retry = async (id: string) => {
+    setRetrying(id);
+    try {
+      await adminApi.retryBillingEvent(id);
+      toast('Event retried', 'success');
+      await loadEvents();
+    } catch (err: any) {
+      toast(`Retry failed: ${err.error || err.message}`, 'error');
+    } finally {
+      setRetrying(null);
+    }
+  };
+
   const eventTypes = [
     'plan_changed_by_admin', 'subscription_status_override', 'trial_set_by_admin',
     'plan_upgraded', 'plan_downgraded', 'subscription_created', 'subscription_canceled',
+    'addon_subscribed', 'addon_cancel_scheduled',
   ];
 
   return (
@@ -921,7 +938,7 @@ function BillingTab() {
 
       <div style={{ background: adminColors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: 'hidden' }}>
         <div style={{
-          display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr',
+          display: 'grid', gridTemplateColumns: '2fr 1.4fr 0.9fr 0.9fr 0.8fr',
           padding: '10px 16px', background: adminColors.headerBg,
           borderBottom: `1px solid ${colors.border}`, fontSize: 11, color: colors.textDim,
           fontWeight: 600, textTransform: 'uppercase',
@@ -929,7 +946,8 @@ function BillingTab() {
           <div>Event</div>
           <div>User</div>
           <div>Amount</div>
-          <div>Date</div>
+          <div>Date / status</div>
+          <div></div>
         </div>
 
         {loading ? (
@@ -937,26 +955,58 @@ function BillingTab() {
         ) : events.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: colors.textMuted }}>No billing events</div>
         ) : (
-          events.map(e => (
-            <div key={e.id} style={{
-              display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr 1fr',
-              padding: '12px 16px', borderBottom: `1px solid ${colors.border}`, alignItems: 'center',
-            }}>
-              <div>
-                <Badge label={e.eventType.replace(/_/g, ' ')} color={colors.accent} bg={adminColors.badgeBlue} />
-                {e.metadata && (
-                  <div style={{ fontSize: 10, color: colors.textDim, marginTop: 4, fontFamily: 'monospace' }}>
-                    {Object.entries(e.metadata).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(', ')}
+          events.map(e => {
+            const isFailed = !!e.errorMessage || (e.eventType || '').endsWith('_failed');
+            const unprocessed = !e.processedAt;
+            return (
+              <div key={e.id} data-testid={`billing-event-${e.id}`} style={{
+                display: 'grid', gridTemplateColumns: '2fr 1.4fr 0.9fr 0.9fr 0.8fr',
+                padding: '12px 16px', borderBottom: `1px solid ${colors.border}`, alignItems: 'center', gap: 8,
+              }}>
+                <div>
+                  <Badge
+                    label={e.eventType.replace(/_/g, ' ')}
+                    color={isFailed ? colors.accentRed : colors.accent}
+                    bg={isFailed ? adminColors.badgeRed : adminColors.badgeBlue}
+                  />
+                  {e.errorMessage && (
+                    <div data-testid={`billing-error-${e.id}`} style={{ fontSize: 10, color: colors.accentRed, marginTop: 4 }}>
+                      {e.errorMessage}
+                    </div>
+                  )}
+                  {e.metadata && (
+                    <div style={{ fontSize: 10, color: colors.textDim, marginTop: 4, fontFamily: 'monospace' }}>
+                      {Object.entries(e.metadata).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(', ')}
+                    </div>
+                  )}
+                </div>
+                <div style={{ fontSize: 13, color: colors.text }}>{e.userName}</div>
+                <div style={{ fontSize: 13, color: e.amount ? colors.accentGreen : colors.textDim }}>
+                  {e.amount ? `$${(e.amount / 100).toFixed(2)}` : '—'}
+                </div>
+                <div style={{ fontSize: 11, color: colors.textDim }}>
+                  <div>{new Date(e.createdAt).toLocaleDateString()}</div>
+                  <div style={{ color: unprocessed ? colors.accentYellow : colors.accentGreen }}>
+                    {unprocessed ? `unprocessed${e.retryCount ? ` · ${e.retryCount} retries` : ''}` : 'processed'}
                   </div>
-                )}
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  {unprocessed && (
+                    <button
+                      data-testid={`button-retry-${e.id}`}
+                      onClick={() => retry(e.id)}
+                      disabled={retrying === e.id}
+                      style={{
+                        padding: '5px 10px', borderRadius: 6, border: `1px solid ${colors.accent}`,
+                        background: 'transparent', color: colors.accent, fontSize: 11, fontWeight: 600,
+                        cursor: retrying === e.id ? 'wait' : 'pointer',
+                      }}
+                    >{retrying === e.id ? '…' : 'Retry'}</button>
+                  )}
+                </div>
               </div>
-              <div style={{ fontSize: 13, color: colors.text }}>{e.userName}</div>
-              <div style={{ fontSize: 13, color: e.amount ? colors.accentGreen : colors.textDim }}>
-                {e.amount ? `$${(e.amount / 100).toFixed(2)}` : '—'}
-              </div>
-              <div style={{ fontSize: 11, color: colors.textDim }}>{new Date(e.createdAt).toLocaleDateString()}</div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -983,6 +1033,7 @@ export default function AdminPage() {
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'users', label: 'Users', icon: '👥' },
+    { id: 'modules', label: 'Modules', icon: '▦' },
     { id: 'audit', label: 'Audit Log', icon: '📋' },
     { id: 'billing', label: 'Billing', icon: '💳' },
   ];
@@ -1025,8 +1076,272 @@ export default function AdminPage() {
 
       {tab === 'overview' && <OverviewTab />}
       {tab === 'users' && <UsersTab />}
+      {tab === 'modules' && <ModulesTab />}
       {tab === 'audit' && <AuditTab />}
       {tab === 'billing' && <BillingTab />}
     </div>
   );
+}
+
+interface AdminModule {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  status: string;
+  planMin: string;
+  baseUrl: string;
+  category: string | null;
+  ord: number;
+  includedInPlans: string[];
+}
+
+function ModulesTab() {
+  const [modules, setModules] = useState<AdminModule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<AdminModule | null>(null);
+  const { toast } = useToast();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const d = await adminApi.getModules();
+      setModules(d.modules);
+    } catch (err: any) {
+      toast(`Failed to load modules: ${err.error || err.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const togglePlan = async (mod: AdminModule, planSlug: string) => {
+    const next = mod.includedInPlans.includes(planSlug)
+      ? mod.includedInPlans.filter(p => p !== planSlug)
+      : [...mod.includedInPlans, planSlug];
+    try {
+      await adminApi.setModulePlanMapping(mod.slug, next);
+      toast(`Updated ${mod.name} plan mapping`, 'success');
+      await load();
+    } catch (err: any) {
+      toast(`Failed: ${err.error || err.message}`, 'error');
+    }
+  };
+
+  const setStatus = async (mod: AdminModule, status: string) => {
+    try {
+      await adminApi.upsertModule({ slug: mod.slug, name: mod.name, status });
+      toast(`Set ${mod.name} → ${status}`, 'success');
+      await load();
+    } catch (err: any) {
+      toast(`Failed: ${err.error || err.message}`, 'error');
+    }
+  };
+
+  if (loading) {
+    return <div data-testid="admin-modules-loading" style={{ padding: 30, color: colors.textMuted }}>Loading modules...</div>;
+  }
+
+  return (
+    <div data-testid="admin-modules">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ fontSize: 13, color: colors.textMuted }}>
+          {modules.length} modules · plan mappings + status are editable; per-user grants live on the user detail page.
+        </div>
+        <button
+          data-testid="button-new-module"
+          onClick={() => setEditing({ id: '', slug: '', name: '', description: '', status: 'coming_soon', planMin: 'elite', baseUrl: '', category: 'app', ord: 99, includedInPlans: [] })}
+          style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: colors.accent, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+        >+ New Module</button>
+      </div>
+
+      <div style={{ background: adminColors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{
+          display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.4fr 1fr',
+          padding: '10px 16px', background: adminColors.headerBg,
+          borderBottom: `1px solid ${colors.border}`, fontSize: 11, color: colors.textDim,
+          fontWeight: 600, textTransform: 'uppercase',
+        }}>
+          <div>Module</div>
+          <div>Status</div>
+          <div>Min plan</div>
+          <div>Included in</div>
+          <div></div>
+        </div>
+
+        {modules.map(m => (
+          <div key={m.slug} data-testid={`admin-module-${m.slug}`} style={{
+            display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.4fr 1fr',
+            padding: '12px 16px', borderBottom: `1px solid ${colors.border}`, alignItems: 'center', gap: 8,
+          }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{m.name}</div>
+              <div style={{ fontSize: 11, color: colors.textDim, fontFamily: 'monospace' }}>{m.slug}</div>
+            </div>
+            <div>
+              <select
+                data-testid={`select-status-${m.slug}`}
+                value={m.status}
+                onChange={e => setStatus(m, e.target.value)}
+                style={{ padding: '5px 8px', borderRadius: 6, border: `1px solid ${colors.border}`, background: colors.bg, color: colors.text, fontSize: 12, outline: 'none' }}
+              >
+                <option value="live">live</option>
+                <option value="beta">beta</option>
+                <option value="coming_soon">coming_soon</option>
+                <option value="disabled">disabled</option>
+              </select>
+            </div>
+            <div style={{ fontSize: 12, color: colors.text }}>{m.planMin}</div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {(['starter', 'pro', 'elite'] as const).map(p => {
+                const on = m.includedInPlans.includes(p);
+                return (
+                  <button
+                    key={p}
+                    data-testid={`toggle-plan-${m.slug}-${p}`}
+                    onClick={() => togglePlan(m, p)}
+                    style={{
+                      padding: '4px 8px', borderRadius: 6, border: `1px solid ${on ? colors.accent : colors.border}`,
+                      background: on ? `${colors.accent}25` : 'transparent',
+                      color: on ? colors.accent : colors.textMuted,
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >{p}</button>
+                );
+              })}
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <button
+                data-testid={`button-edit-module-${m.slug}`}
+                onClick={() => setEditing(m)}
+                style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.text, fontSize: 11, cursor: 'pointer' }}
+              >Edit</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {editing && (
+        <ModuleEditor
+          mod={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ModuleEditor({ mod, onClose, onSaved }: { mod: AdminModule; onClose: () => void; onSaved: () => void }) {
+  const isNew = !mod.id;
+  const [form, setForm] = useState({
+    slug: mod.slug,
+    name: mod.name,
+    description: mod.description || '',
+    baseUrl: mod.baseUrl || '',
+    status: mod.status,
+    planMin: mod.planMin,
+    category: mod.category || 'app',
+    ord: mod.ord,
+  });
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await adminApi.upsertModule(form);
+      toast(isNew ? 'Module created' : 'Module updated', 'success');
+      onSaved();
+    } catch (err: any) {
+      toast(`Failed: ${err.error || err.message}`, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }} onClick={onClose}>
+      <div data-testid="module-editor" style={{
+        background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 16,
+        padding: 28, width: 520, maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto',
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 16 }}>
+          {isNew ? 'New module' : `Edit ${mod.name}`}
+        </div>
+
+        <div style={{ display: 'grid', gap: 12 }}>
+          <Field label="Slug" testId="input-slug">
+            <input
+              data-testid="input-slug"
+              value={form.slug}
+              onChange={e => setForm({ ...form, slug: e.target.value })}
+              disabled={!isNew}
+              style={inputStyle()}
+            />
+          </Field>
+          <Field label="Name" testId="input-name">
+            <input data-testid="input-name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={inputStyle()} />
+          </Field>
+          <Field label="Description" testId="input-description">
+            <textarea data-testid="input-description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} style={inputStyle()} />
+          </Field>
+          <Field label="Base URL" testId="input-baseurl">
+            <input data-testid="input-baseurl" value={form.baseUrl} onChange={e => setForm({ ...form, baseUrl: e.target.value })} placeholder="https://module.example.com" style={inputStyle()} />
+          </Field>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+            <Field label="Status" testId="input-status">
+              <select data-testid="input-status" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={inputStyle()}>
+                <option value="live">live</option>
+                <option value="beta">beta</option>
+                <option value="coming_soon">coming_soon</option>
+                <option value="disabled">disabled</option>
+              </select>
+            </Field>
+            <Field label="Min plan" testId="input-planmin">
+              <select data-testid="input-planmin" value={form.planMin} onChange={e => setForm({ ...form, planMin: e.target.value })} style={inputStyle()}>
+                <option value="starter">starter</option>
+                <option value="pro">pro</option>
+                <option value="elite">elite</option>
+              </select>
+            </Field>
+            <Field label="Order" testId="input-ord">
+              <input data-testid="input-ord" type="number" value={form.ord} onChange={e => setForm({ ...form, ord: parseInt(e.target.value) || 0 })} style={inputStyle()} />
+            </Field>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+          <button onClick={onClose} data-testid="button-cancel-module"
+            style={{ padding: '8px 18px', borderRadius: 8, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.text, fontSize: 13, cursor: 'pointer' }}>
+            Cancel
+          </button>
+          <button onClick={save} disabled={saving} data-testid="button-save-module"
+            style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: colors.accent, color: '#fff', fontSize: 13, fontWeight: 600, cursor: saving ? 'wait' : 'pointer' }}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; testId: string; children: any }) {
+  return (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <span style={{ fontSize: 11, color: colors.textMuted, fontWeight: 600, textTransform: 'uppercase' }}>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function inputStyle(): React.CSSProperties {
+  return {
+    padding: '8px 10px', borderRadius: 6, border: `1px solid ${colors.border}`,
+    background: colors.bg, color: colors.text, fontSize: 13, outline: 'none', width: '100%',
+  };
 }

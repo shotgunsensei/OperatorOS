@@ -236,6 +236,8 @@ export const subscriptions = pgTable('subscriptions', {
   currentPeriodEnd: timestamp('current_period_end'),
   cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
   trialEnd: timestamp('trial_end'),
+  organizationId: varchar('organization_id', { length: 36 }),
+  scopeType: text('scope_type').notNull().default('user'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
@@ -362,9 +364,14 @@ export const billingEvents = pgTable('billing_events', {
   amount: integer('amount'),
   currency: text('currency').default('usd'),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  payloadHash: text('payload_hash'),
+  retryCount: integer('retry_count').notNull().default(0),
+  processedAt: timestamp('processed_at'),
+  errorMessage: text('error_message'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_billing_events_user').on(t.userId),
+  index('idx_billing_events_processed').on(t.processedAt),
 ]);
 
 export const passwordResetTokens = pgTable('password_reset_tokens', {
@@ -391,6 +398,100 @@ export const adminNotes = pgTable('admin_notes', {
 ]);
 
 export type AdminNoteRow = typeof adminNotes.$inferSelect;
+
+// ===========================================================================
+// Shotgun OS Hub — modules, entitlements, and SSO
+// ===========================================================================
+
+export const modules = pgTable('modules', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  slug: text('slug').notNull().unique(),
+  name: text('name').notNull(),
+  description: text('description').default(''),
+  iconUrl: text('icon_url'),
+  category: text('category').default('app'),
+  baseUrl: text('base_url').notNull().default(''),
+  status: text('status').notNull().default('coming_soon'),
+  planMin: text('plan_min').notNull().default('elite'),
+  requiresOrg: boolean('requires_org').notNull().default(false),
+  ord: integer('ord').notNull().default(0),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_modules_slug').on(t.slug),
+  index('idx_modules_status').on(t.status),
+]);
+
+export const planModules = pgTable('plan_modules', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  planId: varchar('plan_id', { length: 36 }).notNull().references(() => subscriptionPlans.id),
+  moduleId: varchar('module_id', { length: 36 }).notNull().references(() => modules.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_plan_modules_plan').on(t.planId),
+  index('idx_plan_modules_module').on(t.moduleId),
+]);
+
+export const addonSubscriptions = pgTable('addon_subscriptions', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  organizationId: varchar('organization_id', { length: 36 }),
+  scopeType: text('scope_type').notNull().default('user'),
+  moduleId: varchar('module_id', { length: 36 }).notNull().references(() => modules.id),
+  status: text('status').notNull().default('active'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  stripeCustomerId: text('stripe_customer_id'),
+  stripePriceId: text('stripe_price_id'),
+  amount: integer('amount').notNull().default(0),
+  currentPeriodStart: timestamp('current_period_start').defaultNow().notNull(),
+  currentPeriodEnd: timestamp('current_period_end'),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_addon_subs_user').on(t.userId),
+  index('idx_addon_subs_module').on(t.moduleId),
+  index('idx_addon_subs_status').on(t.status),
+]);
+
+export const entitlementOverrides = pgTable('entitlement_overrides', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  organizationId: varchar('organization_id', { length: 36 }),
+  moduleId: varchar('module_id', { length: 36 }).notNull().references(() => modules.id),
+  grant: boolean('grant').notNull().default(true),
+  reason: text('reason'),
+  createdByAdminId: varchar('created_by_admin_id', { length: 36 }).notNull().references(() => users.id),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_overrides_user').on(t.userId),
+  index('idx_overrides_module').on(t.moduleId),
+]);
+
+export const ssoHandoffTokens = pgTable('sso_handoff_tokens', {
+  jti: varchar('jti', { length: 64 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  moduleSlug: text('module_slug').notNull(),
+  audience: text('audience').notNull(),
+  env: text('env').notNull(),
+  issuedIp: text('issued_ip'),
+  consumedIp: text('consumed_ip'),
+  expiresAt: timestamp('expires_at').notNull(),
+  consumedAt: timestamp('consumed_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_sso_tokens_expires').on(t.expiresAt),
+  index('idx_sso_tokens_user').on(t.userId),
+]);
+
+export type ModuleRow = typeof modules.$inferSelect;
+export type PlanModuleRow = typeof planModules.$inferSelect;
+export type AddonSubscriptionRow = typeof addonSubscriptions.$inferSelect;
+export type EntitlementOverrideRow = typeof entitlementOverrides.$inferSelect;
+export type SsoHandoffTokenRow = typeof ssoHandoffTokens.$inferSelect;
 
 export const aiPromptTemplates = pgTable('ai_prompt_templates', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),

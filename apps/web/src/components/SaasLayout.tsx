@@ -49,6 +49,12 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    label: 'Shotgun OS',
+    items: [
+      { id: 'apps', label: 'Apps', icon: '▦' },
+    ],
+  },
+  {
     label: 'Account',
     items: [
       { id: 'billing', label: 'Billing', icon: '◈' },
