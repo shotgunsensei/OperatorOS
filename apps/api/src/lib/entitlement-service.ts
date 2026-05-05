@@ -3,7 +3,7 @@ import {
   users, subscriptions, subscriptionPlans,
   modules, planModules, addonSubscriptions, entitlementOverrides,
 } from '../schema.js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { authenticate } from './auth.js';
 import { isAddonPurchasable } from './billing-service.js';
@@ -108,8 +108,30 @@ export interface AccessBreakdown {
 
 const PLAN_RANK: Record<string, number> = { starter: 0, pro: 1, elite: 2 };
 
+/**
+ * Single-source-of-truth helper for "current plan subscription".
+ *
+ * INVARIANT: a user MAY have multiple historical rows in `subscriptions`
+ * (canceled/expired alongside a new active row). Every entitlement and
+ * SSO-handoff path must resolve to the same active row deterministically:
+ *   1. Active or trialing rows win over anything else.
+ *   2. Among ties, the most recently created row wins.
+ * Returns null when the user has no row at all (vs. inactive — caller
+ * decides whether to treat the inactive row as "no plan").
+ */
+export async function getActiveSubscription(userId: string) {
+  const [sub] = await db.select().from(subscriptions)
+    .where(eq(subscriptions.userId, userId))
+    .orderBy(
+      sql`CASE WHEN ${subscriptions.status} IN ('active','trialing') THEN 0 ELSE 1 END`,
+      desc(subscriptions.createdAt),
+    )
+    .limit(1);
+  return sub ?? null;
+}
+
 async function getUserPlanSlug(userId: string): Promise<string | null> {
-  const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
+  const sub = await getActiveSubscription(userId);
   if (!sub) return null;
   if (!['active', 'trialing'].includes(sub.status)) return null;
   const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, sub.planId)).limit(1);
@@ -166,7 +188,7 @@ export async function evaluateUserEntitlement(userId: string, moduleId: string):
   const addon = await activeAddonForUser(userId, moduleId);
   if (addon) return 'addon';
 
-  const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
+  const sub = await getActiveSubscription(userId);
   if (sub && ['active', 'trialing'].includes(sub.status)) {
     if (await planGrantsModule(sub.planId, moduleId)) return 'plan';
   }
@@ -207,7 +229,7 @@ export async function hasModuleAccess(userId: string, moduleSlug: string): Promi
     const addon = await activeAddonForUser(userId, mod.id);
     if (addon) return { moduleSlug, hasAccess: true, source: 'addon' };
 
-    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
+    const sub = await getActiveSubscription(userId);
     if (sub && ['active', 'trialing'].includes(sub.status)) {
       if (await planGrantsModule(sub.planId, mod.id)) {
         return { moduleSlug, hasAccess: true, source: 'plan' };
@@ -351,7 +373,7 @@ export async function getModuleAccessTrace(userId: string, moduleSlug: string): 
 
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   const planSlug = await getUserPlanSlug(userId);
-  const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
+  const sub = await getActiveSubscription(userId);
   const planGrants = sub ? await planGrantsModule(sub.planId, mod.id) : false;
 
   const addon = await activeAddonForUser(userId, mod.id);
@@ -392,8 +414,8 @@ export async function getAccessBreakdown(userId: string): Promise<AccessBreakdow
   const modById = Object.fromEntries(allModules.map(m => [m.id, m]));
   const launchable = (m: { status: string }) => m.status !== 'disabled' && m.status !== 'coming_soon';
 
-  // Plan inclusions (bulk)
-  const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
+  // Plan inclusions (bulk) — must match getUserPlanSlug's row choice.
+  const sub = await getActiveSubscription(userId);
   let planModuleSlugs: string[] = [];
   if (sub && ['active', 'trialing'].includes(sub.status)) {
     const mappings = await db.select().from(planModules).where(eq(planModules.planId, sub.planId));

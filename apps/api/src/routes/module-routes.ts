@@ -11,6 +11,7 @@ import { authenticate, logAudit } from '../lib/auth.js';
 import {
   hasModuleAccess, getUserModules, getModuleForUser,
   getAccessBreakdown, getModuleAccessTrace, evaluateUserEntitlement,
+  getActiveSubscription,
 } from '../lib/entitlement-service.js';
 
 // Map APP_ENV/NODE_ENV to the spec env tri-state: prod | staging | dev.
@@ -260,7 +261,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Module has no launch URL configured.', code: 'NO_BASE_URL' });
     }
 
-    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id)).limit(1);
+    const sub = await getActiveSubscription(user.id);
     let planSlug: string | null = null;
     if (sub) {
       const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, sub.planId)).limit(1);
@@ -436,7 +437,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     if (row.consumedAt) {
       await auditSsoReject({
-        userId: row.userId, action: 'module_consume_replay',
+        userId: row.userId, action: 'module_handoff_replay_blocked',
         details: { jti, consumedAt: row.consumedAt.toISOString(), originalIp: row.consumedIp, ip }, ip,
       });
       return reply.code(409).send({ error: 'Token already consumed', code: 'TOKEN_REPLAYED' });
@@ -454,8 +455,8 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     if (updated.length === 0) {
       await auditSsoReject({
-        userId: row.userId, action: 'module_consume_race_replay',
-        details: { jti, ip }, ip,
+        userId: row.userId, action: 'module_handoff_replay_blocked',
+        details: { jti, ip, race: true }, ip,
       });
       return reply.code(409).send({ error: 'Token already consumed', code: 'TOKEN_REPLAYED' });
     }
@@ -463,7 +464,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // IP-mismatch advisory audit (do not deny — NAT/mobile roaming).
     if (row.issuedIp && row.issuedIp !== ip) {
       await auditSsoReject({
-        userId: row.userId, action: 'module_consume_ip_mismatch_warning',
+        userId: row.userId, action: 'module_handoff_ip_mismatch',
         details: { jti, issuedIp: row.issuedIp, consumedIp: ip }, ip,
       });
     }
@@ -483,7 +484,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     // Hydrate user + plan for the receiver
     const [user] = await db.select().from(users).where(eq(users.id, row.userId)).limit(1);
-    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, row.userId)).limit(1);
+    const sub = await getActiveSubscription(row.userId);
     let planSlug: string | null = null;
     if (sub) {
       const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, sub.planId)).limit(1);
@@ -491,7 +492,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     }
 
     await auditSso({
-      userId: row.userId, action: 'module_consume_success',
+      userId: row.userId, action: 'module_handoff_consumed',
       details: {
         jti, moduleSlug: row.moduleSlug, accessSource: access.source,
         userAgent: userAgent ? userAgent.slice(0, 200) : null,
