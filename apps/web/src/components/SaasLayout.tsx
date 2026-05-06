@@ -1,12 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  LayoutGrid, Store, Sparkles, Receipt, Settings as SettingsIcon,
-  Building2, Users as UsersIcon, Boxes, ShieldCheck, Menu, X, ChevronLeft,
-  type LucideIcon,
-} from 'lucide-react';
+import { Menu, X, ChevronLeft } from 'lucide-react';
 import { useAuth } from './AuthProvider';
+import { buildNavSections } from '@/lib/sidebar-nav';
 
 // Centralized palette. Re-exported below + via lib/design-tokens.ts so all
 // downstream pages share the same source of truth.
@@ -24,60 +21,6 @@ const colors = {
   accentYellow: '#d29922',
   accentPurple: '#bc8cff',
 };
-
-interface NavItem {
-  id: string;
-  label: string;
-  Icon: LucideIcon;
-}
-
-interface NavSection {
-  label: string;
-  items: NavItem[];
-}
-
-// Build the role-aware nav. Sections appear only when the user has the
-// authority to use them — non-tenant-admins never see Tenant Admin entries
-// and non-super-admins never see Platform Command.
-function buildNavSections(opts: {
-  isSuperAdmin: boolean;
-  isTenantAdmin: boolean; // owner OR admin in current tenant
-}): NavSection[] {
-  const sections: NavSection[] = [];
-  sections.push({
-    label: 'Workspace',
-    items: [
-      { id: 'my-apps', label: 'My Apps', Icon: LayoutGrid },
-      { id: 'apps', label: 'App Marketplace', Icon: Store },
-      { id: 'ai-tools', label: 'AI Assistant', Icon: Sparkles },
-    ],
-  });
-  if (opts.isTenantAdmin) {
-    sections.push({
-      label: 'Tenant',
-      items: [
-        { id: 'command-center', label: 'Command Center', Icon: Building2 },
-        { id: 'tenant-users', label: 'Members', Icon: UsersIcon },
-        { id: 'tenant-modules', label: 'Modules', Icon: Boxes },
-        { id: 'tenant-settings', label: 'Tenant Settings', Icon: SettingsIcon },
-      ],
-    });
-  }
-  sections.push({
-    label: 'Account',
-    items: [
-      { id: 'billing', label: 'Billing', Icon: Receipt },
-      { id: 'settings', label: 'Settings', Icon: SettingsIcon },
-    ],
-  });
-  if (opts.isSuperAdmin) {
-    sections.push({
-      label: 'Platform',
-      items: [{ id: 'platform', label: 'Platform Command', Icon: ShieldCheck }],
-    });
-  }
-  return sections;
-}
 
 interface SaasLayoutProps {
   activePage: string;

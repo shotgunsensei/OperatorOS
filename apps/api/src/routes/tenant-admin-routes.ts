@@ -29,12 +29,13 @@ import {
   tenantUserModuleAccess, modules, users,
 } from '../schema.js';
 import { authenticate } from '../lib/auth.js';
-import { requireTenantAdmin } from '../lib/tenant-auth.js';
+import { requireTenantAdmin, requireTenantOwner } from '../lib/tenant-auth.js';
 import { writeAudit, pickSafe, TENANT_USER_ACCESS_SAFE_FIELDS } from '../lib/audit.js';
 
 const INVITE_TTL_DAYS = 14;
 const TENANT_USER_SAFE_FIELDS = ['id', 'tenantId', 'userId', 'role'] as const;
 const TENANT_INVITE_SAFE_FIELDS = ['id', 'tenantId', 'email', 'role', 'expiresAt', 'acceptedAt'] as const;
+const TENANT_SAFE_FIELDS = ['id', 'name', 'slug', 'type', 'status'] as const;
 
 function badRequest(reply: any, msg: string) {
   return reply.code(400).send({ error: msg, code: 'BAD_REQUEST' });
@@ -50,6 +51,35 @@ function isValidEmail(e: any): e is string {
 }
 
 export async function registerTenantAdminRoutes(app: FastifyInstance) {
+  // ──────────────────────────────────────────────────────────────────
+  // Tenant settings — rename (owner only).
+  // ──────────────────────────────────────────────────────────────────
+  app.patch<{ Params: { tenantId: string }; Body: any }>(
+    '/v1/tenants/:tenantId',
+    { preHandler: [requireTenantOwner] },
+    async (request, reply) => {
+      const actor = (request as any).user;
+      const { tenantId } = request.params;
+      const body = (request.body ?? {}) as any;
+      const name = typeof body.name === 'string' ? body.name.trim() : '';
+      if (!name || name.length > 120) {
+        return badRequest(reply, 'name is required (1-120 chars)');
+      }
+      const [before] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+      if (!before) return notFound(reply, 'TENANT_NOT_FOUND', 'Tenant not found');
+      const [after] = await db.update(tenants).set({ name, updatedAt: new Date() })
+        .where(eq(tenants.id, tenantId)).returning();
+      await writeAudit({
+        actorUserId: actor.id, tenantId, targetType: 'tenant',
+        targetId: tenantId, action: 'tenant_renamed',
+        before: pickSafe(before, [...TENANT_SAFE_FIELDS]),
+        after: pickSafe(after, [...TENANT_SAFE_FIELDS]),
+        ipAddress: request.ip,
+      }, request);
+      return { tenant: after };
+    },
+  );
+
   // ──────────────────────────────────────────────────────────────────
   // Members
   // ──────────────────────────────────────────────────────────────────

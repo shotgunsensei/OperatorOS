@@ -20,6 +20,7 @@ import TenantCommandCenterPage from '@/components/pages/TenantCommandCenterPage'
 import TenantUsersPage from '@/components/pages/TenantUsersPage';
 import TenantModulesPage from '@/components/pages/TenantModulesPage';
 import TenantSettingsPage from '@/components/pages/TenantSettingsPage';
+import TenantBillingPage from '@/components/pages/TenantBillingPage';
 import { meApi } from '@/lib/auth';
 
 function AppContent() {
@@ -124,6 +125,10 @@ function AppContent() {
         return isTenantAdmin
           ? <TenantModulesPage />
           : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can view tenant modules." />;
+      case 'tenant-billing':
+        return isTenantAdmin
+          ? <TenantBillingPage />
+          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can view tenant billing." />;
       case 'tenant-settings':
         return isTenantAdmin
           ? <TenantSettingsPage />

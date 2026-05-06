@@ -243,6 +243,10 @@ export const tenantApi = {
 
   // Tenant module catalog (read-only listing for the active tenant).
   listModules: (tenantId: string) => apiFetch(`/tenants/${tenantId}/modules`),
+
+  // Tenant rename (owner only).
+  rename: (tenantId: string, name: string) =>
+    apiFetch(`/tenants/${tenantId}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
 };
 
 export const modulesApi = {

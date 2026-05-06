@@ -132,14 +132,33 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
     () => ['all', ...Array.from(new Set(modules.map(m => m.module.category).filter(Boolean) as string[]))],
     [modules],
   );
+
+  // Status / availability filter chips. Required by Gate 3 IA contract.
+  const statusFilters = ['all', 'installed', 'available', 'addons', 'beta', 'coming_soon'] as const;
+  type StatusFilter = typeof statusFilters[number];
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
+  const matchesStatus = (s: ModuleSummary, f: StatusFilter): boolean => {
+    switch (f) {
+      case 'all': return true;
+      case 'installed': return s.unlocked === true;
+      case 'available': return s.unlocked !== true && s.cta !== 'coming_soon' && s.cta !== 'disabled';
+      case 'addons': return s.cta === 'buy_addon' || s.access_source === 'addon';
+      case 'beta': return s.module.status === 'beta';
+      case 'coming_soon': return s.module.status === 'coming_soon' || s.cta === 'coming_soon';
+    }
+  };
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return modules.filter(({ module: m }) => {
+    return modules.filter(s => {
+      const m = s.module;
       if (activeCategory !== 'all' && m.category !== activeCategory) return false;
+      if (!matchesStatus(s, statusFilter)) return false;
       if (!q) return true;
       return (m.name + ' ' + (m.description ?? '')).toLowerCase().includes(q);
     });
-  }, [modules, search, activeCategory]);
+  }, [modules, search, activeCategory, statusFilter]);
 
   if (loading) {
     return (
@@ -162,14 +181,14 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
       </div>
 
       {/* Search + category pills */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 20 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 8, padding: '6px 10px', flex: '1 1 240px', maxWidth: 320 }}>
           <Search size={14} color={colors.textDim} />
           <input
             data-testid="input-marketplace-search"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search apps…"
+            placeholder="Search apps\u2026"
             style={{ flex: 1, background: 'transparent', border: 'none', color: colors.text, fontSize: 13, outline: 'none' }}
           />
         </div>
@@ -193,6 +212,30 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
             );
           })}
         </div>
+      </div>
+
+      {/* Availability / status filter chips */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 20 }}>
+        {statusFilters.map(f => {
+          const isActive = statusFilter === f;
+          const labels: Record<StatusFilter, string> = {
+            all: 'All', installed: 'Installed', available: 'Available',
+            addons: 'Add-ons', beta: 'Beta', coming_soon: 'Coming Soon',
+          };
+          return (
+            <button
+              key={f}
+              data-testid={`pill-status-${f}`}
+              onClick={() => setStatusFilter(f)}
+              style={{
+                padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+                border: `1px solid ${isActive ? colors.accentPurple : colors.border}`,
+                background: isActive ? `${colors.accentPurple}22` : 'transparent',
+                color: isActive ? colors.accentPurple : colors.textMuted, fontWeight: 600,
+              }}
+            >{labels[f]}</button>
+          );
+        })}
       </div>
 
       <div style={{
@@ -284,6 +327,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                   <button
                     data-testid={`button-comingsoon-${m.slug}`}
                     disabled
+                    title={reason ? reason.replace(/_/g, ' ') : 'This app is coming soon'}
                     style={{
                       flex: 1, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
                       background: 'transparent', color: colors.textMuted, fontSize: 13, cursor: 'not-allowed',
@@ -320,6 +364,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                   <button
                     data-testid={`button-disabled-${m.slug}`}
                     disabled
+                    title={reason ? reason.replace(/_/g, ' ') : 'This app is currently unavailable'}
                     style={{
                       flex: 1, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
                       background: 'transparent', color: colors.textMuted, fontSize: 13, cursor: 'not-allowed',
