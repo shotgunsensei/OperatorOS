@@ -13,7 +13,7 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { db } from '../db.js';
 import { tenants, tenantUsers, users } from '../schema.js';
 import { authenticate } from '../lib/auth.js';
@@ -80,9 +80,12 @@ export async function registerTenantRoutes(app: FastifyInstance) {
       if (!tenantId) {
         return reply.code(400).send({ error: 'tenantId is required', code: 'BAD_REQUEST' });
       }
+      // Direct (tenantId, userId) predicate — single-row indexed lookup,
+      // no in-memory filter. Membership existence implies tenant existence
+      // so we can collapse both checks into one query.
       const [membership] = await db.select().from(tenantUsers)
-        .where(eq(tenantUsers.userId, user.id))
-        .then(rows => rows.filter(r => r.tenantId === tenantId));
+        .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, user.id)))
+        .limit(1);
       if (!membership && user.platformRole !== 'super_admin') {
         return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
       }

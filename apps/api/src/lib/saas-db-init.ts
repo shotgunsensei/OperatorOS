@@ -1,7 +1,7 @@
 import { db } from '../db.js';
 import { hashPassword } from './auth.js';
 import { users, subscriptionPlans, subscriptions, saasWorkspaces, saasProjects, saasTasks, notes, activityFeed, workspaceMemberships, modules, planModules, tenants, tenantUsers, tenantModules, tenantUserModuleAccess } from '../schema.js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { PLAN_CONFIGS } from './plans.js';
 
 export async function ensureSaasTables() {
@@ -854,15 +854,14 @@ export async function backfillPersonalTenants() {
         .where(eq(users.id, u.id));
     }
 
-    // Back-fill tenant_id on user-owned billing & audit rows. Multi-statement
-    // execute so all five tables back-fill in one round-trip per user.
-    await db.execute(`
-      UPDATE subscriptions          SET tenant_id = '${tenant.id}' WHERE user_id  = '${u.id}' AND tenant_id IS NULL;
-      UPDATE addon_subscriptions    SET tenant_id = '${tenant.id}' WHERE user_id  = '${u.id}' AND tenant_id IS NULL;
-      UPDATE entitlement_overrides  SET tenant_id = '${tenant.id}' WHERE user_id  = '${u.id}' AND tenant_id IS NULL;
-      UPDATE billing_events         SET tenant_id = '${tenant.id}' WHERE user_id  = '${u.id}' AND tenant_id IS NULL;
-      UPDATE admin_audit_logs       SET tenant_id = '${tenant.id}' WHERE admin_id = '${u.id}' AND tenant_id IS NULL;
-    `);
+    // Back-fill tenant_id on user-owned billing & audit rows. Use Drizzle's
+    // parameterized `sql` template so values are bound, not interpolated —
+    // robust even though both ids are trusted UUIDs from our own tables.
+    await db.execute(sql`UPDATE subscriptions         SET tenant_id = ${tenant.id} WHERE user_id  = ${u.id} AND tenant_id IS NULL`);
+    await db.execute(sql`UPDATE addon_subscriptions   SET tenant_id = ${tenant.id} WHERE user_id  = ${u.id} AND tenant_id IS NULL`);
+    await db.execute(sql`UPDATE entitlement_overrides SET tenant_id = ${tenant.id} WHERE user_id  = ${u.id} AND tenant_id IS NULL`);
+    await db.execute(sql`UPDATE billing_events        SET tenant_id = ${tenant.id} WHERE user_id  = ${u.id} AND tenant_id IS NULL`);
+    await db.execute(sql`UPDATE admin_audit_logs      SET tenant_id = ${tenant.id} WHERE admin_id = ${u.id} AND tenant_id IS NULL`);
   }
   console.log(`[backfill] Personal tenants: ${created} created, ${allUsers.length} users ensured`);
 }
