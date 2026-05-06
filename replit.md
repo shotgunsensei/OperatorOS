@@ -38,6 +38,8 @@ Commands:
 - **Authentication Logic:** `apps/api/src/lib/auth.ts`
 - **Tenant Authorization:** `apps/api/src/lib/tenant-auth.ts`
 - **Plan Configuration:** `apps/api/src/lib/plans.ts`
+- **Platform Command (Super Admin):** `apps/api/src/routes/platform-routes.ts` + `apps/web/src/components/pages/PlatformPage.tsx`
+- **Centralized Audit:** `apps/api/src/lib/audit.ts` (`writeAudit`, `pickSafe`, field allowlists)
 - **AI Provider Abstraction:** `apps/api/src/lib/ai-provider.ts`
 - **UI Layout:** `apps/web/src/components/SaasLayout.tsx`
 - **Runner Gateway Logic:** `apps/runner-gateway/src/`
@@ -57,6 +59,10 @@ Commands:
   | Module not enabled for tenant (disabled/archived/missing tenant_module row) | 403 | `TENANT_MODULE_DISABLED` |
   | Module enabled but user has no grant         | 403  | `TENANT_MODULE_ACCESS_DENIED` |
   | Add-on already active for tenant             | 409  | `ADDON_ALREADY_ACTIVE`        |
+  | Tenant/module slug collision on create/rename | 409 | `SLUG_TAKEN`                  |
+  | Module slug change blocked by entitlements/subs | 409 | `MODULE_HAS_DEPENDENTS`     |
+  | Module archive blocked by active addon subs (overridable with `?confirm=1`) | 409 | `MODULE_HAS_ACTIVE_SUBS` |
+  | Module is archived (cannot be enabled/edited) | 409 | `MODULE_ARCHIVED`             |
   Rationale: tenant existence is masked behind 404 (anti-enumeration), but once membership is established the deny reason is surfaced as 403 so admins can act on it.
 - **Database Choice:** PostgreSQL with Drizzle ORM for robust, type-safe data management, supporting both SaaS and CDE-specific entities.
 
@@ -79,6 +85,7 @@ I like functional programming.
 - **Super Admin Bootstrap:** The `super_admin` role can only be bootstrapped via the `OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL` environment variable.
 - **AI Provider Fallback:** If `OPENAI_API_KEY` is not set or OpenAI quota is exhausted, the AI module automatically falls back to a mock provider.
 - **Stripe Integration:** Stripe billing is only enabled if `STRIPE_MODE` is set to `live` and relevant `STRIPE_SECRET_KEY` and `STRIPE_PRICE_*` variables are configured.
+- **Add-on pre-create + promote:** `subscribeToAddon` inserts an `incomplete` `addon_subscriptions` row before opening the Stripe checkout session and threads its id through `metadata.internal_addon_subscription_id`. The webhook handler promotes the same row to `active` (no duplicate insert). The double-buy guard ignores `incomplete` rows.
 - **CDE Command Denylist:** The CDE shell enforces a command denylist to prevent unsafe operations unless `ALLOW_UNSAFE_COMMANDS` is set to `true` (not recommended for production).
 
 ## Pointers

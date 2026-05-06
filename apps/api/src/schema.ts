@@ -437,11 +437,16 @@ export const modules = pgTable('modules', {
   requiresOrg: boolean('requires_org').notNull().default(false),
   ord: integer('ord').notNull().default(0),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  // Gate 2: soft-delete. Module rows are never hard-deleted; archived rows
+  // are excluded from default catalogs but kept for audit + entitlement
+  // history.
+  archivedAt: timestamp('archived_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_modules_slug').on(t.slug),
   index('idx_modules_status').on(t.status),
+  index('idx_modules_archived').on(t.archivedAt),
 ]);
 
 export const planModules = pgTable('plan_modules', {
@@ -591,12 +596,18 @@ export const tenants = pgTable('tenants', {
   slug: text('slug').notNull().unique(),
   type: text('type', { enum: ['personal', 'company'] }).notNull().default('personal'),
   ownerUserId: varchar('owner_user_id', { length: 36 }).notNull().references(() => users.id),
+  // Gate 2: lifecycle status. Suspend prevents login + module launch for
+  // tenant members; archive is soft-delete (removes from default lists).
+  status: text('status', { enum: ['active', 'suspended', 'archived'] }).notNull().default('active'),
+  suspendedAt: timestamp('suspended_at'),
+  archivedAt: timestamp('archived_at'),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_tenants_owner').on(t.ownerUserId),
   index('idx_tenants_type').on(t.type),
+  index('idx_tenants_status').on(t.status),
 ]);
 
 export const tenantUsers = pgTable('tenant_users', {

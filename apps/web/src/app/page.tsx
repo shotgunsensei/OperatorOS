@@ -21,6 +21,7 @@ import BillingPage from '@/components/pages/BillingPage';
 import SettingsPage from '@/components/pages/SettingsPage';
 import AdminPage from '@/components/pages/AdminPage';
 import AppsPage from '@/components/pages/AppsPage';
+import PlatformPage from '@/components/pages/PlatformPage';
 
 function AppContent() {
   const { user, loading, authError, logout, clearAuthError } = useAuth();
@@ -60,6 +61,14 @@ function AppContent() {
   }
 
   const handleNavigate = (page: string) => {
+    // Gate 2: super_admins clicking the legacy "Admin" sidebar entry are
+    // routed to the new Platform Command. The legacy AdminPage stays
+    // available for non-platform admins (Gate 3 retires it entirely).
+    if (page === 'admin' && (user as any)?.platformRole === 'super_admin') {
+      setActivePage('platform');
+      setTaskProject(null);
+      return;
+    }
     setActivePage(page);
     if (page !== 'tasks') setTaskProject(null);
   };
@@ -91,6 +100,10 @@ function AppContent() {
         return user.role === 'admin'
           ? <AdminPage />
           : <UnauthorizedPage onGoBack={() => handleNavigate('dashboard')} message="Only administrators can access this page." />;
+      case 'platform':
+        return (user as any).platformRole === 'super_admin'
+          ? <PlatformPage />
+          : <UnauthorizedPage onGoBack={() => handleNavigate('dashboard')} message="Only platform super-administrators can access this page." />;
       default: return <DashboardPage />;
     }
   };

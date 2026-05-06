@@ -316,6 +316,17 @@ export interface WebhookClassification {
   isAddon: boolean;
   userId: string | null;
   moduleSlug: string | null;
+  /** Gate 2: tenant scope from checkout metadata. Falls back to user's
+   *  personal tenant downstream when missing. */
+  tenantId: string | null;
+  /** Gate 2: which user clicked "Buy" (may differ from owner of the
+   *  resulting subscription if a tenant admin purchases on behalf of an
+   *  owner). Used for audit trail. */
+  initiatedByUserId: string | null;
+  /** Gate 2: pre-created addon_subscriptions.id so the webhook can
+   *  promote the existing 'incomplete' row to 'active' instead of
+   *  inserting a duplicate. */
+  internalAddonSubscriptionId: string | null;
   matchedAt: 'object' | 'subscription_data' | 'subscription_details' | 'invoice_line' | 'none';
 }
 
@@ -337,6 +348,9 @@ export function classifyWebhookEvent(event: { type: string; data: { object: any 
         isAddon: true,
         userId: md.user_id ?? md.userId ?? null,
         moduleSlug: md.module_slug ?? md.moduleSlug ?? null,
+        tenantId: md.tenant_id ?? md.tenantId ?? null,
+        initiatedByUserId: md.initiated_by_user_id ?? md.initiatedByUserId ?? md.user_id ?? md.userId ?? null,
+        internalAddonSubscriptionId: md.internal_addon_subscription_id ?? md.internalAddonSubscriptionId ?? null,
         matchedAt: at,
       };
     }
@@ -348,6 +362,9 @@ export function classifyWebhookEvent(event: { type: string; data: { object: any 
     isAddon: false,
     userId: planMd.user_id ?? planMd.userId ?? null,
     moduleSlug: null,
+    tenantId: null,
+    initiatedByUserId: null,
+    internalAddonSubscriptionId: null,
     matchedAt: candidates.length ? candidates[0].at : 'none',
   };
 }
@@ -709,7 +726,11 @@ export interface AddonSubscribeResult {
   checkoutUrl?: string;
 }
 
-export async function subscribeToAddon(userId: string, moduleSlug: string): Promise<AddonSubscribeResult> {
+export async function subscribeToAddon(
+  userId: string,
+  moduleSlug: string,
+  opts?: { tenantId?: string | null; initiatedByUserId?: string | null },
+): Promise<AddonSubscribeResult> {
   const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
   if (!mod) throw new Error(`Module not found: ${moduleSlug}`);
   if (mod.status === 'disabled') throw new Error(`Module is disabled: ${moduleSlug}`);
@@ -739,17 +760,51 @@ export async function subscribeToAddon(userId: string, moduleSlug: string): Prom
       customerId = customer.id;
     }
     const appUrl = process.env.APP_URL || 'http://localhost:5000';
+
+    // Gate 2: pre-create the addon_subscriptions row in 'incomplete' so
+    // the webhook handler can `UPDATE` instead of `INSERT`. This row is
+    // invisible to the double-buy guard above (only 'active'/'trialing'
+    // count). Threading the row id through Stripe metadata gives us a
+    // strong link from webhook → original purchase intent.
+    const initiatedByUserId = opts?.initiatedByUserId ?? userId;
+    const tenantId = opts?.tenantId ?? null;
+    const [pending] = await db.insert(addonSubscriptions).values({
+      userId,
+      moduleId: mod.id,
+      status: 'incomplete',
+      tenantId,
+      stripeCustomerId: customerId,
+      stripePriceId: priceId,
+      amount: 0,
+      currentPeriodStart: new Date(),
+    }).returning();
+
+    const md: Record<string, string> = {
+      userId, user_id: userId,
+      moduleSlug, module_slug: moduleSlug,
+      kind: 'addon', type: 'addon',
+      initiated_by_user_id: initiatedByUserId,
+      initiatedByUserId,
+      internal_addon_subscription_id: pending.id,
+      internalAddonSubscriptionId: pending.id,
+    };
+    if (tenantId) {
+      md.tenant_id = tenantId;
+      md.tenantId = tenantId;
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}?addon=success&module=${moduleSlug}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}?addon=canceled&module=${moduleSlug}`,
-      // Send BOTH metadata keysets so consumers on either contract work:
+      // Both metadata keysets so consumers on either contract work:
       //   legacy: kind='addon', moduleSlug
       //   spec:   type='addon', module_slug
-      metadata: { userId, user_id: userId, moduleSlug, module_slug: moduleSlug, kind: 'addon', type: 'addon' },
-      subscription_data: { metadata: { userId, user_id: userId, moduleSlug, module_slug: moduleSlug, kind: 'addon', type: 'addon' } },
+      // Plus Gate 2 fields: tenant_id, initiated_by_user_id, internal_addon_subscription_id.
+      metadata: md,
+      subscription_data: { metadata: md },
     });
     return { ok: true, moduleSlug, action: 'subscribed', checkoutUrl: session.url! };
   }
@@ -837,18 +892,30 @@ export async function processAddonWebhookEvent(event: { id: string; type: string
         ? new Date(obj.current_period_end * 1000)
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+      // Gate 2: prefer the pre-created row identified by metadata
+      // `internal_addon_subscription_id`, falling back to active rows
+      // (legacy contract) or `incomplete` rows for the same user+module
+      // pair (in case metadata was lost in transit).
       const existingAddon = await db.select().from(addonSubscriptions)
         .where(and(eq(addonSubscriptions.userId, userId), eq(addonSubscriptions.moduleId, mod.id)));
-      const active = existingAddon.find(a => ['active', 'trialing'].includes(a.status));
-      if (active) {
+      const promotable = (cls.internalAddonSubscriptionId
+        ? existingAddon.find(a => a.id === cls.internalAddonSubscriptionId)
+        : null)
+        ?? existingAddon.find(a => ['active', 'trialing'].includes(a.status))
+        ?? existingAddon.find(a => a.status === 'incomplete');
+      if (promotable) {
         await db.update(addonSubscriptions).set({
           stripeSubscriptionId: stripeSubId, stripeCustomerId: customerId,
           status: 'active', updatedAt: new Date(),
           currentPeriodStart: periodStart, currentPeriodEnd: periodEnd,
-        }).where(eq(addonSubscriptions.id, active.id));
+          // Backfill tenantId from metadata if the pending row was created
+          // before tenantId was known (legacy buyers / personal scope).
+          ...(cls.tenantId && !promotable.tenantId ? { tenantId: cls.tenantId } : {}),
+        }).where(eq(addonSubscriptions.id, promotable.id));
       } else {
         await db.insert(addonSubscriptions).values({
           userId, moduleId: mod.id, status: 'active',
+          tenantId: cls.tenantId ?? null,
           stripeSubscriptionId: stripeSubId, stripeCustomerId: customerId,
           amount: obj.amount_total ?? 0,
           currentPeriodStart: periodStart, currentPeriodEnd: periodEnd,

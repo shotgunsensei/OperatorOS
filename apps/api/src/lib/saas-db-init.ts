@@ -474,10 +474,12 @@ const MODULE_SEED_SPECS: ModuleSeedSpec[] = [
   { slug: 'techdeck',         name: 'TechDeck',         description: 'Onsite tech command center',                  category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TECHDECK_URL,        planMin: 'starter', ord: 3, addonPriceCents: ADDON_DEFAULT_CENTS.starter },
   { slug: 'pulsedesk',        name: 'PulseDesk',        description: 'Lightweight ticketing for small teams',      category: 'support', defaultStatus: 'live',        envUrl: process.env.PULSEDESK_URL,       planMin: 'pro',     ord: 4, addonPriceCents: ADDON_DEFAULT_CENTS.pro     },
   { slug: 'faultlinelab',     name: 'FaultlineLab',     description: 'Diagnostic + RCA workflow',                   category: 'support', defaultStatus: 'live',        envUrl: process.env.FAULTLINELAB_URL,    planMin: 'pro',     ord: 5, addonPriceCents: ADDON_DEFAULT_CENTS.pro     },
-  { slug: 'bf-os',            name: 'BF-OS',            description: 'Body shop / collision OS',                    category: 'ops',     defaultStatus: 'live',        envUrl: process.env.BF_OS_URL,           planMin: 'pro',     ord: 6, addonPriceCents: ADDON_DEFAULT_CENTS.pro     },
+  { slug: 'bf-os',            name: 'BrandForgeOS',     description: 'Body shop / collision OS',                    category: 'ops',     defaultStatus: 'live',        envUrl: process.env.BF_OS_URL,           planMin: 'pro',     ord: 6, addonPriceCents: ADDON_DEFAULT_CENTS.pro     },
   { slug: 'snapproofos',      name: 'SnapProofOS',      description: 'Photo-based proof of work',                   category: 'ops',     defaultStatus: 'live',        envUrl: process.env.SNAPPROOFOS_URL,     planMin: 'elite',   ord: 7, addonPriceCents: ADDON_DEFAULT_CENTS.elite   },
   { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                 category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.STUDYFORGE_AI_URL,   planMin: 'elite',   ord: 8, addonPriceCents: ADDON_DEFAULT_CENTS.elite   },
   { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Build & ship internal tools fast',            category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.NINJA_LAUNCH_KIT_URL, planMin: 'elite',  ord: 9, addonPriceCents: ADDON_DEFAULT_CENTS.elite   },
+  { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'AI phone agent + call automation',            category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.CALLCOMMAND_AI_URL,  planMin: 'elite',   ord: 10, addonPriceCents: ADDON_DEFAULT_CENTS.elite  },
+  { slug: 'ninjamation',      name: 'Ninjamation',      description: 'Cross-app workflow automation',               category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.NINJAMATION_URL,     planMin: 'elite',   ord: 11, addonPriceCents: ADDON_DEFAULT_CENTS.elite  },
 ];
 
 export const MODULE_SEEDS: ModuleSeed[] = MODULE_SEED_SPECS.map(s => ({
@@ -528,6 +530,12 @@ export async function seedModules() {
       }
       if (spec.defaultStatus === 'live') {
         updates.status = spec.envUrl ? 'live' : 'coming_soon';
+      }
+      // Gate 2 catalog rename: existing 'BF-OS' rows get re-displayed as
+      // 'BrandForgeOS'. Idempotent — only fires when the name still
+      // matches the legacy literal.
+      if (spec.slug === 'bf-os' && existing[0].name !== 'BrandForgeOS') {
+        updates.name = 'BrandForgeOS';
       }
       await db.update(modules).set(updates).where(eq(modules.slug, spec.slug));
     }
@@ -730,6 +738,18 @@ export async function ensureTenantTables() {
       ALTER TABLE tenants ADD CONSTRAINT tenants_type_check
         CHECK (type IN ('personal', 'company'));
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    -- Gate 2: lifecycle columns (idempotent ALTER on existing tables).
+    ALTER TABLE tenants ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+    ALTER TABLE tenants ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMP;
+    ALTER TABLE tenants ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP;
+    DO $$ BEGIN
+      ALTER TABLE tenants ADD CONSTRAINT tenants_status_check
+        CHECK (status IN ('active','suspended','archived'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    CREATE INDEX IF NOT EXISTS idx_tenants_status ON tenants(status);
+    -- Gate 2: modules soft-delete column.
+    ALTER TABLE modules ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP;
+    CREATE INDEX IF NOT EXISTS idx_modules_archived ON modules(archived_at);
 
     -- tenant_users --------------------------------------------------------
     CREATE TABLE IF NOT EXISTS tenant_users (
