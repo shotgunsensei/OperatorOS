@@ -5,8 +5,9 @@ import { db } from '../db.js';
 import {
   users, subscriptions, subscriptionPlans,
   modules, ssoHandoffTokens, activityFeed, adminAuditLogs,
+  tenantUsers, tenantModules, tenantUserModuleAccess,
 } from '../schema.js';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { authenticate, logAudit } from '../lib/auth.js';
 import {
   hasModuleAccess, getUserModules, getModuleForUser,
@@ -154,19 +155,71 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   // -------------------------------------------------------------------------
   app.get('/v1/me/modules', { preHandler: [authenticate] }, async (request) => {
     const user = (request as any).user;
-    const summary = await getUserModules(user.id);
-    // `unlocked` from entitlement-service already factors in launchable
-    // status (live OR beta) AND baseUrl presence, so it is the single
-    // source of truth for "this module belongs on the launchpad".
-    const unlocked = summary
-      .filter(s => (s as any).unlocked === true)
-      .map(s => ({
-        slug: s.module.slug,
-        name: s.module.name,
-        description: s.module.description,
-        category: s.module.category,
-        iconUrl: s.module.iconUrl,
-        baseUrl: s.module.baseUrl,
+
+    // Gate 3: tenant-scoped resolution. We enumerate every tenant the user
+    // is a member of and union module access from those tenants' rows in
+    // `tenant_modules` + `tenant_user_module_access`. We never fall back
+    // to the legacy per-user entitlement path here — module visibility on
+    // the launchpad must reflect tenant boundaries.
+    const memberships = await db.select().from(tenantUsers)
+      .where(eq(tenantUsers.userId, user.id));
+
+    if (memberships.length === 0) {
+      return { modules: [] };
+    }
+
+    const tenantIds = memberships.map(m => m.tenantId);
+
+    // Tenant-modules currently active (launchable) for any of those tenants.
+    const launchable = ['enabled', 'trial', 'purchased', 'beta'];
+    const tms = await db.select().from(tenantModules)
+      .where(and(
+        inArray(tenantModules.tenantId, tenantIds),
+        inArray(tenantModules.status, launchable),
+      ));
+    if (tms.length === 0) return { modules: [] };
+
+    const moduleIds = Array.from(new Set(tms.map(t => t.moduleId)));
+    const accessRows = await db.select().from(tenantUserModuleAccess)
+      .where(and(
+        inArray(tenantUserModuleAccess.tenantId, tenantIds),
+        eq(tenantUserModuleAccess.userId, user.id),
+        inArray(tenantUserModuleAccess.moduleId, moduleIds),
+      ));
+    // key: `${tenantId}:${moduleId}` -> accessLevel ('none' | 'user' | 'manager')
+    const accMap = new Map<string, string>();
+    for (const a of accessRows) accMap.set(`${a.tenantId}:${a.moduleId}`, a.accessLevel);
+
+    // Decide visibility per (tenant, module). Explicit 'none' denies even when
+    // allowAllMembers is true; explicit 'user'/'manager' grants regardless.
+    const allowedModuleIds = new Set<string>();
+    for (const tm of tms) {
+      const key = `${tm.tenantId}:${tm.moduleId}`;
+      const acc = accMap.get(key);
+      if (acc === 'none') continue;
+      if (acc === 'user' || acc === 'manager') {
+        allowedModuleIds.add(tm.moduleId);
+        continue;
+      }
+      if (tm.allowAllMembers) allowedModuleIds.add(tm.moduleId);
+    }
+
+    if (allowedModuleIds.size === 0) return { modules: [] };
+
+    const allowed = await db.select().from(modules)
+      .where(inArray(modules.id, Array.from(allowedModuleIds)));
+    // Launchpad only surfaces actually-launchable modules: live OR beta
+    // status AND a baseUrl configured.
+    const unlocked = allowed
+      .filter(m => (m.status === 'live' || m.status === 'beta') && !!m.baseUrl)
+      .sort((a, b) => a.ord - b.ord)
+      .map(m => ({
+        slug: m.slug,
+        name: m.name,
+        description: m.description,
+        category: m.category,
+        iconUrl: m.iconUrl,
+        baseUrl: m.baseUrl,
       }));
     return { modules: unlocked };
   });

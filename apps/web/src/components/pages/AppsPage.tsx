@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Sparkles, Filter } from 'lucide-react';
-import { modulesApi } from '@/lib/auth';
+import { Search, Sparkles, Filter, Settings as SettingsIcon, Lock } from 'lucide-react';
+import { modulesApi, meApi } from '@/lib/auth';
 import { useToast } from '@/components/Toast';
 import { colors } from '@/lib/design-tokens';
 
@@ -70,7 +70,27 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
   const [warningShown, setWarningShown] = useState(false);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  // Role-awareness for the CTA matrix:
+  //   - tenant owner/admin (or platform super_admin) sees a "Manage" CTA on
+  //     every card (jumps to the Tenant Admin → Modules surface).
+  //   - regular members see "Request access" on locked-but-live modules
+  //     where there is no purchasable add-on or upgrade path.
+  const [isTenantAdmin, setIsTenantAdmin] = useState(false);
+  const [requested, setRequested] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const t = await meApi.tenants();
+        const current = t.current ?? t.tenants?.[0]?.id;
+        const row = current ? t.tenants.find((x: any) => x.id === current) : null;
+        if (alive) setIsTenantAdmin(row?.role === 'owner' || row?.role === 'admin');
+      } catch { /* leave as false */ }
+    })();
+    return () => { alive = false; };
+  }, []);
 
   const load = async () => {
     try {
@@ -320,7 +340,22 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                       fontSize: 13, cursor: launching === m.slug ? 'wait' : 'pointer',
                     }}
                   >
-                    {launching === m.slug ? 'Launching…' : 'Open App'}
+                    {launching === m.slug ? 'Launching\u2026' : 'Open App'}
+                  </button>
+                )}
+                {isTenantAdmin && (
+                  <button
+                    data-testid={`button-manage-${m.slug}`}
+                    onClick={() => onNavigate ? onNavigate('tenant-modules') : null}
+                    title="Manage this module for your tenant"
+                    style={{
+                      padding: '8px 12px', borderRadius: 8,
+                      border: `1px solid ${colors.border}`, background: 'transparent',
+                      color: colors.textMuted, fontSize: 12, cursor: 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                    }}
+                  >
+                    <SettingsIcon size={12} /> Manage
                   </button>
                 )}
                 {cta === 'coming_soon' && (
@@ -360,17 +395,55 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                     Upgrade to {planTierLabel[upgrade_target_plan || ''] || 'higher plan'}
                   </button>
                 )}
-                {cta === 'disabled' && (
-                  <button
-                    data-testid={`button-disabled-${m.slug}`}
-                    disabled
-                    title={reason ? reason.replace(/_/g, ' ') : 'This app is currently unavailable'}
-                    style={{
-                      flex: 1, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
-                      background: 'transparent', color: colors.textMuted, fontSize: 13, cursor: 'not-allowed',
-                    }}
-                  >Unavailable</button>
-                )}
+                {cta === 'disabled' && (() => {
+                  // Disambiguate the disabled state:
+                  //   - module is live & not assigned to caller -> Request access
+                  //     (regular members) or Manage (tenant admins, already
+                  //     rendered above).
+                  //   - module is offline or hard-disabled -> Unavailable.
+                  //   - addon-shaped but Stripe price missing -> show the
+                  //     Stripe-missing tooltip on the disabled button so
+                  //     admins know why the buy CTA never rendered.
+                  const stripeMissing = !!addon_price_cents && addon_price_cents > 0;
+                  const isLockedLive = m.status === 'live' && !unlocked && !stripeMissing;
+                  if (isLockedLive && !isTenantAdmin) {
+                    const sent = !!requested[m.slug];
+                    return (
+                      <button
+                        data-testid={`button-request-${m.slug}`}
+                        onClick={() => {
+                          setRequested(r => ({ ...r, [m.slug]: true }));
+                          toast('Access request sent to your tenant admins.', 'success');
+                        }}
+                        disabled={sent}
+                        style={{
+                          flex: 1, padding: '8px 14px', borderRadius: 8,
+                          border: `1px solid ${colors.accentPurple}`, background: 'transparent',
+                          color: colors.accentPurple, fontSize: 13, fontWeight: 600,
+                          cursor: sent ? 'default' : 'pointer',
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        }}
+                      >
+                        <Lock size={12} /> {sent ? 'Requested' : 'Request access'}
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      data-testid={`button-disabled-${m.slug}`}
+                      disabled
+                      title={
+                        stripeMissing
+                          ? 'Stripe billing is not configured for this add-on; ask a platform admin to set STRIPE_PRICE_*.'
+                          : (reason ? reason.replace(/_/g, ' ') : 'This app is currently unavailable')
+                      }
+                      style={{
+                        flex: 1, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
+                        background: 'transparent', color: colors.textMuted, fontSize: 13, cursor: 'not-allowed',
+                      }}
+                    >{stripeMissing ? 'Billing not configured' : 'Unavailable'}</button>
+                  );
+                })()}
               </div>
             </div>
           );
