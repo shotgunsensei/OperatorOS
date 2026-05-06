@@ -821,7 +821,17 @@ export async function processAddonWebhookEvent(event: { id: string; type: string
 export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean; message: string; replayed?: boolean; replayResult?: any }> {
   const [evt] = await db.select().from(billingEvents).where(eq(billingEvents.id, eventId)).limit(1);
   if (!evt) return { ok: false, message: 'Event not found' };
-  if (evt.processedAt) return { ok: false, message: 'Event already processed' };
+  // Idempotent no-op: if the event has already been processed (either by
+  // the live webhook handler or by a prior successful replay), refuse to
+  // re-run side effects. The `duplicate_ignored` action mirrors the
+  // contract used by the /v1/billing/webhook claim path so callers can
+  // treat both as "saw it, did nothing" in a uniform way.
+  if (evt.processedAt) return {
+    ok: true,
+    replayed: false,
+    message: 'Event already processed; ignoring duplicate retry.',
+    replayResult: { handled: true, action: 'duplicate_ignored' },
+  };
 
   const next = (evt.retryCount ?? 0) + 1;
   const rawEvent = (evt.metadata as any)?.rawEvent;
