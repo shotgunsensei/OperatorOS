@@ -28,11 +28,23 @@ const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 const STRIPE_MODE = process.env.STRIPE_MODE || 'test';
 
+// Test-only injection seam. Allows tests to force Stripe-mode behavior and
+// substitute a stubbed Stripe client without touching real env vars or
+// hitting the network. Pass `null` to clear. NEVER call from production code.
+let __stripeTestOverride: { enabled?: boolean; client?: any } | null = null;
+export function __setStripeTestOverrides(o: { enabled?: boolean; client?: any } | null) {
+  __stripeTestOverride = o;
+}
+
 export function isStripeEnabled(): boolean {
+  if (__stripeTestOverride && typeof __stripeTestOverride.enabled === 'boolean') {
+    return __stripeTestOverride.enabled;
+  }
   return !!STRIPE_SECRET_KEY && STRIPE_MODE === 'live';
 }
 
 function getStripe() {
+  if (__stripeTestOverride?.client) return __stripeTestOverride.client;
   if (!STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured');
   }
