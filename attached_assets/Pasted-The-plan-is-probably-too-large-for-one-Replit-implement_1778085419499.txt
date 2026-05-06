@@ -1,0 +1,369 @@
+The plan is probably too large for one Replit implementation pass. It includes schema migration, tenant model, RBAC, billing, frontend IA, module CRUD, marketplace UX, audit logs, admin dashboards, tenant dashboards, user dashboards, seed changes, tests, and polish all at once. That is enough scope for Replit to silently “fake complete” parts of it with UI that looks wired but is not truly enforced server-side.
+
+The role model needs tightening. The plan says to keep users.role and add users.tier with super_admin | tenant_admin | user, while also adding tenant_users.role with owner | admin | member. That can create role drift. A user can be a tenant admin for Tenant A, member of Tenant B, and not belong to Tenant C. Tenant admin should usually be tenant-scoped, not global. Better model:
+
+users.role = legacy only, do not use for new authorization
+users.platformRole = super_admin | user
+tenant_users.role = owner | admin | member
+
+Then derive tenant admin status from tenant_users.role, not from a global users.tier.
+
+The plan says existing users get personal tenants. Good. But hard-promoting john@shotgunninjas.com to super_admin in seed logic should be controlled by an environment variable, not hardcoded forever. Use:
+
+OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL=john@shotgunninjas.com
+
+That protects future deployments, test environments, and accidental privilege assignment.
+
+The Stripe section needs one surgical correction. It says preserve the existing Stripe contract and that tenant scoping happens server-side, “not by changing checkout payloads.” That is risky. The public contract can remain the same, but the checkout session should include metadata:
+
+tenantId
+moduleSlug
+initiatedByUserId
+addonSubscriptionId or internal correlation ID
+
+Otherwise webhook reconciliation gets brittle, especially after you move from user-scoped to tenant-scoped billing.
+
+The plan uses assignedModules JSON array on tenant_users. That is fine for a quick prototype, but it is weak for a real access-control matrix. Better to add a normalized table:
+
+tenant_user_module_access
+- id
+- tenantId
+- userId
+- moduleId
+- accessLevel: none | user | manager
+- grantedBy
+- grantedAt
+- revokedAt
+
+You can still cache assigned modules in JSON later, but source-of-truth access should be queryable, auditable, and revocable.
+
+The plan says cross-tenant reads return 404. Good. Expand that to cross-tenant updates/deletes too. For platform-only routes, 403 is acceptable because there is no tenant resource existence to hide. So:
+
+/platform/* unauthorized = 403
+/tenants/:id/* unauthorized or wrong tenant = 404
+/modules/:id tenant-scoped unauthorized = 404
+
+The feature flags and announcements stubs should not include write forms unless they actually persist. A fake “create announcement” form is worse than no form. Make them read-only or fully functional, no theatrical buttons.
+
+The plan says keep inline styles and add Lucide icons. That is fine for speed, but make Replit create a small design-token file so inline styling does not become a vine monster. Something like:
+
+apps/web/src/lib/design-tokens.ts
+
+with spacing, card styles, badge styles, border colors, accent tokens, etc.
+
+Recommended revision: force this into 3 implementation gates
+
+Instead of one giant blast, make Replit execute in staged gates. This prevents the glitter-cannon problem where the UI looks different but RBAC, billing, and data isolation are still cardboard props.
+
+Gate 1 should be tenant/RBAC/data foundation.
+
+Gate 2 should be super admin platform management.
+
+Gate 3 should be tenant/admin/user marketplace UX and polish.
+
+Here is the exact revision prompt I would paste into Replit before approving the plan:
+
+Revise the implementation plan before starting.
+
+The direction is approved, but the current plan is too broad for a single uncontrolled implementation pass. Break the work into three gated implementation phases and do not proceed to the next gate until tests/build pass for the current gate.
+
+Critical architecture revisions:
+
+1. Role model correction
+Do not use a global users.tier value to represent tenant admin status.
+
+Use:
+- users.role remains legacy/backward-compatible only.
+- users.platformRole = super_admin | user.
+- tenant_users.role = owner | admin | member.
+
+Super admin is global and comes only from users.platformRole.
+Tenant admin/owner status is derived from tenant_users.role for the active tenant.
+
+Add helpers:
+- requireSuperAdmin()
+- requireTenantOwner(tenantId)
+- requireTenantAdmin(tenantId)
+- requireTenantMember(tenantId)
+- requireTenantModuleAccess(tenantId, userId, moduleSlug)
+- canPurchaseAddon(userId, tenantId)
+
+2. Bootstrap super admin safely
+Do not permanently hardcode john@shotgunninjas.com as super_admin in seed logic.
+
+Use:
+OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL
+
+If the env var is set and the user exists, promote that user to users.platformRole = super_admin.
+If the env var is missing, do not auto-promote anyone in production.
+
+For local/dev seed, john@shotgunninjas.com may be used only when NODE_ENV is not production or when the bootstrap env var is explicitly set.
+
+3. Module user access should be normalized
+Do not rely only on tenant_users.assignedModules JSON as the source of truth.
+
+Add:
+tenant_user_module_access
+- id
+- tenantId
+- userId
+- moduleId
+- accessLevel: none | user | manager
+- grantedBy
+- grantedAt
+- revokedAt
+- metadata JSON
+- createdAt
+- updatedAt
+
+tenant_modules controls whether the tenant has access to the module.
+tenant_user_module_access controls whether a specific user inside that tenant can launch/use it.
+
+Regular users only see modules where:
+- tenant_modules.status is enabled/trial/purchased/beta as applicable
+AND
+- tenant_user_module_access grants access
+OR
+- tenant policy allows all tenant members to access that module.
+
+4. Stripe checkout metadata
+Preserve the existing public Stripe/add-on API contract, but add internal Stripe Checkout metadata:
+- tenantId
+- moduleSlug
+- initiatedByUserId
+- internalAddonSubscriptionId or correlation ID
+
+Webhook reconciliation must use this metadata when available.
+Do not expose Stripe secrets to the client.
+Stripe price IDs may be referenced only as non-secret configuration status.
+
+5. Tenant security behavior
+Use:
+- Cross-tenant resource reads/updates/deletes return 404.
+- Unauthorized platform routes return 403.
+- Missing tenant or missing module should return 404.
+- Validation errors return 400.
+- Billing precondition errors return 409 when appropriate.
+
+6. Audit coverage
+Audit every privileged action:
+- tenant created
+- tenant updated
+- tenant suspended
+- tenant reactivated
+- tenant archived
+- module created
+- module updated
+- module archived
+- module assigned to tenant
+- module removed from tenant
+- user invited
+- user removed
+- user role changed
+- user module access granted
+- user module access revoked
+- addon checkout initiated
+- billing portal opened
+- feature flag changed, if implemented
+- announcement created, if implemented
+
+Audit rows must include:
+- actorUserId
+- tenantId if applicable
+- targetType
+- targetId
+- action
+- before JSON if safe
+- after JSON if safe
+- createdAt
+
+7. No fake controls
+If a button, form, or page is visible, it must either:
+- work end-to-end,
+- be safely disabled with a clear reason,
+- or be marked as coming soon.
+
+Do not create dead buttons, fake charts, fake revenue, fake announcements, or fake feature flag writes.
+
+Revenue metrics should be labeled as estimated unless they are derived from actual Stripe/billing records.
+
+8. Design-token cleanup
+Since this task intentionally avoids Tailwind/shadcn, create a small shared design token/helper file for repeated inline styles:
+apps/web/src/lib/design-tokens.ts
+
+Use it for:
+- cards
+- badges
+- buttons
+- panels
+- borders
+- muted text
+- danger states
+- success states
+- warning states
+- layout spacing
+
+Do not let every new page invent unrelated inline styles.
+
+============================================================
+GATE 1 — TENANT FOUNDATION, RBAC, AND DATA MODEL
+============================================================
+
+Implement:
+- tenants
+- tenant_users
+- tenant_modules
+- tenant_user_module_access
+- tenant_invites if invite flow is implemented
+- nullable tenant_id additions to existing billing/entitlement/audit records
+- personal tenant backfill for existing users
+- platformRole on users
+- tenant context resolver
+- RBAC helpers
+- entitlement-service update to resolve tenant and user module access
+- seed Demo Co tenant safely
+- seed OperatorOS module catalog idempotently
+
+Do not redesign the entire UI in Gate 1.
+Only add minimal admin/test visibility needed to verify tenant/RBAC behavior.
+
+Tests required before Gate 2:
+- super admin can list tenants
+- non-super admin cannot list platform tenants
+- tenant admin can access own tenant
+- tenant admin cannot access another tenant and receives 404
+- regular user cannot access tenant admin route
+- module entitlement checks tenant_modules and tenant_user_module_access
+- existing API tests still pass
+
+Run:
+- pnpm --filter @operatoros/api test
+- API typecheck/build if available
+
+Stop and report Gate 1 results before continuing.
+
+============================================================
+GATE 2 — SUPER ADMIN PLATFORM COMMAND
+============================================================
+
+Implement:
+- /platform
+- /platform/tenants
+- /platform/tenants/:id
+- /platform/modules
+- /platform/modules/:id
+- /platform/billing
+- /platform/audit
+- /platform/health
+- /platform/pricing
+
+Implement working Super Admin controls:
+- create tenant
+- edit tenant
+- suspend/reactivate tenant
+- archive tenant
+- create module
+- edit module
+- archive module
+- assign/revoke module for tenant
+- grant/revoke module access for tenant user if applicable
+- view audit logs
+- view billing status safely
+- view system health safely
+
+Rules:
+- No hard delete unless explicitly safe. Prefer archive.
+- Prevent slug changes on modules with existing entitlements/subscriptions unless a migration path is implemented.
+- Prevent archive of active paid module without clear confirmation and impact warning.
+- No fake revenue. Use real billing data or mark as estimated.
+- Legacy /admin should redirect to /platform.
+
+Tests required before Gate 3:
+- super admin module create/edit/archive works
+- tenant module assign/revoke works
+- audit logs written for admin actions
+- non-super admins blocked from /platform routes
+- archived modules do not show as purchasable
+- existing tests still pass
+
+Run:
+- pnpm --filter @operatoros/api test
+- web typecheck
+- build if available
+
+Stop and report Gate 2 results before continuing.
+
+============================================================
+GATE 3 — TENANT ADMIN, USER LAUNCHPAD, MARKETPLACE, POLISH
+============================================================
+
+Implement:
+- RoleAwareSidebar with Launch / Tenant / Platform / Account groups
+- dashboard router that sends:
+  - super_admin to Platform Command
+  - tenant owner/admin to Tenant Command Center
+  - regular user to My Apps
+- Tenant Command Center
+- My Apps launchpad
+- App Marketplace
+- Tenant Users page
+- Tenant Billing page
+- Tenant Modules page
+- Tenant Settings page
+
+Marketplace requirements:
+- search
+- filters
+- Installed
+- Available
+- Add-ons
+- Coming Soon
+- Beta
+- categories
+- proper status badges
+- launch/manage/buy/request-access CTAs
+- disabled states when Stripe price ID is missing
+- coming soon modules cannot be purchased
+- regular users cannot purchase unless explicitly allowed
+
+Remove Workspaces / Projects / Tasks / Notes from the main sidebar. Keep the backend/routes for now to avoid data loss. If kept anywhere in the UI, place under Utilities or Workspace Tools, not the primary product identity.
+
+Replace escaped Unicode glyphs with Lucide icons everywhere visible.
+
+Add:
+- loading skeletons
+- empty states
+- error states
+- confirmation dialogs
+- toast feedback
+- mobile responsive layouts
+- accessible button labels
+- clear disabled states
+
+Tests required:
+- sidebar renders role-specific nav
+- tenant admin sees enabled modules and available add-ons
+- tenant admin sees purchase CTA only for purchasable modules
+- regular user sees only assigned modules
+- missing Stripe price disables purchase
+- coming soon modules do not show buy button
+- marketplace search/filter works
+- no raw escaped Unicode artifacts remain in rendered UI if testable
+
+Run:
+- pnpm --filter @operatoros/api test
+- web typecheck
+- lint if available
+- build
+- smoke test super_admin, tenant_admin, and regular user flows
+
+Final output must include:
+- files changed
+- routes added
+- schema changes
+- RBAC changes
+- Stripe behavior
+- tests run/results
+- known limitations
+- manual environment variables needed
+- readiness score from 1 to 100
