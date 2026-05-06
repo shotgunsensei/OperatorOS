@@ -204,33 +204,67 @@ function Dashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
   const [data, setData] = useState<any>(null);
   useEffect(() => {
     Promise.all([
-      apiCall('/v1/platform/tenants?status=active').catch(() => ({ tenants: [] })),
-      apiCall('/v1/platform/modules').catch(() => ({ modules: [] })),
+      apiCall('/v1/platform/stats').catch(() => null),
       apiCall('/v1/platform/health').catch(() => null),
-    ]).then(([t, m, h]) => setData({ tenants: t.tenants, modules: m.modules, health: h }));
+      apiCall('/v1/platform/audit?limit=5').catch(() => ({ logs: [] })),
+    ]).then(([s, h, a]) => setData({ stats: s, health: h, recent: a.logs ?? [] }));
   }, []);
   if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
-  const tenantsActive = data.tenants.length;
-  const modulesLive = data.modules.filter((m: any) => m.status === 'live').length;
+  const s = data.stats ?? {};
+  const h = data.health ?? {};
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-      <Card data-testid="card-tenants" onClick={() => onNavigate({ kind: 'tenants' })} style={{ cursor: 'pointer' }}>
-        <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Active tenants</div>
-        <div style={{ fontSize: 28, fontWeight: 700 }}>{tenantsActive}</div>
-      </Card>
-      <Card data-testid="card-modules" onClick={() => onNavigate({ kind: 'modules' })} style={{ cursor: 'pointer' }}>
-        <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Live modules</div>
-        <div style={{ fontSize: 28, fontWeight: 700 }}>{modulesLive} <span style={{ color: colors.textDim, fontSize: 13 }}>/ {data.modules.length}</span></div>
-      </Card>
-      <Card data-testid="card-stripe">
-        <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Stripe</div>
-        <div style={{ fontSize: 16 }}>
-          <Pill tone={data.health?.stripe?.live ? 'green' : 'yellow'}>{data.health?.stripe?.mode ?? 'unknown'}</Pill>
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 12 }}>
+        <Card data-testid="card-tenants" onClick={() => onNavigate({ kind: 'tenants' })} style={{ cursor: 'pointer' }}>
+          <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Tenants</div>
+          <div style={{ fontSize: 28, fontWeight: 700 }}>{s.tenants?.byStatus?.active ?? 0} <span style={{ color: colors.textDim, fontSize: 13 }}>/ {s.tenants?.total ?? 0}</span></div>
+          <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>{s.tenants?.byStatus?.suspended ?? 0} suspended · {s.tenants?.byStatus?.archived ?? 0} archived</div>
+        </Card>
+        <Card data-testid="card-modules" onClick={() => onNavigate({ kind: 'modules' })} style={{ cursor: 'pointer' }}>
+          <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Modules</div>
+          <div style={{ fontSize: 28, fontWeight: 700 }}>{(s.modules?.byStatus?.live ?? 0) + (s.modules?.byStatus?.active ?? 0)} <span style={{ color: colors.textDim, fontSize: 13 }}>/ {s.modules?.total ?? 0}</span></div>
+          <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>{s.modules?.byStatus?.beta ?? 0} beta · {s.modules?.byStatus?.coming_soon ?? 0} coming soon · {s.modules?.archivedCount ?? 0} archived</div>
+        </Card>
+        <Card data-testid="card-addons" onClick={() => onNavigate({ kind: 'billing' })} style={{ cursor: 'pointer' }}>
+          <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Addon subs</div>
+          <div style={{ fontSize: 28, fontWeight: 700 }}>{s.addonSubscriptions?.activeOrTrialing ?? 0} <span style={{ color: colors.textDim, fontSize: 13 }}>/ {s.addonSubscriptions?.total ?? 0}</span></div>
+          <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>{s.addonSubscriptions?.byStatus?.incomplete ?? 0} incomplete · {s.addonSubscriptions?.byStatus?.canceled ?? 0} canceled</div>
+        </Card>
+        <Card data-testid="card-billing-events" onClick={() => onNavigate({ kind: 'billing' })} style={{ cursor: 'pointer' }}>
+          <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Billing events</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: (s.billingEvents?.failed ?? 0) > 0 ? colors.danger : colors.text }}>{s.billingEvents?.failed ?? 0} <span style={{ color: colors.textDim, fontSize: 13 }}>failed</span></div>
+          <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>{s.billingEvents?.processed ?? 0} processed of {s.billingEvents?.total ?? 0}</div>
+        </Card>
+        <Card data-testid="card-users">
+          <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Users</div>
+          <div style={{ fontSize: 28, fontWeight: 700 }}>{s.users?.active ?? 0} <span style={{ color: colors.textDim, fontSize: 13 }}>/ {s.users?.total ?? 0}</span></div>
+          <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>{s.users?.superAdmins ?? 0} super admin{(s.users?.superAdmins ?? 0) === 1 ? '' : 's'}</div>
+        </Card>
+        <Card data-testid="card-stripe" onClick={() => onNavigate({ kind: 'health' })} style={{ cursor: 'pointer' }}>
+          <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Stripe</div>
+          <div style={{ fontSize: 16 }}><Pill tone={h.stripe?.live ? 'green' : 'yellow'}>{h.stripe?.mode ?? 'unknown'}</Pill></div>
+          <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>last webhook: {h.stripe?.lastSuccessfulWebhookAt ? new Date(h.stripe.lastSuccessfulWebhookAt).toLocaleString() : '—'}</div>
+        </Card>
+        <Card data-testid="card-db" onClick={() => onNavigate({ kind: 'health' })} style={{ cursor: 'pointer' }}>
+          <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Infrastructure</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <Pill tone={h.db?.ok ? 'green' : 'red'}>db {h.db?.ok ? 'ok' : 'down'}</Pill>
+            <Pill tone={h.sessionSecretConfigured ? 'green' : 'red'}>session</Pill>
+            <Pill tone={h.openaiKeyConfigured ? 'green' : 'muted'}>openai</Pill>
+          </div>
+        </Card>
+      </div>
+      <Card>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <h3 style={{ margin: 0, fontSize: 14 }}>Recent admin activity</h3>
+          <Btn data-testid="button-view-all-audit" onClick={() => onNavigate({ kind: 'audit' })}>View all</Btn>
         </div>
-      </Card>
-      <Card data-testid="card-db">
-        <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Database</div>
-        <Pill tone={data.health?.db?.ok ? 'green' : 'red'}>{data.health?.db?.ok ? 'healthy' : 'down'}</Pill>
+        {data.recent.length === 0 && <div style={{ color: colors.textMuted, fontSize: 13 }}>No recent activity.</div>}
+        {data.recent.map((l: any) => (
+          <div key={l.id} style={{ padding: '6px 0', borderBottom: `1px solid ${colors.border}`, fontSize: 12 }}>
+            <code>{l.action}</code> · {l.actor?.email ?? l.adminId} · <span style={{ color: colors.textMuted }}>{new Date(l.createdAt).toLocaleString()}</span>
+          </div>
+        ))}
       </Card>
     </div>
   );
@@ -347,7 +381,7 @@ function CreateTenantForm({ onClose, onCreated }: { onClose: () => void; onCreat
   );
 }
 
-type TenantTab = 'overview' | 'members' | 'modules' | 'billing' | 'audit' | 'settings';
+type TenantTab = 'overview' | 'members' | 'modules' | 'billing' | 'activity' | 'audit' | 'settings';
 
 function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const [data, setData] = useState<any>(null);
@@ -399,6 +433,7 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
     { key: 'members',  label: `Members (${data.members.length})` },
     { key: 'modules',  label: `Modules (${data.modules.length})` },
     { key: 'billing',  label: `Billing (${data.billing.activeAddonCount}/${data.billing.addonCount})` },
+    { key: 'activity', label: 'Activity' },
     { key: 'audit',    label: 'Audit' },
     { key: 'settings', label: 'Settings' },
   ];
@@ -494,7 +529,12 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
       )}
 
       {tab === 'modules' && (
-        <Card style={{ padding: 0 }}>
+        <>
+          <ModuleCatalogPicker
+            tenantModules={data.modules}
+            onEnable={(slug) => enableModule(slug, true)}
+          />
+          <Card style={{ padding: 0 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead><tr style={{ background: colors.bgHover, color: colors.textMuted }}>
               <Th>Module</Th><Th>Status</Th><Th>Allow all members</Th><Th></Th>
@@ -522,8 +562,11 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
               ))}
             </tbody>
           </table>
-        </Card>
+          </Card>
+        </>
       )}
+
+      {tab === 'activity' && <TenantActivity tenantId={id} />}
 
       {tab === 'billing' && (
         <Card>
@@ -561,6 +604,69 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
 
       {tab === 'settings' && <TenantSettings tenant={t} onSaved={load} />}
     </div>
+  );
+}
+
+function ModuleCatalogPicker({ tenantModules, onEnable }: { tenantModules: any[]; onEnable: (slug: string) => void }) {
+  const [catalog, setCatalog] = useState<any[] | null>(null);
+  const [pick, setPick] = useState('');
+  useEffect(() => { apiCall('/v1/platform/modules').then(d => setCatalog(d.modules)).catch(() => setCatalog([])); }, []);
+  const present = new Set(tenantModules.map((m: any) => m.module?.slug).filter(Boolean));
+  const eligible = (catalog ?? []).filter(m => !m.archivedAt && !present.has(m.slug));
+  if (eligible.length === 0) return null;
+  return (
+    <Card style={{ marginBottom: 12 }} data-testid="block-module-catalog-picker">
+      <h3 style={{ marginTop: 0, fontSize: 14 }}>Enable a new module for this tenant</h3>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <select data-testid="select-module-catalog" value={pick} onChange={e => setPick(e.target.value)} style={{ ...inp, flex: 1 }}>
+          <option value="">— choose a module —</option>
+          {eligible.map(m => <option key={m.slug} value={m.slug}>{m.name} ({m.slug}) · {m.status} · planMin={m.planMin}</option>)}
+        </select>
+        <Btn data-testid="button-enable-from-catalog" variant="primary" disabled={!pick} onClick={() => { if (pick) { onEnable(pick); setPick(''); } }}>Enable for tenant</Btn>
+      </div>
+    </Card>
+  );
+}
+
+function TenantActivity({ tenantId }: { tenantId: string }) {
+  const [data, setData] = useState<{ logs: any[]; subs: any[]; events: any[] } | null>(null);
+  const [err, setErr] = useState<any>(null);
+  useEffect(() => {
+    Promise.all([
+      apiCall(`/v1/platform/audit?tenantId=${tenantId}&limit=20`).catch(() => ({ logs: [] })),
+      apiCall(`/v1/platform/billing/events?tenantId=${tenantId}&limit=20`).catch(() => ({ events: [] })),
+    ]).then(([a, b]) => setData({ logs: a.logs ?? [], subs: [], events: b.events ?? [] })).catch(setErr);
+  }, [tenantId]);
+  if (err) return <ErrorBlock err={err} />;
+  if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
+  // Merge audit + billing events into one timeline keyed by created/processed time.
+  type Item = { kind: 'audit' | 'billing'; at: string; title: string; body: string; id: string };
+  const items: Item[] = [
+    ...data.logs.map((l: any) => ({
+      kind: 'audit' as const, id: `a-${l.id}`,
+      at: l.createdAt, title: l.action,
+      body: `${l.actor?.email ?? l.adminId} → ${l.details?.targetType ?? '?'}/${l.details?.targetId ?? '—'}`,
+    })),
+    ...data.events.map((e: any) => ({
+      kind: 'billing' as const, id: `b-${e.id}`,
+      at: e.processedAt ?? e.createdAt, title: `billing.${e.eventType}`,
+      body: `status=${e.status} stripe=${e.stripeEventId ?? '—'}`,
+    })),
+  ].sort((x, y) => (y.at ?? '').localeCompare(x.at ?? ''));
+  return (
+    <Card data-testid="block-tenant-activity">
+      <h3 style={{ marginTop: 0, fontSize: 14 }}>Activity timeline</h3>
+      {items.length === 0 && <div style={{ color: colors.textMuted, fontSize: 13 }}>No recent activity for this tenant.</div>}
+      {items.map(i => (
+        <div key={i.id} style={{ padding: '8px 0', borderBottom: `1px solid ${colors.border}`, fontSize: 12 }} data-testid={`row-activity-${i.id}`}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span><Pill tone={i.kind === 'billing' ? 'purple' : 'muted'}>{i.kind}</Pill> <code>{i.title}</code></span>
+            <span style={{ color: colors.textMuted }}>{i.at ? new Date(i.at).toLocaleString() : '—'}</span>
+          </div>
+          <div style={{ color: colors.textMuted, marginTop: 2 }}>{i.body}</div>
+        </div>
+      ))}
+    </Card>
   );
 }
 
@@ -717,6 +823,7 @@ function ModuleDetail({ slug, onBack }: { slug: string; onBack: () => void }) {
 function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => void }) {
   const STATUSES = ['live', 'active', 'beta', 'coming_soon', 'hidden', 'deprecated', 'disabled'];
   const PLANS = ['starter', 'pro', 'elite'];
+  const meta = (m.metadata ?? {}) as any;
   const [name, setName] = useState(m.name ?? '');
   const [slug, setSlug] = useState(m.slug);
   const [description, setDescription] = useState(m.description ?? '');
@@ -726,6 +833,24 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
   const [status, setStatus] = useState(m.status);
   const [planMin, setPlanMin] = useState(m.planMin);
   const [ord, setOrd] = useState(String(m.ord ?? 0));
+  // Spec-grade fields stored under modules.metadata JSONB so they don't
+  // require DDL. PATCH writes the merged metadata blob back.
+  const [tagline, setTagline] = useState(meta.tagline ?? '');
+  const [shortDescription, setShortDescription] = useState(meta.shortDescription ?? '');
+  const [longDescription, setLongDescription] = useState(meta.longDescription ?? '');
+  const [iconName, setIconName] = useState(meta.iconName ?? '');
+  const [accentColor, setAccentColor] = useState(meta.accentColor ?? '');
+  const [internalRoute, setInternalRoute] = useState(meta.internalRoute ?? '');
+  const [externalUrl, setExternalUrl] = useState(meta.externalUrl ?? '');
+  const [marketingUrl, setMarketingUrl] = useState(meta.marketingUrl ?? '');
+  const [docsUrl, setDocsUrl] = useState(meta.docsUrl ?? '');
+  const [supportUrl, setSupportUrl] = useState(meta.supportUrl ?? '');
+  const [isCore, setIsCore] = useState(!!meta.isCore);
+  const [isPaidAddon, setIsPaidAddon] = useState(!!meta.isPaidAddon);
+  const [addonAnnualPriceCents, setAddonAnnualPriceCents] = useState(String(meta.addonAnnualPriceCents ?? ''));
+  const [stripePriceEnvKey, setStripePriceEnvKey] = useState(meta.stripePriceEnvKey ?? '');
+  const [featureTagsCsv, setFeatureTagsCsv] = useState(Array.isArray(meta.featureTags) ? meta.featureTags.join(', ') : '');
+
   const [err, setErr] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const save = async () => {
@@ -741,6 +866,31 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
       if (status !== m.status) body.status = status;
       if (planMin !== m.planMin) body.planMin = planMin;
       if (parseInt(ord) !== (m.ord ?? 0)) body.ord = parseInt(ord);
+
+      const nextMeta: any = { ...meta };
+      const setOrUnset = (k: string, v: any) => {
+        if (v === '' || v === null || v === undefined) delete nextMeta[k];
+        else nextMeta[k] = v;
+      };
+      setOrUnset('tagline', tagline);
+      setOrUnset('shortDescription', shortDescription);
+      setOrUnset('longDescription', longDescription);
+      setOrUnset('iconName', iconName);
+      setOrUnset('accentColor', accentColor);
+      setOrUnset('internalRoute', internalRoute);
+      setOrUnset('externalUrl', externalUrl);
+      setOrUnset('marketingUrl', marketingUrl);
+      setOrUnset('docsUrl', docsUrl);
+      setOrUnset('supportUrl', supportUrl);
+      nextMeta.isCore = isCore;
+      nextMeta.isPaidAddon = isPaidAddon;
+      const ap = addonAnnualPriceCents.trim();
+      setOrUnset('addonAnnualPriceCents', ap === '' ? '' : Number(ap));
+      setOrUnset('stripePriceEnvKey', stripePriceEnvKey);
+      const tags = featureTagsCsv.split(',').map(s => s.trim()).filter(Boolean);
+      if (tags.length === 0) delete nextMeta.featureTags; else nextMeta.featureTags = tags;
+      if (JSON.stringify(nextMeta) !== JSON.stringify(meta)) body.metadata = nextMeta;
+
       if (Object.keys(body).length === 0) return;
       await apiCall(`/v1/platform/modules/${m.slug}`, { method: 'PATCH', body: JSON.stringify(body) });
       onSaved();
@@ -771,10 +921,42 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
         </div>
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Description</label>
-        <textarea data-testid="input-mod-edit-description" value={description} onChange={e => setDescription(e.target.value)} rows={3} style={{ ...inp, width: '100%', fontFamily: 'inherit' }} />
+        <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Description (legacy short field)</label>
+        <textarea data-testid="input-mod-edit-description" value={description} onChange={e => setDescription(e.target.value)} rows={2} style={{ ...inp, width: '100%', fontFamily: 'inherit' }} />
       </div>
-      <Btn data-testid="button-save-module" variant="primary" disabled={busy} onClick={save} style={{ marginTop: 8 }}>{busy ? 'Saving…' : 'Save module'}</Btn>
+
+      <h4 style={{ marginTop: 16, marginBottom: 6, fontSize: 13, color: colors.textMuted }}>Spec-grade fields (stored in module metadata)</h4>
+      <div style={{ display: 'grid', gap: 8, gridTemplateColumns: '1fr 1fr', marginBottom: 8 }}>
+        <Input label="Tagline"          value={tagline}        onChange={setTagline}        testid="input-mod-edit-tagline" />
+        <Input label="Icon name (Lucide)" value={iconName}     onChange={setIconName}       testid="input-mod-edit-iconname" />
+        <Input label="Accent color (hex)" value={accentColor}  onChange={setAccentColor}    testid="input-mod-edit-accent" />
+        <Input label="Internal route"     value={internalRoute} onChange={setInternalRoute} testid="input-mod-edit-internalroute" />
+        <Input label="External URL"       value={externalUrl}  onChange={setExternalUrl}    testid="input-mod-edit-external" />
+        <Input label="Marketing URL"      value={marketingUrl} onChange={setMarketingUrl}   testid="input-mod-edit-marketing" />
+        <Input label="Docs URL"           value={docsUrl}      onChange={setDocsUrl}        testid="input-mod-edit-docs" />
+        <Input label="Support URL"        value={supportUrl}   onChange={setSupportUrl}     testid="input-mod-edit-support" />
+        <Input label="Addon annual price (cents)" value={addonAnnualPriceCents} onChange={setAddonAnnualPriceCents} testid="input-mod-edit-annualprice" />
+        <Input label="Stripe price env key"       value={stripePriceEnvKey}    onChange={setStripePriceEnvKey}    testid="input-mod-edit-stripekey" />
+        <Input label="Feature tags (comma-separated)" value={featureTagsCsv} onChange={setFeatureTagsCsv} testid="input-mod-edit-tags" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 16 }}>
+          <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <input data-testid="check-mod-iscore" type="checkbox" checked={isCore} onChange={e => setIsCore(e.target.checked)} /> isCore
+          </label>
+          <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <input data-testid="check-mod-ispaidaddon" type="checkbox" checked={isPaidAddon} onChange={e => setIsPaidAddon(e.target.checked)} /> isPaidAddon
+          </label>
+        </div>
+      </div>
+      <div>
+        <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Short description</label>
+        <textarea data-testid="input-mod-edit-shortdesc" value={shortDescription} onChange={e => setShortDescription(e.target.value)} rows={2} style={{ ...inp, width: '100%', fontFamily: 'inherit' }} />
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Long description</label>
+        <textarea data-testid="input-mod-edit-longdesc" value={longDescription} onChange={e => setLongDescription(e.target.value)} rows={4} style={{ ...inp, width: '100%', fontFamily: 'inherit' }} />
+      </div>
+
+      <Btn data-testid="button-save-module" variant="primary" disabled={busy} onClick={save} style={{ marginTop: 12 }}>{busy ? 'Saving…' : 'Save module'}</Btn>
     </Card>
   );
 }

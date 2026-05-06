@@ -144,12 +144,26 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         await db.select().from(modules).where(inArray(modules.id, modIds));
       const modById = Object.fromEntries(modRows.map(m => [m.id, m]));
 
+      // Per-user module-access grants for this tenant. Without this the
+      // PlatformPage Members tab would render every grant as the table
+      // default after each reload, which is misleading.
+      const accessRows = await db.select().from(tenantUserModuleAccess)
+        .where(eq(tenantUserModuleAccess.tenantId, id));
+      const accessByUser: Record<string, any[]> = {};
+      for (const a of accessRows) {
+        (accessByUser[a.userId] ||= []).push(a);
+      }
+
       const subs = await db.select().from(addonSubscriptions).where(eq(addonSubscriptions.tenantId, id));
       const liveAddonCount = subs.filter(s => ['active', 'trialing'].includes(s.status)).length;
 
       return {
         tenant,
-        members: memberRows.map(m => ({ ...m, user: userById[m.userId] ?? null })),
+        members: memberRows.map(m => ({
+          ...m,
+          user: userById[m.userId] ?? null,
+          moduleAccess: accessByUser[m.userId] ?? [],
+        })),
         modules: tmRows.map(tm => ({ ...tm, module: modById[tm.moduleId] ?? null })),
         billing: {
           addonCount: subs.length,
@@ -159,6 +173,48 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       };
     },
   );
+
+  // Lightweight platform-wide stats for the dashboard. One round-trip,
+  // counts only — keeps the operator console snappy.
+  app.get('/v1/platform/stats', { preHandler: [requireSuperAdmin] }, async () => {
+    const [
+      tenantsAll, modulesAll, addonsAll, eventsAll, usersAll,
+    ] = await Promise.all([
+      db.select().from(tenants),
+      db.select().from(modules),
+      db.select().from(addonSubscriptions),
+      db.select().from(billingEvents),
+      db.select({ id: users.id, status: users.status, platformRole: users.platformRole }).from(users),
+    ]);
+    const byStatus = (rows: any[], k = 'status') => rows.reduce((acc: Record<string, number>, r) => {
+      const v = r[k] ?? 'unknown';
+      acc[v] = (acc[v] ?? 0) + 1;
+      return acc;
+    }, {});
+    return {
+      tenants: { total: tenantsAll.length, byStatus: byStatus(tenantsAll) },
+      modules: {
+        total: modulesAll.length,
+        byStatus: byStatus(modulesAll),
+        archivedCount: modulesAll.filter(m => m.archivedAt).length,
+      },
+      addonSubscriptions: {
+        total: addonsAll.length,
+        byStatus: byStatus(addonsAll),
+        activeOrTrialing: addonsAll.filter(s => ['active', 'trialing'].includes(s.status)).length,
+      },
+      billingEvents: {
+        total: eventsAll.length,
+        failed: eventsAll.filter(e => e.status === 'failed').length,
+        processed: eventsAll.filter(e => e.status === 'processed').length,
+      },
+      users: {
+        total: usersAll.length,
+        superAdmins: usersAll.filter(u => u.platformRole === 'super_admin').length,
+        active: usersAll.filter(u => u.status === 'active').length,
+      },
+    };
+  });
 
   // Create company tenant + owner mapping.
   app.post('/v1/platform/tenants', { preHandler: [requireSuperAdmin] }, async (request, reply) => {
@@ -679,8 +735,16 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     const q = (request.query ?? {}) as any;
     const limit = Math.min(parseInt(q.limit) || 100, 500);
     const onlyFailed = q.onlyFailed === '1' || q.onlyFailed === 'true';
-    let rows = await db.select().from(billingEvents).orderBy(desc(billingEvents.createdAt)).limit(limit);
+    let rows = await db.select().from(billingEvents).orderBy(desc(billingEvents.createdAt)).limit(limit * 4);
+    if (q.tenantId) {
+      // tenantId is carried in metadata.tenantId on the event row (set
+      // by classifyWebhookEvent for addon checkouts). Filter post-fetch
+      // because billing_events.metadata is JSONB and Drizzle's path-eq
+      // helper isn't wired in this module.
+      rows = rows.filter(e => (e.metadata as any)?.tenantId === q.tenantId);
+    }
     if (onlyFailed) rows = rows.filter(e => !!e.errorMessage && !e.processedAt);
+    rows = rows.slice(0, limit);
     return { events: rows, total: rows.length };
   });
 
