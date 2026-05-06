@@ -1,8 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import {
+  LayoutGrid, Store, Sparkles, Receipt, Settings as SettingsIcon,
+  Building2, Users as UsersIcon, Boxes, ShieldCheck, Menu, X, ChevronLeft,
+  type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from './AuthProvider';
 
+// Centralized palette. Re-exported below + via lib/design-tokens.ts so all
+// downstream pages share the same source of truth.
 const colors = {
   bg: '#010409',
   bgSecondary: '#0d1117',
@@ -21,8 +28,7 @@ const colors = {
 interface NavItem {
   id: string;
   label: string;
-  icon: string;
-  adminOnly?: boolean;
+  Icon: LucideIcon;
 }
 
 interface NavSection {
@@ -30,47 +36,60 @@ interface NavSection {
   items: NavItem[];
 }
 
-const navSections: NavSection[] = [
-  {
-    label: 'Work',
+// Build the role-aware nav. Sections appear only when the user has the
+// authority to use them — non-tenant-admins never see Tenant Admin entries
+// and non-super-admins never see Platform Command.
+function buildNavSections(opts: {
+  isSuperAdmin: boolean;
+  isTenantAdmin: boolean; // owner OR admin in current tenant
+}): NavSection[] {
+  const sections: NavSection[] = [];
+  sections.push({
+    label: 'Workspace',
     items: [
-      { id: 'workspace', label: 'Workspaces', icon: '⬡' },
-      { id: 'projects', label: 'Projects', icon: '◧' },
-      { id: 'tasks', label: 'Tasks', icon: '☑' },
-      { id: 'notes', label: 'Notes', icon: '◪' },
+      { id: 'my-apps', label: 'My Apps', Icon: LayoutGrid },
+      { id: 'apps', label: 'App Marketplace', Icon: Store },
+      { id: 'ai-tools', label: 'AI Assistant', Icon: Sparkles },
     ],
-  },
-  {
-    label: 'Insights',
-    items: [
-      { id: 'dashboard', label: 'Dashboard', icon: '◫' },
-      { id: 'activity', label: 'Activity', icon: '◉' },
-      { id: 'ai-tools', label: 'AI Assistant', icon: '✦' },
-    ],
-  },
-  {
-    label: 'Shotgun OS',
-    items: [
-      { id: 'apps', label: 'Apps', icon: '▦' },
-    ],
-  },
-  {
+  });
+  if (opts.isTenantAdmin) {
+    sections.push({
+      label: 'Tenant',
+      items: [
+        { id: 'command-center', label: 'Command Center', Icon: Building2 },
+        { id: 'tenant-users', label: 'Members', Icon: UsersIcon },
+        { id: 'tenant-modules', label: 'Modules', Icon: Boxes },
+        { id: 'tenant-settings', label: 'Tenant Settings', Icon: SettingsIcon },
+      ],
+    });
+  }
+  sections.push({
     label: 'Account',
     items: [
-      { id: 'billing', label: 'Billing', icon: '◈' },
-      { id: 'settings', label: 'Settings', icon: '⚙' },
-      { id: 'admin', label: 'Admin', icon: '⛊', adminOnly: true },
+      { id: 'billing', label: 'Billing', Icon: Receipt },
+      { id: 'settings', label: 'Settings', Icon: SettingsIcon },
     ],
-  },
-];
+  });
+  if (opts.isSuperAdmin) {
+    sections.push({
+      label: 'Platform',
+      items: [{ id: 'platform', label: 'Platform Command', Icon: ShieldCheck }],
+    });
+  }
+  return sections;
+}
 
 interface SaasLayoutProps {
   activePage: string;
   onNavigate: (page: string) => void;
   children: React.ReactNode;
+  // Optional override — set when the active tenant role is known to the
+  // shell (e.g. from a /me/tenants response). Falls back to false when
+  // unavailable, hiding tenant-admin entries (safer default).
+  tenantRole?: 'owner' | 'admin' | 'member' | null;
 }
 
-export default function SaasLayout({ activePage, onNavigate, children }: SaasLayoutProps) {
+export default function SaasLayout({ activePage, onNavigate, children, tenantRole }: SaasLayoutProps) {
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -89,10 +108,9 @@ export default function SaasLayout({ activePage, onNavigate, children }: SaasLay
     if (isMobile) setMobileOpen(false);
   };
 
-  const filteredSections = navSections.map(section => ({
-    ...section,
-    items: section.items.filter(item => !item.adminOnly || user?.role === 'admin'),
-  })).filter(section => section.items.length > 0);
+  const isSuperAdmin = (user as any)?.platformRole === 'super_admin';
+  const isTenantAdmin = tenantRole === 'owner' || tenantRole === 'admin' || isSuperAdmin;
+  const sections = buildNavSections({ isSuperAdmin, isTenantAdmin });
 
   const sidebarWidth = isMobile ? 260 : (collapsed ? 64 : 240);
 
@@ -141,16 +159,34 @@ export default function SaasLayout({ activePage, onNavigate, children }: SaasLay
           </div>
         )}
         {isMobile && (
-          <button onClick={() => setMobileOpen(false)} data-testid="button-close-sidebar"
-            style={{ background: 'none', border: 'none', color: colors.textDim, fontSize: 20, cursor: 'pointer', padding: 4 }}>
-            ✕
+          <button
+            onClick={(e) => { e.stopPropagation(); setMobileOpen(false); }}
+            data-testid="button-close-sidebar"
+            style={{ background: 'none', border: 'none', color: colors.textDim, cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
+          >
+            <X size={18} />
           </button>
+        )}
+        {!isMobile && (
+          <ChevronLeft
+            size={16}
+            style={{
+              color: colors.textDim,
+              transform: collapsed ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.2s',
+              flexShrink: 0,
+            }}
+          />
         )}
       </div>
 
       <div style={{ flex: 1, padding: '8px 8px', overflowY: 'auto' }}>
-        {filteredSections.map((section, sIdx) => (
-          <div key={section.label} style={{ marginTop: sIdx === 0 ? 0 : 8 }}>
+        {sections.map((section, sIdx) => (
+          <div
+            key={section.label}
+            style={{ marginTop: sIdx === 0 ? 0 : 8 }}
+            data-testid={`sidebar-section-${section.label.toLowerCase()}`}
+          >
             {(isMobile || !collapsed) && (
               <div style={{
                 padding: '6px 12px 4px',
@@ -169,6 +205,7 @@ export default function SaasLayout({ activePage, onNavigate, children }: SaasLay
             )}
             {section.items.map(item => {
               const isActive = activePage === item.id;
+              const Icon = item.Icon;
               return (
                 <button
                   key={item.id}
@@ -191,10 +228,11 @@ export default function SaasLayout({ activePage, onNavigate, children }: SaasLay
                     textAlign: 'left',
                     transition: 'background 0.15s',
                   }}
-                  onMouseEnter={e => { if (!isActive) (e.target as HTMLElement).style.background = colors.bgHover; }}
-                  onMouseLeave={e => { if (!isActive) (e.target as HTMLElement).style.background = 'transparent'; }}
+                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = colors.bgHover; }}
+                  onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                  title={collapsed && !isMobile ? item.label : undefined}
                 >
-                  <span style={{ fontSize: 16, flexShrink: 0, width: 20, textAlign: 'center' }}>{item.icon}</span>
+                  <Icon size={16} style={{ flexShrink: 0 }} />
                   {(isMobile || !collapsed) && <span>{item.label}</span>}
                 </button>
               );
@@ -217,8 +255,8 @@ export default function SaasLayout({ activePage, onNavigate, children }: SaasLay
                 width: '100%', padding: '8px 12px', border: 'none', borderRadius: 6,
                 background: 'transparent', color: colors.text, cursor: 'pointer', textAlign: 'left', fontSize: 13,
               }}
-              onMouseEnter={e => (e.target as HTMLElement).style.background = colors.bgHover}
-              onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = colors.bgHover}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
             >Settings</button>
             <button
               data-testid="menu-logout"
@@ -227,8 +265,8 @@ export default function SaasLayout({ activePage, onNavigate, children }: SaasLay
                 width: '100%', padding: '8px 12px', border: 'none', borderRadius: 6,
                 background: 'transparent', color: colors.accentRed, cursor: 'pointer', textAlign: 'left', fontSize: 13,
               }}
-              onMouseEnter={e => (e.target as HTMLElement).style.background = colors.bgHover}
-              onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = colors.bgHover}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
             >Sign out</button>
           </div>
         )}
@@ -240,8 +278,8 @@ export default function SaasLayout({ activePage, onNavigate, children }: SaasLay
             padding: '8px 12px', border: 'none', borderRadius: 8,
             background: 'transparent', color: colors.text, cursor: 'pointer',
           }}
-          onMouseEnter={e => (e.target as HTMLElement).style.background = colors.bgHover}
-          onMouseLeave={e => (e.target as HTMLElement).style.background = 'transparent'}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = colors.bgHover}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
         >
           <div style={{
             width: 32, height: 32, borderRadius: '50%',
@@ -282,8 +320,8 @@ export default function SaasLayout({ activePage, onNavigate, children }: SaasLay
             <button
               data-testid="button-open-sidebar"
               onClick={() => setMobileOpen(true)}
-              style={{ background: 'none', border: 'none', color: colors.text, fontSize: 20, cursor: 'pointer', padding: 4 }}
-            >☰</button>
+              style={{ background: 'none', border: 'none', color: colors.text, cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
+            ><Menu size={20} /></button>
             <div style={{
               width: 24, height: 24, borderRadius: 6,
               background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)',

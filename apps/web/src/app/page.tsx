@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AuthProvider, { useAuth } from '@/components/AuthProvider';
 import { ToastProvider } from '@/components/Toast';
 import SaasLayout from '@/components/SaasLayout';
@@ -10,24 +10,56 @@ import ForgotPasswordPage from '@/components/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/components/pages/ResetPasswordPage';
 import SuspendedPage from '@/components/pages/SuspendedPage';
 import UnauthorizedPage from '@/components/pages/UnauthorizedPage';
-import DashboardPage from '@/components/pages/DashboardPage';
-import ProjectsPage from '@/components/pages/ProjectsPage';
-import TasksPage from '@/components/pages/TasksPage';
-import NotesPage from '@/components/pages/NotesPage';
-import ActivityPage from '@/components/pages/ActivityPage';
 import AiToolsPage from '@/components/pages/AiToolsPage';
-import WorkspacesPage from '@/components/pages/WorkspacesPage';
 import BillingPage from '@/components/pages/BillingPage';
 import SettingsPage from '@/components/pages/SettingsPage';
-import AdminPage from '@/components/pages/AdminPage';
 import AppsPage from '@/components/pages/AppsPage';
 import PlatformPage from '@/components/pages/PlatformPage';
+import MyAppsPage from '@/components/pages/MyAppsPage';
+import TenantCommandCenterPage from '@/components/pages/TenantCommandCenterPage';
+import TenantUsersPage from '@/components/pages/TenantUsersPage';
+import TenantModulesPage from '@/components/pages/TenantModulesPage';
+import TenantSettingsPage from '@/components/pages/TenantSettingsPage';
+import { meApi } from '@/lib/auth';
 
 function AppContent() {
   const { user, loading, authError, logout, clearAuthError } = useAuth();
   const [authPage, setAuthPage] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>('login');
-  const [activePage, setActivePage] = useState('dashboard');
-  const [taskProject, setTaskProject] = useState<{ id: string; name: string } | null>(null);
+  // Default landing is set per-role once we know the user (effect below).
+  // 'my-apps' is the safe fallback for any non-admin user.
+  const [activePage, setActivePage] = useState<string>('my-apps');
+  const [tenantRole, setTenantRole] = useState<'owner' | 'admin' | 'member' | null>(null);
+
+  // Discover the caller's tenant role for the active tenant. We use this to
+  // (a) decide the default landing page and (b) reveal Tenant Admin entries
+  // in the sidebar. We only run once per login.
+  useEffect(() => {
+    if (!user) { setTenantRole(null); return; }
+    let alive = true;
+    (async () => {
+      try {
+        const me = await meApi.tenants();
+        const current = me.current ?? me.tenants?.[0]?.id ?? null;
+        const t = me.tenants?.find((x: any) => x.id === current) ?? null;
+        if (!alive) return;
+        const role = (t?.role ?? null) as any;
+        setTenantRole(role);
+        // Set the *initial* landing only — user nav after login is preserved.
+        if (activePage === 'my-apps') {
+          if ((user as any).platformRole === 'super_admin') {
+            // Super admins land on the dedicated /platform surface.
+            setActivePage('platform');
+          } else if (role === 'owner' || role === 'admin') {
+            setActivePage('command-center');
+          }
+        }
+      } catch {
+        // Ignore — leave defaults in place.
+      }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   if (loading) {
     return (
@@ -60,60 +92,52 @@ function AppContent() {
     return <LoginPage onSwitch={handleSwitch} />;
   }
 
+  const isSuperAdmin = (user as any)?.platformRole === 'super_admin';
+  const isTenantAdmin = tenantRole === 'owner' || tenantRole === 'admin' || isSuperAdmin;
+
   const handleNavigate = (page: string) => {
-    // Gate 2: super_admins clicking the legacy "Admin" sidebar entry are
-    // routed to the new path-addressable Platform Command at /platform.
-    // The full URL switch (rather than internal setActivePage) means the
-    // address bar reflects where the user is and the surface is shareable.
-    if (page === 'admin' && (user as any)?.platformRole === 'super_admin') {
-      window.location.href = '/platform';
-      return;
-    }
-    if (page === 'platform' && (user as any)?.platformRole === 'super_admin') {
+    // Super admins clicking the Platform Command entry are routed to the
+    // standalone /platform page so the URL reflects where they are.
+    if (page === 'platform' && isSuperAdmin) {
       window.location.href = '/platform';
       return;
     }
     setActivePage(page);
-    if (page !== 'tasks') setTaskProject(null);
-  };
-
-  const handleNavigateToTasks = (projectId: string, projectName: string) => {
-    setTaskProject({ id: projectId, name: projectName });
-    setActivePage('tasks');
   };
 
   const renderPage = () => {
     switch (activePage) {
-      case 'dashboard': return <DashboardPage />;
-      case 'projects': return <ProjectsPage onNavigateToTasks={handleNavigateToTasks} />;
-      case 'tasks': return (
-        <TasksPage
-          projectId={taskProject?.id}
-          projectName={taskProject?.name}
-          onBack={() => setActivePage('projects')}
-        />
-      );
-      case 'notes': return <NotesPage />;
-      case 'activity': return <ActivityPage />;
-      case 'ai-tools': return <AiToolsPage />;
-      case 'workspace': return <WorkspacesPage />;
+      case 'my-apps': return <MyAppsPage onNavigate={setActivePage} />;
       case 'apps': return <AppsPage onNavigate={setActivePage} />;
+      case 'ai-tools': return <AiToolsPage />;
       case 'billing': return <BillingPage />;
       case 'settings': return <SettingsPage />;
-      case 'admin':
-        return user.role === 'admin'
-          ? <AdminPage />
-          : <UnauthorizedPage onGoBack={() => handleNavigate('dashboard')} message="Only administrators can access this page." />;
+      case 'command-center':
+        return isTenantAdmin
+          ? <TenantCommandCenterPage onNavigate={setActivePage} />
+          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can access the Command Center." />;
+      case 'tenant-users':
+        return isTenantAdmin
+          ? <TenantUsersPage />
+          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can manage members." />;
+      case 'tenant-modules':
+        return isTenantAdmin
+          ? <TenantModulesPage />
+          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can view tenant modules." />;
+      case 'tenant-settings':
+        return isTenantAdmin
+          ? <TenantSettingsPage />
+          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can edit tenant settings." />;
       case 'platform':
-        return (user as any).platformRole === 'super_admin'
+        return isSuperAdmin
           ? <PlatformPage />
-          : <UnauthorizedPage onGoBack={() => handleNavigate('dashboard')} message="Only platform super-administrators can access this page." />;
-      default: return <DashboardPage />;
+          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only platform super-administrators can access this page." />;
+      default: return <MyAppsPage onNavigate={setActivePage} />;
     }
   };
 
   return (
-    <SaasLayout activePage={activePage} onNavigate={handleNavigate}>
+    <SaasLayout activePage={activePage} onNavigate={handleNavigate} tenantRole={tenantRole}>
       {renderPage()}
     </SaasLayout>
   );

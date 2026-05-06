@@ -204,6 +204,47 @@ export const adminApi = {
     apiFetch(`/admin/billing/resync/${userId}`, { method: 'POST' }),
 };
 
+export const meApi = {
+  // Flat per-user list of modules accessible across all tenants the user
+  // is a member of, collapsed by slug to the best access level. Used by
+  // the My Apps launchpad.
+  modules: () => apiFetch('/me/modules'),
+  tenants: () => apiFetch('/me/tenants'),
+};
+
+export const tenantApi = {
+  // Member listing + role/remove mutations.
+  listUsers: (tenantId: string) => apiFetch(`/tenants/${tenantId}/users`),
+  updateUser: (tenantId: string, userId: string, role: 'owner' | 'admin' | 'member') =>
+    apiFetch(`/tenants/${tenantId}/users/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  removeUser: (tenantId: string, userId: string) =>
+    apiFetch(`/tenants/${tenantId}/users/${userId}`, { method: 'DELETE' }),
+
+  // Invites lifecycle.
+  listInvites: (tenantId: string) => apiFetch(`/tenants/${tenantId}/invites`),
+  createInvite: (tenantId: string, email: string, role: 'owner' | 'admin' | 'member') =>
+    apiFetch(`/tenants/${tenantId}/invites`, { method: 'POST', body: JSON.stringify({ email, role }) }),
+  revokeInvite: (tenantId: string, inviteId: string) =>
+    apiFetch(`/tenants/${tenantId}/invites/${inviteId}`, { method: 'DELETE' }),
+  acceptInvite: (token: string) =>
+    apiFetch(`/invites/${token}/accept`, { method: 'POST' }),
+
+  // Per-user, per-module access grants (owner/admin only).
+  getUserModuleAccess: (tenantId: string, userId: string) =>
+    apiFetch(`/tenants/${tenantId}/users/${userId}/module-access`),
+  setUserModuleAccess: (
+    tenantId: string,
+    userId: string,
+    moduleSlug: string,
+    accessLevel: 'none' | 'user' | 'manager',
+  ) => apiFetch(`/tenants/${tenantId}/users/${userId}/module-access`, {
+    method: 'POST', body: JSON.stringify({ moduleSlug, accessLevel }),
+  }),
+
+  // Tenant module catalog (read-only listing for the active tenant).
+  listModules: (tenantId: string) => apiFetch(`/tenants/${tenantId}/modules`),
+};
+
 export const modulesApi = {
   list: () => apiFetch('/modules'),
   get: (slug: string) => apiFetch(`/modules/${slug}`),

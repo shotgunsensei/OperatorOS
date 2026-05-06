@@ -147,6 +147,31 @@ const auditSsoReject = (opts: { userId: string | null; action: string; details: 
 
 export async function registerModuleRoutes(app: FastifyInstance) {
   // -------------------------------------------------------------------------
+  // GET /v1/me/modules — flat list of modules accessible to caller across
+  // every tenant they belong to, collapsed to one row per slug. Used by the
+  // My Apps launchpad. Surface is intentionally minimal (no pricing / CTA
+  // logic — that lives in /v1/modules for the marketplace).
+  // -------------------------------------------------------------------------
+  app.get('/v1/me/modules', { preHandler: [authenticate] }, async (request) => {
+    const user = (request as any).user;
+    const summary = await getUserModules(user.id);
+    // `unlocked` from entitlement-service already factors in launchable
+    // status (live OR beta) AND baseUrl presence, so it is the single
+    // source of truth for "this module belongs on the launchpad".
+    const unlocked = summary
+      .filter(s => (s as any).unlocked === true)
+      .map(s => ({
+        slug: s.module.slug,
+        name: s.module.name,
+        description: s.module.description,
+        category: s.module.category,
+        iconUrl: s.module.iconUrl,
+        baseUrl: s.module.baseUrl,
+      }));
+    return { modules: unlocked };
+  });
+
+  // -------------------------------------------------------------------------
   // GET /v1/modules — list all modules with server-resolved access state
   // -------------------------------------------------------------------------
   app.get('/v1/modules', { preHandler: [authenticate] }, async (request) => {

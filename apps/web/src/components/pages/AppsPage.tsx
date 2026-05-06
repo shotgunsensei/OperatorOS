@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Search, Sparkles, Filter } from 'lucide-react';
 import { modulesApi } from '@/lib/auth';
 import { useToast } from '@/components/Toast';
-import { colors } from '../SaasLayout';
+import { colors } from '@/lib/design-tokens';
 
 type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
 type ModuleCta = 'open' | 'upgrade' | 'buy_addon' | 'coming_soon' | 'disabled';
@@ -67,6 +68,8 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
   const [loading, setLoading] = useState(true);
   const [launching, setLaunching] = useState<string | null>(null);
   const [warningShown, setWarningShown] = useState(false);
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string>('all');
   const { toast } = useToast();
 
   const load = async () => {
@@ -123,6 +126,21 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
     }
   };
 
+  // Hooks must be called unconditionally — keep useMemo above the early
+  // return so React's hook order is stable across renders.
+  const categories = useMemo(
+    () => ['all', ...Array.from(new Set(modules.map(m => m.module.category).filter(Boolean) as string[]))],
+    [modules],
+  );
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return modules.filter(({ module: m }) => {
+      if (activeCategory !== 'all' && m.category !== activeCategory) return false;
+      if (!q) return true;
+      return (m.name + ' ' + (m.description ?? '')).toLowerCase().includes(q);
+    });
+  }, [modules, search, activeCategory]);
+
   if (loading) {
     return (
       <div style={{ padding: 32, color: colors.textMuted, fontSize: 14 }} data-testid="apps-loading">
@@ -133,18 +151,60 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
 
   return (
     <div style={{ padding: '24px 32px', maxWidth: 1200, margin: '0 auto' }} data-testid="apps-page">
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Shotgun OS Apps</h1>
-        <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 6 }}>
-          Single sign-on into every product in the Shotgun ecosystem. Your access updates instantly when your plan changes.
-        </p>
+      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Sparkles size={24} color={colors.accentPurple} />
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>App Marketplace</h1>
+          <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 6 }}>
+            Single sign-on into every product in the Shotgun ecosystem. Your access updates instantly when your plan changes.
+          </p>
+        </div>
+      </div>
+
+      {/* Search + category pills */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 8, padding: '6px 10px', flex: '1 1 240px', maxWidth: 320 }}>
+          <Search size={14} color={colors.textDim} />
+          <input
+            data-testid="input-marketplace-search"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search apps…"
+            style={{ flex: 1, background: 'transparent', border: 'none', color: colors.text, fontSize: 13, outline: 'none' }}
+          />
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+          <Filter size={12} color={colors.textDim} />
+          {categories.map(c => {
+            const isActive = activeCategory === c;
+            return (
+              <button
+                key={c}
+                data-testid={`pill-category-${c}`}
+                onClick={() => setActiveCategory(c)}
+                style={{
+                  padding: '4px 10px', borderRadius: 999, fontSize: 11, cursor: 'pointer',
+                  border: `1px solid ${isActive ? colors.accent : colors.border}`,
+                  background: isActive ? `${colors.accent}22` : 'transparent',
+                  color: isActive ? colors.accent : colors.textMuted, fontWeight: 600,
+                  textTransform: 'capitalize',
+                }}
+              >{c}</button>
+            );
+          })}
+        </div>
       </div>
 
       <div style={{
         display: 'grid', gap: 16,
         gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
       }}>
-        {modules.map(({ module: m, unlocked, access_source, cta, upgrade_target_plan, addon_price_cents, reason }) => {
+        {filtered.length === 0 && (
+          <div data-testid="marketplace-empty" style={{ gridColumn: '1 / -1', padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 13, border: `1px dashed ${colors.border}`, borderRadius: 12 }}>
+            No apps match your filters.
+          </div>
+        )}
+        {filtered.map(({ module: m, unlocked, access_source, cta, upgrade_target_plan, addon_price_cents, reason }) => {
           const srcKey = unlocked && access_source ? access_source : 'locked';
           const src = sourceLabel[srcKey] || sourceLabel.locked;
           const status = statusLabel[m.status] || statusLabel.coming_soon;
@@ -162,6 +222,17 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                 flexDirection: 'column',
                 gap: 12,
                 opacity: unlocked ? 1 : 0.85,
+                transition: 'transform 0.15s, border-color 0.15s, box-shadow 0.15s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.borderColor = colors.accent;
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(88,166,255,0.12)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.borderColor = colors.border;
+                e.currentTarget.style.boxShadow = 'none';
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

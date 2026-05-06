@@ -11,6 +11,10 @@ interface User {
   status: string;
   avatarUrl?: string;
   createdAt: string;
+  // Gate 1+: platform-scoped authority (`super_admin` | `user`).
+  platformRole?: 'super_admin' | 'user';
+  // Active tenant id (resolves the per-request tenant context server-side).
+  currentTenantId?: string | null;
 }
 
 interface AuthContextType {

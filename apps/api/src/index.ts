@@ -34,6 +34,7 @@ import { registerBillingRoutes } from './routes/billing-routes.js';
 import { registerAiRoutes } from './routes/ai-routes.js';
 import { registerModuleRoutes } from './routes/module-routes.js';
 import { registerTenantRoutes } from './routes/tenant-routes.js';
+import { registerTenantAdminRoutes } from './routes/tenant-admin-routes.js';
 import { registerPlatformRoutes } from './routes/platform-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
 import { runAgentLoop } from './agent.js';
@@ -77,6 +78,7 @@ await registerBillingRoutes(app);
 await registerAiRoutes(app);
 await registerModuleRoutes(app);
 await registerTenantRoutes(app);
+await registerTenantAdminRoutes(app);
 await registerPlatformRoutes(app);
 
 async function ensureTables() {
