@@ -604,9 +604,61 @@ function mapStripeStatus(stripeStatus: string): string {
 // Add-on Subscriptions (per-module purchase on top of the base plan)
 // ---------------------------------------------------------------------------
 
+export function getAddonStripePriceEnvKey(moduleSlug: string): string {
+  return `STRIPE_PRICE_ADDON_${moduleSlug.toUpperCase().replace(/-/g, '_')}`;
+}
+
 export function getAddonStripePriceId(moduleSlug: string): string {
-  const key = `STRIPE_PRICE_ADDON_${moduleSlug.toUpperCase().replace(/-/g, '_')}`;
-  return process.env[key] || '';
+  return process.env[getAddonStripePriceEnvKey(moduleSlug)] || '';
+}
+
+// Fetches the live unit_amount + currency for a module's
+// STRIPE_PRICE_ADDON_<SLUG> env binding so admins can spot drift between
+// what they typed into modules.metadata.addonPriceCents and what Stripe
+// will actually charge. Never throws; returns a typed result.
+export interface AddonStripePriceLookup {
+  envKey: string;
+  priceId: string;
+  stripeMode: string;
+  stripeEnabled: boolean;
+  fetched: boolean;
+  unitAmountCents: number | null;
+  currency: string | null;
+  active: boolean | null;
+  error: string | null;
+}
+
+export async function lookupAddonStripePrice(moduleSlug: string): Promise<AddonStripePriceLookup> {
+  const envKey = getAddonStripePriceEnvKey(moduleSlug);
+  const priceId = process.env[envKey] || '';
+  const base: AddonStripePriceLookup = {
+    envKey,
+    priceId,
+    stripeMode: STRIPE_MODE,
+    stripeEnabled: isStripeEnabled(),
+    fetched: false,
+    unitAmountCents: null,
+    currency: null,
+    active: null,
+    error: null,
+  };
+  if (!priceId) return base;
+  if (!STRIPE_SECRET_KEY) {
+    return { ...base, error: 'STRIPE_SECRET_KEY is not configured; cannot verify price.' };
+  }
+  try {
+    const stripe = getStripe();
+    const price = await stripe.prices.retrieve(priceId);
+    return {
+      ...base,
+      fetched: true,
+      unitAmountCents: typeof price.unit_amount === 'number' ? price.unit_amount : null,
+      currency: typeof price.currency === 'string' ? price.currency : null,
+      active: typeof price.active === 'boolean' ? price.active : null,
+    };
+  } catch (err: any) {
+    return { ...base, error: err?.message || 'Stripe price lookup failed' };
+  }
 }
 
 // In local-mode (no Stripe) the buy_addon CTA is allowed so dev can

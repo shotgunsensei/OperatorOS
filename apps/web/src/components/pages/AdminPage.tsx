@@ -1105,6 +1105,19 @@ interface AdminModule {
   category: string | null;
   ord: number;
   includedInPlans: string[];
+  metadata?: { addonPriceCents?: number | null } | null;
+}
+
+interface AdminStripePriceLookup {
+  envKey: string;
+  priceId: string;
+  stripeMode: string;
+  stripeEnabled: boolean;
+  fetched: boolean;
+  unitAmountCents: number | null;
+  currency: string | null;
+  active: boolean | null;
+  error: string | null;
 }
 
 interface ModuleMember {
@@ -1125,6 +1138,7 @@ function ModulesTab() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<AdminModule | null>(null);
   const [membersFor, setMembersFor] = useState<AdminModule | null>(null);
+  const [stripeLookups, setStripeLookups] = useState<Record<string, AdminStripePriceLookup | { loading: true } | { error: string }>>({});
   const { toast } = useToast();
 
   const load = useCallback(async () => {
@@ -1164,6 +1178,38 @@ function ModulesTab() {
     }
   };
 
+  const loadStripeLookup = useCallback(async (slug: string) => {
+    setStripeLookups(prev => ({ ...prev, [slug]: { loading: true } }));
+    try {
+      const d = await adminApi.getModuleStripePrice(slug);
+      setStripeLookups(prev => ({ ...prev, [slug]: d.lookup as AdminStripePriceLookup }));
+    } catch (err: any) {
+      setStripeLookups(prev => ({ ...prev, [slug]: { error: err.error || err.message || 'Lookup failed' } }));
+    }
+  }, []);
+
+  // Auto-load Stripe price binding for each module once the catalog arrives
+  // so the mismatch warning surfaces without an extra click. Cheap: one
+  // Stripe price.retrieve per module, only on the admin Modules tab.
+  useEffect(() => {
+    if (loading) return;
+    for (const m of modules) {
+      if (!stripeLookups[m.slug]) loadStripeLookup(m.slug);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, modules]);
+
+  const saveAddonPrice = async (mod: AdminModule, cents: number) => {
+    try {
+      await adminApi.setModuleAddonPrice(mod.slug, cents);
+      toast(`Updated ${mod.name} add-on price`, 'success');
+      await load();
+      await loadStripeLookup(mod.slug);
+    } catch (err: any) {
+      toast(`Failed: ${err.error || err.message}`, 'error');
+    }
+  };
+
   if (loading) {
     return <div data-testid="admin-modules-loading" style={{ padding: 30, color: colors.textMuted }}>Loading modules...</div>;
   }
@@ -1183,7 +1229,7 @@ function ModulesTab() {
 
       <div style={{ background: adminColors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: 'hidden' }}>
         <div style={{
-          display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.4fr 1fr',
+          display: 'grid', gridTemplateColumns: '1.7fr 0.9fr 0.7fr 1.2fr 1.4fr 1fr',
           padding: '10px 16px', background: adminColors.headerBg,
           borderBottom: `1px solid ${colors.border}`, fontSize: 11, color: colors.textDim,
           fontWeight: 600, textTransform: 'uppercase',
@@ -1191,13 +1237,14 @@ function ModulesTab() {
           <div>Module</div>
           <div>Status</div>
           <div>Min plan</div>
+          <div>Add-on price · Stripe</div>
           <div>Included in</div>
           <div></div>
         </div>
 
         {modules.map(m => (
           <div key={m.slug} data-testid={`admin-module-${m.slug}`} style={{
-            display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.4fr 1fr',
+            display: 'grid', gridTemplateColumns: '1.7fr 0.9fr 0.7fr 1.2fr 1.4fr 1fr',
             padding: '12px 16px', borderBottom: `1px solid ${colors.border}`, alignItems: 'center', gap: 8,
           }}>
             <div>
@@ -1218,6 +1265,11 @@ function ModulesTab() {
               </select>
             </div>
             <div style={{ fontSize: 12, color: colors.text }}>{m.planMin}</div>
+            <AddonPriceCell
+              mod={m}
+              lookup={stripeLookups[m.slug]}
+              onSave={cents => saveAddonPrice(m, cents)}
+            />
             <div style={{ display: 'flex', gap: 4 }}>
               {(['starter', 'pro', 'elite'] as const).map(p => {
                 const on = m.includedInPlans.includes(p);
@@ -1265,6 +1317,135 @@ function ModulesTab() {
           mod={membersFor}
           onClose={() => setMembersFor(null)}
         />
+      )}
+    </div>
+  );
+}
+
+function AddonPriceCell({
+  mod, lookup, onSave,
+}: {
+  mod: AdminModule;
+  lookup: AdminStripePriceLookup | { loading: true } | { error: string } | undefined;
+  onSave: (cents: number) => Promise<void>;
+}) {
+  const currentCents = mod.metadata?.addonPriceCents ?? null;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string>(currentCents != null ? (currentCents / 100).toFixed(2) : '');
+  const [saving, setSaving] = useState(false);
+
+  // Resync draft when the underlying value changes (e.g. after a save).
+  useEffect(() => {
+    setDraft(currentCents != null ? (currentCents / 100).toFixed(2) : '');
+  }, [currentCents]);
+
+  const beginEdit = () => { setEditing(true); };
+  const cancel = () => {
+    setDraft(currentCents != null ? (currentCents / 100).toFixed(2) : '');
+    setEditing(false);
+  };
+  const commit = async () => {
+    const dollars = Number(draft);
+    if (!Number.isFinite(dollars) || dollars < 0) return;
+    const cents = Math.round(dollars * 100);
+    if (cents === currentCents) { setEditing(false); return; }
+    setSaving(true);
+    try {
+      await onSave(cents);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const lookupResolved = lookup && !('loading' in lookup) && !('error' in lookup) ? lookup as AdminStripePriceLookup : null;
+  const lookupErr = lookup && 'error' in lookup ? (lookup as { error: string }).error : null;
+  const lookupLoading = lookup && 'loading' in lookup;
+
+  // Mismatch warning: only when Stripe was reachable AND returned a price
+  // AND the displayed price differs. We deliberately suppress this when
+  // there is no price id binding (nothing to mismatch against) or when
+  // Stripe is unreachable (transient — don't spook the admin).
+  const mismatch =
+    lookupResolved &&
+    lookupResolved.fetched &&
+    lookupResolved.unitAmountCents != null &&
+    currentCents != null &&
+    lookupResolved.unitAmountCents !== currentCents;
+
+  return (
+    <div data-testid={`addon-price-cell-${mod.slug}`} style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11 }}>
+      {!editing && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span data-testid={`text-addon-price-${mod.slug}`} style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+            {currentCents != null ? `$${(currentCents / 100).toFixed(2)}` : '—'}
+          </span>
+          <button
+            data-testid={`button-edit-addon-price-${mod.slug}`}
+            onClick={beginEdit}
+            style={{ padding: '2px 6px', borderRadius: 4, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.textMuted, fontSize: 10, cursor: 'pointer' }}
+          >Edit</button>
+        </div>
+      )}
+      {editing && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ color: colors.textMuted, fontSize: 12 }}>$</span>
+          <input
+            data-testid={`input-addon-price-${mod.slug}`}
+            type="number"
+            min="0"
+            step="0.01"
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            disabled={saving}
+            style={{ width: 70, padding: '4px 6px', borderRadius: 4, border: `1px solid ${colors.border}`, background: colors.bg, color: colors.text, fontSize: 12, outline: 'none' }}
+          />
+          <button
+            data-testid={`button-save-addon-price-${mod.slug}`}
+            onClick={commit}
+            disabled={saving}
+            style={{ padding: '3px 8px', borderRadius: 4, border: 'none', background: colors.accent, color: '#fff', fontSize: 10, fontWeight: 600, cursor: saving ? 'wait' : 'pointer' }}
+          >{saving ? '…' : 'Save'}</button>
+          <button
+            data-testid={`button-cancel-addon-price-${mod.slug}`}
+            onClick={cancel}
+            disabled={saving}
+            style={{ padding: '3px 8px', borderRadius: 4, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.textMuted, fontSize: 10, cursor: 'pointer' }}
+          >Cancel</button>
+        </div>
+      )}
+      <div data-testid={`stripe-binding-${mod.slug}`} style={{ color: colors.textDim, fontFamily: 'monospace', fontSize: 10, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {lookupLoading && 'Stripe: …'}
+        {lookupErr && <span style={{ color: colors.accentRed }} title={lookupErr}>Stripe lookup failed</span>}
+        {lookupResolved && !lookupResolved.priceId && (
+          <span title={`Set ${lookupResolved.envKey} to enable purchase`}>No Stripe price id</span>
+        )}
+        {lookupResolved && lookupResolved.priceId && !lookupResolved.fetched && !lookupResolved.error && (
+          <span title={lookupResolved.envKey}>{lookupResolved.priceId}</span>
+        )}
+        {lookupResolved && lookupResolved.priceId && lookupResolved.error && (
+          <span style={{ color: colors.accentRed }} title={lookupResolved.error}>{lookupResolved.priceId} (lookup failed)</span>
+        )}
+        {lookupResolved && lookupResolved.fetched && lookupResolved.unitAmountCents != null && (
+          <span title={lookupResolved.envKey}>
+            <span data-testid={`stripe-price-id-${mod.slug}`}>{lookupResolved.priceId}</span>
+            {' · $'}{(lookupResolved.unitAmountCents / 100).toFixed(2)}
+            {lookupResolved.currency ? ` ${lookupResolved.currency.toUpperCase()}` : ''}
+            {lookupResolved.active === false ? ' · inactive' : ''}
+          </span>
+        )}
+      </div>
+      {mismatch && (
+        <div
+          data-testid={`addon-price-mismatch-${mod.slug}`}
+          title="Displayed price differs from the Stripe price the customer will be charged."
+          style={{
+            display: 'inline-block', padding: '2px 6px', borderRadius: 4,
+            background: 'rgba(248,81,73,0.12)', color: colors.accentRed,
+            fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4,
+            alignSelf: 'flex-start',
+          }}
+        >Mismatch · Stripe charges ${((lookupResolved!.unitAmountCents! ) / 100).toFixed(2)}</div>
       )}
     </div>
   );

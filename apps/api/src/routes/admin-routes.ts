@@ -8,7 +8,7 @@ import {
 } from '../schema.js';
 import { eq, desc, count, gte, and, or, ilike } from 'drizzle-orm';
 import { requireAdmin, sanitizeUser, logAudit } from '../lib/auth.js';
-import { retryBillingEvent, resyncUserBilling } from '../lib/billing-service.js';
+import { retryBillingEvent, resyncUserBilling, lookupAddonStripePrice } from '../lib/billing-service.js';
 import { getAccessBreakdown, getModuleAccessTrace } from '../lib/entitlement-service.js';
 
 export async function registerAdminRoutes(app: FastifyInstance) {
@@ -584,6 +584,54 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     }).returning();
     await logAudit(admin.id, 'module_created', undefined, { slug }, request.ip);
     return { module: created, action: 'created' };
+  });
+
+  // -------------------------------------------------------------------------
+  // Edit a module's add-on monthly price (modules.metadata.addonPriceCents).
+  // Lets admins iterate on pricing without redeploying the seed defaults.
+  // The Apps page reads this value via /v1/modules and renders it on the
+  // "Buy add-on" CTA, so a successful PUT here is reflected immediately.
+  // -------------------------------------------------------------------------
+  app.put('/v1/admin/modules/:slug/addon-price', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const admin = (request as any).user;
+    const { slug } = request.params as { slug: string };
+    const body = (request.body ?? {}) as { addonPriceCents?: unknown };
+    const raw = body.addonPriceCents;
+    if (typeof raw !== 'number' || !Number.isFinite(raw) || !Number.isInteger(raw) || raw < 0) {
+      return reply.code(400).send({ error: 'addonPriceCents must be a non-negative integer (cents)' });
+    }
+    if (raw > 100_000_00) {
+      return reply.code(400).send({ error: 'addonPriceCents is unreasonably large (>$100,000)' });
+    }
+    const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+    if (!mod) return reply.code(404).send({ error: 'Module not found' });
+
+    const existingMd = (mod.metadata ?? {}) as Record<string, unknown>;
+    const previous = typeof existingMd.addonPriceCents === 'number' ? existingMd.addonPriceCents : null;
+    const nextMd = { ...existingMd, addonPriceCents: raw };
+    const [updated] = await db.update(modules)
+      .set({ metadata: nextMd, updatedAt: new Date() })
+      .where(eq(modules.slug, slug))
+      .returning();
+    await logAudit(admin.id, 'module_addon_price_updated', undefined, {
+      slug, previousCents: previous, nextCents: raw,
+    }, request.ip);
+    return { module: updated };
+  });
+
+  // -------------------------------------------------------------------------
+  // Inspect the Stripe Price binding for a module's add-on. Returns the env
+  // key, the configured price id, and (when Stripe is reachable) the live
+  // unit_amount/currency so the UI can flag a mismatch between the displayed
+  // price (modules.metadata.addonPriceCents) and what Stripe will actually
+  // charge. Read-only — never mutates Stripe.
+  // -------------------------------------------------------------------------
+  app.get('/v1/admin/modules/:slug/stripe-price', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const { slug } = request.params as { slug: string };
+    const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+    if (!mod) return reply.code(404).send({ error: 'Module not found' });
+    const lookup = await lookupAddonStripePrice(slug);
+    return { slug, lookup };
   });
 
   // -------------------------------------------------------------------------

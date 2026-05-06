@@ -190,6 +190,14 @@ export const adminApi = {
   removeUserModuleOverride: (userId: string, overrideId: string) =>
     apiFetch(`/admin/users/${userId}/module-overrides/${overrideId}`, { method: 'DELETE' }),
 
+  setModuleAddonPrice: (slug: string, addonPriceCents: number) =>
+    apiFetch(`/admin/modules/${slug}/addon-price`, {
+      method: 'PUT',
+      body: JSON.stringify({ addonPriceCents }),
+    }),
+  getModuleStripePrice: (slug: string) =>
+    apiFetch(`/admin/modules/${slug}/stripe-price`),
+
   getModuleMembers: (slug: string) =>
     apiFetch(`/admin/modules/${slug}/members`),
   resyncUserBilling: (userId: string) =>
