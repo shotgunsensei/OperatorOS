@@ -188,6 +188,13 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   name: text('name').notNull(),
   role: text('role', { enum: ['user', 'admin'] }).notNull().default('user'),
+  // Gate 1: platform-scoped authority. Distinct from `role` (legacy) and from
+  // `tenant_users.role` (tenant-scoped). Only `super_admin` may reach
+  // platform-only routes (e.g. GET /v1/tenants).
+  platformRole: text('platform_role', { enum: ['super_admin', 'user'] }).notNull().default('user'),
+  // The tenant the user is currently acting in. Resolver precedence is
+  // `:tenantId` path param > `X-Tenant-Id` header > this column.
+  currentTenantId: varchar('current_tenant_id', { length: 36 }),
   status: text('status', { enum: ['active', 'suspended', 'deleted', 'pending'] }).notNull().default('active'),
   avatarUrl: text('avatar_url'),
   planId: varchar('plan_id', { length: 36 }),
@@ -200,6 +207,7 @@ export const users = pgTable('users', {
 }, (t) => [
   index('idx_users_email').on(t.email),
   index('idx_users_status').on(t.status),
+  index('idx_users_platform_role').on(t.platformRole),
 ]);
 
 export const subscriptionPlans = pgTable('subscription_plans', {
@@ -238,11 +246,15 @@ export const subscriptions = pgTable('subscriptions', {
   trialEnd: timestamp('trial_end'),
   organizationId: varchar('organization_id', { length: 36 }),
   scopeType: text('scope_type').notNull().default('user'),
+  // Gate 1: nullable tenant link, back-filled to the owning user's
+  // personal tenant. New writes should always set this.
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_subscriptions_user').on(t.userId),
   index('idx_subscriptions_status').on(t.status),
+  index('idx_subscriptions_tenant').on(t.tenantId),
 ]);
 
 export const saasWorkspaces = pgTable('saas_workspaces', {
@@ -349,10 +361,13 @@ export const adminAuditLogs = pgTable('admin_audit_logs', {
   targetUserId: varchar('target_user_id', { length: 36 }),
   details: jsonb('details').$type<Record<string, unknown>>(),
   ipAddress: text('ip_address'),
+  // Gate 1: nullable tenant scope for the action (back-filled to admin's personal tenant).
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_admin_audit_logs_admin').on(t.adminId),
   index('idx_admin_audit_logs_created').on(t.createdAt),
+  index('idx_admin_audit_logs_tenant').on(t.tenantId),
 ]);
 
 export const billingEvents = pgTable('billing_events', {
@@ -371,10 +386,13 @@ export const billingEvents = pgTable('billing_events', {
   retryCount: integer('retry_count').notNull().default(0),
   processedAt: timestamp('processed_at'),
   errorMessage: text('error_message'),
+  // Gate 1: nullable tenant link, back-filled to the user's personal tenant.
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_billing_events_user').on(t.userId),
   index('idx_billing_events_processed').on(t.processedAt),
+  index('idx_billing_events_tenant').on(t.tenantId),
 ]);
 
 export const passwordResetTokens = pgTable('password_reset_tokens', {
