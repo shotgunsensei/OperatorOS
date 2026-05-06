@@ -47,7 +47,17 @@ Commands:
 - **Monorepo Structure:** Uses `pnpm` monorepo for shared code (`@operatoros/sdk`) and consistent development across services (`api`, `web`, `runner-gateway`).
 - **Multi-Tenancy:** Core architectural principle, where all data and features are scoped by `tenant_id`. Access is strictly controlled, resolving active tenant via URL, header, or user preference. Cross-tenant access results in a `404 TENANT_NOT_FOUND` to prevent leakage.
 - **AI-First Design:** Integrated AI Agent and AI Operations Assistant with a pluggable provider architecture (OpenAI, Mock) and plan-gated tools, emphasizing AI assistance throughout the development workflow.
-- **Role-Based Access Control (RBAC):** Granular authorization via platform roles (`super_admin`, `user`) and tenant-specific roles (`owner`, `admin`, `member`), along with module and feature gating based on subscription plans.
+- **Role-Based Access Control (RBAC):** Granular authorization via platform roles (`super_admin`, `user`) and tenant-specific roles (`owner`, `admin`, `member`), along with module and feature gating based on subscription plans. **Helper contract shape:** RBAC helpers in `tenant-auth.ts` are implemented as Fastify pre-handlers (e.g. `requireTenantOwner`, `requireTenantAdmin`, `requireTenantMember`, `requireTenantModuleAccess(slug)`), not standalone `(tenantId, userId) -> boolean` functions. The active tenant is resolved from request context (precedence: `:tenantId` URL param > `X-Tenant-Id` header > `users.current_tenant_id`) and exposed as `request.tenantContext`. Use `resolveTenantContext(request)` directly when authorization needs to happen mid-handler instead of as a pre-handler.
+- **HTTP code policy (tenant surface):**
+  | Condition                                    | Code | Error code                    |
+  | -------------------------------------------- | ---- | ----------------------------- |
+  | Cross-tenant or non-member of tenant         | 404  | `TENANT_NOT_FOUND`            |
+  | Authenticated, member, role too low          | 403  | `TENANT_ROLE_INSUFFICIENT`    |
+  | Authenticated, not platform super_admin      | 403  | `PLATFORM_ROLE_REQUIRED`      |
+  | Module not enabled for tenant (disabled/archived/missing tenant_module row) | 403 | `TENANT_MODULE_DISABLED` |
+  | Module enabled but user has no grant         | 403  | `TENANT_MODULE_ACCESS_DENIED` |
+  | Add-on already active for tenant             | 409  | `ADDON_ALREADY_ACTIVE`        |
+  Rationale: tenant existence is masked behind 404 (anti-enumeration), but once membership is established the deny reason is surfaced as 403 so admins can act on it.
 - **Database Choice:** PostgreSQL with Drizzle ORM for robust, type-safe data management, supporting both SaaS and CDE-specific entities.
 
 ## Product
