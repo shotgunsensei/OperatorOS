@@ -303,7 +303,7 @@ export async function ensureSaasTables() {
     CREATE INDEX IF NOT EXISTS idx_modules_status ON modules(status);
     DO $$ BEGIN
       ALTER TABLE modules ADD CONSTRAINT modules_status_check
-        CHECK (status IN ('live', 'beta', 'coming_soon', 'disabled'));
+        CHECK (status IN ('live', 'active', 'beta', 'coming_soon', 'hidden', 'deprecated', 'disabled'));
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
     CREATE TABLE IF NOT EXISTS plan_modules (

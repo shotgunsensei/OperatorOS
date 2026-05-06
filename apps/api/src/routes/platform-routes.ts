@@ -36,13 +36,19 @@ import {
   writeAudit, pickSafe, TENANT_SAFE_FIELDS, MODULE_SAFE_FIELDS,
   TENANT_MODULE_SAFE_FIELDS, TENANT_USER_ACCESS_SAFE_FIELDS,
 } from '../lib/audit.js';
-import { lookupAddonStripePrice, getAddonStripePriceEnvKey, getAddonStripePriceId } from '../lib/billing-service.js';
+import { lookupAddonStripePrice, getAddonStripePriceEnvKey, getAddonStripePriceId, retryBillingEvent } from '../lib/billing-service.js';
+import { getSsoCleanupHealth } from '../lib/sso-cleanup.js';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────
 
-const VALID_MODULE_STATUSES = ['live', 'beta', 'coming_soon', 'disabled'] as const;
+// Gate 2 status taxonomy: 'live' (legacy) and 'active' both signify a
+// shipping module; 'hidden' suppresses from public catalog while keeping
+// data; 'deprecated' marks for retirement (still launchable for legacy
+// tenants); 'disabled' fully blocks launch. The DB CHECK constraint in
+// saas-db-init.ts mirrors this list.
+const VALID_MODULE_STATUSES = ['live', 'active', 'beta', 'coming_soon', 'hidden', 'deprecated', 'disabled'] as const;
 const VALID_PLAN_MIN = ['starter', 'pro', 'elite'] as const;
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/;
 
@@ -568,9 +574,18 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     const stripeMode = process.env.STRIPE_MODE || 'off';
     const stripeKey = !!process.env.STRIPE_SECRET_KEY;
     const stripeWebhook = !!process.env.STRIPE_WEBHOOK_SECRET;
+    const sessionSecret = !!process.env.SESSION_SECRET;
+    const openaiKey = !!process.env.OPENAI_API_KEY;
     // Last webhook event = most recent billing_events row.
     const [lastWebhook] = await db.select().from(billingEvents).orderBy(desc(billingEvents.createdAt)).limit(1);
     const [lastAudit]   = await db.select().from(adminAuditLogs).orderBy(desc(adminAuditLogs.createdAt)).limit(1);
+    // Last successfully verified Stripe webhook = most recent billing_events
+    // row whose stripeEventId is non-null AND processedAt is set. Signature
+    // verification happens before stripeEventId is assigned, so this is a
+    // strong proxy for "Stripe is reachable + webhook secret matches".
+    const [lastStripeOk] = await db.select().from(billingEvents)
+      .where(and(isNotNull(billingEvents.stripeEventId), isNotNull(billingEvents.processedAt)))
+      .orderBy(desc(billingEvents.createdAt)).limit(1);
     return {
       ok: dbOk,
       db: { ok: dbOk },
@@ -579,7 +594,15 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         secretConfigured: stripeKey,
         webhookConfigured: stripeWebhook,
         live: stripeMode === 'live' && stripeKey,
+        lastSuccessfulWebhookAt: lastStripeOk?.createdAt ?? null,
       },
+      auth: {
+        sessionSecretConfigured: sessionSecret,
+      },
+      ai: {
+        openaiKeyConfigured: openaiKey,
+      },
+      ssoCleanup: getSsoCleanupHealth(),
       lastWebhookAt: lastWebhook?.createdAt ?? null,
       lastAuditAt:   lastAudit?.createdAt ?? null,
       now: new Date().toISOString(),
@@ -660,4 +683,29 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     if (onlyFailed) rows = rows.filter(e => !!e.errorMessage && !e.processedAt);
     return { events: rows, total: rows.length };
   });
+
+  // Retry a single failed billing webhook (alias of /v1/admin/billing/events/:id/retry,
+  // gated by super_admin instead of admin). Audit row is written so the
+  // retry attempt is traceable independent of the original webhook trail.
+  app.post<{ Params: { id: string } }>(
+    '/v1/platform/billing/events/:id/retry',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const [before] = await db.select().from(billingEvents).where(eq(billingEvents.id, id)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'Billing event not found', code: 'BILLING_EVENT_NOT_FOUND' });
+      const result = await retryBillingEvent(id);
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'billing_event',
+        targetId: id,
+        action: 'billing_event_retried',
+        before: { id: before.id, eventType: before.eventType, processedAt: before.processedAt, errorMessage: before.errorMessage },
+        extra: { result },
+        ipAddress: request.ip,
+      });
+      return result;
+    },
+  );
 }

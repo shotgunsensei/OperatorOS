@@ -62,11 +62,15 @@ function AppContent() {
 
   const handleNavigate = (page: string) => {
     // Gate 2: super_admins clicking the legacy "Admin" sidebar entry are
-    // routed to the new Platform Command. The legacy AdminPage stays
-    // available for non-platform admins (Gate 3 retires it entirely).
+    // routed to the new path-addressable Platform Command at /platform.
+    // The full URL switch (rather than internal setActivePage) means the
+    // address bar reflects where the user is and the surface is shareable.
     if (page === 'admin' && (user as any)?.platformRole === 'super_admin') {
-      setActivePage('platform');
-      setTaskProject(null);
+      window.location.href = '/platform';
+      return;
+    }
+    if (page === 'platform' && (user as any)?.platformRole === 'super_admin') {
+      window.location.href = '/platform';
       return;
     }
     setActivePage(page);

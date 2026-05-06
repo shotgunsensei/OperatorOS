@@ -3,6 +3,7 @@ import { db } from '../db.js';
 import { subscriptions, subscriptionPlans, billingEvents } from '../schema.js';
 import { eq, desc } from 'drizzle-orm';
 import { authenticate, getUserPlanLimits } from '../lib/auth.js';
+import { writeAudit } from '../lib/audit.js';
 import {
   getUserPlanConfig, getUserUsageSummary, getDowngradeViolations,
   isDowngrade, PLAN_CONFIGS, FEATURE_LABELS, LIMIT_LABELS,
@@ -157,7 +158,43 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     const { moduleSlug } = request.body as any;
     if (!moduleSlug) return reply.code(400).send({ error: 'moduleSlug is required' });
     try {
-      const result = await subscribeToAddon(user.id, moduleSlug);
+      // Gate 2: thread tenant scope into Stripe metadata so the webhook
+      // can promote the right pending row and the right tenant gets the
+      // entitlement. Precedence matches resolveTenantContext: explicit
+      // body > X-Tenant-Id header > user.currentTenantId.
+      const headerVal = request.headers['x-tenant-id'];
+      const headerTenantId = Array.isArray(headerVal) ? headerVal[0] : headerVal;
+      const bodyTenantId = (request.body as any)?.tenantId;
+      const tenantId: string | null =
+        (typeof bodyTenantId === 'string' && bodyTenantId) ||
+        (typeof headerTenantId === 'string' && headerTenantId) ||
+        user.currentTenantId || null;
+
+      const result = await subscribeToAddon(user.id, moduleSlug, {
+        tenantId,
+        initiatedByUserId: user.id,
+      });
+
+      // Audit: a checkout intent was created. The webhook handler will
+      // log the eventual settlement; this row marks the click.
+      try {
+        await writeAudit({
+          actorUserId: user.id,
+          tenantId,
+          targetType: 'addon_subscription',
+          targetId: null,
+          action: 'addon_checkout_initiated',
+          extra: {
+            moduleSlug,
+            mode: result.action,
+            hasCheckoutUrl: !!result.checkoutUrl,
+          },
+          ipAddress: request.ip,
+        });
+      } catch (auditErr) {
+        request.log.warn({ err: auditErr }, 'addon checkout audit failed');
+      }
+
       return result;
     } catch (err: any) {
       // Distinguish billing-not-configured (409 + code) from generic

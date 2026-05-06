@@ -6,6 +6,16 @@ const CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 let timer: NodeJS.Timeout | null = null;
+let lastRunAt: Date | null = null;
+let lastRunPruned: number | null = null;
+
+export function getSsoCleanupHealth(): { lastRunAt: string | null; lastRunPruned: number | null; intervalMs: number } {
+  return {
+    lastRunAt: lastRunAt ? lastRunAt.toISOString() : null,
+    lastRunPruned,
+    intervalMs: CLEANUP_INTERVAL_MS,
+  };
+}
 
 export async function cleanupExpiredSsoTokens(): Promise<number> {
   const now = Date.now();
@@ -24,8 +34,15 @@ export async function cleanupExpiredSsoTokens(): Promise<number> {
 
 function runOnce(label: string) {
   cleanupExpiredSsoTokens()
-    .then(n => console.log(`[sso-cleanup] ${label}: pruned ${n} stale handoff token row(s)`))
-    .catch(err => console.error(`[sso-cleanup] ${label} error:`, err));
+    .then(n => {
+      lastRunAt = new Date();
+      lastRunPruned = n;
+      console.log(`[sso-cleanup] ${label}: pruned ${n} stale handoff token row(s)`);
+    })
+    .catch(err => {
+      lastRunAt = new Date();
+      console.error(`[sso-cleanup] ${label} error:`, err);
+    });
 }
 
 export function startSsoTokenCleanup() {

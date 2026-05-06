@@ -170,8 +170,31 @@ export async function resolveTenantContext(request: FastifyRequest): Promise<Ten
     return null;
   }
 
+  // Gate 2: archived tenants are invisible to everyone except super_admin
+  // (who needs visibility for forensic / restore operations). For everyone
+  // else they collapse to the same TENANT_NOT_FOUND code as a missing row.
+  if ((tenant as any).status === 'archived' && user.platformRole !== 'super_admin') {
+    c.context = null;
+    return null;
+  }
+
   const membership = await loadMembership(request, tenant.id, user.id);
   if (membership) {
+    // Gate 2: suspended tenants are visible to members but every operation
+    // is read-blocked at the pre-handler layer. Super admins bypass via
+    // viaPlatformRole so they can still re-activate or audit.
+    if ((tenant as any).status === 'suspended' && user.platformRole !== 'super_admin') {
+      const ctx: TenantContext = {
+        tenantId: tenant.id,
+        tenantSlug: tenant.slug,
+        tenantType: tenant.type as 'personal' | 'company',
+        role: membership.role as 'owner' | 'admin' | 'member',
+        viaPlatformRole: false,
+        suspended: true,
+      } as any;
+      c.context = ctx;
+      return ctx;
+    }
     const ctx: TenantContext = {
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
@@ -242,6 +265,15 @@ export function requireTenantRole(min: 'owner' | 'admin' | 'member') {
     if (!ctx) {
       return denyTenantNotFound(reply);
     }
+    // Gate 2: a suspended tenant blocks all member operations (super_admin
+    // bypasses via viaPlatformRole and never gets `suspended:true` set).
+    if ((ctx as any).suspended) {
+      reply.code(403).send({
+        error: 'Tenant is suspended. Contact platform administrator.',
+        code: 'TENANT_SUSPENDED',
+      });
+      return;
+    }
     if (TENANT_ROLE_RANK[ctx.role] < TENANT_ROLE_RANK[min]) {
       // The user IS a member, just not high enough. 403 is correct here:
       // existence is already known from the membership.
@@ -274,6 +306,16 @@ export function requireTenantModuleAccess(moduleSlug: string) {
     const user = (request as any).user;
     const ctx = await resolveTenantContext(request);
     if (!ctx) return denyTenantNotFound(reply);
+
+    // Gate 2: launching ANY module inside a suspended tenant is blocked
+    // for non-super-admins (matches read/write block in requireTenantRole).
+    if ((ctx as any).suspended && user.platformRole !== 'super_admin') {
+      reply.code(403).send({
+        error: 'Tenant is suspended. Contact platform administrator.',
+        code: 'TENANT_SUSPENDED',
+      });
+      return;
+    }
 
     if (user.platformRole === 'super_admin') {
       (request as any).tenantContext = ctx;

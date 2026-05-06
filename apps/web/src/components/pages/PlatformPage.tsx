@@ -16,6 +16,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../AuthProvider';
 
+export type PlatformView =
+  | { kind: 'dashboard' }
+  | { kind: 'tenants' }
+  | { kind: 'tenant'; id: string }
+  | { kind: 'modules' }
+  | { kind: 'module'; slug: string }
+  | { kind: 'billing' }
+  | { kind: 'pricing' }
+  | { kind: 'health' }
+  | { kind: 'audit' };
+
 const colors = {
   bg: '#010409',
   bgSecondary: '#0d1117',
@@ -33,16 +44,7 @@ const colors = {
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
-type View =
-  | { kind: 'dashboard' }
-  | { kind: 'tenants' }
-  | { kind: 'tenant'; id: string }
-  | { kind: 'modules' }
-  | { kind: 'module'; slug: string }
-  | { kind: 'billing' }
-  | { kind: 'pricing' }
-  | { kind: 'health' }
-  | { kind: 'audit' };
+type View = PlatformView;
 
 async function apiCall(path: string, init: RequestInit = {}): Promise<any> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
@@ -72,9 +74,17 @@ async function apiCall(path: string, init: RequestInit = {}): Promise<any> {
 // Top-level
 // ─────────────────────────────────────────────────────────────────────────
 
-export default function PlatformPage() {
+export default function PlatformPage(props: { view?: View; onNavigate?: (v: View) => void } = {}) {
   const { user } = useAuth();
-  const [view, setView] = useState<View>({ kind: 'dashboard' });
+  // Controlled mode: parent owns view (used by /platform/[[...slug]] route
+  // for path-addressable URLs). Uncontrolled mode: internal state (used
+  // when embedded under root '/' for legacy in-app sidebar nav).
+  const [internalView, setInternalView] = useState<View>({ kind: 'dashboard' });
+  const view = props.view ?? internalView;
+  const setView = (v: View) => {
+    if (props.onNavigate) props.onNavigate(v);
+    else setInternalView(v);
+  };
 
   if (!user || (user as any).platformRole !== 'super_admin') {
     return (
@@ -497,9 +507,13 @@ function CreateModuleForm({ onClose, onCreated }: { onClose: () => void; onCreat
 
 function ModuleDetail({ slug, onBack }: { slug: string; onBack: () => void }) {
   const [data, setData] = useState<any>(null);
+  const [pricing, setPricing] = useState<any>(null);
   const [err, setErr] = useState<any>(null);
   const [busy, setBusy] = useState(false);
-  const load = () => apiCall(`/v1/platform/modules?includeArchived=1`).then(d => setData(d.modules.find((m: any) => m.slug === slug))).catch(setErr);
+  const load = () => Promise.all([
+    apiCall(`/v1/platform/modules?includeArchived=1`).then(d => d.modules.find((m: any) => m.slug === slug)),
+    apiCall(`/v1/platform/pricing`).catch(() => ({ pricing: [] })).then((p: any) => p.pricing?.find((r: any) => r.slug === slug)),
+  ]).then(([m, p]) => { setData(m); setPricing(p); }).catch(setErr);
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [slug]);
 
   const archive = async (confirm: boolean) => {
@@ -517,6 +531,13 @@ function ModuleDetail({ slug, onBack }: { slug: string; onBack: () => void }) {
         <div style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>
           <code>{data.slug}</code> · status={data.archivedAt ? 'archived' : data.status} · planMin={data.planMin} · ord={data.ord}
         </div>
+        {pricing && (
+          <div style={{ marginTop: 12, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }} data-testid="block-module-stripe">
+            <div style={{ color: colors.textMuted, marginBottom: 4 }}>Stripe add-on price binding (read-only)</div>
+            <div>env: <code>{pricing.envKey}</code> {pricing.envKeyConfigured ? <Pill tone="green">configured</Pill> : <Pill tone="muted">missing</Pill>}</div>
+            <div>declared: {pricing.declaredAddonPriceCents ?? '—'}¢ · stripe: {pricing.stripeUnitAmountCents ?? '—'}¢ {pricing.stripeCurrency ? `(${pricing.stripeCurrency})` : ''} {pricing.mismatch && <Pill tone="red">mismatch</Pill>}</div>
+          </div>
+        )}
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
           {!data.archivedAt && <Btn data-testid="button-archive-module" variant="danger" disabled={busy} onClick={() => archive(false)}>Archive</Btn>}
           {!data.archivedAt && err?.code === 'MODULE_HAS_ACTIVE_SUBS' && <Btn data-testid="button-archive-module-confirm" variant="danger" onClick={() => archive(true)}>Confirm archive ({err.body?.activeSubscriptionCount} active)</Btn>}
@@ -533,10 +554,20 @@ function ModuleDetail({ slug, onBack }: { slug: string; onBack: () => void }) {
 function BillingEvents() {
   const [rows, setRows] = useState<any[] | null>(null);
   const [onlyFailed, setOnlyFailed] = useState(false);
-  const load = () => apiCall(`/v1/platform/billing/events${onlyFailed ? '?onlyFailed=1' : ''}`).then(d => setRows(d.events));
+  const [err, setErr] = useState<any>(null);
+  const [retrying, setRetrying] = useState<string | null>(null);
+  const load = () => apiCall(`/v1/platform/billing/events${onlyFailed ? '?onlyFailed=1' : ''}`).then(d => setRows(d.events)).catch(setErr);
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [onlyFailed]);
+  const retry = async (id: string) => {
+    setErr(null); setRetrying(id);
+    try {
+      await apiCall(`/v1/platform/billing/events/${id}/retry`, { method: 'POST' });
+      await load();
+    } catch (e) { setErr(e); } finally { setRetrying(null); }
+  };
   return (
     <div>
+      <ErrorBlock err={err} />
       <div style={{ marginBottom: 12 }}>
         <label style={{ fontSize: 13, color: colors.textMuted }}>
           <input data-testid="checkbox-only-failed" type="checkbox" checked={onlyFailed} onChange={e => setOnlyFailed(e.target.checked)} /> Only failed/unprocessed
@@ -545,19 +576,29 @@ function BillingEvents() {
       <Card style={{ padding: 0 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead><tr style={{ background: colors.bgHover, color: colors.textMuted }}>
-            <Th>Created</Th><Th>Type</Th><Th>User</Th><Th>Stripe Event</Th><Th>Processed</Th><Th>Error</Th>
+            <Th>Created</Th><Th>Type</Th><Th>User</Th><Th>Stripe Event</Th><Th>Processed</Th><Th>Error</Th><Th></Th>
           </tr></thead>
           <tbody>
-            {(rows ?? []).map(e => (
-              <tr key={e.id} style={{ borderTop: `1px solid ${colors.border}` }}>
-                <Td>{new Date(e.createdAt).toLocaleString()}</Td>
-                <Td>{e.eventType}</Td>
-                <Td><code>{e.userId}</code></Td>
-                <Td><code>{e.stripeEventId ?? '—'}</code></Td>
-                <Td>{e.processedAt ? <Pill tone="green">ok</Pill> : <Pill tone="yellow">pending</Pill>}</Td>
-                <Td style={{ color: colors.accentRed }}>{e.errorMessage ?? ''}</Td>
-              </tr>
-            ))}
+            {(rows ?? []).map(e => {
+              const failed = !!e.errorMessage && !e.processedAt;
+              return (
+                <tr key={e.id} style={{ borderTop: `1px solid ${colors.border}` }} data-testid={`row-billing-${e.id}`}>
+                  <Td>{new Date(e.createdAt).toLocaleString()}</Td>
+                  <Td>{e.eventType}</Td>
+                  <Td><code>{e.userId}</code></Td>
+                  <Td><code>{e.stripeEventId ?? '—'}</code></Td>
+                  <Td>{e.processedAt ? <Pill tone="green">ok</Pill> : <Pill tone="yellow">pending</Pill>}</Td>
+                  <Td style={{ color: colors.accentRed }}>{e.errorMessage ?? ''}</Td>
+                  <Td>
+                    {failed && (
+                      <Btn data-testid={`button-retry-${e.id}`} onClick={() => retry(e.id)} disabled={retrying === e.id}>
+                        {retrying === e.id ? 'Retrying…' : 'Retry'}
+                      </Btn>
+                    )}
+                  </Td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </Card>
@@ -606,18 +647,46 @@ function Health() {
 function AuditLog() {
   const [rows, setRows] = useState<any[] | null>(null);
   const [action, setAction] = useState('');
-  const load = () => {
+  const [actorUserId, setActorUserId] = useState('');
+  const [tenantId, setTenantId] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [limit, setLimit] = useState(100);
+  const [offset, setOffset] = useState(0);
+  const [err, setErr] = useState<any>(null);
+  const load = (newOffset = offset) => {
     const qs = new URLSearchParams();
-    if (action) qs.set('action', action);
-    qs.set('limit', '200');
-    apiCall(`/v1/platform/audit?${qs.toString()}`).then(d => setRows(d.logs));
+    if (action)       qs.set('action', action);
+    if (actorUserId)  qs.set('actorUserId', actorUserId);
+    if (tenantId)     qs.set('tenantId', tenantId);
+    if (fromDate)     qs.set('fromDate', new Date(fromDate).toISOString());
+    if (toDate)       qs.set('toDate',   new Date(toDate).toISOString());
+    qs.set('limit', String(limit));
+    qs.set('offset', String(newOffset));
+    apiCall(`/v1/platform/audit?${qs.toString()}`).then(d => setRows(d.logs)).catch(setErr);
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { load(0); /* eslint-disable-next-line */ }, []);
+  const search = () => { setOffset(0); load(0); };
+  const next = () => { const o = offset + limit; setOffset(o); load(o); };
+  const prev = () => { const o = Math.max(0, offset - limit); setOffset(o); load(o); };
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <input data-testid="input-audit-action" placeholder="filter by action…" value={action} onChange={e => setAction(e.target.value)} style={{ flex: 1, background: colors.bgSecondary, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: 6, padding: '6px 10px', fontSize: 13 }} />
-        <Btn data-testid="button-audit-search" onClick={load}>Search</Btn>
+      <ErrorBlock err={err} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8, marginBottom: 12 }}>
+        <input data-testid="input-audit-action"     placeholder="action contains…"      value={action}       onChange={e => setAction(e.target.value)}       style={inp} />
+        <input data-testid="input-audit-actor"      placeholder="actor user id…"        value={actorUserId}  onChange={e => setActorUserId(e.target.value)}  style={inp} />
+        <input data-testid="input-audit-tenant"     placeholder="tenant id…"            value={tenantId}     onChange={e => setTenantId(e.target.value)}     style={inp} />
+        <input data-testid="input-audit-from"       type="datetime-local"               value={fromDate}     onChange={e => setFromDate(e.target.value)}     style={inp} />
+        <input data-testid="input-audit-to"         type="datetime-local"               value={toDate}       onChange={e => setToDate(e.target.value)}       style={inp} />
+        <select data-testid="select-audit-limit" value={limit} onChange={e => setLimit(parseInt(e.target.value))} style={inp}>
+          <option value={50}>50 per page</option><option value={100}>100 per page</option><option value={200}>200 per page</option><option value={500}>500 per page</option>
+        </select>
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+        <Btn data-testid="button-audit-search" variant="primary" onClick={search}>Search</Btn>
+        <Btn data-testid="button-audit-prev"   onClick={prev}    disabled={offset === 0}>← Prev</Btn>
+        <Btn data-testid="button-audit-next"   onClick={next}    disabled={(rows?.length ?? 0) < limit}>Next →</Btn>
+        <span style={{ color: colors.textMuted, fontSize: 12 }}>showing {offset + 1}–{offset + (rows?.length ?? 0)}</span>
       </div>
       <Card style={{ padding: 0 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -634,12 +703,19 @@ function AuditLog() {
                 <Td><code style={{ color: colors.textMuted }}>{l.details?.targetType}/{l.details?.targetId ?? '—'}</code></Td>
               </tr>
             ))}
+            {rows && rows.length === 0 && <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: colors.textMuted }}>No audit rows match the filter.</td></tr>}
           </tbody>
         </table>
       </Card>
     </div>
   );
 }
+
+const inp: React.CSSProperties = {
+  background: colors.bgSecondary, color: colors.text,
+  border: `1px solid ${colors.border}`, borderRadius: 6,
+  padding: '6px 10px', fontSize: 13,
+};
 
 // ─────────────────────────────────────────────────────────────────────────
 // Tiny inputs
