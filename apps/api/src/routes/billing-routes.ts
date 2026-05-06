@@ -4,6 +4,7 @@ import { subscriptions, subscriptionPlans, billingEvents } from '../schema.js';
 import { eq, desc } from 'drizzle-orm';
 import { authenticate, getUserPlanLimits } from '../lib/auth.js';
 import { writeAudit } from '../lib/audit.js';
+import { canPurchaseAddon } from '../lib/tenant-auth.js';
 import {
   getUserPlanConfig, getUserUsageSummary, getDowngradeViolations,
   isDowngrade, PLAN_CONFIGS, FEATURE_LABELS, LIMIT_LABELS,
@@ -169,6 +170,28 @@ export async function registerBillingRoutes(app: FastifyInstance) {
         (typeof bodyTenantId === 'string' && bodyTenantId) ||
         (typeof headerTenantId === 'string' && headerTenantId) ||
         user.currentTenantId || null;
+
+      // Gate 2 — broken-access-control fix: a tenantId from any source must
+      // be authorized for this user. Super admins bypass via platformRole.
+      // Without this, a member of tenant A could open a checkout that gets
+      // billed to tenant B (whose entitlement they'd then receive via the
+      // webhook). canPurchaseAddon also enforces module existence,
+      // purchasability, and the no-double-buy invariant in one shot.
+      if (tenantId && user.platformRole !== 'super_admin') {
+        const check = await canPurchaseAddon(user.id, tenantId, moduleSlug);
+        if (!check.allowed) {
+          // Mirror the documented HTTP code policy:
+          //   TENANT_NOT_FOUND      -> 404 (anti-enumeration)
+          //   MODULE_NOT_FOUND      -> 404
+          //   TENANT_ROLE_INSUFFICIENT -> 403
+          //   ADDON_NOT_PURCHASABLE -> 409
+          //   ADDON_ALREADY_ACTIVE  -> 409
+          const status =
+            check.code === 'TENANT_NOT_FOUND' || check.code === 'MODULE_NOT_FOUND' ? 404 :
+            check.code === 'TENANT_ROLE_INSUFFICIENT' ? 403 : 409;
+          return reply.code(status).send({ error: check.reason, code: check.code });
+        }
+      }
 
       const result = await subscribeToAddon(user.id, moduleSlug, {
         tenantId,
