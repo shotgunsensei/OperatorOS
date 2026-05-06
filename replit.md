@@ -176,6 +176,7 @@ apps/
 | STRIPE_PRICE_STARTER | — | Stripe Price ID for Starter plan |
 | STRIPE_PRICE_PRO | — | Stripe Price ID for Pro plan |
 | STRIPE_PRICE_ELITE | — | Stripe Price ID for Elite plan |
+| STRIPE_PRICE_ADDON_&lt;SLUG&gt; | — | Stripe Price ID per add-on module (e.g. `STRIPE_PRICE_ADDON_TRADEFLOWKIT`). Required for that module's Apps-page "Buy add-on" CTA to work in `STRIPE_MODE=live`. Slug is uppercased with `-` replaced by `_`. Default seeded prices: starter-tier $19/mo, pro-tier $29/mo, elite-tier $49/mo. |
 | APP_URL | http://localhost:5000 | Base URL for Stripe callback redirects |
 
 ## Seeded Accounts
