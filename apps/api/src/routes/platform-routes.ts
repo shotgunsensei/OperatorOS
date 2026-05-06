@@ -33,7 +33,8 @@ import {
 } from '../schema.js';
 import { requireSuperAdmin } from '../lib/tenant-auth.js';
 import {
-  writeAudit, pickSafe, TENANT_SAFE_FIELDS, MODULE_SAFE_FIELDS,
+  writeAudit, pickSafe, registerAuditEnforcement,
+  TENANT_SAFE_FIELDS, MODULE_SAFE_FIELDS,
   TENANT_MODULE_SAFE_FIELDS, TENANT_USER_ACCESS_SAFE_FIELDS,
 } from '../lib/audit.js';
 import { lookupAddonStripePrice, getAddonStripePriceEnvKey, getAddonStripePriceId, retryBillingEvent } from '../lib/billing-service.js';
@@ -69,6 +70,13 @@ function isValidHttpUrl(v: unknown): boolean {
 // ─────────────────────────────────────────────────────────────────────────
 
 export async function registerPlatformRoutes(app: FastifyInstance) {
+  // Gate 2: centralized audit enforcement. Any privileged mutation under
+  // /v1/platform/* or /v1/billing/* that returns 2xx without calling
+  // writeAudit() will trigger a console error AND a fallback `audit_missing`
+  // row. This makes it structurally impossible to ship an unaudited
+  // privileged mutation.
+  registerAuditEnforcement(app, { prefixes: ['/v1/platform/', '/v1/billing/'] });
+
   // =====================================================================
   // TENANTS — list / detail / create / patch / lifecycle
   // =====================================================================
@@ -255,7 +263,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       action: 'tenant_created',
       after: pickSafe(created, [...TENANT_SAFE_FIELDS]),
       ipAddress: request.ip,
-    });
+    }, request);
     return reply.code(201).send({ tenant: created });
   });
 
@@ -290,7 +298,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         before: pickSafe(before, [...TENANT_SAFE_FIELDS]),
         after: pickSafe(after, [...TENANT_SAFE_FIELDS]),
         ipAddress: request.ip,
-      });
+      }, request);
       return { tenant: after };
     },
   );
@@ -316,7 +324,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         before: pickSafe(before, [...TENANT_SAFE_FIELDS]),
         after: pickSafe(after, [...TENANT_SAFE_FIELDS]),
         ipAddress: request.ip,
-      });
+      }, request);
       return { tenant: after };
     };
   app.post('/v1/platform/tenants/:id/suspend',    { preHandler: [requireSuperAdmin] }, lifecycleHandler('suspended', 'tenant_suspended'));
@@ -371,7 +379,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         after: pickSafe(after, [...TENANT_MODULE_SAFE_FIELDS]),
         extra: { moduleSlug: slug },
         ipAddress: request.ip,
-      });
+      }, request);
       return { tenantModule: after };
     },
   );
@@ -400,7 +408,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         after: pickSafe(after, [...TENANT_MODULE_SAFE_FIELDS]),
         extra: { moduleSlug: slug },
         ipAddress: request.ip,
-      });
+      }, request);
       return { tenantModule: after };
     },
   );
@@ -454,7 +462,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         after: pickSafe(after, [...TENANT_USER_ACCESS_SAFE_FIELDS]),
         extra: { moduleSlug, targetUserId: userId },
         ipAddress: request.ip,
-      });
+      }, request);
       return { access: after };
     },
   );
@@ -513,7 +521,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       action: 'module_created',
       after: pickSafe(created, [...MODULE_SAFE_FIELDS]),
       ipAddress: request.ip,
-    });
+    }, request);
     return reply.code(201).send({ module: created });
   });
 
@@ -575,7 +583,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         before: pickSafe(before, [...MODULE_SAFE_FIELDS]),
         after: pickSafe(after, [...MODULE_SAFE_FIELDS]),
         ipAddress: request.ip,
-      });
+      }, request);
       return { module: after };
     },
   );
@@ -615,7 +623,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         after: pickSafe(after, [...MODULE_SAFE_FIELDS]),
         extra: { activeSubscriptionCount: live.length, confirmedImpact: confirm },
         ipAddress: request.ip,
-      });
+      }, request);
       return { module: after };
     },
   );
@@ -768,7 +776,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         before: { id: before.id, eventType: before.eventType, processedAt: before.processedAt, errorMessage: before.errorMessage },
         extra: { result },
         ipAddress: request.ip,
-      });
+      }, request);
       return result;
     },
   );

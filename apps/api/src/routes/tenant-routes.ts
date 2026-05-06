@@ -93,6 +93,18 @@ export async function registerTenantRoutes(app: FastifyInstance) {
       if (!tenant) {
         return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
       }
+      // Gate 2: archived tenants are invisible to non-super-admins.
+      if ((tenant as any).status === 'archived' && user.platformRole !== 'super_admin') {
+        return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+      }
+      // Gate 2: suspended tenant denies module launch and login-into-it
+      // for everyone except super_admin (who needs access to un-suspend).
+      if ((tenant as any).status === 'suspended' && user.platformRole !== 'super_admin') {
+        return reply.code(403).send({
+          error: 'Tenant is suspended. Contact platform administrator.',
+          code: 'TENANT_SUSPENDED',
+        });
+      }
       await db.update(users)
         .set({ currentTenantId: tenantId, updatedAt: new Date() })
         .where(eq(users.id, user.id));

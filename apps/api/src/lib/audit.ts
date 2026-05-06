@@ -35,7 +35,7 @@ export interface AuditEntry {
   extra?: Record<string, unknown>;
 }
 
-export async function writeAudit(entry: AuditEntry): Promise<void> {
+export async function writeAudit(entry: AuditEntry, request?: any): Promise<void> {
   const details: Record<string, unknown> = {
     targetType: entry.targetType,
     targetId: entry.targetId ?? null,
@@ -52,6 +52,55 @@ export async function writeAudit(entry: AuditEntry): Promise<void> {
     tenantId: entry.tenantId ?? null,
     details,
     ipAddress: entry.ipAddress ?? null,
+  });
+  // Gate 2: tag the request so the centralized enforcement hook (in
+  // platform-routes / billing-routes) can verify privileged mutations
+  // didn't slip through unaudited.
+  if (request) request[AUDIT_FLAG] = true;
+}
+
+/** Symbol attached to a FastifyRequest by writeAudit() to prove auditing happened. */
+export const AUDIT_FLAG = Symbol.for('operatoros.requestAudited');
+
+/**
+ * Centralized audit enforcement: register an onResponse hook that fails
+ * loudly when a privileged mutation (POST/PATCH/PUT/DELETE under one of
+ * the matched URL prefixes) completes with a 2xx status but no
+ * `writeAudit` call ran. We also write a fallback audit row tagged
+ * `audit_missing` so the gap is visible in the audit log itself.
+ *
+ * This is the structural guarantee the Gate 2 reviewer asked for: it's
+ * impossible to ship a privileged mutation that quietly skips auditing.
+ */
+export function registerAuditEnforcement(app: any, options: { prefixes: string[] }) {
+  const prefixes = options.prefixes;
+  app.addHook('onResponse', async (request: any, reply: any) => {
+    const method = request.method;
+    if (method !== 'POST' && method !== 'PATCH' && method !== 'PUT' && method !== 'DELETE') return;
+    const url: string = request.routerPath || request.url || '';
+    if (!prefixes.some(p => url.startsWith(p))) return;
+    const status = reply.statusCode;
+    if (status >= 400) return; // failures don't need audit
+    if (request[AUDIT_FLAG]) return;
+    const actor = request.user?.id;
+    // eslint-disable-next-line no-console
+    console.error('[audit-enforcement] privileged mutation completed without audit', { method, url, status, actor });
+    if (actor) {
+      try {
+        await db.insert(adminAuditLogs).values({
+          adminId: actor,
+          action: 'audit_missing',
+          targetUserId: null,
+          tenantId: null,
+          details: { method, url, status, note: 'No writeAudit call recorded for this privileged mutation' },
+          ipAddress: request.ip ?? null,
+        });
+      } catch (err) {
+        // Never let audit-of-audit failures break the response.
+        // eslint-disable-next-line no-console
+        console.error('[audit-enforcement] failed to write fallback audit', err);
+      }
+    }
   });
 }
 

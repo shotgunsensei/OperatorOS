@@ -126,6 +126,16 @@ export async function registerBillingRoutes(app: FastifyInstance) {
 
     try {
       const result = await createPortalSession(user.id);
+      // Gate 2 audit: privileged action — opening the Stripe customer portal
+      // exposes payment-method + invoice management, so we record who
+      // initiated it and from where.
+      await writeAudit({
+        actorUserId: user.id,
+        targetType: 'user',
+        targetId: user.id,
+        action: 'billing_portal_opened',
+        ipAddress: request.ip ?? null,
+      }, request);
       return result;
     } catch (err: any) {
       return reply.code(400).send({ error: err.message });
