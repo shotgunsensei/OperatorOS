@@ -1,9 +1,34 @@
 // Centralized design tokens for OperatorOS web. Re-exports the existing
 // `colors` palette from SaasLayout (kept there to avoid breaking dozens of
-// existing imports) and adds spacing, radii, shadow, and icon-size scales
-// used by Gate 3 surfaces (role-aware sidebar, marketplace, tenant admin).
+// existing imports) and adds spacing, radii, shadow, icon-size scales,
+// plus shared style primitives (cardStyle, panelStyle, badgeStyles,
+// buttonStyles) used by Gate 3 surfaces.
 
-export { colors } from '../components/SaasLayout';
+import type { CSSProperties } from 'react';
+import { colors as palette } from '../components/SaasLayout';
+
+export { palette as colors };
+
+// ─────────────────────────────────────────────────────────────────────
+// Semantic color aliases. All consuming code reaches for accentDanger /
+// accentSuccess / accentWarning rather than the raw red/green/yellow so
+// theming stays consistent across surfaces.
+// ─────────────────────────────────────────────────────────────────────
+export const semantic = {
+  border: palette.border,
+  borderHover: palette.accent,
+  accent: palette.accent,
+  accentDanger: palette.accentRed,
+  accentSuccess: palette.accentGreen,
+  accentWarning: palette.accentYellow,
+  accentInfo: palette.accentPurple,
+  bg: palette.bg,
+  bgPanel: palette.bgSecondary,
+  bgHover: palette.bgHover,
+  text: palette.text,
+  textMuted: palette.textMuted,
+  textDim: palette.textDim,
+} as const;
 
 export const space = {
   xs: 4,
@@ -47,6 +72,73 @@ export const fontSize = {
   h2: 22,
   h1: 28,
 } as const;
+
+// ─────────────────────────────────────────────────────────────────────
+// Reusable style primitives. Use these in Gate 3 surfaces so visual
+// rhythm is consistent without each page re-defining its own card chrome.
+// ─────────────────────────────────────────────────────────────────────
+export const cardStyle: CSSProperties = {
+  background: semantic.bgPanel,
+  border: `1px solid ${semantic.border}`,
+  borderRadius: radius.lg,
+  padding: space.lg,
+  boxShadow: shadow.card,
+};
+
+export const panelStyle: CSSProperties = {
+  background: semantic.bgPanel,
+  border: `1px solid ${semantic.border}`,
+  borderRadius: radius.lg,
+  overflow: 'hidden',
+};
+
+export type BadgeVariant = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
+export const badgeStyles: Record<BadgeVariant, CSSProperties> = {
+  neutral: {
+    fontSize: fontSize.xs, padding: '2px 10px', borderRadius: radius.pill,
+    border: `1px solid ${semantic.border}`, color: semantic.textMuted,
+  },
+  info: {
+    fontSize: fontSize.xs, padding: '2px 10px', borderRadius: radius.pill,
+    border: `1px solid ${semantic.accentInfo}55`, color: semantic.accentInfo,
+  },
+  success: {
+    fontSize: fontSize.xs, padding: '2px 10px', borderRadius: radius.pill,
+    border: `1px solid ${semantic.accentSuccess}55`, color: semantic.accentSuccess,
+  },
+  warning: {
+    fontSize: fontSize.xs, padding: '2px 10px', borderRadius: radius.pill,
+    border: `1px solid ${semantic.accentWarning}55`, color: semantic.accentWarning,
+  },
+  danger: {
+    fontSize: fontSize.xs, padding: '2px 10px', borderRadius: radius.pill,
+    border: `1px solid ${semantic.accentDanger}55`, color: semantic.accentDanger,
+  },
+};
+
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export const buttonStyles: Record<ButtonVariant, CSSProperties> = {
+  primary: {
+    padding: '8px 16px', borderRadius: radius.md, border: 'none',
+    background: semantic.accent, color: '#fff',
+    fontSize: fontSize.body, fontWeight: 600, cursor: 'pointer',
+  },
+  secondary: {
+    padding: '8px 16px', borderRadius: radius.md,
+    border: `1px solid ${semantic.border}`, background: 'transparent',
+    color: semantic.text, fontSize: fontSize.body, fontWeight: 600, cursor: 'pointer',
+  },
+  ghost: {
+    padding: '6px 10px', borderRadius: radius.sm, border: 'none',
+    background: 'transparent', color: semantic.accent,
+    fontSize: fontSize.sm, cursor: 'pointer',
+  },
+  danger: {
+    padding: '8px 16px', borderRadius: radius.md,
+    border: `1px solid ${semantic.accentDanger}55`, background: 'transparent',
+    color: semantic.accentDanger, fontSize: fontSize.body, fontWeight: 600, cursor: 'pointer',
+  },
+};
 
 // Stable test-id helpers — use these in components so tests can rely on a
 // single naming scheme.

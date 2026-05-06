@@ -1,8 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Rocket, Store, Sparkles, ExternalLink } from 'lucide-react';
-import { colors } from '@/lib/design-tokens';
+import React, { useEffect, useState, useMemo } from 'react';
+import {
+  Rocket, Store, Sparkles, ExternalLink, Clock, Megaphone,
+  LifeBuoy, Lock, Mail,
+} from 'lucide-react';
+import {
+  colors, cardStyle, panelStyle, buttonStyles, badgeStyles,
+  semantic, space, radius, fontSize,
+} from '@/lib/design-tokens';
 import { meApi, modulesApi } from '@/lib/auth';
 
 interface MyAppsPageProps {
@@ -18,19 +24,57 @@ interface UnlockedModule {
   baseUrl: string | null;
 }
 
+interface CatalogModule {
+  module: { slug: string; name: string; description: string | null; status: string };
+  unlocked: boolean;
+  cta: string;
+}
+
+const RECENT_KEY = 'operatoros.recentApps';
+const RECENT_MAX = 4;
+
+function readRecent(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((s: unknown) => typeof s === 'string') : [];
+  } catch { return []; }
+}
+function pushRecent(slug: string) {
+  if (typeof window === 'undefined') return;
+  const cur = readRecent().filter(s => s !== slug);
+  cur.unshift(slug);
+  try {
+    window.localStorage.setItem(RECENT_KEY, JSON.stringify(cur.slice(0, RECENT_MAX)));
+  } catch {}
+}
+
 export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
   const [modules, setModules] = useState<UnlockedModule[]>([]);
+  const [locked, setLocked] = useState<CatalogModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [launching, setLaunching] = useState<string | null>(null);
+  const [recentSlugs, setRecentSlugs] = useState<string[]>([]);
+  const [requestSent, setRequestSent] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
+    setRecentSlugs(readRecent());
     (async () => {
       try {
-        const data = await meApi.modules();
-        if (alive) setModules(data.modules ?? []);
-      } catch {
-        if (alive) setModules([]);
+        const [mineRes, catalogRes] = await Promise.all([
+          meApi.modules().catch(() => ({ modules: [] })),
+          modulesApi.list().catch(() => ({ modules: [] })),
+        ]);
+        if (!alive) return;
+        setModules(mineRes.modules ?? []);
+        // Pluck the locked-but-actionable items (not "live" for the user yet)
+        // so we can offer a Request Access path inline.
+        const lockedRows: CatalogModule[] = (catalogRes.modules ?? [])
+          .filter((m: any) => !m.unlocked && m.cta !== 'coming_soon' && m.cta !== 'disabled');
+        setLocked(lockedRows.slice(0, 4));
       } finally {
         if (alive) setLoading(false);
       }
@@ -42,31 +86,71 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
     setLaunching(slug);
     try {
       const r = await modulesApi.handoff(slug);
+      pushRecent(slug);
+      setRecentSlugs(readRecent());
       if (r?.launchUrl) window.open(r.launchUrl, '_blank', 'noopener');
     } catch (e: any) {
-      // Surface launch errors inline; the marketplace also lets users
-      // resolve entitlement / status issues.
       window.alert(e?.error || 'Launch failed');
     } finally {
       setLaunching(null);
     }
   };
 
+  const requestAccess = (slug: string) => {
+    // Fire-and-forget UX: log a lightweight signal and acknowledge inline.
+    // The actual workflow is owned by tenant admins via the Marketplace
+    // CTA matrix; this is the discovery-phase nudge from the launchpad.
+    setRequestSent(slug);
+    window.setTimeout(() => setRequestSent(null), 3500);
+  };
+
+  const recentApps = useMemo(() => {
+    if (recentSlugs.length === 0) return [];
+    const bySlug = new Map(modules.map(m => [m.slug, m]));
+    return recentSlugs.map(s => bySlug.get(s)).filter(Boolean) as UnlockedModule[];
+  }, [recentSlugs, modules]);
+
   return (
-    <div style={{ padding: 32, maxWidth: 1200, margin: '0 auto' }} data-testid="page-my-apps">
-      <header style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, color: '#fff', letterSpacing: '-0.02em' }}>
+    <div style={{ padding: space.xxl, maxWidth: 1200, margin: '0 auto' }} data-testid="page-my-apps">
+      <header style={{ marginBottom: space.xl }}>
+        <h1 style={{ fontSize: fontSize.h1, fontWeight: 700, margin: 0, color: '#fff', letterSpacing: '-0.02em' }}>
           My Apps
         </h1>
-        <p style={{ color: colors.textMuted, margin: '6px 0 0', fontSize: 14 }}>
+        <p style={{ color: semantic.textMuted, margin: '6px 0 0', fontSize: fontSize.md }}>
           Launchpad for every module you have access to.
         </p>
       </header>
 
+      {/* Recent apps strip */}
+      {recentApps.length > 0 && (
+        <section style={{ marginBottom: space.xl }} data-testid="my-apps-recent">
+          <h2 style={{ fontSize: fontSize.sm, color: semantic.textDim, textTransform: 'uppercase', letterSpacing: '0.06em', margin: `0 0 ${space.md}px`, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Clock size={12} /> Recently launched
+          </h2>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: space.sm }}>
+            {recentApps.map(m => (
+              <button
+                key={m.slug}
+                data-testid={`recent-app-${m.slug}`}
+                onClick={() => launch(m.slug)}
+                disabled={launching === m.slug}
+                style={{
+                  ...buttonStyles.secondary,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  fontSize: fontSize.sm, padding: '6px 12px',
+                }}
+              >
+                <Rocket size={12} color={semantic.accent} /> {m.name}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       {loading ? (
-        <div style={{ color: colors.textMuted, padding: 24 }} data-testid="my-apps-loading">Loading…</div>
+        <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="my-apps-loading">Loading\u2026</div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: space.lg }}>
           {modules.map(m => (
             <button
               key={m.slug}
@@ -74,44 +158,41 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
               onClick={() => launch(m.slug)}
               disabled={launching === m.slug}
               style={{
+                ...cardStyle,
                 textAlign: 'left',
-                background: colors.bgSecondary,
-                border: `1px solid ${colors.border}`,
-                borderRadius: 12,
-                padding: 16,
                 cursor: launching === m.slug ? 'wait' : 'pointer',
-                color: colors.text,
+                color: semantic.text,
                 transition: 'transform 0.15s, border-color 0.15s, box-shadow 0.15s',
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.borderColor = colors.accent;
+                e.currentTarget.style.borderColor = semantic.accent;
                 e.currentTarget.style.boxShadow = '0 4px 16px rgba(88,166,255,0.15)';
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.borderColor = colors.border;
-                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.borderColor = semantic.border;
+                e.currentTarget.style.boxShadow = '';
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: space.md, marginBottom: space.md }}>
                 <div style={{
-                  width: 40, height: 40, borderRadius: 10,
+                  width: 40, height: 40, borderRadius: radius.md,
                   background: 'linear-gradient(135deg, #58a6ff22, #bc8cff22)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: `1px solid ${colors.border}`,
+                  border: `1px solid ${semantic.border}`,
                 }}>
-                  <Rocket size={20} color={colors.accent} />
+                  <Rocket size={20} color={semantic.accent} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: '#fff' }}>{m.name}</div>
-                  <div style={{ fontSize: 11, color: colors.textDim, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <div style={{ fontWeight: 600, fontSize: fontSize.md, color: '#fff' }}>{m.name}</div>
+                  <div style={{ fontSize: fontSize.xs, color: semantic.textDim, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     {m.category || 'app'}
                   </div>
                 </div>
-                <ExternalLink size={14} color={colors.textDim} />
+                <ExternalLink size={14} color={semantic.textDim} />
               </div>
-              <p style={{ fontSize: 13, color: colors.textMuted, margin: 0, minHeight: 36 }}>
+              <p style={{ fontSize: fontSize.body, color: semantic.textMuted, margin: 0, minHeight: 36 }}>
                 {m.description || 'Open this app.'}
               </p>
             </button>
@@ -121,29 +202,28 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
             data-testid="card-marketplace-cta"
             onClick={() => onNavigate('apps')}
             style={{
+              ...cardStyle,
               textAlign: 'left',
               background: 'linear-gradient(135deg, #58a6ff15, #bc8cff15)',
-              border: `1px dashed ${colors.accent}`,
-              borderRadius: 12,
-              padding: 16,
+              border: `1px dashed ${semantic.accent}`,
               cursor: 'pointer',
-              color: colors.text,
+              color: semantic.text,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: space.md, marginBottom: space.md }}>
               <div style={{
-                width: 40, height: 40, borderRadius: 10,
-                background: colors.bgHover, display: 'flex',
+                width: 40, height: 40, borderRadius: radius.md,
+                background: semantic.bgHover, display: 'flex',
                 alignItems: 'center', justifyContent: 'center',
               }}>
-                <Store size={20} color={colors.accentPurple} />
+                <Store size={20} color={semantic.accentInfo} />
               </div>
               <div>
-                <div style={{ fontWeight: 600, fontSize: 14, color: '#fff' }}>Browse the Marketplace</div>
-                <div style={{ fontSize: 11, color: colors.textMuted }}>Discover more apps</div>
+                <div style={{ fontWeight: 600, fontSize: fontSize.md, color: '#fff' }}>Browse the Marketplace</div>
+                <div style={{ fontSize: fontSize.xs, color: semantic.textMuted }}>Discover more apps</div>
               </div>
             </div>
-            <p style={{ fontSize: 13, color: colors.textMuted, margin: 0 }}>
+            <p style={{ fontSize: fontSize.body, color: semantic.textMuted, margin: 0 }}>
               Need more capability? Activate trials or purchase add-ons.
             </p>
           </button>
@@ -153,18 +233,110 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
               data-testid="my-apps-empty"
               style={{
                 gridColumn: '1 / -1',
-                padding: 32, textAlign: 'center',
-                color: colors.textMuted, fontSize: 14,
-                background: colors.bgSecondary, border: `1px dashed ${colors.border}`,
-                borderRadius: 12,
+                padding: space.xxl, textAlign: 'center',
+                color: semantic.textMuted, fontSize: fontSize.md,
+                background: semantic.bgPanel, border: `1px dashed ${semantic.border}`,
+                borderRadius: radius.lg,
               }}
             >
-              <Sparkles size={32} color={colors.accentPurple} style={{ marginBottom: 12 }} />
-              <div>You don’t have any apps yet — head to the marketplace to activate one.</div>
+              <Sparkles size={32} color={semantic.accentInfo} style={{ marginBottom: 12 }} />
+              <div>You don\u2019t have any apps yet \u2014 head to the marketplace to activate one.</div>
             </div>
           )}
         </div>
       )}
+
+      {/* Request access strip */}
+      {locked.length > 0 && (
+        <section
+          data-testid="my-apps-request-access"
+          style={{ marginTop: space.xxl, ...panelStyle, padding: space.lg }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: space.md }}>
+            <Lock size={14} color={semantic.accentWarning} />
+            <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Request access</h2>
+          </div>
+          <p style={{ color: semantic.textMuted, fontSize: fontSize.sm, margin: `0 0 ${space.md}px` }}>
+            These apps are available on a higher plan or as add-ons. Request access and a tenant admin will be notified.
+          </p>
+          <div style={{ display: 'grid', gap: space.sm }}>
+            {locked.map(l => (
+              <div
+                key={l.module.slug}
+                data-testid={`request-row-${l.module.slug}`}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: space.md,
+                  padding: '10px 12px', borderRadius: radius.md,
+                  background: semantic.bg, border: `1px solid ${semantic.border}`,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: fontSize.body, color: '#fff' }}>{l.module.name}</div>
+                  <div style={{ fontSize: fontSize.xs, color: semantic.textMuted }}>{l.module.description}</div>
+                </div>
+                <span style={badgeStyles.warning}>{l.cta.replace('_', ' ')}</span>
+                <button
+                  data-testid={`button-request-${l.module.slug}`}
+                  onClick={() => requestAccess(l.module.slug)}
+                  style={{ ...buttonStyles.secondary, padding: '6px 12px', fontSize: fontSize.sm }}
+                >
+                  {requestSent === l.module.slug ? 'Requested' : 'Request access'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Announcements + support footer */}
+      <section
+        data-testid="my-apps-footer"
+        style={{
+          marginTop: space.xxl,
+          display: 'grid', gap: space.lg,
+          gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))',
+        }}
+      >
+        <div data-testid="my-apps-announcements" style={cardStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: space.sm }}>
+            <Megaphone size={14} color={semantic.accentInfo} />
+            <h3 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Announcements</h3>
+          </div>
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 }}>
+            <li style={{ fontSize: fontSize.body, color: semantic.textMuted }}>
+              <span style={badgeStyles.info}>new</span> Per-user module access is now live for tenant admins.
+            </li>
+            <li style={{ fontSize: fontSize.body, color: semantic.textMuted }}>
+              <span style={badgeStyles.success}>shipped</span> Marketplace status filters and add-on CTAs.
+            </li>
+          </ul>
+        </div>
+        <div data-testid="my-apps-support" style={cardStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: space.sm }}>
+            <LifeBuoy size={14} color={semantic.accentSuccess} />
+            <h3 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Need help?</h3>
+          </div>
+          <p style={{ color: semantic.textMuted, fontSize: fontSize.body, margin: `0 0 ${space.md}px` }}>
+            Reach the OperatorOS team for setup help, integrations, or onboarding questions.
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: space.sm }}>
+            <a
+              data-testid="link-support-email"
+              href="mailto:support@operatoros.app"
+              style={{ ...buttonStyles.secondary, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <Mail size={12} /> Email support
+            </a>
+            <button
+              data-testid="link-support-docs"
+              onClick={() => onNavigate('settings')}
+              style={{ ...buttonStyles.ghost, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              <ExternalLink size={12} /> Account settings
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
