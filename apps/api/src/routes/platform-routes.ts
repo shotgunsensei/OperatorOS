@@ -70,11 +70,7 @@ function isValidHttpUrl(v: unknown): boolean {
 // ─────────────────────────────────────────────────────────────────────────
 
 export async function registerPlatformRoutes(app: FastifyInstance) {
-  // Gate 2: centralized audit enforcement. Any privileged mutation under
-  // /v1/platform/* or /v1/billing/* that returns 2xx without calling
-  // writeAudit() will trigger a console error AND a fallback `audit_missing`
-  // row. This makes it structurally impossible to ship an unaudited
-  // privileged mutation.
+  // Centralized audit enforcement for /v1/platform/* and /v1/billing/*.
   registerAuditEnforcement(app, { prefixes: ['/v1/platform/', '/v1/billing/'] });
 
   // =====================================================================
@@ -567,6 +563,20 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         if (body[k] && !isValidHttpUrl(body[k])) {
           return badRequest(reply, `${k} must be an http(s) URL`);
         }
+      }
+
+      // Pricing config (addonAnnualPriceCents, stripePriceEnvKey) is managed
+      // out-of-band (env + dedicated price-update endpoint), not via this PATCH.
+      // Strip them from metadata if present so the UI badge stays the source
+      // of truth and accidental drift is impossible.
+      if (body.metadata && typeof body.metadata === 'object') {
+        const meta = { ...body.metadata };
+        delete meta.addonAnnualPriceCents;
+        delete meta.stripePriceEnvKey;
+        const beforeMeta = (before.metadata ?? {}) as any;
+        if (beforeMeta.addonAnnualPriceCents !== undefined) meta.addonAnnualPriceCents = beforeMeta.addonAnnualPriceCents;
+        if (beforeMeta.stripePriceEnvKey !== undefined) meta.stripePriceEnvKey = beforeMeta.stripePriceEnvKey;
+        body.metadata = meta;
       }
 
       const updates: any = { updatedAt: new Date() };

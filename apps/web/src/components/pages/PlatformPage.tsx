@@ -847,8 +847,8 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
   const [supportUrl, setSupportUrl] = useState(meta.supportUrl ?? '');
   const [isCore, setIsCore] = useState(!!meta.isCore);
   const [isPaidAddon, setIsPaidAddon] = useState(!!meta.isPaidAddon);
-  const [addonAnnualPriceCents, setAddonAnnualPriceCents] = useState(String(meta.addonAnnualPriceCents ?? ''));
-  const [stripePriceEnvKey, setStripePriceEnvKey] = useState(meta.stripePriceEnvKey ?? '');
+  const addonAnnualPriceCents = meta.addonAnnualPriceCents;
+  const stripePriceEnvKey = meta.stripePriceEnvKey ?? '';
   const [featureTagsCsv, setFeatureTagsCsv] = useState(Array.isArray(meta.featureTags) ? meta.featureTags.join(', ') : '');
 
   const [err, setErr] = useState<any>(null);
@@ -884,9 +884,6 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
       setOrUnset('supportUrl', supportUrl);
       nextMeta.isCore = isCore;
       nextMeta.isPaidAddon = isPaidAddon;
-      const ap = addonAnnualPriceCents.trim();
-      setOrUnset('addonAnnualPriceCents', ap === '' ? '' : Number(ap));
-      setOrUnset('stripePriceEnvKey', stripePriceEnvKey);
       const tags = featureTagsCsv.split(',').map((s: string) => s.trim()).filter(Boolean);
       if (tags.length === 0) delete nextMeta.featureTags; else nextMeta.featureTags = tags;
       if (JSON.stringify(nextMeta) !== JSON.stringify(meta)) body.metadata = nextMeta;
@@ -935,8 +932,18 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
         <Input label="Marketing URL"      value={marketingUrl} onChange={setMarketingUrl}   testid="input-mod-edit-marketing" />
         <Input label="Docs URL"           value={docsUrl}      onChange={setDocsUrl}        testid="input-mod-edit-docs" />
         <Input label="Support URL"        value={supportUrl}   onChange={setSupportUrl}     testid="input-mod-edit-support" />
-        <Input label="Addon annual price (cents)" value={addonAnnualPriceCents} onChange={setAddonAnnualPriceCents} testid="input-mod-edit-annualprice" />
-        <Input label="Stripe price env key"       value={stripePriceEnvKey}    onChange={setStripePriceEnvKey}    testid="input-mod-edit-stripekey" />
+        <div data-testid="badge-mod-annualprice">
+          <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Addon annual price (read-only)</label>
+          <div style={{ ...inp, width: '100%', background: colors.panelMuted ?? '#0d1117', color: colors.textMuted }}>
+            {addonAnnualPriceCents != null ? `${addonAnnualPriceCents} cents` : '—'}
+          </div>
+        </div>
+        <div data-testid="badge-mod-stripekey">
+          <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Stripe price env key (read-only)</label>
+          <div style={{ ...inp, width: '100%', background: colors.panelMuted ?? '#0d1117', color: colors.textMuted, fontFamily: 'monospace' }}>
+            {stripePriceEnvKey || '—'}
+          </div>
+        </div>
         <Input label="Feature tags (comma-separated)" value={featureTagsCsv} onChange={setFeatureTagsCsv} testid="input-mod-edit-tags" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 16 }}>
           <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>

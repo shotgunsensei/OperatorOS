@@ -46,12 +46,10 @@ export interface TenantContext {
   tenantSlug: string;
   tenantType: 'personal' | 'company';
   role: 'owner' | 'admin' | 'member';
-  /** Set when access was granted via super_admin override (membership not required). */
+  /** True when access was granted via super_admin override (membership not required). */
   viaPlatformRole: boolean;
-  /** Resolved tenant lifecycle status; archived tenants never make it here for non-super-admins. */
   status: TenantStatus;
-  /** True when status === 'suspended' AND caller is not super_admin. Drives the
-   *  Gate 2 deny path in requireTenantRole / requireTenantModuleAccess. */
+  /** True when tenant is suspended and caller is not super_admin. */
   suspended: boolean;
 }
 
