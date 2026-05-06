@@ -249,8 +249,8 @@ function Dashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Infrastructure</div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <Pill tone={h.db?.ok ? 'green' : 'red'}>db {h.db?.ok ? 'ok' : 'down'}</Pill>
-            <Pill tone={h.sessionSecretConfigured ? 'green' : 'red'}>session</Pill>
-            <Pill tone={h.openaiKeyConfigured ? 'green' : 'muted'}>openai</Pill>
+            <Pill tone={h.auth?.sessionSecretConfigured ? 'green' : 'red'}>session</Pill>
+            <Pill tone={h.ai?.openaiKeyConfigured ? 'green' : 'muted'}>openai</Pill>
           </div>
         </Card>
       </div>

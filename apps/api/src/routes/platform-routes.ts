@@ -70,8 +70,10 @@ function isValidHttpUrl(v: unknown): boolean {
 // ─────────────────────────────────────────────────────────────────────────
 
 export async function registerPlatformRoutes(app: FastifyInstance) {
-  // Centralized audit enforcement for /v1/platform/* and /v1/billing/*.
-  registerAuditEnforcement(app, { prefixes: ['/v1/platform/', '/v1/billing/'] });
+  // Centralized audit enforcement for /v1/platform/* (privileged super-admin
+  // surface). Billing endpoints already self-audit but are not enforced here
+  // to avoid noisy `audit_missing` rows from low-risk routes.
+  registerAuditEnforcement(app, { prefixes: ['/v1/platform/'] });
 
   // =====================================================================
   // TENANTS — list / detail / create / patch / lifecycle

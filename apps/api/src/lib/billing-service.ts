@@ -739,9 +739,17 @@ export async function subscribeToAddon(
   // Fail-closed before any branch that could create an active addon row.
   assertAddonPurchasableOrThrow(moduleSlug);
 
+  // Dedupe scope: when a tenantId is provided, the same admin user can
+  // legitimately purchase the same addon for a different tenant, so only
+  // block when an active row exists for THIS (user, module, tenant) tuple.
+  // Falls back to the legacy (user, module) check for non-tenant flows.
+  const tenantScope = opts?.tenantId ?? null;
   const existing = await db.select().from(addonSubscriptions)
     .where(and(eq(addonSubscriptions.userId, userId), eq(addonSubscriptions.moduleId, mod.id)));
-  const active = existing.find(a => ['active', 'trialing'].includes(a.status));
+  const active = existing.find(a =>
+    ['active', 'trialing'].includes(a.status) &&
+    (tenantScope === null || (a.tenantId ?? null) === tenantScope),
+  );
   if (active) return { ok: true, moduleSlug, action: 'already_active' };
 
   const priceId = getAddonStripePriceId(moduleSlug);
