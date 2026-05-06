@@ -196,10 +196,14 @@ export async function evaluateUserEntitlement(userId: string, moduleId: string):
   return null;
 }
 
-// Entitlement-only access check. Order: admin_role > override > addon > plan.
+// Legacy (pre-tenant) per-user entitlement check. Order:
+// admin_role > override > addon > plan.
 // Module runtime status (live/coming_soon/disabled) and baseUrl are NOT
 // considered here — callers gate launchability separately.
-export async function hasModuleAccess(userId: string, moduleSlug: string): Promise<ModuleAccess> {
+//
+// Public callers MUST go through `hasModuleAccess(userId, tenantId, slug)`
+// with `{ legacy: true }` for unmigrated paths.
+async function hasModuleAccessLegacy(userId: string, moduleSlug: string): Promise<ModuleAccess> {
   try {
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (!user || user.status !== 'active') {
@@ -239,7 +243,7 @@ export async function hasModuleAccess(userId: string, moduleSlug: string): Promi
 
     return { moduleSlug, hasAccess: false, source: null, reason: 'no_entitlement' };
   } catch (err) {
-    console.error('[entitlement] hasModuleAccess error:', err);
+    console.error('[entitlement] hasModuleAccessLegacy error:', err);
     return { moduleSlug, hasAccess: false, source: null, reason: 'evaluation_error' };
   }
 }
@@ -297,7 +301,10 @@ export async function getUserModules(userId: string): Promise<UserModuleSummary[
   const sorted = allModules.sort((a, b) => a.ord - b.ord);
   const out: UserModuleSummary[] = [];
   for (const m of sorted) {
-    const access = await hasModuleAccess(userId, m.slug);
+    // TODO(gate-2): migrate getUserModules to a tenant-aware caller and drop
+    // the legacy fallback. See follow-up task: "Move every existing module
+    // behind the new tenant boundary".
+    const access = await hasModuleAccess(userId, '', m.slug, { legacy: true });
     const upgradeTarget = await smallestUpgradeTarget(m.id);
     const addonPriceCents = readAddonPriceCents(m);
     const cta = pickCta({
@@ -338,7 +345,8 @@ export async function getUserModules(userId: string): Promise<UserModuleSummary[
 export async function getModuleForUser(userId: string, moduleSlug: string): Promise<UserModuleSummary | null> {
   const [m] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
   if (!m) return null;
-  const access = await hasModuleAccess(userId, moduleSlug);
+  // TODO(gate-2): tenant-aware. See follow-up #19.
+  const access = await hasModuleAccess(userId, '', moduleSlug, { legacy: true });
   const upgradeTarget = await smallestUpgradeTarget(m.id);
   const addonPriceCents = readAddonPriceCents(m);
   const cta = pickCta({
@@ -383,7 +391,8 @@ export async function getModuleAccessTrace(userId: string, moduleSlug: string): 
   const override = await activeOverrideForUser(userId, mod.id);
   const overrideGrants = override ? override.grant : null;
 
-  const access = await hasModuleAccess(userId, moduleSlug);
+  // TODO(gate-2): tenant-aware. See follow-up #19.
+  const access = await hasModuleAccess(userId, '', moduleSlug, { legacy: true });
 
   return {
     moduleSlug,
@@ -491,7 +500,8 @@ export function requireModuleAccess(moduleSlug: string) {
     if (reply.sent) return;
     const user = (request as any).user;
 
-    const access = await hasModuleAccess(user.id, moduleSlug);
+    // TODO(gate-2): tenant-aware. See follow-up #19.
+    const access = await hasModuleAccess(user.id, '', moduleSlug, { legacy: true });
     if (!access.hasAccess) {
       reply.code(403).send({
         error: `Access to "${moduleSlug}" requires an upgraded plan or add-on.`,
@@ -507,31 +517,35 @@ export function requireModuleAccess(moduleSlug: string) {
 }
 
 // ===========================================================================
-// Gate 1 — Tenant-aware entitlement
+// Gate 1 — Tenant-aware entitlement (PRIMARY contract)
 // ===========================================================================
 //
-// `hasModuleAccess` above is the LEGACY (pre-tenant) per-user check that
-// resolves entitlements through plan / addon / override rows owned by a
-// single user. It remains the source of truth for callers that have not
-// been migrated to tenants yet.
-//
-// `hasModuleAccessForTenant` is the new tenant-scoped check. Resolution
-// order:
-//   1. user inactive       -> denied
+// `hasModuleAccess(userId, tenantId, slug)` is the canonical entitlement
+// check. Resolution order:
+//   1. user inactive        -> denied
 //   2. platform super_admin -> granted (source = 'admin_role')
-//   3. module not found    -> denied
+//   3. module not found     -> denied
 //   4. tenant_modules row missing or status not in
 //      {enabled, trial, purchased, beta} -> denied
-//   5. tm.allowAllMembers && user is a tenant member -> granted
-//   6. tenant_user_module_access row with accessLevel in {user, manager}
+//      (NB: an `archived` or `disabled` tenant_module always denies, even
+//       for explicit grants, so revocation cascades cleanly.)
+//   5. tenant_user_module_access row with accessLevel='none' -> DENIED
+//      (explicit deny overrides the tenant-wide allowAllMembers opt-in)
+//   6. tenant_user_module_access row with accessLevel ∈ {user, manager}
 //      -> granted
-//   7. otherwise -> denied
+//   7. tm.allowAllMembers && user is a tenant member -> granted
+//   8. otherwise -> denied
 //
 // `source` is reported as 'plan' for any tenant-grant path so existing UI
 // badges keep working without a breaking shape change. A future gate will
 // likely introduce a more specific 'tenant_grant' source.
+//
+// LEGACY FALLBACK: callers that have not yet been migrated to tenants
+// pass `{ legacy: true }` and a placeholder tenantId; the call delegates to
+// the original per-user plan/addon/override check (`hasModuleAccessLegacy`).
+// Every legacy call site is tagged with a TODO referencing follow-up #19.
 
-export async function hasModuleAccessForTenant(
+async function hasModuleAccessTenantScoped(
   userId: string,
   tenantId: string,
   moduleSlug: string,
@@ -558,9 +572,6 @@ export async function hasModuleAccessForTenant(
       return { moduleSlug, hasAccess: false, source: null, reason: 'tenant_module_disabled' };
     }
 
-    // Explicit per-user grant takes precedence over `allowAllMembers` so a
-    // tenant admin can revoke a single user from an otherwise-public module
-    // by setting their access_level to 'none'.
     const [acc] = await db.select().from(tenantUserModuleAccess)
       .where(and(
         eq(tenantUserModuleAccess.tenantId, tenantId),
@@ -575,7 +586,6 @@ export async function hasModuleAccessForTenant(
       return { moduleSlug, hasAccess: true, source: 'plan' };
     }
 
-    // No explicit row → fall back to the tenant-wide opt-in.
     if (tm.allowAllMembers) {
       const [tu] = await db.select().from(tenantUsers)
         .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, userId)))
@@ -585,7 +595,35 @@ export async function hasModuleAccessForTenant(
 
     return { moduleSlug, hasAccess: false, source: null, reason: 'no_tenant_grant' };
   } catch (err) {
-    console.error('[entitlement] hasModuleAccessForTenant error:', err);
+    console.error('[entitlement] hasModuleAccess (tenant-scoped) error:', err);
     return { moduleSlug, hasAccess: false, source: null, reason: 'evaluation_error' };
   }
 }
+
+/**
+ * Tenant-aware module entitlement check. This is the canonical contract
+ * for Gate 1 and beyond.
+ *
+ * @param tenantId  The active tenant id. Ignored when `opts.legacy === true`.
+ * @param opts.legacy  When true, the call is routed to the pre-tenant
+ *                     per-user resolver (`hasModuleAccessLegacy`). Used by
+ *                     unmigrated callers; tracked by follow-up #19.
+ */
+export async function hasModuleAccess(
+  userId: string,
+  tenantId: string,
+  moduleSlug: string,
+  opts?: { legacy?: boolean },
+): Promise<ModuleAccess> {
+  if (opts?.legacy) return hasModuleAccessLegacy(userId, moduleSlug);
+  return hasModuleAccessTenantScoped(userId, tenantId, moduleSlug);
+}
+
+/**
+ * Backwards-compatible alias kept temporarily so that early Gate 1 callers
+ * (and external imports during the transition) continue to work. New code
+ * should call `hasModuleAccess(userId, tenantId, slug)` directly.
+ *
+ * @deprecated Use `hasModuleAccess(userId, tenantId, slug)`.
+ */
+export const hasModuleAccessForTenant = hasModuleAccessTenantScoped;

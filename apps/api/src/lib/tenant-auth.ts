@@ -14,6 +14,15 @@
  *
  * Membership is verified for every resolved context. Cross-tenant access
  * returns 404 (never 403) so we don't leak tenant existence to outsiders.
+ *
+ * REQUEST-SCOPED CACHE
+ * --------------------
+ * All helpers in this module read tenant rows, membership rows, module
+ * rows, and module access rows through a per-request cache attached to the
+ * Fastify request object via a Symbol key. Chained pre-handlers (e.g.
+ * `[authenticate, requireTenantMember, requireTenantModuleAccess('foo')]`)
+ * and route handlers calling the helpers explicitly all share the same
+ * cache, so each row is loaded at most once per request.
  */
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
@@ -39,54 +48,162 @@ export interface TenantContext {
   viaPlatformRole: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Request-scoped cache
+// ---------------------------------------------------------------------------
+
+const CACHE_KEY = Symbol.for('operatoros.tenantAuthCache');
+
+interface RequestCache {
+  /** Cached resolveTenantContext() result; `null` means "already resolved to nothing". */
+  context?: TenantContext | null;
+  tenantById: Map<string, any | null>;
+  membership: Map<string, any | null>;          // key = `${tenantId}:${userId}`
+  moduleBySlug: Map<string, any | null>;
+  tenantModule: Map<string, any | null>;        // key = `${tenantId}:${moduleId}`
+  userModuleAccess: Map<string, any | null>;    // key = `${tenantId}:${userId}:${moduleId}`
+}
+
+function cacheFor(request: FastifyRequest): RequestCache {
+  const r = request as any;
+  if (!r[CACHE_KEY]) {
+    r[CACHE_KEY] = {
+      tenantById: new Map(),
+      membership: new Map(),
+      moduleBySlug: new Map(),
+      tenantModule: new Map(),
+      userModuleAccess: new Map(),
+    } as RequestCache;
+  }
+  return r[CACHE_KEY] as RequestCache;
+}
+
+async function loadTenant(request: FastifyRequest, tenantId: string) {
+  const c = cacheFor(request);
+  if (c.tenantById.has(tenantId)) return c.tenantById.get(tenantId);
+  const [row] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+  c.tenantById.set(tenantId, row ?? null);
+  return row ?? null;
+}
+
+async function loadMembership(request: FastifyRequest, tenantId: string, userId: string) {
+  const c = cacheFor(request);
+  const key = `${tenantId}:${userId}`;
+  if (c.membership.has(key)) return c.membership.get(key);
+  const [row] = await db.select().from(tenantUsers)
+    .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, userId)))
+    .limit(1);
+  c.membership.set(key, row ?? null);
+  return row ?? null;
+}
+
+async function loadModuleBySlug(request: FastifyRequest, slug: string) {
+  const c = cacheFor(request);
+  if (c.moduleBySlug.has(slug)) return c.moduleBySlug.get(slug);
+  const [row] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+  c.moduleBySlug.set(slug, row ?? null);
+  return row ?? null;
+}
+
+async function loadTenantModule(request: FastifyRequest, tenantId: string, moduleId: string) {
+  const c = cacheFor(request);
+  const key = `${tenantId}:${moduleId}`;
+  if (c.tenantModule.has(key)) return c.tenantModule.get(key);
+  const [row] = await db.select().from(tenantModules)
+    .where(and(eq(tenantModules.tenantId, tenantId), eq(tenantModules.moduleId, moduleId)))
+    .limit(1);
+  c.tenantModule.set(key, row ?? null);
+  return row ?? null;
+}
+
+async function loadUserModuleAccess(request: FastifyRequest, tenantId: string, userId: string, moduleId: string) {
+  const c = cacheFor(request);
+  const key = `${tenantId}:${userId}:${moduleId}`;
+  if (c.userModuleAccess.has(key)) return c.userModuleAccess.get(key);
+  const [row] = await db.select().from(tenantUserModuleAccess)
+    .where(and(
+      eq(tenantUserModuleAccess.tenantId, tenantId),
+      eq(tenantUserModuleAccess.userId, userId),
+      eq(tenantUserModuleAccess.moduleId, moduleId),
+    ))
+    .limit(1);
+  c.userModuleAccess.set(key, row ?? null);
+  return row ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Tenant context resolution
+// ---------------------------------------------------------------------------
+
 /**
  * Resolve the tenant a request is acting in. Returns null when no tenant id
  * could be found (no path param, no header, no `current_tenant_id`).
  *
  * Verifies the authenticated user is a member of the resolved tenant.
  * Super admins bypass the membership check (they need to inspect any tenant).
+ *
+ * Result is memoized on the request — calling this twice in one request
+ * (for example by chained pre-handlers) only hits the database once.
  */
 export async function resolveTenantContext(request: FastifyRequest): Promise<TenantContext | null> {
+  const c = cacheFor(request);
+  if (c.context !== undefined) return c.context;
+
   const user = (request as any).user;
-  if (!user) return null;
+  if (!user) {
+    c.context = null;
+    return null;
+  }
 
   const params = (request.params ?? {}) as Record<string, string | undefined>;
   const headerVal = request.headers['x-tenant-id'];
   const headerTenantId = Array.isArray(headerVal) ? headerVal[0] : headerVal;
   const tenantId = params.tenantId || headerTenantId || user.currentTenantId || null;
-  if (!tenantId) return null;
+  if (!tenantId) {
+    c.context = null;
+    return null;
+  }
 
-  const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-  if (!tenant) return null;
+  const tenant = await loadTenant(request, tenantId);
+  if (!tenant) {
+    c.context = null;
+    return null;
+  }
 
-  const [membership] = await db.select().from(tenantUsers)
-    .where(and(eq(tenantUsers.tenantId, tenant.id), eq(tenantUsers.userId, user.id)))
-    .limit(1);
-
+  const membership = await loadMembership(request, tenant.id, user.id);
   if (membership) {
-    return {
+    const ctx: TenantContext = {
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
       tenantType: tenant.type as 'personal' | 'company',
       role: membership.role as 'owner' | 'admin' | 'member',
       viaPlatformRole: false,
     };
+    c.context = ctx;
+    return ctx;
   }
 
   if (user.platformRole === 'super_admin') {
     // Super admins get a synthetic 'owner' role for inspection purposes,
     // but `viaPlatformRole` flags the bypass for audit logging.
-    return {
+    const ctx: TenantContext = {
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
       tenantType: tenant.type as 'personal' | 'company',
       role: 'owner',
       viaPlatformRole: true,
     };
+    c.context = ctx;
+    return ctx;
   }
 
+  c.context = null;
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// Pre-handlers
+// ---------------------------------------------------------------------------
 
 /**
  * Pre-handler: require the caller to be a platform super_admin.
@@ -160,18 +277,17 @@ export function requireTenantModuleAccess(moduleSlug: string) {
 
     if (user.platformRole === 'super_admin') {
       (request as any).tenantContext = ctx;
+      (request as any).tenantModuleAccessLevel = 'manager';
       return;
     }
 
-    const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
+    const mod = await loadModuleBySlug(request, moduleSlug);
     if (!mod) {
       reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND', moduleSlug });
       return;
     }
 
-    const [tm] = await db.select().from(tenantModules)
-      .where(and(eq(tenantModules.tenantId, ctx.tenantId), eq(tenantModules.moduleId, mod.id)))
-      .limit(1);
+    const tm = await loadTenantModule(request, ctx.tenantId, mod.id);
     const launchableStatuses = ['enabled', 'trial', 'purchased', 'beta'];
     if (!tm || !launchableStatuses.includes(tm.status)) {
       reply.code(403).send({
@@ -186,13 +302,7 @@ export function requireTenantModuleAccess(moduleSlug: string) {
     // `access_level='none'` MUST override `allowAllMembers` — that's the
     // documented "tenant admin can revoke a single user from a public
     // module" behavior. So we look for an explicit row FIRST.
-    const [acc] = await db.select().from(tenantUserModuleAccess)
-      .where(and(
-        eq(tenantUserModuleAccess.tenantId, ctx.tenantId),
-        eq(tenantUserModuleAccess.userId, user.id),
-        eq(tenantUserModuleAccess.moduleId, mod.id),
-      ))
-      .limit(1);
+    const acc = await loadUserModuleAccess(request, ctx.tenantId, user.id, mod.id);
 
     if (acc) {
       if (acc.accessLevel === 'none') {

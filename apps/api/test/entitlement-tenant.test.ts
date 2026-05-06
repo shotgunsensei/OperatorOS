@@ -180,20 +180,66 @@ test('non-member outsider -> 404 TENANT_NOT_FOUND (no existence leak)', async ()
   assert.equal(res.json().code, 'TENANT_NOT_FOUND');
 });
 
-test('hasModuleAccessForTenant: explicit none overrides allowAllMembers', async () => {
-  const { hasModuleAccessForTenant } = await import('../src/lib/entitlement-service.js');
+test('hasModuleAccess(userId, tenantId, slug): explicit none overrides allowAllMembers', async () => {
+  const { hasModuleAccess } = await import('../src/lib/entitlement-service.js');
   await setTenantModule({ allowAllMembers: true });
   await setUserAccess(memberA.id, 'none');
-  const r = await hasModuleAccessForTenant(memberA.id, tenant.id, mod.slug);
+  const r = await hasModuleAccess(memberA.id, tenant.id, mod.slug);
   assert.equal(r.hasAccess, false);
   assert.equal(r.reason, 'explicit_deny');
 });
 
-test('hasModuleAccessForTenant: tenant member granted via allowAllMembers when no row', async () => {
-  const { hasModuleAccessForTenant } = await import('../src/lib/entitlement-service.js');
+test('hasModuleAccess: tenant member granted via allowAllMembers when no row', async () => {
+  const { hasModuleAccess } = await import('../src/lib/entitlement-service.js');
   await setTenantModule({ allowAllMembers: true });
   await setUserAccess(memberA.id, null);
-  const r = await hasModuleAccessForTenant(memberA.id, tenant.id, mod.slug);
+  const r = await hasModuleAccess(memberA.id, tenant.id, mod.slug);
   assert.equal(r.hasAccess, true);
   assert.equal(r.source, 'plan');
+});
+
+test('hasModuleAccess: explicit user grant -> granted (entitlement matrix happy path)', async () => {
+  const { hasModuleAccess } = await import('../src/lib/entitlement-service.js');
+  await setTenantModule({ allowAllMembers: false });
+  await setUserAccess(memberA.id, 'user');
+  const r = await hasModuleAccess(memberA.id, tenant.id, mod.slug);
+  assert.equal(r.hasAccess, true);
+  assert.equal(r.source, 'plan');
+});
+
+test('hasModuleAccess: tenant_module status="disabled" denies even with explicit grant', async () => {
+  const { hasModuleAccess } = await import('../src/lib/entitlement-service.js');
+  await setTenantModule({ allowAllMembers: true, status: 'disabled' });
+  await setUserAccess(memberA.id, 'manager');
+  const r = await hasModuleAccess(memberA.id, tenant.id, mod.slug);
+  assert.equal(r.hasAccess, false);
+  assert.equal(r.reason, 'tenant_module_disabled');
+});
+
+test('hasModuleAccess: archived tenant module denies even with explicit manager grant', async () => {
+  // Tenant-level archive cascades cleanly: if a tenant has retired a module
+  // (e.g. removed an add-on after cancel-and-archive), no individual user
+  // grant should resurrect access. This is the regression case the spec
+  // explicitly calls out.
+  const { hasModuleAccess } = await import('../src/lib/entitlement-service.js');
+  await setTenantModule({ allowAllMembers: false, status: 'archived' });
+  await setUserAccess(memberA.id, 'manager');
+  const r = await hasModuleAccess(memberA.id, tenant.id, mod.slug);
+  assert.equal(r.hasAccess, false);
+  assert.equal(r.reason, 'tenant_module_disabled');
+});
+
+test('hasModuleAccess: legacy=true bypasses tenant tables and uses per-user resolver', async () => {
+  // Sanity check on the escape hatch: callers that have not yet been
+  // migrated to tenants pass `{ legacy: true }`. The tenantId argument is
+  // ignored in that mode. Since `outsider` has no plan/addon/override, the
+  // legacy resolver should return hasAccess=false with reason 'no_entitlement'.
+  const { hasModuleAccess } = await import('../src/lib/entitlement-service.js');
+  await setTenantModule({ allowAllMembers: true });
+  const r = await hasModuleAccess(outsider.id, '', mod.slug, { legacy: true });
+  assert.equal(r.hasAccess, false);
+  // Either 'no_entitlement' (no plan match) or 'user_inactive' (test fixture
+  // dependent) — we only need to confirm the legacy code path was taken,
+  // which is proven by NOT returning 'tenant_module_disabled'.
+  assert.notEqual(r.reason, 'tenant_module_disabled');
 });

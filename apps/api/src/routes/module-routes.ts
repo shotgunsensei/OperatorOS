@@ -247,7 +247,8 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // 1. Entitlement gate (403). hasModuleAccess is entitlement-only — it
     // does NOT consider module status, so coming_soon/disabled modules
     // surface their status through the next gate (400) for entitled users.
-    const access = await hasModuleAccess(user.id, slug);
+    // TODO(gate-2): tenant-aware. See follow-up #19.
+    const access = await hasModuleAccess(user.id, '', slug, { legacy: true });
     if (!access.hasAccess) {
       await auditSsoReject({
         userId: user.id, action: 'module_handoff_access_denied',
@@ -474,7 +475,8 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // contract within the documented status set (200/400/404/409/410/429)
     // and lets the user simply re-launch (the next handoff will fail at
     // issue time with 403, the canonical entitlement-deny surface).
-    const access = await hasModuleAccess(row.userId, row.moduleSlug);
+    // TODO(gate-2): tenant-aware. See follow-up #19.
+    const access = await hasModuleAccess(row.userId, '', row.moduleSlug, { legacy: true });
     if (!access.hasAccess) {
       await auditSsoReject({
         userId: row.userId, action: 'module_consume_access_revoked',
