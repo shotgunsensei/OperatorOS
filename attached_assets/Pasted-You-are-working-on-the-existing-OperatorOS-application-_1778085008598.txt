@@ -1,0 +1,705 @@
+You are working on the existing OperatorOS application.
+
+Goal:
+Transform the current frontend from a generic workspace/project/task SaaS dashboard into a polished multi-tenant software ecosystem control center for OperatorOS by Shotgun Ninjas.
+
+OperatorOS is the central operating layer that houses and manages access to multiple software modules/products, including but not limited to:
+
+- TradeFlowKit
+- TorqueShed
+- TechDeck
+- PulseDesk
+- FaultLineLab
+- CallCommand AI
+- SnapProofOS
+- Ninjamation
+- BrandForgeOS
+- StudyForge AI
+- Ninja Launch Kit
+- Future modules added by super admin
+
+The current UI still looks like a basic SaaS project manager with Workspaces, Projects, Tasks, Notes, and generic dashboard cards. Redesign it so OperatorOS feels like a premium SaaS ecosystem hub, product launcher, billing center, and admin command console.
+
+Do not remove existing working backend functionality unless it is clearly obsolete or replaced safely. First inspect the existing codebase, routing, auth system, database schema, billing implementation, current module/add-on handling, and role model. Then implement this as a production-grade refactor.
+
+Primary user roles:
+1. Super Admin
+   - Platform owner/operator.
+   - Can manage all tenants, modules, billing visibility, users, feature flags, platform settings, announcements, product visibility, and audit logs.
+2. Tenant Admin
+   - Admin for a tenant/business account.
+   - Can manage their tenant users, view purchased modules, purchase add-ons, manage billing, configure enabled products, and view usage.
+3. Regular User
+   - End user inside a tenant.
+   - Can access assigned products/modules, see available tools, view account status where allowed, and request access or upgrades.
+
+Critical requirement:
+The UI must visibly and structurally communicate that OperatorOS is the parent ecosystem and the modules are the products. The dashboard should not lead with generic Workspaces/Projects/Tasks. Those can remain as secondary internal features if they are already part of the app, but they should not be the main identity of the platform.
+
+=====================================================================
+PHASE 1 — AUDIT THE EXISTING APP FIRST
+=====================================================================
+
+Before changing files, inspect:
+
+- Existing frontend routes
+- Existing dashboard components
+- Existing sidebar/nav structure
+- Existing database schema
+- Existing seed data
+- Existing auth/session/user model
+- Existing role/permission logic
+- Existing Stripe/billing logic
+- Existing add-on price metadata
+- Existing module/app card logic
+- Existing API routes
+- Existing tests
+- Existing environment variable usage
+
+Then produce a short internal implementation plan in the Replit output explaining:
+- What files will be changed
+- What routes/components will be created
+- What schema changes are needed
+- What existing functionality will be preserved
+- What tests will be added or updated
+
+After that, implement the full solution.
+
+=====================================================================
+PHASE 2 — NEW INFORMATION ARCHITECTURE
+=====================================================================
+
+Replace the current generic app navigation with a role-aware navigation model.
+
+Global navigation should include:
+
+For all authenticated users:
+- Command Center
+- My Apps
+- App Marketplace
+- Activity
+- Help / Support
+- Account
+
+For Tenant Admins:
+- Tenant Dashboard
+- Users
+- Billing
+- Module Access
+- Usage
+- Settings
+
+For Super Admins:
+- Platform Command
+- Tenants
+- Software Modules
+- Module Catalog
+- Plans & Pricing
+- Users
+- Billing Overview
+- Feature Flags
+- Announcements
+- Audit Logs
+- System Health
+- Platform Settings
+
+Design the sidebar so it feels like an operating system console, not a CRUD template. Use clear groupings:
+- Launch
+- Tenant
+- Platform
+- Account
+
+The current left nav items such as Workspaces, Projects, Tasks, and Notes should be demoted, renamed, or relocated unless they are essential. If kept, place them under a “Workspace Tools” or “Utilities” section.
+
+=====================================================================
+PHASE 3 — SUPER ADMIN PLATFORM COMMAND CENTER
+=====================================================================
+
+Create a full Super Admin experience.
+
+Route suggestion:
+- /platform
+- /platform/tenants
+- /platform/modules
+- /platform/modules/new
+- /platform/modules/:id
+- /platform/pricing
+- /platform/users
+- /platform/billing
+- /platform/feature-flags
+- /platform/announcements
+- /platform/audit
+- /platform/settings
+- /platform/health
+
+Super Admin dashboard should include:
+
+Top summary cards:
+- Total tenants
+- Active tenants
+- Trial tenants
+- Paid tenants
+- Monthly recurring revenue estimate if available
+- Active modules
+- Coming soon modules
+- Add-on purchases
+- Failed billing events
+- Open system alerts
+
+Main panels:
+1. Tenant Overview
+   - Recent tenants
+   - Plan
+   - Status
+   - Active modules
+   - Users
+   - Last activity
+   - Billing status
+
+2. Module Revenue / Adoption
+   - Module name
+   - Number of tenants enabled
+   - Number of paid add-ons
+   - Monthly price
+   - Status
+
+3. Platform Activity
+   - Tenant created
+   - Module enabled
+   - User invited
+   - Add-on purchased
+   - Billing event
+   - Super admin changes
+
+4. System Health
+   - API status
+   - Database status
+   - Stripe configured status
+   - Auth configured status
+   - Last background job if applicable
+
+=====================================================================
+PHASE 4 — SOFTWARE MODULE CRUD FOR SUPER ADMIN
+=====================================================================
+
+Build a complete module management system.
+
+Super Admin must be able to:
+
+- Add a new software module
+- Edit an existing module
+- Delete or archive a module
+- Enable/disable module globally
+- Mark module as:
+  - active
+  - beta
+  - coming soon
+  - hidden
+  - deprecated
+- Set module category
+- Set module display name
+- Set module slug
+- Set short description
+- Set long description
+- Set icon
+- Set accent color/token
+- Set launch URL/internal route
+- Set marketing URL
+- Set documentation URL
+- Set support URL
+- Set screenshots/images if supported by existing storage
+- Set required plan/tier
+- Set whether it is core included or paid add-on
+- Set monthly add-on price
+- Set annual add-on price if supported
+- Set Stripe Price ID environment key reference
+- Set sort order
+- Set feature tags/capabilities
+- Set visibility rules
+- Assign module to one tenant, many tenants, or all tenants
+- Remove module access from tenant
+- View tenant adoption per module
+- View audit history for module changes
+
+Important:
+Do not put Stripe secret keys or raw sensitive values in the client. Stripe price IDs may be stored/displayed if already intended by the app, but secret keys must remain server-only.
+
+Suggested module fields if schema needs expansion:
+- id
+- slug
+- name
+- tagline
+- shortDescription
+- longDescription
+- category
+- status
+- iconName
+- accentColor
+- internalRoute
+- externalUrl
+- marketingUrl
+- docsUrl
+- supportUrl
+- isCore
+- isPaidAddon
+- addonPriceCents
+- addonAnnualPriceCents
+- stripePriceEnvKey
+- requiredPlan
+- sortOrder
+- featureTags JSON
+- metadata JSON
+- createdAt
+- updatedAt
+- archivedAt
+
+Use soft-delete/archive where safer than permanent delete.
+
+=====================================================================
+PHASE 5 — TENANT MANAGEMENT FOR SUPER ADMIN
+=====================================================================
+
+Create a robust tenant management area.
+
+Super Admin must be able to:
+
+- View all tenants
+- Search tenants
+- Filter by plan/status/billing/module usage
+- Create tenant
+- Edit tenant
+- Suspend tenant
+- Reactivate tenant
+- Archive tenant
+- Assign owner/admin user
+- View tenant users
+- View tenant modules
+- Enable/disable modules for tenant
+- View tenant billing status
+- View tenant activity
+- View tenant audit trail
+- Impersonate tenant admin only if the existing auth architecture can support it safely
+
+Tenant fields should include:
+- name
+- slug
+- status
+- plan
+- billing status
+- owner/admin
+- user count
+- enabled modules
+- created date
+- last activity date
+
+Tenant detail page should have tabs:
+- Overview
+- Users
+- Modules
+- Billing
+- Activity
+- Settings
+- Audit
+
+=====================================================================
+PHASE 6 — TENANT ADMIN EXPERIENCE
+=====================================================================
+
+Redesign the tenant admin dashboard so it is extremely clear and commercially useful.
+
+Tenant Admin should see:
+
+1. Tenant Command Center
+   - Enabled products
+   - Available add-ons
+   - Active users
+   - Current plan
+   - Billing status
+   - Usage overview
+   - Recent activity
+
+2. My Products
+   Product cards for enabled modules:
+   - Product name
+   - Description
+   - Status
+   - Launch button
+   - Manage access button
+   - Documentation/help link
+
+3. App Marketplace
+   Product cards for available modules:
+   - Included
+   - Installed
+   - Upgrade required
+   - Paid add-on
+   - Coming soon
+   - Beta
+   - Request access
+   - Buy add-on
+
+4. User Management
+   - Invite user
+   - Remove user
+   - Change role
+   - Assign product/module access
+   - Resend invite if existing invite system supports it
+
+5. Billing
+   - Current plan
+   - Active add-ons
+   - Available add-ons
+   - Upgrade CTA
+   - Manage billing portal if Stripe portal already exists
+   - Stripe checkout for module add-ons where configured
+
+Do not make the tenant admin dig through generic project pages to find products. Product access should be the primary UX.
+
+=====================================================================
+PHASE 7 — REGULAR USER EXPERIENCE
+=====================================================================
+
+Regular users should have a simple launchpad.
+
+Dashboard should include:
+- Welcome header with tenant name
+- My Apps grid
+- Recently used apps if tracked
+- Available apps requiring access
+- Request access CTA if supported
+- Help/support area
+- Announcements
+
+Regular users should not see:
+- Platform admin controls
+- Tenant billing unless explicitly permitted
+- Module management
+- Tenant-wide user management
+- Stripe configuration data
+- Super admin routes
+
+Add route guards to enforce this on server and client.
+
+=====================================================================
+PHASE 8 — APP MARKETPLACE UX
+=====================================================================
+
+Build a polished App Marketplace page.
+
+Each app card should include:
+- Icon
+- Product name
+- Short value proposition
+- Category
+- Status badge
+- Included/add-on/coming soon badge
+- Monthly price if add-on
+- Launch button if enabled
+- Buy add-on button if available
+- Request access button if disabled
+- Learn more button
+- Manage button for admins
+
+Marketplace filters:
+- All
+- Installed
+- Available
+- Paid Add-ons
+- Coming Soon
+- Beta
+- Business Ops
+- IT Ops
+- Automotive
+- Healthcare Ops
+- AI/Automation
+- Creative/Branding
+
+Search:
+- Search by product name, description, tag, or category.
+
+For the initial module catalog, use the known OperatorOS ecosystem:
+- TradeFlowKit: business operations and quote-to-payment workflow management
+- TorqueShed: automotive diagnostic and repair planning platform
+- TechDeck: MSP/IT operations console and automation toolkit
+- PulseDesk: healthcare operations coordination platform
+- FaultLineLab: advanced diagnostic challenge and problem-solving platform
+- CallCommand AI: call analysis, transcription, routing, and business automation
+- SnapProofOS: proof, documentation, field evidence, and verification platform
+- Ninjamation: automation builder/workflow engine
+- BrandForgeOS: brand/content/launch asset generator
+- StudyForge AI: learning and training system
+- Ninja Launch Kit: product launch, landing page, and campaign builder
+
+Mark StudyForge AI and Ninja Launch Kit as coming soon unless existing backend says otherwise.
+
+=====================================================================
+PHASE 9 — DASHBOARD REDESIGN
+=====================================================================
+
+Replace the current dashboard that shows Workspaces / Projects / Tasks / Notes as the main metrics.
+
+New dashboard should feel like:
+“OperatorOS Command Center”
+
+For Super Admin:
+- Platform metrics
+- Tenants
+- Modules
+- Revenue/add-on adoption
+- System health
+- Recent platform activity
+
+For Tenant Admin:
+- Active products
+- Available upgrades
+- Team users
+- Usage
+- Billing status
+- Recent tenant activity
+
+For Regular User:
+- My apps
+- Recent activity
+- Recommended tools
+- Support
+
+Design language:
+- Dark premium console UI
+- High contrast
+- Clean cards
+- Strong product identity
+- Better spacing
+- Better typography
+- Better badges
+- Better hover states
+- Better loading skeletons
+- Better empty states
+- Mobile responsive
+- Accessible color contrast
+- No weird escaped Unicode text like \u25e7 or \u2b21 showing in the UI
+
+Fix any visible escaped Unicode artifacts. Icons should render as real icons, not raw escape codes.
+
+=====================================================================
+PHASE 10 — BILLING AND ADD-ON PURCHASE FLOW
+=====================================================================
+
+Integrate with the existing Stripe flow safely.
+
+Requirements:
+- Tenant admins can see current plan and active add-ons
+- Tenant admins can purchase configured add-ons
+- Add-on buy button should be disabled or show “Contact admin” if Stripe price ID is missing
+- Coming soon modules should not show a live purchase CTA
+- Already purchased/enabled modules should show Launch or Manage
+- Super admin can see whether a module has its Stripe price env key configured
+- Super admin cannot view Stripe secret key values
+- Use server-side API calls for checkout/session creation
+- Validate tenant ownership and admin permission server-side
+- Prevent regular users from purchasing add-ons unless explicitly permitted
+- Preserve existing environment variable names where already used:
+  - STRIPE_SECRET_KEY
+  - STRIPE_WEBHOOK_SECRET
+  - STRIPE_PRICE_ADDON_TRADEFLOWKIT
+  - STRIPE_PRICE_ADDON_TORQUESHED
+  - STRIPE_PRICE_ADDON_TECHDECK
+  - STRIPE_PRICE_ADDON_PULSEDESK
+  - STRIPE_PRICE_ADDON_FAULTLINELAB
+  - STRIPE_PRICE_ADDON_BF_OS
+  - STRIPE_PRICE_ADDON_SNAPPROOFOS
+
+If module slugs differ from env names, create a safe mapping layer.
+
+=====================================================================
+PHASE 11 — SECURITY / RBAC HARDENING
+=====================================================================
+
+Harden permissions.
+
+Implement or verify:
+
+- Server-side route/API guards for super_admin, tenant_admin, and user roles
+- Tenant isolation on all tenant-scoped records
+- No cross-tenant data leakage
+- No client-only permission enforcement
+- Validate all incoming API payloads with schema validation, preferably Zod if already used
+- Audit log for admin actions:
+  - module created
+  - module updated
+  - module archived
+  - tenant created
+  - tenant updated
+  - tenant suspended
+  - module assigned to tenant
+  - module removed from tenant
+  - role changed
+  - billing action initiated
+- Safe error messages
+- No leaking secrets to browser
+- No exposing internal IDs unnecessarily
+- Use transactions where multiple related records are modified
+- Prevent deleting active modules without confirmation or archive fallback
+- Prevent deleting tenant with active billing unless archive/suspend flow is used
+
+Add a reusable permission helper if one does not already exist.
+
+Example permission helpers:
+- requireSuperAdmin()
+- requireTenantAdmin()
+- requireTenantAccess(tenantId)
+- canManageTenant(user, tenantId)
+- canManageModule(user)
+- canPurchaseAddon(user, tenantId)
+
+=====================================================================
+PHASE 12 — DATA MODEL / MIGRATIONS
+=====================================================================
+
+If schema needs updates, create safe migrations.
+
+Potential tables/entities:
+- softwareModules
+- tenantModules
+- tenants
+- tenantUsers
+- auditLogs
+- featureFlags
+- announcements
+- moduleEvents
+
+If similar tables already exist, extend them instead of duplicating.
+
+tenantModules should track:
+- tenantId
+- moduleId
+- status: enabled, disabled, trial, purchased, suspended
+- source: included, manual, stripe, trial, beta
+- enabledAt
+- disabledAt
+- purchasedAt
+- currentPeriodEnd if available
+- metadata JSON
+
+Use seed data to populate the OperatorOS product catalog if empty. Do not duplicate modules on repeated seeding.
+
+=====================================================================
+PHASE 13 — FRONTEND COMPONENTS TO BUILD
+=====================================================================
+
+Create reusable components:
+
+- RoleAwareSidebar
+- CommandHeader
+- MetricCard
+- ProductModuleCard
+- MarketplaceGrid
+- ModuleStatusBadge
+- PlanBadge
+- TenantStatusBadge
+- EmptyState
+- LoadingSkeleton
+- ConfirmDialog
+- AdminDataTable
+- ModuleEditorForm
+- TenantEditorForm
+- AuditLogTable
+- FeatureFlagToggle
+- BillingStatusPanel
+- AddonPurchaseButton
+- LaunchProductButton
+- ProductAccessMatrix
+
+Use existing UI framework/components already in the project. If Tailwind/shadcn is already used, follow that style. Do not introduce a major new UI framework unless necessary.
+
+=====================================================================
+PHASE 14 — POLISH REQUIREMENTS
+=====================================================================
+
+The frontend needs to feel premium enough to sell.
+
+Add:
+- Better typography scale
+- Better spacing
+- Better card hierarchy
+- Product-focused visual identity
+- Status badges
+- Search/filter controls
+- Empty states that explain what to do next
+- Loading skeletons
+- Inline validation
+- Toast notifications
+- Confirmation dialogs for destructive actions
+- Responsive layouts for desktop/tablet/mobile
+- Keyboard accessible forms/buttons
+- Clear disabled states
+- Helpful tooltips for admin-only/billing configuration states
+
+Avoid:
+- Placeholder lorem ipsum
+- Broken buttons
+- Dead routes
+- Demo-only fake controls
+- Raw escaped Unicode in the UI
+- Generic dashboard filler
+- Showing admin functions to normal users
+- Hardcoding mock data when real API/data already exists
+
+=====================================================================
+PHASE 15 — TESTING / QUALITY GATES
+=====================================================================
+
+Add or update tests.
+
+Minimum required tests:
+1. Super admin can access platform routes.
+2. Tenant admin cannot access super admin routes.
+3. Regular user cannot access tenant admin or platform routes.
+4. Module catalog loads.
+5. Super admin can create/edit/archive module.
+6. Tenant admin can view marketplace.
+7. Tenant admin sees purchase CTA only for purchasable add-ons.
+8. Regular user sees only assigned modules.
+9. Missing Stripe price ID disables purchase and shows a safe message.
+10. Audit log entry is created for admin module changes.
+11. Tenant isolation is enforced on module access APIs.
+12. Sidebar renders role-specific navigation.
+
+Run:
+- typecheck
+- lint if available
+- unit tests if available
+- integration tests if available
+- build
+- any existing smoke tests
+
+Fix all errors before final response.
+
+=====================================================================
+PHASE 16 — FINAL OUTPUT REQUIRED FROM REPLIT
+=====================================================================
+
+When finished, provide:
+
+1. Summary of what changed
+2. List of new routes
+3. List of new components
+4. List of schema/migration changes
+5. List of security/RBAC improvements
+6. Stripe/add-on behavior summary
+7. Tests run and results
+8. Any environment variables still needed
+9. Any manual admin setup steps
+
+Do not stop at “implemented UI.” Make sure the UI is wired to real data/API paths where possible.
+
+Final acceptance criteria:
+- OperatorOS visibly feels like a product ecosystem command center.
+- Super admin can manage software modules.
+- Super admin can manage tenants.
+- Tenant admins can find enabled products and purchase add-ons.
+- Regular users can easily launch their assigned products.
+- Current generic Workspaces/Projects/Tasks dashboard no longer dominates the product identity.
+- Permissions are enforced server-side.
+- Billing actions are safely gated.
+- The app builds successfully.
+- No broken links, no dead buttons, no fake admin controls.
