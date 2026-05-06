@@ -335,11 +335,47 @@ export function requireTenantModuleAccess(moduleSlug: string) {
 }
 
 /**
- * Billing precondition: returns 409 when the tenant already has an active
- * add-on for this module (prevents double-charging). Caller is responsible
- * for the actual purchase flow; this helper is a pre-flight assertion.
+ * Billing precondition for a user purchasing an add-on within a tenant.
+ *
+ * Spec'd contract: `canPurchaseAddon(userId, tenantId, moduleSlug)`.
+ * Returns:
+ *   - `{ allowed: false, code: 'TENANT_ROLE_INSUFFICIENT' }` when the user
+ *     is a tenant member but lacks purchasing authority (must be admin or owner).
+ *   - `{ allowed: false, code: 'TENANT_NOT_FOUND' }` when the user is not a
+ *     tenant member (404-style — never leak existence).
+ *   - `{ allowed: false, code: 'MODULE_NOT_FOUND' }` when the slug is unknown.
+ *   - `{ allowed: false, code: 'ADDON_NOT_PURCHASABLE' }` when no Stripe price
+ *     is configured in this environment.
+ *   - `{ allowed: false, code: 'ADDON_ALREADY_ACTIVE' }` when the tenant
+ *     already holds an active/trialing add-on for this module (prevents
+ *     double-charging).
+ *   - `{ allowed: true, tenantRole }` otherwise.
+ *
+ * Caller is responsible for the actual purchase flow; this helper is a
+ * pre-flight assertion only.
  */
-export async function canPurchaseAddon(tenantId: string, moduleSlug: string): Promise<{ allowed: true } | { allowed: false; code: string; reason: string }> {
+export async function canPurchaseAddon(
+  userId: string,
+  tenantId: string,
+  moduleSlug: string,
+): Promise<
+  | { allowed: true; tenantRole: 'owner' | 'admin' }
+  | { allowed: false; code: string; reason: string }
+> {
+  const [membership] = await db.select().from(tenantUsers)
+    .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, userId)))
+    .limit(1);
+  if (!membership) {
+    return { allowed: false, code: 'TENANT_NOT_FOUND', reason: 'Tenant not found' };
+  }
+  if (membership.role !== 'owner' && membership.role !== 'admin') {
+    return {
+      allowed: false,
+      code: 'TENANT_ROLE_INSUFFICIENT',
+      reason: 'Add-on purchases require tenant admin or owner',
+    };
+  }
+
   const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
   if (!mod) return { allowed: false, code: 'MODULE_NOT_FOUND', reason: 'Unknown module' };
   if (!isAddonPurchasable(moduleSlug)) {
@@ -351,5 +387,5 @@ export async function canPurchaseAddon(tenantId: string, moduleSlug: string): Pr
   if (live) {
     return { allowed: false, code: 'ADDON_ALREADY_ACTIVE', reason: 'Tenant already has an active add-on for this module' };
   }
-  return { allowed: true };
+  return { allowed: true, tenantRole: membership.role as 'owner' | 'admin' };
 }

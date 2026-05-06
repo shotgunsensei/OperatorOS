@@ -63,6 +63,9 @@ ADMIN_PASSWORD = "Dr0p$0fJup1t3r"
 OPERATOROS_BASE_URL = "https://operatoros.net"
 STRIPE_MODE = "live"
 
+[userenv.development]
+OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL = "john@shotgunninjas.com"
+
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
