@@ -2,6 +2,7 @@ import { db } from '../db.js';
 import {
   users, subscriptions, subscriptionPlans,
   modules, planModules, addonSubscriptions, entitlementOverrides,
+  tenantModules, tenantUsers, tenantUserModuleAccess,
 } from '../schema.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import type { FastifyRequest, FastifyReply } from 'fastify';
@@ -503,4 +504,88 @@ export function requireModuleAccess(moduleSlug: string) {
     }
     (request as any).moduleAccess = access;
   };
+}
+
+// ===========================================================================
+// Gate 1 — Tenant-aware entitlement
+// ===========================================================================
+//
+// `hasModuleAccess` above is the LEGACY (pre-tenant) per-user check that
+// resolves entitlements through plan / addon / override rows owned by a
+// single user. It remains the source of truth for callers that have not
+// been migrated to tenants yet.
+//
+// `hasModuleAccessForTenant` is the new tenant-scoped check. Resolution
+// order:
+//   1. user inactive       -> denied
+//   2. platform super_admin -> granted (source = 'admin_role')
+//   3. module not found    -> denied
+//   4. tenant_modules row missing or status not in
+//      {enabled, trial, purchased, beta} -> denied
+//   5. tm.allowAllMembers && user is a tenant member -> granted
+//   6. tenant_user_module_access row with accessLevel in {user, manager}
+//      -> granted
+//   7. otherwise -> denied
+//
+// `source` is reported as 'plan' for any tenant-grant path so existing UI
+// badges keep working without a breaking shape change. A future gate will
+// likely introduce a more specific 'tenant_grant' source.
+
+export async function hasModuleAccessForTenant(
+  userId: string,
+  tenantId: string,
+  moduleSlug: string,
+): Promise<ModuleAccess> {
+  try {
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!user || user.status !== 'active') {
+      return { moduleSlug, hasAccess: false, source: null, reason: 'user_inactive' };
+    }
+    if (user.platformRole === 'super_admin') {
+      return { moduleSlug, hasAccess: true, source: 'admin_role' };
+    }
+
+    const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
+    if (!mod) {
+      return { moduleSlug, hasAccess: false, source: null, reason: 'module_not_found' };
+    }
+
+    const [tm] = await db.select().from(tenantModules)
+      .where(and(eq(tenantModules.tenantId, tenantId), eq(tenantModules.moduleId, mod.id)))
+      .limit(1);
+    const launchable = ['enabled', 'trial', 'purchased', 'beta'];
+    if (!tm || !launchable.includes(tm.status)) {
+      return { moduleSlug, hasAccess: false, source: null, reason: 'tenant_module_disabled' };
+    }
+
+    // Explicit per-user grant takes precedence over `allowAllMembers` so a
+    // tenant admin can revoke a single user from an otherwise-public module
+    // by setting their access_level to 'none'.
+    const [acc] = await db.select().from(tenantUserModuleAccess)
+      .where(and(
+        eq(tenantUserModuleAccess.tenantId, tenantId),
+        eq(tenantUserModuleAccess.userId, userId),
+        eq(tenantUserModuleAccess.moduleId, mod.id),
+      ))
+      .limit(1);
+    if (acc) {
+      if (acc.accessLevel === 'none') {
+        return { moduleSlug, hasAccess: false, source: null, reason: 'explicit_deny' };
+      }
+      return { moduleSlug, hasAccess: true, source: 'plan' };
+    }
+
+    // No explicit row → fall back to the tenant-wide opt-in.
+    if (tm.allowAllMembers) {
+      const [tu] = await db.select().from(tenantUsers)
+        .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, userId)))
+        .limit(1);
+      if (tu) return { moduleSlug, hasAccess: true, source: 'plan' };
+    }
+
+    return { moduleSlug, hasAccess: false, source: null, reason: 'no_tenant_grant' };
+  } catch (err) {
+    console.error('[entitlement] hasModuleAccessForTenant error:', err);
+    return { moduleSlug, hasAccess: false, source: null, reason: 'evaluation_error' };
+  }
 }

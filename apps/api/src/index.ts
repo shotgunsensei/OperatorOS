@@ -25,7 +25,7 @@ import { db } from './db.js';
 import { workspaces, runners, tasks, taskEvents, toolTraces, publishRuns } from './schema.js';
 import { serveUI } from './ui.js';
 import { ensureExtendedTables } from './lib/db-init.js';
-import { ensureSaasTables, seedPlansAndAdmin, seedModules } from './lib/saas-db-init.js';
+import { ensureSaasTables, seedPlansAndAdmin, seedModules, ensureTenantTables, backfillPersonalTenants, bootstrapSuperAdmin, seedDemoCoTenant } from './lib/saas-db-init.js';
 import { registerOsRoutes } from './routes/os-routes.js';
 import { registerAuthRoutes } from './routes/auth-routes.js';
 import { registerSaasRoutes } from './routes/saas-routes.js';
@@ -33,6 +33,7 @@ import { registerAdminRoutes } from './routes/admin-routes.js';
 import { registerBillingRoutes } from './routes/billing-routes.js';
 import { registerAiRoutes } from './routes/ai-routes.js';
 import { registerModuleRoutes } from './routes/module-routes.js';
+import { registerTenantRoutes } from './routes/tenant-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
 import { runAgentLoop } from './agent.js';
 import type { AgentEvent } from './agent.js';
@@ -74,6 +75,7 @@ await registerAdminRoutes(app);
 await registerBillingRoutes(app);
 await registerAiRoutes(app);
 await registerModuleRoutes(app);
+await registerTenantRoutes(app);
 
 async function ensureTables() {
   await db.execute(`
@@ -163,8 +165,16 @@ async function ensureTables() {
 await ensureTables();
 await ensureExtendedTables();
 await ensureSaasTables();
+// Gate 1: tenant DDL must run BEFORE any seed step that touches `users`,
+// because Drizzle's implicit SELECT * needs `platform_role` /
+// `current_tenant_id` to exist on row reads.
+await ensureTenantTables();
 await seedPlansAndAdmin();
 await seedModules();
+// Backfill + tenant-aware seeds run last so the data they need is present.
+await backfillPersonalTenants();
+await bootstrapSuperAdmin();
+await seedDemoCoTenant();
 startSsoTokenCleanup();
 
 const streamSubscribers = new Map<string, Set<import('ws').WebSocket>>();

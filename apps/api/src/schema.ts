@@ -468,12 +468,15 @@ export const addonSubscriptions = pgTable('addon_subscriptions', {
   currentPeriodStart: timestamp('current_period_start').defaultNow().notNull(),
   currentPeriodEnd: timestamp('current_period_end'),
   cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+  // Gate 1: nullable tenant scope (back-filled to the buyer's personal tenant).
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_addon_subs_user').on(t.userId),
   index('idx_addon_subs_module').on(t.moduleId),
   index('idx_addon_subs_status').on(t.status),
+  index('idx_addon_subs_tenant').on(t.tenantId),
 ]);
 
 export const entitlementOverrides = pgTable('entitlement_overrides', {
@@ -485,11 +488,14 @@ export const entitlementOverrides = pgTable('entitlement_overrides', {
   reason: text('reason'),
   createdByAdminId: varchar('created_by_admin_id', { length: 36 }).notNull().references(() => users.id),
   expiresAt: timestamp('expires_at'),
+  // Gate 1: nullable tenant scope (back-filled to the user's personal tenant).
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_overrides_user').on(t.userId),
   index('idx_overrides_module').on(t.moduleId),
+  index('idx_overrides_tenant').on(t.tenantId),
 ]);
 
 export const ssoHandoffTokens = pgTable('sso_handoff_tokens', {
@@ -566,3 +572,107 @@ export type NoteRow = typeof notes.$inferSelect;
 export type ActivityFeedRow = typeof activityFeed.$inferSelect;
 export type AiPromptTemplateRow = typeof aiPromptTemplates.$inferSelect;
 export type AiActionsLogRow = typeof aiActionsLog.$inferSelect;
+
+// ===========================================================================
+// Gate 1 — Tenant foundation, RBAC & multi-tenant data model
+// ===========================================================================
+//
+// A `tenant` is the unit of ownership for paid plans, modules, members, and
+// (in later gates) data. Every user has at least one tenant — their auto-
+// provisioned `personal` tenant — and may belong to additional `company`
+// tenants. The user's "active" tenant is resolved per-request: path
+// `:tenantId` > header `X-Tenant-Id` > `users.current_tenant_id`.
+
+export const tenants = pgTable('tenants', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  name: text('name').notNull(),
+  // Globally unique. Personal tenants use `personal-<userId>`; company
+  // tenants use a human-friendly slug.
+  slug: text('slug').notNull().unique(),
+  type: text('type', { enum: ['personal', 'company'] }).notNull().default('personal'),
+  ownerUserId: varchar('owner_user_id', { length: 36 }).notNull().references(() => users.id),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_tenants_owner').on(t.ownerUserId),
+  index('idx_tenants_type').on(t.type),
+]);
+
+export const tenantUsers = pgTable('tenant_users', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  // Tenant-scoped role (distinct from `users.platform_role`).
+  // owner > admin > member. Owners cannot be demoted by admins.
+  role: text('role', { enum: ['owner', 'admin', 'member'] }).notNull().default('member'),
+  joinedAt: timestamp('joined_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_tenant_users_tenant').on(t.tenantId),
+  index('idx_tenant_users_user').on(t.userId),
+]);
+
+// `tenant_modules`: which modules are turned ON for a tenant (and how).
+//   status:
+//     enabled   — included by plan / always-on for this tenant
+//     trial     — limited-time enabled
+//     purchased — bought via add-on
+//     beta      — opted into beta
+//     disabled  — temporarily off (preserves grants)
+//     archived  — permanently off (grants ignored)
+//   source: provenance of the enablement.
+//   allowAllMembers: if true, every tenant member is implicitly a 'user' on
+//     this module (no per-user grant needed). Otherwise grants live in
+//     `tenant_user_module_access`.
+export const tenantModules = pgTable('tenant_modules', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  moduleId: varchar('module_id', { length: 36 }).notNull().references(() => modules.id),
+  status: text('status', { enum: ['enabled', 'trial', 'purchased', 'beta', 'disabled', 'archived'] }).notNull().default('enabled'),
+  source: text('source', { enum: ['included', 'addon', 'trial', 'admin'] }).notNull().default('included'),
+  allowAllMembers: boolean('allow_all_members').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_tenant_modules_tenant').on(t.tenantId),
+  index('idx_tenant_modules_module').on(t.moduleId),
+]);
+
+// Per-user, per-module grant inside a tenant.
+//   none    — explicit denial (overrides allowAllMembers)
+//   user    — can use the module
+//   manager — can use AND grant access to other tenant members
+export const tenantUserModuleAccess = pgTable('tenant_user_module_access', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  moduleId: varchar('module_id', { length: 36 }).notNull().references(() => modules.id),
+  accessLevel: text('access_level', { enum: ['none', 'user', 'manager'] }).notNull().default('none'),
+  grantedByUserId: varchar('granted_by_user_id', { length: 36 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_tuma_tenant_user').on(t.tenantId, t.userId),
+  index('idx_tuma_module').on(t.moduleId),
+]);
+
+export const tenantInvites = pgTable('tenant_invites', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  email: text('email').notNull(),
+  role: text('role', { enum: ['owner', 'admin', 'member'] }).notNull().default('member'),
+  token: text('token').notNull().unique(),
+  invitedByUserId: varchar('invited_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  acceptedAt: timestamp('accepted_at'),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_tenant_invites_tenant').on(t.tenantId),
+  index('idx_tenant_invites_email').on(t.email),
+]);
+
+export type TenantRow = typeof tenants.$inferSelect;
+export type TenantUserRow = typeof tenantUsers.$inferSelect;
+export type TenantModuleRow = typeof tenantModules.$inferSelect;
+export type TenantUserModuleAccessRow = typeof tenantUserModuleAccess.$inferSelect;
+export type TenantInviteRow = typeof tenantInvites.$inferSelect;

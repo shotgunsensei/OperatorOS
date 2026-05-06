@@ -1,6 +1,6 @@
 import { db } from '../db.js';
 import { hashPassword } from './auth.js';
-import { users, subscriptionPlans, subscriptions, saasWorkspaces, saasProjects, saasTasks, notes, activityFeed, workspaceMemberships, modules, planModules } from '../schema.js';
+import { users, subscriptionPlans, subscriptions, saasWorkspaces, saasProjects, saasTasks, notes, activityFeed, workspaceMemberships, modules, planModules, tenants, tenantUsers, tenantModules, tenantUserModuleAccess } from '../schema.js';
 import { eq, and } from 'drizzle-orm';
 import { PLAN_CONFIGS } from './plans.js';
 
@@ -678,5 +678,300 @@ export async function seedPlansAndAdmin() {
       }
     }
     console.log(`[seed] Created demo account: ${demoEmail}`);
+  }
+}
+
+// ===========================================================================
+// Gate 1 — Tenant tables, backfill, bootstrap super-admin & Demo Co
+// ===========================================================================
+
+/**
+ * Idempotent DDL for the Gate 1 tenant model. Adds new columns to existing
+ * tables (users / subscriptions / addon_subscriptions / entitlement_overrides
+ * / billing_events / admin_audit_logs) and creates the five new tenant
+ * tables. Safe to run on every boot.
+ */
+export async function ensureTenantTables() {
+  await db.execute(`
+    -- New columns on existing tables ---------------------------------------
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS platform_role TEXT NOT NULL DEFAULT 'user';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS current_tenant_id VARCHAR(36);
+    DO $$ BEGIN
+      ALTER TABLE users ADD CONSTRAINT users_platform_role_check
+        CHECK (platform_role IN ('super_admin', 'user'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    CREATE INDEX IF NOT EXISTS idx_users_platform_role ON users(platform_role);
+
+    ALTER TABLE subscriptions          ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    ALTER TABLE addon_subscriptions    ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    ALTER TABLE entitlement_overrides  ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    ALTER TABLE billing_events         ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    ALTER TABLE admin_audit_logs       ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    CREATE INDEX IF NOT EXISTS idx_subscriptions_tenant     ON subscriptions(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_addon_subs_tenant        ON addon_subscriptions(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_overrides_tenant         ON entitlement_overrides(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_billing_events_tenant    ON billing_events(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_tenant  ON admin_audit_logs(tenant_id);
+
+    -- tenants -------------------------------------------------------------
+    CREATE TABLE IF NOT EXISTS tenants (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      name TEXT NOT NULL,
+      slug TEXT NOT NULL UNIQUE,
+      type TEXT NOT NULL DEFAULT 'personal',
+      owner_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      metadata JSONB,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_tenants_owner ON tenants(owner_user_id);
+    CREATE INDEX IF NOT EXISTS idx_tenants_type  ON tenants(type);
+    DO $$ BEGIN
+      ALTER TABLE tenants ADD CONSTRAINT tenants_type_check
+        CHECK (type IN ('personal', 'company'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- tenant_users --------------------------------------------------------
+    CREATE TABLE IF NOT EXISTS tenant_users (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      role TEXT NOT NULL DEFAULT 'member',
+      joined_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      UNIQUE(tenant_id, user_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_tenant_users_tenant ON tenant_users(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_tenant_users_user   ON tenant_users(user_id);
+    DO $$ BEGIN
+      ALTER TABLE tenant_users ADD CONSTRAINT tenant_users_role_check
+        CHECK (role IN ('owner', 'admin', 'member'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- tenant_modules ------------------------------------------------------
+    CREATE TABLE IF NOT EXISTS tenant_modules (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      module_id VARCHAR(36) NOT NULL REFERENCES modules(id),
+      status TEXT NOT NULL DEFAULT 'enabled',
+      source TEXT NOT NULL DEFAULT 'included',
+      allow_all_members BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      UNIQUE(tenant_id, module_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_tenant_modules_tenant ON tenant_modules(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_tenant_modules_module ON tenant_modules(module_id);
+    DO $$ BEGIN
+      ALTER TABLE tenant_modules ADD CONSTRAINT tenant_modules_status_check
+        CHECK (status IN ('enabled','trial','purchased','beta','disabled','archived'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE tenant_modules ADD CONSTRAINT tenant_modules_source_check
+        CHECK (source IN ('included','addon','trial','admin'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- tenant_user_module_access ------------------------------------------
+    CREATE TABLE IF NOT EXISTS tenant_user_module_access (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      module_id VARCHAR(36) NOT NULL REFERENCES modules(id),
+      access_level TEXT NOT NULL DEFAULT 'none',
+      granted_by_user_id VARCHAR(36),
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      UNIQUE(tenant_id, user_id, module_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_tuma_tenant_user ON tenant_user_module_access(tenant_id, user_id);
+    CREATE INDEX IF NOT EXISTS idx_tuma_module      ON tenant_user_module_access(module_id);
+    DO $$ BEGIN
+      ALTER TABLE tenant_user_module_access ADD CONSTRAINT tuma_level_check
+        CHECK (access_level IN ('none','user','manager'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- tenant_invites ------------------------------------------------------
+    CREATE TABLE IF NOT EXISTS tenant_invites (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      email TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'member',
+      token TEXT NOT NULL UNIQUE,
+      invited_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      accepted_at TIMESTAMP,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_tenant_invites_tenant ON tenant_invites(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_tenant_invites_email  ON tenant_invites(email);
+    DO $$ BEGIN
+      ALTER TABLE tenant_invites ADD CONSTRAINT tenant_invites_role_check
+        CHECK (role IN ('owner', 'admin', 'member'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+}
+
+/**
+ * Idempotent: every user must have exactly one personal tenant. Existing
+ * billing/audit/etc. rows get back-filled to the user's personal tenant
+ * so cross-tenant queries don't return NULL-tenant orphans forever.
+ *
+ * Personal-tenant slug convention: `personal-<userId>`. The tenant name
+ * mirrors the user's email so admins can identify it at a glance.
+ */
+export async function backfillPersonalTenants() {
+  const allUsers = await db.select().from(users);
+  let created = 0;
+  for (const u of allUsers) {
+    const slug = `personal-${u.id}`;
+    let [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
+    if (!tenant) {
+      [tenant] = await db.insert(tenants).values({
+        name: `${u.email} Personal`,
+        slug,
+        type: 'personal',
+        ownerUserId: u.id,
+      }).returning();
+      await db.insert(tenantUsers).values({
+        tenantId: tenant.id,
+        userId: u.id,
+        role: 'owner',
+      });
+      created++;
+    } else {
+      // Heal: ensure owner row exists (migrations from earlier failed runs).
+      const [tu] = await db.select().from(tenantUsers)
+        .where(and(eq(tenantUsers.tenantId, tenant.id), eq(tenantUsers.userId, u.id)))
+        .limit(1);
+      if (!tu) {
+        await db.insert(tenantUsers).values({ tenantId: tenant.id, userId: u.id, role: 'owner' });
+      }
+    }
+
+    // Set current_tenant_id only if unset; never stomp an explicit choice.
+    if (!u.currentTenantId) {
+      await db.update(users)
+        .set({ currentTenantId: tenant.id, updatedAt: new Date() })
+        .where(eq(users.id, u.id));
+    }
+
+    // Back-fill tenant_id on user-owned billing & audit rows. Multi-statement
+    // execute so all five tables back-fill in one round-trip per user.
+    await db.execute(`
+      UPDATE subscriptions          SET tenant_id = '${tenant.id}' WHERE user_id  = '${u.id}' AND tenant_id IS NULL;
+      UPDATE addon_subscriptions    SET tenant_id = '${tenant.id}' WHERE user_id  = '${u.id}' AND tenant_id IS NULL;
+      UPDATE entitlement_overrides  SET tenant_id = '${tenant.id}' WHERE user_id  = '${u.id}' AND tenant_id IS NULL;
+      UPDATE billing_events         SET tenant_id = '${tenant.id}' WHERE user_id  = '${u.id}' AND tenant_id IS NULL;
+      UPDATE admin_audit_logs       SET tenant_id = '${tenant.id}' WHERE admin_id = '${u.id}' AND tenant_id IS NULL;
+    `);
+  }
+  console.log(`[backfill] Personal tenants: ${created} created, ${allUsers.length} users ensured`);
+}
+
+/**
+ * Promotes the user identified by OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL to
+ * platform `super_admin`. Idempotent. NEVER hard-codes an email — when the
+ * env var is absent, the function logs and returns. When the user does not
+ * yet exist (first boot, before the seed user is inserted), the function
+ * also returns; the next boot picks it up.
+ *
+ * SECURITY: this is the ONLY supported way to grant `super_admin` outside
+ * of a direct SQL update by an existing super_admin.
+ */
+export async function bootstrapSuperAdmin() {
+  const email = process.env.OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL;
+  if (!email) {
+    console.log('[bootstrap] OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL not set; skipping super-admin promotion');
+    return;
+  }
+  const [u] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  if (!u) {
+    console.log(`[bootstrap] super-admin email ${email} not found; will retry on next boot`);
+    return;
+  }
+  if (u.platformRole === 'super_admin') {
+    return; // already promoted; quiet no-op
+  }
+  await db.update(users)
+    .set({ platformRole: 'super_admin', updatedAt: new Date() })
+    .where(eq(users.id, u.id));
+  console.log(`[bootstrap] Promoted ${email} to platform super_admin`);
+}
+
+/**
+ * Demo Co — the showcase company tenant for the demo user. Owns every
+ * `live` module via tenant_modules (source = 'included'); the demo user
+ * gets `manager` access on each so they can see the full Hub experience.
+ *
+ * Idempotent: re-runs only insert what's missing. Demo user's
+ * current_tenant_id is moved to Demo Co on first creation so the demo
+ * lands on the company tenant by default.
+ */
+export async function seedDemoCoTenant() {
+  const demoEmail = process.env.DEMO_EMAIL || 'demo@operatoros.com';
+  const [demoUser] = await db.select().from(users).where(eq(users.email, demoEmail)).limit(1);
+  if (!demoUser) return;
+
+  const slug = 'demo-co';
+  let [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
+  let createdTenant = false;
+  if (!tenant) {
+    [tenant] = await db.insert(tenants).values({
+      name: 'Demo Co',
+      slug,
+      type: 'company',
+      ownerUserId: demoUser.id,
+    }).returning();
+    createdTenant = true;
+    console.log('[seed] Created Demo Co tenant');
+  }
+
+  const [membership] = await db.select().from(tenantUsers)
+    .where(and(eq(tenantUsers.tenantId, tenant.id), eq(tenantUsers.userId, demoUser.id)))
+    .limit(1);
+  if (!membership) {
+    await db.insert(tenantUsers).values({
+      tenantId: tenant.id,
+      userId: demoUser.id,
+      role: 'owner',
+    });
+  }
+
+  // Only switch the demo user's active tenant on the FIRST seed of Demo Co
+  // — subsequent boots leave their selection alone.
+  if (createdTenant) {
+    await db.update(users)
+      .set({ currentTenantId: tenant.id, updatedAt: new Date() })
+      .where(eq(users.id, demoUser.id));
+  }
+
+  // Enable every live module on Demo Co; grant the demo user manager access.
+  const liveMods = await db.select().from(modules).where(eq(modules.status, 'live'));
+  for (const m of liveMods) {
+    const [tmExists] = await db.select().from(tenantModules)
+      .where(and(eq(tenantModules.tenantId, tenant.id), eq(tenantModules.moduleId, m.id)))
+      .limit(1);
+    if (!tmExists) {
+      await db.insert(tenantModules).values({
+        tenantId: tenant.id,
+        moduleId: m.id,
+        status: 'enabled',
+        source: 'included',
+      });
+    }
+    const [accExists] = await db.select().from(tenantUserModuleAccess)
+      .where(and(
+        eq(tenantUserModuleAccess.tenantId, tenant.id),
+        eq(tenantUserModuleAccess.userId, demoUser.id),
+        eq(tenantUserModuleAccess.moduleId, m.id),
+      ))
+      .limit(1);
+    if (!accExists) {
+      await db.insert(tenantUserModuleAccess).values({
+        tenantId: tenant.id,
+        userId: demoUser.id,
+        moduleId: m.id,
+        accessLevel: 'manager',
+      });
+    }
   }
 }

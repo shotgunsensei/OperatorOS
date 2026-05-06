@@ -7,9 +7,12 @@ export const TEST_TAG = 'test-billing-regression';
 
 export async function ensureSchemaReady() {
   const { ensureExtendedTables } = await import('../src/lib/db-init.js');
-  const { ensureSaasTables } = await import('../src/lib/saas-db-init.js');
+  const { ensureSaasTables, ensureTenantTables } = await import('../src/lib/saas-db-init.js');
   await ensureExtendedTables();
   await ensureSaasTables();
+  // Gate 1: tenant DDL must run before any code path that selects from
+  // `users` (Drizzle's implicit SELECT * needs the new columns).
+  await ensureTenantTables();
 }
 
 export function uniqueId(prefix: string) {
