@@ -165,8 +165,14 @@ Claims:
 | `iat`, `exp` | Standard JWT timestamps; `exp - iat = 90` |
 
 The `jti` is also persisted in `sso_handoff_tokens` so consumption can
-mark the token spent. A 15-minute background job removes expired and
-already-consumed rows.
+mark the token spent. An in-process background job (`startSsoTokenCleanup`
+in `apps/api/src/lib/sso-cleanup.ts`) runs every 15 minutes and deletes
+rows where `expires_at < now() - interval '7 days'` AND
+(`consumed_at IS NULL OR consumed_at < now() - interval '7 days'`). The
+7-day window keeps recently-consumed rows around for forensic review of
+replay attempts while preventing unbounded growth of the table. Each run
+logs the number of rows pruned (`[sso-cleanup] interval: pruned N stale
+handoff token row(s)`).
 
 ## Receiving module — strict validation order
 

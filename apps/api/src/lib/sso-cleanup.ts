@@ -1,36 +1,37 @@
 import { db } from '../db.js';
 import { ssoHandoffTokens } from '../schema.js';
-import { lt } from 'drizzle-orm';
+import { and, lt, or, isNull } from 'drizzle-orm';
 
-// Spec cadence: run cleanup every 5 minutes, deleting any handoff token
-// whose `issued_at` is older than 15 minutes. Tokens have a 90-second TTL
-// so by the 15-minute mark they're long expired AND past the forensic
-// retention window for replay-detection.
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-const CLEANUP_AGE_MS = 15 * 60 * 1000;     // 15 minutes
+const CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
+const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 let timer: NodeJS.Timeout | null = null;
 
 export async function cleanupExpiredSsoTokens(): Promise<number> {
-  const cutoff = new Date(Date.now() - CLEANUP_AGE_MS);
+  const now = Date.now();
+  const expiresCutoff = new Date(now - RETENTION_MS);
+  const consumedCutoff = new Date(now - RETENTION_MS);
   const result: any = await db.delete(ssoHandoffTokens)
-    .where(lt(ssoHandoffTokens.issuedAt, cutoff));
+    .where(and(
+      lt(ssoHandoffTokens.expiresAt, expiresCutoff),
+      or(
+        isNull(ssoHandoffTokens.consumedAt),
+        lt(ssoHandoffTokens.consumedAt, consumedCutoff),
+      ),
+    ));
   return result?.rowCount ?? 0;
+}
+
+function runOnce(label: string) {
+  cleanupExpiredSsoTokens()
+    .then(n => console.log(`[sso-cleanup] ${label}: pruned ${n} stale handoff token row(s)`))
+    .catch(err => console.error(`[sso-cleanup] ${label} error:`, err));
 }
 
 export function startSsoTokenCleanup() {
   if (timer) return;
-  // Run once at startup, then every 5 minutes.
-  cleanupExpiredSsoTokens()
-    .then(n => { if (n > 0) console.log(`[sso-cleanup] removed ${n} stale tokens at boot`); })
-    .catch(err => console.error('[sso-cleanup] boot error:', err));
-
-  timer = setInterval(() => {
-    cleanupExpiredSsoTokens()
-      .then(n => { if (n > 0) console.log(`[sso-cleanup] removed ${n} stale tokens (>15min old)`); })
-      .catch(err => console.error('[sso-cleanup] interval error:', err));
-  }, CLEANUP_INTERVAL_MS);
-  // Don't keep the event loop alive just for cleanup
+  runOnce('boot');
+  timer = setInterval(() => runOnce('interval'), CLEANUP_INTERVAL_MS);
   if (timer.unref) timer.unref();
 }
 
