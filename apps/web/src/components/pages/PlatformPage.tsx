@@ -232,7 +232,7 @@ function Dashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
         </Card>
         <Card data-testid="card-billing-events" onClick={() => onNavigate({ kind: 'billing' })} style={{ cursor: 'pointer' }}>
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Billing events</div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: (s.billingEvents?.failed ?? 0) > 0 ? colors.danger : colors.text }}>{s.billingEvents?.failed ?? 0} <span style={{ color: colors.textDim, fontSize: 13 }}>failed</span></div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: (s.billingEvents?.failed ?? 0) > 0 ? colors.accentRed : colors.text }}>{s.billingEvents?.failed ?? 0} <span style={{ color: colors.textDim, fontSize: 13 }}>failed</span></div>
           <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>{s.billingEvents?.processed ?? 0} processed of {s.billingEvents?.total ?? 0}</div>
         </Card>
         <Card data-testid="card-users">
@@ -887,7 +887,7 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
       const ap = addonAnnualPriceCents.trim();
       setOrUnset('addonAnnualPriceCents', ap === '' ? '' : Number(ap));
       setOrUnset('stripePriceEnvKey', stripePriceEnvKey);
-      const tags = featureTagsCsv.split(',').map(s => s.trim()).filter(Boolean);
+      const tags = featureTagsCsv.split(',').map((s: string) => s.trim()).filter(Boolean);
       if (tags.length === 0) delete nextMeta.featureTags; else nextMeta.featureTags = tags;
       if (JSON.stringify(nextMeta) !== JSON.stringify(meta)) body.metadata = nextMeta;
 

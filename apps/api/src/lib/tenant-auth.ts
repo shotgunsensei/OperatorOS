@@ -39,6 +39,8 @@ export const TENANT_ROLE_RANK: Record<'member' | 'admin' | 'owner', TenantRoleRa
   owner: 2,
 };
 
+export type TenantStatus = 'active' | 'suspended' | 'archived';
+
 export interface TenantContext {
   tenantId: string;
   tenantSlug: string;
@@ -46,6 +48,11 @@ export interface TenantContext {
   role: 'owner' | 'admin' | 'member';
   /** Set when access was granted via super_admin override (membership not required). */
   viaPlatformRole: boolean;
+  /** Resolved tenant lifecycle status; archived tenants never make it here for non-super-admins. */
+  status: TenantStatus;
+  /** True when status === 'suspended' AND caller is not super_admin. Drives the
+   *  Gate 2 deny path in requireTenantRole / requireTenantModuleAccess. */
+  suspended: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -173,40 +180,30 @@ export async function resolveTenantContext(request: FastifyRequest): Promise<Ten
   // Gate 2: archived tenants are invisible to everyone except super_admin
   // (who needs visibility for forensic / restore operations). For everyone
   // else they collapse to the same TENANT_NOT_FOUND code as a missing row.
-  if ((tenant as any).status === 'archived' && user.platformRole !== 'super_admin') {
+  const tenantStatus = (tenant.status ?? 'active') as TenantStatus;
+  const isSuper = user.platformRole === 'super_admin';
+
+  if (tenantStatus === 'archived' && !isSuper) {
     c.context = null;
     return null;
   }
 
   const membership = await loadMembership(request, tenant.id, user.id);
   if (membership) {
-    // Gate 2: suspended tenants are visible to members but every operation
-    // is read-blocked at the pre-handler layer. Super admins bypass via
-    // viaPlatformRole so they can still re-activate or audit.
-    if ((tenant as any).status === 'suspended' && user.platformRole !== 'super_admin') {
-      const ctx: TenantContext = {
-        tenantId: tenant.id,
-        tenantSlug: tenant.slug,
-        tenantType: tenant.type as 'personal' | 'company',
-        role: membership.role as 'owner' | 'admin' | 'member',
-        viaPlatformRole: false,
-        suspended: true,
-      } as any;
-      c.context = ctx;
-      return ctx;
-    }
     const ctx: TenantContext = {
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
       tenantType: tenant.type as 'personal' | 'company',
       role: membership.role as 'owner' | 'admin' | 'member',
       viaPlatformRole: false,
+      status: tenantStatus,
+      suspended: tenantStatus === 'suspended' && !isSuper,
     };
     c.context = ctx;
     return ctx;
   }
 
-  if (user.platformRole === 'super_admin') {
+  if (isSuper) {
     // Super admins get a synthetic 'owner' role for inspection purposes,
     // but `viaPlatformRole` flags the bypass for audit logging.
     const ctx: TenantContext = {
@@ -215,6 +212,8 @@ export async function resolveTenantContext(request: FastifyRequest): Promise<Ten
       tenantType: tenant.type as 'personal' | 'company',
       role: 'owner',
       viaPlatformRole: true,
+      status: tenantStatus,
+      suspended: false,
     };
     c.context = ctx;
     return ctx;
@@ -267,7 +266,7 @@ export function requireTenantRole(min: 'owner' | 'admin' | 'member') {
     }
     // Gate 2: a suspended tenant blocks all member operations (super_admin
     // bypasses via viaPlatformRole and never gets `suspended:true` set).
-    if ((ctx as any).suspended) {
+    if (ctx.suspended) {
       reply.code(403).send({
         error: 'Tenant is suspended. Contact platform administrator.',
         code: 'TENANT_SUSPENDED',
@@ -309,7 +308,7 @@ export function requireTenantModuleAccess(moduleSlug: string) {
 
     // Gate 2: launching ANY module inside a suspended tenant is blocked
     // for non-super-admins (matches read/write block in requireTenantRole).
-    if ((ctx as any).suspended && user.platformRole !== 'super_admin') {
+    if (ctx.suspended && user.platformRole !== 'super_admin') {
       reply.code(403).send({
         error: 'Tenant is suspended. Contact platform administrator.',
         code: 'TENANT_SUSPENDED',
