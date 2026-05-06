@@ -934,13 +934,13 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
         <Input label="Support URL"        value={supportUrl}   onChange={setSupportUrl}     testid="input-mod-edit-support" />
         <div data-testid="badge-mod-annualprice">
           <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Addon annual price (read-only)</label>
-          <div style={{ ...inp, width: '100%', background: colors.panelMuted ?? '#0d1117', color: colors.textMuted }}>
+          <div style={{ ...inp, width: '100%', background: '#0d1117', color: colors.textMuted }}>
             {addonAnnualPriceCents != null ? `${addonAnnualPriceCents} cents` : '—'}
           </div>
         </div>
         <div data-testid="badge-mod-stripekey">
           <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Stripe price env key (read-only)</label>
-          <div style={{ ...inp, width: '100%', background: colors.panelMuted ?? '#0d1117', color: colors.textMuted, fontFamily: 'monospace' }}>
+          <div style={{ ...inp, width: '100%', background: '#0d1117', color: colors.textMuted, fontFamily: 'monospace' }}>
             {stripePriceEnvKey || '—'}
           </div>
         </div>
