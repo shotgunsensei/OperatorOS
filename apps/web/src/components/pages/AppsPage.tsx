@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Search, Sparkles, Filter, Settings as SettingsIcon, Lock } from 'lucide-react';
 import { modulesApi, meApi } from '@/lib/auth';
 import { useToast } from '@/components/Toast';
+import { useAuth } from '@/components/AuthProvider';
 import { colors } from '@/lib/design-tokens';
 
 type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
@@ -78,6 +79,11 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
   const [isTenantAdmin, setIsTenantAdmin] = useState(false);
   const [requested, setRequested] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
+  const { user } = useAuth();
+  // Platform super_admins always see Manage parity, even if their active
+  // tenant role isn't owner/admin — matches the role contract documented
+  // for the Manage CTA on App Marketplace cards.
+  const isPlatformSuperAdmin = (user as any)?.platformRole === 'super_admin';
 
   useEffect(() => {
     let alive = true;
@@ -86,11 +92,18 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
         const t = await meApi.tenants();
         const current = t.current ?? t.tenants?.[0]?.id;
         const row = current ? t.tenants.find((x: any) => x.id === current) : null;
-        if (alive) setIsTenantAdmin(row?.role === 'owner' || row?.role === 'admin');
-      } catch { /* leave as false */ }
+        if (alive) {
+          setIsTenantAdmin(
+            isPlatformSuperAdmin || row?.role === 'owner' || row?.role === 'admin',
+          );
+        }
+      } catch {
+        // tenants() failed — still grant Manage parity to platform super_admins.
+        if (alive && isPlatformSuperAdmin) setIsTenantAdmin(true);
+      }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [isPlatformSuperAdmin]);
 
   const load = async () => {
     try {
