@@ -50,6 +50,42 @@ test('super admin sees Launch + Tenant + Platform + Account, in that order', () 
   assert.ok(itemIds.includes('platform'));
 });
 
+// ---------------------------------------------------------------------------
+// Role snapshots — the canonical (label, ids[]) tuple for every role.
+// These freeze the sidebar IA so unintended additions / reorderings break the
+// build instead of silently shipping. Update the snapshot ONLY together with
+// a corresponding nav contract change in the spec.
+// ---------------------------------------------------------------------------
+const sectionShape = (sections: ReturnType<typeof buildNavSections>) =>
+  sections.map(s => ({ label: s.label, ids: s.items.map(i => i.id) }));
+
+test('snapshot: regular user sidebar IA', () => {
+  const snap = sectionShape(buildNavSections({ isSuperAdmin: false, isTenantAdmin: false }));
+  assert.deepEqual(snap, [
+    { label: 'Launch',  ids: ['my-apps', 'apps', 'ai-tools'] },
+    { label: 'Account', ids: ['billing', 'settings'] },
+  ]);
+});
+
+test('snapshot: tenant admin sidebar IA', () => {
+  const snap = sectionShape(buildNavSections({ isSuperAdmin: false, isTenantAdmin: true }));
+  assert.deepEqual(snap, [
+    { label: 'Launch',  ids: ['my-apps', 'apps', 'ai-tools'] },
+    { label: 'Tenant',  ids: ['command-center', 'tenant-users', 'tenant-modules', 'tenant-billing', 'tenant-settings'] },
+    { label: 'Account', ids: ['billing', 'settings'] },
+  ]);
+});
+
+test('snapshot: super admin sidebar IA', () => {
+  const snap = sectionShape(buildNavSections({ isSuperAdmin: true, isTenantAdmin: true }));
+  assert.deepEqual(snap, [
+    { label: 'Launch',   ids: ['my-apps', 'apps', 'ai-tools'] },
+    { label: 'Tenant',   ids: ['command-center', 'tenant-users', 'tenant-modules', 'tenant-billing', 'tenant-settings'] },
+    { label: 'Platform', ids: ['platform'] },
+    { label: 'Account',  ids: ['billing', 'settings'] },
+  ]);
+});
+
 test('legacy nav entries (workspaces/projects/tasks/notes/activity) are removed for every role', () => {
   for (const flags of [
     { isSuperAdmin: false, isTenantAdmin: false },

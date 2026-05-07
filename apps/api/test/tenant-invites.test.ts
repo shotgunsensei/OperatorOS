@@ -143,6 +143,41 @@ test('happy path: invitee accepts, joins as member, second accept is 409', async
   assert.equal(replay.json().code, 'INVITE_ALREADY_ACCEPTED');
 });
 
+test('expired invite → 410 INVITE_EXPIRED on accept', async () => {
+  // Owner creates a fresh invite for the invitee (the email-mismatch
+  // test earlier consumed a different one). We then move expiresAt
+  // into the past directly in the DB so the accept handler trips the
+  // expiry branch — invariant: token is otherwise valid, only TTL fails.
+  const expiredEmail = `expired-${Date.now()}@example.com`;
+  const expired = await createTestUser();
+  // Patch the user's email to match the invite so the email check passes
+  // and we exercise ONLY the expiry branch.
+  await db.update(users).set({ email: expiredEmail }).where(eq(users.id, expired.id));
+  const refreshed = { ...expired, email: expiredEmail };
+  try {
+    const create = await app.inject({
+      method: 'POST', url: `/v1/tenants/${tenantA.id}/invites`,
+      headers: bearer(owner),
+      payload: { email: expiredEmail, role: 'member' },
+    });
+    assert.equal(create.statusCode, 200);
+    const inv = create.json().invite;
+    // Force-expire the invite.
+    await db.update(tenantInvites)
+      .set({ expiresAt: new Date(Date.now() - 60_000) })
+      .where(eq(tenantInvites.id, inv.id));
+
+    const r = await app.inject({
+      method: 'POST', url: `/v1/invites/${inv.token}/accept`,
+      headers: bearer(refreshed),
+    });
+    assert.equal(r.statusCode, 410);
+    assert.equal(r.json().code, 'INVITE_EXPIRED');
+  } finally {
+    await cleanupUser(expired.id);
+  }
+});
+
 test('owner revokes a pending invite', async () => {
   const create = await app.inject({
     method: 'POST', url: `/v1/tenants/${tenantA.id}/invites`,
