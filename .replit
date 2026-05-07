@@ -27,7 +27,7 @@ PORT = "5000"
 [deployment]
 deploymentTarget = "autoscale"
 run = ["bash", "-c", "PORT=5001 tsx apps/api/src/index.ts & sleep 2 && cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:5001 npx next start -p ${PORT:-5000}"]
-build = ["bash", "-c", "export NEXT_PUBLIC_API_URL=http://localhost:5001 && cd apps/web && npx next build"]
+build = ["bash", "-c", "export NEXT_PUBLIC_API_URL=http://localhost:5001 && cd apps/web && NODE_OPTIONS='--max-old-space-size=4096' npx next build"]
 
 [workflows]
 runButton = "Project"
