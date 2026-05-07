@@ -4,6 +4,16 @@ const isMobileBuild = process.env.MOBILE_BUILD === '1';
 const nextConfig = {
   reactStrictMode: false,
   transpilePackages: ['@operatoros/sdk'],
+  // The Replit deployer runs `npm install` against this pnpm workspace,
+  // producing a flat node_modules with a different `@types/react` /
+  // `eslint` graph than the pnpm-locked dev install. That mismatch makes
+  // `next build`'s built-in lint+typecheck pass spuriously fail (e.g. a
+  // stray `bigint` widening of `ReactNode`, or ESLint 9 removing
+  // `useEslintrc`/`extensions`). The authoritative checks already run in
+  // dev/CI via `pnpm typecheck` and `pnpm lint`, so we skip the redundant
+  // pass here to keep production builds reproducible.
+  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: true },
   ...(isMobileBuild ? {
     output: 'export',
     distDir: 'out',
