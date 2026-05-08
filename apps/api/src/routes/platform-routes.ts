@@ -30,14 +30,19 @@ import {
   tenants, tenantUsers, users, modules, tenantModules, tenantUserModuleAccess,
   addonSubscriptions, entitlementOverrides, billingEvents, adminAuditLogs,
   subscriptions, subscriptionPlans, planModules,
+  saasWorkspaces, saasProjects, saasTasks, notes, workspaceMemberships,
+  activityFeed,
 } from '../schema.js';
+import { count } from 'drizzle-orm';
 import { requireSuperAdmin } from '../lib/tenant-auth.js';
+import { sanitizeUser } from '../lib/auth.js';
 import {
   writeAudit, pickSafe, registerAuditEnforcement,
   TENANT_SAFE_FIELDS, MODULE_SAFE_FIELDS,
   TENANT_MODULE_SAFE_FIELDS, TENANT_USER_ACCESS_SAFE_FIELDS,
 } from '../lib/audit.js';
-import { lookupAddonStripePrice, getAddonStripePriceEnvKey, getAddonStripePriceId, retryBillingEvent, createAddonStripePrice } from '../lib/billing-service.js';
+import { lookupAddonStripePrice, getAddonStripePriceEnvKey, getAddonStripePriceId, retryBillingEvent, createAddonStripePrice, resyncUserBilling } from '../lib/billing-service.js';
+import { getModuleAccessTrace } from '../lib/entitlement-service.js';
 import { getSsoCleanupHealth } from '../lib/sso-cleanup.js';
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -475,7 +480,20 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     const rows = includeArchived
       ? await db.select().from(modules).orderBy(modules.ord)
       : await db.select().from(modules).where(isNull(modules.archivedAt)).orderBy(modules.ord);
-    return { modules: rows, total: rows.length };
+    // Enrich with `includedInPlans` (plan slugs that bundle each module).
+    // The plan-mapping editor in the UI needs the current state, and other
+    // callers can simply ignore the new field.
+    const allPlans = await db.select().from(subscriptionPlans);
+    const planSlugById = Object.fromEntries(allPlans.map(p => [p.id, p.slug]));
+    const mappings = await db.select().from(planModules);
+    const byModule: Record<string, string[]> = {};
+    for (const m of mappings) {
+      const slug = planSlugById[m.planId];
+      if (!slug) continue;
+      (byModule[m.moduleId] ||= []).push(slug);
+    }
+    const enriched = rows.map(r => ({ ...r, includedInPlans: byModule[r.id] ?? [] }));
+    return { modules: enriched, total: enriched.length };
   });
 
   app.post('/v1/platform/modules', { preHandler: [requireSuperAdmin] }, async (request, reply) => {
@@ -917,6 +935,8 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       // helper isn't wired in this module.
       rows = rows.filter(e => (e.metadata as any)?.tenantId === q.tenantId);
     }
+    if (q.eventType) rows = rows.filter(e => e.eventType === q.eventType);
+    if (q.userId) rows = rows.filter(e => e.userId === q.userId);
     if (onlyFailed) rows = rows.filter(e => !!e.errorMessage && !e.processedAt);
     rows = rows.slice(0, limit);
     return { events: rows, total: rows.length };
@@ -944,6 +964,674 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         ipAddress: request.ip,
       }, request);
       return result;
+    },
+  );
+
+  // =====================================================================
+  // USERS — list / detail / status / role / plan / sub-status / trial /
+  // unlock / soft-delete / hard-delete / billing-resync /
+  // entitlement overrides
+  //
+  // These were ported from the retired `/v1/admin/*` surface. The legacy
+  // `users.role` enum (`user`/`admin`) is preserved as a transitional
+  // signal — Gate 2 authority is the per-user `platformRole` plus the
+  // tenant-scoped roles in `tenant_users`. Mutations all call writeAudit
+  // so the existing audit-enforcement hook stays green.
+  // =====================================================================
+
+  const USER_SAFE_FIELDS = [
+    'id', 'email', 'name', 'role', 'status', 'planId', 'platformRole',
+    'failedLoginCount', 'lockedUntil', 'deletedAt',
+  ] as const;
+  const SUB_SAFE_FIELDS = [
+    'id', 'userId', 'planId', 'status', 'currentPeriodStart',
+    'currentPeriodEnd', 'cancelAtPeriodEnd',
+  ] as const;
+
+  app.get('/v1/platform/users', { preHandler: [requireSuperAdmin] }, async (request) => {
+    const q = (request.query ?? {}) as any;
+    const page = parseInt(q.page) || 1;
+    const limit = Math.min(parseInt(q.limit) || 25, 100);
+    const offset = (page - 1) * limit;
+
+    let allUsers = await db.select({
+      id: users.id, email: users.email, name: users.name, role: users.role,
+      status: users.status, createdAt: users.createdAt, lastLoginAt: users.lastLoginAt,
+      avatarUrl: users.avatarUrl, planId: users.planId, deletedAt: users.deletedAt,
+      failedLoginCount: users.failedLoginCount, lockedUntil: users.lockedUntil,
+      platformRole: users.platformRole,
+    }).from(users).orderBy(desc(users.createdAt));
+
+    if (q.search) {
+      const s = String(q.search).toLowerCase();
+      allUsers = allUsers.filter(u =>
+        (u.email ?? '').toLowerCase().includes(s) ||
+        (u.name ?? '').toLowerCase().includes(s),
+      );
+    }
+    if (q.status) allUsers = allUsers.filter(u => u.status === q.status);
+    if (q.role)   allUsers = allUsers.filter(u => u.role === q.role);
+
+    // Hydrate subscription + plan in one pass each (avoid the old N+1 loop).
+    const allSubs = await db.select().from(subscriptions);
+    const subByUser: Record<string, any> = {};
+    for (const s of allSubs) if (!subByUser[s.userId]) subByUser[s.userId] = s;
+    const allPlans = await db.select().from(subscriptionPlans);
+    const planById = Object.fromEntries(allPlans.map(p => [p.id, p]));
+
+    let withSubs = allUsers.map(u => {
+      const sub = subByUser[u.id] ?? null;
+      const p = sub ? planById[sub.planId] : null;
+      return { ...u, subscription: sub, planName: p?.name ?? 'None', planSlug: p?.slug ?? 'none' };
+    });
+    if (q.plan) withSubs = withSubs.filter(u => u.planSlug === q.plan);
+
+    if (q.sort) {
+      const dir = q.order === 'asc' ? 1 : -1;
+      withSubs.sort((a: any, b: any) => {
+        const va = a[q.sort] ?? '';
+        const vb = b[q.sort] ?? '';
+        if (va < vb) return -dir;
+        if (va > vb) return dir;
+        return 0;
+      });
+    }
+    const total = withSubs.length;
+    return {
+      users: withSubs.slice(offset, offset + limit),
+      total, page, limit, pages: Math.ceil(total / limit),
+    };
+  });
+
+  app.get<{ Params: { id: string } }>(
+    '/v1/platform/users/:id',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const { id } = request.params;
+      const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      if (!user) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+
+      const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, id)).limit(1);
+      let plan = null;
+      if (sub) [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, sub.planId)).limit(1);
+
+      const [{ value: wsCount }]   = await db.select({ value: count() }).from(saasWorkspaces).where(eq(saasWorkspaces.ownerId, id));
+      const [{ value: projCount }] = await db.select({ value: count() }).from(saasProjects).where(eq(saasProjects.userId, id));
+      const [{ value: taskCount }] = await db.select({ value: count() }).from(saasTasks).where(eq(saasTasks.userId, id));
+      const [{ value: noteCount }] = await db.select({ value: count() }).from(notes).where(eq(notes.userId, id));
+
+      const recentActivity = await db.select().from(activityFeed).where(eq(activityFeed.userId, id)).orderBy(desc(activityFeed.createdAt)).limit(10);
+      const auditHistory = await db.select().from(adminAuditLogs).where(eq(adminAuditLogs.targetUserId, id)).orderBy(desc(adminAuditLogs.createdAt)).limit(20);
+      const userBillingEvents = await db.select().from(billingEvents).where(eq(billingEvents.userId, id)).orderBy(desc(billingEvents.createdAt)).limit(20);
+
+      return {
+        user: sanitizeUser(user),
+        subscription: sub ?? null,
+        plan,
+        stats: { workspaces: wsCount, projects: projCount, tasks: taskCount, notes: noteCount },
+        recentActivity,
+        auditHistory,
+        billingEvents: userBillingEvents,
+      };
+    },
+  );
+
+  app.put<{ Params: { id: string }; Body: any }>(
+    '/v1/platform/users/:id/status',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const { status, reason } = (request.body ?? {}) as any;
+      if (!['active', 'suspended', 'deleted'].includes(status)) {
+        return badRequest(reply, 'Invalid status. Allowed: active, suspended, deleted');
+      }
+      if (id === admin.id) return badRequest(reply, 'Cannot change your own status');
+      const [before] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+
+      const updates: any = { status, updatedAt: new Date() };
+      if (status === 'deleted') updates.deletedAt = new Date();
+      if (status === 'active' && before.status === 'suspended') {
+        updates.failedLoginCount = 0;
+        updates.lockedUntil = null;
+      }
+      const [after] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
+      const action = status === 'suspended' ? 'user_suspended'
+        : status === 'active' ? 'user_reactivated'
+        : 'user_deleted';
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'user',
+        targetId: id,
+        action,
+        before: pickSafe(before, [...USER_SAFE_FIELDS]),
+        after: pickSafe(after, [...USER_SAFE_FIELDS]),
+        extra: { reason: reason ?? null },
+        ipAddress: request.ip,
+      }, request);
+      return { user: sanitizeUser(after), previousStatus: before.status };
+    },
+  );
+
+  app.put<{ Params: { id: string }; Body: any }>(
+    '/v1/platform/users/:id/role',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const { role } = (request.body ?? {}) as any;
+      if (!['user', 'admin'].includes(role)) {
+        return badRequest(reply, 'Invalid role. Allowed: user, admin');
+      }
+      if (id === admin.id) return badRequest(reply, 'Cannot change your own role');
+      const [before] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      const [after] = await db.update(users).set({ role, updatedAt: new Date() }).where(eq(users.id, id)).returning();
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'user',
+        targetId: id,
+        action: 'user_role_changed',
+        before: pickSafe(before, [...USER_SAFE_FIELDS]),
+        after: pickSafe(after, [...USER_SAFE_FIELDS]),
+        ipAddress: request.ip,
+      }, request);
+      return { user: sanitizeUser(after), previousRole: before.role };
+    },
+  );
+
+  app.put<{ Params: { id: string }; Body: any }>(
+    '/v1/platform/users/:id/plan',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const { planSlug } = (request.body ?? {}) as any;
+      if (!planSlug || typeof planSlug !== 'string') return badRequest(reply, 'Plan slug is required');
+      const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.slug, planSlug)).limit(1);
+      if (!plan) return reply.code(404).send({ error: 'Plan not found', code: 'PLAN_NOT_FOUND' });
+      const [existingSub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, id)).limit(1);
+      const before = existingSub ?? null;
+      let after: any;
+      if (existingSub) {
+        [after] = await db.update(subscriptions).set({
+          planId: plan.id, status: 'active', updatedAt: new Date(),
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        }).where(eq(subscriptions.id, existingSub.id)).returning();
+      } else {
+        [after] = await db.insert(subscriptions).values({
+          userId: id, planId: plan.id, status: 'active',
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        }).returning();
+      }
+      await db.insert(billingEvents).values({
+        userId: id, eventType: 'plan_changed_by_admin',
+        metadata: { adminId: admin.id, planSlug, previousPlanId: before?.planId ?? null },
+      });
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'user',
+        targetId: id,
+        action: 'user_plan_changed',
+        before: pickSafe(before, [...SUB_SAFE_FIELDS]),
+        after: pickSafe(after, [...SUB_SAFE_FIELDS]),
+        extra: { planSlug },
+        ipAddress: request.ip,
+      }, request);
+      return { ok: true, plan: plan.name };
+    },
+  );
+
+  app.put<{ Params: { id: string }; Body: any }>(
+    '/v1/platform/users/:id/subscription-status',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const { status, reason } = (request.body ?? {}) as any;
+      if (!['active', 'past_due', 'canceled', 'trialing', 'expired'].includes(status)) {
+        return badRequest(reply, 'Invalid subscription status');
+      }
+      const [before] = await db.select().from(subscriptions).where(eq(subscriptions.userId, id)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'No subscription found for this user', code: 'SUBSCRIPTION_NOT_FOUND' });
+      const [after] = await db.update(subscriptions).set({ status, updatedAt: new Date() }).where(eq(subscriptions.id, before.id)).returning();
+      await db.insert(billingEvents).values({
+        userId: id, eventType: 'subscription_status_override',
+        metadata: { adminId: admin.id, previousStatus: before.status, newStatus: status, reason: reason ?? null },
+      });
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'subscription',
+        targetId: before.id,
+        action: 'subscription_status_changed',
+        before: pickSafe(before, [...SUB_SAFE_FIELDS]),
+        after: pickSafe(after, [...SUB_SAFE_FIELDS]),
+        extra: { reason: reason ?? null, targetUserId: id },
+        ipAddress: request.ip,
+      }, request);
+      return { ok: true, previousStatus: before.status, newStatus: status };
+    },
+  );
+
+  app.put<{ Params: { id: string }; Body: any }>(
+    '/v1/platform/users/:id/trial',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const { trialEndDate } = (request.body ?? {}) as any;
+      if (!trialEndDate) return badRequest(reply, 'Trial end date is required');
+      const endDate = new Date(trialEndDate);
+      if (isNaN(endDate.getTime())) return badRequest(reply, 'Invalid date format');
+      const [before] = await db.select().from(subscriptions).where(eq(subscriptions.userId, id)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'No subscription found for this user', code: 'SUBSCRIPTION_NOT_FOUND' });
+      const [after] = await db.update(subscriptions).set({
+        status: 'trialing', currentPeriodEnd: endDate, updatedAt: new Date(),
+      }).where(eq(subscriptions.id, before.id)).returning();
+      await db.insert(billingEvents).values({
+        userId: id, eventType: 'trial_set_by_admin',
+        metadata: { adminId: admin.id, trialEndDate: endDate.toISOString() },
+      });
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'subscription',
+        targetId: before.id,
+        action: 'trial_set',
+        before: pickSafe(before, [...SUB_SAFE_FIELDS]),
+        after: pickSafe(after, [...SUB_SAFE_FIELDS]),
+        extra: { trialEndDate: endDate.toISOString(), targetUserId: id },
+        ipAddress: request.ip,
+      }, request);
+      return { ok: true, trialEndDate: endDate.toISOString() };
+    },
+  );
+
+  app.put<{ Params: { id: string } }>(
+    '/v1/platform/users/:id/unlock',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const [before] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      const [after] = await db.update(users).set({
+        failedLoginCount: 0, lockedUntil: null, updatedAt: new Date(),
+      }).where(eq(users.id, id)).returning();
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'user',
+        targetId: id,
+        action: 'user_unlocked',
+        before: pickSafe(before, [...USER_SAFE_FIELDS]),
+        after: pickSafe(after, [...USER_SAFE_FIELDS]),
+        extra: { wasLocked: !!before.lockedUntil },
+        ipAddress: request.ip,
+      }, request);
+      return { ok: true, message: 'User account unlocked' };
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    '/v1/platform/users/:id',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      if (id === admin.id) return badRequest(reply, 'Cannot delete yourself');
+      const [before] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      const [after] = await db.update(users).set({
+        status: 'deleted', deletedAt: new Date(), updatedAt: new Date(),
+      }).where(eq(users.id, id)).returning();
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'user',
+        targetId: id,
+        action: 'user_deleted',
+        before: pickSafe(before, [...USER_SAFE_FIELDS]),
+        after: pickSafe(after, [...USER_SAFE_FIELDS]),
+        extra: { email: before.email },
+        ipAddress: request.ip,
+      }, request);
+      return { ok: true };
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    '/v1/platform/users/:id/hard',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      if (id === admin.id) return badRequest(reply, 'Cannot delete yourself');
+      const [target] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      if (!target) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      if (target.status !== 'deleted') {
+        return reply.code(400).send({ error: 'User must be soft-deleted first before hard delete', code: 'USER_NOT_SOFT_DELETED' });
+      }
+      const [{ value: wsCount }]   = await db.select({ value: count() }).from(saasWorkspaces).where(eq(saasWorkspaces.ownerId, id));
+      const [{ value: projCount }] = await db.select({ value: count() }).from(saasProjects).where(eq(saasProjects.userId, id));
+      if (wsCount > 0 || projCount > 0) {
+        return reply.code(400).send({
+          error: 'Cannot hard delete user with existing workspaces or projects. Clean up their data first.',
+          code: 'USER_HAS_RESIDUAL_DATA',
+          remaining: { workspaces: wsCount, projects: projCount },
+        });
+      }
+      await db.delete(activityFeed).where(eq(activityFeed.userId, id));
+      await db.delete(saasTasks).where(eq(saasTasks.userId, id));
+      await db.delete(notes).where(eq(notes.userId, id));
+      await db.delete(workspaceMemberships).where(eq(workspaceMemberships.userId, id));
+      await db.delete(billingEvents).where(eq(billingEvents.userId, id));
+      await db.delete(subscriptions).where(eq(subscriptions.userId, id));
+      await db.delete(users).where(eq(users.id, id));
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'user',
+        targetId: id,
+        action: 'user_hard_deleted',
+        before: pickSafe(target, [...USER_SAFE_FIELDS]),
+        extra: { email: target.email },
+        ipAddress: request.ip,
+      }, request);
+      return { ok: true, message: 'User permanently deleted' };
+    },
+  );
+
+  app.post<{ Params: { userId: string } }>(
+    '/v1/platform/billing/resync/:userId',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { userId } = request.params;
+      const [target] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (!target) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      const result = await resyncUserBilling(userId);
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'user',
+        targetId: userId,
+        action: 'billing_resync_triggered',
+        extra: { mode: result.mode, scanned: result.scanned, reconciled: result.reconciled },
+        ipAddress: request.ip,
+      }, request);
+      return result;
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Module add-on price + Stripe drift (port of legacy admin endpoints)
+  // -------------------------------------------------------------------------
+  app.put<{ Params: { slug: string }; Body: { addonPriceCents?: unknown } }>(
+    '/v1/platform/modules/:slug/addon-price',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { slug } = request.params;
+      const raw = request.body?.addonPriceCents;
+      if (typeof raw !== 'number' || !Number.isFinite(raw) || !Number.isInteger(raw) || raw < 0) {
+        return badRequest(reply, 'addonPriceCents must be a non-negative integer (cents)');
+      }
+      if (raw > 100_000_00) return badRequest(reply, 'addonPriceCents is unreasonably large (>$100,000)');
+      const [before] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
+      const existingMd = (before.metadata ?? {}) as Record<string, unknown>;
+      const previous = typeof existingMd.addonPriceCents === 'number' ? existingMd.addonPriceCents : null;
+      const nextMd = { ...existingMd, addonPriceCents: raw };
+      const [after] = await db.update(modules)
+        .set({ metadata: nextMd, updatedAt: new Date() })
+        .where(eq(modules.slug, slug)).returning();
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'module',
+        targetId: before.id,
+        action: 'module_addon_price_updated',
+        before: pickSafe(before, [...MODULE_SAFE_FIELDS]),
+        after: pickSafe(after, [...MODULE_SAFE_FIELDS]),
+        extra: { previousCents: previous, nextCents: raw, slug },
+        ipAddress: request.ip,
+      }, request);
+      return { module: after };
+    },
+  );
+
+  app.get<{ Params: { slug: string } }>(
+    '/v1/platform/modules/:slug/stripe-price',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const { slug } = request.params;
+      const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+      if (!mod) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
+      const lookup = await lookupAddonStripePrice(slug);
+      return { slug, lookup };
+    },
+  );
+
+  app.get<{ Params: { slug: string } }>(
+    '/v1/platform/modules/:slug/members',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const { slug } = request.params;
+      const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+      if (!mod) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
+
+      const allPlans = await db.select().from(subscriptionPlans);
+      const planIdToSlug = Object.fromEntries(allPlans.map(p => [p.id, p.slug]));
+      const includedMappings = await db.select().from(planModules).where(eq(planModules.moduleId, mod.id));
+      const includedPlanIds = new Set(includedMappings.map(m => m.planId));
+
+      const planSubs = includedPlanIds.size > 0 ? await db.select().from(subscriptions) : [];
+      const planUsers = planSubs
+        .filter(s => includedPlanIds.has(s.planId) && ['active', 'trialing'].includes(s.status))
+        .map(s => ({ userId: s.userId, source: 'plan' as const, planSlug: planIdToSlug[s.planId] }));
+
+      const addons = await db.select().from(addonSubscriptions).where(eq(addonSubscriptions.moduleId, mod.id));
+      const addonUsers = addons
+        .filter(a => ['active', 'trialing'].includes(a.status))
+        .map(a => ({ userId: a.userId, source: 'addon' as const, planSlug: null as string | null, addonId: a.id }));
+
+      const overrides = await db.select().from(entitlementOverrides).where(eq(entitlementOverrides.moduleId, mod.id));
+      const now = new Date();
+      const overrideUsers = overrides
+        .filter(o => !o.expiresAt || o.expiresAt > now)
+        .map(o => ({
+          userId: o.userId, source: 'override' as const, planSlug: null as string | null,
+          grant: o.grant, reason: o.reason, expiresAt: o.expiresAt,
+        }));
+
+      // Legacy `users.role === 'admin'` is still honored as an access source
+      // (admin_role > override > addon > plan), mirroring the entitlement
+      // service evaluation order.
+      const adminRows = await db.select().from(users).where(eq(users.role, 'admin'));
+      const adminUsers = adminRows
+        .filter(u => u.status === 'active')
+        .map(u => ({ userId: u.id, source: 'admin_role' as const, planSlug: null as string | null }));
+
+      type Row = {
+        userId: string;
+        source: 'plan' | 'addon' | 'override' | 'admin_role';
+        planSlug: string | null;
+        grant?: boolean;
+        reason?: string | null;
+        expiresAt?: Date | null;
+        addonId?: string;
+      };
+      const byUser: Record<string, Row> = {};
+      for (const r of planUsers as Row[]) byUser[r.userId] = r;
+      for (const r of addonUsers as Row[]) byUser[r.userId] = r;
+      for (const r of overrideUsers as Row[]) byUser[r.userId] = r;
+      for (const r of adminUsers as Row[]) byUser[r.userId] = r;
+
+      const userIds = Object.keys(byUser);
+      const userRows = userIds.length > 0
+        ? await db.select().from(users).where(inArray(users.id, userIds))
+        : [];
+      const userById = Object.fromEntries(userRows.map(u => [u.id, u]));
+
+      const allRows = userIds.map(uid => {
+        const u = userById[uid]; const r = byUser[uid];
+        if (!u) return null;
+        return {
+          userId: u.id, email: u.email, name: u.name, role: u.role, status: u.status,
+          accessSource: r.source, planSlug: r.planSlug,
+          grant: r.grant ?? true, reason: r.reason ?? null,
+          expiresAt: r.expiresAt ?? null, addonId: r.addonId ?? null,
+        };
+      })
+      .filter((m): m is NonNullable<typeof m> => m !== null)
+      .sort((a, b) => a.email.localeCompare(b.email));
+
+      const members = allRows.filter(m => !(m.accessSource === 'override' && !m.grant));
+      const revoked = allRows.filter(m => m.accessSource === 'override' && !m.grant);
+
+      return {
+        module: { id: mod.id, slug: mod.slug, name: mod.name, status: mod.status, planMin: mod.planMin },
+        members, revoked,
+        counts: {
+          total: members.length,
+          plan: members.filter(m => m.accessSource === 'plan').length,
+          addon: members.filter(m => m.accessSource === 'addon').length,
+          override_grant: members.filter(m => m.accessSource === 'override' && m.grant).length,
+          override_revoke: revoked.length,
+          admin_role: members.filter(m => m.accessSource === 'admin_role').length,
+        },
+      };
+    },
+  );
+
+  app.post<{ Params: { slug: string }; Body: { planSlugs?: string[] } }>(
+    '/v1/platform/modules/:slug/plan-mapping',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { slug } = request.params;
+      const { planSlugs } = (request.body ?? {}) as any;
+      if (!Array.isArray(planSlugs)) return badRequest(reply, 'planSlugs must be an array');
+      const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+      if (!mod) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
+
+      const allPlans = await db.select().from(subscriptionPlans);
+      const planBySlug = Object.fromEntries(allPlans.map(p => [p.slug, p]));
+      const planIdToSlug = Object.fromEntries(allPlans.map(p => [p.id, p.slug]));
+
+      const beforeRows = await db.select().from(planModules).where(eq(planModules.moduleId, mod.id));
+      const beforeSlugs = beforeRows.map(r => planIdToSlug[r.planId]).filter(Boolean);
+
+      await db.delete(planModules).where(eq(planModules.moduleId, mod.id));
+      for (const ps of planSlugs) {
+        const plan = planBySlug[ps];
+        if (!plan) continue;
+        await db.insert(planModules).values({ planId: plan.id, moduleId: mod.id });
+      }
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'module',
+        targetId: mod.id,
+        action: 'module_plan_mapping_changed',
+        before: { planSlugs: beforeSlugs },
+        after: { planSlugs },
+        extra: { slug },
+        ipAddress: request.ip,
+      }, request);
+      return { ok: true, slug, planSlugs };
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Per-user entitlement overrides
+  // -------------------------------------------------------------------------
+  app.get<{ Params: { id: string } }>(
+    '/v1/platform/users/:id/module-overrides',
+    { preHandler: [requireSuperAdmin] },
+    async (request) => {
+      const { id } = request.params;
+      const overrides = await db.select().from(entitlementOverrides).where(eq(entitlementOverrides.userId, id));
+      const allModules = await db.select().from(modules);
+      const modById = Object.fromEntries(allModules.map(m => [m.id, m]));
+      const enriched = overrides.map(o => ({
+        ...o, moduleSlug: modById[o.moduleId]?.slug, moduleName: modById[o.moduleId]?.name,
+      }));
+      const addons = await db.select().from(addonSubscriptions).where(eq(addonSubscriptions.userId, id));
+      const enrichedAddons = addons.map(a => ({
+        ...a, moduleSlug: modById[a.moduleId]?.slug, moduleName: modById[a.moduleId]?.name,
+      }));
+      const breakdowns: any[] = [];
+      for (const m of allModules) {
+        const b = await getModuleAccessTrace(id, m.slug);
+        if (b) breakdowns.push(b);
+      }
+      return { overrides: enriched, addons: enrichedAddons, breakdowns };
+    },
+  );
+
+  app.post<{ Params: { id: string }; Body: any }>(
+    '/v1/platform/users/:id/module-overrides',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const { moduleSlug, grant, reason, expiresAt } = (request.body ?? {}) as any;
+      if (!moduleSlug) return badRequest(reply, 'moduleSlug is required');
+      if (typeof grant !== 'boolean') return badRequest(reply, 'grant must be a boolean');
+      const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
+      if (!mod) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
+      const [target] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      if (!target) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+
+      // Replace any existing override for this user/module pair.
+      const [before] = await db.select().from(entitlementOverrides)
+        .where(and(eq(entitlementOverrides.userId, id), eq(entitlementOverrides.moduleId, mod.id))).limit(1);
+      if (before) {
+        await db.delete(entitlementOverrides).where(eq(entitlementOverrides.id, before.id));
+      }
+      const [created] = await db.insert(entitlementOverrides).values({
+        userId: id, moduleId: mod.id, grant, reason: reason ?? null,
+        createdByAdminId: admin.id,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      }).returning();
+      await db.insert(activityFeed).values({
+        userId: id, action: grant ? 'module_granted' : 'module_revoked',
+        entityType: 'module', entityId: mod.id,
+        metadata: { moduleSlug, by: admin.email, reason },
+      });
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'entitlement_override',
+        targetId: created.id,
+        action: grant ? 'module_override_granted' : 'module_override_revoked',
+        before: before ? { id: before.id, grant: before.grant, reason: before.reason, expiresAt: before.expiresAt } : null,
+        after: { id: created.id, grant: created.grant, reason: created.reason, expiresAt: created.expiresAt },
+        extra: { moduleSlug, targetUserId: id },
+        ipAddress: request.ip,
+      }, request);
+      return { override: created };
+    },
+  );
+
+  app.delete<{ Params: { id: string; overrideId: string } }>(
+    '/v1/platform/users/:id/module-overrides/:overrideId',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id, overrideId } = request.params;
+      const [ov] = await db.select().from(entitlementOverrides).where(eq(entitlementOverrides.id, overrideId)).limit(1);
+      if (!ov || ov.userId !== id) {
+        return reply.code(404).send({ error: 'Override not found', code: 'OVERRIDE_NOT_FOUND' });
+      }
+      await db.delete(entitlementOverrides).where(eq(entitlementOverrides.id, overrideId));
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'entitlement_override',
+        targetId: overrideId,
+        action: 'module_override_removed',
+        before: { id: ov.id, grant: ov.grant, reason: ov.reason, expiresAt: ov.expiresAt, moduleId: ov.moduleId },
+        extra: { targetUserId: id },
+        ipAddress: request.ip,
+      }, request);
+      return { ok: true };
     },
   );
 }

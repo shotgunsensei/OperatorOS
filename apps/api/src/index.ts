@@ -29,7 +29,6 @@ import { ensureSaasTables, seedPlansAndAdmin, seedModules, ensureTenantTables, b
 import { registerOsRoutes } from './routes/os-routes.js';
 import { registerAuthRoutes } from './routes/auth-routes.js';
 import { registerSaasRoutes } from './routes/saas-routes.js';
-import { registerAdminRoutes } from './routes/admin-routes.js';
 import { registerBillingRoutes } from './routes/billing-routes.js';
 import { registerAiRoutes } from './routes/ai-routes.js';
 import { registerModuleRoutes } from './routes/module-routes.js';
@@ -73,7 +72,6 @@ await app.register(websocket);
 await registerOsRoutes(app);
 await registerAuthRoutes(app);
 await registerSaasRoutes(app);
-await registerAdminRoutes(app);
 await registerBillingRoutes(app);
 await registerAiRoutes(app);
 await registerModuleRoutes(app);

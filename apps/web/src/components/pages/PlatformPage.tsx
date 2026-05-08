@@ -22,6 +22,8 @@ export type PlatformView =
   | { kind: 'tenant'; id: string }
   | { kind: 'modules' }
   | { kind: 'module'; slug: string }
+  | { kind: 'users' }
+  | { kind: 'user'; id: string }
   | { kind: 'billing' }
   | { kind: 'pricing' }
   | { kind: 'health' }
@@ -99,6 +101,7 @@ export default function PlatformPage(props: { view?: View; onNavigate?: (v: View
   const tabs: { key: View['kind']; label: string }[] = [
     { key: 'dashboard', label: 'Overview' },
     { key: 'tenants',   label: 'Tenants' },
+    { key: 'users',     label: 'Users' },
     { key: 'modules',   label: 'Modules' },
     { key: 'billing',   label: 'Billing Events' },
     { key: 'pricing',   label: 'Pricing' },
@@ -116,7 +119,8 @@ export default function PlatformPage(props: { view?: View; onNavigate?: (v: View
         {tabs.map(t => {
           const active = view.kind === t.key
             || (t.key === 'tenants' && view.kind === 'tenant')
-            || (t.key === 'modules' && view.kind === 'module');
+            || (t.key === 'modules' && view.kind === 'module')
+            || (t.key === 'users'   && view.kind === 'user');
           return (
             <button
               key={t.key}
@@ -139,6 +143,8 @@ export default function PlatformPage(props: { view?: View; onNavigate?: (v: View
       {view.kind === 'tenant'    && <TenantDetail id={view.id} onBack={() => setView({ kind: 'tenants' })} />}
       {view.kind === 'modules'   && <ModuleList onOpen={(slug) => setView({ kind: 'module', slug })} />}
       {view.kind === 'module'    && <ModuleDetail slug={view.slug} onBack={() => setView({ kind: 'modules' })} />}
+      {view.kind === 'users'     && <UserList onOpen={(id) => setView({ kind: 'user', id })} />}
+      {view.kind === 'user'      && <UserDetail id={view.id} onBack={() => setView({ kind: 'users' })} />}
       {view.kind === 'billing'   && <BillingEvents />}
       {view.kind === 'pricing'   && <Pricing />}
       {view.kind === 'health'    && <Health />}
@@ -356,7 +362,7 @@ function CreateTenantForm({ onClose, onCreated }: { onClose: () => void; onCreat
       // raw user-id input if the field looks like a UUID.
       let ownerUserId = ownerEmail.trim();
       if (ownerUserId.includes('@')) {
-        const r = await apiCall(`/v1/admin/users?search=${encodeURIComponent(ownerUserId)}`).catch(() => ({ users: [] }));
+        const r = await apiCall(`/v1/platform/users?search=${encodeURIComponent(ownerUserId)}`).catch(() => ({ users: [] }));
         const found = r.users?.find((u: any) => u.email.toLowerCase() === ownerUserId.toLowerCase());
         if (!found) throw Object.assign(new Error('Owner email not found'), { code: 'USER_NOT_FOUND' });
         ownerUserId = found.id;
@@ -818,7 +824,451 @@ function ModuleDetail({ slug, onBack }: { slug: string; onBack: () => void }) {
         </div>
       </Card>
       {!data.archivedAt && <ModuleEditForm module={data} onSaved={load} />}
+      {!data.archivedAt && <ModulePlanMapping moduleSlug={slug} onSaved={load} />}
+      {!data.archivedAt && <ModuleAddonPriceEditor module={data} onSaved={load} />}
+      <ModuleMembers moduleSlug={slug} />
     </div>
+  );
+}
+
+function ModulePlanMapping({ moduleSlug, onSaved }: { moduleSlug: string; onSaved: () => void }) {
+  // Loads the catalog (which now includes `includedInPlans`) and the plan
+  // list, lets a super_admin toggle plan inclusion, and POSTs the full set
+  // back. The endpoint replaces all mappings for the module in one call.
+  const [allPlans, setAllPlans] = useState<any[] | null>(null);
+  const [included, setIncluded] = useState<Set<string> | null>(null);
+  const [err, setErr] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const load = () => Promise.all([
+    apiCall('/v1/platform/pricing').catch(() => ({ pricing: [] })),
+    apiCall('/v1/platform/modules?includeArchived=1'),
+  ]).then(([_p, m]) => {
+    const mod = m.modules.find((x: any) => x.slug === moduleSlug);
+    setIncluded(new Set(mod?.includedInPlans ?? []));
+  }).catch(setErr);
+  useEffect(() => {
+    apiCall('/v1/platform/plans').catch(() => null).then((d) => {
+      // /v1/platform/plans may not exist; fall back to a hard-coded set
+      // matching the legacy AdminPage's plan picker if necessary.
+      const fallback = [{ slug: 'free' }, { slug: 'starter' }, { slug: 'pro' }, { slug: 'elite' }];
+      setAllPlans(d?.plans ?? fallback);
+    });
+    load(); /* eslint-disable-next-line */
+  }, [moduleSlug]);
+  const toggle = (slug: string) => {
+    if (!included) return;
+    const next = new Set(included);
+    if (next.has(slug)) next.delete(slug); else next.add(slug);
+    setIncluded(next);
+  };
+  const save = async () => {
+    if (!included) return;
+    setErr(null); setBusy(true);
+    try {
+      await apiCall(`/v1/platform/modules/${moduleSlug}/plan-mapping`, {
+        method: 'POST', body: JSON.stringify({ planSlugs: Array.from(included) }),
+      });
+      onSaved();
+    } catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  if (!allPlans || !included) return null;
+  return (
+    <Card style={{ marginTop: 12 }} data-testid="form-module-plan-mapping">
+      <h3 style={{ marginTop: 0, fontSize: 14 }}>Plan mapping</h3>
+      <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8 }}>
+        Plans that bundle this module out of the box. Leaving all unchecked makes the module add-on-only.
+      </div>
+      <ErrorBlock err={err} />
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 8 }}>
+        {allPlans.map(p => (
+          <label key={p.slug} data-testid={`check-plan-${p.slug}`} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input
+              type="checkbox"
+              checked={included.has(p.slug)}
+              onChange={() => toggle(p.slug)}
+            />
+            <code>{p.slug}</code>
+          </label>
+        ))}
+      </div>
+      <Btn data-testid="button-save-plan-mapping" variant="primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save plan mapping'}</Btn>
+    </Card>
+  );
+}
+
+function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: () => void }) {
+  const meta = (m.metadata ?? {}) as any;
+  const current: number | null = typeof meta.addonPriceCents === 'number' ? meta.addonPriceCents : null;
+  const [cents, setCents] = useState<string>(current != null ? String(current) : '');
+  const [err, setErr] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const [drift, setDrift] = useState<any>(null);
+  const checkStripe = async () => {
+    setErr(null);
+    try { setDrift(await apiCall(`/v1/platform/modules/${m.slug}/stripe-price`)); }
+    catch (e) { setErr(e); }
+  };
+  const save = async () => {
+    setErr(null); setBusy(true);
+    try {
+      const n = parseInt(cents, 10);
+      if (!Number.isFinite(n) || n < 0) throw Object.assign(new Error('Enter a non-negative integer (cents)'), { code: 'BAD_INPUT' });
+      await apiCall(`/v1/platform/modules/${m.slug}/addon-price`, {
+        method: 'PUT', body: JSON.stringify({ addonPriceCents: n }),
+      });
+      onSaved();
+    } catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  const lookup = drift?.lookup;
+  return (
+    <Card style={{ marginTop: 12 }} data-testid="form-module-addon-price">
+      <h3 style={{ marginTop: 0, fontSize: 14 }}>Add-on price</h3>
+      <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8 }}>
+        Stored on the module under <code>metadata.addonPriceCents</code>. Used by add-on subscription flows.
+      </div>
+      <ErrorBlock err={err} />
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
+        <div style={{ flex: '0 0 220px' }}>
+          <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Price (cents, e.g. 9900 = $99)</label>
+          <input data-testid="input-addon-price" value={cents} onChange={e => setCents(e.target.value)} style={{ ...inp, width: '100%' }} />
+        </div>
+        <Btn data-testid="button-save-addon-price" variant="primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save price'}</Btn>
+        <Btn data-testid="button-check-stripe-price" onClick={checkStripe}>Check Stripe drift</Btn>
+      </div>
+      {lookup && (
+        <div data-testid="block-stripe-drift" style={{ marginTop: 8, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }}>
+          <div>env key: <code>{lookup.envKey ?? '—'}</code> {lookup.envKeyConfigured ? <Pill tone="green">configured</Pill> : <Pill tone="muted">missing</Pill>}</div>
+          <div>declared: {lookup.declaredAddonPriceCents ?? '—'}¢ · stripe: {lookup.stripeUnitAmountCents ?? '—'}¢ {lookup.stripeCurrency ? `(${lookup.stripeCurrency})` : ''}</div>
+          {lookup.mismatch && <Pill tone="red">mismatch</Pill>}
+          {lookup.error && <Pill tone="yellow">{lookup.error}</Pill>}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ModuleMembers({ moduleSlug }: { moduleSlug: string }) {
+  const [data, setData] = useState<any>(null);
+  const [err, setErr] = useState<any>(null);
+  useEffect(() => {
+    apiCall(`/v1/platform/modules/${moduleSlug}/members`).then(setData).catch(setErr);
+  }, [moduleSlug]);
+  if (err) return <ErrorBlock err={err} />;
+  if (!data) return null;
+  return (
+    <Card style={{ marginTop: 12 }} data-testid="block-module-members">
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+        <h3 style={{ margin: 0, fontSize: 14 }}>Members with access</h3>
+        <span style={{ color: colors.textMuted, fontSize: 12 }}>
+          total {data.counts.total} · plan {data.counts.plan} · addon {data.counts.addon} · grant {data.counts.override_grant} · revoke {data.counts.override_revoke} · admin_role {data.counts.admin_role}
+        </span>
+      </div>
+      <div style={{ maxHeight: 240, overflow: 'auto' }}>
+        {data.members.length === 0
+          ? <div style={{ color: colors.textMuted, fontSize: 12 }}>No members currently have access.</div>
+          : data.members.slice(0, 50).map((mem: any) => (
+            <div key={mem.userId} data-testid={`row-member-${mem.userId}`} style={{ padding: '4px 0', borderBottom: `1px solid ${colors.border}`, fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
+              <span>{mem.email}</span>
+              <span><Pill tone={mem.accessSource === 'plan' ? 'green' : mem.accessSource === 'addon' ? 'purple' : mem.accessSource === 'override' ? 'yellow' : 'muted'}>{mem.accessSource}</Pill> {mem.planSlug ? <code style={{ color: colors.textMuted }}>{mem.planSlug}</code> : null}</span>
+            </div>
+          ))}
+      </div>
+    </Card>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Users (ported from retired AdminPage)
+// ─────────────────────────────────────────────────────────────────────────
+
+function UserList({ onOpen }: { onOpen: (id: string) => void }) {
+  const [rows, setRows] = useState<any[] | null>(null);
+  const [err, setErr] = useState<any>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const load = (p = page) => {
+    const qs = new URLSearchParams();
+    if (search) qs.set('search', search);
+    if (statusFilter) qs.set('status', statusFilter);
+    if (roleFilter) qs.set('role', roleFilter);
+    qs.set('page', String(p));
+    apiCall(`/v1/platform/users?${qs.toString()}`).then(d => setRows(d.users)).catch(setErr);
+  };
+  useEffect(() => { load(1); /* eslint-disable-next-line */ }, [statusFilter, roleFilter]);
+  return (
+    <div>
+      <ErrorBlock err={err} />
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <input
+          data-testid="input-user-search"
+          placeholder="Search by email or name…" value={search}
+          onChange={e => setSearch(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { setPage(1); load(1); } }}
+          style={{ ...inp, flex: 1, minWidth: 220 }}
+        />
+        <select data-testid="select-user-status" value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={inp}>
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="suspended">Suspended</option>
+          <option value="deleted">Deleted</option>
+        </select>
+        <select data-testid="select-user-role" value={roleFilter} onChange={e => setRoleFilter(e.target.value)} style={inp}>
+          <option value="">All roles</option>
+          <option value="user">user</option>
+          <option value="admin">admin</option>
+        </select>
+        <Btn data-testid="button-user-search" onClick={() => { setPage(1); load(1); }}>Search</Btn>
+        <Btn data-testid="button-users-prev" onClick={() => { const p = Math.max(1, page - 1); setPage(p); load(p); }} disabled={page === 1}>← Prev</Btn>
+        <Btn data-testid="button-users-next" onClick={() => { const p = page + 1; setPage(p); load(p); }} disabled={(rows?.length ?? 0) < 25}>Next →</Btn>
+      </div>
+      {rows == null ? <div style={{ color: colors.textMuted }}>Loading…</div> : (
+        <Card style={{ padding: 0 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead><tr style={{ background: colors.bgHover, color: colors.textMuted }}>
+              <Th>Email</Th><Th>Name</Th><Th>Role</Th><Th>Plan</Th><Th>Status</Th><Th>Sub</Th><Th></Th>
+            </tr></thead>
+            <tbody>
+              {rows.map(u => (
+                <tr key={u.id} style={{ borderTop: `1px solid ${colors.border}` }} data-testid={`row-user-${u.id}`}>
+                  <Td>{u.email}</Td>
+                  <Td>{u.name ?? '—'}</Td>
+                  <Td>
+                    <Pill tone={u.platformRole === 'super_admin' ? 'purple' : u.role === 'admin' ? 'yellow' : 'muted'}>
+                      {u.platformRole === 'super_admin' ? 'super_admin' : u.role}
+                    </Pill>
+                  </Td>
+                  <Td>{u.planName}</Td>
+                  <Td><Pill tone={u.status === 'active' ? 'green' : u.status === 'suspended' ? 'yellow' : 'red'}>{u.status}</Pill></Td>
+                  <Td>{u.subscription?.status ?? '—'}</Td>
+                  <Td><Btn data-testid={`button-user-open-${u.id}`} onClick={() => onOpen(u.id)}>Open</Btn></Td>
+                </tr>
+              ))}
+              {rows.length === 0 && <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: colors.textMuted }}>No users match.</td></tr>}
+            </tbody>
+          </table>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function UserDetail({ id, onBack }: { id: string; onBack: () => void }) {
+  const [data, setData] = useState<any>(null);
+  const [err, setErr] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+  const load = () => apiCall(`/v1/platform/users/${id}`).then(setData).catch(setErr);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+
+  const setStatus = async (status: string, label: string) => {
+    if (!confirm(`${label} this user?`)) return;
+    setErr(null); setBusy(true);
+    try { await apiCall(`/v1/platform/users/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }); await load(); }
+    catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  const unlock = async () => {
+    setErr(null); setBusy(true);
+    try { await apiCall(`/v1/platform/users/${id}/unlock`, { method: 'PUT' }); await load(); }
+    catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  const hardDelete = async () => {
+    if (!confirm('PERMANENTLY delete this user? This cannot be undone.')) return;
+    setErr(null); setBusy(true);
+    try { await apiCall(`/v1/platform/users/${id}/hard`, { method: 'DELETE' }); onBack(); }
+    catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  const changeRole = async (role: string) => {
+    setErr(null); setBusy(true);
+    try { await apiCall(`/v1/platform/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role }) }); await load(); }
+    catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  const changePlan = async (planSlug: string) => {
+    if (!planSlug) return;
+    setErr(null); setBusy(true);
+    try { await apiCall(`/v1/platform/users/${id}/plan`, { method: 'PUT', body: JSON.stringify({ planSlug }) }); await load(); }
+    catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  const setSubStatus = async (status: string) => {
+    setErr(null); setBusy(true);
+    try { await apiCall(`/v1/platform/users/${id}/subscription-status`, { method: 'PUT', body: JSON.stringify({ status }) }); await load(); }
+    catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  const setTrial = async () => {
+    const v = prompt('Trial end date (YYYY-MM-DD or ISO):');
+    if (!v) return;
+    setErr(null); setBusy(true);
+    try { await apiCall(`/v1/platform/users/${id}/trial`, { method: 'PUT', body: JSON.stringify({ trialEndDate: v }) }); await load(); }
+    catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  const resync = async () => {
+    setErr(null); setBusy(true);
+    try { const r = await apiCall(`/v1/platform/billing/resync/${id}`, { method: 'POST' }); alert(`Resync: ${r.mode} · scanned ${r.scanned} · reconciled ${r.reconciled}`); await load(); }
+    catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
+  const u = data.user;
+  return (
+    <div>
+      <Btn data-testid="button-user-back" onClick={onBack} style={{ marginBottom: 12 }}>← Back</Btn>
+      <ErrorBlock err={err} />
+      <Card>
+        <h2 style={{ margin: 0, fontSize: 18 }} data-testid="text-user-email">{u.email}</h2>
+        <div style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>
+          <code>{u.id}</code> · {u.name ?? '—'} ·
+          status=<Pill tone={u.status === 'active' ? 'green' : u.status === 'suspended' ? 'yellow' : 'red'}>{u.status}</Pill> ·
+          role=<Pill tone={u.role === 'admin' ? 'yellow' : 'muted'}>{u.role}</Pill>
+          {u.platformRole === 'super_admin' && <Pill tone="purple">super_admin</Pill>}
+        </div>
+        <div style={{ marginTop: 12, fontSize: 12, color: colors.textMuted }}>
+          workspaces: {data.stats.workspaces} · projects: {data.stats.projects} · tasks: {data.stats.tasks} · notes: {data.stats.notes}
+          {u.lockedUntil && <> · <Pill tone="red">locked until {new Date(u.lockedUntil).toLocaleString()}</Pill></>}
+        </div>
+        <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {u.status !== 'suspended' && u.status !== 'deleted' && <Btn data-testid="button-suspend" disabled={busy} onClick={() => setStatus('suspended', 'Suspend')}>Suspend</Btn>}
+          {u.status === 'suspended' && <Btn data-testid="button-reactivate" variant="primary" disabled={busy} onClick={() => setStatus('active', 'Reactivate')}>Reactivate</Btn>}
+          {u.status !== 'deleted' && <Btn data-testid="button-soft-delete" variant="danger" disabled={busy} onClick={() => setStatus('deleted', 'Soft-delete')}>Soft-delete</Btn>}
+          {u.status === 'deleted' && <Btn data-testid="button-hard-delete" variant="danger" disabled={busy} onClick={hardDelete}>Hard delete</Btn>}
+          {u.lockedUntil && <Btn data-testid="button-unlock" disabled={busy} onClick={unlock}>Unlock</Btn>}
+          <Btn data-testid="button-resync-billing" disabled={busy} onClick={resync}>Resync billing</Btn>
+        </div>
+      </Card>
+
+      <Card style={{ marginTop: 12 }}>
+        <h3 style={{ marginTop: 0, fontSize: 14 }}>Subscription</h3>
+        <div style={{ fontSize: 13, color: colors.textMuted, marginBottom: 8 }}>
+          plan: <code>{data.plan?.slug ?? '—'}</code> · status: <code>{data.subscription?.status ?? '—'}</code>
+          {data.subscription?.currentPeriodEnd && <> · ends: {new Date(data.subscription.currentPeriodEnd).toLocaleString()}</>}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select data-testid="select-change-plan" defaultValue="" disabled={busy} onChange={e => { const v = e.target.value; e.target.value = ''; changePlan(v); }} style={inp}>
+            <option value="">Change plan…</option>
+            <option value="free">free</option>
+            <option value="starter">starter</option>
+            <option value="pro">pro</option>
+            <option value="elite">elite</option>
+          </select>
+          <select data-testid="select-change-role" value={u.role} disabled={busy} onChange={e => changeRole(e.target.value)} style={inp}>
+            <option value="user">user</option>
+            <option value="admin">admin</option>
+          </select>
+          <select data-testid="select-sub-status" defaultValue="" disabled={busy} onChange={e => { const v = e.target.value; e.target.value = ''; if (v) setSubStatus(v); }} style={inp}>
+            <option value="">Force sub status…</option>
+            <option value="active">active</option>
+            <option value="trialing">trialing</option>
+            <option value="past_due">past_due</option>
+            <option value="canceled">canceled</option>
+            <option value="expired">expired</option>
+          </select>
+          <Btn data-testid="button-set-trial" onClick={setTrial} disabled={busy}>Set trial end…</Btn>
+        </div>
+      </Card>
+
+      <UserModuleOverrides userId={id} />
+      <UserBillingEvents events={data.billingEvents ?? []} />
+      <UserAuditHistory rows={data.auditHistory ?? []} />
+    </div>
+  );
+}
+
+function UserModuleOverrides({ userId }: { userId: string }) {
+  const [data, setData] = useState<any>(null);
+  const [err, setErr] = useState<any>(null);
+  const [moduleSlug, setModuleSlug] = useState('');
+  const [grant, setGrant] = useState(true);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const load = () => apiCall(`/v1/platform/users/${userId}/module-overrides`).then(setData).catch(setErr);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [userId]);
+  const add = async () => {
+    if (!moduleSlug) return;
+    setErr(null); setBusy(true);
+    try {
+      await apiCall(`/v1/platform/users/${userId}/module-overrides`, {
+        method: 'POST', body: JSON.stringify({ moduleSlug, grant, reason: reason || undefined }),
+      });
+      setModuleSlug(''); setReason(''); await load();
+    } catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  const remove = async (overrideId: string) => {
+    setErr(null); setBusy(true);
+    try { await apiCall(`/v1/platform/users/${userId}/module-overrides/${overrideId}`, { method: 'DELETE' }); await load(); }
+    catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  if (!data) return null;
+  return (
+    <Card style={{ marginTop: 12 }} data-testid="block-user-overrides">
+      <h3 style={{ marginTop: 0, fontSize: 14 }}>Per-user module overrides</h3>
+      <ErrorBlock err={err} />
+      {(data.overrides ?? []).length === 0
+        ? <div style={{ color: colors.textMuted, fontSize: 13, marginBottom: 8 }}>No overrides set.</div>
+        : <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', marginBottom: 8 }}>
+            <thead><tr style={{ color: colors.textMuted }}><Th>Module</Th><Th>Grant</Th><Th>Reason</Th><Th>Expires</Th><Th></Th></tr></thead>
+            <tbody>
+              {data.overrides.map((o: any) => (
+                <tr key={o.id} style={{ borderTop: `1px solid ${colors.border}` }} data-testid={`row-override-${o.id}`}>
+                  <Td><code>{o.moduleSlug}</code> {o.moduleName}</Td>
+                  <Td>{o.grant ? <Pill tone="green">grant</Pill> : <Pill tone="red">revoke</Pill>}</Td>
+                  <Td>{o.reason ?? '—'}</Td>
+                  <Td>{o.expiresAt ? new Date(o.expiresAt).toLocaleDateString() : 'never'}</Td>
+                  <Td><Btn data-testid={`button-remove-override-${o.id}`} variant="danger" disabled={busy} onClick={() => remove(o.id)}>Remove</Btn></Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <input data-testid="input-override-module" placeholder="module slug…" value={moduleSlug} onChange={e => setModuleSlug(e.target.value)} style={{ ...inp, minWidth: 180 }} />
+        <select data-testid="select-override-grant" value={grant ? '1' : '0'} onChange={e => setGrant(e.target.value === '1')} style={inp}>
+          <option value="1">grant</option>
+          <option value="0">revoke</option>
+        </select>
+        <input data-testid="input-override-reason" placeholder="reason (optional)…" value={reason} onChange={e => setReason(e.target.value)} style={{ ...inp, flex: 1, minWidth: 200 }} />
+        <Btn data-testid="button-add-override" variant="primary" disabled={busy || !moduleSlug} onClick={add}>Add override</Btn>
+      </div>
+    </Card>
+  );
+}
+
+function UserBillingEvents({ events }: { events: any[] }) {
+  if (!events.length) return null;
+  return (
+    <Card style={{ marginTop: 12 }} data-testid="block-user-billing-events">
+      <h3 style={{ marginTop: 0, fontSize: 14 }}>Recent billing events</h3>
+      <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+        <thead><tr style={{ color: colors.textMuted }}><Th>When</Th><Th>Type</Th><Th>Processed</Th><Th>Error</Th></tr></thead>
+        <tbody>
+          {events.map((e: any) => (
+            <tr key={e.id} style={{ borderTop: `1px solid ${colors.border}` }}>
+              <Td>{new Date(e.createdAt).toLocaleString()}</Td>
+              <Td>{e.eventType}</Td>
+              <Td>{e.processedAt ? <Pill tone="green">ok</Pill> : <Pill tone="yellow">pending</Pill>}</Td>
+              <Td style={{ color: colors.accentRed }}>{e.errorMessage ?? ''}</Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Card>
+  );
+}
+
+function UserAuditHistory({ rows }: { rows: any[] }) {
+  if (!rows.length) return null;
+  return (
+    <Card style={{ marginTop: 12 }} data-testid="block-user-audit">
+      <h3 style={{ marginTop: 0, fontSize: 14 }}>Audit history</h3>
+      <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+        <thead><tr style={{ color: colors.textMuted }}><Th>When</Th><Th>Action</Th><Th>Actor</Th></tr></thead>
+        <tbody>
+          {rows.map((l: any) => (
+            <tr key={l.id} style={{ borderTop: `1px solid ${colors.border}` }}>
+              <Td>{new Date(l.createdAt).toLocaleString()}</Td>
+              <Td><code>{l.action}</code></Td>
+              <Td>{l.adminId}</Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Card>
   );
 }
 
@@ -977,9 +1427,18 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
 function BillingEvents() {
   const [rows, setRows] = useState<any[] | null>(null);
   const [onlyFailed, setOnlyFailed] = useState(false);
+  const [eventType, setEventType] = useState('');
+  const [userId, setUserId] = useState('');
   const [err, setErr] = useState<any>(null);
   const [retrying, setRetrying] = useState<string | null>(null);
-  const load = () => apiCall(`/v1/platform/billing/events${onlyFailed ? '?onlyFailed=1' : ''}`).then(d => setRows(d.events)).catch(setErr);
+  const load = () => {
+    const qs = new URLSearchParams();
+    if (onlyFailed) qs.set('onlyFailed', '1');
+    if (eventType)  qs.set('eventType', eventType);
+    if (userId)     qs.set('userId', userId);
+    const q = qs.toString();
+    apiCall(`/v1/platform/billing/events${q ? `?${q}` : ''}`).then(d => setRows(d.events)).catch(setErr);
+  };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [onlyFailed]);
   const retry = async (id: string) => {
     setErr(null); setRetrying(id);
@@ -991,10 +1450,27 @@ function BillingEvents() {
   return (
     <div>
       <ErrorBlock err={err} />
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <label style={{ fontSize: 13, color: colors.textMuted }}>
           <input data-testid="checkbox-only-failed" type="checkbox" checked={onlyFailed} onChange={e => setOnlyFailed(e.target.checked)} /> Only failed/unprocessed
         </label>
+        <input
+          data-testid="input-event-type"
+          placeholder="event type contains…"
+          value={eventType}
+          onChange={e => setEventType(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') load(); }}
+          style={{ ...inp, minWidth: 200 }}
+        />
+        <input
+          data-testid="input-event-user"
+          placeholder="user id…"
+          value={userId}
+          onChange={e => setUserId(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') load(); }}
+          style={{ ...inp, minWidth: 220 }}
+        />
+        <Btn data-testid="button-billing-search" onClick={load}>Search</Btn>
       </div>
       <Card style={{ padding: 0 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>

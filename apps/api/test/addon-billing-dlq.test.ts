@@ -9,7 +9,6 @@ import {
   processAddonWebhookEvent,
   markStripeEventProcessed,
   markStripeEventFailed,
-  retryBillingEvent,
 } from '../src/lib/billing-service.js';
 import { signToken } from '../src/lib/auth.js';
 import {
@@ -33,24 +32,26 @@ before(async () => {
   await ensureSchemaReady();
   const u = await createTestUser();
   userId = u.id;
-  // Promote a second test user to admin so we can hit requireAdmin routes.
+  // Promote a second test user to platform super_admin so we can hit the
+  // requireSuperAdmin-gated /v1/platform/* retry route.
   const a = await createTestUser();
   adminId = a.id;
-  await db.update(usersTable).set({ role: 'admin' }).where(eq(usersTable.id, adminId));
+  await db.update(usersTable).set({ platformRole: 'super_admin' }).where(eq(usersTable.id, adminId));
   adminToken = signToken({ userId: adminId, email: a.email, role: 'admin' });
 
   const m = await createTestModule();
   moduleId = m.id;
   moduleSlug = m.slug;
 
-  // Stand up a Fastify app with admin routes registered so the retry
-  // endpoint is exercised end-to-end (preHandler auth + handler + DB).
+  // Stand up a Fastify app with platform routes registered so the retry
+  // endpoint is exercised end-to-end (preHandler auth + handler + DB +
+  // audit-enforcement hook).
   const Fastify = (await import('fastify')).default;
   const cookie = (await import('@fastify/cookie')).default;
-  const { registerAdminRoutes } = await import('../src/routes/admin-routes.js');
+  const { registerPlatformRoutes } = await import('../src/routes/platform-routes.js');
   app = Fastify();
   await app.register(cookie);
-  await registerAdminRoutes(app);
+  await registerPlatformRoutes(app);
   await app.ready();
 });
 
@@ -124,7 +125,7 @@ test('failure path: unknown module slug — claim still persists rawEvent and ma
   assert.equal(afterRow.processedAt, null, 'failed event must remain in DLQ (processedAt=null)');
 });
 
-test('POST /v1/admin/billing-events/:id/retry performs true replay; second retry returns duplicate_ignored', async () => {
+test('POST /v1/platform/billing/events/:id/retry performs true replay; second retry returns duplicate_ignored', async () => {
   const event = buildAddonCheckoutEvent({
     userId,
     moduleSlug,
@@ -144,11 +145,11 @@ test('POST /v1/admin/billing-events/:id/retry performs true replay; second retry
   assert.equal(beforeAddons.length, 0);
 
   // First retry — true replay through the actual HTTP route. This
-  // exercises requireAdmin auth + the route handler + retryBillingEvent
+  // exercises requireSuperAdmin auth + the route handler + retryBillingEvent
   // + processAddonWebhookEvent end-to-end.
   const res1 = await app.inject({
     method: 'POST',
-    url: `/v1/admin/billing-events/${claimedRowId}/retry`,
+    url: `/v1/platform/billing/events/${claimedRowId}/retry`,
     headers: { authorization: `Bearer ${adminToken}` },
   });
   assert.equal(res1.statusCode, 200, `first retry HTTP should be 200, got ${res1.statusCode}: ${res1.payload}`);
@@ -174,7 +175,7 @@ test('POST /v1/admin/billing-events/:id/retry performs true replay; second retry
   // it the same as a redelivered live webhook.
   const res2 = await app.inject({
     method: 'POST',
-    url: `/v1/admin/billing-events/${claimedRowId}/retry`,
+    url: `/v1/platform/billing/events/${claimedRowId}/retry`,
     headers: { authorization: `Bearer ${adminToken}` },
   });
   assert.equal(res2.statusCode, 200);
