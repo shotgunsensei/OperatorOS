@@ -1383,7 +1383,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         targetType: 'user',
         targetId: userId,
         action: 'billing_resync_triggered',
-        extra: { mode: result.mode, scanned: result.scanned, reconciled: result.reconciled },
+        extra: { mode: result.mode, scanned: result.scanned, reconciled: result.reconciled, needsAttention: result.needsAttention ?? 0 },
         ipAddress: request.ip,
       }, request);
       return result;

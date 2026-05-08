@@ -1216,12 +1216,20 @@ export async function retryBillingEvent(eventId: string): Promise<{ ok: boolean;
  * one through the local idempotent processors so the local DB ends up
  * matching upstream regardless of whatever webhooks were missed.
  */
+export type ResyncNeedsAttentionAddon = {
+  stripeSubscriptionId: string;
+  moduleSlug: string | null;
+  reason: string;
+};
+
 export async function resyncUserBilling(userId: string): Promise<{
   ok: boolean;
   mode: 'stripe' | 'local';
   message: string;
   scanned?: number;
   reconciled?: number;
+  needsAttention?: number;
+  needsAttentionAddons?: ResyncNeedsAttentionAddon[];
 }> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return { ok: false, mode: 'local', message: 'User not found' };
@@ -1265,6 +1273,7 @@ export async function resyncUserBilling(userId: string): Promise<{
   let scanned = 0;
   let reconciledAddons = 0;
   let reconciledPlans = 0;
+  const needsAttentionAddons: ResyncNeedsAttentionAddon[] = [];
 
   // Snapshot active plan-price -> plan_id mapping once per resync.
   const allPlans = await db.select().from(subscriptionPlans);
@@ -1298,7 +1307,15 @@ export async function resyncUserBilling(userId: string): Promise<{
           data: { object: { ...sub, metadata: { ...md, userId, user_id: userId, kind: 'addon', type: 'addon' } } },
         };
         const r = await processAddonWebhookEvent(synthetic);
-        if (r.handled) reconciledAddons += 1;
+        if (r.handled) {
+          reconciledAddons += 1;
+        } else {
+          needsAttentionAddons.push({
+            stripeSubscriptionId: sub.id,
+            moduleSlug: (md.module_slug ?? md.moduleSlug ?? null) as string | null,
+            reason: r.error ?? 'Could not reconcile add-on subscription',
+          });
+        }
         continue;
       }
 
@@ -1338,16 +1355,21 @@ export async function resyncUserBilling(userId: string): Promise<{
     }
   }
 
+  const needsAttention = needsAttentionAddons.length;
   await db.insert(billingEvents).values({
     userId, eventType: 'admin_resync',
-    metadata: { mode: 'stripe', scanned, reconciledAddons, reconciledPlans },
+    metadata: { mode: 'stripe', scanned, reconciledAddons, reconciledPlans, needsAttention, needsAttentionAddons },
     processedAt: new Date(),
   });
 
+  const attentionSuffix = needsAttention > 0
+    ? ` ${needsAttention} addon(s) need attention.`
+    : '';
   return {
     ok: true, mode: 'stripe',
-    message: `Resync complete. Scanned ${scanned} Stripe subscription(s); reconciled ${reconciledPlans} plan + ${reconciledAddons} addon record(s).`,
+    message: `Resync complete. Scanned ${scanned} Stripe subscription(s); reconciled ${reconciledPlans} plan + ${reconciledAddons} addon record(s).${attentionSuffix}`,
     scanned, reconciled: reconciledPlans + reconciledAddons,
+    needsAttention, needsAttentionAddons,
   };
 }
 

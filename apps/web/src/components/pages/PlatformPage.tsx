@@ -1242,9 +1242,21 @@ function UserDetail({ id, onBack }: { id: string; onBack: () => void }) {
     try { await apiCall(`/v1/platform/users/${id}/trial`, { method: 'PUT', body: JSON.stringify({ trialEndDate: v }) }); await load(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
+  const [resyncResult, setResyncResult] = useState<{
+    mode?: string;
+    scanned?: number;
+    reconciled?: number;
+    needsAttention?: number;
+    needsAttentionAddons?: Array<{ stripeSubscriptionId: string; moduleSlug: string | null; reason?: string }>;
+    message?: string;
+  } | null>(null);
   const resync = async () => {
     setErr(null); setBusy(true);
-    try { const r = await apiCall(`/v1/platform/billing/resync/${id}`, { method: 'POST' }); alert(`Resync: ${r.mode} · scanned ${r.scanned} · reconciled ${r.reconciled}`); await load(); }
+    try {
+      const r = await apiCall(`/v1/platform/billing/resync/${id}`, { method: 'POST' });
+      setResyncResult(r);
+      await load();
+    }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
   if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
@@ -1308,6 +1320,99 @@ function UserDetail({ id, onBack }: { id: string; onBack: () => void }) {
       <UserModuleOverrides userId={id} />
       <UserBillingEvents events={data.billingEvents ?? []} />
       <UserAuditHistory rows={data.auditHistory ?? []} />
+      {resyncResult && (
+        <ResyncResultDialog result={resyncResult} onClose={() => setResyncResult(null)} />
+      )}
+    </div>
+  );
+}
+
+function ResyncResultDialog({
+  result,
+  onClose,
+}: {
+  result: {
+    mode?: string;
+    scanned?: number;
+    reconciled?: number;
+    needsAttention?: number;
+    needsAttentionAddons?: Array<{ stripeSubscriptionId: string; moduleSlug: string | null; reason?: string }>;
+    message?: string;
+  };
+  onClose: () => void;
+}) {
+  const needsAttention = result.needsAttention ?? 0;
+  const addons = result.needsAttentionAddons ?? [];
+  const tone: 'green' | 'yellow' = needsAttention > 0 ? 'yellow' : 'green';
+  return (
+    <div
+      data-testid="dialog-resync-result"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="resync-result-title"
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16, zIndex: 50,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: colors.bgSecondary, border: `1px solid ${colors.border}`,
+          borderRadius: 8, padding: 20, maxWidth: 640, width: '100%',
+          maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <h3 id="resync-result-title" style={{ margin: 0, fontSize: 16 }}>Resync billing</h3>
+          <Pill tone={tone}>{needsAttention > 0 ? 'Needs attention' : 'Healthy'}</Pill>
+        </div>
+        <div style={{ fontSize: 13, color: colors.text, marginBottom: 8 }} data-testid="text-resync-summary">
+          mode: <code>{result.mode ?? '—'}</code> ·
+          scanned: <code data-testid="text-resync-scanned">{result.scanned ?? 0}</code> ·
+          reconciled: <code data-testid="text-resync-reconciled">{result.reconciled ?? 0}</code> ·
+          needs attention: <code data-testid="text-resync-needs-attention">{needsAttention}</code>
+        </div>
+        {result.message && (
+          <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 12 }}>{result.message}</div>
+        )}
+        {needsAttention > 0 && (
+          <div data-testid="list-needs-attention-addons" style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 6 }}>
+              These add-on subscriptions exist in Stripe but couldn't be reconciled locally. Investigate each one:
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ textAlign: 'left', color: colors.textMuted }}>
+                  <th style={{ padding: '6px 8px', borderBottom: `1px solid ${colors.border}` }}>Stripe subscription</th>
+                  <th style={{ padding: '6px 8px', borderBottom: `1px solid ${colors.border}` }}>Module</th>
+                  <th style={{ padding: '6px 8px', borderBottom: `1px solid ${colors.border}` }}>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {addons.map(a => (
+                  <tr key={a.stripeSubscriptionId} data-testid={`row-needs-attention-${a.stripeSubscriptionId}`}>
+                    <td style={{ padding: '6px 8px', borderBottom: `1px solid ${colors.border}` }}>
+                      <code data-testid={`text-needs-attention-sub-${a.stripeSubscriptionId}`}>{a.stripeSubscriptionId}</code>
+                    </td>
+                    <td style={{ padding: '6px 8px', borderBottom: `1px solid ${colors.border}` }}>
+                      <code data-testid={`text-needs-attention-module-${a.stripeSubscriptionId}`}>{a.moduleSlug ?? '—'}</code>
+                    </td>
+                    <td style={{ padding: '6px 8px', borderBottom: `1px solid ${colors.border}`, color: colors.textMuted }}>
+                      {a.reason ?? '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+          <Btn data-testid="button-resync-result-close" variant="primary" onClick={onClose}>Close</Btn>
+        </div>
+      </div>
     </div>
   );
 }
