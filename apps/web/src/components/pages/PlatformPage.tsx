@@ -922,6 +922,7 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyErr, setHistoryErr] = useState<any>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
 
   const checkStripe = async () => {
     setErr(null);
@@ -947,7 +948,9 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
     setHistoryLoading(true); setHistoryErr(null);
     try {
       const d = await apiCall(`/v1/platform/modules/${m.slug}/addon-price-history`);
-      setHistory(d.history as AddonPriceHistoryEntry[]);
+      const next = d.history as AddonPriceHistoryEntry[];
+      setHistory(next);
+      setCompareIds(prev => prev.filter(id => next.some(h => h.id === id)));
     } catch (e) { setHistoryErr(e); } finally { setHistoryLoading(false); }
   };
   const toggleHistory = () => {
@@ -980,6 +983,65 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
   };
   const lookup = drift?.lookup;
   const fmt = (c: number | null) => c == null ? '—' : `${c}¢`;
+  const toggleCompare = (id: string) => {
+    setCompareIds(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      if (prev.length >= 2) return [prev[1], id];
+      return [...prev, id];
+    });
+  };
+  const compareRows = history && compareIds.length === 2
+    ? compareIds.map(id => history.find(h => h.id === id)).filter(Boolean) as AddonPriceHistoryEntry[]
+    : [];
+  const diff = compareRows.length === 2 ? (() => {
+    const sorted = [...compareRows].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const [older, newer] = sorted;
+    const a = older.nextCents;
+    const b = newer.nextCents;
+    const deltaCents = (a != null && b != null) ? b - a : null;
+    const pct = (a != null && b != null && a !== 0) ? ((b - a) / a) * 100 : null;
+    const ms = new Date(newer.createdAt).getTime() - new Date(older.createdAt).getTime();
+    return { older, newer, a, b, deltaCents, pct, ms };
+  })() : null;
+  const formatDuration = (ms: number) => {
+    const s = Math.floor(ms / 1000);
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m2 = Math.floor((s % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m2}m`;
+    return `${m2}m`;
+  };
+  const exportCompareCsv = () => {
+    if (!diff) return;
+    const rows = [
+      ['field', 'older', 'newer'],
+      ['id', diff.older.id, diff.newer.id],
+      ['createdAt', diff.older.createdAt, diff.newer.createdAt],
+      ['previousCents', String(diff.older.previousCents ?? ''), String(diff.newer.previousCents ?? '')],
+      ['nextCents', String(diff.older.nextCents ?? ''), String(diff.newer.nextCents ?? '')],
+      ['adminEmail', diff.older.adminEmail ?? '', diff.newer.adminEmail ?? ''],
+      [],
+      ['summary', '', ''],
+      ['deltaCents', diff.deltaCents != null ? String(diff.deltaCents) : '', ''],
+      ['deltaPercent', diff.pct != null ? diff.pct.toFixed(4) : '', ''],
+      ['timeBetweenMs', String(diff.ms), ''],
+      ['timeBetween', formatDuration(diff.ms), ''],
+    ];
+    const csv = rows.map(r => r.map(v => {
+      const s = String(v ?? '');
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    }).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `addon-price-compare-${m.slug}-${Date.now()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
   return (
     <Card style={{ marginTop: 12 }} data-testid="form-module-addon-price">
       <h3 style={{ marginTop: 0, fontSize: 14 }}>Add-on price</h3>
@@ -1052,27 +1114,86 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
       )}
       {historyOpen && (
         <div data-testid="block-addon-price-history" style={{ marginTop: 8, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }}>
-          <div style={{ fontWeight: 600, marginBottom: 6 }}>Price history</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <div style={{ fontWeight: 600 }}>Price history</div>
+            <div style={{ color: colors.textMuted, fontSize: 11 }} data-testid="text-compare-hint">
+              {compareIds.length === 0 && 'Tick two rows to compare'}
+              {compareIds.length === 1 && 'Tick one more row to compare'}
+              {compareIds.length === 2 && (
+                <button
+                  type="button"
+                  data-testid="button-clear-compare"
+                  onClick={() => setCompareIds([])}
+                  style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', textDecoration: 'underline', fontSize: 11, padding: 0 }}
+                >Clear comparison</button>
+              )}
+            </div>
+          </div>
           {historyLoading && <div data-testid="addon-price-history-loading" style={{ color: colors.textMuted }}>Loading…</div>}
           {historyErr && <ErrorBlock err={historyErr} />}
           {!historyLoading && !historyErr && history && history.length === 0 && (
             <div data-testid="addon-price-history-empty" style={{ color: colors.textMuted }}>No price changes recorded yet.</div>
           )}
+          {diff && (
+            <div
+              data-testid="block-addon-price-compare"
+              style={{ marginBottom: 8, padding: 8, background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 6 }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <div style={{ fontWeight: 600 }}>Comparison</div>
+                <Btn data-testid="button-export-compare-csv" onClick={exportCompareCsv}>Export CSV</Btn>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div data-testid="block-compare-older">
+                  <div style={{ color: colors.textMuted, fontSize: 11 }}>Older</div>
+                  <div style={{ fontFamily: 'monospace' }} data-testid="text-compare-older-price">{fmt(diff.older.nextCents)}</div>
+                  <div style={{ color: colors.textMuted, fontSize: 11 }}>{new Date(diff.older.createdAt).toLocaleString()}</div>
+                  <div style={{ color: colors.textMuted, fontSize: 11 }}>{diff.older.adminEmail ?? diff.older.adminId}</div>
+                </div>
+                <div data-testid="block-compare-newer">
+                  <div style={{ color: colors.textMuted, fontSize: 11 }}>Newer</div>
+                  <div style={{ fontFamily: 'monospace' }} data-testid="text-compare-newer-price">{fmt(diff.newer.nextCents)}</div>
+                  <div style={{ color: colors.textMuted, fontSize: 11 }}>{new Date(diff.newer.createdAt).toLocaleString()}</div>
+                  <div style={{ color: colors.textMuted, fontSize: 11 }}>{diff.newer.adminEmail ?? diff.newer.adminId}</div>
+                </div>
+              </div>
+              <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${colors.border}`, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <span data-testid="text-compare-delta-cents">
+                  Δ {diff.deltaCents == null ? '—' : `${diff.deltaCents > 0 ? '+' : ''}${diff.deltaCents}¢`}
+                </span>
+                <span data-testid="text-compare-delta-percent">
+                  Δ% {diff.pct == null ? '—' : `${diff.pct > 0 ? '+' : ''}${diff.pct.toFixed(2)}%`}
+                </span>
+                <span data-testid="text-compare-time-between">
+                  time between: {formatDuration(diff.ms)}
+                </span>
+              </div>
+            </div>
+          )}
           {!historyLoading && !historyErr && history && history.map(entry => {
             const canRestore = entry.previousCents != null && entry.previousCents !== current;
             const when = new Date(entry.createdAt);
+            const checked = compareIds.includes(entry.id);
             return (
               <div
                 key={entry.id}
                 data-testid={`addon-price-history-row-${entry.id}`}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between', padding: '4px 0', borderTop: `1px solid ${colors.border}` }}
               >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontFamily: 'monospace' }}>{fmt(entry.previousCents)} → {fmt(entry.nextCents)}</div>
-                  <div style={{ color: colors.textMuted, fontSize: 11 }}>
-                    {when.toLocaleString()} · {entry.adminEmail ?? entry.adminId}
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    data-testid={`checkbox-compare-${entry.id}`}
+                    checked={checked}
+                    onChange={() => toggleCompare(entry.id)}
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontFamily: 'monospace' }}>{fmt(entry.previousCents)} → {fmt(entry.nextCents)}</div>
+                    <div style={{ color: colors.textMuted, fontSize: 11 }}>
+                      {when.toLocaleString()} · {entry.adminEmail ?? entry.adminId}
+                    </div>
                   </div>
-                </div>
+                </label>
                 <Btn
                   data-testid={`button-restore-addon-price-${entry.id}`}
                   onClick={() => restore(entry)}
