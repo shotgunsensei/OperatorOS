@@ -22,7 +22,7 @@
 
 import type { FastifyInstance } from 'fastify';
 import crypto from 'node:crypto';
-import { eq, and, isNull, desc, gte, inArray } from 'drizzle-orm';
+import { eq, and, isNull, desc, gte, inArray, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
   tenants, tenantUsers, tenantInvites, tenantModules,
@@ -549,9 +549,16 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
     async (request) => {
       const { tenantId } = request.params;
 
-      // 1. Recent audit events (last 20) scoped to the tenant.
+      // 1. Recent audit events (last 20) scoped to the tenant. Bound by
+      //    createdAt as well so the planner can use the tenant index +
+      //    created_at filter together, keeping latency flat as the table
+      //    grows past the 30-day window.
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const auditRows = await db.select().from(adminAuditLogs)
-        .where(eq(adminAuditLogs.tenantId, tenantId))
+        .where(and(
+          eq(adminAuditLogs.tenantId, tenantId),
+          gte(adminAuditLogs.createdAt, since),
+        ))
         .orderBy(desc(adminAuditLogs.createdAt))
         .limit(20);
 
@@ -610,18 +617,27 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
       //    telemetry — the underlying usage_tracking table is per-user and
       //    not module-scoped, so admin actions are the most meaningful
       //    per-module signal we can surface.
-      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const since30Rows = await db.select().from(adminAuditLogs)
-        .where(and(eq(adminAuditLogs.tenantId, tenantId), gte(adminAuditLogs.createdAt, since)));
+      //
+      //    The day-bucketing is pushed into Postgres so we never materialize
+      //    every audit row in JS — the result set is bounded by
+      //    (days × distinct targetTypes), independent of audit volume.
+      const dayBucketResult = await db.execute<{
+        day: string; target_type: string; count: number;
+      }>(sql`
+        SELECT to_char(date_trunc('day', created_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day,
+               COALESCE(details->>'targetType', 'other')                                AS target_type,
+               COUNT(*)::int                                                            AS count
+        FROM admin_audit_logs
+        WHERE tenant_id = ${tenantId}
+          AND created_at >= ${since}
+        GROUP BY 1, 2
+      `);
       const dayBuckets = new Map<string, { date: string; count: number; byTargetType: Record<string, number> }>();
-      for (const row of since30Rows) {
-        const day = row.createdAt.toISOString().slice(0, 10);
-        const bucket = dayBuckets.get(day) ?? { date: day, count: 0, byTargetType: {} };
-        bucket.count += 1;
-        const details = (row.details ?? {}) as Record<string, unknown>;
-        const targetType = typeof details.targetType === 'string' ? details.targetType : 'other';
-        bucket.byTargetType[targetType] = (bucket.byTargetType[targetType] ?? 0) + 1;
-        dayBuckets.set(day, bucket);
+      for (const r of dayBucketResult.rows) {
+        const bucket = dayBuckets.get(r.day) ?? { date: r.day, count: 0, byTargetType: {} };
+        bucket.count += r.count;
+        bucket.byTargetType[r.target_type] = (bucket.byTargetType[r.target_type] ?? 0) + r.count;
+        dayBuckets.set(r.day, bucket);
       }
       // Fill in missing days so the chart has a stable 30-point x-axis.
       const dayKeys: string[] = [];
@@ -673,15 +689,28 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
         const mod = allModuleRows.find(m => m.id === tm.moduleId);
         if (mod) ensureSeries(mod.slug);
       }
-      for (const row of since30Rows) {
-        const details = (row.details ?? {}) as Record<string, unknown>;
-        const slug = typeof details.moduleSlug === 'string' ? details.moduleSlug : null;
-        if (!slug) continue;
-        const day = row.createdAt.toISOString().slice(0, 10);
-        const s = ensureSeries(slug);
-        s.total += 1;
-        s.byDay[day] = (s.byDay[day] ?? 0) + 1;
-        s.byAction[row.action] = (s.byAction[row.action] ?? 0) + 1;
+      // Per-module/day/action aggregation — also pushed into Postgres so
+      // the result set is bounded by (modules × days × actions) and not
+      // by audit volume. Filtering on `details->>'moduleSlug' IS NOT NULL`
+      // keeps the JSONB extraction limited to module-tagged events.
+      const moduleAggResult = await db.execute<{
+        day: string; module_slug: string; action: string; count: number;
+      }>(sql`
+        SELECT to_char(date_trunc('day', created_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day,
+               details->>'moduleSlug'                                                   AS module_slug,
+               action                                                                   AS action,
+               COUNT(*)::int                                                            AS count
+        FROM admin_audit_logs
+        WHERE tenant_id = ${tenantId}
+          AND created_at >= ${since}
+          AND details->>'moduleSlug' IS NOT NULL
+        GROUP BY 1, 2, 3
+      `);
+      for (const r of moduleAggResult.rows) {
+        const s = ensureSeries(r.module_slug);
+        s.total += r.count;
+        s.byDay[r.day] = (s.byDay[r.day] ?? 0) + r.count;
+        s.byAction[r.action] = (s.byAction[r.action] ?? 0) + r.count;
       }
       // Materialize byDay into the same 30-point x-axis so the UI can
       // render a stable per-module series.
