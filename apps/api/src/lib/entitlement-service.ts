@@ -258,7 +258,7 @@ export async function getUserModules(userId: string, tenantId: string): Promise<
       hasBaseUrl: !!m.baseUrl,
       upgradeTarget,
       addonPriceCents,
-      addonPurchasable: isAddonPurchasable(m.slug),
+      addonPurchasable: isAddonPurchasable(m),
     });
     out.push({
       module: {
@@ -299,7 +299,7 @@ export async function getModuleForUser(userId: string, tenantId: string, moduleS
     hasBaseUrl: !!m.baseUrl,
     upgradeTarget,
     addonPriceCents,
-    addonPurchasable: isAddonPurchasable(m.slug),
+    addonPurchasable: isAddonPurchasable(m),
   });
   return {
     module: {

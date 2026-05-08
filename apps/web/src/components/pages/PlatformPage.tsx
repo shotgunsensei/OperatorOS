@@ -909,9 +909,13 @@ interface AddonPriceHistoryEntry {
 function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: () => void }) {
   const meta = (m.metadata ?? {}) as any;
   const current: number | null = typeof meta.addonPriceCents === 'number' ? meta.addonPriceCents : null;
+  const currentPriceId: string = typeof meta.stripePriceId === 'string' ? meta.stripePriceId : '';
   const [cents, setCents] = useState<string>(current != null ? String(current) : '');
+  const [priceId, setPriceId] = useState<string>(currentPriceId);
   const [err, setErr] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const [priceIdBusy, setPriceIdBusy] = useState(false);
+  const [priceIdResult, setPriceIdResult] = useState<any>(null);
   const [drift, setDrift] = useState<any>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<AddonPriceHistoryEntry[] | null>(null);
@@ -962,6 +966,18 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
       onSaved();
     } catch (e) { setErr(e); } finally { setRestoringId(null); }
   };
+  const savePriceId = async (clear = false) => {
+    setErr(null); setPriceIdResult(null); setPriceIdBusy(true);
+    try {
+      const r = await apiCall(`/v1/platform/modules/${m.slug}/stripe-price-id`, {
+        method: 'PUT',
+        body: JSON.stringify({ stripePriceId: clear ? null : priceId.trim() }),
+      });
+      setPriceIdResult(r?.validation ?? { ok: true, cleared: clear });
+      if (clear) setPriceId('');
+      onSaved();
+    } catch (e) { setErr(e); } finally { setPriceIdBusy(false); }
+  };
   const lookup = drift?.lookup;
   const fmt = (c: number | null) => c == null ? '—' : `${c}¢`;
   return (
@@ -979,6 +995,52 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
         <Btn data-testid="button-save-addon-price" variant="primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save price'}</Btn>
         <Btn data-testid="button-check-stripe-price" onClick={checkStripe}>Check Stripe drift</Btn>
         <Btn data-testid="button-toggle-price-history" onClick={toggleHistory}>{historyOpen ? 'Hide price history' : 'Price history'}</Btn>
+      </div>
+      <div style={{ borderTop: `1px solid ${colors.border}`, marginTop: 12, paddingTop: 12 }}>
+        <h3 style={{ marginTop: 0, fontSize: 14 }}>Stripe Price ID override</h3>
+        <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8 }}>
+          Stored at <code>metadata.stripePriceId</code>. Preferred over the
+          legacy <code>STRIPE_PRICE_ADDON_{m.slug.toUpperCase().replace(/-/g, '_')}</code> env binding.
+          The id is validated against Stripe before it is saved.
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 320px', minWidth: 220 }}>
+            <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Stripe Price ID (e.g. price_1A2b…)</label>
+            <input
+              data-testid="input-stripe-price-id"
+              value={priceId}
+              onChange={e => setPriceId(e.target.value)}
+              placeholder="price_…"
+              style={{ ...inp, width: '100%' }}
+            />
+          </div>
+          <Btn data-testid="button-save-stripe-price-id" variant="primary" disabled={priceIdBusy || !priceId.trim()} onClick={() => savePriceId(false)}>
+            {priceIdBusy ? 'Validating…' : 'Save price id'}
+          </Btn>
+          <Btn data-testid="button-clear-stripe-price-id" disabled={priceIdBusy || !currentPriceId} onClick={() => savePriceId(true)}>
+            Clear override
+          </Btn>
+        </div>
+        {currentPriceId && (
+          <div style={{ marginTop: 6, fontSize: 12, color: colors.textMuted }}>
+            current override: <code data-testid="text-current-stripe-price-id">{currentPriceId}</code>
+          </div>
+        )}
+        {priceIdResult && (
+          <div data-testid="block-stripe-price-id-result" style={{ marginTop: 8, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }}>
+            {priceIdResult.cleared
+              ? <Pill tone="green">override cleared</Pill>
+              : (
+                <>
+                  <Pill tone={priceIdResult.ok ? 'green' : 'red'}>{priceIdResult.ok ? 'validated' : 'invalid'}</Pill>{' '}
+                  {priceIdResult.unitAmountCents != null && <>{priceIdResult.unitAmountCents}¢ </>}
+                  {priceIdResult.currency && <>({priceIdResult.currency}) </>}
+                  {priceIdResult.active === false && <Pill tone="yellow">inactive</Pill>}
+                </>
+              )
+            }
+          </div>
+        )}
       </div>
       {lookup && (
         <div data-testid="block-stripe-drift" style={{ marginTop: 8, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }}>

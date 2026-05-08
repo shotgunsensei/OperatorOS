@@ -36,6 +36,9 @@ function pathToView(slug: string[] | undefined): PlatformView {
     case 'modules':
       if (rest[0]) return { kind: 'module', slug: rest[0] };
       return { kind: 'modules' };
+    case 'users':
+      if (rest[0]) return { kind: 'user', id: rest[0] };
+      return { kind: 'users' };
     case 'billing': return { kind: 'billing' };
     case 'pricing': return { kind: 'pricing' };
     case 'health':  return { kind: 'health' };

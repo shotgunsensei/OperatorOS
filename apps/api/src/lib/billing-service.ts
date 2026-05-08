@@ -653,8 +653,35 @@ export function getAddonStripePriceEnvKey(moduleSlug: string): string {
   return `STRIPE_PRICE_ADDON_${moduleSlug.toUpperCase().replace(/-/g, '_')}`;
 }
 
-export function getAddonStripePriceId(moduleSlug: string): string {
+// Returns the env-var-bound Stripe Price ID for the module's add-on. Kept
+// for the rare callsite that has only the slug and intentionally wants the
+// env binding (e.g. the Pricing tab "envKey/envKeyConfigured" surface).
+// Most callers should prefer `getAddonStripePriceIdFromModule` so that an
+// admin-edited override on `modules.metadata.stripePriceId` wins.
+export function getAddonStripePriceIdFromEnv(moduleSlug: string): string {
   return process.env[getAddonStripePriceEnvKey(moduleSlug)] || '';
+}
+
+// Resolves the effective Stripe Price ID for a module's add-on, preferring
+// the per-module override stored in `modules.metadata.stripePriceId` and
+// falling back to the legacy env binding so existing deployments keep
+// working without an admin edit.
+export function getAddonStripePriceIdFromModule(
+  mod: { slug: string; metadata?: Record<string, unknown> | null } | null | undefined,
+): string {
+  if (!mod) return '';
+  const md = (mod.metadata ?? {}) as Record<string, unknown>;
+  const fromMeta = typeof md.stripePriceId === 'string' ? md.stripePriceId.trim() : '';
+  if (fromMeta) return fromMeta;
+  return getAddonStripePriceIdFromEnv(mod.slug);
+}
+
+// Async helper for callers that only have a slug. Loads the module and
+// applies the metadata-first resolution.
+export async function getAddonStripePriceId(moduleSlug: string): Promise<string> {
+  const [mod] = await db.select({ slug: modules.slug, metadata: modules.metadata })
+    .from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
+  return getAddonStripePriceIdFromModule(mod ?? null);
 }
 
 // Fetches the live unit_amount + currency for a module's
@@ -675,7 +702,7 @@ export interface AddonStripePriceLookup {
 
 export async function lookupAddonStripePrice(moduleSlug: string): Promise<AddonStripePriceLookup> {
   const envKey = getAddonStripePriceEnvKey(moduleSlug);
-  const priceId = process.env[envKey] || '';
+  const priceId = await getAddonStripePriceId(moduleSlug);
   const base: AddonStripePriceLookup = {
     envKey,
     priceId,
@@ -753,11 +780,58 @@ export async function createAddonStripePrice(
   };
 }
 
+// Validates a Stripe Price ID by retrieving it from Stripe. Used by the
+// admin "edit price id" surface so we never persist a bogus id that would
+// break the checkout flow. Returns the live price details on success.
+export interface AddonStripePriceValidation {
+  ok: boolean;
+  priceId: string;
+  unitAmountCents: number | null;
+  currency: string | null;
+  active: boolean | null;
+  error: string | null;
+}
+
+export async function validateAddonStripePriceId(priceId: string): Promise<AddonStripePriceValidation> {
+  const trimmed = priceId.trim();
+  const base: AddonStripePriceValidation = {
+    ok: false, priceId: trimmed, unitAmountCents: null,
+    currency: null, active: null, error: null,
+  };
+  if (!trimmed) {
+    return { ...base, error: 'Stripe Price ID is required' };
+  }
+  if (!/^price_[A-Za-z0-9]+$/.test(trimmed)) {
+    return { ...base, error: 'Stripe Price ID must look like "price_XXXX"' };
+  }
+  if (!STRIPE_SECRET_KEY) {
+    return { ...base, error: 'STRIPE_SECRET_KEY is not configured; cannot validate price id' };
+  }
+  try {
+    const stripe = getStripe();
+    const price = await stripe.prices.retrieve(trimmed);
+    return {
+      ok: true,
+      priceId: trimmed,
+      unitAmountCents: typeof price.unit_amount === 'number' ? price.unit_amount : null,
+      currency: typeof price.currency === 'string' ? price.currency : null,
+      active: typeof price.active === 'boolean' ? price.active : null,
+      error: null,
+    };
+  } catch (err: any) {
+    return { ...base, error: err?.message || 'Stripe price lookup failed' };
+  }
+}
+
 // In local-mode (no Stripe) the buy_addon CTA is allowed so dev can
 // exercise the local addon path; with Stripe enabled, a price id is required.
-export function isAddonPurchasable(moduleSlug: string): boolean {
+// Accepts the loaded module row so the metadata override on
+// `modules.metadata.stripePriceId` is honored without a second DB roundtrip.
+export function isAddonPurchasable(
+  mod: { slug: string; metadata?: Record<string, unknown> | null } | null | undefined,
+): boolean {
   if (!isStripeEnabled()) return true;
-  return !!getAddonStripePriceId(moduleSlug);
+  return !!getAddonStripePriceIdFromModule(mod);
 }
 
 export class AddonNotPurchasableError extends Error {
@@ -772,12 +846,15 @@ export class AddonNotPurchasableError extends Error {
 // Fail-closed: with Stripe enabled but no STRIPE_PRICE_ADDON_<SLUG>,
 // the purchase endpoint must refuse instead of falling through to the
 // local-mode insert (which would grant a free addon).
-export function assertAddonPurchasableOrThrow(moduleSlug: string): void {
-  if (isStripeEnabled() && !getAddonStripePriceId(moduleSlug)) {
+export function assertAddonPurchasableOrThrow(
+  mod: { slug: string; metadata?: Record<string, unknown> | null },
+): void {
+  if (isStripeEnabled() && !getAddonStripePriceIdFromModule(mod)) {
     throw new AddonNotPurchasableError(
-      moduleSlug,
-      `Add-on for module "${moduleSlug}" is not configured for purchase in this environment. ` +
-      `Stripe is enabled but STRIPE_PRICE_ADDON_${moduleSlug.toUpperCase().replace(/-/g, '_')} is missing.`
+      mod.slug,
+      `Add-on for module "${mod.slug}" is not configured for purchase in this environment. ` +
+      `Stripe is enabled but neither modules.metadata.stripePriceId nor ` +
+      `STRIPE_PRICE_ADDON_${mod.slug.toUpperCase().replace(/-/g, '_')} is set.`
     );
   }
 }
@@ -800,7 +877,7 @@ export async function subscribeToAddon(
   if (mod.status === 'coming_soon') throw new Error(`Module is not yet available: ${moduleSlug}`);
 
   // Fail-closed before any branch that could create an active addon row.
-  assertAddonPurchasableOrThrow(moduleSlug);
+  assertAddonPurchasableOrThrow(mod);
 
   // Dedupe scope: when a tenantId is provided, the same admin user can
   // legitimately purchase the same addon for a different tenant, so only
@@ -815,7 +892,7 @@ export async function subscribeToAddon(
   );
   if (active) return { ok: true, moduleSlug, action: 'already_active' };
 
-  const priceId = getAddonStripePriceId(moduleSlug);
+  const priceId = getAddonStripePriceIdFromModule(mod);
   if (isStripeEnabled() && priceId) {
     const stripe = getStripe();
     const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);

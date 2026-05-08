@@ -417,7 +417,7 @@ export async function canPurchaseAddon(
 
   const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
   if (!mod) return { allowed: false, code: 'MODULE_NOT_FOUND', reason: 'Unknown module' };
-  if (!isAddonPurchasable(moduleSlug)) {
+  if (!isAddonPurchasable(mod)) {
     return { allowed: false, code: 'ADDON_NOT_PURCHASABLE', reason: 'No Stripe price configured for this add-on in this environment' };
   }
   const existing = await db.select().from(addonSubscriptions)

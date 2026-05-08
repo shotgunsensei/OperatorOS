@@ -41,7 +41,7 @@ import {
   TENANT_SAFE_FIELDS, MODULE_SAFE_FIELDS,
   TENANT_MODULE_SAFE_FIELDS, TENANT_USER_ACCESS_SAFE_FIELDS,
 } from '../lib/audit.js';
-import { lookupAddonStripePrice, getAddonStripePriceEnvKey, getAddonStripePriceId, retryBillingEvent, createAddonStripePrice, resyncUserBilling } from '../lib/billing-service.js';
+import { lookupAddonStripePrice, getAddonStripePriceEnvKey, getAddonStripePriceId, retryBillingEvent, createAddonStripePrice, resyncUserBilling, validateAddonStripePriceId } from '../lib/billing-service.js';
 import { getModuleAccessTrace } from '../lib/entitlement-service.js';
 import { getSsoCleanupHealth } from '../lib/sso-cleanup.js';
 
@@ -1453,6 +1453,67 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     },
   );
 
+  // Per-module Stripe Price ID override stored at modules.metadata.stripePriceId.
+  // The override is preferred over the legacy STRIPE_PRICE_ADDON_<SLUG> env var
+  // so admins can rotate the price without a redeploy. We always validate the
+  // id against Stripe (`prices.retrieve`) before persisting so a bad id can
+  // never break the checkout flow. Pass `stripePriceId: null` (or empty) to
+  // clear the override and fall back to the env binding.
+  app.put<{ Params: { slug: string }; Body: { stripePriceId: string | null } }>(
+    '/v1/platform/modules/:slug/stripe-price-id',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { slug } = request.params;
+      const raw = request.body?.stripePriceId;
+      const incoming = typeof raw === 'string' ? raw.trim() : '';
+      const isClear = raw === null || incoming === '';
+
+      const [before] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
+      const existingMd = (before.metadata ?? {}) as Record<string, unknown>;
+      const previous = typeof existingMd.stripePriceId === 'string' ? existingMd.stripePriceId : null;
+
+      let validation: Awaited<ReturnType<typeof validateAddonStripePriceId>> | null = null;
+      if (!isClear) {
+        validation = await validateAddonStripePriceId(incoming);
+        if (!validation.ok) {
+          return reply.code(400).send({
+            error: validation.error || 'Invalid Stripe Price ID',
+            code: 'STRIPE_PRICE_INVALID',
+            validation,
+          });
+        }
+      }
+
+      const nextMd = { ...existingMd };
+      if (isClear) delete (nextMd as any).stripePriceId;
+      else (nextMd as any).stripePriceId = incoming;
+
+      const [after] = await db.update(modules)
+        .set({ metadata: nextMd, updatedAt: new Date() })
+        .where(eq(modules.slug, slug)).returning();
+
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'module',
+        targetId: before.id,
+        action: 'module_stripe_price_id_updated',
+        before: pickSafe(before, [...MODULE_SAFE_FIELDS]),
+        after: pickSafe(after, [...MODULE_SAFE_FIELDS]),
+        extra: {
+          slug,
+          previousPriceId: previous,
+          nextPriceId: isClear ? null : incoming,
+          cleared: isClear,
+        },
+        ipAddress: request.ip,
+      }, request);
+
+      return { module: after, validation };
+    },
+  );
+
   app.get<{ Params: { slug: string } }>(
     '/v1/platform/modules/:slug/members',
     { preHandler: [requireSuperAdmin] },
@@ -1601,10 +1662,14 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       const enrichedAddons = addons.map(a => ({
         ...a, moduleSlug: modById[a.moduleId]?.slug, moduleName: modById[a.moduleId]?.name,
       }));
+      const [targetUser] = await db.select({ currentTenantId: users.currentTenantId })
+        .from(users).where(eq(users.id, id)).limit(1);
       const breakdowns: any[] = [];
-      for (const m of allModules) {
-        const b = await getModuleAccessTrace(id, m.slug);
-        if (b) breakdowns.push(b);
+      if (targetUser?.currentTenantId) {
+        for (const m of allModules) {
+          const b = await getModuleAccessTrace(id, targetUser.currentTenantId, m.slug);
+          if (b) breakdowns.push(b);
+        }
       }
       return { overrides: enriched, addons: enrichedAddons, breakdowns };
     },
