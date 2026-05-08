@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import AuthProvider, { useAuth } from '@/components/AuthProvider';
+import TenantProvider, { useTenant } from '@/components/TenantProvider';
 import { ToastProvider } from '@/components/Toast';
 import SaasLayout from '@/components/SaasLayout';
 import LoginPage from '@/components/pages/LoginPage';
@@ -21,46 +22,41 @@ import TenantUsersPage from '@/components/pages/TenantUsersPage';
 import TenantModulesPage from '@/components/pages/TenantModulesPage';
 import TenantSettingsPage from '@/components/pages/TenantSettingsPage';
 import TenantBillingPage from '@/components/pages/TenantBillingPage';
-import { meApi } from '@/lib/auth';
-
 function AppContent() {
   const { user, loading, authError, logout, clearAuthError } = useAuth();
+  const { activeRole: tenantRole } = useTenant();
   const [authPage, setAuthPage] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>('login');
   // Default landing is set per-role once we know the user (effect below).
   // 'my-apps' is the safe fallback for any non-admin user.
   const [activePage, setActivePage] = useState<string>('my-apps');
-  const [tenantRole, setTenantRole] = useState<'owner' | 'admin' | 'member' | null>(null);
+  const [didInitialLand, setDidInitialLand] = useState(false);
 
-  // Discover the caller's tenant role for the active tenant. We use this to
-  // (a) decide the default landing page and (b) reveal Tenant Admin entries
-  // in the sidebar. We only run once per login.
+  // Reset the one-shot landing flag whenever the authenticated user changes
+  // (including logout) so a subsequent login re-applies the role-based
+  // default landing page.
   useEffect(() => {
-    if (!user) { setTenantRole(null); return; }
-    let alive = true;
-    (async () => {
-      try {
-        const me = await meApi.tenants();
-        const current = me.current ?? me.tenants?.[0]?.id ?? null;
-        const t = me.tenants?.find((x: any) => x.id === current) ?? null;
-        if (!alive) return;
-        const role = (t?.role ?? null) as any;
-        setTenantRole(role);
-        // Set the *initial* landing only — user nav after login is preserved.
-        if (activePage === 'my-apps') {
-          if ((user as any).platformRole === 'super_admin') {
-            // Super admins land on the dedicated /platform surface.
-            setActivePage('platform');
-          } else if (role === 'owner' || role === 'admin') {
-            setActivePage('command-center');
-          }
-        }
-      } catch {
-        // Ignore — leave defaults in place.
-      }
-    })();
-    return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!user) {
+      setDidInitialLand(false);
+      setActivePage('my-apps');
+    }
   }, [user?.id]);
+
+  // Pick the *initial* landing page once tenant role is known. Subsequent
+  // user navigation is preserved.
+  useEffect(() => {
+    if (!user || didInitialLand) return;
+    if (activePage !== 'my-apps') { setDidInitialLand(true); return; }
+    if ((user as any).platformRole === 'super_admin') {
+      setActivePage('platform');
+      setDidInitialLand(true);
+    } else if (tenantRole === 'owner' || tenantRole === 'admin') {
+      setActivePage('command-center');
+      setDidInitialLand(true);
+    } else if (tenantRole === 'member') {
+      setDidInitialLand(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, tenantRole]);
 
   // If the user landed on /invites/:token before signing in, the invite page
   // parks the token in localStorage and bounces them here. Once they finish
@@ -163,9 +159,11 @@ function AppContent() {
 export default function Home() {
   return (
     <AuthProvider>
-      <ToastProvider>
-        <AppContent />
-      </ToastProvider>
+      <TenantProvider>
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
+      </TenantProvider>
     </AuthProvider>
   );
 }

@@ -12,6 +12,10 @@ async function request<T>(path: string, opts?: RequestInit): Promise<T> {
   const url = `${base}${path}`;
   const headers: Record<string, string> = {};
   if (opts?.body) headers['Content-Type'] = 'application/json';
+  if (typeof window !== 'undefined') {
+    const tenantId = localStorage.getItem('activeTenantId');
+    if (tenantId) headers['X-Tenant-Id'] = tenantId;
+  }
   const res = await fetch(url, {
     ...opts,
     headers: { ...headers, ...(opts?.headers as Record<string, string>) },

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, ChevronLeft } from 'lucide-react';
 import { useAuth } from './AuthProvider';
+import TenantSwitcher from './TenantSwitcher';
 import { buildNavSections } from '@/lib/sidebar-nav';
 
 // Centralized palette. Re-exported below + via lib/design-tokens.ts so all
@@ -254,26 +255,38 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
       {sidebar}
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {isMobile && (
-          <div style={{
-            height: 48, display: 'flex', alignItems: 'center', gap: 12,
-            padding: '0 16px', borderBottom: `1px solid ${colors.border}`,
-            background: colors.bgSecondary, flexShrink: 0,
-          }}>
-            <button
-              data-testid="button-open-sidebar"
-              onClick={() => setMobileOpen(true)}
-              style={{ background: 'none', border: 'none', color: colors.text, cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
-            ><Menu size={20} /></button>
-            <div style={{
-              width: 24, height: 24, borderRadius: 6,
-              background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontWeight: 800, color: '#fff',
-            }}>O</div>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>OperatorOS</span>
-          </div>
-        )}
+        <div
+          data-testid="topbar"
+          style={{
+            height: isMobile ? 48 : 52,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '0 16px',
+            borderBottom: `1px solid ${colors.border}`,
+            background: colors.bgSecondary,
+            flexShrink: 0,
+          }}
+        >
+          {isMobile && (
+            <>
+              <button
+                data-testid="button-open-sidebar"
+                onClick={() => setMobileOpen(true)}
+                style={{ background: 'none', border: 'none', color: colors.text, cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
+              ><Menu size={20} /></button>
+              <div style={{
+                width: 24, height: 24, borderRadius: 6,
+                background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12, fontWeight: 800, color: '#fff',
+              }}>O</div>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>OperatorOS</span>
+            </>
+          )}
+          <div style={{ flex: 1 }} />
+          <TenantSwitcher />
+        </div>
 
         <main style={{ flex: 1, overflow: 'auto', background: colors.bg }}>
           {children}

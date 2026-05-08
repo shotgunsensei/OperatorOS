@@ -2,13 +2,28 @@
 
 const API_BASE = '/api';
 
+const ACTIVE_TENANT_KEY = 'activeTenantId';
+
+export function getActiveTenantId(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(ACTIVE_TENANT_KEY);
+}
+
+export function setActiveTenantId(tenantId: string | null) {
+  if (typeof window === 'undefined') return;
+  if (tenantId) localStorage.setItem(ACTIVE_TENANT_KEY, tenantId);
+  else localStorage.removeItem(ACTIVE_TENANT_KEY);
+}
+
 async function apiFetch(path: string, options: RequestInit = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const tenantId = getActiveTenantId();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (tenantId && !headers['X-Tenant-Id']) headers['X-Tenant-Id'] = tenantId;
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: 'include' });
   const data = await res.json();
@@ -210,6 +225,8 @@ export const meApi = {
   // the My Apps launchpad.
   modules: () => apiFetch('/me/modules'),
   tenants: () => apiFetch('/me/tenants'),
+  // Super-admin only — list every tenant in the platform.
+  allTenants: () => apiFetch('/tenants'),
 };
 
 export const tenantApi = {
@@ -252,6 +269,10 @@ export const tenantApi = {
   // Tenant rename (owner only).
   rename: (tenantId: string, name: string) =>
     apiFetch(`/tenants/${tenantId}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+
+  // Switch the caller's active tenant (writes users.current_tenant_id).
+  switch: (tenantId: string) =>
+    apiFetch(`/tenants/${tenantId}/switch`, { method: 'POST' }),
 };
 
 export const modulesApi = {

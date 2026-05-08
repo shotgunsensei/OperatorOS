@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { authApi } from '@/lib/auth';
+import { authApi, setActiveTenantId } from '@/lib/auth';
 
 interface User {
   id: string;
@@ -53,11 +53,16 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const refresh = useCallback(async () => {
     try {
       const { user } = await authApi.me();
+      // Seed the active tenant from the server-side current_tenant_id on
+      // cold reloads so the very first downstream request already carries
+      // X-Tenant-Id, even before TenantProvider.refresh() completes.
+      setActiveTenantId(user?.currentTenantId ?? null);
       setUser(user);
       setAuthError(null);
     } catch (err: any) {
       setUser(null);
       localStorage.removeItem('token');
+      setActiveTenantId(null);
       if (err?.code === 'ACCOUNT_SUSPENDED') {
         setAuthError({ code: 'ACCOUNT_SUSPENDED', message: err.error || 'Account suspended' });
       } else if (err?.code === 'ACCOUNT_DELETED') {
@@ -76,6 +81,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     setAuthError(null);
     const data = await authApi.login(email, password);
     localStorage.setItem('token', data.token);
+    // Seed active tenant immediately so the very first post-login request
+    // already carries X-Tenant-Id, instead of racing TenantProvider.refresh().
+    setActiveTenantId(data.user?.currentTenantId ?? null);
     setUser(data.user);
   };
 
@@ -83,6 +91,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     setAuthError(null);
     const data = await authApi.register(email, password, name);
     localStorage.setItem('token', data.token);
+    setActiveTenantId(data.user?.currentTenantId ?? null);
     setUser(data.user);
   };
 
@@ -91,6 +100,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       await authApi.logout();
     } catch {}
     localStorage.removeItem('token');
+    setActiveTenantId(null);
     setUser(null);
     setAuthError(null);
   };

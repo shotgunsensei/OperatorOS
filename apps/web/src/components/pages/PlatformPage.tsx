@@ -48,11 +48,13 @@ type View = PlatformView;
 
 async function apiCall(path: string, init: RequestInit = {}): Promise<any> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  const tenantId = typeof window !== 'undefined' ? localStorage.getItem('activeTenantId') : null;
   const res = await fetch(`${API}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(tenantId ? { 'X-Tenant-Id': tenantId } : {}),
       ...(init.headers ?? {}),
     },
     credentials: 'include',

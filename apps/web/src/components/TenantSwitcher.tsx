@@ -1,0 +1,250 @@
+'use client';
+
+import React, { useEffect, useRef, useState } from 'react';
+import { Building2, Check, ChevronDown, Shield } from 'lucide-react';
+import { useTenant, type TenantSummary } from './TenantProvider';
+import { useAuth } from './AuthProvider';
+
+const colors = {
+  bgSecondary: '#0d1117',
+  bgHover: '#161b22',
+  border: '#21262d',
+  text: '#c9d1d9',
+  textMuted: '#8b949e',
+  textDim: '#484f58',
+  accent: '#58a6ff',
+  accentPurple: '#bc8cff',
+};
+
+export default function TenantSwitcher() {
+  const { user } = useAuth();
+  const { tenants, allTenants, activeTenant, loading, switchTenant } = useTenant();
+  const [open, setOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const isSuperAdmin = (user as any)?.platformRole === 'super_admin';
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [open]);
+
+  if (!user) return null;
+
+  const handlePick = async (tenantId: string) => {
+    if (tenantId === activeTenant?.id) { setOpen(false); return; }
+    setBusyId(tenantId);
+    try {
+      await switchTenant(tenantId);
+      // switchTenant reloads the page; this is mostly defensive.
+      setOpen(false);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to switch tenant', err);
+      setBusyId(null);
+    }
+  };
+
+  const memberList = tenants;
+  const otherTenants = isSuperAdmin && showAll
+    ? allTenants.filter((t) => !memberList.some((m) => m.id === t.id))
+    : [];
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }} data-testid="tenant-switcher">
+      <button
+        data-testid="button-tenant-switcher"
+        onClick={() => setOpen(!open)}
+        disabled={loading}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '6px 10px',
+          background: colors.bgSecondary,
+          border: `1px solid ${colors.border}`,
+          borderRadius: 8,
+          color: colors.text,
+          cursor: loading ? 'default' : 'pointer',
+          fontSize: 13,
+          fontWeight: 500,
+          minWidth: 0,
+          maxWidth: 260,
+        }}
+        title={activeTenant?.name || 'No tenant'}
+      >
+        <Building2 size={14} style={{ color: colors.accent, flexShrink: 0 }} />
+        <span
+          data-testid="text-active-tenant"
+          style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}
+        >
+          {loading ? 'Loading…' : (activeTenant?.name ?? 'No tenant')}
+        </span>
+        {activeTenant?.role && (
+          <span
+            data-testid="text-active-tenant-role"
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              color: colors.textMuted,
+              padding: '2px 6px',
+              border: `1px solid ${colors.border}`,
+              borderRadius: 4,
+              flexShrink: 0,
+            }}
+          >{activeTenant.role}</span>
+        )}
+        <ChevronDown size={14} style={{ color: colors.textDim, flexShrink: 0 }} />
+      </button>
+
+      {open && (
+        <div
+          data-testid="tenant-switcher-menu"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            minWidth: 280,
+            maxWidth: 360,
+            background: colors.bgSecondary,
+            border: `1px solid ${colors.border}`,
+            borderRadius: 8,
+            padding: 4,
+            zIndex: 200,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            maxHeight: 400,
+            overflowY: 'auto',
+          }}
+        >
+          <SectionLabel>Your tenants</SectionLabel>
+          {memberList.length === 0 && (
+            <div style={{ padding: '8px 12px', fontSize: 12, color: colors.textMuted }}>
+              You are not a member of any tenant.
+            </div>
+          )}
+          {memberList.map((t) => (
+            <TenantRow
+              key={t.id}
+              tenant={t}
+              active={t.id === activeTenant?.id}
+              busy={busyId === t.id}
+              onPick={() => handlePick(t.id)}
+            />
+          ))}
+
+          {isSuperAdmin && (
+            <>
+              <div style={{ height: 1, background: colors.border, margin: '6px 4px' }} />
+              <button
+                data-testid="button-toggle-all-tenants"
+                onClick={() => setShowAll((v) => !v)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 12px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderRadius: 6,
+                  color: colors.accentPurple,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+                onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = colors.bgHover}
+                onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+              >
+                <Shield size={12} />
+                {showAll ? 'Hide all tenants' : 'Show all tenants (super admin)'}
+              </button>
+              {showAll && otherTenants.length === 0 && (
+                <div style={{ padding: '8px 12px', fontSize: 12, color: colors.textMuted }}>
+                  No other tenants on the platform.
+                </div>
+              )}
+              {showAll && otherTenants.map((t) => (
+                <TenantRow
+                  key={t.id}
+                  tenant={t}
+                  active={t.id === activeTenant?.id}
+                  busy={busyId === t.id}
+                  onPick={() => handlePick(t.id)}
+                  superView
+                />
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      padding: '6px 12px 4px',
+      fontSize: 10,
+      fontWeight: 600,
+      letterSpacing: '0.06em',
+      textTransform: 'uppercase',
+      color: colors.textDim,
+    }}>{children}</div>
+  );
+}
+
+function TenantRow({
+  tenant, active, busy, onPick, superView,
+}: {
+  tenant: TenantSummary;
+  active: boolean;
+  busy: boolean;
+  onPick: () => void;
+  superView?: boolean;
+}) {
+  return (
+    <button
+      data-testid={`button-pick-tenant-${tenant.id}`}
+      onClick={onPick}
+      disabled={busy}
+      style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '8px 12px',
+        background: active ? colors.bgHover : 'transparent',
+        border: 'none',
+        borderRadius: 6,
+        color: colors.text,
+        cursor: busy ? 'progress' : 'pointer',
+        textAlign: 'left',
+        fontSize: 13,
+      }}
+      onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = colors.bgHover; }}
+      onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+    >
+      <Building2 size={14} style={{ color: superView ? colors.accentPurple : colors.accent, flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontWeight: active ? 600 : 500,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{tenant.name}</div>
+        <div style={{ fontSize: 11, color: colors.textMuted }}>
+          {tenant.slug}{tenant.role ? ` · ${tenant.role}` : (superView ? ' · not a member' : '')}
+        </div>
+      </div>
+      {active && <Check size={14} style={{ color: colors.accent, flexShrink: 0 }} />}
+    </button>
+  );
+}
