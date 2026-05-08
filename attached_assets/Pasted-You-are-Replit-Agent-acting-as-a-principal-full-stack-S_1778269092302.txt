@@ -1,0 +1,136 @@
+You are Replit Agent acting as a principal full-stack SaaS architect. Work inside the existing OperatorOS pnpm
+monorepo. Do not rebuild from scratch. Your job is to finish OperatorOS as the central Shotgun Ninjas product
+ecosystem command center: custom JWT auth remains the source of truth, OperatorOS owns tenant identity, module
+catalog, entitlements, Stripe billing, and SSO handoff into external modules.
+Primary goal
+Ship a production-ready OperatorOS MVP where:
+1. Super admin can manage tenants, users, modules, plan/package inclusion, add-on pricing, Stripe price IDs, module
+URLs, module statuses, tenant entitlements, billing events, and audit logs.
+2. Tenant owners/admins can manage members, invites, module access, tenant settings, billing, and add-ons.
+3. Regular users land on My Apps, see only usable modules, request access where needed, and launch entitled apps
+through secure SSO handoff.
+4. Stripe plan subscriptions and add-on subscriptions update entitlements through webhooks, not fake client-side
+state.
+5. The UI no longer feels like a generic project/task SaaS. It must feel like an OperatorOS ecosystem hub for the
+Shotgun Ninjas product arsenal.
+Hard constraints
+- Preserve existing custom JWT auth. Do not migrate to Clerk, Supabase Auth, Replit Auth, or another provider.
+- Preserve existing tenant tables, module tables, plan_modules, tenant_modules, tenant_user_module_access,
+addon_subscriptions, entitlement_overrides, sso_handoff_tokens, billing_events, and admin_audit_logs unless a
+migration is required.
+- Preserve the current env var convention unless adding missing variables is required.
+- Do not leave dead buttons, placeholder controls, or fake state.
+- All access checks must be enforced server-side.
+- All Stripe webhooks must verify signature using raw body.
+- Do not expose secrets to the browser.
+Immediate P0 fixes before feature work
+1. Fix PlatformPage token retrieval. It currently reads localStorage key auth_token, while AuthProvider stores
+token. Make Platform Command use the same auth helper/apiFetch pattern as the rest of the app or read token
+consistently.
+2. Audit all unauthenticated CDE/workspace endpoints in apps/api/src/index.ts. Either protect them with authenticate
++ tenant scoping or hide/disable them behind an explicit DEV_CDE_ENABLED flag for production. No unauthenticated
+command execution, patching, git commits, file reads, runner start/stop, or task execution may be available in
+production.
+3. Replace require('stripe') in ESM code with a safe dynamic import or static import so Stripe works at runtime
+under type=module.
+4. Add APP_URL, STRIPE_SUCCESS_URL, STRIPE_CANCEL_URL, and STRIPE_PORTAL_RETURN_URL to .env.example and use them in
+billing-service.ts. Keep sane local defaults.
+5. Decide Stripe test behavior. Add a safe production-ready mode where STRIPE_MODE=test with sk_test_ can create
+Stripe test Checkout sessions, while live requires sk_live_. Do not require STRIPE_MODE=live for test checkout.
+6. Stop hiding build problems. Keep Next production build deployable, but add a required `pnpm verify` script that
+runs API typecheck, runner typecheck, web typecheck, route smoke tests, and lint where available. Report failures
+clearly.
+Plan/package model to implement
+The current seed uses planMin to auto-include modules by tier. Replace this with an explicit package inclusion
+manager:
+- Starter, Pro, Elite remain baseline plans.
+- plan_modules should be the durable source of package inclusion.
+- Reboot/seeding must never silently re-add a module to a plan after a super admin removed it.
+- Keep planMin as a suggested default/minimum label only, not as the only source of truth.
+- Add Platform Command UI for package inclusion with checkboxes by plan and module.
+- Add API endpoints to read/update plan_modules safely with audit logging.
+- Seed defaults only on first install or when a new module is created, not on every boot.
+Default module/package seed to preserve unless John changes it
+Starter package includes: TradeFlowKit, TorqueShed, TechDeck.
+Pro package includes: Starter modules + PulseDesk, FaultLineLab, BrandForgeOS.
+Elite package includes: Pro modules + SnapProofOS, StudyForge AI, Ninja Launch Kit, CallCommand AI, Ninjamation.
+Default add-on pricing: Starter-tier modules $19/mo, Pro-tier modules $29/mo, Elite-tier modules $49/mo.
+Coming soon modules should not render a purchasable checkout button until status, URL, and Stripe price are
+configured.
+Super Admin Platform Command requirements
+Add or finish these screens under /platform:
+- Overview: tenants, active users, MRR estimate, live modules, configured Stripe prices, webhook health, failed
+billing events.
+- Tenants: create, suspend, reactivate, archive, view details, impersonation-safe tenant switch, subscription/add-on
+summary.
+- Users: search users, view memberships, status, platform role, last login, subscription, active tenant, modules.
+Only allow platform_role changes with explicit confirmation and audit logging.
+- Modules: create/edit/archive modules, status live/beta/coming_soon/disabled, category, baseUrl, iconUrl,
+description, order, plan label, add-on price cents, Stripe price ID override, env key display, SSO diagnostics, plan
+inclusion matrix, tenant enablement summary.
+- Pricing: plan price IDs, add-on price IDs, price drift detection, test checkout validation, webhook status, Stripe
+mode.
+- Billing Events: searchable event log, failed webhook/DLQ retry where safe, idempotency visibility.
+OperatorOS Audit - Shotgun Ninjas Productions - Generated May 8, 2026
+- Audit: user/tenant/module/billing audit timeline.
+- Health: API, DB, env readiness, module URL readiness, SSO secret readiness, Stripe readiness.
+Tenant admin requirements
+- Command Center: tenant overview, module adoption, members, pending invites, billing summary, recent activity,
+action items.
+- Members: invite/revoke/resend, role change, remove user, protect last owner, per-user module access.
+- Modules: show tenant enabled modules, included vs add-on vs trial/admin, allowAllMembers, per-user grants, request
+state.
+- Billing: current plan, usage, add-ons, portal session, cancel/reactivate add-ons, receipts/events.
+- Settings: tenant rename, branding fields prepared but not fake if not wired.
+Regular user requirements
+- My Apps should be the default for regular members.
+- App Marketplace should show Open, Buy Add-on, Upgrade, Request Access, Coming Soon, or Disabled based only on
+server-returned CTA state.
+- Request Access must create a real auditable event or tenant admin notification. Do not just set local UI state.
+- Open App must use /v1/modules/:slug/handoff and securely redirect to launchUrl.
+Stripe requirements
+- Plan env vars: STRIPE_PRICE_STARTER, STRIPE_PRICE_PRO, STRIPE_PRICE_ELITE.
+- Add-on env vars: STRIPE_PRICE_ADDON_TRADEFLOWKIT, STRIPE_PRICE_ADDON_TORQUESHED, STRIPE_PRICE_ADDON_TECHDECK,
+STRIPE_PRICE_ADDON_PULSEDESK, STRIPE_PRICE_ADDON_FAULTLINELAB, STRIPE_PRICE_ADDON_BF_OS,
+STRIPE_PRICE_ADDON_SNAPPROOFOS, plus future vars for STUDYFORGE_AI, NINJA_LAUNCH_KIT, CALLCOMMAND_AI, NINJAMATION
+when they go live.
+- Add support for DB-stored Stripe price ID overrides per module so a super admin can manage price IDs without a
+code change, while still showing the expected env key.
+- Checkout metadata must include type/kind, user_id, module_slug, tenant_id, initiated_by_user_id,
+internal_addon_subscription_id where applicable.
+- Webhook handling must update subscriptions/addon_subscriptions and tenant_modules.
+- Failed webhook events must be stored in billing_events with error_message and retriable status.
+SSO requirements
+- MODULE_SSO_SECRET required in production for Open App. Development may show plain URL fallback only with a visible
+warning.
+- Handoff tokens should be short-lived, jti tracked, single-use, include iss/aud/env/module_slug/tenant_id/user
+identity/access source.
+- Maintain docs/MODULE_SSO.md and add module-side consume checklist.
+UI polish requirements
+- Replace remaining generic Workspaces/Projects/Tasks language in the primary SaaS shell with ecosystem language
+unless those features are intentionally kept as a developer module.
+- Keep the dark premium OperatorOS style, but make it more polished: consistent spacing, responsive cards, useful
+empty states, loading states, error banners, and no cramped tables on mobile.
+- Add clear role-based navigation: Launch, Tenant, Platform, Account.
+- Show product cards as a software arsenal: TradeFlowKit, TorqueShed, TechDeck, PulseDesk, FaultLineLab,
+BrandForgeOS, SnapProofOS, StudyForge AI, Ninja Launch Kit, CallCommand AI, Ninjamation.
+Testing and acceptance gates
+Run or add tests for:
+- Login/register/me/logout.
+- Super-admin Platform Command protected routes.
+- Tenant isolation: tenant A cannot access tenant B.
+- Tenant owner/admin/member RBAC.
+- Module CTA matrix: open, buy_addon, upgrade, request_access, coming_soon, disabled.
+- Add-on checkout metadata and webhook activation.
+- Plan package inclusion updates survive restart/seed.
+- SSO token issue/consume/replay/expiry/mismatch.
+- Stripe webhook raw-body verification and idempotency.
+- CDE endpoints are inaccessible in production without auth/dev flag.
+Deliverables
+1. Code changes with file list summary.
+2. Updated .env.example.
+3. Updated README focused on OperatorOS ecosystem hub, not only AI-native CDE.
+4. Updated PLAN_FEATURES.md reflecting final packages and pricing.
+5. Seed script or migration notes.
+6. Smoke test checklist with exact commands to run in Replit.
+7. A final status report listing what is production-ready, what is disabled, and what Jo
