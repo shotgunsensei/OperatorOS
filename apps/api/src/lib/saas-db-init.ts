@@ -843,29 +843,31 @@ export async function backfillPersonalTenants() {
   let created = 0;
   for (const u of allUsers) {
     const slug = `personal-${u.id}`;
-    let [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
-    if (!tenant) {
-      [tenant] = await db.insert(tenants).values({
-        name: `${u.email} Personal`,
-        slug,
-        type: 'personal',
-        ownerUserId: u.id,
-      }).returning();
-      await db.insert(tenantUsers).values({
-        tenantId: tenant.id,
-        userId: u.id,
-        role: 'owner',
-      });
+    // Race-safe insert: if a parallel boot wins the slug, ON CONFLICT DO
+    // NOTHING returns an empty array; we then re-select the winning row.
+    // Both racers converge on the same tenant.id (slug is globally unique),
+    // so all subsequent writes target the same row.
+    const insertedTenant = await db.insert(tenants).values({
+      name: `${u.email} Personal`,
+      slug,
+      type: 'personal',
+      ownerUserId: u.id,
+    }).onConflictDoNothing({ target: tenants.slug }).returning();
+    let tenant = insertedTenant[0];
+    if (tenant) {
       created++;
     } else {
-      // Heal: ensure owner row exists (migrations from earlier failed runs).
-      const [tu] = await db.select().from(tenantUsers)
-        .where(and(eq(tenantUsers.tenantId, tenant.id), eq(tenantUsers.userId, u.id)))
-        .limit(1);
-      if (!tu) {
-        await db.insert(tenantUsers).values({ tenantId: tenant.id, userId: u.id, role: 'owner' });
-      }
+      [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
     }
+
+    // Owner membership — race-safe via composite UNIQUE(tenant_id, user_id).
+    // Also heals legacy tenants that were created before the membership row
+    // was inserted (single statement covers both first-insert and heal paths).
+    await db.insert(tenantUsers).values({
+      tenantId: tenant.id,
+      userId: u.id,
+      role: 'owner',
+    }).onConflictDoNothing({ target: [tenantUsers.tenantId, tenantUsers.userId] });
 
     // Set current_tenant_id only if unset; never stomp an explicit choice.
     if (!u.currentTenantId) {
@@ -895,6 +897,10 @@ export async function backfillPersonalTenants() {
  *
  * SECURITY: this is the ONLY supported way to grant `super_admin` outside
  * of a direct SQL update by an existing super_admin.
+ *
+ * Concurrency: this function performs only SELECT + UPDATE (no INSERT),
+ * so two parallel boots cannot violate any UNIQUE constraint. The worst
+ * case is two converging UPDATE statements that set the same value.
  */
 export async function bootstrapSuperAdmin() {
   const email = process.env.OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL;
@@ -931,29 +937,29 @@ export async function seedDemoCoTenant() {
   if (!demoUser) return;
 
   const slug = 'demo-co';
-  let [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
-  let createdTenant = false;
+  // Race-safe insert: parallel boots converge on the same tenant via the
+  // unique slug. The racer that wins the row sees a non-empty `returning`
+  // and is the one to log "[seed] Created Demo Co tenant" / switch the
+  // demo user's active tenant.
+  const insertedTenant = await db.insert(tenants).values({
+    name: 'Demo Co',
+    slug,
+    type: 'company',
+    ownerUserId: demoUser.id,
+  }).onConflictDoNothing({ target: tenants.slug }).returning();
+  let tenant = insertedTenant[0];
+  const createdTenant = !!tenant;
   if (!tenant) {
-    [tenant] = await db.insert(tenants).values({
-      name: 'Demo Co',
-      slug,
-      type: 'company',
-      ownerUserId: demoUser.id,
-    }).returning();
-    createdTenant = true;
+    [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
+  } else {
     console.log('[seed] Created Demo Co tenant');
   }
 
-  const [membership] = await db.select().from(tenantUsers)
-    .where(and(eq(tenantUsers.tenantId, tenant.id), eq(tenantUsers.userId, demoUser.id)))
-    .limit(1);
-  if (!membership) {
-    await db.insert(tenantUsers).values({
-      tenantId: tenant.id,
-      userId: demoUser.id,
-      role: 'owner',
-    });
-  }
+  await db.insert(tenantUsers).values({
+    tenantId: tenant.id,
+    userId: demoUser.id,
+    role: 'owner',
+  }).onConflictDoNothing({ target: [tenantUsers.tenantId, tenantUsers.userId] });
 
   // Only switch the demo user's active tenant on the FIRST seed of Demo Co
   // — subsequent boots leave their selection alone.
@@ -964,33 +970,26 @@ export async function seedDemoCoTenant() {
   }
 
   // Enable every live module on Demo Co; grant the demo user manager access.
+  // Both inserts are race-safe via the composite UNIQUE constraints on
+  // tenant_modules(tenant_id, module_id) and
+  // tenant_user_module_access(tenant_id, user_id, module_id), so two parallel
+  // boots can't crash on duplicate-key errors.
   const liveMods = await db.select().from(modules).where(eq(modules.status, 'live'));
   for (const m of liveMods) {
-    const [tmExists] = await db.select().from(tenantModules)
-      .where(and(eq(tenantModules.tenantId, tenant.id), eq(tenantModules.moduleId, m.id)))
-      .limit(1);
-    if (!tmExists) {
-      await db.insert(tenantModules).values({
-        tenantId: tenant.id,
-        moduleId: m.id,
-        status: 'enabled',
-        source: 'included',
-      });
-    }
-    const [accExists] = await db.select().from(tenantUserModuleAccess)
-      .where(and(
-        eq(tenantUserModuleAccess.tenantId, tenant.id),
-        eq(tenantUserModuleAccess.userId, demoUser.id),
-        eq(tenantUserModuleAccess.moduleId, m.id),
-      ))
-      .limit(1);
-    if (!accExists) {
-      await db.insert(tenantUserModuleAccess).values({
-        tenantId: tenant.id,
-        userId: demoUser.id,
-        moduleId: m.id,
-        accessLevel: 'manager',
-      });
-    }
+    await db.insert(tenantModules).values({
+      tenantId: tenant.id,
+      moduleId: m.id,
+      status: 'enabled',
+      source: 'included',
+    }).onConflictDoNothing({ target: [tenantModules.tenantId, tenantModules.moduleId] });
+
+    await db.insert(tenantUserModuleAccess).values({
+      tenantId: tenant.id,
+      userId: demoUser.id,
+      moduleId: m.id,
+      accessLevel: 'manager',
+    }).onConflictDoNothing({
+      target: [tenantUserModuleAccess.tenantId, tenantUserModuleAccess.userId, tenantUserModuleAccess.moduleId],
+    });
   }
 }
