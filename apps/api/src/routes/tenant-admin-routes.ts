@@ -22,11 +22,12 @@
 
 import type { FastifyInstance } from 'fastify';
 import crypto from 'node:crypto';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, desc, gte, inArray } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
   tenants, tenantUsers, tenantInvites, tenantModules,
   tenantUserModuleAccess, modules, users,
+  adminAuditLogs, subscriptions, addonSubscriptions, usageTracking,
 } from '../schema.js';
 import { authenticate } from '../lib/auth.js';
 import { requireTenantAdmin, requireTenantOwner } from '../lib/tenant-auth.js';
@@ -447,6 +448,232 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
             allowAllMembers: tm.allowAllMembers,
           };
         }),
+      };
+    },
+  );
+
+  // ──────────────────────────────────────────────────────────────────
+  // Tenant activity feed — recent audit events, usage trend, billing
+  // summary. Drives the Tenant Command Center dashboard.
+  // ──────────────────────────────────────────────────────────────────
+  app.get<{ Params: { tenantId: string } }>(
+    '/v1/tenants/:tenantId/activity',
+    { preHandler: [requireTenantAdmin] },
+    async (request) => {
+      const { tenantId } = request.params;
+
+      // 1. Recent audit events (last 20) scoped to the tenant.
+      const auditRows = await db.select().from(adminAuditLogs)
+        .where(eq(adminAuditLogs.tenantId, tenantId))
+        .orderBy(desc(adminAuditLogs.createdAt))
+        .limit(20);
+
+      const actorIds = [...new Set(auditRows.map(r => r.adminId))];
+      const targetUserIds = [...new Set(auditRows.filter(r => r.targetUserId).map(r => r.targetUserId!))];
+      const allUserIds = [...new Set([...actorIds, ...targetUserIds])];
+      const nameMap = new Map<string, { name: string | null; email: string | null }>();
+      if (allUserIds.length > 0) {
+        const userRows = await db.select({ id: users.id, name: users.name, email: users.email })
+          .from(users).where(inArray(users.id, allUserIds));
+        for (const u of userRows) nameMap.set(u.id, { name: u.name, email: u.email });
+      }
+      // Some audit rows have `targetUserId` set to a membership row id (when
+      // targetType is 'tenant_user'); the actual user id is duplicated into
+      // `details.targetUserId` / `details.extra.targetUserId` by writeAudit
+      // call sites. Prefer the details-side user id for name resolution.
+      const targetUserIdFromDetails = (r: typeof auditRows[number]): string | null => {
+        const d = (r.details ?? {}) as Record<string, unknown>;
+        if (typeof d.targetUserId === 'string') return d.targetUserId;
+        return null;
+      };
+
+      const detailsTargetUserIds = auditRows
+        .map(targetUserIdFromDetails)
+        .filter((v): v is string => typeof v === 'string');
+      const allUserIds2 = [...new Set([...allUserIds, ...detailsTargetUserIds])];
+      if (allUserIds2.length > allUserIds.length) {
+        const extra = allUserIds2.filter(id => !nameMap.has(id));
+        if (extra.length > 0) {
+          const more = await db.select({ id: users.id, name: users.name, email: users.email })
+            .from(users).where(inArray(users.id, extra));
+          for (const u of more) nameMap.set(u.id, { name: u.name, email: u.email });
+        }
+      }
+
+      const recentEvents = auditRows.map(r => {
+        const actor = nameMap.get(r.adminId);
+        const detailsUserId = targetUserIdFromDetails(r);
+        const targetUserId = detailsUserId ?? r.targetUserId;
+        const target = targetUserId ? nameMap.get(targetUserId) : null;
+        const details = (r.details ?? {}) as Record<string, unknown>;
+        return {
+          id: r.id,
+          action: r.action,
+          createdAt: r.createdAt,
+          actorName: actor?.name || actor?.email || 'Unknown',
+          targetUserName: target ? (target.name || target.email || 'Deleted user') : null,
+          targetType: typeof details.targetType === 'string' ? details.targetType : null,
+          targetId: typeof details.targetId === 'string' ? details.targetId : null,
+          moduleSlug: typeof details.moduleSlug === 'string' ? details.moduleSlug : null,
+        };
+      });
+
+      // 2. Per-day audit-event counts for the last 30 days, broken down by
+      //    targetType. We use audit events as the available "tenant usage"
+      //    telemetry — the underlying usage_tracking table is per-user and
+      //    not module-scoped, so admin actions are the most meaningful
+      //    per-module signal we can surface.
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const since30Rows = await db.select().from(adminAuditLogs)
+        .where(and(eq(adminAuditLogs.tenantId, tenantId), gte(adminAuditLogs.createdAt, since)));
+      const dayBuckets = new Map<string, { date: string; count: number; byTargetType: Record<string, number> }>();
+      for (const row of since30Rows) {
+        const day = row.createdAt.toISOString().slice(0, 10);
+        const bucket = dayBuckets.get(day) ?? { date: day, count: 0, byTargetType: {} };
+        bucket.count += 1;
+        const details = (row.details ?? {}) as Record<string, unknown>;
+        const targetType = typeof details.targetType === 'string' ? details.targetType : 'other';
+        bucket.byTargetType[targetType] = (bucket.byTargetType[targetType] ?? 0) + 1;
+        dayBuckets.set(day, bucket);
+      }
+      // Fill in missing days so the chart has a stable 30-point x-axis.
+      const dayKeys: string[] = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+        dayKeys.push(d.toISOString().slice(0, 10));
+      }
+      const usageByDay = dayKeys.map(key =>
+        dayBuckets.get(key) ?? { date: key, count: 0, byTargetType: {} },
+      );
+
+      // 2b. Per-module 30-day breakdown. Uses details.moduleSlug from
+      //     tenant_module / tenant_user_module_access / addon_subscription
+      //     audit events, plus any active tenant module rows so modules
+      //     with zero recent activity still appear (count = 0).
+      const tenantModuleRows = await db.select().from(tenantModules)
+        .where(eq(tenantModules.tenantId, tenantId));
+      const allModuleRows = tenantModuleRows.length > 0
+        ? await db.select().from(modules).where(inArray(modules.id, tenantModuleRows.map(tm => tm.moduleId)))
+        : [];
+      const moduleBySlug = new Map(allModuleRows.map(m => [m.slug, m]));
+
+      type ModuleSeries = {
+        moduleSlug: string;
+        moduleName: string | null;
+        total: number;
+        byDay: Record<string, number>;
+        byAction: Record<string, number>;
+      };
+      const moduleSeries = new Map<string, ModuleSeries>();
+      const ensureSeries = (slug: string): ModuleSeries => {
+        let s = moduleSeries.get(slug);
+        if (!s) {
+          const mod = moduleBySlug.get(slug);
+          s = {
+            moduleSlug: slug,
+            moduleName: mod?.name ?? null,
+            total: 0,
+            byDay: {},
+            byAction: {},
+          };
+          moduleSeries.set(slug, s);
+        }
+        return s;
+      };
+      // Seed the map with every active tenant module so the chart shows
+      // them even when nothing happened in the window.
+      for (const tm of tenantModuleRows) {
+        const mod = allModuleRows.find(m => m.id === tm.moduleId);
+        if (mod) ensureSeries(mod.slug);
+      }
+      for (const row of since30Rows) {
+        const details = (row.details ?? {}) as Record<string, unknown>;
+        const slug = typeof details.moduleSlug === 'string' ? details.moduleSlug : null;
+        if (!slug) continue;
+        const day = row.createdAt.toISOString().slice(0, 10);
+        const s = ensureSeries(slug);
+        s.total += 1;
+        s.byDay[day] = (s.byDay[day] ?? 0) + 1;
+        s.byAction[row.action] = (s.byAction[row.action] ?? 0) + 1;
+      }
+      // Materialize byDay into the same 30-point x-axis so the UI can
+      // render a stable per-module series.
+      const usageByModule = [...moduleSeries.values()]
+        .map(s => ({
+          moduleSlug: s.moduleSlug,
+          moduleName: s.moduleName,
+          total: s.total,
+          byAction: s.byAction,
+          byDay: dayKeys.map(date => ({ date, count: s.byDay[date] ?? 0 })),
+        }))
+        .sort((a, b) => b.total - a.total);
+
+      // 3. AI-action usage rollup across all members of the tenant for the
+      //    same 30-day window.
+      const memberRows = await db.select({ userId: tenantUsers.userId })
+        .from(tenantUsers).where(eq(tenantUsers.tenantId, tenantId));
+      const memberIds = memberRows.map(m => m.userId);
+      let aiActions30d = 0;
+      if (memberIds.length > 0) {
+        const usageRows = await db.select().from(usageTracking).where(
+          and(
+            inArray(usageTracking.userId, memberIds),
+            eq(usageTracking.actionType, 'ai_action'),
+            gte(usageTracking.periodStart, since),
+          ),
+        );
+        aiActions30d = usageRows.reduce((sum, r) => sum + r.count, 0);
+      }
+
+      // 4. Billing summary — active plan + add-on subscriptions on the
+      //    tenant, plus the soonest upcoming renewal.
+      const planSubs = await db.select().from(subscriptions)
+        .where(eq(subscriptions.tenantId, tenantId));
+      const addonSubs = await db.select().from(addonSubscriptions)
+        .where(eq(addonSubscriptions.tenantId, tenantId));
+      const activePlanSubs = planSubs.filter(s => s.status === 'active' || s.status === 'trialing');
+      const activeAddonSubs = addonSubs.filter(s => s.status === 'active' || s.status === 'trialing');
+      const renewalCandidates: Date[] = [];
+      for (const s of [...activePlanSubs, ...activeAddonSubs]) {
+        if (s.currentPeriodEnd && s.currentPeriodEnd.getTime() > Date.now()) {
+          renewalCandidates.push(s.currentPeriodEnd);
+        }
+      }
+      renewalCandidates.sort((a, b) => a.getTime() - b.getTime());
+      const nextRenewal = renewalCandidates[0] ?? null;
+
+      // Per-active-add-on detail (module name + renewal date) for the UI.
+      const addonModuleIds = [...new Set(activeAddonSubs.map(s => s.moduleId))];
+      const addonModuleMap = new Map<string, { slug: string; name: string }>();
+      if (addonModuleIds.length > 0) {
+        const modRows = await db.select({ id: modules.id, slug: modules.slug, name: modules.name })
+          .from(modules).where(inArray(modules.id, addonModuleIds));
+        for (const m of modRows) addonModuleMap.set(m.id, { slug: m.slug, name: m.name });
+      }
+      const addons = activeAddonSubs.map(s => {
+        const mod = addonModuleMap.get(s.moduleId);
+        return {
+          id: s.id,
+          moduleSlug: mod?.slug ?? null,
+          moduleName: mod?.name ?? null,
+          status: s.status,
+          amount: s.amount,
+          currentPeriodEnd: s.currentPeriodEnd,
+          cancelAtPeriodEnd: s.cancelAtPeriodEnd,
+        };
+      });
+
+      return {
+        recentEvents,
+        usageByDay,
+        usageByModule,
+        aiActions30d,
+        billing: {
+          activePlanSubscriptions: activePlanSubs.length,
+          activeAddonSubscriptions: activeAddonSubs.length,
+          nextRenewal,
+          addons,
+        },
       };
     },
   );

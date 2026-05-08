@@ -1,21 +1,74 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Building2, Users as UsersIcon, Boxes, Activity,
   CreditCard, UserPlus, Store, Receipt, AlertTriangle,
+  TrendingUp, Calendar,
 } from 'lucide-react';
 import {
   cardStyle, panelStyle, buttonStyles, badgeStyles,
   semantic, space, fontSize,
 } from '@/lib/design-tokens';
-import { tenantApi, meApi, billingApi, adminApi } from '@/lib/auth';
+import { tenantApi, meApi, billingApi } from '@/lib/auth';
 
 interface Props {
   onNavigate: (page: string) => void;
 }
 
-interface ActivityRow { id: string; action: string; createdAt: string; }
+interface ActivityRow {
+  id: string;
+  action: string;
+  createdAt: string;
+  actorName: string;
+  targetUserName: string | null;
+  targetType: string | null;
+}
+
+interface UsageDay { date: string; count: number; byTargetType: Record<string, number>; }
+
+interface ModuleSeries {
+  moduleSlug: string;
+  moduleName: string | null;
+  total: number;
+  byAction: Record<string, number>;
+  byDay: { date: string; count: number }[];
+}
+
+interface AddonRow {
+  id: string;
+  moduleSlug: string | null;
+  moduleName: string | null;
+  status: string;
+  amount: number;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}
+
+interface BillingSummary {
+  activePlanSubscriptions: number;
+  activeAddonSubscriptions: number;
+  nextRenewal: string | null;
+  addons: AddonRow[];
+}
+
+interface ActivityResponse {
+  recentEvents: ActivityRow[];
+  usageByDay: UsageDay[];
+  usageByModule: ModuleSeries[];
+  aiActions30d: number;
+  billing: BillingSummary;
+}
+
+function formatDate(d: string | null): string {
+  if (!d) return '\u2014';
+  const date = new Date(d);
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function formatCurrency(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
 
 export default function TenantCommandCenterPage({ onNavigate }: Props) {
   const [tenantId, setTenantId] = useState<string | null>(null);
@@ -26,8 +79,7 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
   const [moduleCount, setModuleCount] = useState<number>(0);
   const [planSlug, setPlanSlug] = useState<string>('starter');
   const [planStatus, setPlanStatus] = useState<string>('unknown');
-  const [aiCalls, setAiCalls] = useState<number | null>(null);
-  const [recent, setRecent] = useState<ActivityRow[]>([]);
+  const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,13 +95,12 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
           setTenantName(t.name);
           setTenantStatus(t.status ?? 'active');
         }
-        const [users, mods, invites, sub, usage, audit] = await Promise.all([
+        const [users, mods, invites, sub, act] = await Promise.all([
           tenantApi.listUsers(current).catch(() => ({ users: [] })),
           tenantApi.listModules(current).catch(() => ({ modules: [] })),
           tenantApi.listInvites(current).catch(() => ({ invites: [] })),
           billingApi.getSubscription().catch(() => null),
-          billingApi.getUsage().catch(() => null),
-          adminApi.getAuditLog({ page: 1 }).catch(() => ({ entries: [] })),
+          tenantApi.getActivity(current).catch(() => null),
         ]);
         if (!alive) return;
         setMemberCount(users.users?.length ?? 0);
@@ -59,13 +110,7 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
         );
         setPlanSlug(sub?.subscription?.planSlug ?? sub?.plan?.slug ?? sub?.planSlug ?? 'starter');
         setPlanStatus(sub?.subscription?.status ?? sub?.status ?? 'unknown');
-        setAiCalls(usage?.aiCallsThisMonth ?? null);
-        const entries = (audit?.entries ?? audit?.auditLog ?? []) as any[];
-        setRecent(
-          entries.slice(0, 5).map((row: any) => ({
-            id: row.id, action: row.action, createdAt: row.createdAt,
-          })),
-        );
+        setActivity(act);
       } finally {
         if (alive) setLoading(false);
       }
@@ -79,6 +124,14 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
     : planStatus === 'past_due' ? badgeStyles.warning
     : planStatus === 'canceled' || planStatus === 'unpaid' ? badgeStyles.danger
     : badgeStyles.neutral;
+
+  const moduleSeriesMax = useMemo(() => {
+    let m = 1;
+    for (const series of activity?.usageByModule ?? []) {
+      for (const d of series.byDay) if (d.count > m) m = d.count;
+    }
+    return m;
+  }, [activity]);
 
   const stat = (label: string, value: React.ReactNode, Icon: any, action?: { page: string; label: string }) => (
     <div
@@ -173,8 +226,127 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
                 style={{ ...buttonStyles.ghost, alignSelf: 'flex-start' }}
               >Manage billing \u2192</button>
             </div>
-            {aiCalls != null && stat('AI calls (mo)', aiCalls, Activity)}
+            {activity && stat('AI actions (30d)', activity.aiActions30d, Activity)}
           </div>
+
+          {/* Billing summary */}
+          {activity && (
+            <section data-testid="cc-billing-summary" style={{ ...panelStyle, marginBottom: space.xl }}>
+              <div style={{ padding: '12px 16px', borderBottom: `1px solid ${semantic.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <CreditCard size={14} color={semantic.accent} />
+                <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Billing summary</h2>
+              </div>
+              <div style={{ padding: space.lg, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: space.lg }}>
+                <div data-testid="billing-active-plan-subs">
+                  <div style={{ fontSize: fontSize.sm, color: semantic.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active plan subs</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginTop: 4 }}>{activity.billing.activePlanSubscriptions}</div>
+                </div>
+                <div data-testid="billing-active-addons">
+                  <div style={{ fontSize: fontSize.sm, color: semantic.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Active add-ons</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginTop: 4 }}>{activity.billing.activeAddonSubscriptions}</div>
+                </div>
+                <div data-testid="billing-next-renewal">
+                  <div style={{ fontSize: fontSize.sm, color: semantic.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Next renewal</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: '#fff', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Calendar size={14} color={semantic.textMuted} />
+                    {formatDate(activity.billing.nextRenewal)}
+                  </div>
+                </div>
+              </div>
+              {activity.billing.addons.length > 0 && (
+                <div style={{ borderTop: `1px solid ${semantic.border}` }}>
+                  {activity.billing.addons.map(a => (
+                    <div
+                      key={a.id}
+                      data-testid={`billing-addon-${a.id}`}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: `1px solid ${semantic.border}` }}
+                    >
+                      <div style={{ flex: 1, fontSize: fontSize.body, color: semantic.text }}>
+                        {a.moduleName ?? a.moduleSlug ?? 'Add-on'}
+                      </div>
+                      <div style={{ fontSize: fontSize.xs, color: semantic.textMuted }}>
+                        {formatCurrency(a.amount)} \u00b7 renews {formatDate(a.currentPeriodEnd)}
+                        {a.cancelAtPeriodEnd ? ' (cancels)' : ''}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Per-module usage chart (last 30 days) */}
+          {activity && (
+            <section data-testid="cc-usage-chart" style={{ ...panelStyle, marginBottom: space.xl }}>
+              <div style={{ padding: '12px 16px', borderBottom: `1px solid ${semantic.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <TrendingUp size={14} color={semantic.accent} />
+                <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>
+                  Module activity (last 30 days)
+                </h2>
+                <span
+                  title="Counts admin/audit events recorded for each module (enable/disable, access grants, add-on checkouts). Not end-user runtime usage."
+                  style={{ marginLeft: 'auto', fontSize: fontSize.xs, color: semantic.textMuted }}
+                >
+                  Admin events: {activity.usageByDay.reduce((s, d) => s + d.count, 0)}
+                </span>
+              </div>
+              <div
+                data-testid="cc-usage-source-note"
+                style={{ padding: '0 16px 8px', fontSize: fontSize.xs, color: semantic.textMuted }}
+              >
+                Based on tenant audit events (module enable/disable, access grants, add-on checkouts), not end-user runtime usage.
+              </div>
+              {activity.usageByModule.length === 0 ? (
+                <div data-testid="cc-usage-empty" style={{ padding: space.lg, color: semantic.textMuted, fontSize: fontSize.body }}>
+                  No modules enabled yet for this tenant.
+                </div>
+              ) : (
+                <div style={{ padding: space.lg, display: 'flex', flexDirection: 'column', gap: space.lg }}>
+                  {activity.usageByModule.map(series => (
+                    <div
+                      key={series.moduleSlug}
+                      data-testid={`module-usage-${series.moduleSlug}`}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+                        <div style={{ fontSize: fontSize.body, color: semantic.text, fontWeight: 600 }}>
+                          {series.moduleName ?? series.moduleSlug}
+                        </div>
+                        <div style={{ fontSize: fontSize.xs, color: semantic.textMuted }}>
+                          {series.total} event{series.total === 1 ? '' : 's'}
+                        </div>
+                      </div>
+                      <div
+                        style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 48 }}
+                        data-testid={`module-bars-${series.moduleSlug}`}
+                      >
+                        {series.byDay.map(d => {
+                          const h = Math.round((d.count / moduleSeriesMax) * 100);
+                          return (
+                            <div
+                              key={d.date}
+                              data-testid={`module-bar-${series.moduleSlug}-${d.date}`}
+                              title={`${d.date}: ${d.count} event${d.count === 1 ? '' : 's'}`}
+                              style={{
+                                flex: 1, minWidth: 3,
+                                height: `${Math.max(h, 2)}%`,
+                                background: d.count > 0 ? semantic.accent : semantic.border,
+                                borderRadius: 2,
+                                opacity: d.count > 0 ? 1 : 0.4,
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: fontSize.xs, color: semantic.textMuted }}>
+                    <span>{activity.usageByDay[0]?.date ?? ''}</span>
+                    <span>{activity.usageByDay[activity.usageByDay.length - 1]?.date ?? ''}</span>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Recent activity */}
           <section data-testid="cc-recent-activity" style={panelStyle}>
@@ -182,17 +354,24 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
               <Activity size={14} color={semantic.accent} />
               <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Recent activity</h2>
             </div>
-            {recent.length === 0 ? (
+            {!activity || activity.recentEvents.length === 0 ? (
               <div data-testid="cc-activity-empty" style={{ padding: space.lg, color: semantic.textMuted, fontSize: fontSize.body }}>
                 No recent audit events visible to your role.
               </div>
-            ) : recent.map(r => (
+            ) : activity.recentEvents.map(r => (
               <div
                 key={r.id}
                 data-testid={`activity-${r.id}`}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: `1px solid ${semantic.border}` }}
               >
-                <div style={{ flex: 1, fontSize: fontSize.body, color: semantic.text }}>{r.action.replace(/_/g, ' ')}</div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <div style={{ fontSize: fontSize.body, color: semantic.text }}>{r.action.replace(/_/g, ' ')}</div>
+                  <div style={{ fontSize: fontSize.xs, color: semantic.textMuted }}>
+                    by {r.actorName}
+                    {r.targetUserName ? ` \u2192 ${r.targetUserName}` : ''}
+                    {r.targetType && !r.targetUserName ? ` \u00b7 ${r.targetType}` : ''}
+                  </div>
+                </div>
                 <div style={{ fontSize: fontSize.xs, color: semantic.textMuted }}>
                   {r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}
                 </div>
