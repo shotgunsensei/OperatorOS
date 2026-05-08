@@ -171,7 +171,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const tenantIds = memberships.map(m => m.tenantId);
 
     // Tenant-modules currently active (launchable) for any of those tenants.
-    const launchable = ['enabled', 'trial', 'purchased', 'beta'];
+    const launchable: Array<'enabled' | 'trial' | 'purchased' | 'beta'> = ['enabled', 'trial', 'purchased', 'beta'];
     const tms = await db.select().from(tenantModules)
       .where(and(
         inArray(tenantModules.tenantId, tenantIds),

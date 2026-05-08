@@ -211,8 +211,8 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       },
       billingEvents: {
         total: eventsAll.length,
-        failed: eventsAll.filter(e => e.status === 'failed').length,
-        processed: eventsAll.filter(e => e.status === 'processed').length,
+        failed: eventsAll.filter(e => e.errorMessage !== null).length,
+        processed: eventsAll.filter(e => e.processedAt !== null).length,
       },
       users: {
         total: usersAll.length,

@@ -611,8 +611,10 @@ async function handleInvoicePaid(invoice: any): Promise<WebhookProcessResult> {
   return { handled: true, action: 'invoice_paid' };
 }
 
-function mapStripeStatus(stripeStatus: string): string {
-  const map: Record<string, string> = {
+type SubscriptionStatus = 'active' | 'trialing' | 'past_due' | 'canceled' | 'expired';
+
+function mapStripeStatus(stripeStatus: string): SubscriptionStatus {
+  const map: Record<string, SubscriptionStatus> = {
     active: 'active',
     trialing: 'trialing',
     past_due: 'past_due',

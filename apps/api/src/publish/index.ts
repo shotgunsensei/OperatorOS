@@ -172,8 +172,9 @@ export function generatePlan(
     platform = 'expo-eas';
     type = 'mobile';
   } else if (framework === 'expo') {
-    platform = intent === 'mobile-store' ? 'expo-eas' : 'vercel';
-    type = intent === 'mobile-store' ? 'mobile' : 'web';
+    // intent is narrowed to 'web-domain' | 'pwa' here; mobile-store handled above.
+    platform = 'vercel';
+    type = 'web';
   } else if (framework === 'nextjs') {
     platform = 'vercel';
   } else if (framework === 'react-vite') {

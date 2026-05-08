@@ -370,7 +370,7 @@ app.post<{ Params: { id: string } }>(
       if (result.success) {
         await db.insert(runners).values({
           workspaceId: id,
-          mode: getRunnerMode(),
+          mode: getRunnerMode() === 'k8s' ? 'k8s' : 'docker',
           containerId: result.containerId ?? null,
           status: 'running',
           startedAt: new Date(),
@@ -747,7 +747,7 @@ app.post<{ Params: { taskId: string } }>(
                 } else {
                   const pathValidation = validatePatchPaths(diff);
                   if (!pathValidation.valid) {
-                    result = { success: false, output: `Patch path blocked: ${pathValidation.reason}`, changedFiles: [] };
+                    result = { success: false, output: `Patch path blocked: ${pathValidation.deniedPaths.join(', ')}`, changedFiles: [] };
                   } else {
                     const patchResult = await localExec(ws.id, `cd /workspace && git apply --stat -`, 30, diff);
                     const applyResult = await localExec(ws.id, `cd /workspace && git apply -`, 30, diff);
@@ -790,7 +790,7 @@ app.post<{ Params: { taskId: string } }>(
             broadcastTaskEvent(taskId, { type: event.type, payload: event.payload, ts: new Date().toISOString() });
           };
 
-          const agentResult = await runAgentLoop(task.goal, profileId, {}, onEvent, executeTool);
+          const agentResult = await runAgentLoop(task.goal ?? '', profileId, {}, onEvent, executeTool);
 
           await db.update(tasks).set({
             status: agentResult.success ? 'succeeded' : 'failed',

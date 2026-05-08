@@ -158,6 +158,7 @@ export async function runAgentLoop(
       }
 
       for (const toolCall of assistantMsg.tool_calls) {
+        if (toolCall.type !== 'function') continue;
         const fnName = toolCall.function.name;
         let fnArgs: Record<string, unknown> = {};
         try {

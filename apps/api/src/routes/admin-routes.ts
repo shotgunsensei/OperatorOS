@@ -457,14 +457,14 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     if (userId) events = events.filter(e => e.userId === userId);
     if (eventType) events = events.filter(e => e.eventType === eventType);
 
-    const userIds = [...new Set(events.map(e => e.userId))];
+    const userIds = [...new Set(events.map(e => e.userId).filter((u): u is string => u !== null))];
     const nameMap: Record<string, string> = {};
     for (const uid of userIds) {
       const [u] = await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, uid)).limit(1);
       nameMap[uid] = u?.name || u?.email || 'Deleted';
     }
 
-    const enriched = events.map(e => ({ ...e, userName: nameMap[e.userId] || 'Unknown' }));
+    const enriched = events.map(e => ({ ...e, userName: (e.userId && nameMap[e.userId]) || 'Unknown' }));
     const total = enriched.length;
     const paginated = enriched.slice(offset, offset + limit);
 
