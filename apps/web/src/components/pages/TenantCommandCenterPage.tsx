@@ -31,7 +31,6 @@ interface ModuleSeries {
   moduleSlug: string;
   moduleName: string | null;
   total: number;
-  byAction: Record<string, number>;
   byDay: { date: string; count: number }[];
 }
 
@@ -56,6 +55,7 @@ interface ActivityResponse {
   recentEvents: ActivityRow[];
   usageByDay: UsageDay[];
   usageByModule: ModuleSeries[];
+  moduleUsageTotal30d: number;
   aiActions30d: number;
   billing: BillingSummary;
 }
@@ -281,20 +281,21 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
               <div style={{ padding: '12px 16px', borderBottom: `1px solid ${semantic.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <TrendingUp size={14} color={semantic.accent} />
                 <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>
-                  Module activity (last 30 days)
+                  Module usage (last 30 days)
                 </h2>
                 <span
-                  title="Counts admin/audit events recorded for each module (enable/disable, access grants, add-on checkouts). Not end-user runtime usage."
+                  title="Counts every successful module launch (SSO handoff issued) per tenant member."
                   style={{ marginLeft: 'auto', fontSize: fontSize.xs, color: semantic.textMuted }}
+                  data-testid="cc-module-usage-total"
                 >
-                  Admin events: {activity.usageByDay.reduce((s, d) => s + d.count, 0)}
+                  Launches: {activity.moduleUsageTotal30d}
                 </span>
               </div>
               <div
                 data-testid="cc-usage-source-note"
                 style={{ padding: '0 16px 8px', fontSize: fontSize.xs, color: semantic.textMuted }}
               >
-                Based on tenant audit events (module enable/disable, access grants, add-on checkouts), not end-user runtime usage.
+                Real per-module launch counts from your team's SSO handoffs over the last 30 days.
               </div>
               {activity.usageByModule.length === 0 ? (
                 <div data-testid="cc-usage-empty" style={{ padding: space.lg, color: semantic.textMuted, fontSize: fontSize.body }}>
@@ -312,7 +313,7 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
                           {series.moduleName ?? series.moduleSlug}
                         </div>
                         <div style={{ fontSize: fontSize.xs, color: semantic.textMuted }}>
-                          {series.total} event{series.total === 1 ? '' : 's'}
+                          {series.total} launch{series.total === 1 ? '' : 'es'}
                         </div>
                       </div>
                       <div
@@ -325,7 +326,7 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
                             <div
                               key={d.date}
                               data-testid={`module-bar-${series.moduleSlug}-${d.date}`}
-                              title={`${d.date}: ${d.count} event${d.count === 1 ? '' : 's'}`}
+                              title={`${d.date}: ${d.count} launch${d.count === 1 ? '' : 'es'}`}
                               style={{
                                 flex: 1, minWidth: 3,
                                 height: `${Math.max(h, 2)}%`,

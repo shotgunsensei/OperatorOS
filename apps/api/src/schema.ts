@@ -367,10 +367,15 @@ export const usageTracking = pgTable('usage_tracking', {
   periodEnd: timestamp('period_end').notNull(),
   // Gate 2: nullable tenant scope; usage is now metered per (user, tenant).
   tenantId: varchar('tenant_id', { length: 36 }),
+  // Task #31: nullable per-module dimension. Set for actionType='module_usage'
+  // events emitted by the SSO handoff path so admins can see real per-module
+  // usage. Stays NULL for legacy 'ai_action' rows (which are not module-scoped).
+  moduleId: varchar('module_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_usage_tracking_user_period').on(t.userId, t.periodStart),
   index('idx_usage_tracking_tenant_period').on(t.tenantId, t.periodStart),
+  index('idx_usage_tracking_tenant_module_period').on(t.tenantId, t.moduleId, t.periodStart),
 ]);
 
 export const adminAuditLogs = pgTable('admin_audit_logs', {

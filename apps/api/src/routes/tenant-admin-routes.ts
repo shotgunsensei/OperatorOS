@@ -680,68 +680,71 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
         dayBuckets.get(key) ?? { date: key, count: 0, byTargetType: {} },
       );
 
-      // 2b. Per-module 30-day breakdown. Uses details.moduleSlug from
-      //     tenant_module / tenant_user_module_access / addon_subscription
-      //     audit events, plus any active tenant module rows so modules
-      //     with zero recent activity still appear (count = 0).
+      // 2b. Per-module 30-day breakdown.
+      //     Task #31: now driven by real per-module usage telemetry from
+      //     `usage_tracking` rows with actionType='module_usage' (written
+      //     by the SSO handoff path on every successful launch). We still
+      //     seed the series map with every active tenant module so modules
+      //     with zero usage in the window appear in the chart at count=0.
       const tenantModuleRows = await db.select().from(tenantModules)
         .where(eq(tenantModules.tenantId, tenantId));
       const allModuleRows = tenantModuleRows.length > 0
         ? await db.select().from(modules).where(inArray(modules.id, tenantModuleRows.map(tm => tm.moduleId)))
         : [];
-      const moduleBySlug = new Map(allModuleRows.map(m => [m.slug, m]));
+      const moduleById = new Map(allModuleRows.map(m => [m.id, m]));
 
       type ModuleSeries = {
+        moduleId: string;
         moduleSlug: string;
         moduleName: string | null;
         total: number;
         byDay: Record<string, number>;
-        byAction: Record<string, number>;
       };
       const moduleSeries = new Map<string, ModuleSeries>();
-      const ensureSeries = (slug: string): ModuleSeries => {
-        let s = moduleSeries.get(slug);
+      const ensureSeries = (moduleId: string): ModuleSeries | null => {
+        const mod = moduleById.get(moduleId);
+        if (!mod) return null;
+        let s = moduleSeries.get(moduleId);
         if (!s) {
-          const mod = moduleBySlug.get(slug);
           s = {
-            moduleSlug: slug,
-            moduleName: mod?.name ?? null,
+            moduleId,
+            moduleSlug: mod.slug,
+            moduleName: mod.name,
             total: 0,
             byDay: {},
-            byAction: {},
           };
-          moduleSeries.set(slug, s);
+          moduleSeries.set(moduleId, s);
         }
         return s;
       };
-      // Seed the map with every active tenant module so the chart shows
-      // them even when nothing happened in the window.
-      for (const tm of tenantModuleRows) {
-        const mod = allModuleRows.find(m => m.id === tm.moduleId);
-        if (mod) ensureSeries(mod.slug);
-      }
-      // Per-module/day/action aggregation — also pushed into Postgres so
-      // the result set is bounded by (modules × days × actions) and not
-      // by audit volume. Filtering on `details->>'moduleSlug' IS NOT NULL`
-      // keeps the JSONB extraction limited to module-tagged events.
+      // Seed the map with every tenant module so the chart shows them
+      // even when nothing happened in the window.
+      for (const tm of tenantModuleRows) ensureSeries(tm.moduleId);
+
+      // Per-module/day aggregation — pushed into Postgres so the result
+      // set is bounded by (modules × days) and not by raw row count.
+      // Combined with the partial unique index `uniq_usage_tracking_module_day`
+      // this keeps latency flat as usage_tracking grows.
       const moduleAggResult = await db.execute<{
-        day: string; module_slug: string; action: string; count: number;
+        day: string; module_id: string; total: number;
       }>(sql`
-        SELECT to_char(date_trunc('day', created_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day,
-               details->>'moduleSlug'                                                   AS module_slug,
-               action                                                                   AS action,
-               COUNT(*)::int                                                            AS count
-        FROM admin_audit_logs
+        SELECT to_char(date_trunc('day', period_start AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day,
+               module_id                                                                  AS module_id,
+               SUM(count)::int                                                            AS total
+        FROM usage_tracking
         WHERE tenant_id = ${tenantId}
-          AND created_at >= ${since}
-          AND details->>'moduleSlug' IS NOT NULL
-        GROUP BY 1, 2, 3
+          AND action_type = 'module_usage'
+          AND module_id IS NOT NULL
+          AND period_start >= ${since}
+        GROUP BY 1, 2
       `);
+      let moduleUsageTotal = 0;
       for (const r of moduleAggResult.rows) {
-        const s = ensureSeries(r.module_slug);
-        s.total += r.count;
-        s.byDay[r.day] = (s.byDay[r.day] ?? 0) + r.count;
-        s.byAction[r.action] = (s.byAction[r.action] ?? 0) + r.count;
+        const s = ensureSeries(r.module_id);
+        if (!s) continue;
+        s.total += r.total;
+        s.byDay[r.day] = (s.byDay[r.day] ?? 0) + r.total;
+        moduleUsageTotal += r.total;
       }
       // Materialize byDay into the same 30-point x-axis so the UI can
       // render a stable per-module series.
@@ -750,7 +753,6 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
           moduleSlug: s.moduleSlug,
           moduleName: s.moduleName,
           total: s.total,
-          byAction: s.byAction,
           byDay: dayKeys.map(date => ({ date, count: s.byDay[date] ?? 0 })),
         }))
         .sort((a, b) => b.total - a.total);
@@ -814,6 +816,7 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
         recentEvents,
         usageByDay,
         usageByModule,
+        moduleUsageTotal30d: moduleUsageTotal,
         aiActions30d,
         billing: {
           activePlanSubscriptions: activePlanSubs.length,

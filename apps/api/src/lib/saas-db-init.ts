@@ -738,6 +738,18 @@ export async function ensureTenantTables() {
     CREATE INDEX IF NOT EXISTS idx_notes_tenant                 ON notes(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_activity_feed_tenant         ON activity_feed(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_usage_tracking_tenant_period ON usage_tracking(tenant_id, period_start);
+    -- Task #31: per-module usage telemetry. Nullable so legacy 'ai_action'
+    -- rows continue to satisfy the schema; populated by the SSO handoff
+    -- path for actionType='module_usage'.
+    ALTER TABLE usage_tracking       ADD COLUMN IF NOT EXISTS module_id VARCHAR(36);
+    CREATE INDEX IF NOT EXISTS idx_usage_tracking_tenant_module_period ON usage_tracking(tenant_id, module_id, period_start);
+    -- Partial unique index: enforces "one row per (user, tenant, module,
+    -- action_type, day)" so recordModuleUsage can use INSERT ... ON CONFLICT
+    -- DO UPDATE atomically. Scoped to module-usage rows only so legacy
+    -- ai_action rows (module_id NULL) remain unaffected.
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_usage_tracking_module_day
+      ON usage_tracking(user_id, tenant_id, module_id, action_type, period_start)
+      WHERE module_id IS NOT NULL AND tenant_id IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_ai_templates_tenant          ON ai_prompt_templates(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_ai_actions_tenant            ON ai_actions_log(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_sso_tokens_tenant            ON sso_handoff_tokens(tenant_id);

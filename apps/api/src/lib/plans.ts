@@ -3,7 +3,7 @@ import {
   subscriptions, subscriptionPlans, saasWorkspaces, saasProjects,
   saasTasks, notes, workspaceMemberships, usageTracking,
 } from '../schema.js';
-import { eq, and, count, gte, lte } from 'drizzle-orm';
+import { eq, and, count, gte, lte, sql } from 'drizzle-orm';
 
 export interface PlanConfig {
   slug: string;
@@ -320,6 +320,54 @@ export async function getDowngradeViolations(userId: string, tenantId: string, t
   }
 
   return violations;
+}
+
+/**
+ * Task #31: per-module usage telemetry.
+ *
+ * One row per (userId, tenantId, moduleId, actionType, UTC day) — the
+ * partial unique index `uniq_usage_tracking_module_day` enforces this and
+ * lets us use an atomic `INSERT ... ON CONFLICT DO UPDATE` so concurrent
+ * launches can't lose increments or split into duplicate rows.
+ *
+ * `actionType` differentiates the two signals:
+ *   - 'module_usage'           — SSO handoff issued (intent/launch).
+ *   - 'module_launch_confirmed' — receiver called /v1/modules/sso/consume.
+ * The Tenant Command Center per-module chart aggregates only 'module_usage'
+ * to avoid double-counting; 'module_launch_confirmed' is captured for
+ * future "confirmed-launch" analytics.
+ */
+export async function recordModuleUsage(opts: {
+  userId: string;
+  tenantId: string;
+  moduleId: string;
+  actionType?: 'module_usage' | 'module_launch_confirmed';
+  count?: number;
+}): Promise<void> {
+  const count = opts.count ?? 1;
+  const actionType = opts.actionType ?? 'module_usage';
+  const now = new Date();
+  // UTC day bucket so rows align with the activity endpoint's
+  // `periodStart.toISOString().slice(0,10)` keying.
+  const periodStart = new Date(Date.UTC(
+    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0,
+  ));
+  const periodEnd = new Date(Date.UTC(
+    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999,
+  ));
+
+  // Atomic upsert keyed on the partial unique index. If two requests race
+  // on the same day-bucket, the loser performs `count = count + EXCLUDED.count`
+  // instead of inserting a duplicate row.
+  await db.execute(sql`
+    INSERT INTO usage_tracking
+      (user_id, tenant_id, module_id, action_type, count, period_start, period_end)
+    VALUES
+      (${opts.userId}, ${opts.tenantId}, ${opts.moduleId}, ${actionType}, ${count}, ${periodStart}, ${periodEnd})
+    ON CONFLICT (user_id, tenant_id, module_id, action_type, period_start)
+      WHERE module_id IS NOT NULL AND tenant_id IS NOT NULL
+    DO UPDATE SET count = usage_tracking.count + EXCLUDED.count
+  `);
 }
 
 export async function recordAiUsage(userId: string, tenantId: string, actionCount: number = 1): Promise<void> {

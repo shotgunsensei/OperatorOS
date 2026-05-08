@@ -10,6 +10,7 @@ import {
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { authenticate, logAudit } from '../lib/auth.js';
 import { resolveTenantContext, requireTenantMember } from '../lib/tenant-auth.js';
+import { recordModuleUsage } from '../lib/plans.js';
 import {
   hasModuleAccess, getUserModules, getModuleForUser,
   getAccessBreakdown, getModuleAccessTrace, evaluateUserEntitlement,
@@ -425,6 +426,20 @@ export async function registerModuleRoutes(app: FastifyInstance) {
         entityId: mod.id,
         metadata: { moduleSlug: slug, source: entitlementSource, jti, fallback: SSO_FALLBACK },
       });
+
+      // Task #31: per-module telemetry. Recorded on issue (intent + the
+      // moment we know the launch happened from the platform side — many
+      // module receivers won't necessarily call /sso/consume in dev). Best
+      // effort: a failure here must not break the launch.
+      try {
+        await recordModuleUsage({
+          userId: user.id,
+          tenantId: ctx.tenantId,
+          moduleId: mod.id,
+        });
+      } catch (usageErr) {
+        console.warn('[module-sso] recordModuleUsage failed:', usageErr);
+      }
     } catch (err: any) {
       await auditSsoReject({
         userId: user.id, action: 'module_handoff_internal_error',
@@ -624,6 +639,25 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       },
       ip, level: 'info',
     });
+
+    // Task #31: per-module telemetry on confirmed launch (receiver-side
+    // exchange). Distinct actionType so the Tenant Command Center chart
+    // (which sums only 'module_usage') doesn't double-count this against
+    // the issued handoff. Best effort — never block the consume reply.
+    try {
+      const [consumedMod] = await db.select({ id: modules.id }).from(modules)
+        .where(eq(modules.slug, row.moduleSlug)).limit(1);
+      if (consumedMod && row.tenantId) {
+        await recordModuleUsage({
+          userId: row.userId,
+          tenantId: row.tenantId,
+          moduleId: consumedMod.id,
+          actionType: 'module_launch_confirmed',
+        });
+      }
+    } catch (usageErr) {
+      console.warn('[module-sso] recordModuleUsage (consume) failed:', usageErr);
+    }
 
     return {
       ok: true,
