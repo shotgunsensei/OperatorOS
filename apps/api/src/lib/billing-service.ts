@@ -293,6 +293,20 @@ export interface WebhookProcessResult {
   handled: boolean;
   action?: string;
   error?: string;
+  /**
+   * For addon update/delete branches: the number of local
+   * addon_subscriptions rows that were actually mutated. `0` means the
+   * webhook was understood but no local row matched (the missed-webhook
+   * case admins use resync to surface). Undefined for branches where the
+   * concept doesn't apply (insert/upsert paths, plan webhooks).
+   */
+  rowsAffected?: number;
+  /**
+   * Stable signal that the addon update/delete branch ran but found no
+   * local row. Distinct from `handled: false` so callers can count it
+   * separately without re-parsing error strings.
+   */
+  noLocalRow?: boolean;
 }
 
 export function verifyWebhookSignature(payload: string | Buffer, signature: string): any {
@@ -983,20 +997,34 @@ export async function processAddonWebhookEvent(event: { id: string; type: string
     case 'customer.subscription.updated': {
       const stripeSubId = obj.id;
       const status = mapStripeStatus(obj.status);
-      await db.update(addonSubscriptions).set({
+      const updated = await db.update(addonSubscriptions).set({
         status, cancelAtPeriodEnd: obj.cancel_at_period_end,
         currentPeriodStart: new Date(obj.current_period_start * 1000),
         currentPeriodEnd: new Date(obj.current_period_end * 1000),
         updatedAt: new Date(),
-      }).where(eq(addonSubscriptions.stripeSubscriptionId, stripeSubId));
-      return { handled: true, action: type };
+      }).where(eq(addonSubscriptions.stripeSubscriptionId, stripeSubId))
+        .returning({ id: addonSubscriptions.id });
+      const rowsAffected = updated.length;
+      return {
+        handled: true,
+        action: type,
+        rowsAffected,
+        noLocalRow: rowsAffected === 0,
+      };
     }
     case 'customer.subscription.deleted': {
       const stripeSubId = obj.id;
-      await db.update(addonSubscriptions).set({
+      const updated = await db.update(addonSubscriptions).set({
         status: 'canceled', updatedAt: new Date(),
-      }).where(eq(addonSubscriptions.stripeSubscriptionId, stripeSubId));
-      return { handled: true, action: type };
+      }).where(eq(addonSubscriptions.stripeSubscriptionId, stripeSubId))
+        .returning({ id: addonSubscriptions.id });
+      const rowsAffected = updated.length;
+      return {
+        handled: true,
+        action: type,
+        rowsAffected,
+        noLocalRow: rowsAffected === 0,
+      };
     }
     default:
       return { handled: false, error: `Unhandled event type: ${type}` };
@@ -1117,6 +1145,8 @@ export async function resyncUserBilling(userId: string): Promise<{
   message: string;
   scanned?: number;
   reconciled?: number;
+  needsAttention?: number;
+  needsAttentionAddons?: Array<{ stripeSubscriptionId: string; moduleSlug: string | null }>;
 }> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return { ok: false, mode: 'local', message: 'User not found' };
@@ -1142,13 +1172,15 @@ export async function resyncUserBilling(userId: string): Promise<{
     return {
       ok: true, mode: 'stripe',
       message: 'No Stripe customer is associated with this user yet; nothing to resync.',
-      scanned: 0, reconciled: 0,
+      scanned: 0, reconciled: 0, needsAttention: 0, needsAttentionAddons: [],
     };
   }
 
   let scanned = 0;
   let reconciledAddons = 0;
   let reconciledPlans = 0;
+  let needsAttentionAddons = 0;
+  const needsAttentionAddonDetails: Array<{ stripeSubscriptionId: string; moduleSlug: string | null }> = [];
 
   // Snapshot active plan-price -> plan_id mapping once per resync.
   const allPlans = await db.select().from(subscriptionPlans);
@@ -1172,7 +1204,20 @@ export async function resyncUserBilling(userId: string): Promise<{
           data: { object: { ...sub, metadata: { ...md, userId, user_id: userId, kind: 'addon', type: 'addon' } } },
         };
         const r = await processAddonWebhookEvent(synthetic);
-        if (r.handled) reconciledAddons += 1;
+        // Only count as "reconciled" when the handler actually mutated a
+        // local row. The synthetic event we send is always
+        // `customer.subscription.updated`, so an unhealed addon (no local
+        // row) returns handled:true but rowsAffected:0 — exactly the
+        // missed-webhook case the operator is trying to surface.
+        if (r.handled && r.noLocalRow) {
+          needsAttentionAddons += 1;
+          needsAttentionAddonDetails.push({
+            stripeSubscriptionId: sub.id,
+            moduleSlug: (md.module_slug ?? md.moduleSlug ?? null) as string | null,
+          });
+        } else if (r.handled) {
+          reconciledAddons += 1;
+        }
         continue;
       }
 
@@ -1214,14 +1259,23 @@ export async function resyncUserBilling(userId: string): Promise<{
 
   await db.insert(billingEvents).values({
     userId, eventType: 'admin_resync',
-    metadata: { mode: 'stripe', scanned, reconciledAddons, reconciledPlans },
+    metadata: {
+      mode: 'stripe', scanned, reconciledAddons, reconciledPlans,
+      needsAttention: needsAttentionAddons,
+      needsAttentionAddonDetails,
+    },
     processedAt: new Date(),
   });
 
+  const attentionSuffix = needsAttentionAddons > 0
+    ? ` ${needsAttentionAddons} addon(s) need attention (no local row matched).`
+    : '';
   return {
     ok: true, mode: 'stripe',
-    message: `Resync complete. Scanned ${scanned} Stripe subscription(s); reconciled ${reconciledPlans} plan + ${reconciledAddons} addon record(s).`,
+    message: `Resync complete. Scanned ${scanned} Stripe subscription(s); reconciled ${reconciledPlans} plan + ${reconciledAddons} addon record(s).${attentionSuffix}`,
     scanned, reconciled: reconciledPlans + reconciledAddons,
+    needsAttention: needsAttentionAddons,
+    needsAttentionAddons: needsAttentionAddonDetails,
   };
 }
 

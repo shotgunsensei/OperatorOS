@@ -506,7 +506,11 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
     const result = await resyncUserBilling(userId);
     await logAudit(admin.id, 'billing_resync_triggered', userId, {
-      mode: result.mode, scanned: result.scanned, reconciled: result.reconciled,
+      mode: result.mode,
+      scanned: result.scanned,
+      reconciled: result.reconciled,
+      needsAttention: result.needsAttention,
+      needsAttentionAddons: result.needsAttentionAddons,
     }, request.ip);
     return result;
   });

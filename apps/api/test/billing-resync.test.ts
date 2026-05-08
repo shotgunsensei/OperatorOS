@@ -218,3 +218,45 @@ test('resyncUserBilling: stripe-mode reconciles addon + base plan and writes adm
   assert.equal(md.reconciledPlans, 1, 'audit metadata.reconciledPlans must be 1');
   assert.ok(evts[0].processedAt, 'admin_resync row should be marked processed (not in DLQ)');
 });
+
+test('resyncUserBilling: unhealed addon (no local row) is reported as needsAttention, not reconciled', async () => {
+  // Re-use the same userId/customerId. Add a *new* addon-tagged Stripe sub
+  // whose stripeSubscriptionId does NOT match any local addon row — i.e.
+  // the missed-webhook case. The previous test left exactly one local
+  // addon row with addonStripeSubId; this one uses a fresh sub id.
+  const localAddons = await db.select().from(addonSubscriptions).where(eq(addonSubscriptions.userId, userId));
+  const knownCustomerId = localAddons[0]?.stripeCustomerId
+    ?? (await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1))[0]?.stripeCustomerId!;
+
+  const orphanAddonSubId = uniqueId('sub-orphan');
+  const orphanSub = buildStripeSub({
+    id: orphanAddonSubId,
+    customer: knownCustomerId!,
+    metadata: { type: 'addon', module_slug: moduleSlug, moduleSlug },
+  });
+
+  const stubStripe = {
+    subscriptions: {
+      list: async () => ({ data: [orphanSub] }),
+    },
+  };
+  __setStripeTestOverrides({ enabled: true, client: stubStripe });
+
+  const result: any = await resyncUserBilling(userId);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.scanned, 1);
+  assert.equal(result.reconciled, 0, 'orphan addon must NOT be counted as reconciled');
+  assert.equal(result.needsAttention, 1, 'orphan addon must be reported as needsAttention');
+  assert.equal(result.needsAttentionAddons.length, 1);
+  assert.equal(result.needsAttentionAddons[0].stripeSubscriptionId, orphanAddonSubId);
+  assert.equal(result.needsAttentionAddons[0].moduleSlug, moduleSlug);
+
+  const evts = await db.select().from(billingEvents)
+    .where(and(eq(billingEvents.userId, userId), eq(billingEvents.eventType, 'admin_resync')))
+    .orderBy(desc(billingEvents.createdAt));
+  const md = (evts[0].metadata ?? {}) as any;
+  assert.equal(md.needsAttention, 1, 'audit metadata.needsAttention must be 1');
+  assert.equal(Array.isArray(md.needsAttentionAddonDetails), true);
+  assert.equal(md.needsAttentionAddonDetails[0].stripeSubscriptionId, orphanAddonSubId);
+});
