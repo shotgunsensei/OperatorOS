@@ -257,11 +257,15 @@ function TenantRow({
   onPick: () => void;
   superView?: boolean;
 }) {
+  const status = (tenant.status || 'active').toLowerCase();
+  const inactive = status !== 'active';
+  const nameColor = inactive ? colors.textMuted : colors.text;
   return (
     <button
       data-testid={`button-pick-tenant-${tenant.id}`}
       onClick={onPick}
       disabled={busy}
+      title={inactive ? `Tenant is ${status}` : undefined}
       style={{
         width: '100%',
         display: 'flex',
@@ -271,25 +275,51 @@ function TenantRow({
         background: active ? colors.bgHover : 'transparent',
         border: 'none',
         borderRadius: 6,
-        color: colors.text,
+        color: nameColor,
         cursor: busy ? 'progress' : 'pointer',
         textAlign: 'left',
         fontSize: 13,
+        opacity: inactive ? 0.7 : 1,
       }}
       onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = colors.bgHover; }}
       onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
     >
-      <Building2 size={14} style={{ color: superView ? colors.accentPurple : colors.accent, flexShrink: 0 }} />
+      <Building2 size={14} style={{ color: inactive ? colors.textDim : (superView ? colors.accentPurple : colors.accent), flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontWeight: active ? 600 : 500,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          color: nameColor,
+          fontStyle: inactive ? 'italic' : 'normal',
         }}>{tenant.name}</div>
         <div style={{ fontSize: 11, color: colors.textMuted }}>
           {tenant.slug}{tenant.role ? ` · ${tenant.role}` : (superView ? ' · not a member' : '')}
         </div>
       </div>
+      {inactive && <StatusBadge status={status} />}
       {active && <Check size={14} style={{ color: colors.accent, flexShrink: 0 }} />}
     </button>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const isSuspended = status === 'suspended';
+  const bg = isSuspended ? '#3b1d1d' : '#2a2118';
+  const fg = isSuspended ? '#f0883e' : '#d2a8ff';
+  return (
+    <span
+      data-testid={`badge-tenant-status-${status}`}
+      style={{
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: fg,
+        background: bg,
+        padding: '2px 6px',
+        borderRadius: 4,
+        flexShrink: 0,
+      }}
+    >{status}</span>
   );
 }
