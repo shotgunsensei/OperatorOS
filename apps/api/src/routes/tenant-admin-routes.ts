@@ -32,6 +32,7 @@ import {
 import { authenticate } from '../lib/auth.js';
 import { requireTenantAdmin, requireTenantOwner } from '../lib/tenant-auth.js';
 import { writeAudit, pickSafe, TENANT_USER_ACCESS_SAFE_FIELDS } from '../lib/audit.js';
+import { sendInviteEmail, buildInviteAcceptUrl } from '../lib/email-service.js';
 
 const INVITE_TTL_DAYS = 14;
 const TENANT_USER_SAFE_FIELDS = ['id', 'tenantId', 'userId', 'role'] as const;
@@ -260,7 +261,93 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
         before: null, after: pickSafe(invite, [...TENANT_INVITE_SAFE_FIELDS]),
         ipAddress: request.ip,
       }, request);
-      return { invite };
+
+      // Awaited email delivery (so the response can report whether the
+      // email actually went out), but a failure is intentionally non-fatal:
+      // the invite row is the durable record of truth and admins can
+      // resend, copy the link, or surface the token directly. The audit
+      // row captures whether delivery succeeded so support can investigate
+      // later. Note this adds the email provider roundtrip to request
+      // latency.
+      const [tenantRow] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+      const sendResult = await sendInviteEmail({
+        to: invite.email,
+        tenantName: tenantRow?.name ?? 'your workspace',
+        inviterName: actor.name ?? actor.email,
+        inviterEmail: actor.email,
+        role: invite.role as 'owner' | 'admin' | 'member',
+        acceptUrl: buildInviteAcceptUrl(invite.token),
+        expiresAt: invite.expiresAt,
+      });
+      await writeAudit({
+        actorUserId: actor.id, tenantId, targetType: 'tenant_invite',
+        targetId: invite.id,
+        action: sendResult.ok ? 'tenant_invite_email_sent' : 'tenant_invite_email_failed',
+        before: null, after: null,
+        extra: {
+          provider: sendResult.provider,
+          messageId: sendResult.id ?? null,
+          error: sendResult.error ?? null,
+        },
+        ipAddress: request.ip,
+      }, request);
+
+      return { invite, emailDelivery: { ok: sendResult.ok, provider: sendResult.provider } };
+    },
+  );
+
+  // Resend the invite email for an existing pending invite. Useful when the
+  // recipient never received the first email or when an admin opens the
+  // tenant users page days after the invite was created.
+  app.post<{ Params: { tenantId: string; inviteId: string } }>(
+    '/v1/tenants/:tenantId/invites/:inviteId/resend',
+    { preHandler: [requireTenantAdmin] },
+    async (request, reply) => {
+      const actor = (request as any).user;
+      const { tenantId, inviteId } = request.params;
+      const [invite] = await db.select().from(tenantInvites)
+        .where(and(eq(tenantInvites.id, inviteId), eq(tenantInvites.tenantId, tenantId))).limit(1);
+      if (!invite) return notFound(reply, 'INVITE_NOT_FOUND', 'Invite not found');
+      if (invite.acceptedAt) {
+        return reply.code(409).send({
+          error: 'Invite already accepted',
+          code: 'INVITE_ALREADY_ACCEPTED',
+        });
+      }
+      if (invite.expiresAt.getTime() < Date.now()) {
+        return reply.code(410).send({ error: 'Invite has expired', code: 'INVITE_EXPIRED' });
+      }
+      const [tenantRow] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+      const sendResult = await sendInviteEmail({
+        to: invite.email,
+        tenantName: tenantRow?.name ?? 'your workspace',
+        inviterName: actor.name ?? actor.email,
+        inviterEmail: actor.email,
+        role: invite.role as 'owner' | 'admin' | 'member',
+        acceptUrl: buildInviteAcceptUrl(invite.token),
+        expiresAt: invite.expiresAt,
+      });
+      await writeAudit({
+        actorUserId: actor.id, tenantId, targetType: 'tenant_invite',
+        targetId: invite.id,
+        action: sendResult.ok ? 'tenant_invite_email_resent' : 'tenant_invite_email_failed',
+        before: null, after: null,
+        extra: {
+          provider: sendResult.provider,
+          messageId: sendResult.id ?? null,
+          error: sendResult.error ?? null,
+          resend: true,
+        },
+        ipAddress: request.ip,
+      }, request);
+      if (!sendResult.ok) {
+        return reply.code(502).send({
+          error: sendResult.error ?? 'Failed to send invite email',
+          code: 'INVITE_EMAIL_FAILED',
+          provider: sendResult.provider,
+        });
+      }
+      return { ok: true, provider: sendResult.provider };
     },
   );
 

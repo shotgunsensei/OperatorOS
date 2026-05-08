@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { UserPlus, Trash2, Mail, ShieldAlert, ChevronDown, ChevronRight, Boxes } from 'lucide-react';
+import { UserPlus, Trash2, Mail, ShieldAlert, ChevronDown, ChevronRight, Boxes, Send } from 'lucide-react';
 import { colors } from '@/lib/design-tokens';
 import { tenantApi, meApi } from '@/lib/auth';
 
@@ -108,6 +108,22 @@ export default function TenantUsersPage() {
       await tenantApi.revokeInvite(tenantId, inviteId);
       await reload(tenantId);
     } catch {}
+  };
+
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [resendMsg, setResendMsg] = useState<{ id: string; text: string; ok: boolean } | null>(null);
+  const resendInvite = async (inviteId: string) => {
+    if (!tenantId) return;
+    setResendingId(inviteId);
+    setResendMsg(null);
+    try {
+      const r = await tenantApi.resendInvite(tenantId, inviteId);
+      setResendMsg({ id: inviteId, ok: true, text: `Invite email sent (${r?.provider ?? 'email'}).` });
+    } catch (e: any) {
+      setResendMsg({ id: inviteId, ok: false, text: e?.error || 'Failed to resend invite' });
+    } finally {
+      setResendingId(null);
+    }
   };
 
   const toggleExpand = async (userId: string) => {
@@ -344,6 +360,30 @@ export default function TenantUsersPage() {
                 fontSize: 11, padding: '2px 8px', borderRadius: 999,
                 border: `1px solid ${colors.border}`, color: colors.textMuted,
               }}>{i.role}</span>
+              {resendMsg && resendMsg.id === i.id && (
+                <span
+                  data-testid={`text-resend-status-${i.id}`}
+                  style={{
+                    fontSize: 11,
+                    color: resendMsg.ok ? colors.accent : colors.accentRed,
+                  }}
+                >{resendMsg.text}</span>
+              )}
+              <button
+                data-testid={`button-resend-${i.id}`}
+                onClick={() => resendInvite(i.id)}
+                disabled={resendingId === i.id}
+                title="Resend invite email"
+                style={{
+                  padding: '4px 10px', borderRadius: 6, border: `1px solid ${colors.border}`,
+                  background: 'transparent', color: colors.accent,
+                  cursor: resendingId === i.id ? 'wait' : 'pointer', fontSize: 12,
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                <Send size={12} />
+                {resendingId === i.id ? 'Sending…' : 'Resend'}
+              </button>
               <button
                 data-testid={`button-revoke-${i.id}`}
                 onClick={() => revokeInvite(i.id)}

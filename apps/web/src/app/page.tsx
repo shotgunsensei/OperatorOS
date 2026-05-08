@@ -62,6 +62,18 @@ function AppContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // If the user landed on /invites/:token before signing in, the invite page
+  // parks the token in localStorage and bounces them here. Once they finish
+  // login/register, send them right back so the invite gets accepted.
+  useEffect(() => {
+    if (loading || !user) return;
+    let pending: string | null = null;
+    try { pending = localStorage.getItem('operatoros.pendingInviteToken'); } catch {}
+    if (pending) {
+      window.location.replace(`/invites/${encodeURIComponent(pending)}`);
+    }
+  }, [loading, user]);
+
   if (loading) {
     return (
       <div style={{

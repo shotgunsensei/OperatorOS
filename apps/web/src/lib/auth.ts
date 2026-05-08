@@ -226,6 +226,8 @@ export const tenantApi = {
     apiFetch(`/tenants/${tenantId}/invites`, { method: 'POST', body: JSON.stringify({ email, role }) }),
   revokeInvite: (tenantId: string, inviteId: string) =>
     apiFetch(`/tenants/${tenantId}/invites/${inviteId}`, { method: 'DELETE' }),
+  resendInvite: (tenantId: string, inviteId: string) =>
+    apiFetch(`/tenants/${tenantId}/invites/${inviteId}/resend`, { method: 'POST' }),
   acceptInvite: (token: string) =>
     apiFetch(`/invites/${token}/accept`, { method: 'POST' }),
 
