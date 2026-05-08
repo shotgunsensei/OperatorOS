@@ -43,33 +43,7 @@ interface AllowEntry {
   allowedCodepoints: string[];
 }
 
-const ALLOW_LIST: Record<string, AllowEntry> = {
-  // Decorative box-drawing dividers inside `//` comments only — never
-  // rendered to the DOM. Cleanup of source-comment glyphs across the
-  // whole web app is tracked in a separate follow-up task.
-  'PlatformPage.tsx': {
-    reason: 'box-drawing dividers in source comments only (not rendered)',
-    allowedCodepoints: ['U+2500'], // ─
-  },
-  // Tab label icon ('⚡') in the AI Tools page — pre-existing, replaced
-  // separately when the AI Tools surface gets its Lucide refresh.
-  'AiToolsPage.tsx': {
-    reason: 'tab label icon (⚡) — separate Lucide refresh of AI surface',
-    allowedCodepoints: ['U+26A1'], // ⚡
-  },
-  // Inline edit pencil glyph on Notes — pre-existing, replaced separately
-  // when the Notes page gets its Lucide refresh.
-  'NotesPage.tsx': {
-    reason: 'edit-button glyph (✏) — separate Lucide refresh of Notes',
-    allowedCodepoints: ['U+270F'], // ✏
-  },
-  // Suspended-account warning glyph (⚠) — auth shell page, not in the
-  // role-aware IA, replaced when auth-shell gets its Lucide refresh.
-  'SuspendedPage.tsx': {
-    reason: 'warning glyph (⚠) — separate Lucide refresh of auth shell',
-    allowedCodepoints: ['U+26A0'], // ⚠
-  },
-};
+const ALLOW_LIST: Record<string, AllowEntry> = {};
 
 function findOffenders(source: string): { line: number; col: number; cp: string; ch: string }[] {
   const offenders: { line: number; col: number; cp: string; ch: string }[] = [];

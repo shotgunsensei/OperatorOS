@@ -1,5 +1,6 @@
 'use client';
 
+import { AlertTriangle } from 'lucide-react';
 import { colors } from '../SaasLayout';
 
 interface SuspendedPageProps {
@@ -22,8 +23,9 @@ export default function SuspendedPage({ onLogout, message }: SuspendedPageProps)
           width: 64, height: 64, borderRadius: 16, margin: '0 auto 24px',
           background: 'rgba(248,81,73,0.15)', border: `1px solid ${colors.accentRed}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 32,
-        }}>⚠</div>
+        }}>
+          <AlertTriangle size={32} color={colors.accentRed} strokeWidth={2} />
+        </div>
 
         <h1 data-testid="suspended-title" style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 12px' }}>
           Account Suspended

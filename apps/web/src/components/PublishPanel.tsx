@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { CheckCircle2, XCircle, Loader2, Square, AlertTriangle } from 'lucide-react';
 import {
   publishApi,
   type AnalyzeResult,
@@ -195,11 +196,12 @@ export default function PublishPanel({ workspaceId }: Props) {
     marginRight: 8,
   });
 
-  const stepIconStyle = (status: string): string => {
-    if (status === 'done') return '✅';
-    if (status === 'running') return '⏳';
-    if (status === 'fail') return '❌';
-    return '⬜';
+  const STEP_ICON_SIZE = 14;
+  const stepIcon = (status: string): ReactNode => {
+    if (status === 'done') return <CheckCircle2 size={STEP_ICON_SIZE} color="#3fb950" />;
+    if (status === 'running') return <Loader2 size={STEP_ICON_SIZE} color="#58a6ff" style={{ animation: 'spin 1s linear infinite' }} />;
+    if (status === 'fail') return <XCircle size={STEP_ICON_SIZE} color="#f85149" />;
+    return <Square size={STEP_ICON_SIZE} color="#484f58" />;
   };
 
   return (
@@ -266,7 +268,7 @@ export default function PublishPanel({ workspaceId }: Props) {
               <div style={{ fontSize: 12, fontWeight: 600, color: '#d29922', marginBottom: 4 }}>Risks</div>
               {detection.risks.map((r, i) => (
                 <div key={i} style={{ fontSize: 12, color: '#f0883e', marginBottom: 2 }}>
-                  {r.fixable ? '🔧' : '⚠️'} {r.message}
+                  {r.fixable ? '🔧' : <AlertTriangle size={12} color="#f0883e" style={{ display: 'inline-block', verticalAlign: '-2px' }} />} {r.message}
                 </div>
               ))}
             </div>
@@ -347,7 +349,7 @@ export default function PublishPanel({ workspaceId }: Props) {
                   borderBottom: '1px solid #21262d',
                 }}
               >
-                <span style={{ fontSize: 14, flexShrink: 0 }}>{stepIconStyle(stepStatuses[s.id] ?? 'pending')}</span>
+                <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}>{stepIcon(stepStatuses[s.id] ?? 'pending')}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, fontSize: 13 }}>{s.title}</div>
                   <div style={{ fontSize: 12, color: '#8b949e' }}>{s.description}</div>
@@ -505,7 +507,9 @@ export default function PublishPanel({ workspaceId }: Props) {
 
           <div style={{ marginBottom: 10 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
-              Build {proof.build.ok ? '✅' : '❌'}
+              Build {proof.build.ok
+                ? <CheckCircle2 size={14} color="#3fb950" style={{ display: 'inline-block', verticalAlign: '-2px' }} />
+                : <XCircle size={14} color="#f85149" style={{ display: 'inline-block', verticalAlign: '-2px' }} />}
               <span style={{ color: '#8b949e', fontWeight: 400, marginLeft: 8 }}>
                 {(proof.build.durationMs / 1000).toFixed(1)}s
               </span>
@@ -530,7 +534,9 @@ export default function PublishPanel({ workspaceId }: Props) {
           {proof.verify.steps.map((s, i) => (
             <div key={i} style={{ marginBottom: 10 }}>
               <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
-                {s.name} {s.ok ? '✅' : '❌'}
+                {s.name} {s.ok
+                  ? <CheckCircle2 size={14} color="#3fb950" style={{ display: 'inline-block', verticalAlign: '-2px' }} />
+                  : <XCircle size={14} color="#f85149" style={{ display: 'inline-block', verticalAlign: '-2px' }} />}
               </div>
               <pre
                 style={{
@@ -575,6 +581,7 @@ export default function PublishPanel({ workspaceId }: Props) {
           </button>
         </div>
       )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

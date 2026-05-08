@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Pencil } from 'lucide-react';
 import { saasApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import { useToast } from '../Toast';
@@ -143,7 +144,9 @@ export default function NotesPage() {
                     </div>
                     <div style={{ display: 'flex', gap: 4 }}>
                       <button onClick={() => handlePin(n.id, n.isPinned)} style={{ background: 'none', border: 'none', color: n.isPinned ? colors.accentYellow : colors.textDim, cursor: 'pointer', fontSize: 12 }} title={n.isPinned ? 'Unpin' : 'Pin'}>📌</button>
-                      <button onClick={() => startEdit(n)} style={{ background: 'none', border: 'none', color: colors.textDim, cursor: 'pointer', fontSize: 12 }}>✏</button>
+                      <button onClick={() => startEdit(n)} aria-label="Edit note" style={{ background: 'none', border: 'none', color: colors.textDim, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', padding: 2 }}>
+                        <Pencil size={12} strokeWidth={2} />
+                      </button>
                       <button onClick={() => handleDelete(n.id)} style={{ background: 'none', border: 'none', color: colors.textDim, cursor: 'pointer', fontSize: 12 }}
                         onMouseEnter={e => (e.currentTarget.style.color = colors.accentRed)} onMouseLeave={e => (e.currentTarget.style.color = colors.textDim)}>×</button>
                     </div>

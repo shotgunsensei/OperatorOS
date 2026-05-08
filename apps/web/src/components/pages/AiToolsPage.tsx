@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { Zap } from 'lucide-react';
 import { colors } from '../SaasLayout';
 import { useToast } from '../Toast';
 import { aiApi } from '@/lib/auth';
@@ -47,6 +48,7 @@ interface Template {
 }
 
 type Tab = 'tools' | 'templates' | 'history' | 'usage';
+type TabIcon = string | JSX.Element;
 
 export default function AiToolsPage() {
   const { toast } = useToast();
@@ -162,8 +164,8 @@ export default function AiToolsPage() {
     } catch { toast('Failed to delete template', 'error'); }
   }
 
-  const tabs: { key: Tab; label: string; icon: string }[] = [
-    { key: 'tools', label: 'AI Tools', icon: '⚡' },
+  const tabs: { key: Tab; label: string; icon: TabIcon }[] = [
+    { key: 'tools', label: 'AI Tools', icon: <Zap size={14} strokeWidth={2} style={{ verticalAlign: 'middle' }} /> },
     { key: 'templates', label: 'Templates', icon: '📋' },
     { key: 'history', label: 'History', icon: '🕐' },
     { key: 'usage', label: 'Usage', icon: '📊' },

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { CheckCircle2, XCircle, Play, Loader2, Circle, Square } from 'lucide-react';
 import { agentApi } from '@/lib/api';
 import type { AgentEventData, AgentTask } from '@/lib/api';
 
@@ -8,15 +9,18 @@ interface AgentPanelProps {
   workspaceId: string;
 }
 
-const EVENT_ICONS: Record<string, string> = {
+const ICON_SIZE = 12;
+const inlineIcon: React.CSSProperties = { display: 'inline-block', verticalAlign: '-2px' };
+
+const EVENT_ICONS: Record<string, ReactNode> = {
   PLAN: '📋',
   LLM_THOUGHT_SUMMARY: '🧠',
   TOOL_CALL: '🔧',
   TOOL_RESULT: '📤',
-  VERIFY_RESULT: '✅',
+  VERIFY_RESULT: <CheckCircle2 size={ICON_SIZE} color="#3fb950" style={inlineIcon} />,
   PATCH_APPLIED: '📝',
   DONE: '🏁',
-  ERROR: '❌',
+  ERROR: <XCircle size={ICON_SIZE} color="#f85149" style={inlineIcon} />,
   STREAM_END: '🔚',
 };
 
@@ -140,13 +144,20 @@ export default function AgentPanel({ workspaceId }: AgentPanelProps) {
       const output = String(payload.output ?? '').slice(0, 200);
       return (
         <span>
-          <strong>{String(payload.tool)}</strong>: {payload.success ? '✓' : '✗'}{' '}
+          <strong>{String(payload.tool)}</strong>:{' '}
+          {payload.success
+            ? <CheckCircle2 size={ICON_SIZE} color="#3fb950" style={inlineIcon} />
+            : <XCircle size={ICON_SIZE} color="#f85149" style={inlineIcon} />}{' '}
           <span style={{ color: '#8b949e', fontSize: 11 }}>{output}</span>
         </span>
       );
     }
     if (type === 'VERIFY_RESULT') {
-      return <span>{payload.passed ? '✅ All checks passed' : '❌ Some checks failed'}</span>;
+      return payload.passed ? (
+        <span><CheckCircle2 size={ICON_SIZE} color="#3fb950" style={inlineIcon} /> All checks passed</span>
+      ) : (
+        <span><XCircle size={ICON_SIZE} color="#f85149" style={inlineIcon} /> Some checks failed</span>
+      );
     }
     if (type === 'PATCH_APPLIED') {
       const files = (payload.changedFiles as string[]) ?? [];
@@ -207,7 +218,11 @@ export default function AgentPanel({ workspaceId }: AgentPanelProps) {
               whiteSpace: 'nowrap',
             }}
           >
-            {running ? '⏳ Running...' : '▶ Run Agent'}
+            {running ? (
+              <><Loader2 size={ICON_SIZE} style={{ ...inlineIcon, animation: 'spin 1s linear infinite' }} /> Running...</>
+            ) : (
+              <><Play size={ICON_SIZE} style={inlineIcon} /> Run Agent</>
+            )}
           </button>
         </div>
         {error && <div data-testid="text-agent-error" style={{ color: '#f85149', fontSize: 12, marginTop: 4 }}>{error}</div>}
@@ -239,7 +254,7 @@ export default function AgentPanel({ workspaceId }: AgentPanelProps) {
                       textAlign: 'left',
                     }}
                   >
-                    <span style={{ color: t.status === 'succeeded' ? '#3fb950' : t.status === 'failed' ? '#f85149' : '#8b949e' }}>●</span>{' '}
+                    <Circle size={8} fill={t.status === 'succeeded' ? '#3fb950' : t.status === 'failed' ? '#f85149' : '#8b949e'} color={t.status === 'succeeded' ? '#3fb950' : t.status === 'failed' ? '#f85149' : '#8b949e'} style={inlineIcon} />{' '}
                     {t.goal?.slice(0, 60) ?? t.title} <span style={{ color: '#484f58', fontSize: 11 }}>({t.status})</span>
                   </button>
                 ))}
@@ -261,7 +276,7 @@ export default function AgentPanel({ workspaceId }: AgentPanelProps) {
               lineHeight: 1.5,
             }}
           >
-            <span style={{ marginRight: 6 }}>{EVENT_ICONS[evt.type] ?? '▪'}</span>
+            <span style={{ marginRight: 6 }}>{EVENT_ICONS[evt.type] ?? <Square size={ICON_SIZE} color="#8b949e" style={inlineIcon} />}</span>
             <span style={{ color: EVENT_COLORS[evt.type] ?? '#8b949e', fontWeight: 600, marginRight: 6, fontSize: 10, textTransform: 'uppercase' as const }}>
               {evt.type.replace(/_/g, ' ')}
             </span>
@@ -278,7 +293,7 @@ export default function AgentPanel({ workspaceId }: AgentPanelProps) {
 
         {running && (
           <div style={{ padding: '8px 0', color: '#58a6ff', fontSize: 12 }}>
-            ⏳ Agent is working...
+            <Loader2 size={ICON_SIZE} style={{ ...inlineIcon, animation: 'spin 1s linear infinite' }} /> Agent is working...
           </div>
         )}
 
@@ -296,11 +311,16 @@ export default function AgentPanel({ workspaceId }: AgentPanelProps) {
           }}
         >
           <div style={{ fontWeight: 600, color: task.status === 'succeeded' ? '#3fb950' : '#f85149', marginBottom: 2 }}>
-            {task.status === 'succeeded' ? '✅ Agent succeeded' : '❌ Agent failed'}
+            {task.status === 'succeeded' ? (
+              <><CheckCircle2 size={ICON_SIZE} color="#3fb950" style={inlineIcon} /> Agent succeeded</>
+            ) : (
+              <><XCircle size={ICON_SIZE} color="#f85149" style={inlineIcon} /> Agent failed</>
+            )}
           </div>
           <div style={{ color: '#8b949e' }}>{task.resultSummary}</div>
         </div>
       )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
