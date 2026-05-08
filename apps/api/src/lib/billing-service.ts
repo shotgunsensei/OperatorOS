@@ -684,13 +684,24 @@ export async function getAddonStripePriceId(moduleSlug: string): Promise<string>
   return getAddonStripePriceIdFromModule(mod ?? null);
 }
 
-// Fetches the live unit_amount + currency for a module's
-// STRIPE_PRICE_ADDON_<SLUG> env binding so admins can spot drift between
-// what they typed into modules.metadata.addonPriceCents and what Stripe
-// will actually charge. Never throws; returns a typed result.
+// Fetches the live unit_amount + currency for a module's resolved Stripe
+// Price binding so admins can spot drift between what they typed into
+// modules.metadata.addonPriceCents and what Stripe will actually charge.
+// Reports both the metadata override and the legacy env binding plus
+// which one is currently winning, so admins can tell at a glance how a
+// module is configured. Never throws; returns a typed result.
+export type AddonStripePriceSource = 'override' | 'env' | 'none';
+
 export interface AddonStripePriceLookup {
   envKey: string;
+  /** Resolved priceId actually used by checkout (override wins over env). */
   priceId: string;
+  /** Raw metadata.stripePriceId value (the override), if set. */
+  overridePriceId: string;
+  /** Raw STRIPE_PRICE_ADDON_<SLUG> env value, if set. */
+  envPriceId: string;
+  /** Which mechanism is currently winning. 'none' means neither configured. */
+  source: AddonStripePriceSource;
   stripeMode: string;
   stripeEnabled: boolean;
   fetched: boolean;
@@ -700,12 +711,32 @@ export interface AddonStripePriceLookup {
   error: string | null;
 }
 
-export async function lookupAddonStripePrice(moduleSlug: string): Promise<AddonStripePriceLookup> {
+export async function lookupAddonStripePrice(
+  moduleSlug: string,
+  preloaded?: { slug: string; metadata?: Record<string, unknown> | null } | null,
+): Promise<AddonStripePriceLookup> {
   const envKey = getAddonStripePriceEnvKey(moduleSlug);
-  const priceId = await getAddonStripePriceId(moduleSlug);
+  // Accept a preloaded module row so list endpoints (e.g. /v1/platform/pricing)
+  // can avoid an N+1 DB roundtrip when iterating the module catalog.
+  let mod = preloaded ?? null;
+  if (!mod) {
+    const [row] = await db.select({ slug: modules.slug, metadata: modules.metadata })
+      .from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
+    mod = row ?? null;
+  }
+  const md = (mod?.metadata ?? {}) as Record<string, unknown>;
+  const overridePriceId = typeof md.stripePriceId === 'string' ? md.stripePriceId.trim() : '';
+  const envPriceId = getAddonStripePriceIdFromEnv(moduleSlug);
+  const priceId = overridePriceId || envPriceId;
+  const source: AddonStripePriceSource = overridePriceId
+    ? 'override'
+    : (envPriceId ? 'env' : 'none');
   const base: AddonStripePriceLookup = {
     envKey,
     priceId,
+    overridePriceId,
+    envPriceId,
+    source,
     stripeMode: STRIPE_MODE,
     stripeEnabled: isStripeEnabled(),
     fetched: false,

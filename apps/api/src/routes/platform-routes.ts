@@ -709,7 +709,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     for (const m of all) {
       const md = (m.metadata ?? {}) as Record<string, any>;
       const declared = typeof md.addonPriceCents === 'number' ? md.addonPriceCents : null;
-      const lookup = await lookupAddonStripePrice(m.slug);
+      const lookup = await lookupAddonStripePrice(m.slug, m);
       const mismatch = declared != null && lookup.unitAmountCents != null && declared !== lookup.unitAmountCents;
       out.push({
         slug: m.slug,
@@ -717,7 +717,17 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         status: m.status,
         declaredAddonPriceCents: declared,
         envKey: lookup.envKey,
+        // Effective binding: true iff *some* mechanism (override or env)
+        // resolved a priceId. Kept for backward compatibility with the
+        // previous Pricing surface.
         envKeyConfigured: !!lookup.priceId,
+        // New: report each mechanism independently plus which one is
+        // currently winning, so the Pricing tab can show "configured via
+        // override" vs "configured via env" per row.
+        overridePriceId: lookup.overridePriceId || null,
+        envPriceId: lookup.envPriceId || null,
+        priceId: lookup.priceId || null,
+        priceSource: lookup.source,
         stripeUnitAmountCents: lookup.unitAmountCents,
         stripeCurrency: lookup.currency,
         stripeFetched: lookup.fetched,

@@ -814,7 +814,17 @@ function ModuleDetail({ slug, onBack }: { slug: string; onBack: () => void }) {
         {pricing && (
           <div style={{ marginTop: 12, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }} data-testid="block-module-stripe">
             <div style={{ color: colors.textMuted, marginBottom: 4 }}>Stripe add-on price binding (read-only)</div>
-            <div>env: <code>{pricing.envKey}</code> {pricing.envKeyConfigured ? <Pill tone="green">configured</Pill> : <Pill tone="muted">missing</Pill>}</div>
+            <div data-testid={`text-binding-source-${pricing.slug}`}>
+              binding:{' '}
+              {pricing.priceSource === 'override' && <Pill tone="green">via override</Pill>}
+              {pricing.priceSource === 'env' && <Pill tone="green">via env</Pill>}
+              {pricing.priceSource === 'none' && <Pill tone="muted">not configured</Pill>}
+              {pricing.priceId && <> <code>{pricing.priceId}</code></>}
+            </div>
+            <div>
+              override: {pricing.overridePriceId ? <code>{pricing.overridePriceId}</code> : <span style={{ color: colors.textMuted }}>—</span>}
+              {' · '}env <code>{pricing.envKey}</code>: {pricing.envPriceId ? <code>{pricing.envPriceId}</code> : <span style={{ color: colors.textMuted }}>—</span>}
+            </div>
             <div>declared: {pricing.declaredAddonPriceCents ?? '—'}¢ · stripe: {pricing.stripeUnitAmountCents ?? '—'}¢ {pricing.stripeCurrency ? `(${pricing.stripeCurrency})` : ''} {pricing.mismatch && <Pill tone="red">mismatch</Pill>}</div>
           </div>
         )}
@@ -1106,7 +1116,17 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
       </div>
       {lookup && (
         <div data-testid="block-stripe-drift" style={{ marginTop: 8, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }}>
-          <div>env key: <code>{lookup.envKey ?? '—'}</code> {lookup.envKeyConfigured ? <Pill tone="green">configured</Pill> : <Pill tone="muted">missing</Pill>}</div>
+          <div>
+            binding:{' '}
+            {lookup.source === 'override' && <Pill tone="green">via override</Pill>}
+            {lookup.source === 'env' && <Pill tone="green">via env</Pill>}
+            {lookup.source === 'none' && <Pill tone="muted">not configured</Pill>}
+            {lookup.priceId && <> <code>{lookup.priceId}</code></>}
+          </div>
+          <div>
+            override: {lookup.overridePriceId ? <code>{lookup.overridePriceId}</code> : <span style={{ color: colors.textMuted }}>—</span>}
+            {' · '}env <code>{lookup.envKey ?? '—'}</code>: {lookup.envPriceId ? <code>{lookup.envPriceId}</code> : <span style={{ color: colors.textMuted }}>—</span>}
+          </div>
           <div>declared: {lookup.declaredAddonPriceCents ?? '—'}¢ · stripe: {lookup.stripeUnitAmountCents ?? '—'}¢ {lookup.stripeCurrency ? `(${lookup.stripeCurrency})` : ''}</div>
           {lookup.mismatch && <Pill tone="red">mismatch</Pill>}
           {lookup.error && <Pill tone="yellow">{lookup.error}</Pill>}
@@ -1958,7 +1978,7 @@ function Pricing() {
       <Card style={{ padding: 0 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead><tr style={{ background: colors.bgHover, color: colors.textMuted }}>
-            <Th>Module</Th><Th>Declared (¢)</Th><Th>Stripe (¢)</Th><Th>Currency</Th><Th>Env Key</Th><Th>Status</Th><Th>Actions</Th>
+            <Th>Module</Th><Th>Declared (¢)</Th><Th>Stripe (¢)</Th><Th>Currency</Th><Th>Binding</Th><Th>Status</Th><Th>Actions</Th>
           </tr></thead>
           <tbody>
             {rows.map(p => {
@@ -1970,7 +1990,17 @@ function Pricing() {
                   <Td data-testid={`text-declared-${p.slug}`}>{p.declaredAddonPriceCents ?? '—'}</Td>
                   <Td data-testid={`text-stripe-${p.slug}`}>{p.stripeUnitAmountCents ?? '—'}</Td>
                   <Td>{p.stripeCurrency ?? '—'}</Td>
-                  <Td><code style={{ color: colors.textMuted }}>{p.envKey}</code> {p.envKeyConfigured ? <Pill tone="green">configured</Pill> : <Pill tone="muted">missing</Pill>}</Td>
+                  <Td data-testid={`text-binding-source-row-${p.slug}`}>
+                    {p.priceSource === 'override' && <Pill tone="green">via override</Pill>}
+                    {p.priceSource === 'env' && <Pill tone="green">via env</Pill>}
+                    {p.priceSource === 'none' && <Pill tone="muted">not configured</Pill>}
+                    <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
+                      {p.priceId ? <code>{p.priceId}</code> : '—'}
+                    </div>
+                    <div style={{ color: colors.textMuted, fontSize: 11 }}>
+                      env <code>{p.envKey}</code>{p.envPriceId ? <> = <code>{p.envPriceId}</code></> : ' (unset)'}
+                    </div>
+                  </Td>
                   <Td>{p.mismatch ? <Pill tone="red">mismatch</Pill> : (p.error ? <Pill tone="yellow">{p.error}</Pill> : <Pill tone="green">ok</Pill>)}</Td>
                   <Td>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
