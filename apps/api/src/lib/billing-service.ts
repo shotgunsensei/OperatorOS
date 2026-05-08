@@ -1145,8 +1145,6 @@ export async function resyncUserBilling(userId: string): Promise<{
   message: string;
   scanned?: number;
   reconciled?: number;
-  needsAttention?: number;
-  needsAttentionAddons?: Array<{ stripeSubscriptionId: string; moduleSlug: string | null }>;
 }> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return { ok: false, mode: 'local', message: 'User not found' };
@@ -1168,19 +1166,28 @@ export async function resyncUserBilling(userId: string): Promise<{
   for (const s of localPlanSub) if (s.stripeCustomerId) customerIds.add(s.stripeCustomerId);
   for (const a of localAddonSubs) if (a.stripeCustomerId) customerIds.add(a.stripeCustomerId);
 
+  // Track which stripeSubscriptionIds already have a local addon row, so
+  // we can decide whether to replay as `customer.subscription.updated`
+  // (heal an existing row) vs `customer.subscription.created` (insert a
+  // missing row). Without this, an addon whose original
+  // `checkout.session.completed` was missed would resync as a no-op
+  // UPDATE and the user would silently keep losing access.
+  const knownAddonStripeSubIds = new Set<string>();
+  for (const a of localAddonSubs) {
+    if (a.stripeSubscriptionId) knownAddonStripeSubIds.add(a.stripeSubscriptionId);
+  }
+
   if (customerIds.size === 0) {
     return {
       ok: true, mode: 'stripe',
       message: 'No Stripe customer is associated with this user yet; nothing to resync.',
-      scanned: 0, reconciled: 0, needsAttention: 0, needsAttentionAddons: [],
+      scanned: 0, reconciled: 0,
     };
   }
 
   let scanned = 0;
   let reconciledAddons = 0;
   let reconciledPlans = 0;
-  let needsAttentionAddons = 0;
-  const needsAttentionAddonDetails: Array<{ stripeSubscriptionId: string; moduleSlug: string | null }> = [];
 
   // Snapshot active plan-price -> plan_id mapping once per resync.
   const allPlans = await db.select().from(subscriptionPlans);
@@ -1198,26 +1205,23 @@ export async function resyncUserBilling(userId: string): Promise<{
 
       if (isAddon) {
         // Reuse the addon idempotency machinery via a synthetic event.
+        // If we have NO local addon row for this Stripe subscription id,
+        // the original `checkout.session.completed` was missed entirely
+        // — replay as `customer.subscription.created` so the
+        // processAddonWebhookEvent insert branch fires. Otherwise replay
+        // as `customer.subscription.updated` to heal status/period drift
+        // on the existing row.
+        const hasLocalRow = knownAddonStripeSubIds.has(sub.id);
+        const syntheticType = hasLocalRow
+          ? 'customer.subscription.updated'
+          : 'customer.subscription.created';
         const synthetic = {
           id: `resync_${sub.id}_${Date.now()}`,
-          type: 'customer.subscription.updated' as const,
+          type: syntheticType as 'customer.subscription.updated' | 'customer.subscription.created',
           data: { object: { ...sub, metadata: { ...md, userId, user_id: userId, kind: 'addon', type: 'addon' } } },
         };
         const r = await processAddonWebhookEvent(synthetic);
-        // Only count as "reconciled" when the handler actually mutated a
-        // local row. The synthetic event we send is always
-        // `customer.subscription.updated`, so an unhealed addon (no local
-        // row) returns handled:true but rowsAffected:0 — exactly the
-        // missed-webhook case the operator is trying to surface.
-        if (r.handled && r.noLocalRow) {
-          needsAttentionAddons += 1;
-          needsAttentionAddonDetails.push({
-            stripeSubscriptionId: sub.id,
-            moduleSlug: (md.module_slug ?? md.moduleSlug ?? null) as string | null,
-          });
-        } else if (r.handled) {
-          reconciledAddons += 1;
-        }
+        if (r.handled) reconciledAddons += 1;
         continue;
       }
 
@@ -1259,23 +1263,14 @@ export async function resyncUserBilling(userId: string): Promise<{
 
   await db.insert(billingEvents).values({
     userId, eventType: 'admin_resync',
-    metadata: {
-      mode: 'stripe', scanned, reconciledAddons, reconciledPlans,
-      needsAttention: needsAttentionAddons,
-      needsAttentionAddonDetails,
-    },
+    metadata: { mode: 'stripe', scanned, reconciledAddons, reconciledPlans },
     processedAt: new Date(),
   });
 
-  const attentionSuffix = needsAttentionAddons > 0
-    ? ` ${needsAttentionAddons} addon(s) need attention (no local row matched).`
-    : '';
   return {
     ok: true, mode: 'stripe',
-    message: `Resync complete. Scanned ${scanned} Stripe subscription(s); reconciled ${reconciledPlans} plan + ${reconciledAddons} addon record(s).${attentionSuffix}`,
+    message: `Resync complete. Scanned ${scanned} Stripe subscription(s); reconciled ${reconciledPlans} plan + ${reconciledAddons} addon record(s).`,
     scanned, reconciled: reconciledPlans + reconciledAddons,
-    needsAttention: needsAttentionAddons,
-    needsAttentionAddons: needsAttentionAddonDetails,
   };
 }
 

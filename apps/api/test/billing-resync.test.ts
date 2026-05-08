@@ -109,6 +109,70 @@ test('resyncUserBilling: local mode short-circuits without touching state', asyn
   );
 });
 
+test('resyncUserBilling: inserts a missing addon row when no local addon_subscriptions exists for the Stripe sub (missed checkout.session.completed recovery)', async () => {
+  // Fresh user + module so this test is isolated from the reconcile-existing
+  // test above (which seeds and mutates the same user/module).
+  const u2 = await createTestUser();
+  const m2 = await createTestModule();
+  const customerId = uniqueId('cus-missed');
+  const missedAddonStripeSubId = uniqueId('sub-missed');
+
+  // Seed: a base plan subscription so resyncUserBilling discovers the
+  // customerId. Critically, NO addon_subscriptions row exists for the
+  // missed-webhook addon — this models the "checkout.session.completed
+  // never reached us" outage class resync is supposed to recover from.
+  await db.insert(subscriptions).values({
+    userId: u2.id,
+    planId: testPlanId,
+    status: 'active',
+    stripeSubscriptionId: uniqueId('sub-plan'),
+    stripeCustomerId: customerId,
+  });
+
+  const missedAddonSub = buildStripeSub({
+    id: missedAddonStripeSubId,
+    customer: customerId,
+    metadata: {
+      type: 'addon',
+      module_slug: m2.slug,
+      moduleSlug: m2.slug,
+    },
+  });
+
+  const stubStripe = {
+    subscriptions: {
+      list: async () => ({ data: [missedAddonSub] }),
+    },
+  };
+  __setStripeTestOverrides({ enabled: true, client: stubStripe });
+
+  // Sanity: prove no addon row exists pre-resync.
+  const before = await db.select().from(addonSubscriptions)
+    .where(and(eq(addonSubscriptions.userId, u2.id), eq(addonSubscriptions.moduleId, m2.id)));
+  assert.equal(before.length, 0, 'precondition: no local addon row before resync');
+
+  const result = await resyncUserBilling(u2.id);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.mode, 'stripe');
+  assert.equal(result.scanned, 1);
+  assert.equal(result.reconciled, 1, 'missing addon must count as reconciled, not silently skipped');
+
+  // The fix: an addon_subscriptions row must now exist for the
+  // (user, module) pair, populated from the Stripe sub.
+  const after = await db.select().from(addonSubscriptions)
+    .where(and(eq(addonSubscriptions.userId, u2.id), eq(addonSubscriptions.moduleId, m2.id)));
+  assert.equal(after.length, 1, 'resync must INSERT a new addon row when none existed locally');
+  assert.equal(after[0].stripeSubscriptionId, missedAddonStripeSubId);
+  assert.equal(after[0].stripeCustomerId, customerId);
+  assert.ok(['active', 'trialing'].includes(after[0].status), 'newly inserted addon must be active');
+
+  // Cleanup the per-test fixtures (parent after() handles userId/moduleId).
+  try { await db.delete(subscriptions).where(eq(subscriptions.userId, u2.id)); } catch {}
+  await cleanupUser(u2.id);
+  await cleanupModule(m2.id);
+});
+
 test('resyncUserBilling: stripe-mode reconciles addon + base plan and writes admin_resync audit row', async () => {
   // Seed: user already has a (stale) plan subscription row with a known
   // customerId. resyncUserBilling discovers customers from existing rows.
@@ -219,44 +283,9 @@ test('resyncUserBilling: stripe-mode reconciles addon + base plan and writes adm
   assert.ok(evts[0].processedAt, 'admin_resync row should be marked processed (not in DLQ)');
 });
 
-test('resyncUserBilling: unhealed addon (no local row) is reported as needsAttention, not reconciled', async () => {
-  // Re-use the same userId/customerId. Add a *new* addon-tagged Stripe sub
-  // whose stripeSubscriptionId does NOT match any local addon row — i.e.
-  // the missed-webhook case. The previous test left exactly one local
-  // addon row with addonStripeSubId; this one uses a fresh sub id.
-  const localAddons = await db.select().from(addonSubscriptions).where(eq(addonSubscriptions.userId, userId));
-  const knownCustomerId = localAddons[0]?.stripeCustomerId
-    ?? (await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1))[0]?.stripeCustomerId!;
-
-  const orphanAddonSubId = uniqueId('sub-orphan');
-  const orphanSub = buildStripeSub({
-    id: orphanAddonSubId,
-    customer: knownCustomerId!,
-    metadata: { type: 'addon', module_slug: moduleSlug, moduleSlug },
-  });
-
-  const stubStripe = {
-    subscriptions: {
-      list: async () => ({ data: [orphanSub] }),
-    },
-  };
-  __setStripeTestOverrides({ enabled: true, client: stubStripe });
-
-  const result: any = await resyncUserBilling(userId);
-
-  assert.equal(result.ok, true);
-  assert.equal(result.scanned, 1);
-  assert.equal(result.reconciled, 0, 'orphan addon must NOT be counted as reconciled');
-  assert.equal(result.needsAttention, 1, 'orphan addon must be reported as needsAttention');
-  assert.equal(result.needsAttentionAddons.length, 1);
-  assert.equal(result.needsAttentionAddons[0].stripeSubscriptionId, orphanAddonSubId);
-  assert.equal(result.needsAttentionAddons[0].moduleSlug, moduleSlug);
-
-  const evts = await db.select().from(billingEvents)
-    .where(and(eq(billingEvents.userId, userId), eq(billingEvents.eventType, 'admin_resync')))
-    .orderBy(desc(billingEvents.createdAt));
-  const md = (evts[0].metadata ?? {}) as any;
-  assert.equal(md.needsAttention, 1, 'audit metadata.needsAttention must be 1');
-  assert.equal(Array.isArray(md.needsAttentionAddonDetails), true);
-  assert.equal(md.needsAttentionAddonDetails[0].stripeSubscriptionId, orphanAddonSubId);
-});
+// NOTE: A prior test asserted that an addon-tagged Stripe sub with no
+// matching local addon_subscriptions row was reported as
+// `needsAttention` instead of being reconciled. That contract is
+// intentionally retired by task-13: resync now auto-creates the missing
+// row so the user regains access. The auto-create behavior is covered
+// by the "inserts a missing addon row..." test above.
