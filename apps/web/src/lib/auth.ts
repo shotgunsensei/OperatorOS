@@ -167,6 +167,10 @@ export const tenantApi = {
     apiFetch(`/tenants/${tenantId}/invites/${inviteId}/resend`, { method: 'POST' }),
   acceptInvite: (token: string) =>
     apiFetch(`/invites/${token}/accept`, { method: 'POST' }),
+  // Public read used by the invite landing page to fetch the invitee's
+  // email (for pre-fill) and tenant name without requiring auth.
+  peekInvite: (token: string) =>
+    apiFetch(`/invites/${token}/peek`),
 
   // Per-user, per-module access grants (owner/admin only).
   getUserModuleAccess: (tenantId: string, userId: string) =>

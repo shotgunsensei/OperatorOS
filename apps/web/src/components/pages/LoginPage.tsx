@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../AuthProvider';
 import { colors } from '../SaasLayout';
 
@@ -8,9 +8,20 @@ interface LoginPageProps {
   onSwitch: (page: 'register' | 'forgot-password') => void;
 }
 
+// Set by the invite landing page when an unauthenticated visitor hits
+// /invites/<token>. Reading it here pre-fills the email so the recipient
+// doesn't have to retype the address the invite was issued to.
+const PENDING_INVITE_EMAIL_KEY = 'operatoros.pendingInviteEmail';
+
 export default function LoginPage({ onSwitch }: LoginPageProps) {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
+  useEffect(() => {
+    try {
+      const parked = localStorage.getItem(PENDING_INVITE_EMAIL_KEY);
+      if (parked) setEmail(parked);
+    } catch {}
+  }, []);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

@@ -371,6 +371,37 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
     },
   );
 
+  // Public peek for the invite landing page. Returns just enough to render
+  // a friendly UX (invitee email so we can pre-fill login/register, tenant
+  // name so the recipient knows where they're being invited) and an explicit
+  // status so the page can short-circuit to an error state without making
+  // the recipient sign in first.
+  //
+  // Anti-enumeration: tokens are 32+ random bytes so listing them isn't
+  // feasible. We only expose the email back to whoever already holds the
+  // token (they got it in their inbox), never the underlying tenantId.
+  app.get<{ Params: { token: string } }>(
+    '/v1/invites/:token/peek',
+    async (request, reply) => {
+      const { token } = request.params;
+      const [invite] = await db.select().from(tenantInvites)
+        .where(eq(tenantInvites.token, token)).limit(1);
+      if (!invite) return notFound(reply, 'INVITE_NOT_FOUND', 'Invite not found');
+      const [tenant] = await db.select({ name: tenants.name })
+        .from(tenants).where(eq(tenants.id, invite.tenantId)).limit(1);
+      let status: 'pending' | 'expired' | 'accepted' = 'pending';
+      if (invite.acceptedAt) status = 'accepted';
+      else if (invite.expiresAt.getTime() < Date.now()) status = 'expired';
+      return {
+        email: invite.email,
+        role: invite.role,
+        tenantName: tenant?.name ?? null,
+        status,
+        expiresAt: invite.expiresAt,
+      };
+    },
+  );
+
   app.post<{ Params: { token: string } }>(
     '/v1/invites/:token/accept',
     { preHandler: [authenticate] },
