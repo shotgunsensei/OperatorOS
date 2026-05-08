@@ -5,6 +5,7 @@ import { saasApi, billingApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import UpgradeModal from '../UpgradeModal';
 import { useToast } from '../Toast';
+import { CheckSquare } from 'lucide-react';
 
 interface TasksPageProps {
   projectId?: string;
@@ -107,7 +108,9 @@ export default function TasksPage({ projectId, projectName, onBack }: TasksPageP
           textAlign: 'center', padding: 60, background: colors.bgSecondary,
           border: `1px solid ${colors.border}`, borderRadius: 12,
         }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>☑</div>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+            <CheckSquare size={40} color={colors.textMuted} aria-hidden />
+          </div>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 8 }}>Select a project</div>
           <div style={{ fontSize: 13, color: colors.textMuted }}>Go to Projects and click on a project to see its tasks</div>
         </div>
@@ -197,7 +200,9 @@ export default function TasksPage({ projectId, projectName, onBack }: TasksPageP
         <div style={{ padding: 40, color: colors.textMuted }}>Loading tasks...</div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12 }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>☑</div>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+            <CheckSquare size={40} color={colors.textMuted} aria-hidden />
+          </div>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 8 }}>No tasks yet</div>
           <div style={{ fontSize: 13, color: colors.textMuted }}>Create your first task to start tracking work</div>
         </div>
