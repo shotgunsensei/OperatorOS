@@ -819,7 +819,13 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       if (!before) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
 
       const envKey = getAddonStripePriceEnvKey(slug);
-      const previousPriceId = process.env[envKey] || null;
+      const envPriceId = process.env[envKey] || null;
+      const beforeMd = (before.metadata ?? {}) as Record<string, any>;
+      const previousMetaPriceId = typeof beforeMd.stripePriceId === 'string' ? beforeMd.stripePriceId : null;
+      // The "previous" priceId for audit/UX is whatever would have been
+      // resolved by getAddonStripePriceIdFromModule before the rotation:
+      // metadata override wins over env binding.
+      const previousPriceId = previousMetaPriceId || envPriceId;
 
       let created;
       try {
@@ -839,9 +845,18 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       // and addon checkout flows immediately use the new price.
       process.env[envKey] = created.priceId;
 
-      const beforeMd = (before.metadata ?? {}) as Record<string, any>;
+      // Persist the rotation to modules.metadata.stripePriceId so it
+      // survives a server restart. getAddonStripePriceIdFromModule already
+      // prefers this override over the legacy env binding, so both
+      // lookupAddonStripePrice and the addon checkout flow honor it
+      // automatically. Operators can later restore the previous priceId
+      // (or clear back to the env binding) from the same Pricing tab.
       const previousCents = typeof beforeMd.addonPriceCents === 'number' ? beforeMd.addonPriceCents : null;
-      const nextMd = { ...beforeMd, addonPriceCents: created.unitAmountCents };
+      const nextMd: Record<string, any> = {
+        ...beforeMd,
+        addonPriceCents: created.unitAmountCents,
+        stripePriceId: created.priceId,
+      };
       const [after] = await db.update(modules)
         .set({ metadata: nextMd, updatedAt: new Date() })
         .where(eq(modules.slug, slug))
@@ -857,6 +872,8 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         extra: {
           slug, envKey,
           previousPriceId, newPriceId: created.priceId,
+          previousMetaPriceId, envPriceId,
+          persistedToMetadata: true,
           previousCents, nextCents: created.unitAmountCents,
           currency: created.currency, productId: created.productId,
         },
@@ -869,6 +886,8 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         action: 'stripe_price_created',
         envKey,
         previousPriceId,
+        previousMetaPriceId,
+        envPriceId,
         newPriceId: created.priceId,
         productId: created.productId,
         previousCents,
@@ -876,8 +895,17 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         currency: created.currency,
         module: after,
         lookup: fresh,
-        requiresSecretRotation: true,
-        secretRotationHint: `Save ${envKey}=${created.priceId} into your environment secrets so this binding survives a restart.`,
+        // Persisted to modules.metadata.stripePriceId — the binding now
+        // survives a server restart without manual secret edits. The legacy
+        // STRIPE_PRICE_ADDON_<SLUG> env binding can still be updated for
+        // parity with other environments, but it is no longer required for
+        // this server to keep using the new price after a restart.
+        persistedToMetadata: true,
+        requiresSecretRotation: false,
+        secretRotationHint:
+          `New Stripe price persisted to modules.metadata.stripePriceId — ` +
+          `it will survive a restart. Optional: also save ${envKey}=${created.priceId} ` +
+          `into your environment secrets for parity across environments.`,
       };
     },
   );

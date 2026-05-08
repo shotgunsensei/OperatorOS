@@ -1671,7 +1671,7 @@ function Pricing() {
     setErr(null); setNotice(null);
     const def = String(declaredCents ?? '');
     const input = window.prompt(
-      `Create a NEW Stripe Price for "${slug}" (recurring monthly).\n\nEnter the new unit_amount in CENTS.\nThis will create a fresh Stripe Price, point the in-process env binding at it, and align the declared price.\n\nNOTE: process.env is mutated for this server only — also save the new STRIPE_PRICE_ADDON_<SLUG> value to your secrets so it survives a restart.`,
+      `Create a NEW Stripe Price for "${slug}" (recurring monthly).\n\nEnter the new unit_amount in CENTS.\nThis will create a fresh Stripe Price, persist it to modules.metadata.stripePriceId (survives restart), point the in-process env binding at it, and align the declared price.\n\nThe previous priceId is preserved in the audit log so you can restore it from the module's "Stripe Price ID override" field if needed.`,
       def,
     );
     if (input == null) return;
@@ -1683,9 +1683,13 @@ function Pricing() {
         method: 'POST',
         body: JSON.stringify({ unitAmountCents: cents }),
       });
+      const persistedNote = r.persistedToMetadata
+        ? ' Persisted to modules.metadata.stripePriceId — survives restart.'
+        : '';
       setNotice(
-        `Created Stripe price ${r.newPriceId} for ${slug} at ${r.nextCents}¢ ${r.currency?.toUpperCase?.() || ''}. ` +
-        (r.requiresSecretRotation ? `IMPORTANT: ${r.secretRotationHint}` : ''),
+        `Created Stripe price ${r.newPriceId} for ${slug} at ${r.nextCents}¢ ${r.currency?.toUpperCase?.() || ''}.` +
+        persistedNote +
+        (r.requiresSecretRotation ? ` IMPORTANT: ${r.secretRotationHint}` : ''),
       );
       await reload();
     } catch (e) { setErr(e); } finally { setBusy(null); }
