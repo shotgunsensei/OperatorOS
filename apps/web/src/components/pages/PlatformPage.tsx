@@ -220,8 +220,29 @@ function Dashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
   if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
   const s = data.stats ?? {};
   const h = data.health ?? {};
+  const warnings: { code: string; message: string }[] = Array.isArray(s.warnings) ? s.warnings : [];
   return (
     <div>
+      {warnings.length > 0 && (
+        <div data-testid="banner-stats-warnings" style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {warnings.map(w => (
+            <div
+              key={w.code}
+              data-testid={`banner-stats-warning-${w.code}`}
+              style={{
+                padding: '10px 12px',
+                border: `1px solid ${colors.accentRed}`,
+                background: 'rgba(220, 38, 38, 0.08)',
+                color: colors.text,
+                borderRadius: 6,
+                fontSize: 13,
+              }}
+            >
+              <strong style={{ color: colors.accentRed }}>{w.code}</strong>: {w.message}
+            </div>
+          ))}
+        </div>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 12 }}>
         <Card data-testid="card-tenants" onClick={() => onNavigate({ kind: 'tenants' })} style={{ cursor: 'pointer' }}>
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Tenants</div>

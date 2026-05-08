@@ -187,7 +187,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
 
   // Lightweight platform-wide stats for the dashboard. One round-trip,
   // counts only — keeps the operator console snappy.
-  app.get('/v1/platform/stats', { preHandler: [requireSuperAdmin] }, async () => {
+  app.get('/v1/platform/stats', { preHandler: [requireSuperAdmin] }, async (request) => {
     const [
       tenantsAll, modulesAll, addonsAll, eventsAll, usersAll,
     ] = await Promise.all([
@@ -202,6 +202,27 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       acc[v] = (acc[v] ?? 0) + 1;
       return acc;
     }, {});
+    const billingTotal = eventsAll.length;
+    const billingFailed = eventsAll.filter(e => e.errorMessage !== null).length;
+    const billingProcessed = eventsAll.filter(e => e.processedAt !== null).length;
+
+    // Silent-zero guard: if a column rename or refactor causes the
+    // processed/failed counters to silently read 0 even though the
+    // billing_events table has plenty of rows, surface a warning to
+    // both the operator log and the dashboard so a super_admin notices
+    // before the bug gets baked into a release. Threshold is a single
+    // env-tunable knob (PLATFORM_STATS_SILENT_ZERO_THRESHOLD), default 50.
+    const warnings: { code: string; message: string }[] = [];
+    const silentZeroThreshold = (() => {
+      const raw = Number(process.env.PLATFORM_STATS_SILENT_ZERO_THRESHOLD);
+      return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 50;
+    })();
+    if (billingTotal > silentZeroThreshold && billingProcessed === 0 && billingFailed === 0) {
+      const msg = `billing_events has ${billingTotal} rows but processed=0 and failed=0 (threshold ${silentZeroThreshold}); counters may be reading the wrong column.`;
+      request.log.warn({ billingTotal, silentZeroThreshold }, `[platform-stats] ${msg}`);
+      warnings.push({ code: 'BILLING_EVENTS_SILENT_ZERO', message: msg });
+    }
+
     return {
       tenants: { total: tenantsAll.length, byStatus: byStatus(tenantsAll) },
       modules: {
@@ -215,15 +236,16 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         activeOrTrialing: addonsAll.filter(s => ['active', 'trialing'].includes(s.status)).length,
       },
       billingEvents: {
-        total: eventsAll.length,
-        failed: eventsAll.filter(e => e.errorMessage !== null).length,
-        processed: eventsAll.filter(e => e.processedAt !== null).length,
+        total: billingTotal,
+        failed: billingFailed,
+        processed: billingProcessed,
       },
       users: {
         total: usersAll.length,
         superAdmins: usersAll.filter(u => u.platformRole === 'super_admin').length,
         active: usersAll.filter(u => u.status === 'active').length,
       },
+      warnings,
     };
   });
 
