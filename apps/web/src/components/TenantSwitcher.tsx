@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Building2, Check, ChevronDown, Shield } from 'lucide-react';
 import { useTenant, type TenantSummary } from './TenantProvider';
 import { useAuth } from './AuthProvider';
+import { useToast } from './Toast';
 
 const colors = {
   bgSecondary: '#0d1117',
@@ -19,6 +20,7 @@ const colors = {
 export default function TenantSwitcher() {
   const { user } = useAuth();
   const { tenants, allTenants, activeTenant, loading, switchTenant } = useTenant();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -47,7 +49,10 @@ export default function TenantSwitcher() {
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Failed to switch tenant', err);
+      const message = friendlySwitchError(err);
+      toast(message, 'error');
       setBusyId(null);
+      // Keep the picker open so the user can choose another tenant.
     }
   };
 
@@ -188,6 +193,26 @@ export default function TenantSwitcher() {
       )}
     </div>
   );
+}
+
+// The API rejects /v1/tenants/:id/switch with structured errors:
+//   - 404 TENANT_NOT_FOUND  (cross-tenant, archived, or no membership)
+//   - 403 TENANT_SUSPENDED  (tenant exists but is suspended)
+// Surface the server-provided message when present, with a sensible
+// fallback per known code so the user always sees a helpful reason.
+function friendlySwitchError(err: unknown): string {
+  const e = (err ?? {}) as { status?: number; code?: string; error?: string; message?: string };
+  const serverMsg = e.error || e.message;
+  if (e.code === 'TENANT_SUSPENDED') {
+    return serverMsg || 'That tenant is suspended. Contact your platform administrator.';
+  }
+  if (e.code === 'TENANT_NOT_FOUND' || e.status === 404) {
+    return serverMsg || "That tenant isn't available. It may have been archived or removed.";
+  }
+  if (e.status === 403) {
+    return serverMsg || "You don't have access to that tenant.";
+  }
+  return serverMsg || 'Could not switch tenant. Please try again.';
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
