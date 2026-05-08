@@ -19,7 +19,7 @@ const colors = {
 
 export default function TenantSwitcher() {
   const { user } = useAuth();
-  const { tenants, allTenants, activeTenant, loading, switchTenant } = useTenant();
+  const { tenants, allTenants, activeTenant, loading, switchTenant, refresh } = useTenant();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -53,6 +53,16 @@ export default function TenantSwitcher() {
       toast(message, 'error');
       setBusyId(null);
       // Keep the picker open so the user can choose another tenant.
+      // If the failure indicates the tenant is no longer reachable, refresh
+      // the underlying list so the stale entry disappears (or has its
+      // updated status reflected). Swallow refresh errors so a transient
+      // refresh failure can't trigger an infinite retry loop.
+      if (isTenantGoneError(err)) {
+        refresh().catch((refreshErr) => {
+          // eslint-disable-next-line no-console
+          console.error('Failed to refresh tenant list after switch error', refreshErr);
+        });
+      }
     }
   };
 
@@ -213,6 +223,16 @@ function friendlySwitchError(err: unknown): string {
     return serverMsg || "You don't have access to that tenant.";
   }
   return serverMsg || 'Could not switch tenant. Please try again.';
+}
+
+// True when the failure indicates the tenant is no longer reachable for this
+// user (archived/removed → 404 TENANT_NOT_FOUND, or suspended → 403
+// TENANT_SUSPENDED). In those cases we refresh the underlying tenant list so
+// the picker drops or restyles the stale entry.
+function isTenantGoneError(err: unknown): boolean {
+  const e = (err ?? {}) as { status?: number; code?: string };
+  if (e.code === 'TENANT_NOT_FOUND' || e.code === 'TENANT_SUSPENDED') return true;
+  return false;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
