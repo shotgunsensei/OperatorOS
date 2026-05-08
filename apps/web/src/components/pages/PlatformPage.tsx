@@ -896,6 +896,16 @@ function ModulePlanMapping({ moduleSlug, onSaved }: { moduleSlug: string; onSave
   );
 }
 
+interface AddonPriceHistoryEntry {
+  id: string;
+  createdAt: string;
+  adminId: string;
+  adminEmail: string | null;
+  adminName: string | null;
+  previousCents: number | null;
+  nextCents: number | null;
+}
+
 function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: () => void }) {
   const meta = (m.metadata ?? {}) as any;
   const current: number | null = typeof meta.addonPriceCents === 'number' ? meta.addonPriceCents : null;
@@ -903,23 +913,57 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
   const [err, setErr] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const [drift, setDrift] = useState<any>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<AddonPriceHistoryEntry[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyErr, setHistoryErr] = useState<any>(null);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+
   const checkStripe = async () => {
     setErr(null);
     try { setDrift(await apiCall(`/v1/platform/modules/${m.slug}/stripe-price`)); }
     catch (e) { setErr(e); }
+  };
+  const writePrice = async (n: number) => {
+    await apiCall(`/v1/platform/modules/${m.slug}/addon-price`, {
+      method: 'PUT', body: JSON.stringify({ addonPriceCents: n }),
+    });
   };
   const save = async () => {
     setErr(null); setBusy(true);
     try {
       const n = parseInt(cents, 10);
       if (!Number.isFinite(n) || n < 0) throw Object.assign(new Error('Enter a non-negative integer (cents)'), { code: 'BAD_INPUT' });
-      await apiCall(`/v1/platform/modules/${m.slug}/addon-price`, {
-        method: 'PUT', body: JSON.stringify({ addonPriceCents: n }),
-      });
+      await writePrice(n);
+      if (historyOpen) await loadHistory();
       onSaved();
     } catch (e) { setErr(e); } finally { setBusy(false); }
   };
+  const loadHistory = async () => {
+    setHistoryLoading(true); setHistoryErr(null);
+    try {
+      const d = await apiCall(`/v1/platform/modules/${m.slug}/addon-price-history`);
+      setHistory(d.history as AddonPriceHistoryEntry[]);
+    } catch (e) { setHistoryErr(e); } finally { setHistoryLoading(false); }
+  };
+  const toggleHistory = () => {
+    const next = !historyOpen;
+    setHistoryOpen(next);
+    if (next && history === null && !historyLoading) loadHistory();
+  };
+  const restore = async (entry: AddonPriceHistoryEntry) => {
+    if (entry.previousCents == null) return;
+    setRestoringId(entry.id);
+    setErr(null);
+    try {
+      await writePrice(entry.previousCents);
+      setCents(String(entry.previousCents));
+      await loadHistory();
+      onSaved();
+    } catch (e) { setErr(e); } finally { setRestoringId(null); }
+  };
   const lookup = drift?.lookup;
+  const fmt = (c: number | null) => c == null ? '—' : `${c}¢`;
   return (
     <Card style={{ marginTop: 12 }} data-testid="form-module-addon-price">
       <h3 style={{ marginTop: 0, fontSize: 14 }}>Add-on price</h3>
@@ -934,6 +978,7 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
         </div>
         <Btn data-testid="button-save-addon-price" variant="primary" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save price'}</Btn>
         <Btn data-testid="button-check-stripe-price" onClick={checkStripe}>Check Stripe drift</Btn>
+        <Btn data-testid="button-toggle-price-history" onClick={toggleHistory}>{historyOpen ? 'Hide price history' : 'Price history'}</Btn>
       </div>
       {lookup && (
         <div data-testid="block-stripe-drift" style={{ marginTop: 8, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }}>
@@ -941,6 +986,40 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
           <div>declared: {lookup.declaredAddonPriceCents ?? '—'}¢ · stripe: {lookup.stripeUnitAmountCents ?? '—'}¢ {lookup.stripeCurrency ? `(${lookup.stripeCurrency})` : ''}</div>
           {lookup.mismatch && <Pill tone="red">mismatch</Pill>}
           {lookup.error && <Pill tone="yellow">{lookup.error}</Pill>}
+        </div>
+      )}
+      {historyOpen && (
+        <div data-testid="block-addon-price-history" style={{ marginTop: 8, padding: 10, background: colors.bg, borderRadius: 6, fontSize: 12 }}>
+          <div style={{ fontWeight: 600, marginBottom: 6 }}>Price history</div>
+          {historyLoading && <div data-testid="addon-price-history-loading" style={{ color: colors.textMuted }}>Loading…</div>}
+          {historyErr && <ErrorBlock err={historyErr} />}
+          {!historyLoading && !historyErr && history && history.length === 0 && (
+            <div data-testid="addon-price-history-empty" style={{ color: colors.textMuted }}>No price changes recorded yet.</div>
+          )}
+          {!historyLoading && !historyErr && history && history.map(entry => {
+            const canRestore = entry.previousCents != null && entry.previousCents !== current;
+            const when = new Date(entry.createdAt);
+            return (
+              <div
+                key={entry.id}
+                data-testid={`addon-price-history-row-${entry.id}`}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between', padding: '4px 0', borderTop: `1px solid ${colors.border}` }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: 'monospace' }}>{fmt(entry.previousCents)} → {fmt(entry.nextCents)}</div>
+                  <div style={{ color: colors.textMuted, fontSize: 11 }}>
+                    {when.toLocaleString()} · {entry.adminEmail ?? entry.adminId}
+                  </div>
+                </div>
+                <Btn
+                  data-testid={`button-restore-addon-price-${entry.id}`}
+                  onClick={() => restore(entry)}
+                  disabled={!canRestore || restoringId === entry.id}
+                  title={canRestore ? `Restore to ${fmt(entry.previousCents)}` : entry.previousCents == null ? 'No prior value' : 'Already at this price'}
+                >{restoringId === entry.id ? '…' : 'Restore'}</Btn>
+              </div>
+            );
+          })}
         </div>
       )}
     </Card>

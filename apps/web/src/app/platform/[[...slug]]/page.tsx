@@ -51,6 +51,8 @@ function viewToPath(v: PlatformView): string {
     case 'tenant':    return `/platform/tenants/${v.id}`;
     case 'modules':   return '/platform/modules';
     case 'module':    return `/platform/modules/${v.slug}`;
+    case 'users':     return '/platform/users';
+    case 'user':      return `/platform/users/${v.id}`;
     case 'billing':   return '/platform/billing';
     case 'pricing':   return '/platform/pricing';
     case 'health':    return '/platform/health';

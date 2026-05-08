@@ -1398,6 +1398,49 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     },
   );
 
+  // Per-module add-on price change history. Reads `admin_audit_logs` rows
+  // where action='module_addon_price_updated' and details.slug matches the
+  // requested module slug. Powers the "Price history" panel so platform
+  // admins can audit prior values and roll back to any of them.
+  app.get<{ Params: { slug: string } }>(
+    '/v1/platform/modules/:slug/addon-price-history',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const { slug } = request.params;
+      const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+      if (!mod) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
+      const rows = await db.select()
+        .from(adminAuditLogs)
+        .where(eq(adminAuditLogs.action, 'module_addon_price_updated'))
+        .orderBy(desc(adminAuditLogs.createdAt))
+        .limit(200);
+      const matches = rows.filter(r => {
+        const d = (r.details ?? {}) as Record<string, unknown>;
+        return d.slug === slug;
+      });
+      const adminIds = [...new Set(matches.map(r => r.adminId))];
+      const adminMap: Record<string, { email: string; name: string | null }> = {};
+      for (const uid of adminIds) {
+        const [u] = await db.select({ email: users.email, name: users.name })
+          .from(users).where(eq(users.id, uid)).limit(1);
+        if (u) adminMap[uid] = { email: u.email, name: u.name };
+      }
+      const history = matches.map(r => {
+        const d = (r.details ?? {}) as Record<string, unknown>;
+        return {
+          id: r.id,
+          createdAt: r.createdAt,
+          adminId: r.adminId,
+          adminEmail: adminMap[r.adminId]?.email ?? null,
+          adminName: adminMap[r.adminId]?.name ?? null,
+          previousCents: typeof d.previousCents === 'number' ? d.previousCents : null,
+          nextCents: typeof d.nextCents === 'number' ? d.nextCents : null,
+        };
+      });
+      return { slug, history };
+    },
+  );
+
   app.get<{ Params: { slug: string } }>(
     '/v1/platform/modules/:slug/stripe-price',
     { preHandler: [requireSuperAdmin] },
