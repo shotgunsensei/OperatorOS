@@ -368,13 +368,13 @@ app.post<{ Params: { id: string } }>(
       if (result.success) {
         await db.insert(runners).values({
           workspaceId: id,
-          mode: getRunnerMode() === 'k8s' ? 'k8s' : 'docker',
+          mode: getRunnerMode(),
           containerId: result.containerId ?? null,
           status: 'running',
           startedAt: new Date(),
         }).onConflictDoUpdate({
           target: runners.workspaceId,
-          set: { status: 'running', containerId: result.containerId ?? null, startedAt: new Date(), stoppedAt: null },
+          set: { mode: getRunnerMode(), status: 'running', containerId: result.containerId ?? null, startedAt: new Date(), stoppedAt: null },
         });
       }
 

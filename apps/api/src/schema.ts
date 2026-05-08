@@ -17,7 +17,7 @@ export const workspaces = pgTable('workspaces', {
 
 export const runners = pgTable('runners', {
   workspaceId: varchar('workspace_id', { length: 36 }).primaryKey().references(() => workspaces.id),
-  mode: text('mode', { enum: ['k8s', 'docker'] }).notNull().default('docker'),
+  mode: text('mode', { enum: ['k8s', 'docker', 'local'] }).notNull().default('docker'),
   podName: text('pod_name'),
   namespace: text('namespace'),
   pvcName: text('pvc_name'),
