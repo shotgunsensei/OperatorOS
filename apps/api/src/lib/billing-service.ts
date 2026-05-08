@@ -89,7 +89,7 @@ export interface PortalSessionResult {
   url: string;
 }
 
-export async function subscribeToPlan(userId: string, planSlug: string): Promise<SubscribeResult> {
+export async function subscribeToPlan(userId: string, tenantId: string, planSlug: string): Promise<SubscribeResult> {
   const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.slug, planSlug)).limit(1);
   if (!plan) throw new Error('Plan not found');
 
@@ -110,11 +110,11 @@ export async function subscribeToPlan(userId: string, planSlug: string): Promise
     };
   }
 
-  return await applyPlanChangeLocally(userId, plan, currentConfig.slug, currentSub);
+  return await applyPlanChangeLocally(userId, tenantId, plan, currentConfig.slug, currentSub);
 }
 
 async function applyPlanChangeLocally(
-  userId: string, plan: any, fromSlug: string, currentSub: any
+  userId: string, tenantId: string, plan: any, fromSlug: string, currentSub: any
 ): Promise<SubscribeResult> {
   const upgrading = isUpgrade(fromSlug, plan.slug);
   const downgrading = isDowngrade(fromSlug, plan.slug);
@@ -149,7 +149,7 @@ async function applyPlanChangeLocally(
 
   let downgradeWarnings: string[] = [];
   if (downgrading) {
-    const violations = await getDowngradeViolations(userId, plan.slug);
+    const violations = await getDowngradeViolations(userId, tenantId, plan.slug);
     downgradeWarnings = violations.map(v => v.message);
   }
 

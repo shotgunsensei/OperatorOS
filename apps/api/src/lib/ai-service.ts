@@ -98,6 +98,7 @@ const SYSTEM_PROMPTS: Record<AiToolType, string> = {
 
 export async function checkAiToolAccess(
   userId: string,
+  tenantId: string,
   toolType: AiToolType
 ): Promise<{ allowed: boolean; reason?: string; upgradeSlug?: string }> {
   const tool = AI_TOOLS.find(t => t.type === toolType);
@@ -115,7 +116,7 @@ export async function checkAiToolAccess(
     };
   }
 
-  const limitCheck = await checkResourceLimit(userId, 'maxAiActionsPerMonth');
+  const limitCheck = await checkResourceLimit(userId, tenantId, 'maxAiActionsPerMonth');
   if (!limitCheck.allowed) {
     return {
       allowed: false,
@@ -137,6 +138,7 @@ export async function checkAiToolAccess(
 
 export async function executeAiTool(
   userId: string,
+  tenantId: string,
   toolType: AiToolType,
   input: string,
   templateId?: string
@@ -144,10 +146,11 @@ export async function executeAiTool(
   const tool = AI_TOOLS.find(t => t.type === toolType);
   if (!tool) throw new Error('Unknown AI tool');
 
-  const accessCheck = await checkAiToolAccess(userId, toolType);
+  const accessCheck = await checkAiToolAccess(userId, tenantId, toolType);
   if (!accessCheck.allowed) {
     const [logEntry] = await db.insert(aiActionsLog).values({
       userId,
+      tenantId,
       toolType,
       input: { text: input.substring(0, 500) },
       output: { error: accessCheck.reason },
@@ -168,7 +171,11 @@ export async function executeAiTool(
   let promptText = input;
   if (templateId) {
     const [template] = await db.select().from(aiPromptTemplates)
-      .where(and(eq(aiPromptTemplates.id, templateId), eq(aiPromptTemplates.userId, userId)))
+      .where(and(
+        eq(aiPromptTemplates.id, templateId),
+        eq(aiPromptTemplates.userId, userId),
+        eq(aiPromptTemplates.tenantId, tenantId),
+      ))
       .limit(1);
     if (template) {
       promptText = template.promptText.replace('{{input}}', input);
@@ -190,10 +197,11 @@ export async function executeAiTool(
       temperature: toolType === 'quick_action' ? 0.7 : 0.5,
     });
 
-    await recordAiUsage(userId, tool.actionCost);
+    await recordAiUsage(userId, tenantId, tool.actionCost);
 
     const [logEntry] = await db.insert(aiActionsLog).values({
       userId,
+      tenantId,
       toolType,
       input: { text: input.substring(0, 1000) },
       output: { text: response.text.substring(0, 5000) },
@@ -215,6 +223,7 @@ export async function executeAiTool(
 
     const [logEntry] = await db.insert(aiActionsLog).values({
       userId,
+      tenantId,
       toolType,
       input: { text: input.substring(0, 500) },
       output: { error: err.message || 'Unknown error' },
@@ -232,7 +241,7 @@ export async function executeAiTool(
   }
 }
 
-export async function getAiUsageStats(userId: string) {
+export async function getAiUsageStats(userId: string, tenantId: string) {
   const { config } = await getUserPlanConfig(userId);
 
   const now = new Date();
@@ -241,6 +250,7 @@ export async function getAiUsageStats(userId: string) {
   const monthlyActions = await db.select().from(aiActionsLog)
     .where(and(
       eq(aiActionsLog.userId, userId),
+      eq(aiActionsLog.tenantId, tenantId),
       gte(aiActionsLog.createdAt, monthStart),
     ));
 
@@ -279,9 +289,9 @@ export async function getAiUsageStats(userId: string) {
   };
 }
 
-export async function getAiHistory(userId: string, limit: number = 20) {
+export async function getAiHistory(userId: string, tenantId: string, limit: number = 20) {
   const actions = await db.select().from(aiActionsLog)
-    .where(eq(aiActionsLog.userId, userId))
+    .where(and(eq(aiActionsLog.userId, userId), eq(aiActionsLog.tenantId, tenantId)))
     .orderBy(desc(aiActionsLog.createdAt))
     .limit(limit);
 
@@ -298,13 +308,13 @@ export async function getAiHistory(userId: string, limit: number = 20) {
   }));
 }
 
-export async function getUserTemplates(userId: string) {
+export async function getUserTemplates(userId: string, tenantId: string) {
   return db.select().from(aiPromptTemplates)
-    .where(eq(aiPromptTemplates.userId, userId))
+    .where(and(eq(aiPromptTemplates.userId, userId), eq(aiPromptTemplates.tenantId, tenantId)))
     .orderBy(desc(aiPromptTemplates.updatedAt));
 }
 
-export async function createTemplate(userId: string, data: {
+export async function createTemplate(userId: string, tenantId: string, data: {
   name: string;
   description?: string;
   toolType: AiToolType;
@@ -312,6 +322,7 @@ export async function createTemplate(userId: string, data: {
 }) {
   const [template] = await db.insert(aiPromptTemplates).values({
     userId,
+    tenantId,
     name: data.name,
     description: data.description || null,
     toolType: data.toolType,
@@ -320,13 +331,17 @@ export async function createTemplate(userId: string, data: {
   return template;
 }
 
-export async function updateTemplate(userId: string, templateId: string, data: {
+export async function updateTemplate(userId: string, tenantId: string, templateId: string, data: {
   name?: string;
   description?: string;
   promptText?: string;
 }) {
   const [existing] = await db.select().from(aiPromptTemplates)
-    .where(and(eq(aiPromptTemplates.id, templateId), eq(aiPromptTemplates.userId, userId)))
+    .where(and(
+      eq(aiPromptTemplates.id, templateId),
+      eq(aiPromptTemplates.userId, userId),
+      eq(aiPromptTemplates.tenantId, tenantId),
+    ))
     .limit(1);
   if (!existing) throw { status: 404, message: 'Template not found' };
 
@@ -337,9 +352,13 @@ export async function updateTemplate(userId: string, templateId: string, data: {
   return updated;
 }
 
-export async function deleteTemplate(userId: string, templateId: string) {
+export async function deleteTemplate(userId: string, tenantId: string, templateId: string) {
   const [existing] = await db.select().from(aiPromptTemplates)
-    .where(and(eq(aiPromptTemplates.id, templateId), eq(aiPromptTemplates.userId, userId)))
+    .where(and(
+      eq(aiPromptTemplates.id, templateId),
+      eq(aiPromptTemplates.userId, userId),
+      eq(aiPromptTemplates.tenantId, tenantId),
+    ))
     .limit(1);
   if (!existing) throw { status: 404, message: 'Template not found' };
 

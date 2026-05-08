@@ -4,7 +4,7 @@ import { subscriptions, subscriptionPlans, billingEvents } from '../schema.js';
 import { eq, desc } from 'drizzle-orm';
 import { authenticate, getUserPlanLimits } from '../lib/auth.js';
 import { writeAudit } from '../lib/audit.js';
-import { canPurchaseAddon } from '../lib/tenant-auth.js';
+import { canPurchaseAddon, resolveTenantContext } from '../lib/tenant-auth.js';
 import {
   getUserPlanConfig, getUserUsageSummary, getDowngradeViolations,
   isDowngrade, PLAN_CONFIGS, FEATURE_LABELS, LIMIT_LABELS,
@@ -30,10 +30,12 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     return { subscription: sub || null, plan, limits };
   });
 
-  app.get('/v1/billing/usage', { preHandler: [authenticate] }, async (request) => {
+  app.get('/v1/billing/usage', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
     const { config, subscription } = await getUserPlanConfig(user.id);
-    const usage = await getUserUsageSummary(user.id);
+    const usage = await getUserUsageSummary(user.id, ctx.tenantId);
     return {
       plan: {
         slug: config.slug,
@@ -70,7 +72,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     return getBillingMode();
   });
 
-  app.post('/v1/billing/check-downgrade', { preHandler: [authenticate] }, async (request) => {
+  app.post('/v1/billing/check-downgrade', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     const { planSlug } = request.body as any;
     const { config: currentConfig } = await getUserPlanConfig(user.id);
@@ -79,7 +81,9 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       return { violations: [], isDowngrade: false };
     }
 
-    const violations = await getDowngradeViolations(user.id, planSlug);
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    const violations = await getDowngradeViolations(user.id, ctx.tenantId, planSlug);
     return { violations, isDowngrade: true };
   });
 
@@ -88,7 +92,9 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     const { planSlug } = request.body as any;
 
     try {
-      const result = await subscribeToPlan(user.id, planSlug);
+      const ctx = await resolveTenantContext(request);
+      if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+      const result = await subscribeToPlan(user.id, ctx.tenantId, planSlug);
       return result;
     } catch (err: any) {
       return reply.code(400).send({ error: err.message });

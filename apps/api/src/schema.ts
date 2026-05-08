@@ -263,10 +263,14 @@ export const saasWorkspaces = pgTable('saas_workspaces', {
   name: text('name').notNull(),
   slug: text('slug').notNull(),
   description: text('description'),
+  // Gate 2: nullable tenant scope, back-filled to owner's personal tenant.
+  // New writes always set this; reads scope by tenantId.
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_saas_workspaces_owner').on(t.ownerId),
+  index('idx_saas_workspaces_tenant').on(t.tenantId),
 ]);
 
 export const workspaceMemberships = pgTable('workspace_memberships', {
@@ -288,11 +292,14 @@ export const saasProjects = pgTable('saas_projects', {
   description: text('description'),
   status: text('status', { enum: ['active', 'archived', 'completed'] }).notNull().default('active'),
   color: text('color').default('#3b82f6'),
+  // Gate 2: nullable tenant scope, mirrors parent workspace.
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_saas_projects_workspace').on(t.workspaceId),
   index('idx_saas_projects_user').on(t.userId),
+  index('idx_saas_projects_tenant').on(t.tenantId),
 ]);
 
 export const saasTasks = pgTable('saas_tasks', {
@@ -305,12 +312,15 @@ export const saasTasks = pgTable('saas_tasks', {
   priority: text('priority', { enum: ['low', 'medium', 'high', 'urgent'] }).notNull().default('medium'),
   dueDate: timestamp('due_date'),
   assigneeId: varchar('assignee_id', { length: 36 }),
+  // Gate 2: nullable tenant scope, mirrors parent project.
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_saas_tasks_project').on(t.projectId),
   index('idx_saas_tasks_user').on(t.userId),
   index('idx_saas_tasks_status').on(t.status),
+  index('idx_saas_tasks_tenant').on(t.tenantId),
 ]);
 
 export const notes = pgTable('notes', {
@@ -321,11 +331,14 @@ export const notes = pgTable('notes', {
   title: text('title').notNull(),
   content: text('content').default(''),
   isPinned: boolean('is_pinned').notNull().default(false),
+  // Gate 2: nullable tenant scope, back-filled to author's personal tenant.
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_notes_user').on(t.userId),
   index('idx_notes_workspace').on(t.workspaceId),
+  index('idx_notes_tenant').on(t.tenantId),
 ]);
 
 export const activityFeed = pgTable('activity_feed', {
@@ -336,10 +349,13 @@ export const activityFeed = pgTable('activity_feed', {
   entityType: text('entity_type').notNull(),
   entityId: varchar('entity_id', { length: 36 }),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  // Gate 2: nullable tenant scope, back-filled to actor's personal tenant.
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_activity_feed_user').on(t.userId),
   index('idx_activity_feed_workspace_created').on(t.workspaceId, t.createdAt),
+  index('idx_activity_feed_tenant').on(t.tenantId),
 ]);
 
 export const usageTracking = pgTable('usage_tracking', {
@@ -349,9 +365,12 @@ export const usageTracking = pgTable('usage_tracking', {
   count: integer('count').notNull().default(1),
   periodStart: timestamp('period_start').notNull(),
   periodEnd: timestamp('period_end').notNull(),
+  // Gate 2: nullable tenant scope; usage is now metered per (user, tenant).
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_usage_tracking_user_period').on(t.userId, t.periodStart),
+  index('idx_usage_tracking_tenant_period').on(t.tenantId, t.periodStart),
 ]);
 
 export const adminAuditLogs = pgTable('admin_audit_logs', {
@@ -516,10 +535,14 @@ export const ssoHandoffTokens = pgTable('sso_handoff_tokens', {
   issuedAt: timestamp('issued_at').defaultNow().notNull(),
   expiresAt: timestamp('expires_at').notNull(),
   consumedAt: timestamp('consumed_at'),
+  // Gate 2: tenant scope captured at issue-time; consume-time re-checks
+  // hasModuleAccess(userId, tenantId, moduleSlug) against the SAME tenant.
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_sso_tokens_expires').on(t.expiresAt),
   index('idx_sso_tokens_user').on(t.userId),
+  index('idx_sso_tokens_tenant').on(t.tenantId),
 ]);
 
 export type ModuleRow = typeof modules.$inferSelect;
@@ -537,11 +560,14 @@ export const aiPromptTemplates = pgTable('ai_prompt_templates', {
   promptText: text('prompt_text').notNull(),
   isShared: boolean('is_shared').notNull().default(false),
   usageCount: integer('usage_count').notNull().default(0),
+  // Gate 2: nullable tenant scope; templates are private to a tenant.
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_ai_templates_user').on(t.userId),
   index('idx_ai_templates_tool').on(t.toolType),
+  index('idx_ai_templates_tenant').on(t.tenantId),
 ]);
 
 export const aiActionsLog = pgTable('ai_actions_log', {
@@ -553,11 +579,14 @@ export const aiActionsLog = pgTable('ai_actions_log', {
   tokenCount: integer('token_count').notNull().default(0),
   durationMs: integer('duration_ms').notNull().default(0),
   status: text('status', { enum: ['success', 'error', 'rate_limited'] }).notNull().default('success'),
+  // Gate 2: nullable tenant scope; AI history scoped per tenant.
+  tenantId: varchar('tenant_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_ai_actions_user').on(t.userId),
   index('idx_ai_actions_created').on(t.createdAt),
   index('idx_ai_actions_tool').on(t.toolType),
+  index('idx_ai_actions_tenant').on(t.tenantId),
 ]);
 
 export type PublishRunRow = typeof publishRuns.$inferSelect;

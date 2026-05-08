@@ -5,7 +5,7 @@
  */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import { users, tenants, tenantUsers, tenantInvites } from '../src/schema.js';
 import { signToken } from '../src/lib/auth.js';
@@ -91,7 +91,7 @@ test('owner creates invite, list returns it', async () => {
 test('admin (non-owner) cannot invite owner role', async () => {
   // Promote member to admin to exercise the boundary.
   const [m] = await db.update(tenantUsers).set({ role: 'admin' })
-    .where(eq(tenantUsers.userId, member.id)).returning();
+    .where(and(eq(tenantUsers.userId, member.id), eq(tenantUsers.tenantId, tenantA.id))).returning();
   assert.equal(m.role, 'admin');
   const r = await app.inject({
     method: 'POST', url: `/v1/tenants/${tenantA.id}/invites`,
@@ -132,7 +132,7 @@ test('happy path: invitee accepts, joins as member, second accept is 409', async
   assert.equal(accept.json().tenantId, tenantA.id);
   // Membership exists with the role from the invite.
   const [mem] = await db.select().from(tenantUsers)
-    .where(eq(tenantUsers.userId, invitee.id));
+    .where(and(eq(tenantUsers.userId, invitee.id), eq(tenantUsers.tenantId, tenantA.id)));
   assert.equal(mem.role, 'admin');
 
   const replay = await app.inject({

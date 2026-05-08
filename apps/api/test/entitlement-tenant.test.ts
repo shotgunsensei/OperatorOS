@@ -2,7 +2,7 @@
  * Gate 1 — Tenant module access semantics.
  *
  * Locks in the resolution order for `requireTenantModuleAccess` and
- * `hasModuleAccessForTenant`:
+ * `hasModuleAccess(userId, tenantId, slug)`:
  *
  *   1. tenant_modules row missing / wrong status -> deny
  *   2. explicit per-user grant with access_level='none' -> DENY
@@ -229,17 +229,6 @@ test('hasModuleAccess: archived tenant module denies even with explicit manager 
   assert.equal(r.reason, 'tenant_module_disabled');
 });
 
-test('hasModuleAccess: legacy=true bypasses tenant tables and uses per-user resolver', async () => {
-  // Sanity check on the escape hatch: callers that have not yet been
-  // migrated to tenants pass `{ legacy: true }`. The tenantId argument is
-  // ignored in that mode. Since `outsider` has no plan/addon/override, the
-  // legacy resolver should return hasAccess=false with reason 'no_entitlement'.
-  const { hasModuleAccess } = await import('../src/lib/entitlement-service.js');
-  await setTenantModule({ allowAllMembers: true });
-  const r = await hasModuleAccess(outsider.id, '', mod.slug, { legacy: true });
-  assert.equal(r.hasAccess, false);
-  // Either 'no_entitlement' (no plan match) or 'user_inactive' (test fixture
-  // dependent) — we only need to confirm the legacy code path was taken,
-  // which is proven by NOT returning 'tenant_module_disabled'.
-  assert.notEqual(r.reason, 'tenant_module_disabled');
-});
+// (removed) The pre-tenant `legacy=true` opt-in was dropped in follow-up
+// #19. Every caller now resolves access against an explicit tenant id;
+// the `hasModuleAccessLegacy` per-user resolver no longer exists.

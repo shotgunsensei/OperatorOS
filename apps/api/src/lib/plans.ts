@@ -194,22 +194,26 @@ export async function getUserPlanConfig(userId: string): Promise<{ config: PlanC
   return { config, subscription: sub };
 }
 
-export async function getUserUsageSummary(userId: string): Promise<UsageSummary> {
+// Gate 2: usage is now metered per (user, tenant). Every counter filters
+// by tenantId; team-member count includes only workspaces owned within the
+// active tenant. Plan limits remain user-level for now (one plan per user)
+// — caps apply per-tenant against the user's plan.
+export async function getUserUsageSummary(userId: string, tenantId: string): Promise<UsageSummary> {
   const { config } = await getUserPlanConfig(userId);
 
-  const [{ value: wsCount }] = await db.select({ value: count() }).from(saasWorkspaces).where(eq(saasWorkspaces.ownerId, userId));
-  const [{ value: projCount }] = await db.select({ value: count() }).from(saasProjects).where(eq(saasProjects.userId, userId));
-  const [{ value: taskCount }] = await db.select({ value: count() }).from(saasTasks).where(eq(saasTasks.userId, userId));
+  const [{ value: wsCount }] = await db.select({ value: count() }).from(saasWorkspaces)
+    .where(and(eq(saasWorkspaces.ownerId, userId), eq(saasWorkspaces.tenantId, tenantId)));
+  const [{ value: projCount }] = await db.select({ value: count() }).from(saasProjects)
+    .where(and(eq(saasProjects.userId, userId), eq(saasProjects.tenantId, tenantId)));
+  const [{ value: taskCount }] = await db.select({ value: count() }).from(saasTasks)
+    .where(and(eq(saasTasks.userId, userId), eq(saasTasks.tenantId, tenantId)));
 
-  const memberships = await db.select().from(workspaceMemberships)
-    .where(eq(workspaceMemberships.userId, userId));
-  const ownedWsIds: string[] = [];
-  const wsOwned = await db.select().from(saasWorkspaces).where(eq(saasWorkspaces.ownerId, userId));
-  wsOwned.forEach(w => ownedWsIds.push(w.id));
+  const wsOwned = await db.select().from(saasWorkspaces)
+    .where(and(eq(saasWorkspaces.ownerId, userId), eq(saasWorkspaces.tenantId, tenantId)));
   let teamMemberCount = 0;
-  for (const wsId of ownedWsIds) {
+  for (const w of wsOwned) {
     const [{ value: mc }] = await db.select({ value: count() }).from(workspaceMemberships)
-      .where(and(eq(workspaceMemberships.workspaceId, wsId)));
+      .where(eq(workspaceMemberships.workspaceId, w.id));
     teamMemberCount += mc - 1;
   }
 
@@ -219,6 +223,7 @@ export async function getUserUsageSummary(userId: string): Promise<UsageSummary>
   const usageRows = await db.select().from(usageTracking).where(
     and(
       eq(usageTracking.userId, userId),
+      eq(usageTracking.tenantId, tenantId),
       eq(usageTracking.actionType, 'ai_action'),
       gte(usageTracking.periodStart, periodStart),
       lte(usageTracking.periodEnd, periodEnd),
@@ -237,9 +242,9 @@ export async function getUserUsageSummary(userId: string): Promise<UsageSummary>
   };
 }
 
-export async function checkResourceLimit(userId: string, resource: keyof PlanLimits): Promise<PlanCheckResult> {
+export async function checkResourceLimit(userId: string, tenantId: string, resource: keyof PlanLimits): Promise<PlanCheckResult> {
   const { config } = await getUserPlanConfig(userId);
-  const usage = await getUserUsageSummary(userId);
+  const usage = await getUserUsageSummary(userId, tenantId);
 
   const resourceToUsageKey: Record<keyof PlanLimits, keyof UsageSummary> = {
     maxWorkspaces: 'workspaces',
@@ -286,11 +291,11 @@ export async function checkFeatureAccess(userId: string, feature: keyof PlanFeat
   return { allowed: true, resource: feature, used: 0, limit: 0, message: '' };
 }
 
-export async function getDowngradeViolations(userId: string, targetSlug: string): Promise<PlanCheckResult[]> {
+export async function getDowngradeViolations(userId: string, tenantId: string, targetSlug: string): Promise<PlanCheckResult[]> {
   const target = getPlanConfig(targetSlug);
   if (!target) return [];
 
-  const usage = await getUserUsageSummary(userId);
+  const usage = await getUserUsageSummary(userId, tenantId);
   const violations: PlanCheckResult[] = [];
 
   const checks: Array<{ key: keyof UsageSummary; limitKey: keyof PlanLimits }> = [
@@ -317,7 +322,7 @@ export async function getDowngradeViolations(userId: string, targetSlug: string)
   return violations;
 }
 
-export async function recordAiUsage(userId: string, actionCount: number = 1): Promise<void> {
+export async function recordAiUsage(userId: string, tenantId: string, actionCount: number = 1): Promise<void> {
   const now = new Date();
   const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
@@ -325,6 +330,7 @@ export async function recordAiUsage(userId: string, actionCount: number = 1): Pr
   const existing = await db.select().from(usageTracking).where(
     and(
       eq(usageTracking.userId, userId),
+      eq(usageTracking.tenantId, tenantId),
       eq(usageTracking.actionType, 'ai_action'),
       gte(usageTracking.periodStart, periodStart),
       lte(usageTracking.periodEnd, periodEnd),
@@ -338,6 +344,7 @@ export async function recordAiUsage(userId: string, actionCount: number = 1): Pr
   } else {
     await db.insert(usageTracking).values({
       userId,
+      tenantId,
       actionType: 'ai_action',
       count: actionCount,
       periodStart,

@@ -721,6 +721,27 @@ export async function ensureTenantTables() {
     CREATE INDEX IF NOT EXISTS idx_billing_events_tenant    ON billing_events(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_tenant  ON admin_audit_logs(tenant_id);
 
+    -- Gate 2: per-user resources scoped by tenant. All nullable so existing
+    -- rows survive boot; backfillPersonalTenants() fills them in.
+    ALTER TABLE saas_workspaces      ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    ALTER TABLE saas_projects        ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    ALTER TABLE saas_tasks           ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    ALTER TABLE notes                ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    ALTER TABLE activity_feed        ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    ALTER TABLE usage_tracking       ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    ALTER TABLE ai_prompt_templates  ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    ALTER TABLE ai_actions_log       ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    ALTER TABLE sso_handoff_tokens   ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(36);
+    CREATE INDEX IF NOT EXISTS idx_saas_workspaces_tenant       ON saas_workspaces(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_saas_projects_tenant         ON saas_projects(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_saas_tasks_tenant            ON saas_tasks(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_notes_tenant                 ON notes(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_activity_feed_tenant         ON activity_feed(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_usage_tracking_tenant_period ON usage_tracking(tenant_id, period_start);
+    CREATE INDEX IF NOT EXISTS idx_ai_templates_tenant          ON ai_prompt_templates(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_ai_actions_tenant            ON ai_actions_log(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_sso_tokens_tenant            ON sso_handoff_tokens(tenant_id);
+
     -- tenants -------------------------------------------------------------
     CREATE TABLE IF NOT EXISTS tenants (
       id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -884,7 +905,32 @@ export async function backfillPersonalTenants() {
     await db.execute(sql`UPDATE entitlement_overrides SET tenant_id = ${tenant.id} WHERE user_id  = ${u.id} AND tenant_id IS NULL`);
     await db.execute(sql`UPDATE billing_events        SET tenant_id = ${tenant.id} WHERE user_id  = ${u.id} AND tenant_id IS NULL`);
     await db.execute(sql`UPDATE admin_audit_logs      SET tenant_id = ${tenant.id} WHERE admin_id = ${u.id} AND tenant_id IS NULL`);
+
+    // Gate 2: per-user resources. Owner-keyed tables (workspaces, notes,
+    // usage, ai logs/templates, sso tokens) backfill straight from user_id.
+    // Children (projects, tasks) inherit their parent's tenant via subquery
+    // — this preserves invariant "row.tenant_id == parent.tenant_id".
+    await db.execute(sql`UPDATE saas_workspaces     SET tenant_id = ${tenant.id} WHERE owner_id = ${u.id} AND tenant_id IS NULL`);
+    await db.execute(sql`UPDATE notes               SET tenant_id = ${tenant.id} WHERE user_id  = ${u.id} AND tenant_id IS NULL`);
+    await db.execute(sql`UPDATE activity_feed       SET tenant_id = ${tenant.id} WHERE user_id  = ${u.id} AND tenant_id IS NULL`);
+    await db.execute(sql`UPDATE usage_tracking      SET tenant_id = ${tenant.id} WHERE user_id  = ${u.id} AND tenant_id IS NULL`);
+    await db.execute(sql`UPDATE ai_prompt_templates SET tenant_id = ${tenant.id} WHERE user_id  = ${u.id} AND tenant_id IS NULL`);
+    await db.execute(sql`UPDATE ai_actions_log      SET tenant_id = ${tenant.id} WHERE user_id  = ${u.id} AND tenant_id IS NULL`);
+    await db.execute(sql`UPDATE sso_handoff_tokens  SET tenant_id = ${tenant.id} WHERE user_id  = ${u.id} AND tenant_id IS NULL`);
   }
+
+  // Pull projects/tasks tenant_id from their parent in a single pass — runs
+  // after all per-user updates so multi-owner workspaces resolve correctly.
+  await db.execute(sql`
+    UPDATE saas_projects p SET tenant_id = w.tenant_id
+    FROM saas_workspaces w WHERE p.workspace_id = w.id
+      AND p.tenant_id IS NULL AND w.tenant_id IS NOT NULL
+  `);
+  await db.execute(sql`
+    UPDATE saas_tasks t SET tenant_id = p.tenant_id
+    FROM saas_projects p WHERE t.project_id = p.id
+      AND t.tenant_id IS NULL AND p.tenant_id IS NOT NULL
+  `);
   console.log(`[backfill] Personal tenants: ${created} created, ${allUsers.length} users ensured`);
 }
 

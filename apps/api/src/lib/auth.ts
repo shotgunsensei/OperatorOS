@@ -158,7 +158,18 @@ export function requireUsageWithinLimit(resourceType: string) {
     const limitKey = resourceMap[resourceType];
     if (!limitKey) return;
 
-    const result = await checkResourceLimit(user.id, limitKey);
+    // Resource caps are now metered per (user, tenant). Pre-handlers must
+    // resolve the active tenant before consulting limits — otherwise we
+    // would either count globally (over-counting cross-tenant work) or
+    // never count anything.
+    const { resolveTenantContext } = await import('./tenant-auth.js');
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) {
+      reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+      return;
+    }
+
+    const result = await checkResourceLimit(user.id, ctx.tenantId, limitKey);
     if (!result.allowed) {
       const statusCode = resourceType === 'aiActions' ? 429 : 403;
       reply.code(statusCode).send({

@@ -196,58 +196,6 @@ export async function evaluateUserEntitlement(userId: string, moduleId: string):
   return null;
 }
 
-// Legacy (pre-tenant) per-user entitlement check. Order:
-// admin_role > override > addon > plan.
-// Module runtime status (live/coming_soon/disabled) and baseUrl are NOT
-// considered here — callers gate launchability separately.
-//
-// Public callers MUST go through `hasModuleAccess(userId, tenantId, slug)`
-// with `{ legacy: true }` for unmigrated paths.
-async function hasModuleAccessLegacy(userId: string, moduleSlug: string): Promise<ModuleAccess> {
-  try {
-    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (!user || user.status !== 'active') {
-      return { moduleSlug, hasAccess: false, source: null, reason: 'user_inactive' };
-    }
-
-    const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
-    if (!mod) return { moduleSlug, hasAccess: false, source: null, reason: 'module_not_found' };
-
-    if (user.role === 'admin') {
-      return { moduleSlug, hasAccess: true, source: 'admin_role' };
-    }
-
-    const override = await activeOverrideForUser(userId, mod.id);
-    if (override) {
-      if (!override.grant) {
-        return {
-          moduleSlug, hasAccess: false, source: 'override',
-          reason: override.reason ?? 'admin_revoked', expiresAt: override.expiresAt,
-        };
-      }
-      return {
-        moduleSlug, hasAccess: true, source: 'override',
-        reason: override.reason ?? 'admin_granted', expiresAt: override.expiresAt,
-      };
-    }
-
-    const addon = await activeAddonForUser(userId, mod.id);
-    if (addon) return { moduleSlug, hasAccess: true, source: 'addon' };
-
-    const sub = await getActiveSubscription(userId);
-    if (sub && ['active', 'trialing'].includes(sub.status)) {
-      if (await planGrantsModule(sub.planId, mod.id)) {
-        return { moduleSlug, hasAccess: true, source: 'plan' };
-      }
-    }
-
-    return { moduleSlug, hasAccess: false, source: null, reason: 'no_entitlement' };
-  } catch (err) {
-    console.error('[entitlement] hasModuleAccessLegacy error:', err);
-    return { moduleSlug, hasAccess: false, source: null, reason: 'evaluation_error' };
-  }
-}
-
 /**
  * Compute the smallest plan slug that grants this module via plan inclusion,
  * for the "Upgrade to X" CTA. Returns null if no plan grants the module.
@@ -296,15 +244,12 @@ function pickCta(args: {
  * AND server-resolved rendering fields (unlocked / cta / upgrade target /
  * addon price). UI consumes this directly — never compute access on the client.
  */
-export async function getUserModules(userId: string): Promise<UserModuleSummary[]> {
+export async function getUserModules(userId: string, tenantId: string): Promise<UserModuleSummary[]> {
   const allModules = await db.select().from(modules);
   const sorted = allModules.sort((a, b) => a.ord - b.ord);
   const out: UserModuleSummary[] = [];
   for (const m of sorted) {
-    // TODO(gate-2): migrate getUserModules to a tenant-aware caller and drop
-    // the legacy fallback. See follow-up task: "Move every existing module
-    // behind the new tenant boundary".
-    const access = await hasModuleAccess(userId, '', m.slug, { legacy: true });
+    const access = await hasModuleAccess(userId, tenantId, m.slug);
     const upgradeTarget = await smallestUpgradeTarget(m.id);
     const addonPriceCents = readAddonPriceCents(m);
     const cta = pickCta({
@@ -342,11 +287,10 @@ export async function getUserModules(userId: string): Promise<UserModuleSummary[
 /**
  * Single-module summary with the same server-resolved shape as getUserModules.
  */
-export async function getModuleForUser(userId: string, moduleSlug: string): Promise<UserModuleSummary | null> {
+export async function getModuleForUser(userId: string, tenantId: string, moduleSlug: string): Promise<UserModuleSummary | null> {
   const [m] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
   if (!m) return null;
-  // TODO(gate-2): tenant-aware. See follow-up #19.
-  const access = await hasModuleAccess(userId, '', moduleSlug, { legacy: true });
+  const access = await hasModuleAccess(userId, tenantId, moduleSlug);
   const upgradeTarget = await smallestUpgradeTarget(m.id);
   const addonPriceCents = readAddonPriceCents(m);
   const cta = pickCta({
@@ -376,7 +320,7 @@ export async function getModuleForUser(userId: string, moduleSlug: string): Prom
  * Per-module trace for `/v1/modules/debug/:slug` and admin per-module
  * inspection. Returns null when the module slug does not exist.
  */
-export async function getModuleAccessTrace(userId: string, moduleSlug: string): Promise<ModuleAccessTrace | null> {
+export async function getModuleAccessTrace(userId: string, tenantId: string, moduleSlug: string): Promise<ModuleAccessTrace | null> {
   const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
   if (!mod) return null;
 
@@ -391,8 +335,7 @@ export async function getModuleAccessTrace(userId: string, moduleSlug: string): 
   const override = await activeOverrideForUser(userId, mod.id);
   const overrideGrants = override ? override.grant : null;
 
-  // TODO(gate-2): tenant-aware. See follow-up #19.
-  const access = await hasModuleAccess(userId, '', moduleSlug, { legacy: true });
+  const access = await hasModuleAccess(userId, tenantId, moduleSlug);
 
   return {
     moduleSlug,
@@ -500,8 +443,13 @@ export function requireModuleAccess(moduleSlug: string) {
     if (reply.sent) return;
     const user = (request as any).user;
 
-    // TODO(gate-2): tenant-aware. See follow-up #19.
-    const access = await hasModuleAccess(user.id, '', moduleSlug, { legacy: true });
+    const { resolveTenantContext } = await import('./tenant-auth.js');
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) {
+      reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+      return;
+    }
+    const access = await hasModuleAccess(user.id, ctx.tenantId, moduleSlug);
     if (!access.hasAccess) {
       reply.code(403).send({
         error: `Access to "${moduleSlug}" requires an upgraded plan or add-on.`,
@@ -571,6 +519,11 @@ async function hasModuleAccessTenantScoped(
     if (!tm || !launchable.includes(tm.status)) {
       return { moduleSlug, hasAccess: false, source: null, reason: 'tenant_module_disabled' };
     }
+    // The tenant_modules row encodes how the tenant got access. 'purchased'
+    // is the addon path (Stripe subscription); everything else (enabled,
+    // trial, beta) is the plan path. We surface that distinction to the
+    // UI through `source` so the marketplace badge stays correct.
+    const tmSource: 'addon' | 'plan' = tm.status === 'purchased' ? 'addon' : 'plan';
 
     const [acc] = await db.select().from(tenantUserModuleAccess)
       .where(and(
@@ -583,14 +536,14 @@ async function hasModuleAccessTenantScoped(
       if (acc.accessLevel === 'none') {
         return { moduleSlug, hasAccess: false, source: null, reason: 'explicit_deny' };
       }
-      return { moduleSlug, hasAccess: true, source: 'plan' };
+      return { moduleSlug, hasAccess: true, source: tmSource };
     }
 
     if (tm.allowAllMembers) {
       const [tu] = await db.select().from(tenantUsers)
         .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, userId)))
         .limit(1);
-      if (tu) return { moduleSlug, hasAccess: true, source: 'plan' };
+      if (tu) return { moduleSlug, hasAccess: true, source: tmSource };
     }
 
     return { moduleSlug, hasAccess: false, source: null, reason: 'no_tenant_grant' };
@@ -601,29 +554,15 @@ async function hasModuleAccessTenantScoped(
 }
 
 /**
- * Tenant-aware module entitlement check. This is the canonical contract
- * for Gate 1 and beyond.
- *
- * @param tenantId  The active tenant id. Ignored when `opts.legacy === true`.
- * @param opts.legacy  When true, the call is routed to the pre-tenant
- *                     per-user resolver (`hasModuleAccessLegacy`). Used by
- *                     unmigrated callers; tracked by follow-up #19.
+ * Tenant-aware module entitlement check. Canonical contract — every
+ * caller resolves access against an explicit tenant. The legacy per-user
+ * (pre-tenant) resolver and `{ legacy: true }` opt-in were removed in
+ * follow-up #19 once every gate route was migrated.
  */
 export async function hasModuleAccess(
   userId: string,
   tenantId: string,
   moduleSlug: string,
-  opts?: { legacy?: boolean },
 ): Promise<ModuleAccess> {
-  if (opts?.legacy) return hasModuleAccessLegacy(userId, moduleSlug);
   return hasModuleAccessTenantScoped(userId, tenantId, moduleSlug);
 }
-
-/**
- * Backwards-compatible alias kept temporarily so that early Gate 1 callers
- * (and external imports during the transition) continue to work. New code
- * should call `hasModuleAccess(userId, tenantId, slug)` directly.
- *
- * @deprecated Use `hasModuleAccess(userId, tenantId, slug)`.
- */
-export const hasModuleAccessForTenant = hasModuleAccessTenantScoped;

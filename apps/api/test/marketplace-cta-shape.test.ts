@@ -9,7 +9,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 import { db } from '../src/db.js';
-import { addonSubscriptions } from '../src/schema.js';
+import { addonSubscriptions, tenantModules } from '../src/schema.js';
 import { signToken } from '../src/lib/auth.js';
 import {
   ensureSchemaReady, createTestUser, createTestModule, cleanupUser, cleanupModule,
@@ -30,6 +30,16 @@ before(async () => {
     stripePriceId: 'price_mkt',
     currentPeriodStart: new Date(),
     currentPeriodEnd: new Date(Date.now() + 30 * 86400_000),
+  });
+  // Gate 2: addon access is tenant-scoped. The webhook normally inserts
+  // a tenant_modules row with status='purchased' + allowAllMembers=true
+  // when the user buys the addon. We replicate that here since this test
+  // seeds addon_subscriptions directly.
+  await db.insert(tenantModules).values({
+    tenantId: user.currentTenantId,
+    moduleId: mod.id,
+    status: 'purchased',
+    allowAllMembers: true,
   });
 
   const Fastify = (await import('fastify')).default;

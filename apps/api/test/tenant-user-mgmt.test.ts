@@ -5,7 +5,7 @@
  */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import { tenants, tenantUsers } from '../src/schema.js';
 import { signToken } from '../src/lib/auth.js';
@@ -111,7 +111,7 @@ test('owner removes a member', async () => {
   });
   assert.equal(r.statusCode, 200);
   const [row] = await db.select().from(tenantUsers)
-    .where(eq(tenantUsers.userId, admin.id));
+    .where(and(eq(tenantUsers.userId, admin.id), eq(tenantUsers.tenantId, tenantA.id)));
   assert.equal(row, undefined);
 });
 

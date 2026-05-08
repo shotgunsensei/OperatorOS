@@ -9,6 +9,7 @@ import {
 } from '../schema.js';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { authenticate, logAudit } from '../lib/auth.js';
+import { resolveTenantContext, requireTenantMember } from '../lib/tenant-auth.js';
 import {
   hasModuleAccess, getUserModules, getModuleForUser,
   getAccessBreakdown, getModuleAccessTrace, evaluateUserEntitlement,
@@ -227,9 +228,10 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   // -------------------------------------------------------------------------
   // GET /v1/modules — list all modules with server-resolved access state
   // -------------------------------------------------------------------------
-  app.get('/v1/modules', { preHandler: [authenticate] }, async (request) => {
+  app.get('/v1/modules', { preHandler: [requireTenantMember] }, async (request) => {
     const user = (request as any).user;
-    const summary = await getUserModules(user.id);
+    const ctx = (request as any).tenantContext;
+    const summary = await getUserModules(user.id, ctx.tenantId);
     // SSO fallback is an operator concern (missing MODULE_SSO_SECRET),
     // not an end-user concern. Surface the human-readable warning to
     // admins only; non-admins get the boolean so the UI can still adapt
@@ -273,10 +275,11 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   // -------------------------------------------------------------------------
   // GET /v1/modules/:slug — single-module detail, server-resolved
   // -------------------------------------------------------------------------
-  app.get('/v1/modules/:slug', { preHandler: [authenticate] }, async (request, reply) => {
+  app.get('/v1/modules/:slug', { preHandler: [requireTenantMember] }, async (request, reply) => {
     const user = (request as any).user;
+    const ctx = (request as any).tenantContext;
     const { slug } = request.params as { slug: string };
-    const summary = await getModuleForUser(user.id, slug);
+    const summary = await getModuleForUser(user.id, ctx.tenantId, slug);
     if (!summary) return reply.code(404).send({ error: 'Module not found' });
     return summary;
   });
@@ -293,15 +296,18 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       });
     }
     const targetUserId = queryUserId || user.id;
-    const breakdown = await getModuleAccessTrace(targetUserId, slug);
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    const breakdown = await getModuleAccessTrace(targetUserId, ctx.tenantId, slug);
     if (!breakdown) return reply.code(404).send({ error: 'Module not found' });
     return { breakdown, evaluated_for: targetUserId, env: APP_ENV };
   });
 
   // POST /v1/modules/:slug/handoff — issue short-lived signed JWT + launch URL.
   // Order: rate-limit -> module exists -> entitlement (403) -> status (400) -> issue.
-  app.post('/v1/modules/:slug/handoff', { preHandler: [authenticate] }, async (request, reply) => {
+  app.post('/v1/modules/:slug/handoff', { preHandler: [requireTenantMember] }, async (request, reply) => {
     const user = (request as any).user;
+    const ctx = (request as any).tenantContext;
     const { slug } = request.params as { slug: string };
     const userAgent = (request.headers['user-agent'] as string) || null;
 
@@ -325,8 +331,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // 1. Entitlement gate (403). hasModuleAccess is entitlement-only — it
     // does NOT consider module status, so coming_soon/disabled modules
     // surface their status through the next gate (400) for entitled users.
-    // TODO(gate-2): tenant-aware. See follow-up #19.
-    const access = await hasModuleAccess(user.id, '', slug, { legacy: true });
+    const access = await hasModuleAccess(user.id, ctx.tenantId, slug);
     if (!access.hasAccess) {
       await auditSsoReject({
         userId: user.id, action: 'module_handoff_access_denied',
@@ -403,6 +408,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       await db.insert(ssoHandoffTokens).values({
         jti,
         userId: user.id,
+        tenantId: ctx.tenantId,
         moduleSlug: slug,
         aud: slug,
         env: APP_ENV,
@@ -553,8 +559,18 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // contract within the documented status set (200/400/404/409/410/429)
     // and lets the user simply re-launch (the next handoff will fail at
     // issue time with 403, the canonical entitlement-deny surface).
-    // TODO(gate-2): tenant-aware. See follow-up #19.
-    const access = await hasModuleAccess(row.userId, '', row.moduleSlug, { legacy: true });
+    // Re-verify entitlement against the SAME tenant the token was issued
+    // for. Without this, a token minted under tenant A could be honored
+    // even if the user lost access in A — or worse, replayed in another
+    // tenant context.
+    if (!row.tenantId) {
+      await auditSsoReject({
+        userId: row.userId, action: 'module_consume_no_tenant',
+        details: { jti, ip }, ip,
+      });
+      return reply.code(410).send({ error: 'Token no longer valid', code: 'TOKEN_EXPIRED' });
+    }
+    const access = await hasModuleAccess(row.userId, row.tenantId, row.moduleSlug);
     if (!access.hasAccess) {
       await auditSsoReject({
         userId: row.userId, action: 'module_consume_access_revoked',
