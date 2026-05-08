@@ -37,7 +37,7 @@ import {
   TENANT_SAFE_FIELDS, MODULE_SAFE_FIELDS,
   TENANT_MODULE_SAFE_FIELDS, TENANT_USER_ACCESS_SAFE_FIELDS,
 } from '../lib/audit.js';
-import { lookupAddonStripePrice, getAddonStripePriceEnvKey, getAddonStripePriceId, retryBillingEvent } from '../lib/billing-service.js';
+import { lookupAddonStripePrice, getAddonStripePriceEnvKey, getAddonStripePriceId, retryBillingEvent, createAddonStripePrice } from '../lib/billing-service.js';
 import { getSsoCleanupHealth } from '../lib/sso-cleanup.js';
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -709,6 +709,160 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     }
     return { pricing: out, total: out.length, stripeMode: process.env.STRIPE_MODE || 'off' };
   });
+
+  // Pricing-drift fix #1: copy live Stripe unit_amount into
+  // modules.metadata.addonPriceCents so the in-app displayed price matches
+  // what Stripe will actually charge. Read-only against Stripe (no price
+  // mutation); only modifies the local module row.
+  app.post<{ Params: { slug: string } }>(
+    '/v1/platform/pricing/:slug/sync-from-stripe',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { slug } = request.params;
+      const [before] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
+
+      const lookup = await lookupAddonStripePrice(slug);
+      if (!lookup.priceId) {
+        return reply.code(409).send({
+          error: `No Stripe price configured (${lookup.envKey} is empty)`,
+          code: 'STRIPE_PRICE_NOT_CONFIGURED',
+        });
+      }
+      if (!lookup.fetched || typeof lookup.unitAmountCents !== 'number') {
+        return reply.code(502).send({
+          error: lookup.error || 'Could not fetch Stripe price',
+          code: 'STRIPE_LOOKUP_FAILED',
+        });
+      }
+
+      const beforeMd = (before.metadata ?? {}) as Record<string, any>;
+      const previousCents = typeof beforeMd.addonPriceCents === 'number' ? beforeMd.addonPriceCents : null;
+      const nextCents = lookup.unitAmountCents;
+      const nextMd = { ...beforeMd, addonPriceCents: nextCents };
+      const [after] = await db.update(modules)
+        .set({ metadata: nextMd, updatedAt: new Date() })
+        .where(eq(modules.slug, slug))
+        .returning();
+
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'module',
+        targetId: before.id,
+        action: 'module_addon_price_synced_from_stripe',
+        before: pickSafe(before, [...MODULE_SAFE_FIELDS]),
+        after: pickSafe(after, [...MODULE_SAFE_FIELDS]),
+        extra: {
+          slug, envKey: lookup.envKey, priceId: lookup.priceId,
+          previousCents, nextCents, currency: lookup.currency,
+        },
+        ipAddress: request.ip,
+      }, request);
+
+      const fresh = await lookupAddonStripePrice(slug);
+      return {
+        ok: true,
+        action: 'synced_from_stripe',
+        previousCents,
+        nextCents,
+        module: after,
+        lookup: fresh,
+      };
+    },
+  );
+
+  // Pricing-drift fix #2: provision a new Stripe Price (recurring monthly)
+  // for the module's add-on, point the in-process env binding at it, and
+  // align modules.metadata.addonPriceCents to the new amount. Requires
+  // STRIPE_MODE=live so we never invent priceIds against a non-live env.
+  //
+  // IMPORTANT: process.env mutation only persists for the running process.
+  // The response carries `requiresSecretRotation: true` and the new priceId
+  // so the operator can persist STRIPE_PRICE_ADDON_<SLUG> in their secrets.
+  app.post<{ Params: { slug: string }; Body: { unitAmountCents?: unknown; currency?: unknown } }>(
+    '/v1/platform/pricing/:slug/create-stripe-price',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { slug } = request.params;
+      const body = (request.body ?? {}) as any;
+      const raw = body.unitAmountCents;
+      if (typeof raw !== 'number' || !Number.isFinite(raw) || !Number.isInteger(raw) || raw <= 0) {
+        return badRequest(reply, 'unitAmountCents must be a positive integer (cents)');
+      }
+      if (raw > 100_000_00) {
+        return badRequest(reply, 'unitAmountCents is unreasonably large (>$100,000)');
+      }
+      const currency = typeof body.currency === 'string' && body.currency.length > 0
+        ? body.currency.toLowerCase() : 'usd';
+
+      const [before] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
+
+      const envKey = getAddonStripePriceEnvKey(slug);
+      const previousPriceId = process.env[envKey] || null;
+
+      let created;
+      try {
+        created = await createAddonStripePrice({
+          moduleSlug: slug, moduleName: before.name, unitAmountCents: raw, currency,
+        });
+      } catch (err: any) {
+        const msg = err?.message || 'Stripe price creation failed';
+        const isLive = (process.env.STRIPE_MODE || '') === 'live';
+        return reply.code(isLive ? 502 : 409).send({
+          error: msg,
+          code: isLive ? 'STRIPE_PRICE_CREATE_FAILED' : 'STRIPE_NOT_LIVE',
+        });
+      }
+
+      // Rotate in-process env binding so subsequent /v1/admin/.../stripe-price
+      // and addon checkout flows immediately use the new price.
+      process.env[envKey] = created.priceId;
+
+      const beforeMd = (before.metadata ?? {}) as Record<string, any>;
+      const previousCents = typeof beforeMd.addonPriceCents === 'number' ? beforeMd.addonPriceCents : null;
+      const nextMd = { ...beforeMd, addonPriceCents: created.unitAmountCents };
+      const [after] = await db.update(modules)
+        .set({ metadata: nextMd, updatedAt: new Date() })
+        .where(eq(modules.slug, slug))
+        .returning();
+
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'module',
+        targetId: before.id,
+        action: 'module_stripe_price_created',
+        before: pickSafe(before, [...MODULE_SAFE_FIELDS]),
+        after: pickSafe(after, [...MODULE_SAFE_FIELDS]),
+        extra: {
+          slug, envKey,
+          previousPriceId, newPriceId: created.priceId,
+          previousCents, nextCents: created.unitAmountCents,
+          currency: created.currency, productId: created.productId,
+        },
+        ipAddress: request.ip,
+      }, request);
+
+      const fresh = await lookupAddonStripePrice(slug);
+      return {
+        ok: true,
+        action: 'stripe_price_created',
+        envKey,
+        previousPriceId,
+        newPriceId: created.priceId,
+        productId: created.productId,
+        previousCents,
+        nextCents: created.unitAmountCents,
+        currency: created.currency,
+        module: after,
+        lookup: fresh,
+        requiresSecretRotation: true,
+        secretRotationHint: `Save ${envKey}=${created.priceId} into your environment secrets so this binding survives a restart.`,
+      };
+    },
+  );
 
   // Filterable audit log.
   app.get('/v1/platform/audit', { preHandler: [requireSuperAdmin] }, async (request) => {

@@ -692,6 +692,53 @@ export async function lookupAddonStripePrice(moduleSlug: string): Promise<AddonS
   }
 }
 
+// Creates a brand-new recurring (monthly) Stripe Price for a module's add-on.
+// Used by the super-admin "Create new Stripe price" drift-fix action so an
+// admin can rotate to a corrected unit_amount without leaving the UI.
+// Requires Stripe to be live (secret + STRIPE_MODE=live) — local/test stubs
+// are intentionally rejected so we never invent priceIds against a real env.
+export interface CreateAddonStripePriceArgs {
+  moduleSlug: string;
+  moduleName: string;
+  unitAmountCents: number;
+  currency?: string;
+}
+export interface CreateAddonStripePriceResult {
+  priceId: string;
+  productId: string;
+  unitAmountCents: number;
+  currency: string;
+}
+export async function createAddonStripePrice(
+  args: CreateAddonStripePriceArgs,
+): Promise<CreateAddonStripePriceResult> {
+  if (!isStripeEnabled()) {
+    throw new Error('Stripe is not enabled (set STRIPE_SECRET_KEY and STRIPE_MODE=live)');
+  }
+  if (!Number.isInteger(args.unitAmountCents) || args.unitAmountCents <= 0) {
+    throw new Error('unitAmountCents must be a positive integer (cents)');
+  }
+  const currency = (args.currency || 'usd').toLowerCase();
+  const stripe = getStripe();
+  const price = await stripe.prices.create({
+    unit_amount: args.unitAmountCents,
+    currency,
+    recurring: { interval: 'month' },
+    product_data: { name: `OperatorOS — ${args.moduleName} (add-on)` },
+    metadata: { moduleSlug: args.moduleSlug, source: 'platform_pricing_create' },
+  });
+  return {
+    priceId: price.id,
+    productId: typeof price.product === 'string'
+      ? price.product
+      : (price.product && typeof price.product === 'object' && 'id' in price.product
+          ? String(price.product.id)
+          : ''),
+    unitAmountCents: typeof price.unit_amount === 'number' ? price.unit_amount : args.unitAmountCents,
+    currency: price.currency || currency,
+  };
+}
+
 // In local-mode (no Stripe) the buy_addon CTA is allowed so dev can
 // exercise the local addon path; with Stripe enabled, a price id is required.
 export function isAddonPurchasable(moduleSlug: string): boolean {

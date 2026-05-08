@@ -1029,28 +1029,128 @@ function BillingEvents() {
 
 function Pricing() {
   const [rows, setRows] = useState<any[] | null>(null);
-  useEffect(() => { apiCall('/v1/platform/pricing').then(d => setRows(d.pricing)); }, []);
+  const [stripeMode, setStripeMode] = useState<string>('off');
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<any>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const reload = () => apiCall('/v1/platform/pricing')
+    .then(d => { setRows(d.pricing); setStripeMode(d.stripeMode || 'off'); })
+    .catch(setErr);
+  useEffect(() => { reload(); }, []);
+
+  const sync = async (slug: string) => {
+    setErr(null); setNotice(null); setBusy(`sync:${slug}`);
+    try {
+      const r = await apiCall(`/v1/platform/pricing/${encodeURIComponent(slug)}/sync-from-stripe`, { method: 'POST' });
+      setNotice(`Synced ${slug}: declared price is now ${r.nextCents}¢ (was ${r.previousCents ?? '—'}¢).`);
+      await reload();
+    } catch (e) { setErr(e); } finally { setBusy(null); }
+  };
+
+  const createPrice = async (slug: string, declaredCents: number | null) => {
+    setErr(null); setNotice(null);
+    const def = String(declaredCents ?? '');
+    const input = window.prompt(
+      `Create a NEW Stripe Price for "${slug}" (recurring monthly).\n\nEnter the new unit_amount in CENTS.\nThis will create a fresh Stripe Price, point the in-process env binding at it, and align the declared price.\n\nNOTE: process.env is mutated for this server only — also save the new STRIPE_PRICE_ADDON_<SLUG> value to your secrets so it survives a restart.`,
+      def,
+    );
+    if (input == null) return;
+    const cents = parseInt(input, 10);
+    if (!Number.isFinite(cents) || cents <= 0) { setErr(new Error('Invalid cents value')); return; }
+    setBusy(`create:${slug}`);
+    try {
+      const r = await apiCall(`/v1/platform/pricing/${encodeURIComponent(slug)}/create-stripe-price`, {
+        method: 'POST',
+        body: JSON.stringify({ unitAmountCents: cents }),
+      });
+      setNotice(
+        `Created Stripe price ${r.newPriceId} for ${slug} at ${r.nextCents}¢ ${r.currency?.toUpperCase?.() || ''}. ` +
+        (r.requiresSecretRotation ? `IMPORTANT: ${r.secretRotationHint}` : ''),
+      );
+      await reload();
+    } catch (e) { setErr(e); } finally { setBusy(null); }
+  };
+
   if (!rows) return <div style={{ color: colors.textMuted }}>Loading…</div>;
+
+  const mismatchCount = rows.filter(r => r.mismatch).length;
+  const isLive = stripeMode === 'live';
+
   return (
-    <Card style={{ padding: 0 }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-        <thead><tr style={{ background: colors.bgHover, color: colors.textMuted }}>
-          <Th>Module</Th><Th>Declared (¢)</Th><Th>Stripe (¢)</Th><Th>Currency</Th><Th>Env Key</Th><Th>Notes</Th>
-        </tr></thead>
-        <tbody>
-          {rows.map(p => (
-            <tr key={p.slug} style={{ borderTop: `1px solid ${colors.border}` }} data-testid={`row-pricing-${p.slug}`}>
-              <Td>{p.name} <span style={{ color: colors.textMuted, fontSize: 11 }}>{p.slug}</span></Td>
-              <Td>{p.declaredAddonPriceCents ?? '—'}</Td>
-              <Td>{p.stripeUnitAmountCents ?? '—'}</Td>
-              <Td>{p.stripeCurrency ?? '—'}</Td>
-              <Td><code style={{ color: colors.textMuted }}>{p.envKey}</code> {p.envKeyConfigured ? <Pill tone="green">configured</Pill> : <Pill tone="muted">missing</Pill>}</Td>
-              <Td>{p.mismatch ? <Pill tone="red">mismatch</Pill> : (p.error ? <Pill tone="yellow">{p.error}</Pill> : <Pill tone="green">ok</Pill>)}</Td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </Card>
+    <div>
+      <ErrorBlock err={err} />
+      {notice && (
+        <div data-testid="pricing-notice" style={{
+          padding: 12, marginBottom: 12, borderRadius: 6,
+          border: `1px solid ${colors.accentGreen}`, color: colors.text,
+          background: colors.bgSecondary, fontSize: 13,
+        }}>{notice}</div>
+      )}
+      <div data-testid="pricing-banner" style={{
+        padding: 12, marginBottom: 12, borderRadius: 6,
+        border: `1px solid ${mismatchCount > 0 ? colors.accentRed : colors.border}`,
+        background: colors.bgSecondary, color: colors.text, fontSize: 13, lineHeight: 1.5,
+      }}>
+        <div style={{ marginBottom: 6 }}>
+          <strong>Pricing drift inspector</strong>{' '}
+          <Pill tone={isLive ? 'green' : 'yellow'}>STRIPE_MODE={stripeMode}</Pill>{' '}
+          {mismatchCount > 0
+            ? <Pill tone="red">{mismatchCount} mismatch{mismatchCount === 1 ? '' : 'es'}</Pill>
+            : <Pill tone="green">all aligned</Pill>}
+        </div>
+        <div style={{ color: colors.textMuted }}>
+          When the declared price (modules.metadata.addonPriceCents) differs from what Stripe will actually charge, customers can be silently over- or undercharged.
+          {' '}<strong>Sync from Stripe</strong> trusts Stripe and rewrites the declared price to match the live unit_amount.
+          {' '}<strong>Create new Stripe price</strong> provisions a fresh Stripe Price at the amount you choose, points the in-process env binding at it, and aligns the declared price — use this when Stripe is wrong (e.g. you priced incorrectly there) or no price is bound yet.
+          {isLive ? '' : ' (Create is disabled because STRIPE_MODE is not "live".)'}
+        </div>
+      </div>
+      <Card style={{ padding: 0 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead><tr style={{ background: colors.bgHover, color: colors.textMuted }}>
+            <Th>Module</Th><Th>Declared (¢)</Th><Th>Stripe (¢)</Th><Th>Currency</Th><Th>Env Key</Th><Th>Status</Th><Th>Actions</Th>
+          </tr></thead>
+          <tbody>
+            {rows.map(p => {
+              const canSync = p.envKeyConfigured && p.stripeFetched && p.mismatch;
+              const createDisabled = !isLive || busy != null;
+              return (
+                <tr key={p.slug} style={{ borderTop: `1px solid ${colors.border}` }} data-testid={`row-pricing-${p.slug}`}>
+                  <Td>{p.name} <span style={{ color: colors.textMuted, fontSize: 11 }}>{p.slug}</span></Td>
+                  <Td data-testid={`text-declared-${p.slug}`}>{p.declaredAddonPriceCents ?? '—'}</Td>
+                  <Td data-testid={`text-stripe-${p.slug}`}>{p.stripeUnitAmountCents ?? '—'}</Td>
+                  <Td>{p.stripeCurrency ?? '—'}</Td>
+                  <Td><code style={{ color: colors.textMuted }}>{p.envKey}</code> {p.envKeyConfigured ? <Pill tone="green">configured</Pill> : <Pill tone="muted">missing</Pill>}</Td>
+                  <Td>{p.mismatch ? <Pill tone="red">mismatch</Pill> : (p.error ? <Pill tone="yellow">{p.error}</Pill> : <Pill tone="green">ok</Pill>)}</Td>
+                  <Td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <Btn
+                        data-testid={`button-sync-${p.slug}`}
+                        variant={canSync ? 'primary' : 'default'}
+                        disabled={!canSync || busy != null}
+                        title={canSync
+                          ? 'Overwrite the declared price with the live Stripe unit_amount'
+                          : 'No mismatch to sync (or Stripe price not fetched).'}
+                        onClick={() => sync(p.slug)}
+                      >{busy === `sync:${p.slug}` ? 'Syncing…' : 'Sync from Stripe'}</Btn>
+                      <Btn
+                        data-testid={`button-create-${p.slug}`}
+                        disabled={createDisabled}
+                        title={isLive
+                          ? 'Create a NEW Stripe price and rotate the env binding'
+                          : 'Disabled: STRIPE_MODE is not "live".'}
+                        onClick={() => createPrice(p.slug, p.declaredAddonPriceCents)}
+                      >{busy === `create:${p.slug}` ? 'Creating…' : 'Create new Stripe price'}</Btn>
+                    </div>
+                  </Td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </Card>
+    </div>
   );
 }
 
