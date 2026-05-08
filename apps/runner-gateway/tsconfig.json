@@ -2,10 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "composite": false,
+    "rootDir": "../.."
   },
-  "include": ["src"],
-  "references": [
-    { "path": "../../packages/sdk" }
-  ]
+  "include": ["src", "../../packages/sdk/src"]
 }

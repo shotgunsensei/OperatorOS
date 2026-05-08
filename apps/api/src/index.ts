@@ -1195,6 +1195,68 @@ serveUI(app);
 const port = parseInt(process.env.PORT ?? '5001', 10);
 const host = '0.0.0.0';
 
+// -- Capability banner ------------------------------------------------------
+// Logs which optional features are enabled/disabled at boot so operators have
+// a single line in the logs explaining why (e.g.) Stripe checkout is silent
+// or why module Open App buttons are hidden. Logging only — never blocks boot.
+function logCapabilityBanner(): void {
+  const onOff = (cond: boolean) => (cond ? 'ON ' : 'off');
+  const env = process.env.NODE_ENV ?? 'development';
+
+  const stripeOn =
+    !!process.env.STRIPE_SECRET_KEY && process.env.STRIPE_MODE === 'live';
+  const openaiOn = !!process.env.OPENAI_API_KEY;
+  const ssoOn = !!process.env.MODULE_SSO_SECRET;
+  const bootstrapAdminOn = !!process.env.OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL;
+
+  const moduleUrlEnv: Record<string, string> = {
+    tradeflowkit: 'TRADEFLOWKIT_URL',
+    torqueshed: 'TORQUESHED_URL',
+    techdeck: 'TECHDECK_URL',
+    pulsedesk: 'PULSEDESK_URL',
+    faultlinelab: 'FAULTLINELAB_URL',
+    'bf-os': 'BF_OS_URL',
+    snapproofos: 'SNAPPROOFOS_URL',
+    'studyforge-ai': 'STUDYFORGE_AI_URL',
+    'ninja-launch-kit': 'NINJA_LAUNCH_KIT_URL',
+    'callcommand-ai': 'CALLCOMMAND_AI_URL',
+    ninjamation: 'NINJAMATION_URL',
+  };
+  const moduleEntries = Object.entries(moduleUrlEnv);
+  const configuredModules = moduleEntries.filter(([, k]) => !!process.env[k]).map(([s]) => s);
+  const missingModules = moduleEntries.filter(([, k]) => !process.env[k]).map(([s]) => s);
+
+  console.info('');
+  console.info('  OperatorOS capability banner');
+  console.info('  ────────────────────────────');
+  console.info(`  env             : ${env}`);
+  console.info(`  runner          : ${getRunnerMode()}`);
+  console.info(`  Stripe          : ${onOff(stripeOn)}  (mode=${process.env.STRIPE_MODE ?? 'unset'})`);
+  console.info(`  OpenAI          : ${onOff(openaiOn)}  (falls back to mock provider when off)`);
+  console.info(`  Module SSO      : ${onOff(ssoOn)}  (handoff JWT issuance)`);
+  console.info(`  Bootstrap admin : ${onOff(bootstrapAdminOn)}`);
+  console.info(`  Module URLs     : ${configuredModules.length}/${moduleEntries.length} configured`);
+  if (missingModules.length > 0) {
+    console.info(`     missing      : ${missingModules.join(', ')}`);
+  }
+
+  if (!stripeOn) console.warn('  [warn] Stripe disabled — billing checkout buttons will show configuration-needed state.');
+  if (!ssoOn && env === 'production') {
+    console.warn('  [warn] MODULE_SSO_SECRET unset in production — Open App will fail closed.');
+  }
+  if (!ssoOn && env !== 'production') {
+    console.warn('  [warn] MODULE_SSO_SECRET unset — Open App falls back to plain URL (dev only).');
+  }
+  console.info('');
+}
+
+try {
+  logCapabilityBanner();
+} catch (err) {
+  // Never let banner formatting crash the app.
+  console.warn('[boot] capability banner failed:', err);
+}
+
 try {
   await app.listen({ port, host });
   console.info(`OperatorOS API listening on http://${host}:${port} [runner=${getRunnerMode()}]`);
