@@ -56,7 +56,7 @@ export const PLAN_CONFIGS: PlanConfig[] = [
   {
     slug: 'starter',
     name: 'Starter',
-    price: 0,
+    price: 4900,
     interval: 'month',
     description: 'For individuals getting started',
     limits: {
@@ -80,7 +80,7 @@ export const PLAN_CONFIGS: PlanConfig[] = [
   {
     slug: 'pro',
     name: 'Pro',
-    price: 2900,
+    price: 14900,
     interval: 'month',
     description: 'For growing teams and power users',
     highlight: true,
@@ -105,7 +105,7 @@ export const PLAN_CONFIGS: PlanConfig[] = [
   {
     slug: 'elite',
     name: 'Elite',
-    price: 9900,
+    price: 29900,
     interval: 'month',
     description: 'For enterprises and large teams',
     limits: {

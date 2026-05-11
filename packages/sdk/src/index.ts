@@ -1,3 +1,5 @@
+export * from './catalog.js';
+
 export interface HealthResponse {
   status: 'healthy' | 'degraded' | 'unhealthy';
   service: string;

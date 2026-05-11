@@ -94,7 +94,22 @@ function escapeHtml(s: string): string {
 function escapeAttr(s: string): string { return escapeHtml(s); }
 
 function getFromAddress(): string {
-  return process.env.EMAIL_FROM || 'OperatorOS <no-reply@operatoros.local>';
+  // Task #66: EMAIL_FROM is the primary FROM; INVITE_FROM_EMAIL is a
+  // dedicated fallback so ops can split transactional channels later
+  // without touching the rest of the email surface.
+  return (
+    process.env.EMAIL_FROM ||
+    process.env.INVITE_FROM_EMAIL ||
+    'OperatorOS <no-reply@operatoros.local>'
+  );
+}
+
+/** Public probe used by /v1/platform/health. Booleans only — never the value. */
+export function getEmailFromHealth(): { configured: boolean; provider: 'resend' | 'log' } {
+  return {
+    configured: !!(process.env.EMAIL_FROM || process.env.INVITE_FROM_EMAIL),
+    provider: process.env.RESEND_API_KEY ? 'resend' : 'log',
+  };
 }
 
 async function sendViaResend(input: InviteEmailInput): Promise<SendResult> {
@@ -158,6 +173,7 @@ export async function sendInviteEmail(input: InviteEmailInput): Promise<SendResu
  */
 export function buildInviteAcceptUrl(token: string): string {
   const base = (
+    process.env.OPERATOROS_BASE_URL ||
     process.env.INVITE_ACCEPT_BASE_URL ||
     process.env.APP_BASE_URL ||
     process.env.WEB_BASE_URL ||
