@@ -1,0 +1,556 @@
+You are working inside the existing OperatorOS Replit codebase. Do not rebuild the app from scratch. Audit the current implementation, then patch the existing system.
+
+Main goal:
+Fix OperatorOS tenant identity, super admin access, module unlocks, package pricing, Stripe billing, invite email delivery, and make all Shotgun Ninjas ecosystem apps live and available, including StudyForge AI, Ninja Launch Kit, Ninjamation, and CallCommand AI.
+
+Current problems:
+1. Tenant Settings saves the display name as “Shotgun Ninjas Productions,” but the top-right tenant dropdown still shows “john@shotgunninjas.com Personal.”
+2. john@shotgunninjas.com should be a platform-level super admin, but currently appears to only have tenant owner/admin access.
+3. The tenant shows Elite plan, but apps are locked or marked “tenant module disabled.”
+4. Plan pricing is outdated. Current UI shows Starter $0/mo, Pro $29/mo, Elite $99/mo.
+5. Stripe billing does not work. UI says Stripe SDK is not installed.
+6. Member invites appear as pending, but emails are not being delivered.
+7. StudyForge AI, Ninja Launch Kit, CallCommand AI, and Ninjamation currently show Coming Soon, but they now need to be active, priced, included in Elite, and launchable.
+8. Live modules should open to an app route, external domain, or polished in-platform module shell.
+
+Important pricing note:
+All backend price values must use cents, not dollars.
+
+Correct package pricing:
+Starter:
+- monthlyPriceCents: 4900
+- annualPriceCents: 49000
+- displayMonthlyPrice: "$49/mo"
+- displayAnnualPrice: "$490/yr"
+
+Pro:
+- monthlyPriceCents: 14900
+- annualPriceCents: 149000
+- displayMonthlyPrice: "$149/mo"
+- displayAnnualPrice: "$1,490/yr"
+
+Elite:
+- monthlyPriceCents: 29900
+- annualPriceCents: 299000
+- displayMonthlyPrice: "$299/mo"
+- displayAnnualPrice: "$2,990/yr"
+
+Do not display cents values directly in the UI. The UI must show the display price strings.
+
+Correct package module access:
+Starter includes:
+- tradeflowkit
+- torqueshed
+- techdeck
+
+Pro includes:
+- tradeflowkit
+- torqueshed
+- techdeck
+- pulsedesk
+- faultlinelab
+- brandforgeos
+
+Elite includes:
+- tradeflowkit
+- torqueshed
+- techdeck
+- pulsedesk
+- faultlinelab
+- brandforgeos
+- snapproofos
+- studyforge-ai
+- ninja-launch-kit
+- callcommand-ai
+- ninjamation
+
+All modules below must be active/live:
+- tradeflowkit
+- torqueshed
+- techdeck
+- pulsedesk
+- faultlinelab
+- brandforgeos
+- snapproofos
+- studyforge-ai
+- ninja-launch-kit
+- callcommand-ai
+- ninjamation
+
+Correct add-on pricing:
+TradeFlowKit:
+- status: live
+- priceCents: 1900
+- displayPrice: "$19/mo"
+
+TorqueShed:
+- status: live
+- priceCents: 1900
+- displayPrice: "$19/mo"
+
+TechDeck:
+- status: live
+- priceCents: 1900
+- displayPrice: "$19/mo"
+
+PulseDesk:
+- status: live
+- priceCents: 2900
+- displayPrice: "$29/mo"
+
+FaultlineLab:
+- status: live
+- priceCents: 2900
+- displayPrice: "$29/mo"
+
+BrandForgeOS:
+- status: live
+- priceCents: 2900
+- displayPrice: "$29/mo"
+
+SnapProofOS:
+- status: live
+- priceCents: 4900
+- displayPrice: "$49/mo"
+
+StudyForge AI:
+- status: live
+- priceCents: 2900
+- displayPrice: "$29/mo"
+- domain: "https://studyforgeai.net"
+
+Ninja Launch Kit:
+- status: live
+- priceCents: 2900
+- displayPrice: "$29/mo"
+- domain: "https://ninjalaunchkit.com"
+
+CallCommand AI:
+- status: live
+- priceCents: 4900
+- displayPrice: "$49/mo"
+- domain: "https://callcommand.net"
+
+Ninjamation:
+- status: live
+- priceCents: 4900
+- displayPrice: "$49/mo"
+- domain: "https://ninjamation.com"
+
+Step 1: Create one source of truth for plans and modules.
+Create or update a shared config file such as:
+shared/config/plans.ts
+or
+src/lib/plans.ts
+
+Use clear field names:
+- id
+- label
+- slug
+- status
+- monthlyPriceCents
+- annualPriceCents
+- displayMonthlyPrice
+- displayAnnualPrice
+- includedModules
+- addOnPriceCents
+- displayAddOnPrice
+- domain
+- internalRoute
+- category
+- description
+- minPlan
+
+Remove or replace old hardcoded pricing values in:
+- frontend UI
+- backend billing logic
+- seed data
+- marketplace cards
+- plan comparison cards
+- tenant billing page
+- entitlement checks
+- Stripe checkout logic
+
+Step 2: Fix tenant display name syncing.
+When the tenant display name is updated:
+- Save it to the canonical tenant display name field.
+- Refetch or invalidate the active tenant context.
+- Update the top-right tenant dropdown immediately.
+- The dropdown should show “Shotgun Ninjas Productions” after saving.
+- Only fall back to “john@shotgunninjas.com Personal” if no tenant display name exists.
+
+Step 3: Add real platform super admin access.
+Create a platform-level role separate from tenant roles.
+
+Required platform role:
+- super_admin
+
+Required tenant roles:
+- owner
+- admin
+- member
+
+Seed or migrate john@shotgunninjas.com as:
+- platformRole: super_admin
+- tenantRole: owner
+- tenant plan: elite
+
+Super admin must be able to:
+- View all tenants
+- View all users
+- View all modules
+- View all plans
+- Change a tenant plan for testing
+- Enable or disable tenant modules
+- See platform health/config status
+- Access a protected /admin area
+
+Do not show super admin navigation to normal tenant users.
+
+Step 4: Fix module entitlement logic.
+Create one shared entitlement function used by:
+- Marketplace cards
+- App launch buttons
+- App routes
+- Backend access checks
+- Billing/add-on logic
+
+Rules:
+- If tenant is inactive or suspended, lock access.
+- If module is included in the tenant’s package, unlock it unless explicitly disabled.
+- If module is purchased as an active add-on, unlock it unless explicitly disabled.
+- If module is not included and not purchased, show upgrade/add-on option.
+- Only show “tenant module disabled” if there is an explicit disabled setting for that tenant/module.
+- Do not require a tenant_modules row to exist for every included module.
+- Missing tenant_modules row means default enabled when included by plan.
+- Since all ecosystem modules are now live, do not show Coming Soon for StudyForge AI, Ninja Launch Kit, CallCommand AI, or Ninjamation.
+
+Expected result for john@shotgunninjas.com on Elite:
+Accessible live modules:
+- TradeFlowKit
+- TorqueShed
+- TechDeck
+- PulseDesk
+- FaultlineLab
+- BrandForgeOS
+- SnapProofOS
+- StudyForge AI
+- Ninja Launch Kit
+- CallCommand AI
+- Ninjamation
+
+Step 5: Fix marketplace cards and module launch behavior.
+Every live module must show an Open or Launch button when the user has access.
+
+Create internal routes if missing:
+- /apps/tradeflowkit
+- /apps/torqueshed
+- /apps/techdeck
+- /apps/pulsedesk
+- /apps/faultlinelab
+- /apps/brandforgeos
+- /apps/snapproofos
+- /apps/studyforge-ai
+- /apps/ninja-launch-kit
+- /apps/callcommand-ai
+- /apps/ninjamation
+
+For modules with external domains, the card should support:
+- Open in OperatorOS
+- Open external site
+
+External domain mapping:
+- StudyForge AI: https://studyforgeai.net
+- Ninja Launch Kit: https://ninjalaunchkit.com
+- CallCommand AI: https://callcommand.net
+- Ninjamation: https://ninjamation.com
+
+If full app functionality is not built yet, create a polished in-platform MVP module shell instead of leaving the module locked.
+
+Each module shell should show:
+- Module name
+- Access confirmed
+- Current tenant plan
+- Module status: Live
+- Domain link
+- “MVP module shell active”
+- Planned next features
+- Back to Marketplace button
+
+Step 6: Give each newly live module a useful MVP shell.
+StudyForge AI shell:
+- Positioning: AI-powered study, training, SOP, and knowledge-building partner.
+- MVP cards:
+  - Create training guide
+  - Generate quiz
+  - Convert notes into lesson
+  - Build employee onboarding path
+  - Export training outline
+
+Ninja Launch Kit shell:
+- Positioning: Product, business, and campaign launch command kit.
+- MVP cards:
+  - Build launch checklist
+  - Create offer
+  - Generate landing page copy
+  - Create pricing plan
+  - Build go-to-market tasks
+
+CallCommand AI shell:
+- Positioning: AI phone, call intake, call summary, and follow-up workflow assistant.
+- MVP cards:
+  - New call intake
+  - Generate call script
+  - Summarize call notes
+  - Create callback task
+  - Draft customer follow-up
+
+Ninjamation shell:
+- Positioning: Cross-app workflow automation engine for OperatorOS.
+- MVP cards:
+  - Create automation
+  - Trigger from module event
+  - Send notification
+  - Generate task
+  - View automation log
+
+These MVP shells do not need full AI integration yet, but they must be functional UI pages, access-controlled, and clearly marked Live.
+
+Step 7: Fix Stripe billing setup.
+Install Stripe:
+npm install stripe
+
+Implement or repair:
+- Create checkout session
+- Create billing portal session
+- Stripe webhook handler
+- Billing status endpoint
+- Add-on checkout session
+
+Required environment variables:
+- STRIPE_SECRET_KEY
+- STRIPE_WEBHOOK_SECRET
+- STRIPE_PRICE_STARTER_MONTHLY
+- STRIPE_PRICE_STARTER_ANNUAL
+- STRIPE_PRICE_PRO_MONTHLY
+- STRIPE_PRICE_PRO_ANNUAL
+- STRIPE_PRICE_ELITE_MONTHLY
+- STRIPE_PRICE_ELITE_ANNUAL
+- STRIPE_PRICE_ADDON_TRADEFLOWKIT
+- STRIPE_PRICE_ADDON_TORQUESHED
+- STRIPE_PRICE_ADDON_TECHDECK
+- STRIPE_PRICE_ADDON_PULSEDESK
+- STRIPE_PRICE_ADDON_FAULTLINELAB
+- STRIPE_PRICE_ADDON_BRANDFORGEOS
+- STRIPE_PRICE_ADDON_SNAPPROOFOS
+- STRIPE_PRICE_ADDON_STUDYFORGE_AI
+- STRIPE_PRICE_ADDON_NINJA_LAUNCH_KIT
+- STRIPE_PRICE_ADDON_CALLCOMMAND_AI
+- STRIPE_PRICE_ADDON_NINJAMATION
+
+Billing portal behavior:
+- If Stripe is configured, open the customer portal.
+- If Stripe is missing configuration, show a clear missing-config message.
+- Do not crash the page.
+- Do not show “Stripe SDK is not installed” after dependency is installed.
+
+Webhook handling:
+- checkout.session.completed
+- customer.subscription.created
+- customer.subscription.updated
+- customer.subscription.deleted
+- invoice.payment_succeeded
+- invoice.payment_failed
+
+Webhook should update:
+- tenant.stripeCustomerId
+- tenant.stripeSubscriptionId
+- tenant.plan
+- tenant.billingStatus
+- tenant.currentPeriodEnd
+- active add-ons
+- entitlement cache if one exists
+
+Step 8: Fix invite email delivery.
+Current invites are saved but emails are not being delivered.
+
+Use Resend unless another working email provider already exists.
+
+Install if needed:
+npm install resend
+
+Required environment variables:
+- RESEND_API_KEY
+- INVITE_FROM_EMAIL
+- APP_BASE_URL
+
+Invite behavior:
+- Create pending invite with email, role, tenantId, token hash, status, expiration date.
+- Send invite email with an accept link.
+- Accept link format:
+  APP_BASE_URL/invite/accept?token=<token>
+- Resend should resend the email.
+- Revoke should invalidate the invite.
+- Add a copy invite link button so testing works even before email is configured.
+- Show clear UI status:
+  “Invite created and email sent”
+  or
+  “Invite created, but email failed because email provider is not configured.”
+
+Step 9: Add a super admin health page.
+Create:
+- /admin/health
+
+Show status only. Never reveal secret values.
+
+Health checks:
+- Stripe package installed
+- STRIPE_SECRET_KEY present
+- STRIPE_WEBHOOK_SECRET present
+- Stripe package price IDs present
+- Stripe add-on price IDs present
+- Email provider configured
+- APP_BASE_URL configured
+- Database connected
+- Current user platform role
+- Current tenant plan
+- Module registry count
+- Pending invite count
+
+Step 10: Update plan comparison UI.
+Replace old pricing and generic copy.
+
+Starter:
+- $49/mo
+- $490/yr
+- Includes TradeFlowKit, TorqueShed, TechDeck
+
+Pro:
+- $149/mo
+- $1,490/yr
+- Includes Starter modules plus PulseDesk, FaultlineLab, BrandForgeOS
+
+Elite:
+- $299/mo
+- $2,990/yr
+- Includes Pro modules plus SnapProofOS, StudyForge AI, Ninja Launch Kit, CallCommand AI, and Ninjamation
+
+Do not claim features that do not exist yet unless marked as planned.
+
+Step 11: Update Marketplace copy.
+Use this app positioning:
+
+TradeFlowKit:
+- Category: Ops
+- Description: Business operations and revenue flow toolkit
+- Min plan: Starter
+- Add-on: $19/mo
+
+TorqueShed:
+- Category: Automotive
+- Description: Automotive diagnostics, repair planning, and garage workflow
+- Min plan: Starter
+- Add-on: $19/mo
+
+TechDeck:
+- Category: IT
+- Description: IT operations, asset notes, and technical command center
+- Min plan: Starter
+- Add-on: $19/mo
+
+PulseDesk:
+- Category: Support
+- Description: Lightweight operations desk for requests, incidents, and team handoffs
+- Min plan: Pro
+- Add-on: $29/mo
+
+FaultlineLab:
+- Category: Risk
+- Description: Root cause analysis, issue investigation, and corrective action workflow
+- Min plan: Pro
+- Add-on: $29/mo
+
+BrandForgeOS:
+- Category: Marketing
+- Description: Brand, content, campaign, and launch asset builder
+- Min plan: Pro
+- Add-on: $29/mo
+
+SnapProofOS:
+- Category: Proof
+- Description: Photo-based proof of work, evidence packets, and completion records
+- Min plan: Elite
+- Add-on: $49/mo
+
+StudyForge AI:
+- Category: AI Training
+- Description: AI study, training, SOP, and quiz generation workspace
+- Min plan: Elite
+- Add-on: $29/mo
+- Domain: studyforgeai.net
+
+Ninja Launch Kit:
+- Category: Launch
+- Description: Product, service, and business launch planning kit
+- Min plan: Elite
+- Add-on: $29/mo
+- Domain: ninjalaunchkit.com
+
+CallCommand AI:
+- Category: AI Voice
+- Description: AI call intake, scripts, summaries, and follow-up workflows
+- Min plan: Elite
+- Add-on: $49/mo
+- Domain: callcommand.net
+
+Ninjamation:
+- Category: Automation
+- Description: Cross-app workflow automation engine for OperatorOS
+- Min plan: Elite
+- Add-on: $49/mo
+- Domain: ninjamation.com
+
+Step 12: Verification.
+After patching, run:
+npm install
+npm run build
+
+Also run if available:
+npm run typecheck
+npm run lint
+npm run test
+
+Manual verification checklist:
+1. Login as john@shotgunninjas.com.
+2. Confirm john is platform super admin.
+3. Confirm Super Admin nav appears.
+4. Save tenant display name as “Shotgun Ninjas Productions.”
+5. Confirm top-right tenant dropdown updates immediately.
+6. Confirm plan page shows Starter $49, Pro $149, Elite $299.
+7. Confirm tenant billing shows Elite correctly.
+8. Confirm Marketplace unlocks all Elite live modules.
+9. Confirm StudyForge AI is live and launchable.
+10. Confirm Ninja Launch Kit is live and launchable.
+11. Confirm CallCommand AI is live and launchable.
+12. Confirm Ninjamation is live and launchable.
+13. Confirm live module Open/Launch buttons work.
+14. Confirm external domain buttons point to:
+    - https://studyforgeai.net
+    - https://ninjalaunchkit.com
+    - https://callcommand.net
+    - https://ninjamation.com
+15. Confirm invite creation works.
+16. Confirm invite email sends when Resend is configured.
+17. Confirm copy invite link works even without Resend.
+18. Confirm Stripe billing portal works when Stripe env vars are configured.
+19. Confirm Stripe shows clear missing-config errors when env vars are missing.
+20. Confirm normal non-super-admin users cannot access /admin.
+
+Deliverables:
+- Patch the application.
+- Add docs/operatoros-fix-audit.md.
+- Add docs/operatoros-env-vars.md.
+- Add docs/operatoros-verification-checklist.md.
+- List all changed files.
+- Explain anything left as a placeholder.
+- Do not mark complete until the app builds successfully.

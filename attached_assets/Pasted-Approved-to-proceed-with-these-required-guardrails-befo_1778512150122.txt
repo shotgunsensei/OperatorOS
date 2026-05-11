@@ -1,0 +1,38 @@
+Approved to proceed, with these required guardrails before build starts:
+
+1. Do not create a duplicate tenant for john@shotgunninjas.com unless no valid tenant exists. Prefer updating the existing tenant in place so memberships, subscription records, tenant_modules rows, and billing metadata are not orphaned.
+
+2. Make all migrations/seeds idempotent. Use UPDATE/UPSERT patterns only. Do not DELETE/INSERT module rows where foreign keys may exist. The bf-os → brandforgeos rename must preserve relationships.
+
+3. Treat Stripe SDK status as something to verify, not assume. If stripe is missing from the actual app/package workspace, install it in the correct workspace. If it already exists, remove the stale UI error and fix the detection/config path.
+
+4. Normalize env variable naming and support fallbacks:
+   - Use OPERATOROS_BASE_URL as primary app URL.
+   - Support APP_BASE_URL as fallback if already used.
+   - Use EMAIL_FROM as primary invite sender.
+   - Support INVITE_FROM_EMAIL as fallback if already used.
+   - Keep STRIPE_PRICE_ADDON_BF_OS as an alias for STRIPE_PRICE_ADDON_BRANDFORGEOS.
+
+5. The shared pricing/module catalog must be truly shared by web, API, seed, entitlement, and billing. If the repo cannot cleanly import one shared file across packages, create one canonical source and generate/import from it consistently. Do not let web and API drift.
+
+6. Entitlement tests are required for:
+   - Elite tenant unlocks all 11 live modules.
+   - Missing tenant_modules row defaults to enabled when included by plan.
+   - Explicit tenant_modules enabled=false locks the module.
+   - Starter cannot access Pro/Elite modules without add-on.
+   - Pro cannot access Elite modules without add-on.
+   - Super admin can access platform/admin views but should not fake tenant billing state.
+
+7. For module shells, do not mark unfinished AI functionality as fully operational. Mark the module as Live, but label the page as an MVP module shell where deeper AI workflows are not yet implemented.
+
+8. The /admin/health page must never print secret values, partial secrets, Stripe keys, webhook secrets, invite tokens, or raw env values. Boolean present/missing only.
+
+9. Build completion requires:
+   - pnpm typecheck success
+   - pnpm build success
+   - docs added
+   - changed files summarized
+   - remaining placeholders clearly listed
+   - manual verification notes for john@shotgunninjas.com on Elite
+
+Proceed with Task #66 as the primary launch-fix pass. Gate 3 should remain a follow-up task only after confirmed gaps are identified.
