@@ -33,6 +33,7 @@ import { authenticate } from '../lib/auth.js';
 import { requireTenantAdmin, requireTenantOwner } from '../lib/tenant-auth.js';
 import { writeAudit, pickSafe, TENANT_USER_ACCESS_SAFE_FIELDS } from '../lib/audit.js';
 import { sendInviteEmail, buildInviteAcceptUrl } from '../lib/email-service.js';
+import { isTenantOwner } from '../lib/rbac.js';
 
 const INVITE_TTL_DAYS = 14;
 const TENANT_USER_SAFE_FIELDS = ['id', 'tenantId', 'userId', 'role'] as const;
@@ -124,14 +125,14 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
       if (!target) return notFound(reply, 'TENANT_USER_NOT_FOUND', 'User is not a member of this tenant');
 
       // Only owners may promote/demote owner role; admins cannot manage owners.
-      if ((target.role === 'owner' || body.role === 'owner') && ctx.role !== 'owner') {
+      if ((isTenantOwner(target.role) || isTenantOwner(body.role)) && !isTenantOwner(ctx.role)) {
         return reply.code(403).send({
           error: 'Only tenant owners can change owner roles',
           code: 'TENANT_ROLE_INSUFFICIENT',
         });
       }
       // Blocking demotion of the last owner — keep at least one owner alive.
-      if (target.role === 'owner' && body.role !== 'owner') {
+      if (isTenantOwner(target.role) && !isTenantOwner(body.role)) {
         const owners = await db.select().from(tenantUsers)
           .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.role, 'owner')));
         if (owners.length <= 1) {
@@ -168,13 +169,13 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
         .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, userId))).limit(1);
       if (!target) return notFound(reply, 'TENANT_USER_NOT_FOUND', 'User is not a member of this tenant');
 
-      if (target.role === 'owner' && ctx.role !== 'owner') {
+      if (isTenantOwner(target.role) && !isTenantOwner(ctx.role)) {
         return reply.code(403).send({
           error: 'Only tenant owners can remove other owners',
           code: 'TENANT_ROLE_INSUFFICIENT',
         });
       }
-      if (target.role === 'owner') {
+      if (isTenantOwner(target.role)) {
         const owners = await db.select().from(tenantUsers)
           .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.role, 'owner')));
         if (owners.length <= 1) {
@@ -229,7 +230,7 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
       const role = body.role ?? 'member';
       if (!isValidEmail(email)) return badRequest(reply, 'email is required');
       if (!isValidRole(role)) return badRequest(reply, 'role must be owner|admin|member');
-      if (role === 'owner' && ctx.role !== 'owner') {
+      if (isTenantOwner(role) && !isTenantOwner(ctx.role)) {
         return reply.code(403).send({
           error: 'Only tenant owners can invite new owners',
           code: 'TENANT_ROLE_INSUFFICIENT',

@@ -31,6 +31,7 @@ import { db } from '../db.js';
 import { tenants, tenantUsers, tenantModules, tenantUserModuleAccess, modules, addonSubscriptions } from '../schema.js';
 import { authenticate } from './auth.js';
 import { isAddonPurchasable } from './billing-service.js';
+import { isSuperAdmin } from './rbac.js';
 
 export type TenantRoleRank = 0 | 1 | 2; // member | admin | owner
 export const TENANT_ROLE_RANK: Record<'member' | 'admin' | 'owner', TenantRoleRank> = {
@@ -179,7 +180,7 @@ export async function resolveTenantContext(request: FastifyRequest): Promise<Ten
   // (who needs visibility for forensic / restore operations). For everyone
   // else they collapse to the same TENANT_NOT_FOUND code as a missing row.
   const tenantStatus = (tenant.status ?? 'active') as TenantStatus;
-  const isSuper = user.platformRole === 'super_admin';
+  const isSuper = isSuperAdmin(user.platformRole);
 
   if (tenantStatus === 'archived' && !isSuper) {
     c.context = null;
@@ -234,7 +235,7 @@ export async function requireSuperAdmin(request: FastifyRequest, reply: FastifyR
   await authenticate(request, reply);
   if (reply.sent) return;
   const user = (request as any).user;
-  if (user.platformRole !== 'super_admin') {
+  if (!isSuperAdmin(user.platformRole)) {
     reply.code(403).send({
       error: 'Platform super-admin role required',
       code: 'PLATFORM_ROLE_REQUIRED',

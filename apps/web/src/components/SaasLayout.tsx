@@ -5,6 +5,7 @@ import { Menu, X, ChevronLeft } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import TenantSwitcher from './TenantSwitcher';
 import { buildNavSections } from '@/lib/sidebar-nav';
+import { isSuperAdmin, isTenantAdmin } from '@/lib/rbac';
 
 // Centralized palette. Re-exported below + via lib/design-tokens.ts so all
 // downstream pages share the same source of truth.
@@ -52,9 +53,9 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
     if (isMobile) setMobileOpen(false);
   };
 
-  const isSuperAdmin = (user as any)?.platformRole === 'super_admin';
-  const isTenantAdmin = tenantRole === 'owner' || tenantRole === 'admin' || isSuperAdmin;
-  const sections = buildNavSections({ isSuperAdmin, isTenantAdmin });
+  const userIsSuperAdmin = isSuperAdmin((user as any)?.platformRole);
+  const userIsTenantAdmin = isTenantAdmin(tenantRole, (user as any)?.platformRole);
+  const sections = buildNavSections({ isSuperAdmin: userIsSuperAdmin, isTenantAdmin: userIsTenantAdmin });
 
   const sidebarWidth = isMobile ? 260 : (collapsed ? 64 : 240);
 
