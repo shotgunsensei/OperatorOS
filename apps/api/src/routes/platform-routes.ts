@@ -779,6 +779,12 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       // these as red/green dots; counts/diagnostics live behind the
       // existing `/v1/platform/pricing` and `/v1/platform/audit` routes.
       emailFrom: { configured: getEmailFromHealth().configured },
+      // Email *provider* (vs the FROM address). 'resend' when RESEND_API_KEY
+      // is present, otherwise 'log' (dev fallback that prints to stdout).
+      emailProvider: {
+        configured: !!process.env.RESEND_API_KEY,
+        provider: (process.env.RESEND_API_KEY ? 'resend' : 'log') as 'resend' | 'log',
+      },
       baseUrl: { configured: !!process.env.OPERATOROS_BASE_URL },
       plans: {
         seeded: planRows.length > 0,

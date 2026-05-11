@@ -44,6 +44,7 @@ export default function BillingPage() {
   const [downgradeCheck, setDowngradeCheck] = useState<{ slug: string; violations: any[] } | null>(null);
 
   const [billingMode, setBillingMode] = useState<any>(null);
+  const [interval, setInterval] = useState<'month' | 'year'>('month');
 
   const loadData = async () => {
     try {
@@ -84,7 +85,7 @@ export default function BillingPage() {
     setSwitching(slug);
     setDowngradeCheck(null);
     try {
-      const result = await billingApi.subscribe(slug);
+      const result = await billingApi.subscribe(slug, interval);
       if (result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
         return;
@@ -241,7 +242,24 @@ export default function BillingPage() {
       </div>
 
       <div style={{ marginBottom: 32 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 16px' }}>Plan Comparison</h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: 0 }}>Plan Comparison</h3>
+          <div role="group" aria-label="Billing interval"
+               style={{ display: 'inline-flex', borderRadius: 8, border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
+            {(['month', 'year'] as const).map((v) => (
+              <button key={v} data-testid={`button-interval-${v}`}
+                onClick={() => setInterval(v)}
+                style={{
+                  padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  border: 'none',
+                  background: interval === v ? colors.accent : 'transparent',
+                  color: interval === v ? '#fff' : colors.textMuted,
+                }}>
+                {v === 'month' ? 'Monthly' : 'Annual (save ~17%)'}
+              </button>
+            ))}
+          </div>
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
           {plans.sort((a: any, b: any) => a.price - b.price).map((p: any) => {
             const isCurrent = p.slug === currentSlug;
@@ -267,8 +285,24 @@ export default function BillingPage() {
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{p.name}</div>
                 <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 12 }}>{p.description}</div>
                 <div style={{ marginBottom: 20 }}>
-                  <span style={{ fontSize: 36, fontWeight: 800, color: '#fff' }}>${(p.price / 100).toFixed(0)}</span>
-                  <span style={{ fontSize: 14, color: colors.textMuted }}>/mo</span>
+                  {interval === 'year' ? (
+                    <>
+                      <span style={{ fontSize: 36, fontWeight: 800, color: '#fff' }} data-testid={`price-${p.slug}-year`}>
+                        ${((p.price * 10) / 100).toFixed(0)}
+                      </span>
+                      <span style={{ fontSize: 14, color: colors.textMuted }}>/yr</span>
+                      <div style={{ fontSize: 11, color: colors.accentGreen, marginTop: 4 }}>
+                        2 months free vs monthly
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: 36, fontWeight: 800, color: '#fff' }} data-testid={`price-${p.slug}-month`}>
+                        ${(p.price / 100).toFixed(0)}
+                      </span>
+                      <span style={{ fontSize: 14, color: colors.textMuted }}>/mo</span>
+                    </>
+                  )}
                 </div>
 
                 <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: 16, marginBottom: 16 }}>

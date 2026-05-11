@@ -1,21 +1,27 @@
 'use client';
 
 import React from 'react';
-import { GraduationCap, BookOpen, Sparkles, ArrowRight } from 'lucide-react';
-import { semantic, space, fontSize, radius, cardStyle } from '@/lib/design-tokens';
+import { GraduationCap, BookOpen, Sparkles } from 'lucide-react';
+import { semantic, space, fontSize, cardStyle } from '@/lib/design-tokens';
+import { ShellLiveBadge, ShellMvpNotice, ShellLaunchButton } from './ShellChrome';
 
 export default function StudyForgeShell({ baseUrl }: { baseUrl?: string }) {
   return (
     <div style={{ padding: space.xxl, maxWidth: 960, margin: '0 auto' }} data-testid="shell-studyforge-ai">
       <header style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: space.xl }}>
         <GraduationCap size={28} color={semantic.accent} />
-        <div>
-          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, color: '#fff' }}>StudyForge AI</h1>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, color: '#fff' }}>StudyForge AI</h1>
+            <ShellLiveBadge />
+          </div>
           <p style={{ color: semantic.textMuted, margin: '4px 0 0', fontSize: fontSize.body }}>
             Your AI study & training partner — turn any document into a tutored learning loop.
           </p>
         </div>
       </header>
+      <ShellMvpNotice />
+
 
       <div style={{ display: 'grid', gap: space.lg, gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))' }}>
         <FeatureCard
@@ -36,20 +42,7 @@ export default function StudyForgeShell({ baseUrl }: { baseUrl?: string }) {
       </div>
 
       <div style={{ marginTop: space.xl }}>
-        <a
-          href={baseUrl && baseUrl.startsWith('http') ? baseUrl : '#'}
-          target={baseUrl && baseUrl.startsWith('http') ? '_blank' : undefined}
-          rel="noopener noreferrer"
-          data-testid="link-launch-studyforge-ai"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '10px 18px', borderRadius: radius.sm,
-            background: semantic.accent, color: '#fff', textDecoration: 'none',
-            fontWeight: 600, fontSize: fontSize.body,
-          }}
-        >
-          Start a study session <ArrowRight size={14} />
-        </a>
+        <ShellLaunchButton baseUrl={baseUrl} testId="link-launch-studyforge-ai" label="Start a study session" />
       </div>
     </div>
   );

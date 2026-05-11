@@ -100,10 +100,12 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     try {
       const ctx = await resolveTenantContext(request);
       if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
-      const result = await subscribeToPlan(user.id, ctx.tenantId, planSlug!, interval);
+      if (!planSlug) return reply.code(400).send({ error: 'planSlug is required', code: 'PLAN_SLUG_REQUIRED' });
+      const result = await subscribeToPlan(user.id, ctx.tenantId, planSlug, interval);
       return result;
-    } catch (err: any) {
-      return reply.code(400).send({ error: err.message });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Subscription failed';
+      return reply.code(400).send({ error: message });
     }
   });
 
@@ -114,6 +116,9 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     const interval: 'month' | 'year' =
       body.interval === 'year' || body.interval === 'annual' ? 'year' : 'month';
 
+    if (!planSlug) {
+      return reply.code(400).send({ error: 'planSlug is required', code: 'PLAN_SLUG_REQUIRED' });
+    }
     if (!isStripeEnabled()) {
       return reply.code(400).send({
         error: 'Stripe is not configured. Subscriptions are managed locally.',
@@ -122,11 +127,13 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     }
 
     try {
-      const result = await createCheckoutSession(user.id, planSlug!, interval);
+      const result = await createCheckoutSession(user.id, planSlug, interval);
       return result;
-    } catch (err: any) {
-      const code = err?.code === 'NO_STRIPE_PRICE_FOR_INTERVAL' ? 409 : 400;
-      return reply.code(code).send({ error: err.message, code: err?.code });
+    } catch (err: unknown) {
+      const errCode = (err as { code?: string })?.code;
+      const message = err instanceof Error ? err.message : 'Checkout failed';
+      const httpCode = errCode === 'NO_STRIPE_PRICE_FOR_INTERVAL' ? 409 : 400;
+      return reply.code(httpCode).send({ error: message, code: errCode });
     }
   });
 

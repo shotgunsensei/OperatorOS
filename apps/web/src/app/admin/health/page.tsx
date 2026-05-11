@@ -38,6 +38,7 @@ interface HealthResponse {
   auth: { sessionSecretConfigured: boolean };
   ai: { openaiKeyConfigured: boolean };
   emailFrom: { configured: boolean };
+  emailProvider: { configured: boolean; provider: 'resend' | 'log' };
   baseUrl: { configured: boolean };
   plans: {
     seeded: boolean;
@@ -145,11 +146,21 @@ function HealthDashboard() {
         Probed at {new Date(health.now).toLocaleString()}
       </div>
 
+      <Section title="Viewer Context">
+        <Row label="Your platform role" ok={true} sub={(user as { platformRole?: string })?.platformRole ?? 'user'} />
+        <Row label="Active tenant id"
+             ok={!!(user as { currentTenantId?: string | null })?.currentTenantId}
+             sub={(user as { currentTenantId?: string | null })?.currentTenantId ?? 'none'} />
+      </Section>
+
       <Section title="Core">
         <Row label="Database reachable" ok={health.db.ok} />
         <Row label="Session secret configured" ok={health.auth.sessionSecretConfigured} />
         <Row label="OpenAI key configured" ok={health.ai.openaiKeyConfigured} />
         <Row label="EMAIL_FROM configured" ok={health.emailFrom.configured} />
+        <Row label="Email provider configured"
+             ok={health.emailProvider?.configured ?? false}
+             sub={health.emailProvider?.provider ?? 'log'} />
         <Row label="OPERATOROS_BASE_URL configured" ok={health.baseUrl.configured} />
         <Row label="Bootstrap super-admin email set" ok={health.bootstrapSuperAdmin.emailConfigured} />
         <Row label="Shotgun tenant configured" ok={health.shotgunTenant.configured} />

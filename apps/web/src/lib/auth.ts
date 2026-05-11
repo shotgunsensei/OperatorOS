@@ -112,10 +112,10 @@ export const billingApi = {
   getMode: () => apiFetch('/billing/mode'),
   checkDowngrade: (planSlug: string) =>
     apiFetch('/billing/check-downgrade', { method: 'POST', body: JSON.stringify({ planSlug }) }),
-  subscribe: (planSlug: string) =>
-    apiFetch('/billing/subscribe', { method: 'POST', body: JSON.stringify({ planSlug }) }),
-  createCheckoutSession: (planSlug: string) =>
-    apiFetch('/billing/create-checkout-session', { method: 'POST', body: JSON.stringify({ planSlug }) }),
+  subscribe: (planSlug: string, interval: 'month' | 'year' = 'month') =>
+    apiFetch('/billing/subscribe', { method: 'POST', body: JSON.stringify({ planSlug, interval }) }),
+  createCheckoutSession: (planSlug: string, interval: 'month' | 'year' = 'month') =>
+    apiFetch('/billing/create-checkout-session', { method: 'POST', body: JSON.stringify({ planSlug, interval }) }),
   createPortalSession: () =>
     apiFetch('/billing/create-portal-session', { method: 'POST' }),
   cancel: () => apiFetch('/billing/cancel', { method: 'POST' }),

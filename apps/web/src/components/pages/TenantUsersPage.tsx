@@ -38,6 +38,7 @@ export default function TenantUsersPage() {
   const [role, setRole] = useState<'owner' | 'admin' | 'member'>('member');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ kind: 'ok' | 'warn'; message: string } | null>(null);
   // userId of the currently expanded module-access matrix (only one open at a
   // time to keep the row count manageable on narrow screens).
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -69,13 +70,28 @@ export default function TenantUsersPage() {
     e.preventDefault();
     if (!tenantId) return;
     setErr(null);
+    setStatus(null);
     setBusy(true);
     try {
-      await tenantApi.createInvite(tenantId, email.trim(), role);
+      const res = await tenantApi.createInvite(tenantId, email.trim(), role) as
+        { invite?: unknown; emailDelivery?: { ok: boolean; provider: string } };
+      const delivery = res?.emailDelivery;
+      if (!delivery) {
+        setStatus({ kind: 'ok', message: 'Invite created.' });
+      } else if (delivery.ok && delivery.provider !== 'log') {
+        setStatus({ kind: 'ok', message: 'Invite created and email sent.' });
+      } else if (delivery.ok && delivery.provider === 'log') {
+        setStatus({ kind: 'warn', message: 'Invite created, email provider not configured (link printed to server log).' });
+      } else {
+        setStatus({ kind: 'warn', message: 'Invite created, email failed (provider not configured or returned error). Use Copy link.' });
+      }
       setEmail('');
       await reload(tenantId);
-    } catch (e: any) {
-      setErr(e?.error || 'Failed to create invite');
+    } catch (e: unknown) {
+      const msg = (e as { error?: string; message?: string })?.error
+               ?? (e as { message?: string })?.message
+               ?? 'Failed to create invite';
+      setErr(msg);
     } finally {
       setBusy(false);
     }
@@ -236,8 +252,17 @@ export default function TenantUsersPage() {
           >Send invite</button>
         </form>
         {err && (
-          <div style={{ color: colors.accentRed, fontSize: 12, marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div data-testid="text-invite-error" style={{ color: colors.accentRed, fontSize: 12, marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
             <ShieldAlert size={12} /> {err}
+          </div>
+        )}
+        {status && (
+          <div data-testid={`text-invite-status-${status.kind}`}
+               style={{
+                 color: status.kind === 'ok' ? colors.accentGreen : colors.accentYellow,
+                 fontSize: 12, marginTop: 8,
+               }}>
+            {status.message}
           </div>
         )}
       </section>
