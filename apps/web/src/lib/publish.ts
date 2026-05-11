@@ -1,10 +1,12 @@
+import { resolveServerApiOrigin } from './api-config';
+
 function getApiBase(): string {
   if (typeof window !== 'undefined') {
     const mobileApiUrl = (window as any).__CAPACITOR_API_URL__;
     if (mobileApiUrl) return mobileApiUrl + '/v1';
     return '/api';
   }
-  return (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001') + '/v1';
+  return resolveServerApiOrigin() + '/v1';
 }
 
 async function request<T>(path: string, opts?: RequestInit): Promise<T> {
