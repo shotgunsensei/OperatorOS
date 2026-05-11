@@ -165,6 +165,11 @@ export const tenantApi = {
     apiFetch(`/tenants/${tenantId}/invites/${inviteId}`, { method: 'DELETE' }),
   resendInvite: (tenantId: string, inviteId: string) =>
     apiFetch(`/tenants/${tenantId}/invites/${inviteId}/resend`, { method: 'POST' }),
+  // Task #66: copy-link fallback. Returns { acceptUrl, expiresAt } so
+  // the UI can clipboard-paste the invite URL without resending the
+  // email. Owner/admin only on the server.
+  getInviteLink: (tenantId: string, inviteId: string) =>
+    apiFetch(`/tenants/${tenantId}/invites/${inviteId}/link`),
   acceptInvite: (token: string) =>
     apiFetch(`/invites/${token}/accept`, { method: 'POST' }),
   // Public read used by the invite landing page to fetch the invitee's

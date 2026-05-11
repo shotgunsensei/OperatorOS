@@ -1,5 +1,6 @@
 import { db } from '../db.js';
 import crypto from 'node:crypto';
+import { createRequire } from 'node:module';
 import {
   users, subscriptions, subscriptionPlans, billingEvents, activityFeed,
   modules, addonSubscriptions,
@@ -8,6 +9,14 @@ import { eq, and, sql } from 'drizzle-orm';
 import {
   getUserPlanConfig, getDowngradeViolations, isUpgrade, isDowngrade, PLAN_CONFIGS,
 } from './plans.js';
+
+// Task #66: `apps/api/package.json` is `"type":"module"`, so the previous
+// `require('stripe')` inside `getStripe()` was undefined and every checkout
+// call threw "Stripe SDK is not installed" even though the package was
+// hoisted. createRequire(import.meta.url) restores CommonJS resolution
+// from inside an ES module without modifying package.json.
+const esmRequire = createRequire(import.meta.url);
+let __stripeSingleton: any | null = null;
 
 // ---------------------------------------------------------------------------
 // Stripe Configuration
@@ -48,24 +57,38 @@ function getStripe() {
   if (!STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not configured');
   }
-  // Lazy-load stripe to avoid import errors when not installed
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  if (__stripeSingleton) return __stripeSingleton;
+  // Task #66: ES-module-safe require via createRequire. Cached so we
+  // don't re-resolve / re-instantiate on every checkout call.
   try {
-    const Stripe = require('stripe');
-    return new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
-  } catch {
-    throw new Error('Stripe SDK is not installed. Run: npm install stripe');
+    const StripeModule = esmRequire('stripe');
+    const Stripe = (StripeModule && (StripeModule.default ?? StripeModule)) as any;
+    __stripeSingleton = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
+    return __stripeSingleton;
+  } catch (err) {
+    throw new Error(`Stripe SDK could not be loaded: ${(err as Error)?.message ?? 'unknown'}`);
   }
 }
 
-const STRIPE_PRICE_MAP: Record<string, string> = {
-  starter: process.env.STRIPE_PRICE_STARTER || '',
-  pro: process.env.STRIPE_PRICE_PRO || '',
-  elite: process.env.STRIPE_PRICE_ELITE || '',
-};
+// Task #66: monthly + annual price resolution. STRIPE_PRICE_<PLAN>_<INTERVAL>
+// is the canonical form; the bare STRIPE_PRICE_<PLAN> is honored only for the
+// monthly fallback so existing prod env stays valid through the cutover.
+export type BillingInterval = 'month' | 'year';
 
+function getStripePriceIdForInterval(planSlug: string, interval: BillingInterval): string {
+  const upper = planSlug.toUpperCase();
+  if (interval === 'year') {
+    return process.env[`STRIPE_PRICE_${upper}_ANNUAL`] || '';
+  }
+  return process.env[`STRIPE_PRICE_${upper}_MONTHLY`]
+    || process.env[`STRIPE_PRICE_${upper}`]
+    || '';
+}
+
+// Legacy monthly-only resolver kept for callers that haven't been
+// migrated to the interval-aware variant yet.
 function getStripePriceId(planSlug: string): string {
-  return STRIPE_PRICE_MAP[planSlug] || '';
+  return getStripePriceIdForInterval(planSlug, 'month');
 }
 
 // ---------------------------------------------------------------------------
@@ -218,15 +241,27 @@ export async function reactivateSubscription(userId: string): Promise<{ ok: bool
 // Stripe Checkout & Portal Sessions
 // ---------------------------------------------------------------------------
 
-export async function createCheckoutSession(userId: string, planSlug: string): Promise<CheckoutSessionResult> {
+export async function createCheckoutSession(
+  userId: string,
+  planSlug: string,
+  interval: BillingInterval = 'month',
+): Promise<CheckoutSessionResult> {
   if (!isStripeEnabled()) {
     throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE=live');
   }
 
   const stripe = getStripe();
-  const priceId = getStripePriceId(planSlug);
+  const priceId = getStripePriceIdForInterval(planSlug, interval);
   if (!priceId) {
-    throw new Error(`No Stripe price ID configured for plan: ${planSlug}. Set STRIPE_PRICE_${planSlug.toUpperCase()} env var.`);
+    const upper = planSlug.toUpperCase();
+    const want = interval === 'year' ? `${upper}_ANNUAL` : `${upper}_MONTHLY` + ` (or bare ${upper})`;
+    const code = interval === 'year' ? 'NO_STRIPE_PRICE_FOR_INTERVAL' : 'NO_STRIPE_PRICE';
+    const err: any = new Error(
+      `No Stripe price ID configured for plan="${planSlug}" interval="${interval}". ` +
+      `Set STRIPE_PRICE_${want} env var.`,
+    );
+    err.code = code;
+    throw err;
   }
 
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -653,12 +688,28 @@ export function getAddonStripePriceEnvKey(moduleSlug: string): string {
   return `STRIPE_PRICE_ADDON_${moduleSlug.toUpperCase().replace(/-/g, '_')}`;
 }
 
+// Task #66: addon env-key alias chain. After the bf-os -> brandforgeos
+// rename, `STRIPE_PRICE_ADDON_BRANDFORGEOS` is the canonical key but
+// `STRIPE_PRICE_ADDON_BF_OS` may still be the only one set in prod.
+// Add new aliases here as further renames happen.
+const ADDON_ENV_ALIASES: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  brandforgeos: ['STRIPE_PRICE_ADDON_BRANDFORGEOS', 'STRIPE_PRICE_ADDON_BF_OS'],
+});
+
 // Returns the env-var-bound Stripe Price ID for the module's add-on. Kept
 // for the rare callsite that has only the slug and intentionally wants the
 // env binding (e.g. the Pricing tab "envKey/envKeyConfigured" surface).
 // Most callers should prefer `getAddonStripePriceIdFromModule` so that an
 // admin-edited override on `modules.metadata.stripePriceId` wins.
 export function getAddonStripePriceIdFromEnv(moduleSlug: string): string {
+  const aliases = ADDON_ENV_ALIASES[moduleSlug];
+  if (aliases) {
+    for (const k of aliases) {
+      const v = process.env[k];
+      if (v && v.trim()) return v;
+    }
+    return '';
+  }
   return process.env[getAddonStripePriceEnvKey(moduleSlug)] || '';
 }
 
@@ -1410,9 +1461,9 @@ export function getBillingMode() {
     stripeConfigured: !!STRIPE_SECRET_KEY,
     webhookConfigured: !!STRIPE_WEBHOOK_SECRET,
     prices: {
-      starter: !!STRIPE_PRICE_MAP.starter,
-      pro: !!STRIPE_PRICE_MAP.pro,
-      elite: !!STRIPE_PRICE_MAP.elite,
+      starter: !!getStripePriceIdForInterval('starter', 'month'),
+      pro: !!getStripePriceIdForInterval('pro', 'month'),
+      elite: !!getStripePriceIdForInterval('elite', 'month'),
     },
   };
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { UserPlus, Trash2, Mail, ShieldAlert, ChevronDown, ChevronRight, Boxes, Send } from 'lucide-react';
+import { UserPlus, Trash2, Mail, ShieldAlert, ChevronDown, ChevronRight, Boxes, Send, Link as LinkIcon } from 'lucide-react';
 import { colors } from '@/lib/design-tokens';
 import { tenantApi, meApi } from '@/lib/auth';
 
@@ -112,6 +112,31 @@ export default function TenantUsersPage() {
 
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [resendMsg, setResendMsg] = useState<{ id: string; text: string; ok: boolean } | null>(null);
+  // Task #66: copy-link fallback for invite delivery.
+  const [copyingId, setCopyingId] = useState<string | null>(null);
+  const copyInviteLink = async (inviteId: string) => {
+    if (!tenantId) return;
+    setCopyingId(inviteId);
+    setResendMsg(null);
+    try {
+      const r = await tenantApi.getInviteLink(tenantId, inviteId);
+      const url: string = r?.acceptUrl ?? '';
+      if (!url) throw new Error('No acceptUrl returned');
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // Best-effort fallback for environments without the async clipboard API.
+        const ta = document.createElement('textarea');
+        ta.value = url; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } finally { document.body.removeChild(ta); }
+      }
+      setResendMsg({ id: inviteId, ok: true, text: 'Invite link copied to clipboard.' });
+    } catch (e: any) {
+      setResendMsg({ id: inviteId, ok: false, text: e?.error || e?.message || 'Failed to copy link' });
+    } finally {
+      setCopyingId(null);
+    }
+  };
   const resendInvite = async (inviteId: string) => {
     if (!tenantId) return;
     setResendingId(inviteId);
@@ -369,6 +394,21 @@ export default function TenantUsersPage() {
                   }}
                 >{resendMsg.text}</span>
               )}
+              <button
+                data-testid={`button-copy-link-${i.id}`}
+                onClick={() => copyInviteLink(i.id)}
+                disabled={copyingId === i.id}
+                title="Copy invite link to clipboard"
+                style={{
+                  padding: '4px 10px', borderRadius: 6, border: `1px solid ${colors.border}`,
+                  background: 'transparent', color: colors.text,
+                  cursor: copyingId === i.id ? 'wait' : 'pointer', fontSize: 12,
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                <LinkIcon size={12} />
+                {copyingId === i.id ? 'Copying…' : 'Copy link'}
+              </button>
               <button
                 data-testid={`button-resend-${i.id}`}
                 onClick={() => resendInvite(i.id)}

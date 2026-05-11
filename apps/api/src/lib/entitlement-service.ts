@@ -516,7 +516,31 @@ async function hasModuleAccessTenantScoped(
       .where(and(eq(tenantModules.tenantId, tenantId), eq(tenantModules.moduleId, mod.id)))
       .limit(1);
     const launchable = ['enabled', 'trial', 'purchased', 'beta'];
-    if (!tm || !launchable.includes(tm.status)) {
+    if (!tm) {
+      // Task #66: default-enabled fallback. The data layer often lags
+      // behind plan changes — a tenant on Elite can have ZERO
+      // tenant_modules rows on first boot. Rather than denying every
+      // plan-included module until an admin clicks through the
+      // marketplace, we look up plan inclusion at runtime and grant
+      // (source='plan'). Explicit-deny semantics still win below
+      // because we only enter this branch when the row is *absent*.
+      const [planGrant] = await db.select({ planId: subscriptions.planId })
+        .from(subscriptions)
+        .innerJoin(planModules, eq(planModules.planId, subscriptions.planId))
+        .where(and(
+          eq(subscriptions.userId, userId),
+          eq(subscriptions.status, 'active'),
+          eq(planModules.moduleId, mod.id),
+        ))
+        .limit(1);
+      if (planGrant) {
+        return { moduleSlug, hasAccess: true, source: 'plan' };
+      }
+      return { moduleSlug, hasAccess: false, source: null, reason: 'no_plan_grant' };
+    }
+    if (!launchable.includes(tm.status)) {
+      // Explicit disabled / archived / etc. — never override with the
+      // plan fallback. Admins shut these off intentionally.
       return { moduleSlug, hasAccess: false, source: null, reason: 'tenant_module_disabled' };
     }
     // The tenant_modules row encodes how the tenant got access. 'purchased'

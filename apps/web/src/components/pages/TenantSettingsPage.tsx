@@ -7,6 +7,7 @@ import {
   semantic, space, fontSize, radius,
 } from '@/lib/design-tokens';
 import { meApi, tenantApi } from '@/lib/auth';
+import { useTenant } from '@/components/TenantProvider';
 
 interface TenantRow {
   id: string; name: string; slug: string;
@@ -19,6 +20,10 @@ interface Member {
 }
 
 export default function TenantSettingsPage() {
+  // Task #66: hold a handle on the global TenantProvider so a successful
+  // rename refreshes the top-right tenant dropdown immediately, without
+  // a page reload.
+  const tenantCtx = useTenant();
   const [tenant, setTenant] = useState<TenantRow | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [meId, setMeId] = useState<string | null>(null);
@@ -81,6 +86,9 @@ export default function TenantSettingsPage() {
       const r = await tenantApi.rename(tenant.id, name.trim());
       setTenant({ ...tenant, name: r.tenant.name });
       setSavedAt(Date.now());
+      // Task #66: refresh the global tenant context so the top-right
+      // dropdown re-renders with the new name without a page reload.
+      try { await tenantCtx.refresh(); } catch { /* best-effort */ }
     } catch (e: any) {
       setErr(e?.error || 'Failed to rename tenant');
     } finally { setBusy(false); }

@@ -44,6 +44,8 @@ import {
 import { lookupAddonStripePrice, getAddonStripePriceEnvKey, getAddonStripePriceId, retryBillingEvent, createAddonStripePrice, resyncUserBilling, validateAddonStripePriceId, __setStripeTestOverrides } from '../lib/billing-service.js';
 import { getModuleAccessTrace } from '../lib/entitlement-service.js';
 import { getSsoCleanupHealth } from '../lib/sso-cleanup.js';
+import { getEmailFromHealth } from '../lib/email-service.js';
+import { PLAN_CONFIGS } from '../lib/plans.js';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -702,6 +704,31 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     const [lastStripeOk] = await db.select().from(billingEvents)
       .where(and(isNotNull(billingEvents.stripeEventId), isNotNull(billingEvents.processedAt)))
       .orderBy(desc(billingEvents.createdAt)).limit(1);
+    // Task #66: launch-fix probes. All booleans — never surface secret
+    // values (keys, price IDs, emails) through this endpoint.
+    const [planRows, modRows] = await Promise.all([
+      db.select().from(subscriptionPlans),
+      db.select().from(modules),
+    ]);
+    const expectedPlanPrices = Object.fromEntries(PLAN_CONFIGS.map(p => [p.slug, p.price]));
+    const pricesMatchConfig = planRows.length > 0 && planRows.every(p =>
+      expectedPlanPrices[p.slug] == null || p.price === expectedPlanPrices[p.slug]);
+    const liveCount = modRows.filter(m => m.status === 'live').length;
+    const comingSoonCount = modRows.filter(m => m.status === 'coming_soon').length;
+    const brandForgeOsRenamed =
+      modRows.some(m => m.slug === 'brandforgeos') &&
+      !modRows.some(m => m.slug === 'bf-os');
+    const bootstrapEmail =
+      process.env.OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL || process.env.ADMIN_EMAIL || '';
+    const desiredShotgunName = process.env.SHOTGUN_TENANT_NAME || 'Shotgun Ninjas Productions';
+    let shotgunConfigured = false;
+    if (bootstrapEmail) {
+      const [j] = await db.select().from(users).where(eq(users.email, bootstrapEmail)).limit(1);
+      if (j?.currentTenantId) {
+        const [t] = await db.select().from(tenants).where(eq(tenants.id, j.currentTenantId)).limit(1);
+        shotgunConfigured = !!t && t.name === desiredShotgunName && t.type === 'company';
+      }
+    }
     return {
       ok: dbOk,
       db: { ok: dbOk },
@@ -718,6 +745,23 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       ai: {
         openaiKeyConfigured: openaiKey,
       },
+      // Task #66 launch-fix probes — booleans only by design (no
+      // secret values, no raw counts). The Admin Health page renders
+      // these as red/green dots; counts/diagnostics live behind the
+      // existing `/v1/platform/pricing` and `/v1/platform/audit` routes.
+      emailFrom: { configured: getEmailFromHealth().configured },
+      plans: {
+        seeded: planRows.length > 0,
+        pricesMatchConfig,
+      },
+      modules: {
+        seeded: modRows.length > 0,
+        hasLive: liveCount > 0,
+        allLive: modRows.length > 0 && comingSoonCount === 0,
+        brandForgeOsRenamed,
+      },
+      shotgunTenant: { configured: shotgunConfigured },
+      bootstrapSuperAdmin: { emailConfigured: !!bootstrapEmail },
       ssoCleanup: getSsoCleanupHealth(),
       lastWebhookAt: lastWebhook?.createdAt ?? null,
       lastAuditAt:   lastAudit?.createdAt ?? null,

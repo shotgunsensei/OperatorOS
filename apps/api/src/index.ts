@@ -172,11 +172,20 @@ await ensureSaasTables();
 // `current_tenant_id` to exist on row reads.
 await ensureTenantTables();
 await seedPlansAndAdmin();
+// Task #66: launch-fix bootstrap. Pre-seed runs the `bf-os ->
+// brandforgeos` slug rename + `subscription_plans.stripe_price_id_annual`
+// column add BEFORE seedModules so the seeder finds the renamed row.
+const { launchFixPreSeed, launchFixPostSeed } = await import('./lib/launch-fix-init.js');
+await launchFixPreSeed();
 await seedModules();
 // Backfill + tenant-aware seeds run last so the data they need is present.
 await backfillPersonalTenants();
 await bootstrapSuperAdmin();
 await seedDemoCoTenant();
+// Task #66: post-seed aligns plan prices to PLAN_CONFIGS, back-fills
+// monthly/annual Stripe price IDs, renames John's tenant + flips type to
+// company, and back-fills tenant_modules for plan-included live modules.
+await launchFixPostSeed();
 startSsoTokenCleanup();
 
 const streamSubscribers = new Map<string, Set<import('ws').WebSocket>>();

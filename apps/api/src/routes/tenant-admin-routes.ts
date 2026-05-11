@@ -351,6 +351,34 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
     },
   );
 
+  // Task #66: copy-link fallback. When an admin needs to hand the
+  // invite URL to the recipient out-of-band (Slack DM, SMS, etc.) the
+  // UI calls this endpoint and copies the returned acceptUrl to the
+  // clipboard. Owner/admin only — the URL embeds the secret token.
+  app.get<{ Params: { tenantId: string; inviteId: string } }>(
+    '/v1/tenants/:tenantId/invites/:inviteId/link',
+    { preHandler: [requireTenantAdmin] },
+    async (request, reply) => {
+      const { tenantId, inviteId } = request.params;
+      const [invite] = await db.select().from(tenantInvites)
+        .where(and(eq(tenantInvites.id, inviteId), eq(tenantInvites.tenantId, tenantId))).limit(1);
+      if (!invite) return notFound(reply, 'INVITE_NOT_FOUND', 'Invite not found');
+      if (invite.acceptedAt) {
+        return reply.code(409).send({
+          error: 'Invite already accepted',
+          code: 'INVITE_ALREADY_ACCEPTED',
+        });
+      }
+      if (invite.expiresAt.getTime() < Date.now()) {
+        return reply.code(410).send({ error: 'Invite has expired', code: 'INVITE_EXPIRED' });
+      }
+      return {
+        acceptUrl: buildInviteAcceptUrl(invite.token),
+        expiresAt: invite.expiresAt,
+      };
+    },
+  );
+
   app.delete<{ Params: { tenantId: string; inviteId: string } }>(
     '/v1/tenants/:tenantId/invites/:inviteId',
     { preHandler: [requireTenantAdmin] },

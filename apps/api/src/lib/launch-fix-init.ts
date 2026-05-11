@@ -49,14 +49,60 @@ export async function launchFixPreSeed(): Promise<void> {
 
   if (legacy && !target) {
     await db.update(modules)
-      .set({ slug: 'brandforgeos', name: 'BrandForgeOS', updatedAt: new Date() })
+      .set({ slug: 'brandforgeos', name: 'BrandForgeOS' })
       .where(eq(modules.slug, 'bf-os'));
     console.log('[launch-fix:pre] Renamed module bf-os -> brandforgeos');
   } else if (legacy && target) {
-    // Both exist (shouldn't happen, but defensive). Keep the new slug,
-    // remove the legacy duplicate.
-    await db.delete(modules).where(eq(modules.slug, 'bf-os'));
-    console.log('[launch-fix:pre] Dropped duplicate bf-os row (brandforgeos already present)');
+    // Both exist (shouldn't happen, but defensive). FK dependents
+    // (plan_modules, tenant_modules, addon_subscriptions,
+    // tenant_user_module_access, entitlement_overrides) reference
+    // modules.id, so deleting the legacy row directly would either FK-
+    // restrict-fail or — worse — silently strand grants if the FK is
+    // ON DELETE CASCADE. Re-point every dependent row to the canonical
+    // brandforgeos id first, swallow uniqueness collisions on
+    // (plan_id, module_id) / (tenant_id, module_id) / (tenant_id,
+    // user_id, module_id) so the heal stays idempotent across retries,
+    // then drop the legacy row.
+    const legacyId = legacy.id;
+    const targetId = target.id;
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`
+        UPDATE plan_modules SET module_id = ${targetId}
+        WHERE module_id = ${legacyId}
+          AND NOT EXISTS (
+            SELECT 1 FROM plan_modules pm2
+            WHERE pm2.plan_id = plan_modules.plan_id AND pm2.module_id = ${targetId}
+          )`);
+      await tx.execute(sql`DELETE FROM plan_modules WHERE module_id = ${legacyId}`);
+
+      await tx.execute(sql`
+        UPDATE tenant_modules SET module_id = ${targetId}
+        WHERE module_id = ${legacyId}
+          AND NOT EXISTS (
+            SELECT 1 FROM tenant_modules tm2
+            WHERE tm2.tenant_id = tenant_modules.tenant_id AND tm2.module_id = ${targetId}
+          )`);
+      await tx.execute(sql`DELETE FROM tenant_modules WHERE module_id = ${legacyId}`);
+
+      await tx.execute(sql`
+        UPDATE tenant_user_module_access SET module_id = ${targetId}
+        WHERE module_id = ${legacyId}
+          AND NOT EXISTS (
+            SELECT 1 FROM tenant_user_module_access tuma2
+            WHERE tuma2.tenant_id = tenant_user_module_access.tenant_id
+              AND tuma2.user_id   = tenant_user_module_access.user_id
+              AND tuma2.module_id = ${targetId}
+          )`);
+      await tx.execute(sql`DELETE FROM tenant_user_module_access WHERE module_id = ${legacyId}`);
+
+      // addon_subscriptions + entitlement_overrides: re-point in place;
+      // there's no composite uniqueness preventing a straight UPDATE.
+      await tx.execute(sql`UPDATE addon_subscriptions   SET module_id = ${targetId} WHERE module_id = ${legacyId}`);
+      await tx.execute(sql`UPDATE entitlement_overrides SET module_id = ${targetId} WHERE module_id = ${legacyId}`);
+
+      await tx.delete(modules).where(eq(modules.id, legacyId));
+    });
+    console.log('[launch-fix:pre] Migrated FK refs from bf-os -> brandforgeos and dropped duplicate row');
   }
 }
 
@@ -73,7 +119,7 @@ async function alignPlanPricesAndStripeIds(): Promise<void> {
   // PLAN_CONFIGS is the source of truth; back-fill the DB to match.
   for (const cfg of PLAN_CONFIGS) {
     await db.update(subscriptionPlans)
-      .set({ price: cfg.price, updatedAt: new Date() })
+      .set({ price: cfg.price })
       .where(and(
         eq(subscriptionPlans.slug, cfg.slug),
         sql`${subscriptionPlans.price} <> ${cfg.price}`,
@@ -99,7 +145,7 @@ async function alignPlanPricesAndStripeIds(): Promise<void> {
   for (const [slug, ids] of Object.entries(planEnv)) {
     if (ids.monthly) {
       await db.update(subscriptionPlans)
-        .set({ stripePriceId: ids.monthly, updatedAt: new Date() })
+        .set({ stripePriceId: ids.monthly })
         .where(and(
           eq(subscriptionPlans.slug, slug),
           sql`(${subscriptionPlans.stripePriceId} IS NULL OR ${subscriptionPlans.stripePriceId} <> ${ids.monthly})`,
@@ -135,7 +181,7 @@ async function fixShotgunTenant(): Promise<void> {
   const [tenantBefore] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
   if (tenantBefore && (tenantBefore.name !== desiredName || tenantBefore.type !== 'company')) {
     await db.update(tenants)
-      .set({ name: desiredName, type: 'company', updatedAt: new Date() })
+      .set({ name: desiredName, type: 'company' })
       .where(eq(tenants.id, tenantId));
     console.log(`[launch-fix:post] Renamed John's tenant -> "${desiredName}" (company)`);
   }

@@ -448,6 +448,14 @@ interface ModuleSeedSpec {
   planMin: 'starter' | 'pro' | 'elite';
   ord: number;
   /**
+   * Task #66: when `true`, the module ships with an internal MVP shell
+   * mounted at `/apps/<slug>` in the web app. The seeder treats an
+   * internal shell as equivalent to an env URL for status-derivation
+   * purposes (so the row stays `live` and `baseUrl` defaults to the
+   * internal route when no external URL is configured).
+   */
+  internal?: boolean;
+  /**
    * Default add-on price in USD cents seeded into modules.metadata
    * on first insert. After insert, admins can edit modules.metadata
    * to override; we never stomp admin-edited values on restart.
@@ -474,12 +482,21 @@ const MODULE_SEED_SPECS: ModuleSeedSpec[] = [
   { slug: 'techdeck',         name: 'TechDeck',         description: 'Onsite tech command center',                  category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TECHDECK_URL,        planMin: 'starter', ord: 3, addonPriceCents: ADDON_DEFAULT_CENTS.starter },
   { slug: 'pulsedesk',        name: 'PulseDesk',        description: 'Lightweight ticketing for small teams',      category: 'support', defaultStatus: 'live',        envUrl: process.env.PULSEDESK_URL,       planMin: 'pro',     ord: 4, addonPriceCents: ADDON_DEFAULT_CENTS.pro     },
   { slug: 'faultlinelab',     name: 'FaultlineLab',     description: 'Diagnostic + RCA workflow',                   category: 'support', defaultStatus: 'live',        envUrl: process.env.FAULTLINELAB_URL,    planMin: 'pro',     ord: 5, addonPriceCents: ADDON_DEFAULT_CENTS.pro     },
-  { slug: 'bf-os',            name: 'BrandForgeOS',     description: 'Body shop / collision OS',                    category: 'ops',     defaultStatus: 'live',        envUrl: process.env.BF_OS_URL,           planMin: 'pro',     ord: 6, addonPriceCents: ADDON_DEFAULT_CENTS.pro     },
+  // Task #66: bf-os renamed to brandforgeos. BF_OS_URL retained as a
+  // fallback so live secrets keep working until ops swaps them.
+  // launch-fix-init.launchFixPreSeed() renames the existing DB row from
+  // 'bf-os' -> 'brandforgeos' BEFORE this seed iterates, so the SELECT
+  // .where(slug='brandforgeos') below finds the same row and updates it
+  // instead of inserting a duplicate.
+  { slug: 'brandforgeos',     name: 'BrandForgeOS',     description: 'Body shop / collision OS',                    category: 'ops',     defaultStatus: 'live',        envUrl: process.env.BRANDFORGEOS_URL || process.env.BF_OS_URL, planMin: 'pro', ord: 6, addonPriceCents: ADDON_DEFAULT_CENTS.pro },
   { slug: 'snapproofos',      name: 'SnapProofOS',      description: 'Photo-based proof of work',                   category: 'ops',     defaultStatus: 'live',        envUrl: process.env.SNAPPROOFOS_URL,     planMin: 'elite',   ord: 7, addonPriceCents: ADDON_DEFAULT_CENTS.elite   },
-  { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                 category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.STUDYFORGE_AI_URL,   planMin: 'elite',   ord: 8, addonPriceCents: ADDON_DEFAULT_CENTS.elite   },
-  { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Build & ship internal tools fast',            category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.NINJA_LAUNCH_KIT_URL, planMin: 'elite',  ord: 9, addonPriceCents: ADDON_DEFAULT_CENTS.elite   },
-  { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'AI phone agent + call automation',            category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.CALLCOMMAND_AI_URL,  planMin: 'elite',   ord: 10, addonPriceCents: ADDON_DEFAULT_CENTS.elite  },
-  { slug: 'ninjamation',      name: 'Ninjamation',      description: 'Cross-app workflow automation',               category: 'ai',      defaultStatus: 'coming_soon', envUrl: process.env.NINJAMATION_URL,     planMin: 'elite',   ord: 11, addonPriceCents: ADDON_DEFAULT_CENTS.elite  },
+  // Task #66: 4 modules below ship MVP shells at /apps/<slug>; promoted
+  // to defaultStatus='live' + internal=true so they appear unlocked
+  // even when the external *_URL env is missing.
+  { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                 category: 'ai',      defaultStatus: 'live',        envUrl: process.env.STUDYFORGE_AI_URL,   planMin: 'elite',   ord: 8,  addonPriceCents: ADDON_DEFAULT_CENTS.elite, internal: true },
+  { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Build & ship internal tools fast',            category: 'ai',      defaultStatus: 'live',        envUrl: process.env.NINJA_LAUNCH_KIT_URL, planMin: 'elite',  ord: 9,  addonPriceCents: ADDON_DEFAULT_CENTS.elite, internal: true },
+  { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'AI phone agent + call automation',            category: 'ai',      defaultStatus: 'live',        envUrl: process.env.CALLCOMMAND_AI_URL,  planMin: 'elite',   ord: 10, addonPriceCents: ADDON_DEFAULT_CENTS.elite, internal: true },
+  { slug: 'ninjamation',      name: 'Ninjamation',      description: 'Cross-app workflow automation',               category: 'ai',      defaultStatus: 'live',        envUrl: process.env.NINJAMATION_URL,     planMin: 'elite',   ord: 11, addonPriceCents: ADDON_DEFAULT_CENTS.elite, internal: true },
 ];
 
 export const MODULE_SEEDS: ModuleSeed[] = MODULE_SEED_SPECS.map(s => ({
@@ -487,8 +504,15 @@ export const MODULE_SEEDS: ModuleSeed[] = MODULE_SEED_SPECS.map(s => ({
   name: s.name,
   description: s.description,
   category: s.category,
-  status: s.defaultStatus === 'live' && !s.envUrl ? 'coming_soon' : s.defaultStatus,
-  baseUrl: s.envUrl ?? '',
+  // Task #66: an internal MVP shell counts as a launchable surface, so
+  // a module marked `internal: true` stays `live` even without an env URL.
+  status: s.defaultStatus === 'live' && !s.envUrl && !s.internal
+    ? 'coming_soon'
+    : s.defaultStatus,
+  // Task #66: when no external URL is configured but the module ships
+  // an internal shell, point baseUrl at the in-app route so the
+  // marketplace launcher hands off cleanly.
+  baseUrl: s.envUrl ?? (s.internal ? `/apps/${s.slug}` : ''),
   planMin: s.planMin,
   ord: s.ord,
 }));
@@ -529,12 +553,15 @@ export async function seedModules() {
         updates.metadata = { ...existingMd, addonPriceCents: spec.addonPriceCents };
       }
       if (spec.defaultStatus === 'live') {
-        updates.status = spec.envUrl ? 'live' : 'coming_soon';
+        // Task #66: an internal MVP shell is a launchable surface, so
+        // treat it as equivalent to an env URL for status purposes.
+        updates.status = (spec.envUrl || spec.internal) ? 'live' : 'coming_soon';
       }
-      // Gate 2 catalog rename: existing 'BF-OS' rows get re-displayed as
-      // 'BrandForgeOS'. Idempotent — only fires when the name still
-      // matches the legacy literal.
-      if (spec.slug === 'bf-os' && existing[0].name !== 'BrandForgeOS') {
+      // Task #66 catalog rename: existing rows that pre-date the
+      // BrandForgeOS rename keep getting nudged to the canonical name.
+      // (The slug rename itself is handled idempotently by
+      // `launchFixPreSeed` BEFORE this seeder runs.)
+      if (spec.slug === 'brandforgeos' && existing[0].name !== 'BrandForgeOS') {
         updates.name = 'BrandForgeOS';
       }
       await db.update(modules).set(updates).where(eq(modules.slug, spec.slug));
