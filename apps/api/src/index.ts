@@ -41,6 +41,7 @@ import type { AgentEvent } from './agent.js';
 import { analyzeWorkspace, generatePlan, generateArtifacts, runProof } from './publish/index.js';
 import type { DetectionResult } from './publish/types.js';
 import { buildCorsOriginValidator } from './lib/cors-origin.js';
+import { requireSessionSecret } from './lib/session-secret.js';
 
 const startTime = Date.now();
 
@@ -57,7 +58,9 @@ await app.register(cors, {
   origin: buildCorsOriginValidator(process.env.CORS_ALLOWED_ORIGINS, process.env.NODE_ENV),
   credentials: true,
 });
-await app.register(cookie, { secret: process.env.SESSION_SECRET || 'operatoros-dev-secret' });
+await app.register(cookie, {
+  secret: requireSessionSecret(process.env.NODE_ENV, process.env.SESSION_SECRET),
+});
 
 // Replace the default JSON parser with one that preserves the raw buffer on
 // the request. This is required for Stripe webhook signature verification
