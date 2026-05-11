@@ -62,6 +62,7 @@ ADMIN_PASSWORD = "Dr0p$0fJup1t3r"
 [userenv.production]
 OPERATOROS_BASE_URL = "https://operatoros.net"
 STRIPE_MODE = "live"
+APP_ENV = "production"
 
 [userenv.development]
 OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL = "john@shotgunninjas.com"
