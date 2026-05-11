@@ -49,7 +49,11 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 type View = PlatformView;
 
 async function apiCall(path: string, init: RequestInit = {}): Promise<any> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  // localStorage key 'token' is set by AuthProvider on login. (PlatformPage
+  // previously read 'auth_token' — that key is never set anywhere, so every
+  // /v1/platform/* call went out without an Authorization header and the
+  // entire surface 401'd. Aligning with the rest of the web app.)
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const tenantId = typeof window !== 'undefined' ? localStorage.getItem('activeTenantId') : null;
   const res = await fetch(`${API}${path}`, {
     ...init,
