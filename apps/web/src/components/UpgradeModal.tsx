@@ -20,6 +20,7 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
   const [currentPlan, setCurrentPlan] = useState('');
   const [downgradeWarnings, setDowngradeWarnings] = useState<string[]>([]);
   const [pendingDowngradeSlug, setPendingDowngradeSlug] = useState('');
+  const [interval, setInterval] = useState<'month' | 'year'>('month');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -49,7 +50,11 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
         }
       }
 
-      const result = await billingApi.subscribe(slug);
+      const result = await billingApi.subscribe(slug, interval);
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+        return;
+      }
       if (result.downgradeWarnings?.length > 0) {
         setDowngradeWarnings(result.downgradeWarnings);
       }
@@ -67,7 +72,11 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
   const confirmDowngrade = async (slug: string) => {
     setSwitching(slug);
     try {
-      const result = await billingApi.subscribe(slug);
+      const result = await billingApi.subscribe(slug, interval);
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+        return;
+      }
       setDowngradeWarnings(result.downgradeWarnings || []);
       onUpgraded();
       onClose();
@@ -107,6 +116,22 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
           </div>
           <button onClick={onClose} data-testid="button-close-upgrade-modal"
             style={{ background: 'none', border: 'none', color: colors.textDim, fontSize: 20, cursor: 'pointer', padding: 4 }}>{'\u2715'}</button>
+        </div>
+
+        <div role="group" aria-label="Billing interval"
+             style={{ display: 'inline-flex', borderRadius: 8, border: `1px solid ${colors.border}`, overflow: 'hidden', marginBottom: 20 }}>
+          {(['month', 'year'] as const).map((v) => (
+            <button key={v} data-testid={`button-modal-interval-${v}`}
+              onClick={() => setInterval(v)}
+              style={{
+                padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                border: 'none',
+                background: interval === v ? colors.accent : 'transparent',
+                color: interval === v ? '#fff' : colors.textMuted,
+              }}>
+              {v === 'month' ? 'Monthly' : 'Annual (save ~17%)'}
+            </button>
+          ))}
         </div>
 
         {downgradeWarnings.length > 0 && (
@@ -156,8 +181,29 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
                   <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{p.name}</div>
                   <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 12 }}>{p.description}</div>
                   <div style={{ marginBottom: 16 }}>
-                    <span style={{ fontSize: 28, fontWeight: 800, color: '#fff' }}>${(p.price / 100).toFixed(0)}</span>
-                    <span style={{ fontSize: 12, color: colors.textMuted }}>/mo</span>
+                    {(() => {
+                      const monthlyCents = p.displayMonthlyPriceCents ?? p.price;
+                      const annualCents = p.displayAnnualPriceCents ?? (monthlyCents * 10);
+                      if (interval === 'year') {
+                        return (
+                          <>
+                            <span style={{ fontSize: 28, fontWeight: 800, color: '#fff' }} data-testid={`modal-price-${p.slug}-year`}>
+                              ${(annualCents / 100).toFixed(0)}
+                            </span>
+                            <span style={{ fontSize: 12, color: colors.textMuted }}>/yr</span>
+                            <div style={{ fontSize: 10, color: colors.accentGreen, marginTop: 2 }}>2 months free vs monthly</div>
+                          </>
+                        );
+                      }
+                      return (
+                        <>
+                          <span style={{ fontSize: 28, fontWeight: 800, color: '#fff' }} data-testid={`modal-price-${p.slug}-month`}>
+                            ${(monthlyCents / 100).toFixed(0)}
+                          </span>
+                          <span style={{ fontSize: 12, color: colors.textMuted }}>/mo</span>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: 12, marginBottom: 16 }}>
