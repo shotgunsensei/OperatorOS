@@ -18,7 +18,7 @@ import AuthProvider, { useAuth } from '@/components/AuthProvider';
 
 // Local fetch helper — mirrors the apiCall pattern used in PlatformPage so
 // /admin/health doesn't take a dependency on the private auth.ts internals.
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API = '/api';
 async function apiCall(path: string): Promise<unknown> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const res = await fetch(`${API}${path}`, {

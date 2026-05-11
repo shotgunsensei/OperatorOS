@@ -1,5 +1,24 @@
 /** @type {import('next').NextConfig} */
 const isMobileBuild = process.env.MOBILE_BUILD === '1';
+const isDev = process.env.NODE_ENV !== 'production';
+
+function resolveApiUrl() {
+  const internalApiUrl = process.env.INTERNAL_API_URL;
+  const publicApiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const configured = internalApiUrl || publicApiUrl;
+
+  if (!configured) {
+    const message =
+      'Missing API URL configuration: set INTERNAL_API_URL or NEXT_PUBLIC_API_URL for non-dev builds.';
+    if (isDev) {
+      console.warn(message);
+      return 'http://localhost:5001';
+    }
+    throw new Error(message);
+  }
+
+  return configured.replace(/\/$/, '');
+}
 
 const nextConfig = {
   reactStrictMode: false,
@@ -21,7 +40,7 @@ const nextConfig = {
   } : {}),
   ...(!isMobileBuild ? {
     async rewrites() {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+      const apiUrl = resolveApiUrl();
       return [
         {
           source: '/api/:path*',
