@@ -40,8 +40,10 @@ import { runAgentLoop } from './agent.js';
 import type { AgentEvent } from './agent.js';
 import { analyzeWorkspace, generatePlan, generateArtifacts, runProof } from './publish/index.js';
 import type { DetectionResult } from './publish/types.js';
+import { requireSessionSecret } from './lib/session-secret.js';
 
 const startTime = Date.now();
+const sessionSecret = requireSessionSecret();
 
 const app = Fastify({
   logger: {
@@ -53,7 +55,7 @@ const app = Fastify({
 });
 
 await app.register(cors, { origin: true, credentials: true });
-await app.register(cookie, { secret: process.env.SESSION_SECRET || 'operatoros-dev-secret' });
+await app.register(cookie, { secret: sessionSecret });
 
 // Replace the default JSON parser with one that preserves the raw buffer on
 // the request. This is required for Stripe webhook signature verification

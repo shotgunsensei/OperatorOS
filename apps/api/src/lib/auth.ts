@@ -5,8 +5,9 @@ import { db } from '../db.js';
 import { users, subscriptions, adminAuditLogs, activityFeed } from '../schema.js';
 import { eq, and } from 'drizzle-orm';
 import { getUserPlanConfig, checkResourceLimit, checkFeatureAccess, type PlanFeatures, type PlanLimits } from './plans.js';
+import { requireSessionSecret } from './session-secret.js';
 
-const JWT_SECRET = process.env.SESSION_SECRET || 'operatoros-dev-secret-change-me';
+const JWT_SECRET = requireSessionSecret();
 const JWT_EXPIRY = '7d';
 const MAX_FAILED_LOGINS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
