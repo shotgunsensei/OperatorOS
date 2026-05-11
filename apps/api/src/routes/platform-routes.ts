@@ -41,7 +41,7 @@ import {
   TENANT_SAFE_FIELDS, MODULE_SAFE_FIELDS,
   TENANT_MODULE_SAFE_FIELDS, TENANT_USER_ACCESS_SAFE_FIELDS,
 } from '../lib/audit.js';
-import { lookupAddonStripePrice, getAddonStripePriceEnvKey, getAddonStripePriceId, retryBillingEvent, createAddonStripePrice, resyncUserBilling, validateAddonStripePriceId } from '../lib/billing-service.js';
+import { lookupAddonStripePrice, getAddonStripePriceEnvKey, getAddonStripePriceId, retryBillingEvent, createAddonStripePrice, resyncUserBilling, validateAddonStripePriceId, __setStripeTestOverrides } from '../lib/billing-service.js';
 import { getModuleAccessTrace } from '../lib/entitlement-service.js';
 import { getSsoCleanupHealth } from '../lib/sso-cleanup.js';
 
@@ -941,6 +941,35 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       };
     },
   );
+
+  // Dev/test-only seam: lets an automated UI test (Playwright/runTest)
+  // install a Stripe stub in the running API process so the Pricing
+  // drift-fix flows are deterministically exercisable end-to-end without
+  // hitting the real Stripe API. Hard-gated on:
+  //   1) NODE_ENV must NOT be 'production'   — never reachable in prod
+  //   2) requireSuperAdmin                   — same gate as the rest
+  // Body: { enabled?: boolean, retrievePrice?: { id, unit_amount, currency, active },
+  //         createPrice?: { id, product, unit_amount, currency } } | { reset: true }
+  app.post('/v1/platform/__test__/stripe-override', { preHandler: [requireSuperAdmin] }, async (request, reply) => {
+    if (process.env.NODE_ENV === 'production') {
+      return reply.code(404).send({ error: 'not found', code: 'NOT_FOUND' });
+    }
+    const body = (request.body ?? {}) as any;
+    if (body.reset === true) {
+      __setStripeTestOverrides(null);
+      return { ok: true, action: 'reset' };
+    }
+    const retrievePrice = body.retrievePrice || null;
+    const createPrice = body.createPrice || null;
+    const client = {
+      prices: {
+        retrieve: async (id: string) => retrievePrice ? { id, ...retrievePrice } : (() => { throw new Error('No retrievePrice configured'); })(),
+        create:   async (_args: any) => createPrice ? { ...createPrice } : (() => { throw new Error('No createPrice configured'); })(),
+      },
+    };
+    __setStripeTestOverrides({ enabled: body.enabled !== false, client });
+    return { ok: true, action: 'installed' };
+  });
 
   // Filterable audit log.
   app.get('/v1/platform/audit', { preHandler: [requireSuperAdmin] }, async (request) => {
