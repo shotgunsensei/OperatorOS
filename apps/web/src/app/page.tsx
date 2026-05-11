@@ -22,6 +22,7 @@ import TenantUsersPage from '@/components/pages/TenantUsersPage';
 import TenantModulesPage from '@/components/pages/TenantModulesPage';
 import TenantSettingsPage from '@/components/pages/TenantSettingsPage';
 import TenantBillingPage from '@/components/pages/TenantBillingPage';
+import { isSuperAdmin, isTenantAdmin } from '@/lib/rbac';
 function AppContent() {
   const { user, loading, authError, logout, clearAuthError } = useAuth();
   const { activeRole: tenantRole } = useTenant();
@@ -46,10 +47,10 @@ function AppContent() {
   useEffect(() => {
     if (!user || didInitialLand) return;
     if (activePage !== 'my-apps') { setDidInitialLand(true); return; }
-    if ((user as any).platformRole === 'super_admin') {
+    if (isSuperAdmin((user as any).platformRole)) {
       setActivePage('platform');
       setDidInitialLand(true);
-    } else if (tenantRole === 'owner' || tenantRole === 'admin') {
+    } else if (isTenantAdmin(tenantRole, (user as any).platformRole)) {
       setActivePage('command-center');
       setDidInitialLand(true);
     } else if (tenantRole === 'member') {
@@ -101,13 +102,13 @@ function AppContent() {
     return <LoginPage onSwitch={handleSwitch} />;
   }
 
-  const isSuperAdmin = (user as any)?.platformRole === 'super_admin';
-  const isTenantAdmin = tenantRole === 'owner' || tenantRole === 'admin' || isSuperAdmin;
+  const userIsSuperAdmin = isSuperAdmin((user as any)?.platformRole);
+  const userIsTenantAdmin = isTenantAdmin(tenantRole, (user as any)?.platformRole);
 
   const handleNavigate = (page: string) => {
     // Super admins clicking the Platform Command entry are routed to the
     // standalone /platform page so the URL reflects where they are.
-    if (page === 'platform' && isSuperAdmin) {
+    if (page === 'platform' && userIsSuperAdmin) {
       window.location.href = '/platform';
       return;
     }
@@ -122,27 +123,27 @@ function AppContent() {
       case 'billing': return <BillingPage />;
       case 'settings': return <SettingsPage />;
       case 'command-center':
-        return isTenantAdmin
+        return userIsTenantAdmin
           ? <TenantCommandCenterPage onNavigate={setActivePage} />
           : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can access the Command Center." />;
       case 'tenant-users':
-        return isTenantAdmin
+        return userIsTenantAdmin
           ? <TenantUsersPage />
           : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can manage members." />;
       case 'tenant-modules':
-        return isTenantAdmin
+        return userIsTenantAdmin
           ? <TenantModulesPage />
           : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can view tenant modules." />;
       case 'tenant-billing':
-        return isTenantAdmin
+        return userIsTenantAdmin
           ? <TenantBillingPage />
           : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can view tenant billing." />;
       case 'tenant-settings':
-        return isTenantAdmin
+        return userIsTenantAdmin
           ? <TenantSettingsPage />
           : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can edit tenant settings." />;
       case 'platform':
-        return isSuperAdmin
+        return userIsSuperAdmin
           ? <PlatformPage />
           : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only platform super-administrators can access this page." />;
       default: return <MyAppsPage onNavigate={setActivePage} />;
