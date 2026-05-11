@@ -11,6 +11,8 @@ import NinjaLaunchKitShell from '@/components/module-shells/NinjaLaunchKitShell'
 import CallCommandShell from '@/components/module-shells/CallCommandShell';
 import NinjamationShell from '@/components/module-shells/NinjamationShell';
 
+interface MeModulesResponse { modules?: MeModule[]; items?: MeModule[] }
+
 interface MeModule {
   slug: string;
   name: string;
@@ -39,12 +41,15 @@ export default function InternalAppPage() {
     (async () => {
       if (!slug) return;
       try {
-        const res: any = await (meApi as any).modules?.();
+        const res = (await meApi.modules()) as MeModulesResponse;
         const list: MeModule[] = res?.modules ?? res?.items ?? [];
         const found = list.find(m => m.slug === slug) ?? null;
         if (alive) setMod(found);
-      } catch (e: any) {
-        if (alive) setErr(e?.error || 'Failed to load module');
+      } catch (e) {
+        const msg = (e as { error?: string; message?: string })?.error
+                 ?? (e as { message?: string })?.message
+                 ?? 'Failed to load module';
+        if (alive) setErr(msg);
       } finally {
         if (alive) setLoading(false);
       }

@@ -52,81 +52,38 @@ export interface PlanCheckResult {
   upgradeSlug?: string;
 }
 
-export const PLAN_CONFIGS: PlanConfig[] = [
-  {
-    slug: 'starter',
-    name: 'Starter',
-    price: 4900,
-    interval: 'month',
-    description: 'For individuals getting started',
-    limits: {
-      maxWorkspaces: 1,
-      maxProjects: 3,
-      maxTasks: 50,
-      maxTeamMembers: 0,
-      maxAiActionsPerMonth: 10,
-    },
-    features: {
-      exports: false,
-      automation: false,
-      templates: false,
-      advancedAnalytics: false,
-      whiteLabel: false,
-      prioritySupport: false,
-      customIntegrations: false,
-      apiAccess: false,
-    },
+// Task #66: per-tier limits/features remain here (API-only concerns) but
+// slug/name/description/price come from the shared SDK catalog so the
+// web pricing surface and the API seed share one source of truth.
+import { PLAN_CATALOG, PLAN_CATALOG_BY_SLUG } from '@operatoros/sdk';
+
+const PLAN_LIMITS_FEATURES: Record<string, { limits: PlanLimits; features: PlanFeatures }> = {
+  starter: {
+    limits: { maxWorkspaces: 1, maxProjects: 3, maxTasks: 50, maxTeamMembers: 0, maxAiActionsPerMonth: 10 },
+    features: { exports: false, automation: false, templates: false, advancedAnalytics: false, whiteLabel: false, prioritySupport: false, customIntegrations: false, apiAccess: false },
   },
-  {
-    slug: 'pro',
-    name: 'Pro',
-    price: 14900,
-    interval: 'month',
-    description: 'For growing teams and power users',
-    highlight: true,
-    limits: {
-      maxWorkspaces: 5,
-      maxProjects: 25,
-      maxTasks: 500,
-      maxTeamMembers: 10,
-      maxAiActionsPerMonth: 200,
-    },
-    features: {
-      exports: true,
-      automation: true,
-      templates: true,
-      advancedAnalytics: false,
-      whiteLabel: false,
-      prioritySupport: true,
-      customIntegrations: false,
-      apiAccess: true,
-    },
+  pro: {
+    limits: { maxWorkspaces: 5, maxProjects: 25, maxTasks: 500, maxTeamMembers: 10, maxAiActionsPerMonth: 200 },
+    features: { exports: true, automation: true, templates: true, advancedAnalytics: false, whiteLabel: false, prioritySupport: true, customIntegrations: false, apiAccess: true },
   },
-  {
-    slug: 'elite',
-    name: 'Elite',
-    price: 29900,
-    interval: 'month',
-    description: 'For enterprises and large teams',
-    limits: {
-      maxWorkspaces: 999,
-      maxProjects: 9999,
-      maxTasks: 99999,
-      maxTeamMembers: 999,
-      maxAiActionsPerMonth: 9999,
-    },
-    features: {
-      exports: true,
-      automation: true,
-      templates: true,
-      advancedAnalytics: true,
-      whiteLabel: true,
-      prioritySupport: true,
-      customIntegrations: true,
-      apiAccess: true,
-    },
+  elite: {
+    limits: { maxWorkspaces: 999, maxProjects: 9999, maxTasks: 99999, maxTeamMembers: 999, maxAiActionsPerMonth: 9999 },
+    features: { exports: true, automation: true, templates: true, advancedAnalytics: true, whiteLabel: true, prioritySupport: true, customIntegrations: true, apiAccess: true },
   },
-];
+};
+
+export const PLAN_CONFIGS: PlanConfig[] = PLAN_CATALOG.map(c => ({
+  slug: c.slug,
+  name: c.name,
+  price: c.monthlyPriceCents,
+  interval: 'month' as const,
+  description: c.description,
+  highlight: c.highlight || undefined,
+  limits: PLAN_LIMITS_FEATURES[c.slug].limits,
+  features: PLAN_LIMITS_FEATURES[c.slug].features,
+}));
+
+export { PLAN_CATALOG, PLAN_CATALOG_BY_SLUG };
 
 export function getPlanConfig(slug: string): PlanConfig | undefined {
   return PLAN_CONFIGS.find(p => p.slug === slug);

@@ -46,6 +46,8 @@ import { getModuleAccessTrace } from '../lib/entitlement-service.js';
 import { getSsoCleanupHealth } from '../lib/sso-cleanup.js';
 import { getEmailFromHealth } from '../lib/email-service.js';
 import { PLAN_CONFIGS } from '../lib/plans.js';
+import { PLAN_CATALOG, MODULE_CATALOG, pickEnv } from '@operatoros/sdk';
+import { tenantInvites } from '../schema.js';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -729,6 +731,33 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         shotgunConfigured = !!t && t.name === desiredShotgunName && t.type === 'company';
       }
     }
+    // Task #66 (review fix #3): per-plan monthly+annual price-ID and per-addon
+    // price-ID presence as booleans (NEVER the raw values). Sourced from the
+    // shared SDK PLAN_CATALOG / MODULE_CATALOG so adding a new plan or module
+    // automatically extends the readiness probe.
+    const planPriceIds: Record<string, { monthly: boolean; annual: boolean }> =
+      Object.fromEntries(PLAN_CATALOG.map(p => [
+        p.slug,
+        {
+          monthly: !!pickEnv([...p.stripeMonthlyEnvKeys]),
+          annual:  !!pickEnv([...p.stripeAnnualEnvKeys]),
+        },
+      ]));
+    const allPlanMonthlyPriceIdsConfigured = Object.values(planPriceIds).every(p => p.monthly);
+    const allPlanAnnualPriceIdsConfigured  = Object.values(planPriceIds).every(p => p.annual);
+    const addonPriceIds: Record<string, boolean> = Object.fromEntries(
+      MODULE_CATALOG.map(m => [m.slug, !!pickEnv([...m.stripeAddonEnvKeys])])
+    );
+    const allAddonPriceIdsConfigured = Object.values(addonPriceIds).every(Boolean);
+
+    // Diagnostic counts (NOT booleans): kept under a separate `diagnostics`
+    // namespace so the booleans-only contract for launch-readiness probes
+    // remains intact while still surfacing raw counts the launch checklist
+    // needs.
+    const [pendingInvitesRow] = await db.select({ value: count() })
+      .from(tenantInvites).where(isNull(tenantInvites.acceptedAt));
+    const pendingInvitesCount = Number(pendingInvitesRow?.value ?? 0);
+
     return {
       ok: dbOk,
       db: { ok: dbOk },
@@ -750,19 +779,37 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       // these as red/green dots; counts/diagnostics live behind the
       // existing `/v1/platform/pricing` and `/v1/platform/audit` routes.
       emailFrom: { configured: getEmailFromHealth().configured },
+      baseUrl: { configured: !!process.env.OPERATOROS_BASE_URL },
       plans: {
         seeded: planRows.length > 0,
         pricesMatchConfig,
+        // Per-plan { monthly, annual } booleans. UI shows a green dot for
+        // each interval that has a Stripe price ID configured.
+        priceIds: planPriceIds,
+        allMonthlyPriceIdsConfigured: allPlanMonthlyPriceIdsConfigured,
+        allAnnualPriceIdsConfigured: allPlanAnnualPriceIdsConfigured,
       },
       modules: {
         seeded: modRows.length > 0,
         hasLive: liveCount > 0,
         allLive: modRows.length > 0 && comingSoonCount === 0,
         brandForgeOsRenamed,
+        // Per-addon priceId presence (boolean). Lets the Admin Health
+        // page flag any addon module that's still missing a Stripe price.
+        addonPriceIds,
+        allAddonPriceIdsConfigured,
       },
       shotgunTenant: { configured: shotgunConfigured },
       bootstrapSuperAdmin: { emailConfigured: !!bootstrapEmail },
       ssoCleanup: getSsoCleanupHealth(),
+      // Task #66: raw diagnostics — counts only, no PII or secret values.
+      diagnostics: {
+        modulesRegistered: modRows.length,
+        modulesLive: liveCount,
+        modulesComingSoon: comingSoonCount,
+        plansSeeded: planRows.length,
+        pendingInvites: pendingInvitesCount,
+      },
       lastWebhookAt: lastWebhook?.createdAt ?? null,
       lastAuditAt:   lastAudit?.createdAt ?? null,
       now: new Date().toISOString(),

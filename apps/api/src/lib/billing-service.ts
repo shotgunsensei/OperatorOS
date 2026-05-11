@@ -16,7 +16,19 @@ import {
 // hoisted. createRequire(import.meta.url) restores CommonJS resolution
 // from inside an ES module without modifying package.json.
 const esmRequire = createRequire(import.meta.url);
-let __stripeSingleton: any | null = null;
+// Stripe SDK is loaded lazily via createRequire (ESM context); the
+// official type lives in the optional `stripe` package and we don't want
+// `apps/api` to take a hard import on it. `unknown` keeps callers honest
+// — the only call sites use the narrow methods through the public
+// helpers below (checkout/create, subscriptions/update, webhooks/etc).
+type StripeClient = {
+  checkout: { sessions: { create: (args: unknown) => Promise<{ id: string; url: string | null }> } };
+  customers: { create: (args: unknown) => Promise<{ id: string }> };
+  subscriptions: { update: (id: string, args: unknown) => Promise<unknown> };
+  billingPortal: { sessions: { create: (args: unknown) => Promise<{ url: string }> } };
+  webhooks: { constructEvent: (payload: string | Buffer, sig: string, secret: string) => unknown };
+};
+let __stripeSingleton: StripeClient | null = null;
 
 // ---------------------------------------------------------------------------
 // Stripe Configuration
@@ -61,9 +73,10 @@ function getStripe() {
   // Task #66: ES-module-safe require via createRequire. Cached so we
   // don't re-resolve / re-instantiate on every checkout call.
   try {
-    const StripeModule = esmRequire('stripe');
-    const Stripe = (StripeModule && (StripeModule.default ?? StripeModule)) as any;
-    __stripeSingleton = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
+    const StripeModule = esmRequire('stripe') as { default?: unknown } | unknown;
+    const StripeCtor = (StripeModule as { default?: unknown })?.default ?? StripeModule;
+    type StripeFactory = new (key: string, opts: { apiVersion: string }) => StripeClient;
+    __stripeSingleton = new (StripeCtor as StripeFactory)(STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
     return __stripeSingleton;
   } catch (err) {
     throw new Error(`Stripe SDK could not be loaded: ${(err as Error)?.message ?? 'unknown'}`);
@@ -112,7 +125,12 @@ export interface PortalSessionResult {
   url: string;
 }
 
-export async function subscribeToPlan(userId: string, tenantId: string, planSlug: string): Promise<SubscribeResult> {
+export async function subscribeToPlan(
+  userId: string,
+  tenantId: string,
+  planSlug: string,
+  interval: BillingInterval = 'month',
+): Promise<SubscribeResult> {
   const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.slug, planSlug)).limit(1);
   if (!plan) throw new Error('Plan not found');
 
@@ -123,7 +141,7 @@ export async function subscribeToPlan(userId: string, tenantId: string, planSlug
   const downgrading = isDowngrade(currentConfig.slug, planSlug);
 
   if (isStripeEnabled() && plan.price > 0) {
-    const checkoutResult = await createCheckoutSession(userId, planSlug);
+    const checkoutResult = await createCheckoutSession(userId, planSlug, interval);
     return {
       ok: true,
       plan: plan.name,

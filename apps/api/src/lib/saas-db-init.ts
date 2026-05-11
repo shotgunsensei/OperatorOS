@@ -3,6 +3,7 @@ import { hashPassword } from './auth.js';
 import { users, subscriptionPlans, subscriptions, saasWorkspaces, saasProjects, saasTasks, notes, activityFeed, workspaceMemberships, modules, planModules, tenants, tenantUsers, tenantModules, tenantUserModuleAccess } from '../schema.js';
 import { eq, and, sql } from 'drizzle-orm';
 import { PLAN_CONFIGS } from './plans.js';
+import { MODULE_CATALOG, pickEnv } from '@operatoros/sdk';
 
 export async function ensureSaasTables() {
   await db.execute(`
@@ -476,28 +477,26 @@ interface ModuleSeedSpec {
 // edit `modules.metadata` to set custom prices per module.
 const ADDON_DEFAULT_CENTS = { starter: 1900, pro: 2900, elite: 4900 } as const;
 
-const MODULE_SEED_SPECS: ModuleSeedSpec[] = [
-  { slug: 'tradeflowkit',     name: 'TradeFlowKit',     description: 'Job tracker for trade & service businesses', category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TRADEFLOWKIT_URL,    planMin: 'starter', ord: 1, addonPriceCents: ADDON_DEFAULT_CENTS.starter },
-  { slug: 'torqueshed',       name: 'TorqueShed',       description: 'Mechanic shop dashboard & invoicing',        category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TORQUESHED_URL,      planMin: 'starter', ord: 2, addonPriceCents: ADDON_DEFAULT_CENTS.starter },
-  { slug: 'techdeck',         name: 'TechDeck',         description: 'Onsite tech command center',                  category: 'ops',     defaultStatus: 'live',        envUrl: process.env.TECHDECK_URL,        planMin: 'starter', ord: 3, addonPriceCents: ADDON_DEFAULT_CENTS.starter },
-  { slug: 'pulsedesk',        name: 'PulseDesk',        description: 'Lightweight ticketing for small teams',      category: 'support', defaultStatus: 'live',        envUrl: process.env.PULSEDESK_URL,       planMin: 'pro',     ord: 4, addonPriceCents: ADDON_DEFAULT_CENTS.pro     },
-  { slug: 'faultlinelab',     name: 'FaultlineLab',     description: 'Diagnostic + RCA workflow',                   category: 'support', defaultStatus: 'live',        envUrl: process.env.FAULTLINELAB_URL,    planMin: 'pro',     ord: 5, addonPriceCents: ADDON_DEFAULT_CENTS.pro     },
-  // Task #66: bf-os renamed to brandforgeos. BF_OS_URL retained as a
-  // fallback so live secrets keep working until ops swaps them.
-  // launch-fix-init.launchFixPreSeed() renames the existing DB row from
-  // 'bf-os' -> 'brandforgeos' BEFORE this seed iterates, so the SELECT
-  // .where(slug='brandforgeos') below finds the same row and updates it
-  // instead of inserting a duplicate.
-  { slug: 'brandforgeos',     name: 'BrandForgeOS',     description: 'Body shop / collision OS',                    category: 'ops',     defaultStatus: 'live',        envUrl: process.env.BRANDFORGEOS_URL || process.env.BF_OS_URL, planMin: 'pro', ord: 6, addonPriceCents: ADDON_DEFAULT_CENTS.pro },
-  { slug: 'snapproofos',      name: 'SnapProofOS',      description: 'Photo-based proof of work',                   category: 'ops',     defaultStatus: 'live',        envUrl: process.env.SNAPPROOFOS_URL,     planMin: 'elite',   ord: 7, addonPriceCents: ADDON_DEFAULT_CENTS.elite   },
-  // Task #66: 4 modules below ship MVP shells at /apps/<slug>; promoted
-  // to defaultStatus='live' + internal=true so they appear unlocked
-  // even when the external *_URL env is missing.
-  { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                 category: 'ai',      defaultStatus: 'live',        envUrl: process.env.STUDYFORGE_AI_URL,   planMin: 'elite',   ord: 8,  addonPriceCents: ADDON_DEFAULT_CENTS.elite, internal: true },
-  { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Build & ship internal tools fast',            category: 'ai',      defaultStatus: 'live',        envUrl: process.env.NINJA_LAUNCH_KIT_URL, planMin: 'elite',  ord: 9,  addonPriceCents: ADDON_DEFAULT_CENTS.elite, internal: true },
-  { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'AI phone agent + call automation',            category: 'ai',      defaultStatus: 'live',        envUrl: process.env.CALLCOMMAND_AI_URL,  planMin: 'elite',   ord: 10, addonPriceCents: ADDON_DEFAULT_CENTS.elite, internal: true },
-  { slug: 'ninjamation',      name: 'Ninjamation',      description: 'Cross-app workflow automation',               category: 'ai',      defaultStatus: 'live',        envUrl: process.env.NINJAMATION_URL,     planMin: 'elite',   ord: 11, addonPriceCents: ADDON_DEFAULT_CENTS.elite, internal: true },
-];
+// Task #66: derived from the SDK MODULE_CATALOG so the slug list,
+// env-key chains, plan tiers, and internal-shell flags can never drift
+// between API seed and web app. The seed-specific fields below
+// (description, category, defaultStatus, addonPriceCents) come from
+// the catalog where it carries them; addonPriceCents is computed from
+// the plan tier so we don't duplicate per-tier pricing in two places.
+const MODULE_SEED_SPECS: ModuleSeedSpec[] = MODULE_CATALOG.map(c => ({
+  slug: c.slug,
+  name: c.name,
+  description: c.description,
+  category: c.category,
+  defaultStatus: c.defaultStatus === 'beta' ? 'beta'
+    : c.defaultStatus === 'coming_soon' ? 'coming_soon'
+    : 'live',
+  envUrl: pickEnv(c.envUrlKeys),
+  planMin: c.planMin,
+  ord: c.ord,
+  internal: c.internal,
+  addonPriceCents: ADDON_DEFAULT_CENTS[c.planMin],
+}));
 
 export const MODULE_SEEDS: ModuleSeed[] = MODULE_SEED_SPECS.map(s => ({
   slug: s.slug,

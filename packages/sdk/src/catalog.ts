@@ -150,3 +150,57 @@ export function modulesIncludedInPlan(planSlug: string): ModuleCatalogEntry[] {
   if (!r) return [];
   return MODULE_CATALOG.filter(m => PLAN_TIER_RANK[m.planMin] <= r);
 }
+
+// ---------------------------------------------------------------------------
+// Plan catalog — single source of truth for plan slugs, display info,
+// and Stripe price-ID env-key chains. Both `apps/api/src/lib/plans.ts`
+// and the web BillingPage consume this so launch pricing can never
+// drift between surfaces.
+//
+// Per-interval Stripe price IDs follow:
+//   monthly: STRIPE_PRICE_<SLUG>_MONTHLY  (falls back to bare STRIPE_PRICE_<SLUG>)
+//   annual : STRIPE_PRICE_<SLUG>_ANNUAL
+// `monthlyPriceCents` / `annualPriceCents` are display values (USD cents).
+// `annualPriceCents` is null for the free Starter tier.
+// ---------------------------------------------------------------------------
+
+export interface PlanCatalogEntry {
+  slug: ModulePlanTier;
+  name: string;
+  description: string;
+  monthlyPriceCents: number;
+  annualPriceCents: number | null;
+  highlight: boolean;
+  stripeMonthlyEnvKeys: string[];
+  stripeAnnualEnvKeys: string[];
+}
+
+export const PLAN_CATALOG: readonly PlanCatalogEntry[] = [
+  {
+    slug: 'starter', name: 'Starter',
+    description: 'For individuals getting started',
+    monthlyPriceCents: 4900, annualPriceCents: 49000,
+    highlight: false,
+    stripeMonthlyEnvKeys: ['STRIPE_PRICE_STARTER_MONTHLY', 'STRIPE_PRICE_STARTER'],
+    stripeAnnualEnvKeys:  ['STRIPE_PRICE_STARTER_ANNUAL'],
+  },
+  {
+    slug: 'pro', name: 'Pro',
+    description: 'For growing teams and power users',
+    monthlyPriceCents: 14900, annualPriceCents: 149000,
+    highlight: true,
+    stripeMonthlyEnvKeys: ['STRIPE_PRICE_PRO_MONTHLY', 'STRIPE_PRICE_PRO'],
+    stripeAnnualEnvKeys:  ['STRIPE_PRICE_PRO_ANNUAL'],
+  },
+  {
+    slug: 'elite', name: 'Elite',
+    description: 'For enterprises and large teams',
+    monthlyPriceCents: 29900, annualPriceCents: 299000,
+    highlight: false,
+    stripeMonthlyEnvKeys: ['STRIPE_PRICE_ELITE_MONTHLY', 'STRIPE_PRICE_ELITE'],
+    stripeAnnualEnvKeys:  ['STRIPE_PRICE_ELITE_ANNUAL'],
+  },
+] as const;
+
+export const PLAN_CATALOG_BY_SLUG: Readonly<Record<string, PlanCatalogEntry>> =
+  Object.freeze(Object.fromEntries(PLAN_CATALOG.map(p => [p.slug, p])));

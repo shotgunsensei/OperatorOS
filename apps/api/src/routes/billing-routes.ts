@@ -89,12 +89,18 @@ export async function registerBillingRoutes(app: FastifyInstance) {
 
   app.post('/v1/billing/subscribe', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
-    const { planSlug } = request.body as any;
+    const body = (request.body ?? {}) as { planSlug?: string; interval?: string };
+    const planSlug = body.planSlug;
+    // Task #66: monthly | annual selector. Defaults to monthly so legacy
+    // clients keep working. Anything other than the two known values is
+    // rejected to avoid accidentally mapping to a wrong Stripe price.
+    const interval: 'month' | 'year' =
+      body.interval === 'year' || body.interval === 'annual' ? 'year' : 'month';
 
     try {
       const ctx = await resolveTenantContext(request);
       if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
-      const result = await subscribeToPlan(user.id, ctx.tenantId, planSlug);
+      const result = await subscribeToPlan(user.id, ctx.tenantId, planSlug!, interval);
       return result;
     } catch (err: any) {
       return reply.code(400).send({ error: err.message });
@@ -103,7 +109,10 @@ export async function registerBillingRoutes(app: FastifyInstance) {
 
   app.post('/v1/billing/create-checkout-session', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
-    const { planSlug } = request.body as any;
+    const body = (request.body ?? {}) as { planSlug?: string; interval?: string };
+    const planSlug = body.planSlug;
+    const interval: 'month' | 'year' =
+      body.interval === 'year' || body.interval === 'annual' ? 'year' : 'month';
 
     if (!isStripeEnabled()) {
       return reply.code(400).send({
@@ -113,10 +122,11 @@ export async function registerBillingRoutes(app: FastifyInstance) {
     }
 
     try {
-      const result = await createCheckoutSession(user.id, planSlug);
+      const result = await createCheckoutSession(user.id, planSlug!, interval);
       return result;
     } catch (err: any) {
-      return reply.code(400).send({ error: err.message });
+      const code = err?.code === 'NO_STRIPE_PRICE_FOR_INTERVAL' ? 409 : 400;
+      return reply.code(code).send({ error: err.message, code: err?.code });
     }
   });
 
