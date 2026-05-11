@@ -41,7 +41,7 @@ import type { AgentEvent } from './agent.js';
 import { analyzeWorkspace, generatePlan, generateArtifacts, runProof } from './publish/index.js';
 import type { DetectionResult } from './publish/types.js';
 import { buildCorsOriginValidator } from './lib/cors-origin.js';
-import { requireSessionSecret } from './lib/session-secret.js';
+import { requireSessionSecret } from './lib/session-secrets.js';
 
 const startTime = Date.now();
 
