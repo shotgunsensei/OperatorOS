@@ -267,6 +267,16 @@ export default function BillingPage() {
             const isUpgradeOption = planIdx > currentIdx;
             const isHighlighted = p.highlight;
 
+            // Task #66 round 3 fix: consume catalog-driven display
+            // pricing from /v1/billing/plans rather than re-deriving
+            // annual price as monthly*10 in the UI. The catalog
+            // (PLAN_CATALOG) is the single source of truth across
+            // both surfaces; if a slug somehow lacks an annual entry
+            // (e.g. a legacy free Starter), we fall back to the
+            // monthly*10 heuristic so the UI never crashes.
+            const monthlyCents = p.displayMonthlyPriceCents ?? p.price;
+            const annualCents  = p.displayAnnualPriceCents ?? (monthlyCents * 10);
+
             return (
               <div key={p.slug} data-testid={`plan-card-${p.slug}`}
                 style={{
@@ -288,7 +298,7 @@ export default function BillingPage() {
                   {interval === 'year' ? (
                     <>
                       <span style={{ fontSize: 36, fontWeight: 800, color: '#fff' }} data-testid={`price-${p.slug}-year`}>
-                        ${((p.price * 10) / 100).toFixed(0)}
+                        ${(annualCents / 100).toFixed(0)}
                       </span>
                       <span style={{ fontSize: 14, color: colors.textMuted }}>/yr</span>
                       <div style={{ fontSize: 11, color: colors.accentGreen, marginTop: 4 }}>
@@ -298,7 +308,7 @@ export default function BillingPage() {
                   ) : (
                     <>
                       <span style={{ fontSize: 36, fontWeight: 800, color: '#fff' }} data-testid={`price-${p.slug}-month`}>
-                        ${(p.price / 100).toFixed(0)}
+                        ${(monthlyCents / 100).toFixed(0)}
                       </span>
                       <span style={{ fontSize: 14, color: colors.textMuted }}>/mo</span>
                     </>

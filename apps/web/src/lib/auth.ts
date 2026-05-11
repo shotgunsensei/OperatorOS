@@ -139,6 +139,17 @@ export const aiApi = {
   deleteTemplate: (id: string) => apiFetch(`/ai/templates/${id}`, { method: 'DELETE' }),
 };
 
+export const moduleApi = {
+  // Task #66: tenant-scoped entitlement check. Hits GET /v1/modules/:slug
+  // which is gated by `requireTenantMember` and returns
+  // `getModuleForUser(user.id, ctx.tenantId, slug)` — i.e. it evaluates
+  // the entitlement *for the active tenant only*, never the union of
+  // every tenant the user belongs to. /apps/[slug] uses this so a user
+  // who has access in tenant A cannot open the shell while their active
+  // tenant is B.
+  get: (slug: string) => apiFetch(`/modules/${slug}`),
+};
+
 export const meApi = {
   // Flat per-user list of modules accessible across all tenants the user
   // is a member of, collapsed by slug to the best access level. Used by

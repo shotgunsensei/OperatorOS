@@ -8,6 +8,7 @@ import { canPurchaseAddon, resolveTenantContext } from '../lib/tenant-auth.js';
 import {
   getUserPlanConfig, getUserUsageSummary, getDowngradeViolations,
   isDowngrade, PLAN_CONFIGS, FEATURE_LABELS, LIMIT_LABELS,
+  PLAN_CATALOG_BY_SLUG,
 } from '../lib/plans.js';
 import {
   subscribeToPlan, cancelSubscription, reactivateSubscription,
@@ -58,11 +59,21 @@ export async function registerBillingRoutes(app: FastifyInstance) {
 
   app.get('/v1/billing/plans', async () => {
     return {
-      plans: PLAN_CONFIGS.map(p => ({
-        slug: p.slug, name: p.name, price: p.price, interval: p.interval,
-        description: p.description, highlight: p.highlight,
-        limits: p.limits, features: p.features,
-      })),
+      plans: PLAN_CONFIGS.map(p => {
+        // Task #66 round 3: thread shared display pricing through to the
+        // BillingPage so the UI never re-derives annual cost from monthly.
+        // PLAN_CATALOG_BY_SLUG owns both numbers; if a slug is somehow
+        // missing from the catalog we fall back to the legacy field so
+        // the response shape stays compatible.
+        const cat = PLAN_CATALOG_BY_SLUG[p.slug];
+        return {
+          slug: p.slug, name: p.name, price: p.price, interval: p.interval,
+          description: p.description, highlight: p.highlight,
+          limits: p.limits, features: p.features,
+          displayMonthlyPriceCents: cat?.monthlyPriceCents ?? p.price,
+          displayAnnualPriceCents: cat?.annualPriceCents ?? null,
+        };
+      }),
       featureLabels: FEATURE_LABELS,
       limitLabels: LIMIT_LABELS,
     };

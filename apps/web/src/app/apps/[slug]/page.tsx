@@ -5,21 +5,27 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ExternalLink, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { semantic, space, fontSize, radius, cardStyle } from '@/lib/design-tokens';
-import { meApi } from '@/lib/auth';
+import { moduleApi } from '@/lib/auth';
 import StudyForgeShell from '@/components/module-shells/StudyForgeShell';
 import NinjaLaunchKitShell from '@/components/module-shells/NinjaLaunchKitShell';
 import CallCommandShell from '@/components/module-shells/CallCommandShell';
 import NinjamationShell from '@/components/module-shells/NinjamationShell';
 
-interface MeModulesResponse { modules?: MeModule[]; items?: MeModule[] }
-
-interface MeModule {
-  slug: string;
-  name: string;
-  description?: string;
-  baseUrl?: string | null;
-  status?: string;
-  hasAccess?: boolean;
+// Mirrors the server's UserModuleSummary shape returned by
+// GET /v1/modules/:slug. Defined inline (rather than imported from the
+// API package) because the web app is a separate workspace and this is
+// the only consumer; if a third surface ever needs it, promote to SDK.
+interface UserModuleSummary {
+  module: {
+    slug: string;
+    name: string;
+    description?: string | null;
+    baseUrl: string;
+    status: string;
+  };
+  unlocked: boolean;
+  cta: 'open' | 'launch' | 'upgrade' | 'buy_addon' | 'coming_soon' | string;
+  reason?: string;
 }
 
 const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string }>> = {
@@ -32,7 +38,7 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string }>>
 export default function InternalAppPage() {
   const params = useParams<{ slug: string }>();
   const slug = params?.slug;
-  const [mod, setMod] = useState<MeModule | null>(null);
+  const [mod, setMod] = useState<UserModuleSummary['module'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -41,15 +47,38 @@ export default function InternalAppPage() {
     (async () => {
       if (!slug) return;
       try {
-        const res = (await meApi.modules()) as MeModulesResponse;
-        const list: MeModule[] = res?.modules ?? res?.items ?? [];
-        const found = list.find(m => m.slug === slug) ?? null;
-        if (alive) setMod(found);
+        // Task #66 round 3 fix: tenant-scoped entitlement check.
+        // GET /v1/modules/:slug is gated by `requireTenantMember` and
+        // returns `getModuleForUser(user.id, ctx.tenantId, slug)` —
+        // i.e. the entitlement is evaluated for the *active* tenant
+        // only, never the union of every tenant the user belongs to.
+        // The active tenant is sourced from apiFetch's X-Tenant-Id
+        // header (driven by users.current_tenant_id in AuthProvider).
+        // hasAccess===false is treated as "not enabled for this
+        // tenant" so we surface the same not-accessible card we used
+        // to render when the slug was missing from the union list.
+        // GET /v1/modules/:slug returns UserModuleSummary, with the
+        // authoritative entitlement signal in `unlocked` and module
+        // metadata nested under `.module`. The UI MUST NOT recompute
+        // unlocked from any other field — server is source of truth.
+        const summary = (await moduleApi.get(slug)) as UserModuleSummary | null;
+        if (!alive) return;
+        if (!summary || summary.unlocked === false) {
+          setMod(null);
+        } else {
+          setMod(summary.module);
+        }
       } catch (e) {
-        const msg = (e as { error?: string; message?: string })?.error
-                 ?? (e as { message?: string })?.message
-                 ?? 'Failed to load module';
-        if (alive) setErr(msg);
+        const errObj = e as { status?: number; error?: string; code?: string; message?: string };
+        // 403 / 404 from the tenant-scoped check both mean "not
+        // entitled in the active tenant" — render the friendly
+        // not-accessible card instead of a raw error toast.
+        if (errObj?.status === 403 || errObj?.status === 404) {
+          if (alive) { setMod(null); setErr(null); }
+        } else {
+          const msg = errObj?.error ?? errObj?.message ?? 'Failed to load module';
+          if (alive) setErr(msg);
+        }
       } finally {
         if (alive) setLoading(false);
       }
