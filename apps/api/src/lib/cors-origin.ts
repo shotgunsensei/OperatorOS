@@ -26,11 +26,11 @@ export function isCorsOriginAllowed(origin: string | undefined, allowedOrigins: 
 
 export function buildCorsOriginValidator(rawAllowedOrigins: string | undefined, nodeEnv: string | undefined) {
   const allowedOrigins = parseCorsAllowedOrigins(rawAllowedOrigins);
-  return (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
+  return (origin: string | undefined, cb: (err: Error | null, origin: boolean | string) => void) => {
     if (isCorsOriginAllowed(origin, allowedOrigins, nodeEnv)) {
       cb(null, true);
       return;
     }
-    cb(new Error('Origin not allowed by CORS'));
+    cb(new Error('Origin not allowed by CORS'), false);
   };
 }

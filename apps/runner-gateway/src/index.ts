@@ -11,6 +11,7 @@ import {
   getRunnerMode,
 } from './provisioner.js';
 import { isCommandAllowed, clampTimeout, truncateOutput } from './safety.js';
+import { buildCorsOriginValidator } from './cors-origin.js';
 
 const startTime = Date.now();
 
@@ -23,7 +24,9 @@ const app = Fastify({
   },
 });
 
-await app.register(cors, { origin: true });
+await app.register(cors, {
+  origin: buildCorsOriginValidator(process.env.CORS_ALLOWED_ORIGINS, process.env.NODE_ENV),
+});
 await app.register(websocket);
 
 const streamSubscribers = new Map<string, Set<import('ws').WebSocket>>();
