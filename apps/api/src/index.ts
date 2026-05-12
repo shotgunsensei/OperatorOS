@@ -25,13 +25,14 @@ import { db } from './db.js';
 import { workspaces, runners, tasks, taskEvents, toolTraces, publishRuns } from './schema.js';
 import { serveUI } from './ui.js';
 import { ensureExtendedTables } from './lib/db-init.js';
-import { ensureSaasTables, seedPlansAndAdmin, seedModules, ensureTenantTables, backfillPersonalTenants, bootstrapSuperAdmin, seedDemoCoTenant } from './lib/saas-db-init.js';
+import { ensureSaasTables, seedPlansAndAdmin, seedModules, ensureTenantTables, ensureModuleShellTables, backfillPersonalTenants, bootstrapSuperAdmin, seedDemoCoTenant } from './lib/saas-db-init.js';
 import { registerOsRoutes } from './routes/os-routes.js';
 import { registerAuthRoutes } from './routes/auth-routes.js';
 import { registerSaasRoutes } from './routes/saas-routes.js';
 import { registerBillingRoutes } from './routes/billing-routes.js';
 import { registerAiRoutes } from './routes/ai-routes.js';
 import { registerModuleRoutes } from './routes/module-routes.js';
+import { registerModuleShellRoutes } from './routes/module-shell-routes.js';
 import { registerTenantRoutes } from './routes/tenant-routes.js';
 import { registerTenantAdminRoutes } from './routes/tenant-admin-routes.js';
 import { registerPlatformRoutes } from './routes/platform-routes.js';
@@ -77,6 +78,7 @@ await registerSaasRoutes(app);
 await registerBillingRoutes(app);
 await registerAiRoutes(app);
 await registerModuleRoutes(app);
+await registerModuleShellRoutes(app);
 await registerTenantRoutes(app);
 await registerTenantAdminRoutes(app);
 await registerPlatformRoutes(app);
@@ -173,6 +175,9 @@ await ensureSaasTables();
 // because Drizzle's implicit SELECT * needs `platform_role` /
 // `current_tenant_id` to exist on row reads.
 await ensureTenantTables();
+// Task #72: per-shell persistence tables. Must run AFTER ensureTenantTables
+// because each table FKs `tenants(id)` and `users(id)`.
+await ensureModuleShellTables();
 await seedPlansAndAdmin();
 // Task #66: launch-fix bootstrap. Pre-seed runs the `bf-os ->
 // brandforgeos` slug rename + `subscription_plans.stripe_price_id_annual`

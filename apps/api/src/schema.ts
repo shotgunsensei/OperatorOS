@@ -721,3 +721,74 @@ export type TenantUserRow = typeof tenantUsers.$inferSelect;
 export type TenantModuleRow = typeof tenantModules.$inferSelect;
 export type TenantUserModuleAccessRow = typeof tenantUserModuleAccess.$inferSelect;
 export type TenantInviteRow = typeof tenantInvites.$inferSelect;
+
+// ===========================================================================
+// Task #72 — module shell persistence tables
+//
+// The four polished module first-screens (CallCommand AI, StudyForge AI,
+// Ninjamation, Ninja Launch Kit) used to keep all user activity in
+// component state. These tables persist that activity per-tenant so it
+// survives a refresh and shows up in the activity feed where appropriate.
+// All four tables are tenant-scoped and read/written exclusively through
+// the `requireTenantMember` pre-handler, mirroring the saas-routes pattern.
+// ===========================================================================
+
+export const moduleCallLogs = pgTable('module_call_logs', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  phone: text('phone').notNull(),
+  callerName: text('caller_name').notNull(),
+  persona: text('persona').notNull(),
+  status: text('status', { enum: ['queued', 'ringing', 'completed', 'failed'] }).notNull().default('queued'),
+  summary: text('summary'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_module_call_logs_tenant_created').on(t.tenantId, t.createdAt),
+]);
+
+export const moduleStudySessions = pgTable('module_study_sessions', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  source: text('source').notNull(),
+  cards: jsonb('cards').$type<Array<{ id: string; question: string; answer: string }>>().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_module_study_sessions_user_created').on(t.userId, t.createdAt),
+  index('idx_module_study_sessions_tenant').on(t.tenantId),
+]);
+
+export const moduleAutomations = pgTable('module_automations', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  templateId: text('template_id').notNull(),
+  name: text('name').notNull(),
+  trigger: text('trigger').notNull(),
+  action: text('action').notNull(),
+  modules: jsonb('modules').$type<string[]>().notNull(),
+  enabled: boolean('enabled').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_module_automations_tenant').on(t.tenantId),
+]);
+
+export const moduleScaffolds = pgTable('module_scaffolds', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  slug: text('slug').notNull(),
+  stackId: text('stack_id').notNull(),
+  stackName: text('stack_name').notNull(),
+  files: jsonb('files').$type<string[]>().notNull(),
+  status: text('status', { enum: ['queued', 'ready', 'failed'] }).notNull().default('queued'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_module_scaffolds_tenant_created').on(t.tenantId, t.createdAt),
+]);
+
+export type ModuleCallLogRow = typeof moduleCallLogs.$inferSelect;
+export type ModuleStudySessionRow = typeof moduleStudySessions.$inferSelect;
+export type ModuleAutomationRow = typeof moduleAutomations.$inferSelect;
+export type ModuleScaffoldRow = typeof moduleScaffolds.$inferSelect;

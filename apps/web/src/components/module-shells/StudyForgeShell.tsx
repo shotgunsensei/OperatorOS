@@ -1,69 +1,109 @@
 'use client';
 
 /**
- * Task #69 — real first-screen for StudyForge AI.
+ * Task #72 — first-screen for StudyForge AI, backed by the API.
  *
- * Drop-in source → study plan generator. The user pastes any study
- * material; we extract sentences locally and turn them into a tutored
- * recall session (flashcards + a starter quiz). No AI backend call yet
- * — the local generator is honest and good enough to demo the loop.
+ * Submitting a source POSTs to `/v1/modules/studyforge-ai/sessions`,
+ * which extracts cards server-side and persists the session per-tenant.
+ * Past sessions are listed below the generator and can be re-opened or
+ * deleted.
  */
 
-import React, { useMemo, useState } from 'react';
-import { GraduationCap, Sparkles, RotateCcw, Eye, EyeOff } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { GraduationCap, Sparkles, RotateCcw, Eye, EyeOff, Trash2 } from 'lucide-react';
 import {
   semantic, space, fontSize, radius, cardStyle,
 } from '@/lib/design-tokens';
 import { ShellLiveBadge, ShellLaunchButton } from './ShellChrome';
+import { moduleShellApi } from '@/lib/auth';
 
 interface Card { id: string; question: string; answer: string }
+interface StudySession {
+  id: string;
+  source: string;
+  cards: Card[];
+  createdAt: string;
+}
 
 const SAMPLE = `The mitochondrion is the powerhouse of the cell, generating ATP through oxidative phosphorylation. \
 Photosynthesis converts light energy into chemical energy stored in glucose. \
 Newton's second law states that force equals mass times acceleration. \
 Binary search runs in O(log n) time on a sorted array.`;
 
-function buildCards(source: string): Card[] {
-  const sentences = source
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length >= 12);
-  return sentences.slice(0, 6).map((sentence, idx) => {
-    const subject = sentence.split(/\s+/).slice(0, 3).join(' ').replace(/[.,!?]+$/, '');
-    return {
-      id: `card_${idx}`,
-      question: `What does the source say about ${subject}?`,
-      answer: sentence,
-    };
-  });
-}
-
 export default function StudyForgeShell({ baseUrl }: { baseUrl?: string }) {
   const [source, setSource] = useState('');
-  const [cards, setCards] = useState<Card[]>([]);
+  const [active, setActive] = useState<StudySession | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
-  const [generated, setGenerated] = useState(false);
+  const [history, setHistory] = useState<StudySession[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const wordCount = useMemo(() => source.trim().split(/\s+/).filter(Boolean).length, [source]);
 
-  function generate() {
-    const next = buildCards(source.trim());
-    setCards(next);
-    setRevealed(new Set());
-    setGenerated(true);
+  useEffect(() => {
+    let cancelled = false;
+    moduleShellApi.studyforge.list()
+      .then((res: any) => {
+        if (cancelled) return;
+        const sessions: StudySession[] = res.sessions ?? [];
+        setHistory(sessions);
+        if (sessions[0]) {
+          setActive(sessions[0]);
+        }
+      })
+      .catch((err) => { if (!cancelled) setError(err?.message || 'Failed to load sessions'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  async function generate() {
+    if (submitting) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const session: StudySession = await moduleShellApi.studyforge.create(source);
+      setActive(session);
+      setRevealed(new Set());
+      setHistory((prev) => [session, ...prev].slice(0, 20));
+      setSource('');
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (msg.includes('SOURCE_TOO_SHORT')) {
+        setError('Add at least 8 words of source material to generate cards.');
+      } else if (msg.includes('NO_CARDS')) {
+        setError('Could not extract distinct ideas — add a few more sentences.');
+      } else {
+        setError(msg || 'Could not generate study session');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function reset() {
-    setCards([]);
+    setActive(null);
     setRevealed(new Set());
-    setGenerated(false);
     setSource('');
   }
 
-  function toggle(id: string) {
+  async function removeSession(id: string) {
+    try {
+      await moduleShellApi.studyforge.delete(id);
+      setHistory((prev) => prev.filter((s) => s.id !== id));
+      if (active?.id === id) {
+        setActive(null);
+        setRevealed(new Set());
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Could not delete session');
+    }
+  }
+
+  function toggle(cardId: string) {
     setRevealed((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(cardId)) next.delete(cardId); else next.add(cardId);
       return next;
     });
   }
@@ -120,24 +160,29 @@ export default function StudyForgeShell({ baseUrl }: { baseUrl?: string }) {
             fontFamily: 'inherit',
           }}
         />
+        {error && (
+          <div data-testid="text-studyforge-error" style={{ color: semantic.accentDanger, fontSize: fontSize.sm }}>
+            {error}
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
           <button
             type="button"
             data-testid="button-studyforge-generate"
             onClick={generate}
-            disabled={wordCount < 8}
+            disabled={wordCount < 8 || submitting}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
               padding: '10px 18px', borderRadius: radius.sm, border: 'none',
-              background: wordCount < 8 ? 'rgba(139,148,158,0.18)' : semantic.accent,
-              color: wordCount < 8 ? semantic.textMuted : '#fff',
-              cursor: wordCount < 8 ? 'not-allowed' : 'pointer',
+              background: wordCount < 8 || submitting ? 'rgba(139,148,158,0.18)' : semantic.accent,
+              color: wordCount < 8 || submitting ? semantic.textMuted : '#fff',
+              cursor: wordCount < 8 || submitting ? 'not-allowed' : 'pointer',
               fontWeight: 600, fontSize: fontSize.body,
             }}
           >
-            <Sparkles size={14} /> Generate study session
+            <Sparkles size={14} /> {submitting ? 'Generating…' : 'Generate study session'}
           </button>
-          {generated && (
+          {active && (
             <button
               type="button"
               data-testid="button-studyforge-reset"
@@ -149,7 +194,7 @@ export default function StudyForgeShell({ baseUrl }: { baseUrl?: string }) {
                 color: semantic.textMuted, cursor: 'pointer', fontSize: fontSize.sm,
               }}
             >
-              <RotateCcw size={14} /> Reset
+              <RotateCcw size={14} /> Clear current
             </button>
           )}
           <span data-testid="text-studyforge-wordcount" style={{ marginLeft: 'auto', color: semantic.textMuted, fontSize: fontSize.sm }}>
@@ -158,21 +203,21 @@ export default function StudyForgeShell({ baseUrl }: { baseUrl?: string }) {
         </div>
       </div>
 
-      {generated && (
+      {active && (
         <section style={{ marginTop: space.xl }}>
           <h2 style={{ margin: 0, fontSize: fontSize.lg, fontWeight: 600, color: '#fff', marginBottom: space.md }}>
             Recall session
             <span style={{ marginLeft: 8, color: semantic.textMuted, fontSize: fontSize.sm, fontWeight: 400 }}>
-              ({cards.length} cards)
+              ({active.cards.length} cards)
             </span>
           </h2>
-          {cards.length === 0 ? (
+          {active.cards.length === 0 ? (
             <div data-testid="text-studyforge-no-cards" style={{ ...cardStyle, color: semantic.textMuted }}>
               The source was too short to extract distinct ideas. Add a few more sentences and try again.
             </div>
           ) : (
             <ul data-testid="list-studyforge-cards" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: space.sm }}>
-              {cards.map((c) => {
+              {active.cards.map((c) => {
                 const open = revealed.has(c.id);
                 return (
                   <li key={c.id} data-testid={`card-studyforge-${c.id}`} style={{ ...cardStyle }}>
@@ -210,6 +255,55 @@ export default function StudyForgeShell({ baseUrl }: { baseUrl?: string }) {
           )}
         </section>
       )}
+
+      <section style={{ marginTop: space.xl }}>
+        <h2 style={{ margin: 0, fontSize: fontSize.lg, fontWeight: 600, color: '#fff', marginBottom: space.md }}>
+          Past sessions
+        </h2>
+        {loading ? (
+          <div data-testid="text-studyforge-loading" style={{ ...cardStyle, color: semantic.textMuted }}>
+            Loading sessions…
+          </div>
+        ) : history.length === 0 ? (
+          <div data-testid="text-studyforge-history-empty" style={{ ...cardStyle, color: semantic.textMuted }}>
+            Generate a session above and it will appear here.
+          </div>
+        ) : (
+          <ul data-testid="list-studyforge-history" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: space.sm }}>
+            {history.map((s) => (
+              <li key={s.id} data-testid={`row-studyforge-history-${s.id}`} style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button
+                  type="button"
+                  data-testid={`button-studyforge-open-${s.id}`}
+                  onClick={() => { setActive(s); setRevealed(new Set()); }}
+                  style={{
+                    flex: 1, textAlign: 'left', background: 'transparent', border: 'none',
+                    color: '#fff', cursor: 'pointer', padding: 0, fontSize: fontSize.body, fontWeight: 600,
+                  }}
+                >
+                  {s.cards.length} cards
+                  <span style={{ marginLeft: 8, color: semantic.textMuted, fontWeight: 400, fontSize: fontSize.sm }}>
+                    {s.source.slice(0, 80)}{s.source.length > 80 ? '…' : ''}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  data-testid={`button-studyforge-delete-${s.id}`}
+                  onClick={() => removeSession(s.id)}
+                  aria-label="Delete session"
+                  style={{
+                    padding: '6px 10px', borderRadius: radius.sm,
+                    border: `1px solid ${semantic.border}`, background: 'transparent',
+                    color: semantic.textMuted, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: fontSize.sm,
+                  }}
+                >
+                  <Trash2 size={12} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

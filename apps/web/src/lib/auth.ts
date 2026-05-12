@@ -215,6 +215,60 @@ export const tenantApi = {
     apiFetch(`/tenants/${tenantId}/switch`, { method: 'POST' }),
 };
 
+// Task #72 — backend persistence for the polished module shells.
+// Each helper hits `/v1/modules/{slug}/...` which is gated by
+// `requireTenantMember` and stamps the active tenant from the
+// X-Tenant-Id header that `apiFetch` already sets.
+export const moduleShellApi = {
+  callcommand: {
+    list: () => apiFetch('/modules/callcommand-ai/calls'),
+    place: (input: { phone: string; name: string; persona: string }) =>
+      apiFetch('/modules/callcommand-ai/calls', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+  },
+  studyforge: {
+    list: () => apiFetch('/modules/studyforge-ai/sessions'),
+    create: (source: string) =>
+      apiFetch('/modules/studyforge-ai/sessions', {
+        method: 'POST',
+        body: JSON.stringify({ source }),
+      }),
+    delete: (id: string) =>
+      apiFetch(`/modules/studyforge-ai/sessions/${id}`, { method: 'DELETE' }),
+  },
+  ninjamation: {
+    list: () => apiFetch('/modules/ninjamation/automations'),
+    activate: (input: {
+      templateId: string;
+      name: string;
+      trigger: string;
+      action: string;
+      modules: string[];
+    }) =>
+      apiFetch('/modules/ninjamation/automations', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    deactivate: (id: string) =>
+      apiFetch(`/modules/ninjamation/automations/${id}`, { method: 'DELETE' }),
+  },
+  launchkit: {
+    list: () => apiFetch('/modules/ninja-launch-kit/scaffolds'),
+    scaffold: (input: {
+      stackId: string;
+      stackName: string;
+      files: string[];
+      name?: string;
+    }) =>
+      apiFetch('/modules/ninja-launch-kit/scaffolds', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+  },
+};
+
 export const modulesApi = {
   list: () => apiFetch('/modules'),
   get: (slug: string) => apiFetch(`/modules/${slug}`),

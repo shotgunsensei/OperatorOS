@@ -1,35 +1,30 @@
 'use client';
 
 /**
- * Task #69 — real first-screen for CallCommand AI.
+ * Task #72 — first-screen for CallCommand AI, backed by the API.
  *
- * Paste-a-number test-call console:
- *   • phone + caller-name input
- *   • persona/script selector
- *   • "Place test call" runs a local simulation (no telephony backend
- *     yet) and appends the call to a recent-calls timeline so the
- *     surface feels live without lying about real outbound dialing.
- *
- * Entitlement is enforced by the parent route ([slug]/page.tsx); this
- * component only renders when the active tenant is unlocked.
+ * The form posts to `/v1/modules/callcommand-ai/calls`, the server runs
+ * the (sandboxed) dialer + summary, persists the row, and we re-render
+ * the recent-calls list from the server. No more in-memory only state.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Phone, PhoneCall, CheckCircle2, Clock } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Phone, PhoneCall, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import {
   semantic, space, fontSize, radius, cardStyle,
 } from '@/lib/design-tokens';
 import { ShellLiveBadge, ShellLaunchButton } from './ShellChrome';
+import { moduleShellApi } from '@/lib/auth';
 
-type CallStatus = 'queued' | 'ringing' | 'completed';
+type CallStatus = 'queued' | 'ringing' | 'completed' | 'failed';
 interface TestCall {
   id: string;
   phone: string;
-  name: string;
+  callerName: string;
   persona: string;
-  startedAt: number;
   status: CallStatus;
-  summary?: string;
+  summary?: string | null;
+  createdAt: string;
 }
 
 const PERSONAS = [
@@ -38,60 +33,44 @@ const PERSONAS = [
   { value: 'collector',    label: 'Payment reminder — friendly tone' },
 ];
 
-function normalisePhone(raw: string): string | null {
-  const digits = raw.replace(/[^\d+]/g, '');
-  // Accept E.164-ish (+ then 8-15 digits) or 10-15 raw digits.
-  if (/^\+\d{8,15}$/.test(digits)) return digits;
-  if (/^\d{10,15}$/.test(digits)) return `+${digits}`;
-  return null;
-}
-
 export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [persona, setPersona] = useState(PERSONAS[0].value);
   const [error, setError] = useState<string | null>(null);
   const [calls, setCalls] = useState<TestCall[]>([]);
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => () => {
-    // Clear any pending simulation timers when the shell unmounts so we
-    // don't call setState on an unmounted component after navigating away.
-    timersRef.current.forEach(clearTimeout);
-    timersRef.current = [];
+  useEffect(() => {
+    let cancelled = false;
+    moduleShellApi.callcommand.list()
+      .then((res: any) => { if (!cancelled) setCalls(res.calls ?? []); })
+      .catch((err) => { if (!cancelled) setError(err?.message || 'Failed to load calls'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
-  function placeCall(e: React.FormEvent) {
+  async function placeCall(e: React.FormEvent) {
     e.preventDefault();
-    const tel = normalisePhone(phone);
-    if (!tel) {
-      setError('Enter a phone number with country code (e.g. +14155550123).');
-      return;
-    }
+    if (submitting) return;
     setError(null);
-    const id = `call_${Date.now()}`;
-    const call: TestCall = {
-      id,
-      phone: tel,
-      name: name.trim() || 'Unknown caller',
-      persona,
-      startedAt: Date.now(),
-      status: 'queued',
-    };
-    setCalls((prev) => [call, ...prev].slice(0, 8));
-    setPhone(''); setName('');
-
-    // Local-only simulation: queued → ringing → completed.
-    timersRef.current.push(setTimeout(() => setCalls((prev) =>
-      prev.map((c) => c.id === id ? { ...c, status: 'ringing' } : c)
-    ), 700));
-    timersRef.current.push(setTimeout(() => setCalls((prev) =>
-      prev.map((c) => c.id === id ? {
-        ...c,
-        status: 'completed',
-        summary: personaSummary(persona, call.name),
-      } : c)
-    ), 2200));
+    setSubmitting(true);
+    try {
+      const row: TestCall = await moduleShellApi.callcommand.place({ phone, name, persona });
+      setCalls((prev) => [row, ...prev].slice(0, 20));
+      setPhone('');
+      setName('');
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (msg.includes('INVALID_PHONE')) {
+        setError('Enter a phone number with country code (e.g. +14155550123).');
+      } else {
+        setError(msg || 'Could not place call');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -149,23 +128,25 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
         </Field>
 
         {error && (
-          <div data-testid="text-callcommand-error" style={{ color: semantic.accentDanger, fontSize: fontSize.sm }}>
-            {error}
+          <div data-testid="text-callcommand-error" style={{ color: semantic.accentDanger, fontSize: fontSize.sm, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <AlertTriangle size={14} /> {error}
           </div>
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
           <button
             type="submit"
+            disabled={submitting}
             data-testid="button-callcommand-place-test-call"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
               padding: '10px 18px', borderRadius: radius.sm, border: 'none',
-              background: semantic.accent, color: '#fff', cursor: 'pointer',
+              background: submitting ? 'rgba(139,148,158,0.4)' : semantic.accent,
+              color: '#fff', cursor: submitting ? 'wait' : 'pointer',
               fontWeight: 600, fontSize: fontSize.body,
             }}
           >
-            <PhoneCall size={14} /> Place test call
+            <PhoneCall size={14} /> {submitting ? 'Placing call…' : 'Place test call'}
           </button>
           <ShellLaunchButton baseUrl={baseUrl} testId="link-launch-callcommand-ai" label="Open the call console" />
         </div>
@@ -175,7 +156,11 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
         <h2 style={{ margin: 0, fontSize: fontSize.lg, fontWeight: 600, color: '#fff', marginBottom: space.md }}>
           Recent test calls
         </h2>
-        {calls.length === 0 ? (
+        {loading ? (
+          <div data-testid="text-callcommand-loading" style={{ ...cardStyle, color: semantic.textMuted }}>
+            Loading recent calls…
+          </div>
+        ) : calls.length === 0 ? (
           <div
             data-testid="text-callcommand-empty"
             style={{ ...cardStyle, color: semantic.textMuted, fontSize: fontSize.body }}
@@ -190,7 +175,7 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
                   <StatusPill status={c.status} />
                   <div style={{ color: '#fff', fontWeight: 600 }}>{c.phone}</div>
                   <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-                    {c.name} · {PERSONAS.find((p) => p.value === c.persona)?.label}
+                    {c.callerName} · {PERSONAS.find((p) => p.value === c.persona)?.label ?? c.persona}
                   </div>
                 </div>
                 {c.summary && (
@@ -207,17 +192,6 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
   );
 }
 
-function personaSummary(persona: string, who: string): string {
-  switch (persona) {
-    case 'qualifier':
-      return `Qualified ${who}: budget mid-range, decision in 2 weeks. Routed to sales follow-up queue.`;
-    case 'collector':
-      return `Reminded ${who} of overdue invoice; agreed to pay by Friday. Reminder logged.`;
-    default:
-      return `Booked appointment for ${who} on the next open Tuesday slot. Confirmation SMS sent.`;
-  }
-}
-
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label style={{ display: 'grid', gap: 4, fontSize: fontSize.sm, color: semantic.textMuted }}>
@@ -232,6 +206,7 @@ function StatusPill({ status }: { status: CallStatus }) {
     queued:    { label: 'Queued',    color: semantic.accentInfo,    icon: <Clock size={12} /> },
     ringing:   { label: 'Ringing',   color: semantic.accentWarning, icon: <PhoneCall size={12} /> },
     completed: { label: 'Completed', color: semantic.accentSuccess, icon: <CheckCircle2 size={12} /> },
+    failed:    { label: 'Failed',    color: semantic.accentDanger,  icon: <AlertTriangle size={12} /> },
   }[status];
   return (
     <span

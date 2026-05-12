@@ -1,25 +1,37 @@
 'use client';
 
 /**
- * Task #69 — real first-screen for Ninja Launch Kit.
+ * Task #72 — first-screen for Ninja Launch Kit, backed by the API.
  *
- * Pick a starter stack → name the project → preview the scaffold. The
- * scaffold preview is generated locally (no backend yet) so the surface
- * shows a tangible artifact instead of marketing copy.
+ * "Generate scaffold" POSTs to `/v1/modules/ninja-launch-kit/scaffolds`
+ * which persists a queued scaffold row, writes a `queued`
+ * `entityType=scaffold` entry into the tenant activity feed, and returns
+ * the row. Past scaffolds are listed below.
  */
 
-import React, { useState } from 'react';
-import { Rocket, FolderTree, Sparkles, ChevronRight } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Rocket, FolderTree, Sparkles, ChevronRight, Clock } from 'lucide-react';
 import {
   semantic, space, fontSize, radius, cardStyle,
 } from '@/lib/design-tokens';
 import { ShellLiveBadge, ShellLaunchButton } from './ShellChrome';
+import { moduleShellApi } from '@/lib/auth';
 
 interface StackTemplate {
   id: string;
   name: string;
   summary: string;
   files: string[];
+}
+
+interface ScaffoldRow {
+  id: string;
+  slug: string;
+  stackId: string;
+  stackName: string;
+  files: string[];
+  status: 'queued' | 'ready' | 'failed';
+  createdAt: string;
 }
 
 const STACKS: StackTemplate[] = [
@@ -66,19 +78,49 @@ const STACKS: StackTemplate[] = [
   },
 ];
 
-function slugify(s: string): string {
-  return s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40) || 'untitled';
-}
-
 export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [name, setName] = useState('');
-  const [scaffolded, setScaffolded] = useState<{ stack: StackTemplate; slug: string } | null>(null);
+  const [scaffolded, setScaffolded] = useState<ScaffoldRow | null>(null);
+  const [history, setHistory] = useState<ScaffoldRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function scaffold() {
+  useEffect(() => {
+    let cancelled = false;
+    moduleShellApi.launchkit.list()
+      .then((res: any) => {
+        if (cancelled) return;
+        const rows: ScaffoldRow[] = res.scaffolds ?? [];
+        setHistory(rows);
+        if (rows[0]) setScaffolded(rows[0]);
+      })
+      .catch((err) => { if (!cancelled) setError(err?.message || 'Failed to load scaffolds'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  async function scaffold() {
     const stack = STACKS.find((s) => s.id === selected);
-    if (!stack) return;
-    setScaffolded({ stack, slug: slugify(name || stack.name) });
+    if (!stack || submitting) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const row: ScaffoldRow = await moduleShellApi.launchkit.scaffold({
+        stackId: stack.id,
+        stackName: stack.name,
+        files: stack.files,
+        name: name || stack.name,
+      });
+      setScaffolded(row);
+      setHistory((prev) => [row, ...prev].slice(0, 20));
+      setName('');
+    } catch (err: any) {
+      setError(err?.message || 'Could not generate scaffold');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -91,7 +133,7 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
             <ShellLiveBadge />
           </div>
           <p style={{ color: semantic.textMuted, margin: '4px 0 0', fontSize: fontSize.body }}>
-            Pick a stack, name it, and preview the scaffold before spinning up a workspace.
+            Pick a stack, name it, and queue a scaffold for your next workspace.
           </p>
         </div>
         <ShellLaunchButton baseUrl={baseUrl} testId="link-launch-ninja-launch-kit" label="Open the launch console" />
@@ -162,22 +204,27 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
             type="button"
             data-testid="button-launchkit-scaffold"
             onClick={scaffold}
-            disabled={!selected}
+            disabled={!selected || submitting}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
               padding: '10px 18px', borderRadius: radius.sm, border: 'none',
-              background: selected ? semantic.accent : 'rgba(139,148,158,0.18)',
-              color: selected ? '#fff' : semantic.textMuted,
-              cursor: selected ? 'pointer' : 'not-allowed',
+              background: !selected || submitting ? 'rgba(139,148,158,0.18)' : semantic.accent,
+              color: !selected || submitting ? semantic.textMuted : '#fff',
+              cursor: !selected || submitting ? 'not-allowed' : 'pointer',
               fontWeight: 600, fontSize: fontSize.body,
             }}
           >
-            <Sparkles size={14} /> Generate scaffold
+            <Sparkles size={14} /> {submitting ? 'Queueing…' : 'Generate scaffold'}
           </button>
         </div>
         {!selected && (
           <p data-testid="text-launchkit-pick-hint" style={{ margin: `${space.sm}px 0 0`, color: semantic.textMuted, fontSize: fontSize.sm }}>
             Pick a stack above to enable scaffold generation.
+          </p>
+        )}
+        {error && (
+          <p data-testid="text-launchkit-error" style={{ margin: `${space.sm}px 0 0`, color: semantic.accentDanger, fontSize: fontSize.sm }}>
+            {error}
           </p>
         )}
       </section>
@@ -194,11 +241,12 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
                 {scaffolded.slug}/
               </span>
               <span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-                · {scaffolded.stack.name}
+                · {scaffolded.stackName}
               </span>
+              <ScaffoldStatus status={scaffolded.status} />
             </div>
             <ul data-testid="list-launchkit-scaffold-files" style={{ listStyle: 'none', padding: 0, margin: 0, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: fontSize.sm }}>
-              {scaffolded.stack.files.map((f) => (
+              {scaffolded.files.map((f) => (
                 <li
                   key={f}
                   data-testid={`row-launchkit-file-${f}`}
@@ -212,6 +260,68 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
           </div>
         </section>
       )}
+
+      <section style={{ marginTop: space.xl }}>
+        <h2 style={{ margin: 0, fontSize: fontSize.lg, fontWeight: 600, color: '#fff', marginBottom: space.md }}>
+          Past scaffolds
+        </h2>
+        {loading ? (
+          <div data-testid="text-launchkit-loading" style={{ ...cardStyle, color: semantic.textMuted }}>
+            Loading scaffolds…
+          </div>
+        ) : history.length === 0 ? (
+          <div data-testid="text-launchkit-history-empty" style={{ ...cardStyle, color: semantic.textMuted }}>
+            Generate a scaffold above and it will appear here.
+          </div>
+        ) : (
+          <ul data-testid="list-launchkit-history" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: space.sm }}>
+            {history.map((s) => (
+              <li
+                key={s.id}
+                data-testid={`row-launchkit-history-${s.id}`}
+                style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 10 }}
+              >
+                <button
+                  type="button"
+                  data-testid={`button-launchkit-open-${s.id}`}
+                  onClick={() => setScaffolded(s)}
+                  style={{
+                    flex: 1, textAlign: 'left', background: 'transparent', border: 'none',
+                    color: '#fff', cursor: 'pointer', padding: 0, fontSize: fontSize.body, fontWeight: 600,
+                  }}
+                >
+                  {s.slug}/
+                  <span style={{ marginLeft: 8, color: semantic.textMuted, fontWeight: 400, fontSize: fontSize.sm }}>
+                    {s.stackName} · {s.files.length} files
+                  </span>
+                </button>
+                <ScaffoldStatus status={s.status} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
+  );
+}
+
+function ScaffoldStatus({ status }: { status: 'queued' | 'ready' | 'failed' }) {
+  const map = {
+    queued: { label: 'Queued', color: semantic.accentInfo, icon: <Clock size={12} /> },
+    ready:  { label: 'Ready',  color: semantic.accentSuccess, icon: <ChevronRight size={12} /> },
+    failed: { label: 'Failed', color: semantic.accentDanger,  icon: <ChevronRight size={12} /> },
+  }[status];
+  return (
+    <span
+      data-testid={`status-launchkit-${status}`}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '2px 8px', borderRadius: 999,
+        border: `1px solid ${map.color}55`, color: map.color,
+        fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4,
+      }}
+    >
+      {map.icon} {map.label}
+    </span>
   );
 }

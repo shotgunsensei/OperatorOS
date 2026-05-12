@@ -1,20 +1,20 @@
 'use client';
 
 /**
- * Task #69 — real first-screen for Ninjamation.
+ * Task #72 — first-screen for Ninjamation, backed by the API.
  *
- * Starter automations gallery: each template lists trigger → action +
- * which OperatorOS modules it touches. "Use template" activates it
- * locally (no execution backend yet) and pins the activation to the
- * Active automations panel so the surface shows real state changes.
+ * Activating a template POSTs to `/v1/modules/ninjamation/automations`,
+ * which persists the activation per-tenant AND writes an entry to the
+ * activity feed so the activation shows up across the platform.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Workflow, ArrowRight, Play, Check } from 'lucide-react';
 import {
   semantic, space, fontSize, radius, cardStyle,
 } from '@/lib/design-tokens';
 import { ShellLiveBadge, ShellLaunchButton } from './ShellChrome';
+import { moduleShellApi } from '@/lib/auth';
 
 interface AutomationTemplate {
   id: string;
@@ -22,6 +22,16 @@ interface AutomationTemplate {
   trigger: string;
   action: string;
   modules: string[];
+}
+
+interface ActivationRow {
+  id: string;
+  templateId: string;
+  name: string;
+  trigger: string;
+  action: string;
+  modules: string[];
+  enabled: boolean;
 }
 
 const TEMPLATES: AutomationTemplate[] = [
@@ -63,17 +73,64 @@ const TEMPLATES: AutomationTemplate[] = [
 ];
 
 export default function NinjamationShell({ baseUrl }: { baseUrl?: string }) {
-  const [active, setActive] = useState<Set<string>>(new Set());
+  const [activations, setActivations] = useState<ActivationRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  function toggle(id: string) {
-    setActive((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+  useEffect(() => {
+    let cancelled = false;
+    moduleShellApi.ninjamation.list()
+      .then((res: any) => { if (!cancelled) setActivations(res.automations ?? []); })
+      .catch((err) => { if (!cancelled) setError(err?.message || 'Failed to load automations'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const activeByTemplate = useMemo(() => {
+    const map = new Map<string, ActivationRow>();
+    for (const a of activations) if (a.enabled) map.set(a.templateId, a);
+    return map;
+  }, [activations]);
+
+  async function activate(t: AutomationTemplate) {
+    if (pending) return;
+    setError(null);
+    setPending(t.id);
+    try {
+      const row: ActivationRow = await moduleShellApi.ninjamation.activate({
+        templateId: t.id,
+        name: t.name,
+        trigger: t.trigger,
+        action: t.action,
+        modules: t.modules,
+      });
+      setActivations((prev) => {
+        const without = prev.filter((p) => p.id !== row.id);
+        return [row, ...without];
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Could not activate automation');
+    } finally {
+      setPending(null);
+    }
   }
 
-  const activeList = TEMPLATES.filter((t) => active.has(t.id));
+  async function deactivate(id: string) {
+    if (pending) return;
+    setError(null);
+    setPending(id);
+    try {
+      await moduleShellApi.ninjamation.deactivate(id);
+      setActivations((prev) => prev.filter((p) => p.id !== id));
+    } catch (err: any) {
+      setError(err?.message || 'Could not deactivate automation');
+    } finally {
+      setPending(null);
+    }
+  }
+
+  const activeList = activations.filter((a) => a.enabled);
 
   return (
     <div style={{ padding: space.xxl, maxWidth: 960, margin: '0 auto' }} data-testid="shell-ninjamation">
@@ -91,6 +148,12 @@ export default function NinjamationShell({ baseUrl }: { baseUrl?: string }) {
         <ShellLaunchButton baseUrl={baseUrl} testId="link-launch-ninjamation" label="Open the automation canvas" />
       </header>
 
+      {error && (
+        <div data-testid="text-ninjamation-error" style={{ ...cardStyle, color: semantic.accentDanger, marginBottom: space.lg, fontSize: fontSize.sm }}>
+          {error}
+        </div>
+      )}
+
       <section style={{ marginBottom: space.xl }}>
         <h2 style={{ margin: 0, fontSize: fontSize.lg, fontWeight: 600, color: '#fff', marginBottom: space.md }}>
           Active automations
@@ -98,7 +161,11 @@ export default function NinjamationShell({ baseUrl }: { baseUrl?: string }) {
             ({activeList.length})
           </span>
         </h2>
-        {activeList.length === 0 ? (
+        {loading ? (
+          <div data-testid="text-ninjamation-loading" style={{ ...cardStyle, color: semantic.textMuted }}>
+            Loading active automations…
+          </div>
+        ) : activeList.length === 0 ? (
           <div
             data-testid="text-ninjamation-active-empty"
             style={{ ...cardStyle, color: semantic.textMuted, fontSize: fontSize.body }}
@@ -110,22 +177,23 @@ export default function NinjamationShell({ baseUrl }: { baseUrl?: string }) {
             {activeList.map((t) => (
               <li
                 key={t.id}
-                data-testid={`row-ninjamation-active-${t.id}`}
+                data-testid={`row-ninjamation-active-${t.templateId}`}
                 style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 10 }}
               >
                 <Play size={14} color={semantic.accentSuccess} />
                 <span style={{ color: '#fff', fontWeight: 600, flex: 1 }}>{t.name}</span>
                 <button
                   type="button"
-                  data-testid={`button-ninjamation-deactivate-${t.id}`}
-                  onClick={() => toggle(t.id)}
+                  data-testid={`button-ninjamation-deactivate-${t.templateId}`}
+                  onClick={() => deactivate(t.id)}
+                  disabled={pending === t.id}
                   style={{
                     padding: '6px 12px', borderRadius: radius.sm,
                     border: `1px solid ${semantic.border}`, background: 'transparent',
-                    color: semantic.textMuted, cursor: 'pointer', fontSize: fontSize.sm,
+                    color: semantic.textMuted, cursor: pending === t.id ? 'wait' : 'pointer', fontSize: fontSize.sm,
                   }}
                 >
-                  Deactivate
+                  {pending === t.id ? 'Removing…' : 'Deactivate'}
                 </button>
               </li>
             ))}
@@ -146,7 +214,9 @@ export default function NinjamationShell({ baseUrl }: { baseUrl?: string }) {
           }}
         >
           {TEMPLATES.map((t) => {
-            const on = active.has(t.id);
+            const activation = activeByTemplate.get(t.id);
+            const on = !!activation;
+            const busy = pending === t.id || (activation && pending === activation.id);
             return (
               <li key={t.id} data-testid={`card-ninjamation-template-${t.id}`} style={{ ...cardStyle }}>
                 <h3 style={{ margin: 0, color: '#fff', fontSize: fontSize.md, fontWeight: 600 }}>
@@ -173,8 +243,9 @@ export default function NinjamationShell({ baseUrl }: { baseUrl?: string }) {
                 <button
                   type="button"
                   data-testid={`button-ninjamation-use-${t.id}`}
-                  onClick={() => toggle(t.id)}
+                  onClick={() => on && activation ? deactivate(activation.id) : activate(t)}
                   aria-pressed={on}
+                  disabled={!!busy}
                   style={{
                     marginTop: space.md,
                     display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -182,10 +253,10 @@ export default function NinjamationShell({ baseUrl }: { baseUrl?: string }) {
                     border: on ? `1px solid ${semantic.accentSuccess}55` : 'none',
                     background: on ? 'transparent' : semantic.accent,
                     color: on ? semantic.accentSuccess : '#fff',
-                    cursor: 'pointer', fontWeight: 600, fontSize: fontSize.sm,
+                    cursor: busy ? 'wait' : 'pointer', fontWeight: 600, fontSize: fontSize.sm,
                   }}
                 >
-                  {on ? (<><Check size={14} /> Active</>) : 'Use template'}
+                  {busy ? 'Saving…' : on ? (<><Check size={14} /> Active</>) : 'Use template'}
                 </button>
               </li>
             );

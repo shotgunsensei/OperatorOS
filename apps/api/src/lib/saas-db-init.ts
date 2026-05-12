@@ -890,6 +890,78 @@ export async function ensureTenantTables() {
 }
 
 /**
+ * Task #72 — idempotent DDL for the four module-shell persistence tables.
+ * Safe to run on every boot. Called from index.ts after ensureTenantTables.
+ */
+export async function ensureModuleShellTables() {
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS module_call_logs (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      phone TEXT NOT NULL,
+      caller_name TEXT NOT NULL,
+      persona TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued',
+      summary TEXT,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_module_call_logs_tenant_created
+      ON module_call_logs(tenant_id, created_at DESC);
+    DO $$ BEGIN
+      ALTER TABLE module_call_logs ADD CONSTRAINT module_call_logs_status_check
+        CHECK (status IN ('queued','ringing','completed','failed'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    CREATE TABLE IF NOT EXISTS module_study_sessions (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      source TEXT NOT NULL,
+      cards JSONB NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_module_study_sessions_user_created
+      ON module_study_sessions(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_module_study_sessions_tenant
+      ON module_study_sessions(tenant_id);
+
+    CREATE TABLE IF NOT EXISTS module_automations (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      template_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      trigger TEXT NOT NULL,
+      action TEXT NOT NULL,
+      modules JSONB NOT NULL DEFAULT '[]'::jsonb,
+      enabled BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_module_automations_tenant
+      ON module_automations(tenant_id);
+
+    CREATE TABLE IF NOT EXISTS module_scaffolds (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      slug TEXT NOT NULL,
+      stack_id TEXT NOT NULL,
+      stack_name TEXT NOT NULL,
+      files JSONB NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued',
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_module_scaffolds_tenant_created
+      ON module_scaffolds(tenant_id, created_at DESC);
+    DO $$ BEGIN
+      ALTER TABLE module_scaffolds ADD CONSTRAINT module_scaffolds_status_check
+        CHECK (status IN ('queued','ready','failed'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+  `);
+}
+
+/**
  * Idempotent: every user must have exactly one personal tenant. Existing
  * billing/audit/etc. rows get back-filled to the user's personal tenant
  * so cross-tenant queries don't return NULL-tenant orphans forever.
