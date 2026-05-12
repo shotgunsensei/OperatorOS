@@ -7,6 +7,16 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: [{ rel: 'icon', url: '/favicon.svg', type: 'image/svg+xml' }],
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'OperatorOS' },
+  // SEO fix: Lighthouse "Page is blocked from indexing" — explicitly opt
+  // the marketing/landing surface in to indexing so neither the host's
+  // default robots policy nor Next.js's default behaviour suppresses it.
+  // Authenticated admin/platform/apps routes are still excluded via
+  // /robots.txt (apps/web/src/app/robots.ts).
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
 };
 
 export const viewport: Viewport = {
