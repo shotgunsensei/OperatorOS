@@ -23,18 +23,75 @@ import TenantModulesPage from '@/components/pages/TenantModulesPage';
 import TenantSettingsPage from '@/components/pages/TenantSettingsPage';
 import TenantBillingPage from '@/components/pages/TenantBillingPage';
 import { isSuperAdmin, isTenantAdmin } from '@/lib/rbac';
+
+function LandingPage({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSignIn: () => void }) {
+  const cardStyle = {
+    background: 'rgba(22, 27, 34, 0.75)',
+    border: '1px solid rgba(139, 148, 158, 0.25)',
+    borderRadius: 16,
+    padding: 20,
+  } as const;
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#010409', color: '#f0f6fc' }}>
+      <div style={{ maxWidth: 1120, margin: '0 auto', padding: '32px 20px 56px' }}>
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 22 }}>O</div>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>OperatorOS</div>
+              <div style={{ fontSize: 12, color: '#8b949e' }}>Run your operations, apps, and growth from one system.</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={onSignIn} style={{ background: 'transparent', color: '#f0f6fc', border: '1px solid #30363d', borderRadius: 10, padding: '10px 14px', cursor: 'pointer', fontWeight: 600 }}>Sign in</button>
+            <button onClick={onGetStarted} style={{ background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 14px', cursor: 'pointer', fontWeight: 700 }}>Sign up</button>
+          </div>
+        </header>
+
+        <section style={{ marginTop: 44, ...cardStyle, padding: 28 }}>
+          <p style={{ margin: 0, color: '#79c0ff', fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase', fontSize: 12 }}>Business Operating System</p>
+          <h1 style={{ margin: '10px 0 12px', fontSize: 'clamp(28px, 4.5vw, 48px)', lineHeight: 1.1 }}>OperatorOS is the home base for people and teams running modern businesses.</h1>
+          <p style={{ margin: '0 0 20px', color: '#c9d1d9', maxWidth: 760, lineHeight: 1.5 }}>
+            Instead of juggling disconnected tools, you get one connected ecosystem for daily execution: launch apps,
+            team coordination, AI-assisted workflows, billing visibility, and tenant-level administration.
+          </p>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <button onClick={onGetStarted} style={{ background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)', color: '#fff', border: 'none', borderRadius: 12, padding: '14px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 16 }}>Create your account</button>
+            <button onClick={onSignIn} style={{ background: '#161b22', color: '#f0f6fc', border: '1px solid #30363d', borderRadius: 12, padding: '14px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 16 }}>I already have an account</button>
+          </div>
+        </section>
+
+        <section style={{ marginTop: 24, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+          <article style={cardStyle}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 18 }}>What is OperatorOS?</h2>
+            <p style={{ margin: 0, color: '#c9d1d9', lineHeight: 1.5 }}>A unified operating layer for businesses and operators to organize apps, users, permissions, and execution in one place.</p>
+          </article>
+          <article style={cardStyle}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 18 }}>What applications does it house?</h2>
+            <p style={{ margin: 0, color: '#c9d1d9', lineHeight: 1.5 }}>Workspace apps, AI tools, team management, tenant modules, billing controls, and platform-level administration tools.</p>
+          </article>
+          <article style={cardStyle}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 18 }}>What do those applications do?</h2>
+            <p style={{ margin: 0, color: '#c9d1d9', lineHeight: 1.5 }}>They help you launch initiatives faster, keep your team aligned, manage access securely, and automate repetitive work with AI assistance.</p>
+          </article>
+          <article style={cardStyle}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 18 }}>How does the ecosystem help daily?</h2>
+            <p style={{ margin: 0, color: '#c9d1d9', lineHeight: 1.5 }}>Everyone works from the same source of truth, reducing tool sprawl, miscommunication, and manual handoffs across day-to-day operations.</p>
+          </article>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 function AppContent() {
   const { user, loading, authError, logout, clearAuthError } = useAuth();
   const { activeRole: tenantRole } = useTenant();
-  const [authPage, setAuthPage] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>('login');
-  // Default landing is set per-role once we know the user (effect below).
-  // 'my-apps' is the safe fallback for any non-admin user.
+  const [authPage, setAuthPage] = useState<'landing' | 'login' | 'register' | 'forgot-password' | 'reset-password'>('landing');
   const [activePage, setActivePage] = useState<string>('my-apps');
   const [didInitialLand, setDidInitialLand] = useState(false);
 
-  // Reset the one-shot landing flag whenever the authenticated user changes
-  // (including logout) so a subsequent login re-applies the role-based
-  // default landing page.
   useEffect(() => {
     if (!user) {
       setDidInitialLand(false);
@@ -42,8 +99,6 @@ function AppContent() {
     }
   }, [user?.id]);
 
-  // Pick the *initial* landing page once tenant role is known. Subsequent
-  // user navigation is preserved.
   useEffect(() => {
     if (!user || didInitialLand) return;
     if (activePage !== 'my-apps') { setDidInitialLand(true); return; }
@@ -56,12 +111,8 @@ function AppContent() {
     } else if (tenantRole === 'member') {
       setDidInitialLand(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, tenantRole]);
 
-  // If the user landed on /invites/:token before signing in, the invite page
-  // parks the token in localStorage and bounces them here. Once they finish
-  // login/register, send them right back so the invite gets accepted.
   useEffect(() => {
     if (loading || !user) return;
     let pending: string | null = null;
@@ -96,6 +147,7 @@ function AppContent() {
 
   if (!user) {
     const handleSwitch = (page: string) => setAuthPage(page as any);
+    if (authPage === 'landing') return <LandingPage onGetStarted={() => setAuthPage('register')} onSignIn={() => setAuthPage('login')} />;
     if (authPage === 'register') return <RegisterPage onSwitch={handleSwitch} />;
     if (authPage === 'forgot-password') return <ForgotPasswordPage onSwitch={handleSwitch} />;
     if (authPage === 'reset-password') return <ResetPasswordPage onSwitch={handleSwitch} />;
@@ -106,8 +158,6 @@ function AppContent() {
   const userIsTenantAdmin = isTenantAdmin(tenantRole, (user as any)?.platformRole);
 
   const handleNavigate = (page: string) => {
-    // Super admins clicking the Platform Command entry are routed to the
-    // standalone /platform page so the URL reflects where they are.
     if (page === 'platform' && userIsSuperAdmin) {
       window.location.href = '/platform';
       return;
