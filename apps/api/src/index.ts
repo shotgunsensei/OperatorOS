@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, inArray, and, isNull } from 'drizzle-orm';
 import type {
   HealthResponse,
   CreateWorkspaceRequest,
@@ -22,7 +22,7 @@ import {
 import { isCommandAllowed, clampTimeout, truncateOutput } from '../../../apps/runner-gateway/src/safety.js';
 import cookie from '@fastify/cookie';
 import { db } from './db.js';
-import { workspaces, runners, tasks, taskEvents, toolTraces, publishRuns } from './schema.js';
+import { workspaces, runners, tasks, taskEvents, toolTraces, publishRuns, users } from './schema.js';
 import { serveUI } from './ui.js';
 import { ensureExtendedTables } from './lib/db-init.js';
 import { ensureSaasTables, seedPlansAndAdmin, seedModules, ensureTenantTables, ensureModuleShellTables, backfillPersonalTenants, bootstrapSuperAdmin, seedDemoCoTenant } from './lib/saas-db-init.js';
@@ -42,6 +42,7 @@ import type { AgentEvent } from './agent.js';
 import { analyzeWorkspace, generatePlan, generateArtifacts, runProof } from './publish/index.js';
 import type { DetectionResult } from './publish/types.js';
 import { requireSessionSecret } from './lib/session-secret.js';
+import { authenticate } from './lib/auth.js';
 
 const startTime = Date.now();
 const sessionSecret = requireSessionSecret();
@@ -95,6 +96,8 @@ async function ensureTables() {
       updated_at TIMESTAMP DEFAULT NOW() NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_workspaces_status ON workspaces(status);
+    ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS user_id VARCHAR(36);
+    CREATE INDEX IF NOT EXISTS idx_workspaces_user ON workspaces(user_id);
 
     CREATE TABLE IF NOT EXISTS runners (
       workspace_id VARCHAR(36) PRIMARY KEY REFERENCES workspaces(id),
@@ -271,6 +274,31 @@ async function runVerifyWithFallbacks(workspaceId: string, commands: string[]): 
   return lastResult!;
 }
 
+type AuthUser = { id: string; platformRole: string };
+
+async function getAuthorizedWorkspace(
+  id: string,
+  user: AuthUser,
+  reply: import('fastify').FastifyReply,
+) {
+  const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
+  if (!ws) {
+    reply.status(404).send({ error: 'Workspace not found' });
+    return null;
+  }
+  if (user.platformRole !== 'super_admin' && ws.userId !== user.id) {
+    reply.status(404).send({ error: 'Workspace not found' });
+    return null;
+  }
+  return ws;
+}
+
+async function getUserWorkspaceIds(user: AuthUser): Promise<string[]> {
+  if (user.platformRole === 'super_admin') return [];
+  const rows = await db.select({ id: workspaces.id }).from(workspaces).where(eq(workspaces.userId, user.id));
+  return rows.map((r) => r.id);
+}
+
 app.get('/', async (req, reply) => {
   const accept = req.headers.accept ?? '';
   if (accept.includes('text/html')) {
@@ -327,6 +355,7 @@ app.get('/v1/profiles', async (_req, reply) => {
 
 app.post<{ Body: CreateWorkspaceRequest }>(
   '/v1/workspaces',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { gitUrl, gitRef, profileId } = req.body;
     if (!gitUrl) return reply.status(400).send({ error: 'gitUrl is required' });
@@ -334,7 +363,9 @@ app.post<{ Body: CreateWorkspaceRequest }>(
     const profile = getProfile(profileId ?? 'node20');
     if (!profile) return reply.status(400).send({ error: `Unknown profile: ${profileId}` });
 
+    const user = (req as any).user as AuthUser;
     const [ws] = await db.insert(workspaces).values({
+      userId: user.id,
       gitUrl,
       gitRef: gitRef ?? 'main',
       profileId: profileId ?? 'node20',
@@ -345,17 +376,54 @@ app.post<{ Body: CreateWorkspaceRequest }>(
   },
 );
 
-app.get('/v1/workspaces', async (_req, reply) => {
-  const rows = await db.select().from(workspaces);
+app.get('/v1/workspaces', { preHandler: [authenticate] }, async (req, reply) => {
+  const user = (req as any).user as AuthUser;
+  const rows = user.platformRole === 'super_admin'
+    ? await db.select().from(workspaces)
+    : await db.select().from(workspaces).where(eq(workspaces.userId, user.id));
   return reply.send({ workspaces: rows, total: rows.length });
 });
 
-app.get<{ Params: { id: string } }>(
-  '/v1/workspaces/:id',
+app.get('/v1/workspaces/unowned', { preHandler: [authenticate] }, async (req, reply) => {
+  const user = (req as any).user as AuthUser;
+  if (user.platformRole !== 'super_admin') {
+    return reply.status(403).send({ error: 'PLATFORM_ROLE_REQUIRED' });
+  }
+  const rows = await db.select().from(workspaces).where(isNull(workspaces.userId));
+  return reply.send({ workspaces: rows, total: rows.length });
+});
+
+app.patch<{ Params: { id: string }; Body: { userId: string } }>(
+  '/v1/workspaces/:id/owner',
+  { preHandler: [authenticate] },
   async (req, reply) => {
+    const user = (req as any).user as AuthUser;
+    if (user.platformRole !== 'super_admin') {
+      return reply.status(403).send({ error: 'PLATFORM_ROLE_REQUIRED' });
+    }
     const { id } = req.params;
+    const { userId: newOwnerId } = req.body;
+    if (!newOwnerId) return reply.status(400).send({ error: 'userId is required' });
+    const [targetUser] = await db.select({ id: users.id }).from(users).where(eq(users.id, newOwnerId));
+    if (!targetUser) return reply.status(404).send({ error: 'User not found' });
     const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
     if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const [updated] = await db.update(workspaces)
+      .set({ userId: newOwnerId, updatedAt: new Date() })
+      .where(eq(workspaces.id, id))
+      .returning();
+    return reply.send(updated);
+  },
+);
+
+app.get<{ Params: { id: string } }>(
+  '/v1/workspaces/:id',
+  { preHandler: [authenticate] },
+  async (req, reply) => {
+    const { id } = req.params;
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     let runnerStatus = null;
     try {
@@ -368,10 +436,12 @@ app.get<{ Params: { id: string } }>(
 
 app.post<{ Params: { id: string } }>(
   '/v1/workspaces/:id/start',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     const profileImage = getProfileImage(ws.profileId);
     await db.update(workspaces).set({ status: 'provisioning', updatedAt: new Date() }).where(eq(workspaces.id, id));
@@ -407,10 +477,12 @@ app.post<{ Params: { id: string } }>(
 
 app.post<{ Params: { id: string } }>(
   '/v1/workspaces/:id/stop',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const result = await stopWorkspaceRunner(id);
@@ -429,11 +501,13 @@ app.post<{ Params: { id: string } }>(
 
 app.post<{ Params: { id: string }; Body: { cmd: string; timeoutSec?: number } }>(
   '/v1/workspaces/:id/exec',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
     const { cmd, timeoutSec } = req.body;
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const result = await localExec(id, cmd, timeoutSec);
@@ -446,6 +520,7 @@ app.post<{ Params: { id: string }; Body: { cmd: string; timeoutSec?: number } }>
 
 app.post<{ Params: { id: string }; Body: { diff: string } }>(
   '/v1/workspaces/:id/apply-patch',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
     const { diff } = req.body;
@@ -460,8 +535,9 @@ app.post<{ Params: { id: string }; Body: { diff: string } }>(
       return reply.status(400).send({ error: 'Patch modifies denied paths', deniedPaths: pathCheck.deniedPaths });
     }
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const writeTemp = await localExec(id, `cat > /tmp/_patch.diff`, 10, diff);
@@ -486,6 +562,7 @@ app.post<{ Params: { id: string }; Body: { diff: string } }>(
 
 app.get<{ Params: { id: string }; Querystring: { path?: string; depth?: string } }>(
   '/v1/workspaces/:id/tree',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
     const subPath = req.query.path ?? '.';
@@ -498,8 +575,9 @@ app.get<{ Params: { id: string }; Querystring: { path?: string; depth?: string }
       return reply.status(400).send({ error: 'Invalid path characters' });
     }
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const safePath = subPath.replace(/'/g, "'\\''");
@@ -518,6 +596,7 @@ app.get<{ Params: { id: string }; Querystring: { path?: string; depth?: string }
 
 app.post<{ Params: { id: string }; Body: { path: string } }>(
   '/v1/workspaces/:id/read-file',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
     const { path: filePath } = req.body;
@@ -525,8 +604,9 @@ app.post<{ Params: { id: string }; Body: { path: string } }>(
     if (filePath.includes('..') || filePath.startsWith('/')) {
       return reply.status(400).send({ error: 'Invalid path' });
     }
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const result = await localExec(id, `cd /workspace && cat ${JSON.stringify(filePath)}`, 10);
@@ -542,10 +622,12 @@ app.post<{ Params: { id: string }; Body: { path: string } }>(
 
 app.post<{ Params: { id: string } }>(
   '/v1/workspaces/:id/git-status',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const result = await localExec(id, 'cd /workspace && git status --porcelain', 10);
@@ -558,13 +640,15 @@ app.post<{ Params: { id: string } }>(
 
 app.post<{ Params: { id: string }; Body: { name: string } }>(
   '/v1/workspaces/:id/create-branch',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
     const { name } = req.body;
     if (!name) return reply.status(400).send({ error: 'Branch name required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const result = await localExec(id, `cd /workspace && git checkout -b '${name.replace(/'/g, "'\\''")}'`, 10);
@@ -577,13 +661,15 @@ app.post<{ Params: { id: string }; Body: { name: string } }>(
 
 app.post<{ Params: { id: string }; Body: { message: string } }>(
   '/v1/workspaces/:id/commit',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
     const { message } = req.body;
     if (!message) return reply.status(400).send({ error: 'Commit message required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const safeMsg = message.replace(/'/g, "'\\''");
@@ -597,10 +683,12 @@ app.post<{ Params: { id: string }; Body: { message: string } }>(
 
 app.post<{ Params: { id: string } }>(
   '/v1/workspaces/:id/verify',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     const profile = getProfile(ws.profileId);
     if (!profile) return reply.status(400).send({ error: `Unknown profile: ${ws.profileId}` });
@@ -642,12 +730,14 @@ app.post<{ Params: { id: string } }>(
 
 app.post<{ Body: { workspaceId: string; profileId?: string } }>(
   '/v1/verify/run',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId, profileId } = req.body;
     if (!workspaceId) return reply.status(400).send({ error: 'workspaceId required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const profile = getProfile(profileId ?? ws.profileId);
     if (!profile) return reply.status(400).send({ error: `Unknown profile: ${profileId ?? ws.profileId}` });
@@ -681,13 +771,15 @@ app.post<{ Body: { workspaceId: string; profileId?: string } }>(
 
 app.post<{ Body: { workspaceId: string; title?: string; goal?: string; profileId?: string } }>(
   '/v1/tasks',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId, title, goal, profileId } = req.body;
     if (!workspaceId) return reply.status(400).send({ error: 'workspaceId required' });
     if (!goal && !title) return reply.status(400).send({ error: 'goal or title required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const pid = profileId ?? ws.profileId;
     const plan = getVerifyPlan(pid);
@@ -717,6 +809,7 @@ function broadcastTaskEvent(taskId: string, eventData: Record<string, unknown>) 
 
 app.post<{ Params: { taskId: string } }>(
   '/v1/tasks/:taskId/run',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { taskId } = req.params;
     const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
@@ -724,8 +817,9 @@ app.post<{ Params: { taskId: string } }>(
 
     if (task.status === 'running') return reply.status(409).send({ error: 'Task already running' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, task.workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(task.workspaceId, user, reply);
+    if (!ws) return;
 
     await db.update(tasks).set({ status: 'running', startedAt: new Date() }).where(eq(tasks.id, taskId));
 
@@ -871,18 +965,28 @@ app.post<{ Params: { taskId: string } }>(
 
 app.get<{ Params: { taskId: string } }>(
   '/v1/tasks/:taskId',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { taskId } = req.params;
     const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
     if (!task) return reply.status(404).send({ error: 'Task not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(task.workspaceId, user, reply);
+    if (!ws) return;
     return reply.send(task);
   },
 );
 
 app.get<{ Params: { taskId: string } }>(
   '/v1/tasks/:taskId/events',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { taskId } = req.params;
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+    if (!task) return reply.status(404).send({ error: 'Task not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(task.workspaceId, user, reply);
+    if (!ws) return;
     const events = await db.select().from(taskEvents).where(eq(taskEvents.taskId, taskId)).orderBy(taskEvents.ts);
     return reply.send({ events, total: events.length });
   },
@@ -890,10 +994,14 @@ app.get<{ Params: { taskId: string } }>(
 
 app.get<{ Params: { taskId: string } }>(
   '/v1/tasks/:taskId/events/stream',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { taskId } = req.params;
     const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
     if (!task) return reply.status(404).send({ error: 'Task not found' });
+    const user = (req as any).user as AuthUser;
+    const wsAuth = await getAuthorizedWorkspace(task.workspaceId, user, reply);
+    if (!wsAuth) return;
 
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -951,29 +1059,49 @@ app.get<{ Params: { taskId: string } }>(
 
 app.get<{ Params: { taskId: string } }>(
   '/v1/tasks/:taskId/traces',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { taskId } = req.params;
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+    if (!task) return reply.status(404).send({ error: 'Task not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(task.workspaceId, user, reply);
+    if (!ws) return;
     const traces = await db.select().from(toolTraces).where(eq(toolTraces.taskId, taskId)).orderBy(toolTraces.ts);
     return reply.send({ traces, total: traces.length });
   },
 );
 
-app.get('/v1/tasks', async (req, reply) => {
+app.get('/v1/tasks', { preHandler: [authenticate] }, async (req, reply) => {
+  const user = (req as any).user as AuthUser;
   const wsId = (req.query as any).workspaceId;
   let rows;
   if (wsId) {
+    const ws = await getAuthorizedWorkspace(wsId, user, reply);
+    if (!ws) return;
     rows = await db.select().from(tasks).where(eq(tasks.workspaceId, wsId)).orderBy(desc(tasks.createdAt));
-  } else {
+  } else if (user.platformRole === 'super_admin') {
     rows = await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+  } else {
+    const userWsIds = await getUserWorkspaceIds(user);
+    rows = userWsIds.length
+      ? await db.select().from(tasks).where(inArray(tasks.workspaceId, userWsIds)).orderBy(desc(tasks.createdAt))
+      : [];
   }
   return reply.send({ tasks: rows, total: rows.length });
 });
 
 app.get<{ Params: { workspaceId: string } }>(
   '/v1/runner/stream/:workspaceId',
-  { websocket: true },
-  (socket, req) => {
+  { websocket: true, preHandler: [authenticate] },
+  async (socket, req) => {
     const workspaceId = (req.params as { workspaceId: string }).workspaceId;
+    const user = (req as any).user as AuthUser;
+    const [wsRecord] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
+    if (!wsRecord || (user.platformRole !== 'super_admin' && wsRecord.userId !== user.id)) {
+      socket.close(4403, 'Workspace not found or access denied');
+      return;
+    }
 
     if (!streamSubscribers.has(workspaceId)) {
       streamSubscribers.set(workspaceId, new Set());
@@ -1002,12 +1130,14 @@ app.get<{ Params: { workspaceId: string } }>(
 
 app.post<{ Body: { workspaceId: string } }>(
   '/v1/publish/analyze',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId } = req.body;
     if (!workspaceId) return reply.status(400).send({ error: 'workspaceId is required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const exec = async (cmd: string, timeoutSec = 30) => {
       const r = await localExec(workspaceId, cmd, timeoutSec);
@@ -1028,12 +1158,14 @@ app.post<{ Body: { workspaceId: string } }>(
 
 app.post<{ Body: { workspaceId: string; intent: 'web-domain' | 'mobile-store' | 'pwa'; preferences?: { platform?: string } } }>(
   '/v1/publish/plan',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId, intent, preferences } = req.body;
     if (!workspaceId || !intent) return reply.status(400).send({ error: 'workspaceId and intent are required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const existingRuns = await db.select().from(publishRuns)
       .where(eq(publishRuns.workspaceId, workspaceId))
@@ -1057,12 +1189,14 @@ app.post<{ Body: { workspaceId: string; intent: 'web-domain' | 'mobile-store' | 
 
 app.post<{ Body: { workspaceId: string; platform: string } }>(
   '/v1/publish/artifacts',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId, platform } = req.body;
     if (!workspaceId || !platform) return reply.status(400).send({ error: 'workspaceId and platform are required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const existingRuns = await db.select().from(publishRuns)
       .where(eq(publishRuns.workspaceId, workspaceId))
@@ -1096,12 +1230,14 @@ app.post<{ Body: { workspaceId: string; platform: string } }>(
 
 app.post<{ Body: { workspaceId: string; planId?: string } }>(
   '/v1/publish/proof',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId } = req.body;
     if (!workspaceId) return reply.status(400).send({ error: 'workspaceId is required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const existingRuns = await db.select().from(publishRuns)
       .where(eq(publishRuns.workspaceId, workspaceId))
@@ -1145,12 +1281,17 @@ app.post<{ Body: { workspaceId: string; planId?: string } }>(
 
 app.post<{ Body: { workspaceId: string; planId: string } }>(
   '/v1/publish/explain',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) return reply.status(501).send({ error: 'OPENAI_API_KEY not configured' });
 
     const { workspaceId, planId } = req.body;
     if (!workspaceId) return reply.status(400).send({ error: 'workspaceId is required' });
+
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const existingRuns = await db.select().from(publishRuns)
       .where(eq(publishRuns.workspaceId, workspaceId))
@@ -1194,8 +1335,12 @@ app.post<{ Body: { workspaceId: string; planId: string } }>(
 
 app.get<{ Params: { workspaceId: string } }>(
   '/v1/publish/runs/:workspaceId',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId } = req.params;
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
     const runs = await db.select().from(publishRuns)
       .where(eq(publishRuns.workspaceId, workspaceId))
       .orderBy(desc(publishRuns.createdAt))

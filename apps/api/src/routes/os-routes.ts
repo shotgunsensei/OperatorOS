@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
   automationRules,
@@ -13,18 +13,55 @@ import {
 import { safeWorkspaceExec } from '../lib/exec.js';
 import { addSystemEvent, addSystemNotification } from '../lib/system-events.js';
 import { getProfile } from '../../../../packages/profiles/src/index.js';
+import { authenticate } from '../lib/auth.js';
 
 function shellEscape(input: string) {
   return `'${input.replace(/'/g, `'\\''`)}'`;
 }
 
+type AuthUser = { id: string; platformRole: string };
+
+async function getAuthorizedWorkspace(
+  id: string,
+  user: AuthUser,
+  reply: import('fastify').FastifyReply,
+) {
+  const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
+  if (!ws) {
+    reply.status(404).send({ error: 'Workspace not found' });
+    return null;
+  }
+  if (user.platformRole !== 'super_admin' && ws.userId !== user.id) {
+    reply.status(404).send({ error: 'Workspace not found' });
+    return null;
+  }
+  return ws;
+}
+
+async function getUserWorkspaceIds(user: AuthUser): Promise<string[]> {
+  if (user.platformRole === 'super_admin') return [];
+  const rows = await db.select({ id: workspaces.id }).from(workspaces).where(eq(workspaces.userId, user.id));
+  return rows.map((r) => r.id);
+}
+
 export async function registerOsRoutes(app: FastifyInstance) {
-  app.get('/v1/system/status', async () => {
+  app.get('/v1/system/status', { preHandler: [authenticate] }, async (req) => {
+    const user = (req as any).user as AuthUser;
+    const userWsIds = await getUserWorkspaceIds(user);
+    const isSuperAdmin = user.platformRole === 'super_admin';
+
+    const wsFilter = isSuperAdmin ? undefined : (userWsIds.length ? inArray(workspaces.id, userWsIds) : sql<boolean>`false`);
+    const procFilter = isSuperAdmin ? eq(workspaceProcesses.status, 'running') : (userWsIds.length ? and(eq(workspaceProcesses.status, 'running'), inArray(workspaceProcesses.workspaceId, userWsIds)) : sql<boolean>`false`);
+    const svcFilter = isSuperAdmin ? eq(workspaceServices.status, 'running') : (userWsIds.length ? and(eq(workspaceServices.status, 'running'), inArray(workspaceServices.workspaceId, userWsIds)) : sql<boolean>`false`);
+    const notifFilter = isSuperAdmin ? eq(systemNotifications.read, false) : (userWsIds.length ? and(eq(systemNotifications.read, false), inArray(systemNotifications.workspaceId, userWsIds)) : sql<boolean>`false`);
+
     const [workspaceCount, processCount, serviceCount, notificationCount] = await Promise.all([
-      db.select({ count: sql<number>`count(*)::int` }).from(workspaces),
-      db.select({ count: sql<number>`count(*)::int` }).from(workspaceProcesses).where(eq(workspaceProcesses.status, 'running')),
-      db.select({ count: sql<number>`count(*)::int` }).from(workspaceServices).where(eq(workspaceServices.status, 'running')),
-      db.select({ count: sql<number>`count(*)::int` }).from(systemNotifications).where(eq(systemNotifications.read, false)),
+      wsFilter
+        ? db.select({ count: sql<number>`count(*)::int` }).from(workspaces).where(wsFilter)
+        : db.select({ count: sql<number>`count(*)::int` }).from(workspaces),
+      db.select({ count: sql<number>`count(*)::int` }).from(workspaceProcesses).where(procFilter),
+      db.select({ count: sql<number>`count(*)::int` }).from(workspaceServices).where(svcFilter),
+      db.select({ count: sql<number>`count(*)::int` }).from(systemNotifications).where(notifFilter),
     ]);
 
     return {
@@ -39,46 +76,85 @@ export async function registerOsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get('/v1/system/events', async (req) => {
+  app.get('/v1/system/events', { preHandler: [authenticate] }, async (req) => {
+    const user = (req as any).user as AuthUser;
     const q = req.query as { workspaceId?: string; limit?: string };
     const limit = Math.min(Number.parseInt(q.limit ?? '50', 10), 200);
-    const rows = q.workspaceId
-      ? await db.select().from(systemEvents).where(eq(systemEvents.workspaceId, q.workspaceId)).orderBy(desc(systemEvents.ts)).limit(limit)
-      : await db.select().from(systemEvents).orderBy(desc(systemEvents.ts)).limit(limit);
-
+    let rows;
+    if (q.workspaceId) {
+      const [ws] = await db.select({ id: workspaces.id, userId: workspaces.userId }).from(workspaces).where(eq(workspaces.id, q.workspaceId));
+      if (!ws || (user.platformRole !== 'super_admin' && ws.userId !== user.id)) {
+        return { events: [], total: 0 };
+      }
+      rows = await db.select().from(systemEvents).where(eq(systemEvents.workspaceId, q.workspaceId)).orderBy(desc(systemEvents.ts)).limit(limit);
+    } else if (user.platformRole === 'super_admin') {
+      rows = await db.select().from(systemEvents).orderBy(desc(systemEvents.ts)).limit(limit);
+    } else {
+      const wsIds = await getUserWorkspaceIds(user);
+      rows = wsIds.length
+        ? await db.select().from(systemEvents).where(inArray(systemEvents.workspaceId, wsIds)).orderBy(desc(systemEvents.ts)).limit(limit)
+        : [];
+    }
     return { events: rows, total: rows.length };
   });
 
-  app.get('/v1/system/notifications', async (req) => {
+  app.get('/v1/system/notifications', { preHandler: [authenticate] }, async (req) => {
+    const user = (req as any).user as AuthUser;
     const q = req.query as { workspaceId?: string; limit?: string };
     const limit = Math.min(Number.parseInt(q.limit ?? '25', 10), 100);
-    const rows = q.workspaceId
-      ? await db.select().from(systemNotifications).where(eq(systemNotifications.workspaceId, q.workspaceId)).orderBy(desc(systemNotifications.createdAt)).limit(limit)
-      : await db.select().from(systemNotifications).orderBy(desc(systemNotifications.createdAt)).limit(limit);
-
+    let rows;
+    if (q.workspaceId) {
+      const [ws] = await db.select({ id: workspaces.id, userId: workspaces.userId }).from(workspaces).where(eq(workspaces.id, q.workspaceId));
+      if (!ws || (user.platformRole !== 'super_admin' && ws.userId !== user.id)) {
+        return { notifications: [], total: 0 };
+      }
+      rows = await db.select().from(systemNotifications).where(eq(systemNotifications.workspaceId, q.workspaceId)).orderBy(desc(systemNotifications.createdAt)).limit(limit);
+    } else if (user.platformRole === 'super_admin') {
+      rows = await db.select().from(systemNotifications).orderBy(desc(systemNotifications.createdAt)).limit(limit);
+    } else {
+      const wsIds = await getUserWorkspaceIds(user);
+      rows = wsIds.length
+        ? await db.select().from(systemNotifications).where(inArray(systemNotifications.workspaceId, wsIds)).orderBy(desc(systemNotifications.createdAt)).limit(limit)
+        : [];
+    }
     return { notifications: rows, total: rows.length };
   });
 
-  app.post('/v1/system/notifications/:id/read', async (req) => {
+  app.post('/v1/system/notifications/:id/read', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).user as AuthUser;
     const { id } = req.params as { id: string };
+    const [notif] = await db.select().from(systemNotifications).where(eq(systemNotifications.id, id));
+    if (!notif) return reply.status(404).send({ error: 'Notification not found' });
+    if (notif.workspaceId) {
+      const [ws] = await db.select({ id: workspaces.id, userId: workspaces.userId }).from(workspaces).where(eq(workspaces.id, notif.workspaceId));
+      if (!ws || (user.platformRole !== 'super_admin' && ws.userId !== user.id)) {
+        return reply.status(404).send({ error: 'Notification not found' });
+      }
+    } else {
+      if (user.platformRole !== 'super_admin') {
+        return reply.status(404).send({ error: 'Notification not found' });
+      }
+    }
     await db.update(systemNotifications).set({ read: true }).where(eq(systemNotifications.id, id));
     return { ok: true };
   });
 
-  app.get('/v1/workspaces/:id/processes', async (req, reply) => {
+  app.get('/v1/workspaces/:id/processes', { preHandler: [authenticate] }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!workspace) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const workspace = await getAuthorizedWorkspace(id, user, reply);
+    if (!workspace) return;
 
     const rows = await db.select().from(workspaceProcesses).where(eq(workspaceProcesses.workspaceId, id)).orderBy(desc(workspaceProcesses.startedAt)).limit(100);
     return { processes: rows, total: rows.length };
   });
 
-  app.post('/v1/workspaces/:id/processes', async (req, reply) => {
+  app.post('/v1/workspaces/:id/processes', { preHandler: [authenticate] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const body = req.body as { name?: string; command: string; background?: boolean; timeoutSec?: number };
-    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!workspace) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const workspace = await getAuthorizedWorkspace(id, user, reply);
+    if (!workspace) return;
     if (!body.command?.trim()) return reply.status(400).send({ error: 'command is required' });
 
     const background = body.background ?? true;
@@ -125,8 +201,11 @@ export async function registerOsRoutes(app: FastifyInstance) {
     return { process: row, result: execResult };
   });
 
-  app.post('/v1/workspaces/:id/processes/:processId/stop', async (req, reply) => {
+  app.post('/v1/workspaces/:id/processes/:processId/stop', { preHandler: [authenticate] }, async (req, reply) => {
     const { id, processId } = req.params as { id: string; processId: string };
+    const user = (req as any).user as AuthUser;
+    const wsAuth = await getAuthorizedWorkspace(id, user, reply);
+    if (!wsAuth) return;
     const [row] = await db.select().from(workspaceProcesses).where(and(eq(workspaceProcesses.id, processId), eq(workspaceProcesses.workspaceId, id)));
     if (!row) return reply.status(404).send({ error: 'Process not found' });
     if (!row.providerProcessId) return reply.status(400).send({ error: 'Process does not have a managed PID' });
@@ -140,8 +219,11 @@ export async function registerOsRoutes(app: FastifyInstance) {
     return { ok: killResult.exitCode === 0, result: killResult };
   });
 
-  app.get('/v1/workspaces/:id/processes/:processId/logs', async (req, reply) => {
+  app.get('/v1/workspaces/:id/processes/:processId/logs', { preHandler: [authenticate] }, async (req, reply) => {
     const { id, processId } = req.params as { id: string; processId: string };
+    const user = (req as any).user as AuthUser;
+    const wsAuth = await getAuthorizedWorkspace(id, user, reply);
+    if (!wsAuth) return;
     const [row] = await db.select().from(workspaceProcesses).where(and(eq(workspaceProcesses.id, processId), eq(workspaceProcesses.workspaceId, id)));
     if (!row) return reply.status(404).send({ error: 'Process not found' });
     if (!row.logPath) return { logs: '', process: row };
@@ -150,19 +232,21 @@ export async function registerOsRoutes(app: FastifyInstance) {
     return { logs: result.stdout, process: row };
   });
 
-  app.get('/v1/workspaces/:id/services', async (req, reply) => {
+  app.get('/v1/workspaces/:id/services', { preHandler: [authenticate] }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!workspace) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const workspace = await getAuthorizedWorkspace(id, user, reply);
+    if (!workspace) return;
     const rows = await db.select().from(workspaceServices).where(eq(workspaceServices.workspaceId, id)).orderBy(desc(workspaceServices.updatedAt)).limit(100);
     return { services: rows, total: rows.length };
   });
 
-  app.post('/v1/workspaces/:id/services/start', async (req, reply) => {
+  app.post('/v1/workspaces/:id/services/start', { preHandler: [authenticate] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const body = req.body as { name?: string; type?: string; command?: string; port?: number; protocol?: string; healthPath?: string };
-    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!workspace) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const workspace = await getAuthorizedWorkspace(id, user, reply);
+    if (!workspace) return;
 
     const profile = getProfile(workspace.profileId);
     const command = body.command?.trim() || profile?.preview?.startCommands?.[0];
@@ -216,8 +300,11 @@ export async function registerOsRoutes(app: FastifyInstance) {
     return reply.status(201).send({ service: serviceRow, process: processRow });
   });
 
-  app.post('/v1/workspaces/:id/services/:serviceId/stop', async (req, reply) => {
+  app.post('/v1/workspaces/:id/services/:serviceId/stop', { preHandler: [authenticate] }, async (req, reply) => {
     const { id, serviceId } = req.params as { id: string; serviceId: string };
+    const user = (req as any).user as AuthUser;
+    const wsAuth = await getAuthorizedWorkspace(id, user, reply);
+    if (!wsAuth) return;
     const [service] = await db.select().from(workspaceServices).where(and(eq(workspaceServices.id, serviceId), eq(workspaceServices.workspaceId, id)));
     if (!service) return reply.status(404).send({ error: 'Service not found' });
 
@@ -235,27 +322,34 @@ export async function registerOsRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
-  app.get('/v1/workspaces/:id/services/:serviceId/status', async (req, reply) => {
+  app.get('/v1/workspaces/:id/services/:serviceId/status', { preHandler: [authenticate] }, async (req, reply) => {
     const { id, serviceId } = req.params as { id: string; serviceId: string };
+    const user = (req as any).user as AuthUser;
+    const wsAuth = await getAuthorizedWorkspace(id, user, reply);
+    if (!wsAuth) return;
     const [service] = await db.select().from(workspaceServices).where(and(eq(workspaceServices.id, serviceId), eq(workspaceServices.workspaceId, id)));
     if (!service) return reply.status(404).send({ error: 'Service not found' });
     return { service };
   });
 
-  app.get('/v1/workspaces/:id/automations', async (req, reply) => {
+  app.get('/v1/workspaces/:id/automations', { preHandler: [authenticate] }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!workspace) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const workspace = await getAuthorizedWorkspace(id, user, reply);
+    if (!workspace) return;
     const rows = await db.select().from(automationRules).where(eq(automationRules.workspaceId, id)).orderBy(desc(automationRules.updatedAt)).limit(100);
     return { automations: rows, total: rows.length };
   });
 
-  app.post('/v1/workspaces/:id/automations', async (req, reply) => {
+  app.post('/v1/workspaces/:id/automations', { preHandler: [authenticate] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const body = req.body as { name: string; triggerType: string; triggerJson?: Record<string, unknown>; actionType: string; actionJson?: Record<string, unknown>; enabled?: boolean };
     if (!body.name?.trim() || !body.triggerType?.trim() || !body.actionType?.trim()) {
       return reply.status(400).send({ error: 'name, triggerType, and actionType are required' });
     }
+    const user = (req as any).user as AuthUser;
+    const wsAuth = await getAuthorizedWorkspace(id, user, reply);
+    if (!wsAuth) return;
 
     const [row] = await db.insert(automationRules).values({
       workspaceId: id,
@@ -272,9 +366,12 @@ export async function registerOsRoutes(app: FastifyInstance) {
     return reply.status(201).send(row);
   });
 
-  app.post('/v1/workspaces/:id/automations/:ruleId/toggle', async (req, reply) => {
+  app.post('/v1/workspaces/:id/automations/:ruleId/toggle', { preHandler: [authenticate] }, async (req, reply) => {
     const { id, ruleId } = req.params as { id: string; ruleId: string };
     const body = req.body as { enabled?: boolean };
+    const user = (req as any).user as AuthUser;
+    const wsAuth = await getAuthorizedWorkspace(id, user, reply);
+    if (!wsAuth) return;
     const [rule] = await db.select().from(automationRules).where(and(eq(automationRules.id, ruleId), eq(automationRules.workspaceId, id)));
     if (!rule) return reply.status(404).send({ error: 'Automation rule not found' });
 

@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 
 export const workspaces = pgTable('workspaces', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar('user_id', { length: 36 }),
   gitUrl: text('git_url').notNull(),
   gitRef: text('git_ref').notNull().default('main'),
   profileId: text('profile_id').notNull().default('node20'),
@@ -13,6 +14,7 @@ export const workspaces = pgTable('workspaces', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_workspaces_status').on(t.status),
+  index('idx_workspaces_user').on(t.userId),
 ]);
 
 export const runners = pgTable('runners', {
