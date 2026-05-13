@@ -24,34 +24,54 @@ import TenantSettingsPage from '@/components/pages/TenantSettingsPage';
 import TenantBillingPage from '@/components/pages/TenantBillingPage';
 import { isSuperAdmin, isTenantAdmin } from '@/lib/rbac';
 
+// Landing-page mirror of the SDK MODULE_CATALOG (slug + name + category +
+// planMin) plus editorial pitch/accent. We deliberately do NOT import
+// `@operatoros/sdk` here: that package's index re-exports `./catalog.js`
+// with an explicit ESM extension that Next's webpack can't resolve at
+// build time, even with transpilePackages. The values below must stay in
+// lockstep with packages/sdk/src/catalog.ts; the post-merge typecheck
+// catches drift via the matching API seed.
+type ArsenalCategory = 'ops' | 'support' | 'ai';
+const ARSENAL_PRODUCTS: ReadonlyArray<{
+  slug: string; name: string; category: ArsenalCategory; planMin: 'starter' | 'pro' | 'elite';
+  pitch: string; accent: string;
+}> = [
+  { slug: 'tradeflowkit', name: 'TradeFlowKit', category: 'ops', planMin: 'starter',
+    pitch: 'Quote, schedule, and invoice every job from one console — built for trade and field-service crews.', accent: '#58a6ff' },
+  { slug: 'torqueshed', name: 'TorqueShed', category: 'ops', planMin: 'starter',
+    pitch: 'A mechanic-shop dashboard with work orders, parts, labor, and invoicing in one workflow.', accent: '#f6c177' },
+  { slug: 'techdeck', name: 'TechDeck', category: 'ops', planMin: 'starter',
+    pitch: 'Onsite tech command center: dispatch, checklists, and status reporting from any device.', accent: '#56d364' },
+  { slug: 'pulsedesk', name: 'PulseDesk', category: 'support', planMin: 'pro',
+    pitch: 'Lightweight ticketing and triage that keeps small support teams responsive without bloat.', accent: '#bc8cff' },
+  { slug: 'faultlinelab', name: 'FaultlineLab', category: 'support', planMin: 'pro',
+    pitch: 'Diagnostic and root-cause analysis workflow purpose-built for engineering and ops teams.', accent: '#ff7b72' },
+  { slug: 'brandforgeos', name: 'BrandForgeOS', category: 'ops', planMin: 'pro',
+    pitch: 'Body-shop / collision OS that keeps estimates, repairs, and customer comms moving.', accent: '#79c0ff' },
+  { slug: 'snapproofos', name: 'SnapProofOS', category: 'ops', planMin: 'elite',
+    pitch: 'Photo-based proof of work — capture, annotate, and share verified evidence with clients.', accent: '#ffa657' },
+  { slug: 'studyforge-ai', name: 'StudyForge AI', category: 'ai', planMin: 'elite',
+    pitch: 'AI study and training partner that turns reference docs into adaptive learning sessions.', accent: '#7ee787' },
+  { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', category: 'ai', planMin: 'elite',
+    pitch: 'Build-and-ship-fast toolkit for launching internal tools, microsites, and prototypes.', accent: '#d2a8ff' },
+  { slug: 'callcommand-ai', name: 'CallCommand AI', category: 'ai', planMin: 'elite',
+    pitch: 'AI phone agent and call automation for outbound, inbound, and follow-up workflows.', accent: '#79c0ff' },
+  { slug: 'ninjamation', name: 'Ninjamation', category: 'ai', planMin: 'elite',
+    pitch: 'Cross-app workflow automation that connects your stack and removes manual handoffs.', accent: '#bc8cff' },
+];
+
+const CATEGORY_LABEL: Record<ArsenalCategory, string> = {
+  ops: 'Operations',
+  support: 'Support',
+  ai: 'AI',
+};
+
 function LandingPage({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSignIn: () => void }) {
-  const arsenalProducts = [
-    {
-      name: 'OperatorOS',
-      image: '/favicon.svg',
-      useCase: 'Serves as the central operating layer so visitors can unify their apps, teams, billing, and execution in one place.',
-    },
-    {
-      name: 'StudyForge',
-      image: '/icons/icon-192x192.svg',
-      useCase: 'Helps knowledge-based teams turn learning systems into repeatable workflows that improve onboarding speed and consistency.',
-    },
-    {
-      name: 'CallCommand',
-      image: '/icons/icon-144x144.svg',
-      useCase: 'Supports customer-facing and sales-heavy businesses with structured call operations that reduce dropped follow-up and increase close rates.',
-    },
-    {
-      name: 'NinjaLaunchKit',
-      image: '/icons/icon-96x96.svg',
-      useCase: 'Gives founders and operators launch-ready checklists, assets, and workflows to speed up go-to-market execution.',
-    },
-    {
-      name: 'Ninjamation',
-      image: '/icons/icon-72x72.svg',
-      useCase: 'Enables teams to produce motion-ready creative assets that improve engagement for ads, social, and product storytelling.',
-    },
-  ] as const;
+  const arsenalByCategory = (['ops', 'support', 'ai'] as const).map((cat) => ({
+    category: cat,
+    label: CATEGORY_LABEL[cat],
+    products: ARSENAL_PRODUCTS.filter((p) => p.category === cat),
+  }));
 
   const cardStyle = {
     background: 'rgba(22, 27, 34, 0.75)',
@@ -110,18 +130,59 @@ function LandingPage({ onGetStarted, onSignIn }: { onGetStarted: () => void; onS
         </section>
 
         <section style={{ marginTop: 24, ...cardStyle }}>
-          <h2 style={{ margin: '0 0 14px', fontSize: 22 }}>ShotgunNinjas Arsenal</h2>
-          <p style={{ margin: '0 0 16px', color: '#c9d1d9', lineHeight: 1.5 }}>
-            Each product in the arsenal is positioned to create measurable value for the person or business visiting this page.
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+            <h2 style={{ margin: 0, fontSize: 22 }}>The Shotgun Ninjas Arsenal</h2>
+            <a href="https://www.shotgunninjas.com" target="_blank" rel="noreferrer" style={{ color: '#79c0ff', fontSize: 13, textDecoration: 'none' }}>shotgunninjas.com →</a>
+          </div>
+          <p style={{ margin: '8px 0 18px', color: '#c9d1d9', lineHeight: 1.5, maxWidth: 820 }}>
+            OperatorOS plugs you into the full Shotgun Ninjas product family. Subscribe to a plan and any included modules light up
+            inside your tenant — no separate sign-ups, no copy-pasted credentials, one bill.
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-            {arsenalProducts.map((product) => (
-              <article key={product.name} style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: 14, padding: 14 }}>
-                <img src={product.image} alt={`${product.name} product`} style={{ width: '100%', height: 140, objectFit: 'contain', borderRadius: 10, background: '#161b22', border: '1px solid #30363d', padding: 10 }} />
-                <h3 style={{ margin: '12px 0 8px', fontSize: 18 }}>{product.name}</h3>
-                <p style={{ margin: 0, color: '#c9d1d9', lineHeight: 1.45, fontSize: 14 }}>{product.useCase}</p>
-              </article>
-            ))}
+          {arsenalByCategory.map((group) => (
+            <div key={group.category} style={{ marginTop: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: '#8b949e' }}>{group.label}</span>
+                <span style={{ flex: 1, height: 1, background: '#21262d' }} />
+                <span style={{ fontSize: 11, color: '#484f58' }}>{group.products.length} modules</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+                {group.products.map((product) => (
+                  <article
+                    key={product.slug}
+                    data-testid={`landing-arsenal-card-${product.slug}`}
+                    style={{
+                      background: '#0d1117',
+                      border: '1px solid #30363d',
+                      borderRadius: 14,
+                      padding: 16,
+                      borderTop: `3px solid ${product.accent}`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 10,
+                        background: `linear-gradient(135deg, ${product.accent}33 0%, ${product.accent}11 100%)`,
+                        border: `1px solid ${product.accent}55`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 800, color: product.accent, fontSize: 16,
+                      }}>{product.name.charAt(0)}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h3 style={{ margin: 0, fontSize: 16, color: '#f0f6fc' }}>{product.name}</h3>
+                        <div style={{ fontSize: 11, color: '#8b949e', textTransform: 'uppercase', letterSpacing: 0.4 }}>{product.planMin}+ plan</div>
+                      </div>
+                    </div>
+                    <p style={{ margin: 0, color: '#c9d1d9', lineHeight: 1.5, fontSize: 13 }}>{product.pitch}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div style={{ marginTop: 22, padding: 16, borderRadius: 12, background: '#0d1117', border: '1px solid #30363d', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ color: '#c9d1d9', fontSize: 14 }}>Pick a plan, get the matching modules — upgrade anytime to unlock more of the arsenal.</div>
+            <button onClick={onGetStarted} data-testid="button-arsenal-cta" style={{ background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', cursor: 'pointer', fontWeight: 700 }}>Get started free</button>
           </div>
         </section>
       </div>

@@ -5,6 +5,7 @@ import { Building2, Check, ChevronDown, Shield } from 'lucide-react';
 import { useTenant, type TenantSummary } from './TenantProvider';
 import { useAuth } from './AuthProvider';
 import { useToast } from './Toast';
+import { isSuperAdmin } from '@/lib/rbac';
 
 const colors = {
   bgSecondary: '#0d1117',
