@@ -181,7 +181,7 @@ async function activeOverrideForUser(userId: string, moduleId: string) {
 export async function evaluateUserEntitlement(userId: string, moduleId: string): Promise<AccessSource> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user || user.status !== 'active') return null;
-  if (user.role === 'admin') return 'admin_role';
+  if (user.platformRole === 'super_admin') return 'admin_role';
 
   const override = await activeOverrideForUser(userId, moduleId);
   if (override) return override.grant ? 'override' : null;
@@ -345,7 +345,7 @@ export async function getModuleAccessTrace(userId: string, tenantId: string, mod
     planGrants,
     addonGrants,
     overrideGrants,
-    isAdmin: user?.role === 'admin',
+    isAdmin: user?.platformRole === 'super_admin',
     moduleStatus: mod.status,
     reason: access.reason,
   };
@@ -360,7 +360,7 @@ export async function getModuleAccessTrace(userId: string, tenantId: string, mod
  */
 export async function getAccessBreakdown(userId: string): Promise<AccessBreakdown> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.platformRole === 'super_admin';
   const planSlug = await getUserPlanSlug(userId);
 
   const allModules = await db.select().from(modules);

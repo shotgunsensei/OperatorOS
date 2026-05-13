@@ -9,7 +9,7 @@ import {
 } from '../schema.js';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { authenticate, logAudit } from '../lib/auth.js';
-import { resolveTenantContext, requireTenantMember } from '../lib/tenant-auth.js';
+import { resolveTenantContext, requireTenantMember, requireSuperAdmin } from '../lib/tenant-auth.js';
 import { recordModuleUsage } from '../lib/plans.js';
 import {
   hasModuleAccess, getUserModules, getModuleForUser,
@@ -237,7 +237,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // not an end-user concern. Surface the human-readable warning to
     // admins only; non-admins get the boolean so the UI can still adapt
     // its launch flow without exposing internal misconfiguration.
-    const isAdmin = user.role === 'admin';
+    const isAdmin = user.platformRole === 'super_admin';
     return {
       modules: summary,
       ssoFallback: SSO_FALLBACK,
@@ -250,10 +250,10 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   app.get('/v1/modules/debug', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     const { user_id: queryUserId } = request.query as { user_id?: string };
-    if (queryUserId && queryUserId !== user.id && user.role !== 'admin') {
+    if (queryUserId && queryUserId !== user.id && user.platformRole !== 'super_admin') {
       return reply.code(403).send({
-        error: 'Only admins may inspect another user\'s entitlement state.',
-        code: 'FORBIDDEN',
+        error: 'Only super-admins may inspect another user\'s entitlement state.',
+        code: 'PLATFORM_ROLE_REQUIRED',
       });
     }
     const targetUserId = queryUserId || user.id;
@@ -290,10 +290,10 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const user = (request as any).user;
     const { slug } = request.params as { slug: string };
     const { user_id: queryUserId } = request.query as { user_id?: string };
-    if (queryUserId && queryUserId !== user.id && user.role !== 'admin') {
+    if (queryUserId && queryUserId !== user.id && user.platformRole !== 'super_admin') {
       return reply.code(403).send({
-        error: 'Only admins may inspect another user\'s entitlement state.',
-        code: 'FORBIDDEN',
+        error: 'Only super-admins may inspect another user\'s entitlement state.',
+        code: 'PLATFORM_ROLE_REQUIRED',
       });
     }
     const targetUserId = queryUserId || user.id;
@@ -470,7 +470,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // repo) consume `launchUrl`. Emit both so the spec name is
     // canonical and the existing UI keeps working.
     const launchUrl = buildLaunchUrl(mod.baseUrl, token);
-    const isAdmin = user.role === 'admin';
+    const isAdmin = user.platformRole === 'super_admin';
     return {
       token,
       redirect_url: launchUrl,
@@ -676,9 +676,8 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   // Returns the catalog plus per-module entitlement counts grouped by source
   // (plan / addon / override) and a deduplicated total. Used by the admin
   // Modules tab to surface adoption per module.
-  app.get('/v1/modules/admin/all', { preHandler: [authenticate] }, async (request, reply) => {
+  app.get('/v1/modules/admin/all', { preHandler: [requireSuperAdmin] }, async (request, reply) => {
     const user = (request as any).user;
-    if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
     const { planModules, addonSubscriptions, entitlementOverrides, subscriptions } = await import('../schema.js');
     const rows = await db.select().from(modules).orderBy(modules.ord);
     const allPlans = await db.select().from(subscriptionPlans);
@@ -744,9 +743,8 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
   // POST /v1/modules/admin/grant — admin grants a per-user module override.
   // Body: { user_id, module_slug, reason?, expires_at? }
-  app.post('/v1/modules/admin/grant', { preHandler: [authenticate] }, async (request, reply) => {
+  app.post('/v1/modules/admin/grant', { preHandler: [requireSuperAdmin] }, async (request, reply) => {
     const user = (request as any).user;
-    if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
     const { user_id, module_slug, reason, expires_at } = (request.body ?? {}) as {
       user_id?: string; module_slug?: string; reason?: string; expires_at?: string;
     };
@@ -773,9 +771,8 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
   // POST /v1/modules/admin/revoke — admin revokes a per-user module override.
   // Body: { user_id, module_slug, reason? }
-  app.post('/v1/modules/admin/revoke', { preHandler: [authenticate] }, async (request, reply) => {
+  app.post('/v1/modules/admin/revoke', { preHandler: [requireSuperAdmin] }, async (request, reply) => {
     const user = (request as any).user;
-    if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
     const { user_id, module_slug, reason } = (request.body ?? {}) as {
       user_id?: string; module_slug?: string; reason?: string;
     };
@@ -796,9 +793,8 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     return { override: row };
   });
 
-  app.patch('/v1/modules/admin/:slug', { preHandler: [authenticate] }, async (request, reply) => {
+  app.patch('/v1/modules/admin/:slug', { preHandler: [requireSuperAdmin] }, async (request, reply) => {
     const user = (request as any).user;
-    if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
     const { slug } = request.params as { slug: string };
     const body = request.body as any;
 
