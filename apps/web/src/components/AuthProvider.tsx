@@ -89,10 +89,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const register = async (email: string, password: string, name: string) => {
     setAuthError(null);
-    const data = await authApi.register(email, password, name);
-    localStorage.setItem('token', data.token);
-    setActiveTenantId(data.user?.currentTenantId ?? null);
-    setUser(data.user);
+    await authApi.register(email, password, name);
+    throw { code: 'REGISTRATION_SUBMITTED', error: 'If this email is new, your account has been created. Please sign in to continue.' };
   };
 
   const logout = async () => {

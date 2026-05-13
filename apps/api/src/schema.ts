@@ -200,6 +200,7 @@ export const users = pgTable('users', {
   planId: varchar('plan_id', { length: 36 }),
   failedLoginCount: integer('failed_login_count').notNull().default(0),
   lockedUntil: timestamp('locked_until'),
+  tokenVersion: integer('token_version').notNull().default(0),
   deletedAt: timestamp('deleted_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

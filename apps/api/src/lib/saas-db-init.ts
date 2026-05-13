@@ -28,6 +28,7 @@ export async function ensureSaasTables() {
 
     ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_count INTEGER DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
 
     CREATE TABLE IF NOT EXISTS subscription_plans (

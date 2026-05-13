@@ -26,6 +26,7 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +36,10 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
     try {
       await register(email, password, name);
     } catch (err: any) {
+      if (err.code === 'REGISTRATION_SUBMITTED') {
+        setSubmitted(true);
+        return;
+      }
       setError(err.error || 'Registration failed');
     } finally {
       setLoading(false);
@@ -61,6 +66,19 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
           <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>Start your OperatorOS journey</p>
         </div>
 
+        {submitted ? (
+          <div data-testid="register-success" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 16 }}>✓</div>
+            <p style={{ color: colors.text, fontSize: 14, marginBottom: 24 }}>
+              If this email is new, your account has been created. Please sign in to continue.
+            </p>
+            <button data-testid="button-go-login" onClick={() => onSwitch('login')}
+              style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: colors.accent, color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              Sign in
+            </button>
+          </div>
+        ) : (
+          <>
         {error && (
           <div data-testid="register-error" style={{
             padding: '10px 14px', marginBottom: 16, borderRadius: 8,
@@ -99,6 +117,8 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
           <button data-testid="link-login" onClick={() => onSwitch('login')}
             style={{ background: 'none', border: 'none', color: colors.accent, cursor: 'pointer', fontSize: 13 }}>Sign in</button>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

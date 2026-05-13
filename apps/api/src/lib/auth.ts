@@ -16,6 +16,7 @@ export interface JWTPayload {
   userId: string;
   email: string;
   role: string;
+  tokenVersion?: number;
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -57,6 +58,12 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
   if (!user) {
     reply.code(401).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+    return;
+  }
+
+  const tokenVer = payload.tokenVersion ?? 0;
+  if (tokenVer !== user.tokenVersion) {
+    reply.code(401).send({ error: 'Session has been invalidated. Please log in again.', code: 'TOKEN_REVOKED' });
     return;
   }
 
