@@ -25,6 +25,34 @@ import TenantBillingPage from '@/components/pages/TenantBillingPage';
 import { isSuperAdmin, isTenantAdmin } from '@/lib/rbac';
 
 function LandingPage({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSignIn: () => void }) {
+  const arsenalProducts = [
+    {
+      name: 'OperatorOS',
+      image: '/favicon.svg',
+      useCase: 'Serves as the central operating layer so visitors can unify their apps, teams, billing, and execution in one place.',
+    },
+    {
+      name: 'StudyForge',
+      image: '/icons/icon-192x192.svg',
+      useCase: 'Helps knowledge-based teams turn learning systems into repeatable workflows that improve onboarding speed and consistency.',
+    },
+    {
+      name: 'CallCommand',
+      image: '/icons/icon-144x144.svg',
+      useCase: 'Supports customer-facing and sales-heavy businesses with structured call operations that reduce dropped follow-up and increase close rates.',
+    },
+    {
+      name: 'NinjaLaunchKit',
+      image: '/icons/icon-96x96.svg',
+      useCase: 'Gives founders and operators launch-ready checklists, assets, and workflows to speed up go-to-market execution.',
+    },
+    {
+      name: 'Ninjamation',
+      image: '/icons/icon-72x72.svg',
+      useCase: 'Enables teams to produce motion-ready creative assets that improve engagement for ads, social, and product storytelling.',
+    },
+  ] as const;
+
   const cardStyle = {
     background: 'rgba(22, 27, 34, 0.75)',
     border: '1px solid rgba(139, 148, 158, 0.25)',
@@ -37,7 +65,7 @@ function LandingPage({ onGetStarted, onSignIn }: { onGetStarted: () => void; onS
       <div style={{ maxWidth: 1120, margin: '0 auto', padding: '32px 20px 56px' }}>
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 22 }}>O</div>
+            <img src="/favicon.svg" alt="OperatorOS logo" style={{ width: 44, height: 44, borderRadius: 12, background: '#0d1117', border: '1px solid #30363d', padding: 6 }} />
             <div>
               <div style={{ fontSize: 18, fontWeight: 700 }}>OperatorOS</div>
               <div style={{ fontSize: 12, color: '#8b949e' }}>Run your operations, apps, and growth from one system.</div>
@@ -79,6 +107,22 @@ function LandingPage({ onGetStarted, onSignIn }: { onGetStarted: () => void; onS
             <h2 style={{ margin: '0 0 8px', fontSize: 18 }}>How does the ecosystem help daily?</h2>
             <p style={{ margin: 0, color: '#c9d1d9', lineHeight: 1.5 }}>Everyone works from the same source of truth, reducing tool sprawl, miscommunication, and manual handoffs across day-to-day operations.</p>
           </article>
+        </section>
+
+        <section style={{ marginTop: 24, ...cardStyle }}>
+          <h2 style={{ margin: '0 0 14px', fontSize: 22 }}>ShotgunNinjas Arsenal</h2>
+          <p style={{ margin: '0 0 16px', color: '#c9d1d9', lineHeight: 1.5 }}>
+            Each product in the arsenal is positioned to create measurable value for the person or business visiting this page.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+            {arsenalProducts.map((product) => (
+              <article key={product.name} style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: 14, padding: 14 }}>
+                <img src={product.image} alt={`${product.name} product`} style={{ width: '100%', height: 140, objectFit: 'contain', borderRadius: 10, background: '#161b22', border: '1px solid #30363d', padding: 10 }} />
+                <h3 style={{ margin: '12px 0 8px', fontSize: 18 }}>{product.name}</h3>
+                <p style={{ margin: 0, color: '#c9d1d9', lineHeight: 1.45, fontSize: 14 }}>{product.useCase}</p>
+              </article>
+            ))}
+          </div>
         </section>
       </div>
     </div>
