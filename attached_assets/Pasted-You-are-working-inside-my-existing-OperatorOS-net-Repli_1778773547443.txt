@@ -1,0 +1,333 @@
+You are working inside my existing OperatorOS.net Replit project.
+
+Do not rewrite the application from scratch. First inspect the current codebase, routes, auth system, database schema, middleware, environment variables, frontend structure, and existing module/app entitlement logic. Preserve the existing UI/branding and existing custom JWT authentication unless a small additive change is required.
+
+Primary goal:
+Make OperatorOS the central control tower for tenants, tenant admins, module entitlements, and SSO launch into my other Shotgun Ninjas software products.
+
+Critical fixed identity:
+The only account that may ever have Super Admin capability is:
+
+john@shotgunninjas.com
+
+No other account should be able to add, remove, edit, impersonate, transfer, suspend, archive, restore, or globally manage tenants.
+
+This restriction must be enforced server-side, not only hidden in the UI.
+
+Use this default env var if it does not already exist:
+
+ROOT_SUPER_ADMIN_EMAIL=john@shotgunninjas.com
+
+Normalize email checks to lowercase and trimmed values.
+
+Super Admin rules:
+1. A user is Super Admin only when normalized authenticated email equals ROOT_SUPER_ADMIN_EMAIL.
+2. Do not allow any database flag, role record, frontend state, invite flow, or API call to make another user Super Admin.
+3. If a global role table already exists, keep it only as informational or secondary, but the hard gate must still require email === ROOT_SUPER_ADMIN_EMAIL.
+4. Add backend middleware/helper:
+   - requireAuthenticatedUser
+   - requireSuperAdmin
+   - requireTenantAdmin
+   - requireTenantAccess
+5. Super Admin must be able to:
+   - View all tenants
+   - Create tenant
+   - Edit tenant name, slug, status, billing metadata, contact metadata
+   - Suspend tenant
+   - Archive tenant
+   - Restore tenant
+   - Delete tenant only if safe and no destructive cascade occurs without confirmation logic
+   - Assign or remove tenant admin users
+   - View tenant users
+   - View module/app entitlements
+   - Grant/revoke module access
+   - View audit logs
+   - Launch into any module for testing if entitlement allows or if Super Admin override is intentionally implemented
+6. No other user can access these global tenant management APIs.
+7. If a non-super-admin calls a global tenant management route, return 403.
+8. Add audit logging for all tenant lifecycle changes.
+
+Tenant Admin requirements:
+Implement fully working tenant admin accounts.
+
+Tenant Admins are scoped to exactly the tenant or tenants they belong to. They should never be able to globally manage tenants.
+
+Tenant Admin should be able to:
+1. View their tenant dashboard.
+2. View tenant profile/settings for their assigned tenant.
+3. Edit limited tenant details such as business name, support contact, logo, default timezone, and internal notes if the schema supports it.
+4. Invite users into their own tenant.
+5. Create users inside their own tenant.
+6. Deactivate/reactivate users inside their own tenant.
+7. Reset or trigger password reset/invite flow for users inside their own tenant.
+8. Assign tenant-scoped roles only:
+   - tenant_admin
+   - module_admin
+   - billing_manager
+   - support_user
+   - standard_user
+9. Never assign Super Admin.
+10. Never move users between unrelated tenants.
+11. Never edit another tenant.
+12. View module entitlements for their own tenant.
+13. Assign users to modules already enabled for their tenant.
+14. Not purchase/grant global modules unless current billing logic already supports tenant-level purchase flow.
+15. Launch enabled modules via SSO.
+
+Suggested role model:
+Use these role concepts, adapting to the existing schema if one already exists:
+
+Global:
+- super_admin, but hard-gated to ROOT_SUPER_ADMIN_EMAIL only
+
+Tenant-scoped:
+- tenant_admin
+- module_admin
+- billing_manager
+- support_user
+- standard_user
+
+Database/schema requirements:
+Inspect the existing schema first. Add only what is missing.
+
+Minimum entities or equivalent:
+1. tenants
+   - id
+   - name
+   - slug
+   - status: active, suspended, archived
+   - primary_contact_email
+   - billing_customer_id
+   - created_at
+   - updated_at
+
+2. tenant_users or memberships
+   - id
+   - tenant_id
+   - user_id
+   - role
+   - status: active, invited, disabled
+   - created_at
+   - updated_at
+
+3. module_entitlements
+   - id
+   - tenant_id
+   - module_key
+   - status: active, disabled, trialing, canceled
+   - source: manual, stripe, seed, system
+   - stripe_subscription_id nullable
+   - created_at
+   - updated_at
+
+4. audit_logs
+   - id
+   - actor_user_id
+   - actor_email
+   - actor_role_context
+   - tenant_id nullable
+   - action
+   - target_type
+   - target_id
+   - metadata_json
+   - ip_address nullable
+   - user_agent nullable
+   - created_at
+
+SSO requirements:
+OperatorOS must become the identity provider / launcher for the child apps.
+
+Implement an SSO launch flow:
+
+1. User logs into OperatorOS.
+2. User clicks a module/app card.
+3. Backend checks:
+   - user is authenticated
+   - user belongs to the tenant
+   - tenant is active
+   - module entitlement is active for that tenant
+   - user is allowed to access that module
+4. Backend creates a short-lived SSO launch token.
+5. Backend redirects user to the child app SSO consume URL.
+
+Recommended route:
+POST /api/sso/launch/:moduleKey
+
+or if existing routing style differs, use the existing project convention.
+
+The SSO token must include:
+- iss: OperatorOS issuer URL
+- aud: target module key or target app URL
+- sub: OperatorOS user id
+- email
+- name if available
+- tenant_id
+- tenant_slug
+- tenant_name
+- tenant_role
+- module_key
+- entitlements or plan summary if useful
+- iat
+- exp, no longer than 5 minutes
+- jti unique token id
+
+Security:
+Use RS256 signing if practical.
+
+Add env vars:
+OPERATOROS_BASE_URL=https://operatoros.net
+OPERATOROS_SSO_ISSUER=https://operatoros.net
+OPERATOROS_SSO_PRIVATE_KEY=<private key PEM or base64 encoded private key>
+OPERATOROS_SSO_PUBLIC_KEY=<public key PEM or base64 encoded public key>
+
+If RS256 is too disruptive for the current stack, implement HS256 using:
+
+OPERATOROS_SSO_SECRET=<long random secret>
+
+But prefer RS256 because child apps only need the public key.
+
+Add a JWKS or public-key endpoint if practical:
+GET /api/sso/.well-known/jwks.json
+
+or:
+GET /api/sso/public-key
+
+Create an admin SSO settings page for Super Admin only that displays:
+- issuer
+- public key or JWKS URL
+- module launch URLs
+- required env vars for child apps
+- copyable integration values
+
+Module registry:
+Create or update a central module registry with entries similar to:
+
+TRADEFLOWKIT:
+- displayName: TradeFlowKit
+- appUrl: https://tradeflowkit.com
+- ssoConsumeUrl: https://tradeflowkit.com/sso/consume
+- requiredTier/addon info if existing
+
+TECHDECK:
+- displayName: TechDeck
+- appUrl: https://techdeck.app
+- ssoConsumeUrl: https://techdeck.app/sso/consume
+
+TORQUESHED:
+- displayName: TorqueShed
+- appUrl: https://torqueshed.pro
+- ssoConsumeUrl: https://torqueshed.pro/sso/consume
+
+PULSEDESK:
+- displayName: PulseDesk
+- appUrl: https://pulsedesk.support
+- ssoConsumeUrl: https://pulsedesk.support/sso/consume
+
+BF_OS:
+- displayName: BrandForge OS
+- appUrl: https://bf-os.com
+- ssoConsumeUrl: https://bf-os.com/sso/consume
+
+FAULTLINELAB:
+- displayName: Faultline Lab
+- appUrl: https://faultlinelab.com
+- ssoConsumeUrl: https://faultlinelab.com/sso/consume
+
+SNAPPROOFOS:
+- displayName: SnapProofOS
+- appUrl: https://snapproofos.com
+- ssoConsumeUrl: https://snapproofos.com/sso/consume
+
+NINJAMATION:
+- displayName: Ninjamation
+- appUrl: https://ninjamation.com
+- ssoConsumeUrl: https://ninjamation.com/sso/consume
+
+Use existing module keys if the codebase already has them. Do not break current Stripe price ID mappings.
+
+Frontend requirements:
+Add Super Admin navigation only visible to john@shotgunninjas.com:
+- Super Admin
+- Tenants
+- Tenant detail
+- Tenant users
+- Tenant module entitlements
+- SSO settings
+- Audit logs
+
+Add Tenant Admin navigation for tenant admins:
+- Tenant Dashboard
+- Users
+- Roles
+- Module Access
+- Tenant Settings
+
+UI must not show Super Admin features to anyone except john@shotgunninjas.com, but remember the real protection must be backend middleware.
+
+API route protection:
+Audit every tenant-related API route.
+
+Global tenant management routes require requireSuperAdmin.
+
+Tenant-scoped routes require:
+- authenticated user
+- tenant membership
+- tenant role permission
+
+Do not trust tenant_id from the frontend without verifying the authenticated user has access.
+
+SSO launch route must be server-side protected.
+
+Seed/bootstrap:
+On startup or migration seed, ensure john@shotgunninjas.com exists as the root Super Admin identity if the user system allows safe seeding.
+
+Do not overwrite password if the account already exists.
+
+If no tenant exists, create a default Shotgun Ninjas tenant:
+- name: Shotgun Ninjas Productions
+- slug: shotgun-ninjas
+- status: active
+
+Attach john@shotgunninjas.com to it as tenant_admin as well, but Super Admin power still comes only from ROOT_SUPER_ADMIN_EMAIL.
+
+Testing and verification:
+Add or update tests where the stack supports it.
+
+Minimum acceptance tests:
+1. john@shotgunninjas.com can access Super Admin tenant list.
+2. Any other authenticated user receives 403 from Super Admin tenant list.
+3. Tenant admin can manage users only inside their own tenant.
+4. Tenant admin cannot create, archive, suspend, delete, or edit unrelated tenants.
+5. Tenant admin cannot assign Super Admin.
+6. Standard user cannot access tenant admin routes.
+7. SSO launch fails if tenant is suspended.
+8. SSO launch fails if module entitlement is inactive.
+9. SSO launch succeeds for an active user in an active tenant with active module entitlement.
+10. SSO token expires within 5 minutes and contains correct issuer, audience, subject, email, tenant, role, and module claims.
+
+Deliverables:
+1. Implement backend middleware and route protection.
+2. Implement schema/migrations safely.
+3. Implement Super Admin UI.
+4. Implement Tenant Admin UI.
+5. Implement SSO launch endpoint.
+6. Implement SSO public key/JWKS endpoint if using RS256.
+7. Implement audit logging.
+8. Add seed/bootstrap logic.
+9. Add tests or at minimum a manual verification checklist.
+10. Provide a final summary showing:
+   - files changed
+   - env vars required
+   - routes added
+   - how to verify Super Admin
+   - how to verify Tenant Admin
+   - how to configure each child app for SSO
+
+Important constraints:
+- Do not remove existing auth unless absolutely required.
+- Do not break Stripe billing.
+- Do not break existing module cards.
+- Do not expose Super Admin controls through frontend-only logic.
+- Do not allow any account except john@shotgunninjas.com to manage tenants globally.
+- Do not create a path where tenant admins can escalate themselves.
+- Prefer additive, production-safe changes.
