@@ -168,18 +168,37 @@ function SsoSettings() {
   const [data, setData] = useState<any>(null);
   const [err, setErr] = useState<any>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   useEffect(() => {
     apiCall('/v1/platform/sso/settings').then(setData).catch(setErr);
   }, []);
-  const copyEnvBlock = async () => {
-    if (!data?.envBlock) return;
+  const copyText = async (text: string): Promise<boolean> => {
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(data.envBlock);
+        await navigator.clipboard.writeText(text);
+        return true;
       }
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch { /* ignore — fallback shows the block inline anyway */ }
+    } catch { /* fall through */ }
+    return false;
+  };
+  const copyEnvBlock = async () => {
+    if (!data?.envBlock) return;
+    await copyText(data.envBlock);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  const moduleEnvBlock = (m: any): string => [
+    `# OperatorOS SSO env for ${m.displayName} (${m.slug})`,
+    `OPERATOROS_BASE_URL=${data.issuer || 'https://app.operatoros.com'}`,
+    `OPERATOROS_API_URL=${data.issuer || 'https://api.operatoros.com'}`,
+    `APP_ENV=${data.env}`,
+    `MODULE_SLUG=${m.slug}`,
+    'MODULE_SSO_SECRET=<rotate-this-must-match-operatoros>',
+  ].join('\n');
+  const copyModule = async (m: any) => {
+    await copyText(moduleEnvBlock(m));
+    setCopiedSlug(m.slug);
+    setTimeout(() => setCopiedSlug(s => s === m.slug ? null : s), 1500);
   };
   if (err) return <ErrorBlock err={err} />;
   if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
@@ -227,7 +246,7 @@ function SsoSettings() {
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead><tr style={{ background: colors.bgHover, color: colors.textMuted }}>
-            <Th>Module</Th><Th>Slug</Th><Th>Base URL</Th><Th>Launch URL pattern</Th>
+            <Th>Module</Th><Th>Slug</Th><Th>Base URL</Th><Th>Launch URL pattern</Th><Th>Env</Th>
           </tr></thead>
           <tbody>
             {data.modules.map((m: any) => (
@@ -240,6 +259,12 @@ function SsoSettings() {
                     : <Pill tone="red">missing</Pill>}
                 </Td>
                 <Td><code style={{ fontSize: 11 }}>{m.launchUrlPattern}</code></Td>
+                <Td>
+                  <Btn
+                    data-testid={`button-copy-module-env-${m.slug}`}
+                    onClick={() => copyModule(m)}
+                  >{copiedSlug === m.slug ? 'Copied!' : 'Copy child env vars'}</Btn>
+                </Td>
               </tr>
             ))}
           </tbody>
@@ -592,7 +617,7 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
             {t.status !== 'active' && <Btn data-testid="button-reactivate" variant="primary" disabled={busy} onClick={() => lifecycle('reactivate')}>Reactivate</Btn>}
             {t.status !== 'archived' && <Btn data-testid="button-archive" variant="danger" disabled={busy} onClick={() => lifecycle('archive')}>Archive</Btn>}
             {t.status === 'archived' && <Btn data-testid="button-restore" variant="primary" disabled={busy} onClick={() => lifecycle('restore')}>Restore</Btn>}
-            {t.status === 'archived' && <Btn data-testid="button-hard-delete" variant="danger" disabled={busy} onClick={hardDelete}>Delete permanently</Btn>}
+            <Btn data-testid="button-hard-delete" variant="danger" disabled={busy} onClick={hardDelete}>Delete permanently</Btn>
           </div>
         </div>
       </Card>

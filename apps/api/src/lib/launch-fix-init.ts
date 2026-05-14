@@ -162,61 +162,71 @@ async function alignPlanPricesAndStripeIds(): Promise<void> {
   }
 }
 
-async function fixShotgunTenant(): Promise<void> {
+// Task #81: ensure the canonical "Shotgun Ninjas Productions" tenant
+// exists with slug=shotgun-ninjas, status=active, type=company, and
+// john@shotgunninjas.com as owner.
+//
+// Strategy is FIND-OR-CREATE by slug. We never rename or modify any
+// tenant that doesn't already match the canonical slug. If the canonical
+// row exists we only heal owner + membership; otherwise we create it
+// from scratch and re-point john's `current_tenant_id` to it.
+//
+// Exported so the bootstrap idempotency test can call it directly.
+export async function fixShotgunTenant(): Promise<void> {
   const adminEmail =
     process.env.OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL ||
     process.env.ADMIN_EMAIL ||
     'john@shotgunninjas.com';
 
   const [john] = await db.select().from(users).where(eq(users.email, adminEmail)).limit(1);
-  if (!john || !john.currentTenantId) {
-    console.log(`[launch-fix:post] super-admin ${adminEmail} or current_tenant_id missing; skipping`);
+  if (!john) {
+    console.log(`[launch-fix:post] super-admin ${adminEmail} not found; skipping`);
     return;
   }
 
   const desiredName = process.env.SHOTGUN_TENANT_NAME || 'Shotgun Ninjas Productions';
-  const tenantId = john.currentTenantId;
-
-  // Idempotent rename + type flip + canonical slug + active status.
-  // Task #81: the spec requires slug=`shotgun-ninjas`, status=`active`,
-  // type=`company`. We only collide on slug if some other tenant already
-  // owns it (very unlikely outside re-seeded test DBs); in that case we
-  // leave the existing slug alone and log a warning so the operator can
-  // resolve the duplicate manually.
   const desiredSlug = 'shotgun-ninjas';
-  const [tenantBefore] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-  if (tenantBefore) {
-    const updates: Record<string, unknown> = {};
-    if (tenantBefore.name !== desiredName) updates.name = desiredName;
-    if (tenantBefore.type !== 'company') updates.type = 'company';
-    if (tenantBefore.status !== 'active') {
-      updates.status = 'active';
-      updates.suspendedAt = null;
-      updates.archivedAt = null;
-    }
-    if (tenantBefore.slug !== desiredSlug) {
-      const [collide] = await db.select().from(tenants).where(eq(tenants.slug, desiredSlug)).limit(1);
-      if (!collide) {
-        updates.slug = desiredSlug;
-      } else if (collide.id !== tenantId) {
-        console.warn(`[launch-fix:post] Skipping slug rename to "${desiredSlug}" — already owned by tenant ${collide.id}`);
-      }
-    }
-    if (Object.keys(updates).length > 0) {
-      await db.update(tenants).set(updates).where(eq(tenants.id, tenantId));
-      console.log(`[launch-fix:post] Aligned John's tenant -> ${JSON.stringify(updates)}`);
-    }
+
+  // Find-or-create the canonical tenant strictly by slug.
+  let [canonical] = await db.select().from(tenants).where(eq(tenants.slug, desiredSlug)).limit(1);
+  if (!canonical) {
+    [canonical] = await db.insert(tenants).values({
+      name: desiredName,
+      slug: desiredSlug,
+      type: 'company',
+      status: 'active',
+      ownerUserId: john.id,
+    }).returning();
+    console.log(`[launch-fix:post] Created canonical tenant "${desiredName}" (${canonical.id})`);
   }
 
-  // Ensure john owns + is a member of his current tenant. The user row's
-  // ownership column is `currentTenantId`; tenants.ownerUserId may have
-  // drifted in older databases. Both are idempotent.
-  if (tenantBefore && tenantBefore.ownerUserId !== john.id) {
-    await db.update(tenants).set({ ownerUserId: john.id }).where(eq(tenants.id, tenantId));
+  // Heal canonical-tenant ownership + ensure status/type stay aligned.
+  // (Only touches the canonical row, never any other tenant.)
+  const heal: Record<string, unknown> = {};
+  if (canonical.ownerUserId !== john.id) heal.ownerUserId = john.id;
+  if (canonical.type !== 'company') heal.type = 'company';
+  if (canonical.status !== 'active') {
+    heal.status = 'active';
+    heal.suspendedAt = null;
+    heal.archivedAt = null;
   }
+  if (canonical.name !== desiredName) heal.name = desiredName;
+  if (Object.keys(heal).length > 0) {
+    await db.update(tenants).set(heal).where(eq(tenants.id, canonical.id));
+    console.log(`[launch-fix:post] Healed canonical tenant -> ${JSON.stringify(heal)}`);
+  }
+
+  // Ensure john has an owner-role membership row on the canonical tenant.
   await db.insert(tenantUsers).values({
-    tenantId, userId: john.id, role: 'owner',
+    tenantId: canonical.id, userId: john.id, role: 'owner',
   }).onConflictDoNothing({ target: [tenantUsers.tenantId, tenantUsers.userId] });
+
+  // Re-point john's current_tenant_id to canonical only if it isn't
+  // already (so subsequent module backfill writes to the right place).
+  if (john.currentTenantId !== canonical.id) {
+    await db.update(users).set({ currentTenantId: canonical.id }).where(eq(users.id, john.id));
+  }
+  const tenantId = canonical.id;
 
   // Back-fill tenant_modules for every plan-included live module on
   // John's tenant. Mirrors the Demo Co pattern.

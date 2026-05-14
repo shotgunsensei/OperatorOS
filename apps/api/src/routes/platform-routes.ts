@@ -422,8 +422,9 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
 
       const launchableModuleStatuses: ('enabled' | 'trial' | 'purchased' | 'beta')[] = ['enabled', 'trial', 'purchased', 'beta'];
       const activeAddonStatuses: string[] = ['active', 'trialing'];
+      const activeSubscriptionStatuses: ('active' | 'trialing')[] = ['active', 'trialing'];
 
-      const [activeAddons, launchableModulesRows, memberRows] = await Promise.all([
+      const [activeAddons, launchableModulesRows, memberRows, activeSubsRows] = await Promise.all([
         db.select().from(addonSubscriptions).where(and(
           eq(addonSubscriptions.tenantId, id),
           inArray(addonSubscriptions.status, activeAddonStatuses),
@@ -435,6 +436,10 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         db.select({ userId: tenantUsers.userId, platformRole: users.platformRole })
           .from(tenantUsers).innerJoin(users, eq(users.id, tenantUsers.userId))
           .where(eq(tenantUsers.tenantId, id)),
+        db.select().from(subscriptions).where(and(
+          eq(subscriptions.tenantId, id),
+          inArray(subscriptions.status, activeSubscriptionStatuses),
+        )),
       ]);
 
       const nonAdminMembers = memberRows.filter(m => m.platformRole !== 'super_admin');
@@ -442,8 +447,9 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         activeAddons: activeAddons.length,
         launchableModules: launchableModulesRows.length,
         nonAdminMembers: nonAdminMembers.length,
+        activeSubscriptions: activeSubsRows.length,
       };
-      if (dependents.activeAddons > 0 || dependents.launchableModules > 0 || dependents.nonAdminMembers > 0) {
+      if (dependents.activeAddons > 0 || dependents.launchableModules > 0 || dependents.nonAdminMembers > 0 || dependents.activeSubscriptions > 0) {
         return reply.code(409).send({
           error: 'Tenant has dependents that block hard-delete.',
           code: 'TENANT_HAS_DEPENDENTS',
