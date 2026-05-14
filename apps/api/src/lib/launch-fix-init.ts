@@ -197,7 +197,9 @@ export async function fixShotgunTenant(): Promise<void> {
       status: 'active',
       ownerUserId: john.id,
     }).returning();
-    console.log(`[launch-fix:post] Created canonical tenant "${desiredName}" (${canonical.id})`);
+    console.log(`[bootstrap] shotgun-ninjas created (${canonical.id})`);
+  } else {
+    console.log(`[bootstrap] shotgun-ninjas already-present (${canonical.id})`);
   }
 
   // Ensure john has an owner-role membership row on the canonical tenant.

@@ -505,11 +505,16 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         });
       } catch (err: any) {
         // Drizzle wraps everything in a SQL transaction, so on throw the
-        // DB is rolled back: tenant row + audit row are both gone.
+        // DB is rolled back: tenant row + audit row are both gone. Log
+        // the raw error server-side; only return the raw `detail` to the
+        // client outside production to avoid leaking schema info.
+        console.error('[platform.tenants.delete] tx failed', err);
         return reply.code(500).send({
           error: 'Hard-delete failed; tenant rolled back to prior state.',
           code: 'TENANT_DELETE_FAILED',
-          detail: err?.message || String(err),
+          ...(process.env.NODE_ENV === 'production'
+            ? {}
+            : { detail: err?.message || String(err) }),
         });
       }
 
