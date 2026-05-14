@@ -28,6 +28,7 @@ import { and, desc, eq, gte, lte, ilike, isNull, isNotNull, inArray, ne, or } fr
 import { db } from '../db.js';
 import {
   tenants, tenantUsers, users, modules, tenantModules, tenantUserModuleAccess,
+  moduleCallLogs, moduleStudySessions, moduleAutomations, moduleScaffolds,
   addonSubscriptions, entitlementOverrides, billingEvents, adminAuditLogs,
   subscriptions, subscriptionPlans, planModules,
   saasWorkspaces, saasProjects, saasTasks, notes, workspaceMemberships,
@@ -359,6 +360,226 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
   app.post('/v1/platform/tenants/:id/suspend',    { preHandler: [requireSuperAdmin] }, lifecycleHandler('suspended', 'tenant_suspended'));
   app.post('/v1/platform/tenants/:id/reactivate', { preHandler: [requireSuperAdmin] }, lifecycleHandler('active',    'tenant_reactivated'));
   app.post('/v1/platform/tenants/:id/archive',    { preHandler: [requireSuperAdmin] }, lifecycleHandler('archived',  'tenant_archived'));
+
+  // Task #81: explicit restore endpoint. Distinct from `reactivate`
+  // because it only flips an ARCHIVED tenant back to active and audits
+  // as `tenant_restored` (operationally distinct from "un-suspend").
+  app.post<{ Params: { id: string } }>(
+    '/v1/platform/tenants/:id/restore',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const [before] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+      if (before.status !== 'archived') {
+        return reply.code(409).send({
+          error: 'Tenant is not archived; nothing to restore.',
+          code: 'TENANT_NOT_ARCHIVED',
+          currentStatus: before.status,
+        });
+      }
+      const [after] = await db.update(tenants).set({
+        status: 'active', archivedAt: null, suspendedAt: null, updatedAt: new Date(),
+      }).where(eq(tenants.id, id)).returning();
+      await writeAudit({
+        actorUserId: admin.id, tenantId: id,
+        targetType: 'tenant', targetId: id,
+        action: 'tenant_restored',
+        before: pickSafe(before, [...TENANT_SAFE_FIELDS]),
+        after:  pickSafe(after,  [...TENANT_SAFE_FIELDS]),
+        ipAddress: request.ip,
+      }, request);
+      return { tenant: after };
+    },
+  );
+
+  // Task #81: hard-delete tenant (transactional). Refuses with 409
+  // TENANT_HAS_DEPENDENTS if any of the following exist:
+  //   - active or trialing addon_subscriptions for the tenant
+  //   - launchable tenant_modules (status enabled/trial/purchased/beta)
+  //   - members other than the calling super_admin (i.e. anyone whose
+  //     own platform role is NOT super_admin)
+  // Caller must pass `?confirm=<slug>` matching the tenant's slug —
+  // a typed-confirmation guard against fat-finger DELETEs.
+  app.delete<{ Params: { id: string }; Querystring: { confirm?: string } }>(
+    '/v1/platform/tenants/:id',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const confirm = request.query?.confirm;
+
+      const [before] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+
+      if (typeof confirm !== 'string' || confirm !== before.slug) {
+        return reply.code(400).send({
+          error: 'Pass ?confirm=<tenant-slug> to confirm hard-delete.',
+          code: 'TENANT_DELETE_CONFIRM_REQUIRED',
+        });
+      }
+
+      const launchableModuleStatuses: ('enabled' | 'trial' | 'purchased' | 'beta')[] = ['enabled', 'trial', 'purchased', 'beta'];
+      const activeAddonStatuses: string[] = ['active', 'trialing'];
+
+      const [activeAddons, launchableModulesRows, memberRows] = await Promise.all([
+        db.select().from(addonSubscriptions).where(and(
+          eq(addonSubscriptions.tenantId, id),
+          inArray(addonSubscriptions.status, activeAddonStatuses),
+        )),
+        db.select().from(tenantModules).where(and(
+          eq(tenantModules.tenantId, id),
+          inArray(tenantModules.status, launchableModuleStatuses),
+        )),
+        db.select({ userId: tenantUsers.userId, platformRole: users.platformRole })
+          .from(tenantUsers).innerJoin(users, eq(users.id, tenantUsers.userId))
+          .where(eq(tenantUsers.tenantId, id)),
+      ]);
+
+      const nonAdminMembers = memberRows.filter(m => m.platformRole !== 'super_admin');
+      const dependents = {
+        activeAddons: activeAddons.length,
+        launchableModules: launchableModulesRows.length,
+        nonAdminMembers: nonAdminMembers.length,
+      };
+      if (dependents.activeAddons > 0 || dependents.launchableModules > 0 || dependents.nonAdminMembers > 0) {
+        return reply.code(409).send({
+          error: 'Tenant has dependents that block hard-delete.',
+          code: 'TENANT_HAS_DEPENDENTS',
+          dependents,
+        });
+      }
+
+      const beforeSnapshot = pickSafe(before, [...TENANT_SAFE_FIELDS]);
+
+      // Two-step audit pattern:
+      //   1. tenant_delete_requested — written BEFORE the tx so we have a
+      //      forensic record of who attempted the delete and what the
+      //      dependents check returned, even if the tx ultimately fails.
+      //   2. tenant_deleted — written AFTER the tx commits so the
+      //      "deleted" semantics never lie. If the tx rolls back the
+      //      tenant is still present and only the request-row exists.
+      await writeAudit({
+        actorUserId: admin.id, tenantId: id,
+        targetType: 'tenant', targetId: id,
+        action: 'tenant_delete_requested',
+        before: beforeSnapshot,
+        after: null,
+        extra: { dependents },
+        ipAddress: request.ip,
+      }, request);
+
+      try {
+        await db.transaction(async (tx) => {
+          // Order matters: every table that has an FK back to tenants.id
+          // (no cascade) must be cleared first. We also blank out the
+          // optional cross-tenant pointer on `users.current_tenant_id`
+          // so it doesn't FK-fail.
+          //
+          // tenant-FK tables in scope (per schema.ts):
+          //   - tenant_user_module_access, tenant_modules, tenant_invites,
+          //     tenant_users
+          //   - module shell tables (Task #72): module_call_logs,
+          //     module_study_sessions, module_automations, module_scaffolds
+          // Tables with nullable tenant_id (e.g. activity_feed, audit_logs,
+          // notes, projects, etc.) keep their rows for forensic purposes;
+          // those columns are nullable so they don't block delete.
+          await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.tenantId, id));
+          await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.tenantId, id));
+          await tx.delete(moduleAutomations).where(eq(moduleAutomations.tenantId, id));
+          await tx.delete(moduleScaffolds).where(eq(moduleScaffolds.tenantId, id));
+          await tx.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, id));
+          await tx.delete(tenantModules).where(eq(tenantModules.tenantId, id));
+          await tx.delete(tenantInvites).where(eq(tenantInvites.tenantId, id));
+          await tx.delete(tenantUsers).where(eq(tenantUsers.tenantId, id));
+          await tx.update(users).set({ currentTenantId: null })
+            .where(eq(users.currentTenantId, id));
+          await tx.delete(tenants).where(eq(tenants.id, id));
+        });
+      } catch (err: any) {
+        // Drizzle wraps everything in a SQL transaction, so on throw the
+        // DB is rolled back and the tenant row still exists. We surface
+        // the FK violation (or whatever the underlying cause was) so an
+        // operator can extend the cleanup list above.
+        return reply.code(500).send({
+          error: 'Hard-delete failed; tenant rolled back to prior state.',
+          code: 'TENANT_DELETE_FAILED',
+          detail: err?.message || String(err),
+        });
+      }
+
+      // Only audit `tenant_deleted` after the tx commits. This guarantees
+      // the audit trail reflects reality.
+      await writeAudit({
+        actorUserId: admin.id, tenantId: id,
+        targetType: 'tenant', targetId: id,
+        action: 'tenant_deleted',
+        before: beforeSnapshot,
+        after: null,
+        extra: { dependents },
+        ipAddress: request.ip,
+      }, request);
+
+      return { ok: true, deletedTenant: beforeSnapshot };
+    },
+  );
+
+  // Task #81: super-admin SSO Settings endpoint. Returns issuer / env /
+  // TTL / per-module launch URL pattern + a copy-paste env block for
+  // wiring child apps. Secret value is NEVER returned — only a boolean
+  // `secretStatus`. Module baseUrls are public (they're the URLs the
+  // browser is told to redirect to anyway), so they're safe to expose.
+  app.get(
+    '/v1/platform/sso/settings',
+    { preHandler: [requireSuperAdmin] },
+    async () => {
+      const issuer = process.env.OPERATOROS_BASE_URL || '';
+      const apiUrl = process.env.OPERATOROS_API_URL || issuer;
+      const rawEnv = (process.env.APP_ENV || process.env.NODE_ENV || '').toLowerCase().trim();
+      const env: 'prod' | 'staging' | 'dev' =
+        rawEnv === 'prod' || rawEnv === 'production' ? 'prod'
+        : rawEnv === 'staging' || rawEnv === 'stage' ? 'staging'
+        : 'dev';
+      const secretStatus: 'configured' | 'missing' =
+        process.env.MODULE_SSO_SECRET && process.env.MODULE_SSO_SECRET.length >= 16
+          ? 'configured' : 'missing';
+
+      const modRows = await db.select().from(modules);
+      const modulesOut = MODULE_CATALOG.map(c => {
+        const dbRow = modRows.find(m => m.slug === c.slug);
+        const baseUrl = dbRow?.baseUrl || pickEnv([...c.envUrlKeys]) || '';
+        const trimmed = baseUrl.replace(/\/+$/, '');
+        return {
+          slug: c.slug,
+          displayName: c.name,
+          baseUrlConfigured: !!baseUrl,
+          baseUrl: trimmed || null,
+          launchUrlPattern: trimmed ? `${trimmed}/sso?token={jwt}` : `{module_base_url}/sso?token={jwt}`,
+        };
+      });
+
+      // Copy-paste env block for child apps. Secret is a placeholder —
+      // operators rotate the real value in their secrets manager.
+      const envBlock = [
+        '# OperatorOS SSO — paste into the child app secrets',
+        `OPERATOROS_BASE_URL=${issuer || 'https://app.operatoros.com'}`,
+        `OPERATOROS_API_URL=${apiUrl || 'https://api.operatoros.com'}`,
+        `APP_ENV=${env}`,
+        'MODULE_SLUG=<your-lowercase-module-slug>',
+        'MODULE_SSO_SECRET=<rotate-this-must-be-at-least-16-chars-and-match-operatoros>',
+      ].join('\n');
+
+      return {
+        issuer,
+        env,
+        ttlSeconds: 90,
+        secretStatus,
+        modules: modulesOut,
+        envBlock,
+      };
+    },
+  );
 
   // =====================================================================
   // Per-tenant module assignment

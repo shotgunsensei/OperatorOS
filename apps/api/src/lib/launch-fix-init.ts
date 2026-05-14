@@ -177,14 +177,46 @@ async function fixShotgunTenant(): Promise<void> {
   const desiredName = process.env.SHOTGUN_TENANT_NAME || 'Shotgun Ninjas Productions';
   const tenantId = john.currentTenantId;
 
-  // Idempotent rename + type flip.
+  // Idempotent rename + type flip + canonical slug + active status.
+  // Task #81: the spec requires slug=`shotgun-ninjas`, status=`active`,
+  // type=`company`. We only collide on slug if some other tenant already
+  // owns it (very unlikely outside re-seeded test DBs); in that case we
+  // leave the existing slug alone and log a warning so the operator can
+  // resolve the duplicate manually.
+  const desiredSlug = 'shotgun-ninjas';
   const [tenantBefore] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-  if (tenantBefore && (tenantBefore.name !== desiredName || tenantBefore.type !== 'company')) {
-    await db.update(tenants)
-      .set({ name: desiredName, type: 'company' })
-      .where(eq(tenants.id, tenantId));
-    console.log(`[launch-fix:post] Renamed John's tenant -> "${desiredName}" (company)`);
+  if (tenantBefore) {
+    const updates: Record<string, unknown> = {};
+    if (tenantBefore.name !== desiredName) updates.name = desiredName;
+    if (tenantBefore.type !== 'company') updates.type = 'company';
+    if (tenantBefore.status !== 'active') {
+      updates.status = 'active';
+      updates.suspendedAt = null;
+      updates.archivedAt = null;
+    }
+    if (tenantBefore.slug !== desiredSlug) {
+      const [collide] = await db.select().from(tenants).where(eq(tenants.slug, desiredSlug)).limit(1);
+      if (!collide) {
+        updates.slug = desiredSlug;
+      } else if (collide.id !== tenantId) {
+        console.warn(`[launch-fix:post] Skipping slug rename to "${desiredSlug}" — already owned by tenant ${collide.id}`);
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      await db.update(tenants).set(updates).where(eq(tenants.id, tenantId));
+      console.log(`[launch-fix:post] Aligned John's tenant -> ${JSON.stringify(updates)}`);
+    }
   }
+
+  // Ensure john owns + is a member of his current tenant. The user row's
+  // ownership column is `currentTenantId`; tenants.ownerUserId may have
+  // drifted in older databases. Both are idempotent.
+  if (tenantBefore && tenantBefore.ownerUserId !== john.id) {
+    await db.update(tenants).set({ ownerUserId: john.id }).where(eq(tenants.id, tenantId));
+  }
+  await db.insert(tenantUsers).values({
+    tenantId, userId: john.id, role: 'owner',
+  }).onConflictDoNothing({ target: [tenantUsers.tenantId, tenantUsers.userId] });
 
   // Back-fill tenant_modules for every plan-included live module on
   // John's tenant. Mirrors the Demo Co pattern.

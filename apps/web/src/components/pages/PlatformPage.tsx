@@ -27,7 +27,8 @@ export type PlatformView =
   | { kind: 'billing' }
   | { kind: 'pricing' }
   | { kind: 'health' }
-  | { kind: 'audit' };
+  | { kind: 'audit' }
+  | { kind: 'sso' };
 
 const colors = {
   bg: '#010409',
@@ -111,6 +112,7 @@ export default function PlatformPage(props: { view?: View; onNavigate?: (v: View
     { key: 'pricing',   label: 'Pricing' },
     { key: 'health',    label: 'Health' },
     { key: 'audit',     label: 'Audit' },
+    { key: 'sso',       label: 'SSO' },
   ];
 
   return (
@@ -153,6 +155,96 @@ export default function PlatformPage(props: { view?: View; onNavigate?: (v: View
       {view.kind === 'pricing'   && <Pricing />}
       {view.kind === 'health'    && <Health />}
       {view.kind === 'audit'     && <AuditLog />}
+      {view.kind === 'sso'       && <SsoSettings />}
+    </div>
+  );
+}
+
+// -------------------------------------------------------------------------
+// SSO Settings (Task #81)
+// -------------------------------------------------------------------------
+
+function SsoSettings() {
+  const [data, setData] = useState<any>(null);
+  const [err, setErr] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    apiCall('/v1/platform/sso/settings').then(setData).catch(setErr);
+  }, []);
+  const copyEnvBlock = async () => {
+    if (!data?.envBlock) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(data.envBlock);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* ignore — fallback shows the block inline anyway */ }
+  };
+  if (err) return <ErrorBlock err={err} />;
+  if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
+  const secretOk = data.secretStatus === 'configured';
+  return (
+    <div data-testid="sso-settings">
+      <Card style={{ marginBottom: 12 }}>
+        <h3 style={{ margin: 0, fontSize: 14, marginBottom: 8 }}>Identity provider</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, fontSize: 13 }}>
+          <div>
+            <div style={{ color: colors.textMuted, fontSize: 11 }}>Issuer</div>
+            <div data-testid="sso-issuer"><code>{data.issuer || '(not set)'}</code></div>
+          </div>
+          <div>
+            <div style={{ color: colors.textMuted, fontSize: 11 }}>Environment</div>
+            <div data-testid="sso-env"><Pill tone={data.env === 'prod' ? 'green' : data.env === 'staging' ? 'yellow' : 'muted'}>{data.env}</Pill></div>
+          </div>
+          <div>
+            <div style={{ color: colors.textMuted, fontSize: 11 }}>Token TTL</div>
+            <div data-testid="sso-ttl">{data.ttlSeconds}s</div>
+          </div>
+          <div>
+            <div style={{ color: colors.textMuted, fontSize: 11 }}>MODULE_SSO_SECRET</div>
+            <div data-testid="sso-secret-status">
+              <Pill tone={secretOk ? 'green' : 'red'}>{secretOk ? 'configured' : 'missing'}</Pill>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <h3 style={{ margin: 0, fontSize: 14 }}>Child app .env block</h3>
+          <Btn data-testid="button-copy-env-block" variant="primary" onClick={copyEnvBlock}>{copied ? 'Copied!' : 'Copy'}</Btn>
+        </div>
+        <pre data-testid="sso-env-block" style={{
+          margin: 0, padding: 12, background: colors.bg, border: `1px solid ${colors.border}`,
+          borderRadius: 6, color: colors.text, fontSize: 12, overflow: 'auto',
+        }}>{data.envBlock}</pre>
+      </Card>
+
+      <Card style={{ padding: 0 }}>
+        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${colors.border}` }}>
+          <h3 style={{ margin: 0, fontSize: 14 }}>Per-module launch URLs</h3>
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead><tr style={{ background: colors.bgHover, color: colors.textMuted }}>
+            <Th>Module</Th><Th>Slug</Th><Th>Base URL</Th><Th>Launch URL pattern</Th>
+          </tr></thead>
+          <tbody>
+            {data.modules.map((m: any) => (
+              <tr key={m.slug} data-testid={`sso-module-row-${m.slug}`} style={{ borderTop: `1px solid ${colors.border}` }}>
+                <Td>{m.displayName}</Td>
+                <Td><code>{m.slug}</code></Td>
+                <Td>
+                  {m.baseUrlConfigured
+                    ? <code style={{ fontSize: 11 }}>{m.baseUrl}</code>
+                    : <Pill tone="red">missing</Pill>}
+                </Td>
+                <Td><code style={{ fontSize: 11 }}>{m.launchUrlPattern}</code></Td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
     </div>
   );
 }
@@ -431,10 +523,23 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
     }
   }, [tab, id]);
 
-  const lifecycle = async (action: 'suspend' | 'reactivate' | 'archive') => {
+  const lifecycle = async (action: 'suspend' | 'reactivate' | 'archive' | 'restore') => {
     setBusy(true); setErr(null);
     try { await apiCall(`/v1/platform/tenants/${id}/${action}`, { method: 'POST' }); await load(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  const hardDelete = async () => {
+    setErr(null);
+    if (typeof window === 'undefined') return;
+    const slug = data?.tenant?.slug;
+    if (!slug) return;
+    const typed = window.prompt(`Type the tenant slug "${slug}" to permanently delete this tenant. This cannot be undone.`);
+    if (typed !== slug) return;
+    setBusy(true);
+    try {
+      await apiCall(`/v1/platform/tenants/${id}?confirm=${encodeURIComponent(slug)}`, { method: 'DELETE' });
+      onBack();
+    } catch (e) { setErr(e); } finally { setBusy(false); }
   };
   const enableModule = async (slug: string, allowAllMembers: boolean) => {
     setErr(null);
@@ -486,6 +591,8 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
             {t.status !== 'suspended' && t.status !== 'archived' && <Btn data-testid="button-suspend" disabled={busy} onClick={() => lifecycle('suspend')}>Suspend</Btn>}
             {t.status !== 'active' && <Btn data-testid="button-reactivate" variant="primary" disabled={busy} onClick={() => lifecycle('reactivate')}>Reactivate</Btn>}
             {t.status !== 'archived' && <Btn data-testid="button-archive" variant="danger" disabled={busy} onClick={() => lifecycle('archive')}>Archive</Btn>}
+            {t.status === 'archived' && <Btn data-testid="button-restore" variant="primary" disabled={busy} onClick={() => lifecycle('restore')}>Restore</Btn>}
+            {t.status === 'archived' && <Btn data-testid="button-hard-delete" variant="danger" disabled={busy} onClick={hardDelete}>Delete permanently</Btn>}
           </div>
         </div>
       </Card>
