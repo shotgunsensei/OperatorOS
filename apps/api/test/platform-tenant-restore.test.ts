@@ -107,7 +107,7 @@ test('restore: 200 archived → active, audit written', async () => {
 
   const auditRows = await db.select().from(adminAuditLogs).where(and(
     eq(adminAuditLogs.tenantId, archivedTenant.id),
-    eq(adminAuditLogs.action, 'tenant_restored'),
+    eq(adminAuditLogs.action, 'tenant.restored'),
   ));
   assert.ok(auditRows.length >= 1, 'audit row written');
   assert.equal(auditRows[0].adminId, admin.id);

@@ -89,7 +89,8 @@ test('sso/settings: returns spec shape with secret status only (never value)', a
   assert.equal(typeof body.envBlock, 'string');
   assert.ok(body.envBlock.includes('MODULE_SSO_SECRET='), 'env block has the secret KEY name');
   assert.ok(body.envBlock.includes('OPERATOROS_BASE_URL='));
-  assert.ok(body.envBlock.includes('APP_ENV='));
+  assert.ok(body.envBlock.includes('OPERATOROS_SSO_AUDIENCE='));
+  assert.ok(body.envBlock.includes('OPERATOROS_SSO_ENV='));
 
   // Hard rule: secret VALUE must never appear anywhere in the response.
   const serialized = JSON.stringify(body);

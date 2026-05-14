@@ -200,23 +200,9 @@ export async function fixShotgunTenant(): Promise<void> {
     console.log(`[launch-fix:post] Created canonical tenant "${desiredName}" (${canonical.id})`);
   }
 
-  // Heal canonical-tenant ownership + ensure status/type stay aligned.
-  // (Only touches the canonical row, never any other tenant.)
-  const heal: Record<string, unknown> = {};
-  if (canonical.ownerUserId !== john.id) heal.ownerUserId = john.id;
-  if (canonical.type !== 'company') heal.type = 'company';
-  if (canonical.status !== 'active') {
-    heal.status = 'active';
-    heal.suspendedAt = null;
-    heal.archivedAt = null;
-  }
-  if (canonical.name !== desiredName) heal.name = desiredName;
-  if (Object.keys(heal).length > 0) {
-    await db.update(tenants).set(heal).where(eq(tenants.id, canonical.id));
-    console.log(`[launch-fix:post] Healed canonical tenant -> ${JSON.stringify(heal)}`);
-  }
-
   // Ensure john has an owner-role membership row on the canonical tenant.
+  // We DO NOT modify any other field on an already-existing canonical
+  // tenant — name, slug, type, status, ownerUserId are left as-is.
   await db.insert(tenantUsers).values({
     tenantId: canonical.id, userId: john.id, role: 'owner',
   }).onConflictDoNothing({ target: [tenantUsers.tenantId, tenantUsers.userId] });

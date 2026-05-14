@@ -190,9 +190,8 @@ function SsoSettings() {
   const moduleEnvBlock = (m: any): string => [
     `# OperatorOS SSO env for ${m.displayName} (${m.slug})`,
     `OPERATOROS_BASE_URL=${data.issuer || 'https://app.operatoros.com'}`,
-    `OPERATOROS_API_URL=${data.issuer || 'https://api.operatoros.com'}`,
-    `APP_ENV=${data.env}`,
-    `MODULE_SLUG=${m.slug}`,
+    `OPERATOROS_SSO_AUDIENCE=${m.slug}`,
+    `OPERATOROS_SSO_ENV=${data.env}`,
     'MODULE_SSO_SECRET=<rotate-this-must-match-operatoros>',
   ].join('\n');
   const copyModule = async (m: any) => {
@@ -478,7 +477,23 @@ function TenantList({ onOpen }: { onOpen: (id: string) => void }) {
                   <Td><Pill tone={t.status === 'active' ? 'green' : t.status === 'suspended' ? 'yellow' : 'red'}>{t.status}</Pill></Td>
                   <Td>{t.memberCount}</Td>
                   <Td>{t.enabledModuleCount}</Td>
-                  <Td><Btn data-testid={`button-tenant-open-${t.id}`} onClick={() => onOpen(t.id)}>Open</Btn></Td>
+                  <Td>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <Btn data-testid={`button-tenant-open-${t.id}`} onClick={() => onOpen(t.id)}>Open</Btn>
+                      {t.status === 'archived' && (
+                        <Btn
+                          data-testid={`button-tenant-restore-${t.id}`}
+                          variant="primary"
+                          onClick={async () => {
+                            try {
+                              await apiCall(`/v1/platform/tenants/${t.id}/restore`, { method: 'POST' });
+                              load();
+                            } catch (e) { console.error(e); }
+                          }}
+                        >Restore</Btn>
+                      )}
+                    </div>
+                  </Td>
                 </tr>
               ))}
               {rows.length === 0 && <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: colors.textMuted }}>No tenants match.</td></tr>}
@@ -553,16 +568,15 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
     try { await apiCall(`/v1/platform/tenants/${id}/${action}`, { method: 'POST' }); await load(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
-  const hardDelete = async () => {
-    setErr(null);
-    if (typeof window === 'undefined') return;
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const hardDelete = () => { setErr(null); setShowDeleteDialog(true); };
+  const confirmDelete = async () => {
     const slug = data?.tenant?.slug;
     if (!slug) return;
-    const typed = window.prompt(`Type the tenant slug "${slug}" to permanently delete this tenant. This cannot be undone.`);
-    if (typed !== slug) return;
     setBusy(true);
     try {
       await apiCall(`/v1/platform/tenants/${id}?confirm=${encodeURIComponent(slug)}`, { method: 'DELETE' });
+      setShowDeleteDialog(false);
       onBack();
     } catch (e) { setErr(e); } finally { setBusy(false); }
   };
@@ -768,6 +782,65 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
       )}
 
       {tab === 'settings' && <TenantSettings tenant={t} onSaved={load} />}
+
+      {showDeleteDialog && (
+        <DeleteTenantDialog
+          tenant={t}
+          busy={busy}
+          onCancel={() => setShowDeleteDialog(false)}
+          onConfirm={confirmDelete}
+        />
+      )}
+    </div>
+  );
+}
+
+// Modal: typed-slug confirmation gating the destructive Delete button.
+function DeleteTenantDialog({
+  tenant, busy, onCancel, onConfirm,
+}: { tenant: any; busy: boolean; onCancel: () => void; onConfirm: () => void }) {
+  const [typed, setTyped] = useState('');
+  const matches = typed === tenant.slug;
+  return (
+    <div
+      data-testid="dialog-hard-delete"
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+      }}
+    >
+      <Card style={{ width: 480, maxWidth: '92vw' }}>
+        <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Delete tenant permanently?</h3>
+        <p style={{ margin: '0 0 12px 0', color: colors.textMuted, fontSize: 13 }}>
+          This removes <strong>{tenant.name}</strong> and every member, module
+          assignment, invite, and module-shell row attached to it. This action
+          cannot be undone.
+        </p>
+        <p style={{ margin: '0 0 6px 0', fontSize: 13 }}>
+          Type the tenant slug <code>{tenant.slug}</code> to enable the delete button:
+        </p>
+        <input
+          data-testid="input-confirm-slug"
+          autoFocus
+          value={typed}
+          onChange={e => setTyped(e.target.value)}
+          placeholder={tenant.slug}
+          style={{
+            width: '100%', background: colors.bgSecondary, color: colors.text,
+            border: `1px solid ${colors.border}`, borderRadius: 6,
+            padding: '8px 10px', fontSize: 13, marginBottom: 12,
+          }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Btn data-testid="button-cancel-delete" onClick={onCancel} disabled={busy}>Cancel</Btn>
+          <Btn
+            data-testid="button-confirm-delete"
+            variant="danger"
+            disabled={!matches || busy}
+            onClick={onConfirm}
+          >Delete permanently</Btn>
+        </div>
+      </Card>
     </div>
   );
 }

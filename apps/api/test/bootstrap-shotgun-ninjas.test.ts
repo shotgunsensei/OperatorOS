@@ -136,13 +136,17 @@ test('fixShotgunTenant: does not mutate unrelated tenants', async () => {
   assert.equal(unrelatedAfter.type, unrelatedSnapshot.type);
 });
 
-test('fixShotgunTenant: heals canonical when status drifted to archived', async () => {
+test('fixShotgunTenant: never modifies an existing canonical tenant\'s fields', async () => {
+  // The canonical tenant already exists from prior tests. Drift its
+  // status/name and confirm fixShotgunTenant() does NOT change them
+  // back — this codifies the "create-if-missing only" requirement.
   const [canonical] = await db.select().from(tenants).where(eq(tenants.slug, 'shotgun-ninjas'));
-  await db.update(tenants).set({ status: 'archived', archivedAt: new Date() })
+  await db.update(tenants).set({ status: 'archived', archivedAt: new Date(), name: 'Drifted Name' })
     .where(eq(tenants.id, canonical.id));
 
   await fixShotgunTenant();
-  const [healed] = await db.select().from(tenants).where(eq(tenants.id, canonical.id));
-  assert.equal(healed.status, 'active', 'status healed back to active');
-  assert.equal(healed.archivedAt, null, 'archivedAt cleared');
+  const [after] = await db.select().from(tenants).where(eq(tenants.id, canonical.id));
+  assert.equal(after.status, 'archived', 'status NOT mutated back to active');
+  assert.equal(after.name, 'Drifted Name', 'name NOT mutated back');
+  assert.notEqual(after.archivedAt, null, 'archivedAt NOT cleared');
 });

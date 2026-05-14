@@ -38,7 +38,7 @@ import { count } from 'drizzle-orm';
 import { requireSuperAdmin } from '../lib/tenant-auth.js';
 import { sanitizeUser } from '../lib/auth.js';
 import {
-  writeAudit, pickSafe, registerAuditEnforcement,
+  writeAudit, pickSafe, registerAuditEnforcement, AUDIT_FLAG,
   TENANT_SAFE_FIELDS, MODULE_SAFE_FIELDS,
   TENANT_MODULE_SAFE_FIELDS, TENANT_USER_ACCESS_SAFE_FIELDS,
 } from '../lib/audit.js';
@@ -385,7 +385,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       await writeAudit({
         actorUserId: admin.id, tenantId: id,
         targetType: 'tenant', targetId: id,
-        action: 'tenant_restored',
+        action: 'tenant.restored',
         before: pickSafe(before, [...TENANT_SAFE_FIELDS]),
         after:  pickSafe(after,  [...TENANT_SAFE_FIELDS]),
         ipAddress: request.ip,
@@ -459,25 +459,28 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
 
       const beforeSnapshot = pickSafe(before, [...TENANT_SAFE_FIELDS]);
 
-      // Two-step audit pattern:
-      //   1. tenant_delete_requested — written BEFORE the tx so we have a
-      //      forensic record of who attempted the delete and what the
-      //      dependents check returned, even if the tx ultimately fails.
-      //   2. tenant_deleted — written AFTER the tx commits so the
-      //      "deleted" semantics never lie. If the tx rolls back the
-      //      tenant is still present and only the request-row exists.
-      await writeAudit({
-        actorUserId: admin.id, tenantId: id,
-        targetType: 'tenant', targetId: id,
-        action: 'tenant_delete_requested',
-        before: beforeSnapshot,
-        after: null,
-        extra: { dependents },
-        ipAddress: request.ip,
-      }, request);
-
       try {
         await db.transaction(async (tx) => {
+          // Audit `tenant.deleted` BEFORE the actual delete commits so
+          // the snapshot exists and an operator can replay state. We
+          // write the audit row inside the same tx (raw insert because
+          // writeAudit() uses the top-level db handle); if any step
+          // below fails, the audit row is rolled back with the rest.
+          await tx.insert(adminAuditLogs).values({
+            adminId: admin.id,
+            action: 'tenant.deleted',
+            targetUserId: null,
+            tenantId: id,
+            details: {
+              targetType: 'tenant',
+              targetId: id,
+              before: beforeSnapshot,
+              after: null,
+              dependents,
+            },
+            ipAddress: request.ip ?? null,
+          });
+          (request as any)[AUDIT_FLAG] = true;
           // Order matters: every table that has an FK back to tenants.id
           // (no cascade) must be cleared first. We also blank out the
           // optional cross-tenant pointer on `users.current_tenant_id`
@@ -488,9 +491,6 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           //     tenant_users
           //   - module shell tables (Task #72): module_call_logs,
           //     module_study_sessions, module_automations, module_scaffolds
-          // Tables with nullable tenant_id (e.g. activity_feed, audit_logs,
-          // notes, projects, etc.) keep their rows for forensic purposes;
-          // those columns are nullable so they don't block delete.
           await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.tenantId, id));
           await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.tenantId, id));
           await tx.delete(moduleAutomations).where(eq(moduleAutomations.tenantId, id));
@@ -505,27 +505,13 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         });
       } catch (err: any) {
         // Drizzle wraps everything in a SQL transaction, so on throw the
-        // DB is rolled back and the tenant row still exists. We surface
-        // the FK violation (or whatever the underlying cause was) so an
-        // operator can extend the cleanup list above.
+        // DB is rolled back: tenant row + audit row are both gone.
         return reply.code(500).send({
           error: 'Hard-delete failed; tenant rolled back to prior state.',
           code: 'TENANT_DELETE_FAILED',
           detail: err?.message || String(err),
         });
       }
-
-      // Only audit `tenant_deleted` after the tx commits. This guarantees
-      // the audit trail reflects reality.
-      await writeAudit({
-        actorUserId: admin.id, tenantId: id,
-        targetType: 'tenant', targetId: id,
-        action: 'tenant_deleted',
-        before: beforeSnapshot,
-        after: null,
-        extra: { dependents },
-        ipAddress: request.ip,
-      }, request);
 
       return { ok: true, deletedTenant: beforeSnapshot };
     },
@@ -565,14 +551,16 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         };
       });
 
-      // Copy-paste env block for child apps. Secret is a placeholder —
-      // operators rotate the real value in their secrets manager.
+      // Copy-paste env block for child apps. Required keys per the
+      // child-sso-integration-prompt.md contract: OPERATOROS_BASE_URL,
+      // OPERATOROS_SSO_AUDIENCE (the module slug the child verifies),
+      // OPERATOROS_SSO_ENV (matches OperatorOS-issued tokens), and
+      // MODULE_SSO_SECRET (placeholder — operator rotates it).
       const envBlock = [
         '# OperatorOS SSO — paste into the child app secrets',
         `OPERATOROS_BASE_URL=${issuer || 'https://app.operatoros.com'}`,
-        `OPERATOROS_API_URL=${apiUrl || 'https://api.operatoros.com'}`,
-        `APP_ENV=${env}`,
-        'MODULE_SLUG=<your-lowercase-module-slug>',
+        'OPERATOROS_SSO_AUDIENCE=<your-lowercase-module-slug>',
+        `OPERATOROS_SSO_ENV=${env}`,
         'MODULE_SSO_SECRET=<rotate-this-must-be-at-least-16-chars-and-match-operatoros>',
       ].join('\n');
 

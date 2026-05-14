@@ -54,9 +54,9 @@ TTL is **90 seconds**. Reject anything older.
 | name                 | purpose                                                  |
 | -------------------- | -------------------------------------------------------- |
 | `MODULE_SSO_SECRET`  | Shared HS256 signing secret. ≥16 characters. Same value as on OperatorOS. |
-| `OPERATOROS_BASE_URL`| Expected `iss` value. Reject tokens with any other issuer. |
-| `MODULE_SLUG`        | This child app's lowercase slug. Must match `aud` and `module_slug`. |
-| `APP_ENV`            | `prod` / `staging` / `dev`. Reject tokens whose `env` differs. |
+| `OPERATOROS_BASE_URL`   | Expected `iss` value. Reject tokens with any other issuer. |
+| `OPERATOROS_SSO_AUDIENCE` | This child app's lowercase slug. Must match `aud` and `module_slug`. |
+| `OPERATOROS_SSO_ENV`    | `prod` / `staging` / `dev`. Reject tokens whose `env` differs. |
 | `OPERATOROS_API_URL` | Where to POST `/v1/modules/sso/consume` (typically same host as `iss`). |
 
 ## /sso route — server-side flow
@@ -65,8 +65,8 @@ TTL is **90 seconds**. Reject anything older.
 2. Verify the JWT with `MODULE_SSO_SECRET`, algorithm `HS256` ONLY.
    Reject `alg=none` and any RS256 token.
 3. Verify `iss === OPERATOROS_BASE_URL` (exact string match).
-4. Verify `aud === MODULE_SLUG` and `module_slug === MODULE_SLUG`.
-5. Verify `env === APP_ENV`.
+4. Verify `aud === OPERATOROS_SSO_AUDIENCE` and `module_slug === OPERATOROS_SSO_AUDIENCE`.
+5. Verify `env === OPERATOROS_SSO_ENV`.
 6. Verify `exp` is in the future and `iat` is not in the future (allow
    ±5s clock skew). Token age (`now - iat`) must be ≤ 90 seconds.
 7. **Mandatory**: `POST {OPERATOROS_API_URL}/v1/modules/sso/consume`
@@ -107,8 +107,8 @@ TTL is **90 seconds**. Reject anything older.
 | 400  | `bad_request`             | malformed JWT                                     |
 | 401  | `signature_invalid`       | HS256 verify failed                               |
 | 401  | `issuer_mismatch`         | `iss` is not `OPERATOROS_BASE_URL`                |
-| 401  | `audience_mismatch`       | `aud` ≠ `MODULE_SLUG`                             |
-| 401  | `env_mismatch`            | `env` ≠ `APP_ENV`                                 |
+| 401  | `audience_mismatch`       | `aud` ≠ `OPERATOROS_SSO_AUDIENCE`                 |
+| 401  | `env_mismatch`            | `env` ≠ `OPERATOROS_SSO_ENV`                      |
 | 401  | `expired`                 | `exp` in the past, or `iat` older than 90s        |
 | 401  | `clock_skew`              | `iat` more than 5s in the future                  |
 | 401  | `consume_failed`          | `/v1/modules/sso/consume` returned 4xx            |

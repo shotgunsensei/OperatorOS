@@ -174,7 +174,7 @@ test('hard-delete: 200 deletes tenant + writes audit before delete', async () =>
 
   const auditRows = await db.select().from(adminAuditLogs).where(and(
     eq(adminAuditLogs.tenantId, t.id),
-    eq(adminAuditLogs.action, 'tenant_deleted'),
+    eq(adminAuditLogs.action, 'tenant.deleted'),
   ));
   assert.ok(auditRows.length >= 1, 'audit row written');
   const audit = auditRows[0];
