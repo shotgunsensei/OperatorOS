@@ -42,6 +42,23 @@ export const brand = {
   markBgFill: 'rgba(8, 11, 18, 0.92)',
   // Radial backdrop used behind marketing hero headlines.
   heroRadial: 'radial-gradient(60% 50% at 50% 30%, rgba(0, 229, 255, 0.12) 0%, rgba(124, 58, 237, 0.08) 45%, transparent 70%)',
+  // Module status badge palette — surfaced as tokens so marketing
+  // components never reach for raw hex/rgba literals. Each tuple is
+  // (text, background tint, border tint) and reuses the same hue as
+  // the underlying accent color (green=Available, amber=Beta,
+  // slate=ComingSoon, violet=Locked).
+  statusAvailableText:   '#22C55E',
+  statusAvailableBg:     'rgba(34, 197, 94, 0.12)',
+  statusAvailableBorder: 'rgba(34, 197, 94, 0.35)',
+  statusBetaText:        '#F59E0B',
+  statusBetaBg:          'rgba(245, 158, 11, 0.12)',
+  statusBetaBorder:      'rgba(245, 158, 11, 0.35)',
+  statusComingSoonText:   '#A7B0C0',
+  statusComingSoonBg:     'rgba(148, 163, 184, 0.10)',
+  statusComingSoonBorder: 'rgba(148, 163, 184, 0.28)',
+  statusLockedText:   '#7C3AED',
+  statusLockedBg:     'rgba(124, 58, 237, 0.12)',
+  statusLockedBorder: 'rgba(124, 58, 237, 0.35)',
   fontDisplay: '"Space Grotesk", Inter, system-ui, sans-serif',
   fontBody: 'Inter, system-ui, sans-serif',
   contentMaxWidth: 1200,

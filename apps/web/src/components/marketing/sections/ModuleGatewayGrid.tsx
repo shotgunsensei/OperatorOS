@@ -6,11 +6,13 @@ import { ArrowUpRight } from 'lucide-react';
 import { brand } from '@/lib/brand';
 import {
   MARKETING_MODULES,
+  applyEntitlements,
   statusBadgeColor,
   type MarketingModule,
 } from '@/lib/marketing-catalog';
 import { moduleCtaTarget } from '@/lib/marketing-cta';
 import { useAuth } from '../../AuthProvider';
+import { useEntitlements } from '@/lib/use-entitlements';
 
 interface ModuleGatewayGridProps {
   /** Optional heading override for use on `/modules` vs. the homepage. */
@@ -31,6 +33,12 @@ export default function ModuleGatewayGrid({
   testId = 'marketing-module-grid',
 }: ModuleGatewayGridProps) {
   const { user } = useAuth();
+  // Overlay live entitlement state onto the static catalog. Anonymous
+  // viewers get null → static defaults. Signed-in viewers see every
+  // module they aren't entitled to flip to "Locked", which routes the
+  // CTA to /pricing instead of /app.
+  const entitled = useEntitlements();
+  const modules = applyEntitlements(MARKETING_MODULES, entitled);
 
   return (
     <section
@@ -67,7 +75,7 @@ export default function ModuleGatewayGrid({
           gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
         }}
       >
-        {MARKETING_MODULES.map((m) => (
+        {modules.map((m) => (
           <ModuleCard key={m.slug} module={m} signedIn={!!user} />
         ))}
       </div>

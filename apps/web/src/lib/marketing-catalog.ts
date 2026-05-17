@@ -3,20 +3,20 @@
  *
  * A public-safe mirror of the 11-module Shotgun Ninjas ecosystem used
  * by Phase 2 marketing surfaces (homepage orbit, gateway grid,
- * /modules page, /how-it-works page). Mirrors the order, slug, name,
- * plan tier, and default status from `packages/sdk/src/catalog.ts`
- * and adds the outcome-led one-sentence copy and four-label status
- * mapping that public visitors should see.
+ * /modules page, /how-it-works page). Mirrors the slug/name/plan/ord
+ * from `packages/sdk/src/catalog.ts` and adds the outcome-led
+ * one-sentence copy plus the four-label status mapping.
  *
  * Inlined intentionally — the SDK uses explicit `.js` extensions on
  * its ESM imports for Node's bundler resolver, which Next/webpack
- * cannot resolve from a `.ts` source. Re-stating the 11 entries here
- * keeps the marketing surface bundleable without dragging the API's
- * runtime contract into the browser.
+ * cannot resolve from a `.ts` source. If a module is added or
+ * renamed in `packages/sdk/src/catalog.ts`, mirror it here too.
  *
- * If a module is added or renamed in `packages/sdk/src/catalog.ts`,
- * mirror the change here too.
+ * Colors come from `brand.ts` only — no raw hex/rgba literals live
+ * here, which keeps token discipline consistent with Phase 1.
  */
+
+import { brand } from './brand';
 
 export type ModulePlanTier = 'starter' | 'pro' | 'elite';
 export type ModuleDefaultStatus = 'live' | 'beta' | 'coming_soon';
@@ -91,35 +91,44 @@ export const MARKETING_MODULES: readonly MarketingModule[] = SOURCE
     source: entry,
   }));
 
-export function statusBadgeColor(status: MarketingStatus): {
+/**
+ * Overlay live entitlement state onto the static marketing catalog.
+ *
+ * `entitledSlugs` is a Set of module slugs the signed-in viewer has
+ * actual access to (sourced from `modulesApi.list()` at the
+ * AuthProvider boundary — see `useEntitlements()`). When the viewer
+ * is signed in but the module is not in the set, the badge flips to
+ * `'Locked'` so the CTA helper routes them to `/pricing` instead of
+ * `/app`. Anonymous viewers (entitledSlugs === null) see the static
+ * defaults.
+ */
+export function applyEntitlements(
+  modules: readonly MarketingModule[],
+  entitledSlugs: ReadonlySet<string> | null,
+): MarketingModule[] {
+  if (!entitledSlugs) return modules.slice();
+  return modules.map((m) => {
+    if (m.status === 'Coming Soon' || m.status === 'Beta') return m;
+    if (entitledSlugs.has(m.slug)) return { ...m, status: 'Available' as const };
+    return { ...m, status: 'Locked' as const };
+  });
+}
+
+export interface StatusBadgePalette {
   text: string;
   bg: string;
   border: string;
-} {
+}
+
+export function statusBadgeColor(status: MarketingStatus): StatusBadgePalette {
   switch (status) {
     case 'Available':
-      return {
-        text: 'var(--brand-accent-green, #22C55E)',
-        bg: 'rgba(34, 197, 94, 0.12)',
-        border: 'rgba(34, 197, 94, 0.35)',
-      };
+      return { text: brand.statusAvailableText, bg: brand.statusAvailableBg, border: brand.statusAvailableBorder };
     case 'Beta':
-      return {
-        text: 'var(--brand-accent-amber, #F59E0B)',
-        bg: 'rgba(245, 158, 11, 0.12)',
-        border: 'rgba(245, 158, 11, 0.35)',
-      };
+      return { text: brand.statusBetaText,      bg: brand.statusBetaBg,      border: brand.statusBetaBorder };
     case 'Coming Soon':
-      return {
-        text: 'var(--brand-text-secondary, #A7B0C0)',
-        bg: 'rgba(148, 163, 184, 0.10)',
-        border: 'rgba(148, 163, 184, 0.28)',
-      };
+      return { text: brand.statusComingSoonText, bg: brand.statusComingSoonBg, border: brand.statusComingSoonBorder };
     case 'Locked':
-      return {
-        text: 'var(--brand-accent-violet, #7C3AED)',
-        bg: 'rgba(124, 58, 237, 0.12)',
-        border: 'rgba(124, 58, 237, 0.35)',
-      };
+      return { text: brand.statusLockedText,    bg: brand.statusLockedBg,    border: brand.statusLockedBorder };
   }
 }

@@ -1,19 +1,21 @@
 /**
- * Auth-aware CTA targeting for the public marketing surface.
+ * Auth-aware + entitlement-aware CTA targeting for marketing surfaces.
  *
- * Centralizes the rule that the entire Phase 2 homepage relies on:
+ * Targeting matrix:
  *
- *   - Signed-in visitor   → `/app` (the console, where SSO handoff
- *                            into individual modules already lives).
- *   - Signed-out visitor  → `/login` (which then bounces them to
- *                            `/app` after auth).
- *   - Locked module       → `/pricing` (regardless of auth state) so
- *                            visitors discover the upgrade path before
- *                            they hit a 403 in-app.
+ *   | Viewer state                  | Module status     | Destination |
+ *   | ----------------------------- | ----------------- | ----------- |
+ *   | Signed out                    | Available / Beta  | /login      |
+ *   | Signed in, entitled           | Available / Beta  | /app        |
+ *   | Signed in, NOT entitled       | (status=Locked)   | /pricing    |
+ *   | Anyone                        | Coming Soon       | /pricing    |
+ *   | Anyone                        | Locked            | /pricing    |
  *
- * Marketing CTAs never perform the actual SSO handoff — that still
- * happens inside the console once the user is authenticated and the
- * tenant context is resolved.
+ * Entitlement is surfaced through `MarketingModule.status` —
+ * `applyEntitlements()` in `marketing-catalog.ts` flips an unentitled
+ * signed-in viewer's module status to `'Locked'` so this helper only
+ * has to read the status field. Marketing CTAs never perform the
+ * actual SSO handoff; that still lives inside `/app`.
  */
 
 import type { MarketingStatus } from './marketing-catalog';
@@ -35,6 +37,7 @@ export function moduleCtaTarget(
 ): CtaTarget {
   if (status === 'Coming Soon') return { href: '/pricing', label: 'Notify me' };
   if (status === 'Locked')      return { href: '/pricing', label: 'Unlock' };
+  // Available / Beta — surface depends on auth state only.
   if (signedIn)                 return { href: '/app',     label: 'Open' };
   return { href: '/login', label: 'Sign in to launch' };
 }
