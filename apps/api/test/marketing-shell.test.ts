@@ -261,41 +261,43 @@ test('marketing shell · HTTP — public marketing routes return 200', { concurr
   }
 });
 
-test('marketing shell · HTTP — /app reaches the inline LoginPage for anonymous users', { concurrency: false }, async (t) => {
+test('marketing shell · HTTP — /app and nested /app/* 307 anonymous traffic to /login', { concurrency: false }, async (t) => {
   if (!(await webIsUp())) {
     t.skip('Next dev server not reachable at ' + WEB_BASE);
     return;
   }
-  // /app is exempt from middleware because it IS the login surface —
-  // ConsolePage renders LoginPage when there is no user. Gating it
-  // would create a redirect loop with the "Launch console" CTA.
-  const r = await probe('/app', { redirect: 'manual' });
-  assert.equal(r.status, 200, 'GET /app should return 200 so the LoginPage can render');
-  const body = await r.text();
-  // ConsolePage is a client component, so the LoginPage form itself is
-  // injected after hydration — the SSR'd HTML carries the branded
-  // shell. The contract here is "/app is reachable without a cookie";
-  // confirming a 200 + the OperatorOS shell is sufficient.
-  assert.match(body, /OperatorOS/i, 'GET /app should serve the branded shell to anonymous visitors');
-});
-
-test('marketing shell · HTTP — nested /app/* console routes 307 anonymous traffic to /', { concurrency: false }, async (t) => {
-  if (!(await webIsUp())) {
-    t.skip('Next dev server not reachable at ' + WEB_BASE);
-    return;
-  }
-  // Nested console surfaces (Platform Command, per-module pages) are
-  // gated server-side: anonymous traffic gets bounced to / so we don't
-  // render half-hydrated console shells or fire authenticated /me calls.
-  for (const path of ['/app/platform', '/app/platform/tenants', '/app/apps/example']) {
+  // The console tree is fully auth-gated server-side: every /app/*
+  // request without the `token` cookie 307-redirects to /login with
+  // ?next= preserving the intended destination. The sign-in flow
+  // lives at /login (its own route) so /app can enforce this contract
+  // without creating a redirect loop with the "Sign in" CTA.
+  for (const path of ['/app', '/app/platform', '/app/platform/tenants', '/app/apps/example']) {
     const r = await probe(path, { redirect: 'manual' });
     assert.ok(
       r.status === 307 || r.status === 302,
       `GET ${path} without auth cookie should redirect (got ${r.status})`,
     );
     const loc = r.headers.get('location') ?? '';
-    assert.ok(loc.startsWith('/?') || loc === '/', `Location should point at marketing, got ${loc}`);
+    assert.ok(
+      loc.includes('/login'),
+      `GET ${path} should redirect to /login (got Location: ${loc})`,
+    );
+    assert.ok(
+      loc.includes('next='),
+      `Redirect should preserve ?next= for post-login deep-linking (got ${loc})`,
+    );
   }
+});
+
+test('marketing shell · HTTP — /login is reachable and renders the sign-in surface', { concurrency: false }, async (t) => {
+  if (!(await webIsUp())) {
+    t.skip('Next dev server not reachable at ' + WEB_BASE);
+    return;
+  }
+  const r = await probe('/login', { redirect: 'manual' });
+  assert.equal(r.status, 200, 'GET /login should return 200 so anonymous users can sign in');
+  const body = await r.text();
+  assert.match(body, /OperatorOS/i, 'GET /login should serve the branded shell');
 });
 
 test('marketing shell · HTTP — /app/invites/:token bypasses middleware for the pre-auth handoff', { concurrency: false }, async (t) => {
@@ -321,8 +323,28 @@ test('marketing shell · /app/* server-side auth gate (middleware)', () => {
   assert.match(src, /matcher.*\/app/);
   assert.match(src, /token/, 'middleware should check the auth cookie issued by /v1/auth/login');
   assert.match(src, /NextResponse\.redirect/);
-  assert.match(src, /pathname === '\/app'/, 'middleware must exempt /app so LoginPage is reachable');
+  assert.match(src, /\/login/, 'middleware must redirect anonymous traffic to the /login surface');
   assert.match(src, /\/app\/invites\//, 'middleware must exempt /app/invites/:token for the pre-auth handoff');
+  // /app itself is no longer exempt — the dedicated /login route
+  // means we can enforce the "/app/* requires auth" contract on every
+  // console surface, including the root /app landing.
+  assert.doesNotMatch(
+    src,
+    /pathname === ['"]\/app['"]/,
+    'middleware must not exempt /app (login lives at /login, not /app)',
+  );
+});
+
+test('marketing shell · /login route exists and lives outside the console tree', () => {
+  // The login route must be a top-level public surface so middleware
+  // never runs on it and its CTAs from MarketingNavbar don't loop.
+  const src = read('src/app/login/page.tsx');
+  assert.match(src, /LoginPage/, '/login should render the LoginPage component');
+  assert.match(src, /AuthProvider/, '/login must wrap LoginPage in AuthProvider');
+  assert.match(src, /next/, '/login should honor a ?next= query for post-login deep-linking');
+  // MarketingNavbar CTAs must point at /login, never directly at /app.
+  const nav = read('src/components/marketing/MarketingNavbar.tsx');
+  assert.match(nav, /href="\/login"/, 'Sign-in CTA should link to /login');
 });
 
 test('marketing shell · PWA icon set is rebranded to the Operator mark', () => {

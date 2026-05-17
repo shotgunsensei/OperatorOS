@@ -178,14 +178,14 @@ export default function MarketingNavbar() {
               ) : (
                 <>
                   <Link
-                    href="/app"
+                    href="/login"
                     className="operatoros-cta-secondary"
                     data-testid="cta-sign-in"
                   >
                     Sign in
                   </Link>
                   <Link
-                    href="/app"
+                    href="/login"
                     className="operatoros-cta-primary"
                     data-testid="cta-launch-console"
                   >
@@ -258,7 +258,7 @@ export default function MarketingNavbar() {
                 ) : (
                   <>
                     <Link
-                      href="/app"
+                      href="/login"
                       className="operatoros-cta-secondary"
                       style={{ flex: 1, justifyContent: 'center' }}
                       data-testid="cta-mobile-sign-in"
@@ -266,7 +266,7 @@ export default function MarketingNavbar() {
                       Sign in
                     </Link>
                     <Link
-                      href="/app"
+                      href="/login"
                       className="operatoros-cta-primary"
                       style={{ flex: 1, justifyContent: 'center' }}
                       data-testid="cta-mobile-launch-console"

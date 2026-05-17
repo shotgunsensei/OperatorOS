@@ -37,9 +37,6 @@ import { NextResponse, type NextRequest } from 'next/server';
 const AUTH_COOKIE = 'token';
 
 function isExempt(pathname: string): boolean {
-  // /app exact (login surface) — note matcher gives us /app/:path*,
-  // and `pathname === '/app'` is the canonical signed-out landing.
-  if (pathname === '/app') return true;
   // Invite-accept flow handles its own pre-auth logic + localStorage
   // handoff; gating it would break invitation emails.
   if (pathname.startsWith('/app/invites/')) return true;
@@ -50,13 +47,13 @@ export function middleware(req: NextRequest) {
   if (isExempt(req.nextUrl.pathname)) return NextResponse.next();
   if (req.cookies.has(AUTH_COOKIE)) return NextResponse.next();
 
-  // Anonymous → bounce to marketing home. `?next=` preserves the
-  // intended destination so a future iteration of ConsolePage can
-  // honor it after sign-in to deep-link signed-in users back to the
-  // surface they originally tried to reach.
+  // Anonymous → bounce to the dedicated /login surface. `?next=`
+  // preserves the intended destination so LoginGate can deep-link the
+  // user back to where they tried to go (e.g. /app/platform/tenants)
+  // immediately after sign-in.
   const url = req.nextUrl.clone();
   const target = url.pathname + (url.search || '');
-  url.pathname = '/';
+  url.pathname = '/login';
   url.search = `?next=${encodeURIComponent(target)}`;
   return NextResponse.redirect(url, 307);
 }
