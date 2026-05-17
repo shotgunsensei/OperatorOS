@@ -261,48 +261,68 @@ test('marketing shell · HTTP — public marketing routes return 200', { concurr
   }
 });
 
-test('marketing shell · HTTP — /app is auth-gated and 307s anonymous traffic to /', { concurrency: false }, async (t) => {
+test('marketing shell · HTTP — /app reaches the inline LoginPage for anonymous users', { concurrency: false }, async (t) => {
   if (!(await webIsUp())) {
     t.skip('Next dev server not reachable at ' + WEB_BASE);
     return;
   }
+  // /app is exempt from middleware because it IS the login surface —
+  // ConsolePage renders LoginPage when there is no user. Gating it
+  // would create a redirect loop with the "Launch console" CTA.
   const r = await probe('/app', { redirect: 'manual' });
-  assert.ok(
-    r.status === 307 || r.status === 302,
-    `GET /app without auth cookie should redirect (got ${r.status})`,
-  );
-  const loc = r.headers.get('location') ?? '';
-  assert.ok(
-    loc === '/' || loc.startsWith('/?') || loc.endsWith('/'),
-    `GET /app should redirect to / (got Location: ${loc})`,
-  );
+  assert.equal(r.status, 200, 'GET /app should return 200 so the LoginPage can render');
+  const body = await r.text();
+  // ConsolePage is a client component, so the LoginPage form itself is
+  // injected after hydration — the SSR'd HTML carries the branded
+  // shell. The contract here is "/app is reachable without a cookie";
+  // confirming a 200 + the OperatorOS shell is sufficient.
+  assert.match(body, /OperatorOS/i, 'GET /app should serve the branded shell to anonymous visitors');
 });
 
-test('marketing shell · HTTP — /app nested console routes also require auth', { concurrency: false }, async (t) => {
+test('marketing shell · HTTP — nested /app/* console routes 307 anonymous traffic to /', { concurrency: false }, async (t) => {
   if (!(await webIsUp())) {
     t.skip('Next dev server not reachable at ' + WEB_BASE);
     return;
   }
-  for (const path of ['/app/platform', '/app/apps/example', '/app/invites/example-token']) {
+  // Nested console surfaces (Platform Command, per-module pages) are
+  // gated server-side: anonymous traffic gets bounced to / so we don't
+  // render half-hydrated console shells or fire authenticated /me calls.
+  for (const path of ['/app/platform', '/app/platform/tenants', '/app/apps/example']) {
     const r = await probe(path, { redirect: 'manual' });
     assert.ok(
       r.status === 307 || r.status === 302,
       `GET ${path} without auth cookie should redirect (got ${r.status})`,
     );
+    const loc = r.headers.get('location') ?? '';
+    assert.ok(loc.startsWith('/?') || loc === '/', `Location should point at marketing, got ${loc}`);
   }
 });
 
+test('marketing shell · HTTP — /app/invites/:token bypasses middleware for the pre-auth handoff', { concurrency: false }, async (t) => {
+  if (!(await webIsUp())) {
+    t.skip('Next dev server not reachable at ' + WEB_BASE);
+    return;
+  }
+  // The invite page handles its own auth state: it reads the token,
+  // stashes it in localStorage, and redirects to /app to sign in.
+  // Middleware must NOT pre-empt that flow or invitation emails break.
+  const r = await probe('/app/invites/example-token', { redirect: 'manual' });
+  assert.equal(r.status, 200, 'GET /app/invites/:token should reach the page logic without a cookie');
+});
+
 test('marketing shell · /app/* server-side auth gate (middleware)', () => {
-  // The Edge middleware enforces the "/app/* requires auth" contract
-  // by checking for the `token` cookie issued by Fastify's auth-routes
-  // and 307-redirecting cookie-less requests to `/`. Without this
-  // file, anonymous traffic would render the console shell skeleton
-  // and rely entirely on client-side hydration to bounce — leaking
-  // the surface and burning a render cycle.
+  // The Edge middleware enforces "nested /app/* requires auth" by
+  // checking for the `token` cookie issued by Fastify's auth-routes
+  // and 307-redirecting cookie-less requests to `/`. Critical
+  // exemptions: `/app` itself (login surface — gating it would loop
+  // the "Launch console" CTA) and `/app/invites/:token` (the invite
+  // page runs its own pre-auth localStorage handoff).
   const src = read('src/middleware.ts');
   assert.match(src, /matcher.*\/app/);
   assert.match(src, /token/, 'middleware should check the auth cookie issued by /v1/auth/login');
   assert.match(src, /NextResponse\.redirect/);
+  assert.match(src, /pathname === '\/app'/, 'middleware must exempt /app so LoginPage is reachable');
+  assert.match(src, /\/app\/invites\//, 'middleware must exempt /app/invites/:token for the pre-auth handoff');
 });
 
 test('marketing shell · footer attribution reads "Powered by Shotgun Ninjas Productions"', () => {
