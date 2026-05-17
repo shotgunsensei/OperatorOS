@@ -3,26 +3,24 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
-import MarketingPlaceholder from '@/components/marketing/MarketingPlaceholder';
+import Hero from '@/components/marketing/sections/Hero';
+import CommandOrbit from '@/components/marketing/sections/CommandOrbit';
+import PlatformPositioning from '@/components/marketing/sections/PlatformPositioning';
+import ModuleGatewayGrid from '@/components/marketing/sections/ModuleGatewayGrid';
+import HowItWorks from '@/components/marketing/sections/HowItWorks';
+import FinalCta from '@/components/marketing/sections/FinalCta';
 import { useAuth } from '@/components/AuthProvider';
 
 /**
- * Marketing home — Phase 1 foundation shell.
+ * Marketing home — Phase 2.
  *
- * Phase 1 ships the public layout (glass navbar + footer + brand
- * tokens) wrapped around a placeholder hero. Phase 2 (task #86)
- * replaces this body with the full hero, value proposition, module
- * grid, and social-proof sections.
+ * Renders the full public homepage in section order:
+ *   Hero → Command Orbit → Platform Positioning → Module Gateway Grid
+ *   → How It Works → Final CTA.
  *
- * Behavior:
- *   - Signed-out visitors see the marketing surface (public).
- *   - Signed-in visitors get auto-redirected to `/app` so the home
- *     URL acts as a "land me in my workspace" entry point. The
- *     auth check happens client-side after the AuthProvider hydrates;
- *     during that hydration the marketing chrome renders as the
- *     fallback. This preserves SEO/public access for anonymous bots
- *     while still delivering the expected "open the console" feel
- *     for returning users.
+ * Signed-in visitors are auto-redirected to `/app` so the home URL
+ * behaves like a "land me in my workspace" entry point for returning
+ * users while staying fully public for anonymous traffic.
  */
 function HomeBody() {
   const router = useRouter();
@@ -33,14 +31,14 @@ function HomeBody() {
   }, [loading, user, router]);
 
   return (
-    <MarketingPlaceholder
-      eyebrow="Marketing redesign · Phase 1"
-      title="The command layer for modern operations is taking shape."
-      subtitle="One console, every tool your team launches. The full home experience is shipping in the next phase — sign in any time to jump to your workspace."
-      ctaHref="/app"
-      ctaLabel="Open the console"
-      testId="marketing-home"
-    />
+    <>
+      <Hero />
+      <CommandOrbit />
+      <PlatformPositioning />
+      <ModuleGatewayGrid />
+      <HowItWorks />
+      <FinalCta />
+    </>
   );
 }
 

@@ -480,3 +480,112 @@ test('marketing shell · HTTP — /robots.txt disallows /app', { concurrency: fa
   const body = await r.text();
   assert.match(body, /Disallow:\s*\/app/, '/robots.txt should disallow /app');
 });
+
+// ---------------------------------------------------------------------------
+// Phase 2 — homepage section assembly.
+// ---------------------------------------------------------------------------
+
+test('marketing phase 2 · homepage composes the six required sections in order', () => {
+  const src = read('src/app/page.tsx');
+  for (const marker of ['Hero', 'CommandOrbit', 'PlatformPositioning',
+                        'ModuleGatewayGrid', 'HowItWorks', 'FinalCta']) {
+    assert.match(src, new RegExp(`<${marker}\\b`), `home should render <${marker}>`);
+  }
+  // Section order must match the spec: Hero → Orbit → Positioning →
+  // Gateway Grid → How It Works → Final CTA. Asserting positional
+  // index keeps Phase 3 from accidentally reshuffling them.
+  const order = ['Hero', 'CommandOrbit', 'PlatformPositioning',
+                 'ModuleGatewayGrid', 'HowItWorks', 'FinalCta'];
+  const positions = order.map(name => src.indexOf(`<${name}`));
+  for (let i = 1; i < positions.length; i++) {
+    assert.ok(
+      positions[i] > positions[i - 1] && positions[i - 1] >= 0,
+      `expected ${order[i]} after ${order[i - 1]} in src/app/page.tsx`,
+    );
+  }
+});
+
+test('marketing phase 2 · section components exist with required test-ids', () => {
+  const expectations: Array<[string, RegExp]> = [
+    ['src/components/marketing/sections/Hero.tsx',                /data-testid="marketing-hero"/],
+    ['src/components/marketing/sections/Hero.tsx',                /Command Every Moving Part/],
+    ['src/components/marketing/sections/Hero.tsx',                /Launch OperatorOS/],
+    ['src/components/marketing/sections/Hero.tsx',                /Explore Modules/],
+    ['src/components/marketing/sections/CommandOrbit.tsx',        /data-testid="marketing-orbit"/],
+    ['src/components/marketing/sections/CommandOrbit.tsx',        /prefers-reduced-motion/],
+    ['src/components/marketing/sections/PlatformPositioning.tsx', /data-testid="marketing-positioning"/],
+    ['src/components/marketing/sections/PlatformPositioning.tsx', /Business Operations/],
+    ['src/components/marketing/sections/PlatformPositioning.tsx', /IT & MSP Operations/],
+    ['src/components/marketing/sections/PlatformPositioning.tsx', /Automotive & Diagnostics/],
+    ['src/components/marketing/sections/PlatformPositioning.tsx', /Healthcare Workflow Coordination/],
+    ['src/components/marketing/sections/PlatformPositioning.tsx', /Branding & Launch Systems/],
+    ['src/components/marketing/sections/PlatformPositioning.tsx', /AI Automation/],
+    ['src/components/marketing/sections/ModuleGatewayGrid.tsx',   /module-gateway-card-/],
+    ['src/components/marketing/sections/ModuleGatewayGrid.tsx',   /module-gateway-status-/],
+    ['src/components/marketing/sections/ModuleGatewayGrid.tsx',   /module-gateway-cta-/],
+    ['src/components/marketing/sections/HowItWorks.tsx',          /how-it-works-step-\$\{i \+ 1\}/],
+    ['src/components/marketing/sections/HowItWorks.tsx',          /STEPS:\s*Step\[\]\s*=\s*\[[\s\S]{200,}\]/],
+    ['src/components/marketing/sections/FinalCta.tsx',            /Stop juggling tools/],
+    ['src/components/marketing/sections/FinalCta.tsx',            /Enter the Command Layer/],
+  ];
+  for (const [rel, re] of expectations) {
+    const src = read(rel);
+    assert.match(src, re, `${rel} should match ${re}`);
+  }
+});
+
+test('marketing phase 2 · /modules and /how-it-works reuse the shared sections', () => {
+  const modules = read('src/app/modules/page.tsx');
+  assert.match(modules, /ModuleGatewayGrid/, '/modules must render the shared module grid');
+  assert.match(modules, /MarketingLayout/, '/modules must stay inside the marketing shell');
+
+  const how = read('src/app/how-it-works/page.tsx');
+  assert.match(how, /HowItWorks/, '/how-it-works must render the shared step flow');
+  assert.match(how, /MarketingLayout/, '/how-it-works must stay inside the marketing shell');
+});
+
+test('marketing phase 2 · catalog mirror covers all 11 modules with outcome copy', async () => {
+  const src = read('src/lib/marketing-catalog.ts');
+  // Every slug from the SDK catalog must be present in the marketing
+  // outcome map so visitors never see an empty card body.
+  const slugs = [
+    'tradeflowkit', 'torqueshed', 'techdeck', 'pulsedesk', 'faultlinelab',
+    'brandforgeos', 'snapproofos', 'studyforge-ai', 'ninja-launch-kit',
+    'callcommand-ai', 'ninjamation',
+  ];
+  for (const slug of slugs) {
+    assert.match(src, new RegExp(`'${slug}'\\s*:`), `marketing-catalog missing outcome for ${slug}`);
+  }
+  // Status mapping must produce the four marketing labels used by
+  // statusBadgeColor.
+  for (const status of ['Available', 'Coming Soon', 'Beta', 'Locked']) {
+    assert.match(src, new RegExp(`'${status}'`), `marketing-catalog missing status: ${status}`);
+  }
+});
+
+test('marketing phase 2 · auth-aware CTA helper centralizes the targeting rule', () => {
+  const src = read('src/lib/marketing-cta.ts');
+  // Signed-in → /app, signed-out → /login, locked/coming-soon → /pricing.
+  assert.match(src, /primaryCtaTarget/);
+  assert.match(src, /moduleCtaTarget/);
+  assert.match(src, /'\/app'/);
+  assert.match(src, /'\/login'/);
+  assert.match(src, /'\/pricing'/);
+});
+
+test('marketing phase 2 · no buzzwords in homepage copy', () => {
+  // Brief explicitly bans "revolutionary", "game-changing", "next-gen".
+  const files = [
+    'src/components/marketing/sections/Hero.tsx',
+    'src/components/marketing/sections/CommandOrbit.tsx',
+    'src/components/marketing/sections/PlatformPositioning.tsx',
+    'src/components/marketing/sections/ModuleGatewayGrid.tsx',
+    'src/components/marketing/sections/HowItWorks.tsx',
+    'src/components/marketing/sections/FinalCta.tsx',
+  ];
+  const banned = /\b(revolutionary|game[- ]changing|next[- ]gen)\b/i;
+  for (const rel of files) {
+    const src = read(rel);
+    assert.doesNotMatch(src, banned, `${rel} contains a banned buzzword`);
+  }
+});
