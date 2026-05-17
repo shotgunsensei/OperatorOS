@@ -36,7 +36,12 @@ export function useEntitlements(): ReadonlySet<string> | null {
         }
         setEntitled(set);
       } catch {
-        if (alive) setEntitled(null);
+        // Fail conservatively: a signed-in viewer whose entitlement
+        // fetch failed gets an empty set rather than `null` so the
+        // grid flips every module to "Locked" → /pricing instead of
+        // optimistically routing to /app. This preserves the spec's
+        // strict "no /app without entitlement" rule under API errors.
+        if (alive) setEntitled(new Set<string>());
       }
     })();
     return () => { alive = false; };
