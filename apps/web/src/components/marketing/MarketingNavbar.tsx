@@ -80,14 +80,14 @@ export default function MarketingNavbar() {
           display: inline-flex; align-items: center; gap: 6px;
           padding: 8px 14px; border-radius: 8px;
           background: linear-gradient(135deg, var(--brand-accent-cyan) 0%, var(--brand-accent-violet) 100%);
-          color: #0B0B12; font-weight: 600; font-size: 13px;
+          color: var(--brand-accent-ink); font-weight: 600; font-size: 13px;
           text-decoration: none; border: none; cursor: pointer;
-          box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.18), 0 10px 30px -10px rgba(124, 58, 237, 0.55);
+          box-shadow: var(--brand-cta-glow-soft);
           transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
         .operatoros-cta-primary:hover {
           transform: translateY(-1px);
-          box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.32), 0 14px 36px -10px rgba(124, 58, 237, 0.75);
+          box-shadow: var(--brand-cta-glow-hover);
         }
         .operatoros-cta-secondary {
           display: inline-flex; align-items: center; gap: 6px;
@@ -99,7 +99,7 @@ export default function MarketingNavbar() {
         }
         .operatoros-cta-secondary:hover {
           border-color: var(--brand-border-strong);
-          background: rgba(255, 255, 255, 0.03);
+          background: var(--brand-bg-glass-hover);
         }
         @media (max-width: 767px) {
           .operatoros-nav-desktop { display: none !important; }
@@ -119,9 +119,7 @@ export default function MarketingNavbar() {
           zIndex: 50,
           backdropFilter: 'blur(16px) saturate(140%)',
           WebkitBackdropFilter: 'blur(16px) saturate(140%)',
-          background: scrolled
-            ? 'rgba(8, 11, 18, 0.82)'
-            : 'rgba(8, 11, 18, 0.55)',
+          background: scrolled ? brand.bgGlassNavScrolled : brand.bgGlassNavTop,
           borderBottom: `1px solid ${scrolled ? brand.borderSoft : 'transparent'}`,
           transition: 'background 0.2s ease, border-color 0.2s ease',
         }}

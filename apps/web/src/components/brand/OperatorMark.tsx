@@ -44,14 +44,14 @@ export default function OperatorMark({
       className={className}
       style={{
         display: 'block',
-        filter: glow ? 'drop-shadow(0 0 12px rgba(0, 229, 255, 0.55))' : undefined,
+        filter: glow ? 'var(--brand-mark-drop-shadow, drop-shadow(0 0 12px rgba(0, 229, 255, 0.55)))' : undefined,
         ...style,
       }}
     >
       <title>{title}</title>
       {/* Subtle inner field so the mark reads at small sizes against
           dark and light backgrounds alike. */}
-      <circle cx="32" cy="32" r="28" fill="rgba(8, 11, 18, 0.92)" />
+      <circle cx="32" cy="32" r="28" fill="var(--brand-mark-bg-fill, rgba(8, 11, 18, 0.92))" />
       {/* Outer command ring */}
       <circle
         cx="32"

@@ -325,6 +325,80 @@ test('marketing shell · /app/* server-side auth gate (middleware)', () => {
   assert.match(src, /\/app\/invites\//, 'middleware must exempt /app/invites/:token for the pre-auth handoff');
 });
 
+test('marketing shell · PWA icon set is rebranded to the Operator mark', () => {
+  // Phase 1 contract: every manifest/apple-touch/PWA icon must render
+  // the new Operator mark, not the legacy "OS" tile. We assert on each
+  // referenced file individually because manifest-only checks would
+  // miss stale files on disk that the browser still caches.
+  const iconFiles = [
+    'public/icons/icon-48x48.svg',
+    'public/icons/icon-72x72.svg',
+    'public/icons/icon-96x96.svg',
+    'public/icons/icon-144x144.svg',
+    'public/icons/icon-192x192.svg',
+    'public/icons/icon-512x512.svg',
+    'public/favicon.svg',
+  ];
+  for (const f of iconFiles) {
+    const src = read(f);
+    // Brand mark uses the new bg + accent palette; legacy used #0d1117
+    // + #58a6ff and embedded the text "OS"/"OperatorOS".
+    assert.match(src, /#080B12/i, `${f} should use the new brand background`);
+    assert.match(src, /#00E5FF/i, `${f} should use the new cyan accent`);
+    assert.doesNotMatch(src, />OS</, `${f} must not embed the legacy "OS" wordmark`);
+    assert.doesNotMatch(src, /#58a6ff/i, `${f} must not use the legacy GitHub blue accent`);
+  }
+});
+
+test('marketing shell · new brand/marketing components consume centralized tokens', () => {
+  // Single-source token contract: new Phase 1 components must pull
+  // colors/shadows/gradients from `brand` (or its CSS variables), not
+  // hand-code hex/rgba literals. This catches drift before Phase 2/3
+  // adds more components on the same foundation.
+  //
+  // The brand.ts module itself is the source of truth and is allowed
+  // to contain literals.
+  const files = [
+    'src/components/marketing/MarketingNavbar.tsx',
+    'src/components/marketing/MarketingFooter.tsx',
+    'src/components/marketing/MarketingPlaceholder.tsx',
+    'src/components/marketing/MarketingLayout.tsx',
+    'src/components/brand/OperatorMark.tsx',
+    'src/components/brand/OperatorLogo.tsx',
+    'src/components/brand/OperatorLoader.tsx',
+    'src/components/brand/OperatorBadge.tsx',
+  ];
+  // Permit only #RGB(A)/#RRGGBB(AA) hex *outside* of var(--…, fallback)
+  // contexts and outside of CSS custom-property assignments. Brand
+  // components MAY include hex inside `var(--brand-*, #hex)` fallbacks
+  // (defense-in-depth when CSS vars haven't loaded) or as named
+  // arguments that the component passes back to tokens.
+  const HEX_RE = /#[0-9a-fA-F]{3,8}\b/g;
+  const RGBA_RE = /\brgba?\([^)]+\)/g;
+  for (const f of files) {
+    const src = read(f);
+    // Strip permitted contexts before scanning.
+    const stripped = src
+      // var(--brand-…, #hex) and var(--brand-…, rgba(...)) fallbacks
+      .replace(/var\(--brand-[^)]*\)/g, 'VAR')
+      // single-line component-doc comments often quote brand hex codes
+      .replace(/\/\/[^\n]*/g, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    const hexMatches = stripped.match(HEX_RE) ?? [];
+    const rgbaMatches = stripped.match(RGBA_RE) ?? [];
+    assert.equal(
+      hexMatches.length,
+      0,
+      `${f} should not contain bare hex literals (found: ${hexMatches.join(', ')}). Use brand tokens or var(--brand-*) fallbacks.`,
+    );
+    assert.equal(
+      rgbaMatches.length,
+      0,
+      `${f} should not contain bare rgba() literals (found: ${rgbaMatches.join(', ')}). Use brand tokens or var(--brand-*) fallbacks.`,
+    );
+  }
+});
+
 test('marketing shell · footer attribution reads "Powered by Shotgun Ninjas Productions"', () => {
   // Brand contract: full attribution string with "Productions". A
   // truncated "Shotgun Ninjas" fails the spec even if visually close.

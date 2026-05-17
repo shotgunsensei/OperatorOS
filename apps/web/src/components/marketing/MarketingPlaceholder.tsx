@@ -48,8 +48,7 @@ export default function MarketingPlaceholder({
           position: 'absolute',
           inset: 0,
           pointerEvents: 'none',
-          background:
-            'radial-gradient(60% 50% at 50% 30%, rgba(0, 229, 255, 0.12) 0%, rgba(124, 58, 237, 0.08) 45%, transparent 70%)',
+          background: brand.heroRadial,
         }}
       />
       <div style={{ position: 'relative', textAlign: 'center' }}>
@@ -110,12 +109,11 @@ export default function MarketingPlaceholder({
             padding: '12px 22px',
             borderRadius: 10,
             background: `linear-gradient(135deg, ${brand.accentCyan} 0%, ${brand.accentViolet} 100%)`,
-            color: '#0B0B12',
+            color: brand.accentInk,
             fontWeight: 600,
             fontSize: 14,
             textDecoration: 'none',
-            boxShadow:
-              '0 0 0 1px rgba(0, 229, 255, 0.22), 0 18px 48px -16px rgba(124, 58, 237, 0.7)',
+            boxShadow: brand.ctaGlowLarge,
           }}
         >
           {ctaLabel} <ArrowRight size={16} />
