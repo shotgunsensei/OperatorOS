@@ -394,7 +394,7 @@ export const adminAuditLogs = pgTable('admin_audit_logs', {
 }, (t) => [
   index('idx_admin_audit_logs_admin').on(t.adminId),
   index('idx_admin_audit_logs_created').on(t.createdAt),
-  index('idx_admin_audit_logs_tenant').on(t.tenantId),
+  index('idx_admin_audit_logs_tenant_created').on(t.tenantId, t.createdAt.desc()),
 ]);
 
 export const billingEvents = pgTable('billing_events', {
