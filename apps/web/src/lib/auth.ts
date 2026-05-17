@@ -222,6 +222,7 @@ export const tenantApi = {
 export const moduleShellApi = {
   callcommand: {
     list: () => apiFetch('/modules/callcommand-ai/calls'),
+    get: (id: string) => apiFetch(`/modules/callcommand-ai/calls/${id}`),
     place: (input: { phone: string; name: string; persona: string }) =>
       apiFetch('/modules/callcommand-ai/calls', {
         method: 'POST',

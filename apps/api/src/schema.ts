@@ -745,9 +745,19 @@ export const moduleCallLogs = pgTable('module_call_logs', {
   persona: text('persona').notNull(),
   status: text('status', { enum: ['queued', 'ringing', 'completed', 'failed'] }).notNull().default('queued'),
   summary: text('summary'),
+  // Telephony-provider linkage (Task #75). `provider` is `twilio` or `stub`
+  // depending on whether real telephony is configured; `providerSid` is the
+  // Twilio Call SID we use to correlate status/recording webhooks.
+  provider: text('provider'),
+  providerSid: text('provider_sid'),
+  transcript: text('transcript'),
+  recordingUrl: text('recording_url'),
+  errorMessage: text('error_message'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_module_call_logs_tenant_created').on(t.tenantId, t.createdAt),
+  index('idx_module_call_logs_provider_sid').on(t.providerSid),
 ]);
 
 export const moduleStudySessions = pgTable('module_study_sessions', {

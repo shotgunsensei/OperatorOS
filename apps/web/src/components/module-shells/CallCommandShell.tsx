@@ -2,13 +2,14 @@
 
 /**
  * Task #72 — first-screen for CallCommand AI, backed by the API.
- *
- * The form posts to `/v1/modules/callcommand-ai/calls`, the server runs
- * the (sandboxed) dialer + summary, persists the row, and we re-render
- * the recent-calls list from the server. No more in-memory only state.
+ * Task #75 — when a real telephony provider (Twilio) is configured the
+ * server returns a `queued`/`ringing` row immediately and emits status
+ * updates via webhook. We poll non-terminal calls every few seconds so
+ * the shell shows the live progression and the final AI-generated
+ * summary once the recording lands.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Phone, PhoneCall, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import {
   semantic, space, fontSize, radius, cardStyle,
@@ -24,8 +25,16 @@ interface TestCall {
   persona: string;
   status: CallStatus;
   summary?: string | null;
+  transcript?: string | null;
+  recordingUrl?: string | null;
+  errorMessage?: string | null;
+  provider?: string | null;
   createdAt: string;
 }
+
+const TERMINAL: Record<CallStatus, boolean> = {
+  queued: false, ringing: false, completed: true, failed: true,
+};
 
 const PERSONAS = [
   { value: 'receptionist', label: 'Receptionist — books appointments' },
@@ -41,6 +50,7 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
   const [calls, setCalls] = useState<TestCall[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,6 +60,33 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
+
+  // Poll every 3s for any non-terminal call. We only refresh those rows so
+  // a long backlog of completed calls does not generate needless traffic.
+  useEffect(() => {
+    const pending = calls.filter((c) => !TERMINAL[c.status]);
+    if (pending.length === 0) {
+      if (pollTimer.current) { clearInterval(pollTimer.current); pollTimer.current = null; }
+      return;
+    }
+    if (pollTimer.current) return;
+    pollTimer.current = setInterval(async () => {
+      try {
+        const updates = await Promise.all(
+          pending.map((c) => moduleShellApi.callcommand.get(c.id).catch(() => null)),
+        );
+        setCalls((prev) =>
+          prev.map((row) => {
+            const fresh = updates.find((u: any) => u && u.id === row.id);
+            return fresh ? (fresh as TestCall) : row;
+          }),
+        );
+      } catch { /* swallow — next tick will retry */ }
+    }, 3000);
+    return () => {
+      if (pollTimer.current) { clearInterval(pollTimer.current); pollTimer.current = null; }
+    };
+  }, [calls]);
 
   async function placeCall(e: React.FormEvent) {
     e.preventDefault();
@@ -62,11 +99,26 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
       setPhone('');
       setName('');
     } catch (err: any) {
-      const msg = err?.message || '';
-      if (msg.includes('INVALID_PHONE')) {
+      // apiFetch throws a plain object: `{ status, error, code, ... }`.
+      const code: string = err?.code ?? '';
+      const fallback: string = err?.error || err?.message || 'Could not place call';
+      if (code === 'INVALID_PHONE') {
         setError('Enter a phone number with country code (e.g. +14155550123).');
+      } else if (code === 'INVALID_PERSONA') {
+        setError('Pick one of the agent personas above.');
+      } else if (code === 'TELEPHONY_FAILED') {
+        setError(
+          err?.message
+            ? `Telephony provider rejected the call: ${err.message}`
+            : 'The telephony provider rejected the call. Check your Twilio number and credentials.',
+        );
+        // The server still persisted a `failed` row; refresh the list so it shows.
+        try {
+          const res: any = await moduleShellApi.callcommand.list();
+          setCalls(res.calls ?? []);
+        } catch { /* ignore */ }
       } else {
-        setError(msg || 'Could not place call');
+        setError(fallback);
       }
     } finally {
       setSubmitting(false);
@@ -179,9 +231,31 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
                   </div>
                 </div>
                 {c.summary && (
-                  <p style={{ margin: `${space.sm}px 0 0`, color: semantic.textMuted, fontSize: fontSize.sm }}>
+                  <p
+                    data-testid={`text-callcommand-summary-${c.id}`}
+                    style={{ margin: `${space.sm}px 0 0`, color: semantic.textMuted, fontSize: fontSize.sm }}
+                  >
                     {c.summary}
                   </p>
+                )}
+                {c.errorMessage && (
+                  <p
+                    data-testid={`text-callcommand-error-${c.id}`}
+                    style={{ margin: `${space.sm}px 0 0`, color: semantic.accentDanger, fontSize: fontSize.sm }}
+                  >
+                    {c.errorMessage}
+                  </p>
+                )}
+                {c.recordingUrl && (
+                  <a
+                    data-testid={`link-callcommand-recording-${c.id}`}
+                    href={c.recordingUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ display: 'inline-block', marginTop: space.sm, color: semantic.accent, fontSize: fontSize.sm }}
+                  >
+                    Recording ↗
+                  </a>
                 )}
               </li>
             ))}

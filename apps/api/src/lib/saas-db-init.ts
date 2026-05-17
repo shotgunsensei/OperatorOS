@@ -913,6 +913,16 @@ export async function ensureModuleShellTables() {
       ALTER TABLE module_call_logs ADD CONSTRAINT module_call_logs_status_check
         CHECK (status IN ('queued','ringing','completed','failed'));
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    -- Task #75 — telephony provider columns. Idempotent so the boot path
+    -- can upgrade existing call rows without a separate migration step.
+    ALTER TABLE module_call_logs ADD COLUMN IF NOT EXISTS provider TEXT;
+    ALTER TABLE module_call_logs ADD COLUMN IF NOT EXISTS provider_sid TEXT;
+    ALTER TABLE module_call_logs ADD COLUMN IF NOT EXISTS transcript TEXT;
+    ALTER TABLE module_call_logs ADD COLUMN IF NOT EXISTS recording_url TEXT;
+    ALTER TABLE module_call_logs ADD COLUMN IF NOT EXISTS error_message TEXT;
+    ALTER TABLE module_call_logs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW() NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_module_call_logs_provider_sid
+      ON module_call_logs(provider_sid);
 
     CREATE TABLE IF NOT EXISTS module_study_sessions (
       id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),

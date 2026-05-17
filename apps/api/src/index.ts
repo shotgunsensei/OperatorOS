@@ -72,6 +72,26 @@ app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, 
     done(err as Error);
   }
 });
+
+// Twilio status / recording webhooks POST application/x-www-form-urlencoded.
+// We need access to the parsed key/value pairs to verify the X-Twilio-Signature
+// header (HMAC of URL + sorted form fields) and to react to call state.
+app.addContentTypeParser(
+  'application/x-www-form-urlencoded',
+  { parseAs: 'string' },
+  (_req, body, done) => {
+    try {
+      const text = typeof body === 'string' ? body : (body as Buffer).toString('utf8');
+      if (!text) return done(null, {});
+      const params = new URLSearchParams(text);
+      const out: Record<string, string> = {};
+      for (const [k, v] of params.entries()) out[k] = v;
+      done(null, out);
+    } catch (err) {
+      done(err as Error);
+    }
+  },
+);
 await app.register(websocket);
 await registerOsRoutes(app);
 await registerAuthRoutes(app);
