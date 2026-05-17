@@ -140,6 +140,12 @@ export const buttonStyles: Record<ButtonVariant, CSSProperties> = {
   },
 };
 
+// Brand palette + CSS variables live in `./brand.ts` (server-safe,
+// no client-component imports) so root server components can dot into
+// them. Re-exported here for convenience so client surfaces only need
+// one import path.
+export { brand, brandCssVariables } from './brand';
+
 // Stable test-id helpers — use these in components so tests can rely on a
 // single naming scheme.
 export const testId = {

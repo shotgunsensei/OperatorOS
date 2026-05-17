@@ -19,7 +19,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin', '/platform', '/apps/', '/invites/'],
+        disallow: ['/admin', '/platform', '/apps/', '/invites/', '/app'],
       },
     ],
   };

@@ -205,7 +205,14 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
             >Settings</button>
             <button
               data-testid="menu-logout"
-              onClick={async () => { await logout(); setShowUserMenu(false); }}
+              onClick={async () => {
+                await logout();
+                setShowUserMenu(false);
+                // Marketing redesign: signing out from the console drops the
+                // user on the new public marketing surface at `/` rather than
+                // re-rendering an embedded login screen in place.
+                if (typeof window !== 'undefined') window.location.href = '/';
+              }}
               style={{
                 width: '100%', padding: '8px 12px', border: 'none', borderRadius: 6,
                 background: 'transparent', color: colors.accentRed, cursor: 'pointer', textAlign: 'left', fontSize: 13,

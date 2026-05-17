@@ -1,9 +1,11 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
+import { brand, brandCssVariables } from '@/lib/brand';
 
 export const metadata: Metadata = {
-  title: 'OperatorOS — Premium Operations Platform',
-  description: 'Command center for running your business — Powered by Shotgun Ninjas',
+  title: 'OperatorOS — The Command Layer for Modern Operations',
+  description:
+    'The modular command layer for modern business operations. One console, every tool your team launches. Powered by Shotgun Ninjas.',
   manifest: '/manifest.json',
   icons: {
     // Browsers always probe `/favicon.ico` even when an SVG icon is
@@ -26,17 +28,27 @@ export const metadata: Metadata = {
   // SEO fix: Lighthouse "Page is blocked from indexing" — explicitly opt
   // the marketing/landing surface in to indexing so neither the host's
   // default robots policy nor Next.js's default behaviour suppresses it.
-  // Authenticated admin/platform/apps routes are still excluded via
+  // Authenticated /app/* and /platform/* routes are still excluded via
   // /robots.txt (apps/web/src/app/robots.ts).
   robots: {
     index: true,
     follow: true,
     googleBot: { index: true, follow: true },
   },
+  openGraph: {
+    title: 'OperatorOS — The Command Layer for Modern Operations',
+    description:
+      'The modular command layer for modern business operations. One console, every tool your team launches.',
+    siteName: 'OperatorOS',
+    type: 'website',
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0d1117',
+  // Marketing redesign: deep-near-black brand canvas replaces the prior
+  // #0d1117 console grey so mobile address bars / PWA chrome match the
+  // new public surface.
+  themeColor: brand.bgPrimary,
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -47,9 +59,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+        {/* Brand typography: Space Grotesk drives display/headline text,
+            Inter remains the body font. Both loaded with display=swap so
+            the first paint is not blocked by font fetch. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+        {/* Expose brand tokens as CSS custom properties so unstyled HTML,
+            SVG fills, and inline animations can pull them without
+            re-importing the TS module. */}
+        <style dangerouslySetInnerHTML={{ __html: `:root { ${brandCssVariables} }` }} />
       </head>
-      <body style={{ margin: 0, fontFamily: 'Inter, system-ui, sans-serif', background: '#010409', color: '#c9d1d9' }} suppressHydrationWarning>
+      <body
+        style={{
+          margin: 0,
+          fontFamily: brand.fontBody,
+          background: brand.bgPrimary,
+          color: brand.textPrimary,
+        }}
+        suppressHydrationWarning
+      >
         {children}
       </body>
     </html>

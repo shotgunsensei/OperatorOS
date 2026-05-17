@@ -118,7 +118,11 @@ function InviteAcceptInner() {
         if (peek.email) localStorage.setItem(PENDING_INVITE_EMAIL_KEY, peek.email);
       } catch {}
       setPhase('redirecting-login');
-      router.replace('/');
+      // Marketing redesign: `/` is now the public landing. The console
+      // (with its embedded LoginPage for signed-out users) lives at `/app`,
+      // and ConsolePage re-reads PENDING_INVITE_KEY after sign-in to bring
+      // the user back to this invite page.
+      router.replace('/app');
       return;
     }
 
@@ -150,8 +154,10 @@ function InviteAcceptInner() {
         setPhase('accepted');
         // Hard navigate so TenantProvider re-fetches with the new tenant.
         setTimeout(() => {
-          if (typeof window !== 'undefined') window.location.href = '/';
-          else router.replace('/');
+          // Hard-navigate to `/app` (the console) so TenantProvider
+          // re-fetches with the new tenant. `/` is now marketing.
+          if (typeof window !== 'undefined') window.location.href = '/app';
+          else router.replace('/app');
         }, 600);
       } catch (e: any) {
         // Only surface this error if we haven't already reached a terminal

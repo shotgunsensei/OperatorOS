@@ -82,7 +82,7 @@ function PlatformGate() {
     return (
       <div style={{ padding: 48, color: '#f85149', textAlign: 'center' }}>
         <h1 style={{ fontSize: 20 }}>403 — Platform Command requires super-admin role.</h1>
-        <a href="/" style={{ color: '#58a6ff' }}>← Return to your workspace</a>
+        <a href="/app" style={{ color: '#58a6ff' }}>← Return to your workspace</a>
       </div>
     );
   }

@@ -180,7 +180,7 @@ export default function InternalAppPage() {
 function BackLink() {
   return (
     <Link
-      href="/"
+      href="/app"
       data-testid="link-back-to-apps"
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
