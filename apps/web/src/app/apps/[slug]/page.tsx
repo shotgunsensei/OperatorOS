@@ -6,6 +6,10 @@ import Link from 'next/link';
 import { ExternalLink, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { semantic, space, fontSize, radius, cardStyle } from '@/lib/design-tokens';
 import { moduleApi } from '@/lib/auth';
+import AuthProvider, { useAuth } from '@/components/AuthProvider';
+import { ToastProvider } from '@/components/Toast';
+import LoginPage from '@/components/pages/LoginPage';
+import OperatorLoader from '@/components/brand/OperatorLoader';
 import StudyForgeShell from '@/components/module-shells/StudyForgeShell';
 import NinjaLaunchKitShell from '@/components/module-shells/NinjaLaunchKitShell';
 import CallCommandShell from '@/components/module-shells/CallCommandShell';
@@ -35,7 +39,7 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string }>>
   'ninjamation':      NinjamationShell,
 };
 
-export default function InternalAppPage() {
+function InternalAppContent() {
   const params = useParams<{ slug: string }>();
   const slug = params?.slug;
   const [mod, setMod] = useState<UserModuleSummary['module'] | null>(null);
@@ -174,6 +178,51 @@ export default function InternalAppPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Auth gate for the per-module surface.
+ *
+ * Wrapping the route in AuthProvider + ToastProvider mirrors /app:
+ * unauthenticated visitors see the inline LoginPage (which posts to
+ * /v1/auth/login and updates AuthProvider state without leaving the
+ * page), loading visitors see the branded loader, and signed-in users
+ * land in the module shell. This closes the gap where direct hits to
+ * /app/apps/:slug without a session would fall through to API 401s
+ * instead of the standard sign-in experience.
+ *
+ * Server-side middleware (apps/web/src/middleware.ts) additionally
+ * 307-redirects cookie-less requests to `/`, so anonymous traffic
+ * never reaches this code in normal use — the gate below is the
+ * defense-in-depth client-side equivalent.
+ */
+function InternalAppGate() {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: semantic.bg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <OperatorLoader />
+      </div>
+    );
+  }
+  if (!user) return <LoginPage onSwitch={() => { /* no register flow from module route */ }} />;
+  return <InternalAppContent />;
+}
+
+export default function InternalAppPage() {
+  return (
+    <AuthProvider>
+      <ToastProvider>
+        <InternalAppGate />
+      </ToastProvider>
+    </AuthProvider>
   );
 }
 

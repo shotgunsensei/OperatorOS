@@ -23,7 +23,7 @@ const COL_LEGAL = [
 
 /**
  * MarketingFooter — closes the public layout with brand identity,
- * link columns, and the "Powered by Shotgun Ninjas" attribution.
+ * link columns, and the "Powered by Shotgun Ninjas Productions" attribution.
  *
  * Legal column links are placeholders pointed at `/`; Phase 3 swaps
  * them for real policy pages.
@@ -90,7 +90,7 @@ export default function MarketingFooter() {
         <span data-testid="footer-attribution">
           Powered by{' '}
           <span style={{ color: brand.textSecondary, fontWeight: 600 }}>
-            Shotgun Ninjas
+            Shotgun Ninjas Productions
           </span>
         </span>
       </div>
