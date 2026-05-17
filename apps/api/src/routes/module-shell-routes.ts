@@ -17,6 +17,7 @@ import {
   fetchTwilioTranscription,
   summarizeTranscript,
 } from '../lib/telephony.js';
+import { getAiProvider } from '../lib/ai-provider.js';
 
 // Per-module guard chains. `requireTenantMember` confirms the caller belongs
 // to the active tenant; `requireTenantModuleAccess(slug)` then enforces that
@@ -63,7 +64,9 @@ function personaSummary(persona: string, callerName: string): string {
   }
 }
 
-function buildCards(source: string): Array<{ id: string; question: string; answer: string }> {
+type StudyCard = { id: string; question: string; answer: string };
+
+function buildCards(source: string): StudyCard[] {
   const sentences = source
     .split(/(?<=[.!?])\s+/)
     .map((s) => s.trim())
@@ -80,6 +83,68 @@ function buildCards(source: string): Array<{ id: string; question: string; answe
       answer: sentence,
     };
   });
+}
+
+// Extract a JSON array from a model response. Tolerates code-fenced output and
+// leading/trailing prose by isolating the first `[ ... ]` block.
+function extractJsonArray(text: string): unknown {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fenced ? fenced[1] : text;
+  const start = candidate.indexOf('[');
+  const end = candidate.lastIndexOf(']');
+  if (start === -1 || end === -1 || end <= start) return null;
+  try {
+    return JSON.parse(candidate.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
+// Ask the AI provider for Q/A pairs. Returns null when the provider is the
+// mock (so the caller can use the deterministic splitter instead), when the
+// call fails, or when the response is unparseable / empty.
+async function buildCardsWithAi(source: string): Promise<StudyCard[] | null> {
+  const provider = getAiProvider();
+  if (provider.name !== 'openai') return null;
+
+  const systemPrompt =
+    'You generate study flashcards from a learner-supplied source. ' +
+    'Return ONLY a JSON array of 3 to 6 objects with the exact shape ' +
+    '{"question": string, "answer": string}. Each question must be answerable ' +
+    'from the source alone. Keep answers concise (1-2 sentences). No prose, no markdown.';
+  const userPrompt = `Source:\n"""\n${source}\n"""`;
+
+  let response;
+  try {
+    response = await provider.complete({
+      systemPrompt,
+      userPrompt,
+      maxTokens: 800,
+      temperature: 0.3,
+    });
+  } catch (err) {
+    console.warn('[studyforge] AI provider failed, falling back to splitter:', err);
+    return null;
+  }
+
+  const parsed = extractJsonArray(response.text);
+  if (!Array.isArray(parsed)) return null;
+
+  const stamp = Date.now().toString(36);
+  const cards: StudyCard[] = [];
+  for (const item of parsed) {
+    if (!item || typeof item !== 'object') continue;
+    const obj = item as Record<string, unknown>;
+    const q = obj.question;
+    const a = obj.answer;
+    if (typeof q !== 'string' || typeof a !== 'string') continue;
+    const question = q.trim().slice(0, 500);
+    const answer = a.trim().slice(0, 1000);
+    if (question.length < 3 || answer.length < 1) continue;
+    cards.push({ id: `card_${cards.length}_${stamp}`, question, answer });
+    if (cards.length >= 6) break;
+  }
+  return cards.length > 0 ? cards : null;
 }
 
 function slugify(s: string): string {
@@ -432,7 +497,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
           .send({ error: 'Source needs at least 8 words', code: 'SOURCE_TOO_SHORT' });
       }
       const bounded = trimmed.slice(0, 8000);
-      const cards = buildCards(bounded);
+      const cards = (await buildCardsWithAi(bounded)) ?? buildCards(bounded);
       if (cards.length === 0) {
         return reply
           .code(400)
