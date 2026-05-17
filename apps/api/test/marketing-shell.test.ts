@@ -335,13 +335,26 @@ test('marketing shell · /app/* server-side auth gate (middleware)', () => {
   );
 });
 
-test('marketing shell · /login route exists and lives outside the console tree', () => {
-  // The login route must be a top-level public surface so middleware
-  // never runs on it and its CTAs from MarketingNavbar don't loop.
+test('marketing shell · /login route exposes the full auth state machine', () => {
+  // The /login surface must preserve every signed-out flow that lived
+  // on the old /app login screen — login, register, forgot-password,
+  // and reset-password. LoginPage calls onSwitch('forgot-password'),
+  // so a callback that silently ignores its argument and hard-codes
+  // 'register' would break the password-recovery email flow.
   const src = read('src/app/login/page.tsx');
   assert.match(src, /LoginPage/, '/login should render the LoginPage component');
-  assert.match(src, /AuthProvider/, '/login must wrap LoginPage in AuthProvider');
+  assert.match(src, /RegisterPage/, '/login should support the register switch');
+  assert.match(src, /ForgotPasswordPage/, '/login should support the forgot-password switch');
+  assert.match(src, /ResetPasswordPage/, '/login should support the reset-password switch');
+  assert.match(src, /AuthProvider/, '/login must wrap auth pages in AuthProvider');
   assert.match(src, /next/, '/login should honor a ?next= query for post-login deep-linking');
+  // onSwitch must honor its argument (target page) instead of dropping
+  // it on the floor and forcing a single hardcoded transition.
+  assert.match(
+    src,
+    /onSwitch=\{\(target\)\s*=>\s*setMode\(target\)\}/,
+    'LoginPage.onSwitch must forward its target argument to setMode',
+  );
   // MarketingNavbar CTAs must point at /login, never directly at /app.
   const nav = read('src/components/marketing/MarketingNavbar.tsx');
   assert.match(nav, /href="\/login"/, 'Sign-in CTA should link to /login');

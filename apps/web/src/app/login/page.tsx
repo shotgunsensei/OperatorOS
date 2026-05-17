@@ -22,6 +22,8 @@ import AuthProvider, { useAuth } from '@/components/AuthProvider';
 import { ToastProvider } from '@/components/Toast';
 import LoginPage from '@/components/pages/LoginPage';
 import RegisterPage from '@/components/pages/RegisterPage';
+import ForgotPasswordPage from '@/components/pages/ForgotPasswordPage';
+import ResetPasswordPage from '@/components/pages/ResetPasswordPage';
 import OperatorLoader from '@/components/brand/OperatorLoader';
 import { brand } from '@/lib/brand';
 
@@ -33,12 +35,21 @@ function safeNext(raw: string | null): string {
   return raw;
 }
 
+type AuthMode = 'login' | 'register' | 'forgot-password' | 'reset-password';
+
 function LoginGate() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNext(params.get('next'));
-  const [mode, setMode] = React.useState<'login' | 'register'>('login');
+  // Deep-link support: /login?mode=reset-password&token=… (used by the
+  // password-reset email) lands the user directly on ResetPasswordPage.
+  const initialMode: AuthMode = ((): AuthMode => {
+    const m = params.get('mode');
+    if (m === 'register' || m === 'forgot-password' || m === 'reset-password') return m;
+    return 'login';
+  })();
+  const [mode, setMode] = React.useState<AuthMode>(initialMode);
 
   useEffect(() => {
     if (!loading && user) router.replace(next);
@@ -60,11 +71,20 @@ function LoginGate() {
     );
   }
 
-  return mode === 'login' ? (
-    <LoginPage onSwitch={() => setMode('register')} />
-  ) : (
-    <RegisterPage onSwitch={() => setMode('login')} />
-  );
+  // LoginPage emits 'register' or 'forgot-password' through `onSwitch`;
+  // honoring the argument verbatim keeps parity with the legacy
+  // /app-hosted auth flow that this route replaces.
+  switch (mode) {
+    case 'register':
+      return <RegisterPage onSwitch={() => setMode('login')} />;
+    case 'forgot-password':
+      return <ForgotPasswordPage onSwitch={(target) => setMode(target)} />;
+    case 'reset-password':
+      return <ResetPasswordPage onSwitch={() => setMode('login')} />;
+    case 'login':
+    default:
+      return <LoginPage onSwitch={(target) => setMode(target)} />;
+  }
 }
 
 export default function LoginRoute() {
