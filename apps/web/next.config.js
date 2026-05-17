@@ -52,6 +52,27 @@ const nextConfig = {
         },
       ];
     },
+    // Marketing-redesign Phase 1 route split.
+    //
+    // The console (and all of its sub-surfaces — Platform Command, per-
+    // module pages, invite-accept) now lives under `/app/*`. Old root
+    // URLs (`/platform`, `/apps/:slug`, `/invites/:token`) are emitted
+    // by transactional emails, audit logs, and external bookmarks, so
+    // we 308-redirect them to their `/app/...` equivalents instead of
+    // breaking them.
+    //
+    // 308 (permanent) is chosen so user agents update bookmarks and
+    // crawlers update their indices; the API-side email templates can
+    // migrate to the new paths in a follow-up without an interim period
+    // of double-handling.
+    async redirects() {
+      return [
+        { source: '/platform',         destination: '/app/platform',         permanent: true },
+        { source: '/platform/:path*',  destination: '/app/platform/:path*',  permanent: true },
+        { source: '/apps/:slug',       destination: '/app/apps/:slug',       permanent: true },
+        { source: '/invites/:token',   destination: '/app/invites/:token',   permanent: true },
+      ];
+    },
   } : {}),
 };
 

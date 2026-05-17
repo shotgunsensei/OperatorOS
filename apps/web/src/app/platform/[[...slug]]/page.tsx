@@ -48,18 +48,23 @@ function pathToView(slug: string[] | undefined): PlatformView {
 }
 
 function viewToPath(v: PlatformView): string {
+  // Post-route-split: Platform Command lives at /app/platform/*.
+  // Legacy /platform/* URLs 308-redirect here via next.config.js,
+  // but every in-app navigation should emit the canonical /app/* path
+  // so the browser URL stays consistent with the rendered surface.
   switch (v.kind) {
-    case 'dashboard': return '/platform';
-    case 'tenants':   return '/platform/tenants';
-    case 'tenant':    return `/platform/tenants/${v.id}`;
-    case 'modules':   return '/platform/modules';
-    case 'module':    return `/platform/modules/${v.slug}`;
-    case 'users':     return '/platform/users';
-    case 'user':      return `/platform/users/${v.id}`;
-    case 'billing':   return '/platform/billing';
-    case 'pricing':   return '/platform/pricing';
-    case 'health':    return '/platform/health';
-    case 'audit':     return '/platform/audit';
+    case 'dashboard': return '/app/platform';
+    case 'tenants':   return '/app/platform/tenants';
+    case 'tenant':    return `/app/platform/tenants/${v.id}`;
+    case 'modules':   return '/app/platform/modules';
+    case 'module':    return `/app/platform/modules/${v.slug}`;
+    case 'users':     return '/app/platform/users';
+    case 'user':      return `/app/platform/users/${v.id}`;
+    case 'billing':   return '/app/platform/billing';
+    case 'pricing':   return '/app/platform/pricing';
+    case 'health':    return '/app/platform/health';
+    case 'audit':     return '/app/platform/audit';
+    default:          return '/app/platform';
   }
 }
 

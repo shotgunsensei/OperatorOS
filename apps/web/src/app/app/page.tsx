@@ -76,7 +76,8 @@ function AppContent() {
     let pending: string | null = null;
     try { pending = localStorage.getItem('operatoros.pendingInviteToken'); } catch {}
     if (pending) {
-      window.location.replace(`/invites/${encodeURIComponent(pending)}`);
+      // Canonical invite URL post-split lives under /app/*.
+      window.location.replace(`/app/invites/${encodeURIComponent(pending)}`);
     }
   }, [loading, user]);
 
@@ -101,7 +102,8 @@ function AppContent() {
 
   const handleNavigate = (page: string) => {
     if (page === 'platform' && userIsSuperAdmin) {
-      window.location.href = '/platform';
+      // Canonical Platform URL post-split lives under /app/*.
+      window.location.href = '/app/platform';
       return;
     }
     setActivePage(page);

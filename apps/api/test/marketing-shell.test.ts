@@ -118,6 +118,70 @@ test('marketing shell · robots disallows /app, manifest rebranded', () => {
   );
 });
 
+test('marketing shell · next.config redirects legacy console URLs to /app/*', () => {
+  // After the route split the canonical console surface is /app/*.
+  // Legacy URLs (/platform, /apps/:slug, /invites/:token) live in
+  // bookmarks, audit-log entries, and outgoing invitation emails — so
+  // the Next config must 308-redirect them rather than 404-ing.
+  const cfg = read('next.config.js');
+  assert.match(cfg, /async redirects\(\)/, 'next.config.js should declare redirects()');
+  for (const pair of [
+    "{ source: '/platform',",
+    "{ source: '/platform/:path*',",
+    "{ source: '/apps/:slug',",
+    "{ source: '/invites/:token',",
+  ]) {
+    assert.ok(
+      cfg.includes(pair),
+      `next.config.js redirects() should include ${pair}`,
+    );
+  }
+  assert.match(cfg, /destination: '\/app\/platform'/);
+  assert.match(cfg, /destination: '\/app\/platform\/:path\*'/);
+  assert.match(cfg, /destination: '\/app\/apps\/:slug'/);
+  assert.match(cfg, /destination: '\/app\/invites\/:token'/);
+  assert.match(cfg, /permanent: true/);
+});
+
+test('marketing shell · /app/* canonical routes exist as re-exports', () => {
+  // Re-exporting from the legacy file paths keeps a single source of
+  // truth for the gate logic, slug parsing, and stateful behavior in
+  // each surface — the canonical /app/* path simply renders the same
+  // component tree.
+  for (const rel of [
+    'src/app/app/platform/[[...slug]]/page.tsx',
+    'src/app/app/apps/[slug]/page.tsx',
+    'src/app/app/invites/[token]/page.tsx',
+  ]) {
+    const src = read(rel);
+    assert.match(src, /export \{ default \} from/, `${rel} should re-export the legacy implementation`);
+  }
+});
+
+test('marketing shell · branded loading state covers marketing tree', () => {
+  // Next.js renders src/app/loading.tsx automatically for any
+  // suspending segment under /, so this is what visitors see during
+  // initial nav / route transitions on /, /modules, /pricing,
+  // /how-it-works. It must use the branded OperatorLoader on the
+  // brand canvas instead of the default white blank.
+  const src = read('src/app/loading.tsx');
+  assert.match(src, /OperatorLoader/);
+  assert.match(src, /brand\.bgPrimary/);
+  assert.match(src, /data-testid="marketing-loading"/);
+});
+
+test('marketing shell · signed-in visitors auto-redirect from / to /app', () => {
+  // The marketing home should keep public access for signed-out
+  // visitors (SEO / first-touch) but bounce authenticated users into
+  // their workspace so / behaves as a "land me in the console" entry
+  // point. The check has to happen client-side because AuthProvider's
+  // /me call hydrates only after mount.
+  const src = read('src/app/page.tsx');
+  assert.match(src, /'use client'/);
+  assert.match(src, /useAuth/);
+  assert.match(src, /router\.replace\(['"]\/app['"]\)/);
+});
+
 test('marketing shell · console-internal links point at /app, not /', () => {
   // Regression guard: when the console moved to /app, several
   // sibling routes were still linking back to `/` for "home" / "back
@@ -152,4 +216,94 @@ test('marketing shell · root layout loads Space Grotesk + brand tokens', () => 
   assert.match(layout, /Space\+Grotesk/, 'layout.tsx should request Space Grotesk');
   assert.match(layout, /brandCssVariables/, 'layout.tsx should inject brand CSS variables');
   assert.match(layout, /brand\.bgPrimary/, 'layout.tsx should use the brand background token');
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// HTTP reachability — runs against the dev workflow on :5000 when
+// available. The test is skipped (not failed) if the Next dev server
+// isn't up, so CI environments without a running web workflow don't
+// false-fail; but when a developer runs the suite locally against
+// `pnpm dev`, this is the layer that catches a real broken route or
+// a missing redirect.
+// ─────────────────────────────────────────────────────────────────────
+
+const WEB_BASE = process.env.WEB_BASE_URL ?? 'http://localhost:5000';
+
+async function probe(path: string, init?: RequestInit) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 5000);
+  try {
+    return await fetch(`${WEB_BASE}${path}`, { ...init, signal: ctl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function webIsUp(): Promise<boolean> {
+  try {
+    const r = await probe('/', { method: 'HEAD' });
+    return r.status < 500 || r.status === 405; // 405 = HEAD not allowed; still up
+  } catch {
+    return false;
+  }
+}
+
+test('marketing shell · HTTP — public marketing routes return 200', { concurrency: false }, async (t) => {
+  if (!(await webIsUp())) {
+    t.skip('Next dev server not reachable at ' + WEB_BASE);
+    return;
+  }
+  for (const path of ['/', '/modules', '/pricing', '/how-it-works']) {
+    const r = await probe(path);
+    assert.equal(r.status, 200, `GET ${path} should be 200 for anonymous visitors`);
+    const body = await r.text();
+    assert.match(body, /OperatorOS/i, `GET ${path} should render branded HTML`);
+  }
+});
+
+test('marketing shell · HTTP — /app is reachable and renders the console shell', { concurrency: false }, async (t) => {
+  if (!(await webIsUp())) {
+    t.skip('Next dev server not reachable at ' + WEB_BASE);
+    return;
+  }
+  const r = await probe('/app');
+  // Anonymous visitors get the inline LoginPage (200, client-side
+  // gate), not a server redirect — auth state hydrates after mount.
+  assert.equal(r.status, 200, 'GET /app should return 200 (auth is client-side)');
+});
+
+test('marketing shell · HTTP — legacy /platform /apps /invites 308-redirect under /app', { concurrency: false }, async (t) => {
+  if (!(await webIsUp())) {
+    t.skip('Next dev server not reachable at ' + WEB_BASE);
+    return;
+  }
+  const cases: Array<{ from: string; to: string }> = [
+    { from: '/platform',               to: '/app/platform' },
+    { from: '/platform/tenants',       to: '/app/platform/tenants' },
+    { from: '/apps/some-module',       to: '/app/apps/some-module' },
+    { from: '/invites/abc-123',        to: '/app/invites/abc-123' },
+  ];
+  for (const { from, to } of cases) {
+    const r = await probe(from, { redirect: 'manual' });
+    assert.ok(
+      r.status === 308 || r.status === 307 || r.status === 301 || r.status === 302,
+      `GET ${from} should be a redirect, got ${r.status}`,
+    );
+    const loc = r.headers.get('location') ?? '';
+    assert.ok(
+      loc.endsWith(to),
+      `GET ${from} should redirect to ${to}, got Location: ${loc}`,
+    );
+  }
+});
+
+test('marketing shell · HTTP — /robots.txt disallows /app', { concurrency: false }, async (t) => {
+  if (!(await webIsUp())) {
+    t.skip('Next dev server not reachable at ' + WEB_BASE);
+    return;
+  }
+  const r = await probe('/robots.txt');
+  assert.equal(r.status, 200);
+  const body = await r.text();
+  assert.match(body, /Disallow:\s*\/app/, '/robots.txt should disallow /app');
 });

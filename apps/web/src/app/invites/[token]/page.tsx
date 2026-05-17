@@ -118,10 +118,11 @@ function InviteAcceptInner() {
         if (peek.email) localStorage.setItem(PENDING_INVITE_EMAIL_KEY, peek.email);
       } catch {}
       setPhase('redirecting-login');
-      // Marketing redesign: `/` is now the public landing. The console
-      // (with its embedded LoginPage for signed-out users) lives at `/app`,
-      // and ConsolePage re-reads PENDING_INVITE_KEY after sign-in to bring
-      // the user back to this invite page.
+      // Marketing redesign: `/` is the public landing; the console
+      // (with its embedded LoginPage for signed-out users) lives at
+      // `/app`, and ConsolePage re-reads PENDING_INVITE_KEY after
+      // sign-in to bring the user back to this invite page at the
+      // canonical /app/invites/:token path.
       router.replace('/app');
       return;
     }

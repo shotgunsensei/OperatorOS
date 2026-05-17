@@ -25,7 +25,7 @@ function AdminRedirect() {
     // /platform/[[...slug]] route surfaces a friendly 403 for non-super-
     // admins, so we never need to bounce them to the legacy admin shell —
     // and the URL stays consistent with the published "/platform" surface.
-    router.replace('/platform');
+    router.replace('/app/platform');
   }, [user, loading, router]);
   return <div style={{ padding: 48, color: '#8b949e', textAlign: 'center' }}>Redirecting…</div>;
 }
