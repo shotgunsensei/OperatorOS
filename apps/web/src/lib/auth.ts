@@ -270,8 +270,18 @@ export const moduleShellApi = {
   },
 };
 
+export interface ModulesListResponse {
+  modules: Array<{
+    module: { slug: string; name: string; description: string | null; status: string };
+    unlocked: boolean;
+    cta: string;
+    planMin?: string;
+    status?: string;
+  }>;
+}
+
 export const modulesApi = {
-  list: () => apiFetch('/modules'),
+  list: (): Promise<ModulesListResponse> => apiFetch('/modules') as Promise<ModulesListResponse>,
   get: (slug: string) => apiFetch(`/modules/${slug}`),
   debug: (slug: string, userId?: string) =>
     apiFetch(`/modules/debug/${slug}${userId ? `?user_id=${userId}` : ''}`),

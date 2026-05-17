@@ -11,7 +11,7 @@ import { MARKETING_MODULES } from '@/lib/marketing-catalog';
  * are visible:
  *
  *   - Inner ring (first 5 modules, ord 1..5)  — radius 38%
- *   - Outer ring (modules 6..11)              — radius 56%
+ *   - Outer ring (modules 6..11)              — radius 50%
  *
  * Pure SVG + CSS animation. `prefers-reduced-motion: reduce` freezes
  * the orbit and keeps the static composition, so visitors with motion

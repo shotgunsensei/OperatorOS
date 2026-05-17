@@ -5,15 +5,17 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { brand } from '@/lib/brand';
 import { useAuth } from '../../AuthProvider';
+import { primaryCtaTarget } from '@/lib/marketing-cta';
 
 /**
  * Final CTA — closing section that re-issues the primary call to
- * action with a stronger emotional headline. Always points at /app
- * (the console), via /login first for signed-out visitors.
+ * action with a stronger emotional headline. Routes through the
+ * shared `primaryCtaTarget` helper so all marketing CTAs stay on a
+ * single source of truth (signed-in → /app, signed-out → /login).
  */
 export default function FinalCta() {
   const { user, loading } = useAuth();
-  const href = loading ? '/login' : user ? '/app' : '/login';
+  const { href } = primaryCtaTarget(!loading && !!user);
 
   return (
     <section

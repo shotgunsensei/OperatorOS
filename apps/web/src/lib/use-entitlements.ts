@@ -28,7 +28,7 @@ export function useEntitlements(): ReadonlySet<string> | null {
     let alive = true;
     (async () => {
       try {
-        const res = (await modulesApi.list()) as { modules?: Array<{ module?: { slug?: string }; unlocked?: boolean }> };
+        const res = await modulesApi.list();
         if (!alive) return;
         const set = new Set<string>();
         for (const row of res.modules ?? []) {
