@@ -8,9 +8,10 @@ import {
   moduleScaffolds,
   activityFeed,
 } from '../schema.js';
-import { requireTenantMember, requireTenantModuleAccess } from '../lib/tenant-auth.js';
+import { requireTenantAdmin, requireTenantMember, requireTenantModuleAccess } from '../lib/tenant-auth.js';
 import {
   isTelephonyConfigured,
+  getTelephonyInfo,
   placeTwilioCall,
   mapTwilioStatus,
   verifyTwilioSignature,
@@ -208,6 +209,93 @@ async function finalizeTranscript(
 
 export async function registerModuleShellRoutes(app: FastifyInstance) {
   // ===== CallCommand AI ===================================================
+  // Task #89 — surface the telephony config source so the shell can show
+  // either "connected via Replit", "using env vars", or a one-click
+  // "Connect Twilio" affordance when nothing is wired up.
+  app.get(
+    '/v1/modules/callcommand-ai/telephony/status',
+    { preHandler: [...callcommandGuards] },
+    async () => {
+      return await getTelephonyInfo();
+    },
+  );
+
+  // Task #89 — one-click connect flow. The Replit connector proxy is the
+  // privileged path to wire up Twilio without pasting credentials, but
+  // the actual OAuth handshake lives in the Replit workspace UI (the
+  // agent-side `proposeIntegration` tool drives a drawer there). This
+  // endpoint returns the canonical URL the admin should open to complete
+  // the binding, plus the connector id so the workspace can deep-link
+  // straight to Twilio. The shell opens that URL in a new tab and
+  // re-polls `/telephony/status` when focus returns.
+  //
+  // We don't try to invoke `proposeIntegration` server-side: it is an
+  // agent control-flow operation, not an HTTP endpoint, and would not be
+  // reachable for a tenant admin who is not running the Replit agent.
+  // Falling back to a clearly-labelled URL keeps the affordance honest.
+  // Admin-only: pasting credentials, or initiating a connector OAuth
+  // hand-off, is a privileged tenant config change. We gate on
+  // `requireTenantAdmin` in addition to the standard member +
+  // module-access checks so tenant `member` users cannot kick off the
+  // flow even if they have CallCommand access.
+  const callcommandAdminGuards = [
+    requireTenantMember,
+    requireTenantModuleAccess('callcommand-ai'),
+    requireTenantAdmin,
+  ];
+
+  // Twilio connector ID (the Replit-managed `ccfg_*` identifier from the
+  // connectors registry). Surfaced in the connect response so the shell
+  // can deep-link straight to the OAuth drawer for this connector
+  // instead of dropping the admin on a generic integrations index.
+  const TWILIO_CONNECTOR_ID = 'ccfg_twilio_01K69QJTED9YTJFE2SJ7E4SY08';
+
+  app.post(
+    '/v1/modules/callcommand-ai/telephony/connect',
+    { preHandler: callcommandAdminGuards },
+    async (_request, reply) => {
+      const info = await getTelephonyInfo();
+      if (info.configured) {
+        return reply.code(409).send({
+          error: 'Telephony already configured',
+          code: 'TELEPHONY_ALREADY_CONFIGURED',
+          source: info.source,
+        });
+      }
+      if (!info.connectorAvailable) {
+        // Self-hosted install with no Replit connector proxy. Tell the
+        // caller to use the env-var path — the shell already shows the
+        // four required vars in this branch.
+        return reply.code(409).send({
+          error: 'Replit connector unavailable in this environment',
+          code: 'CONNECTOR_UNAVAILABLE',
+        });
+      }
+
+      // Drive Replit's connector OAuth setup directly. The integrations
+      // setup URL (`?integration=<ccfg_id>` on the workspace) opens the
+      // same drawer that the agent-side `proposeIntegration` callback
+      // would have opened, so the admin gets a one-click handshake
+      // instead of a manual "find Twilio in the integrations list"
+      // workflow. We fall back to the connector setup URL on the
+      // connectors-v2 host if REPL_OWNER/REPL_SLUG aren't set.
+      const owner = process.env.REPL_OWNER;
+      const slug = process.env.REPL_SLUG;
+      const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+      const url = owner && slug
+        ? `https://replit.com/@${encodeURIComponent(owner)}/${encodeURIComponent(slug)}?integration=${TWILIO_CONNECTOR_ID}`
+        : `https://${hostname}/setup?connector_id=${TWILIO_CONNECTOR_ID}`;
+
+      return {
+        connectorId: TWILIO_CONNECTOR_ID,
+        connectorName: 'twilio',
+        url,
+        instructions:
+          'A new tab will open the Replit Twilio connector setup. After you finish OAuth, this banner will turn green within ~60 seconds.',
+      };
+    },
+  );
+
   app.get(
     '/v1/modules/callcommand-ai/calls',
     { preHandler: [...callcommandGuards] },
@@ -249,7 +337,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       // (which can race the API response back) always has a row to update,
       // then attempt to dial. On dial failure we flip the row to `failed`
       // and surface the provider error to the caller.
-      if (!isTelephonyConfigured()) {
+      if (!(await isTelephonyConfigured())) {
         // Dev/test fallback so the shell remains usable when no telephony
         // provider is wired up. The row is still persisted but clearly
         // marked as a stub via `provider='stub'`.
@@ -382,7 +470,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   app.post('/v1/modules/callcommand-ai/webhooks/twilio/status', async (request, reply) => {
     const body = (request.body as Record<string, string>) ?? {};
     const sig = request.headers['x-twilio-signature'] as string | undefined;
-    if (!verifyTwilioSignature(canonicalWebhookUrl(request), body, sig)) {
+    if (!(await verifyTwilioSignature(canonicalWebhookUrl(request), body, sig))) {
       return reply.code(403).send({ error: 'Invalid signature' });
     }
     const sid = body.CallSid;
@@ -410,7 +498,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   app.post('/v1/modules/callcommand-ai/webhooks/twilio/recording', async (request, reply) => {
     const body = (request.body as Record<string, string>) ?? {};
     const sig = request.headers['x-twilio-signature'] as string | undefined;
-    if (!verifyTwilioSignature(canonicalWebhookUrl(request), body, sig)) {
+    if (!(await verifyTwilioSignature(canonicalWebhookUrl(request), body, sig))) {
       return reply.code(403).send({ error: 'Invalid signature' });
     }
     const sid = body.CallSid;

@@ -228,6 +228,9 @@ export const moduleShellApi = {
         method: 'POST',
         body: JSON.stringify(input),
       }),
+    telephonyStatus: () => apiFetch('/modules/callcommand-ai/telephony/status'),
+    telephonyConnect: () =>
+      apiFetch('/modules/callcommand-ai/telephony/connect', { method: 'POST' }),
   },
   studyforge: {
     list: () => apiFetch('/modules/studyforge-ai/sessions'),

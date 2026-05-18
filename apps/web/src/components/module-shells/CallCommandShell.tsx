@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Phone, PhoneCall, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { Phone, PhoneCall, CheckCircle2, Clock, AlertTriangle, Link2, Plug } from 'lucide-react';
 import {
   semantic, space, fontSize, radius, cardStyle,
 } from '@/lib/design-tokens';
@@ -32,6 +32,15 @@ interface TestCall {
   createdAt: string;
 }
 
+interface CallListResponse { calls: TestCall[] }
+
+interface ConnectResponse {
+  url: string;
+  connectorId: string;
+  connectorName: string;
+  instructions: string;
+}
+
 const TERMINAL: Record<CallStatus, boolean> = {
   queued: false, ringing: false, completed: true, failed: true,
 };
@@ -42,6 +51,18 @@ const PERSONAS = [
   { value: 'collector',    label: 'Payment reminder — friendly tone' },
 ];
 
+// Task #89 — telephony config descriptor returned by the API. `source`
+// tells the shell whether credentials came from the Replit connector or
+// fall-back env vars; `connectorAvailable` indicates whether the one-click
+// connector flow is even reachable from this environment (self-hosted
+// installs running outside Replit lack the connector proxy).
+interface TelephonyStatus {
+  configured: boolean;
+  provider: 'twilio';
+  source: 'connector' | 'env' | null;
+  connectorAvailable: boolean;
+}
+
 export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
@@ -50,16 +71,78 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
   const [calls, setCalls] = useState<TestCall[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [telephony, setTelephony] = useState<TelephonyStatus | null>(null);
+  const [connectPending, setConnectPending] = useState(false);
+  const [connectInfo, setConnectInfo] = useState<ConnectResponse | null>(null);
+  const [connectError, setConnectError] = useState<string | null>(null);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Re-fetch only the telephony status — used after a successful connect
+  // flow and when the window regains focus (the admin likely just
+  // finished the OAuth handshake in another tab).
+  async function refreshTelephonyStatus() {
+    try {
+      const res = (await moduleShellApi.callcommand.telephonyStatus()) as TelephonyStatus;
+      setTelephony(res);
+      return res;
+    } catch {
+      return null;
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
-    moduleShellApi.callcommand.list()
-      .then((res: any) => { if (!cancelled) setCalls(res.calls ?? []); })
+    Promise.all([
+      moduleShellApi.callcommand.list() as Promise<CallListResponse>,
+      moduleShellApi.callcommand.telephonyStatus().catch(() => null) as Promise<TelephonyStatus | null>,
+    ])
+      .then(([listRes, statusRes]) => {
+        if (cancelled) return;
+        setCalls(listRes?.calls ?? []);
+        if (statusRes) setTelephony(statusRes);
+      })
       .catch((err) => { if (!cancelled) setError(err?.message || 'Failed to load calls'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
+
+  // When focus returns to the tab, the admin may have just finished
+  // adding the Twilio connector in Replit. Re-poll the status so the
+  // banner flips green without requiring a manual refresh.
+  useEffect(() => {
+    if (telephony?.configured) return;
+    function onFocus() { void refreshTelephonyStatus(); }
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [telephony?.configured]);
+
+  async function handleConnectTwilio() {
+    if (connectPending) return;
+    setConnectPending(true);
+    setConnectError(null);
+    try {
+      const res = (await moduleShellApi.callcommand.telephonyConnect()) as ConnectResponse;
+      setConnectInfo(res);
+      // Open the workspace in a new tab so the admin can drive the
+      // Replit integration drawer. We deliberately do not block on it —
+      // the focus listener above will pick up the new status when the
+      // admin tabs back.
+      window.open(res.url, '_blank', 'noopener,noreferrer');
+    } catch (err: unknown) {
+      const e = err as { code?: string; error?: string; message?: string };
+      if (e?.code === 'CONNECTOR_UNAVAILABLE') {
+        setConnectError('The Replit connector is not reachable from this environment — use environment variables instead.');
+      } else if (e?.code === 'TELEPHONY_ALREADY_CONFIGURED') {
+        // Race: someone else configured it between the status poll and
+        // the click. Refresh to reflect reality.
+        await refreshTelephonyStatus();
+      } else {
+        setConnectError(e?.error || e?.message || 'Could not start the connect flow.');
+      }
+    } finally {
+      setConnectPending(false);
+    }
+  }
 
   // Poll every 3s for any non-terminal call. We only refresh those rows so
   // a long backlog of completed calls does not generate needless traffic.
@@ -140,7 +223,15 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
         </div>
       </header>
 
-      <form onSubmit={placeCall} style={{ ...cardStyle, display: 'grid', gap: space.md }}>
+      <TelephonyBanner
+        status={telephony}
+        connectPending={connectPending}
+        connectInfo={connectInfo}
+        connectError={connectError}
+        onConnect={handleConnectTwilio}
+      />
+
+      <form onSubmit={placeCall} style={{ ...cardStyle, display: 'grid', gap: space.md, marginTop: space.md }}>
         <h2 style={{ margin: 0, fontSize: fontSize.lg, fontWeight: 600, color: '#fff' }}>
           Place a test call
         </h2>
@@ -262,6 +353,160 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+/**
+ * Task #89 — surface the telephony config state at the top of the shell.
+ * Three modes:
+ *   • Not configured + connector available → "Connect Twilio" button that
+ *     reveals one-click setup instructions.
+ *   • Not configured + connector unavailable (self-hosted) → guidance to
+ *     paste the four env vars.
+ *   • Configured → a green status pill labelled with the active source
+ *     so admins can tell at a glance whether they are on the connector or
+ *     legacy env-var path.
+ */
+function TelephonyBanner({
+  status,
+  connectPending,
+  connectInfo,
+  connectError,
+  onConnect,
+}: {
+  status: TelephonyStatus | null;
+  connectPending: boolean;
+  connectInfo: ConnectResponse | null;
+  connectError: string | null;
+  onConnect: () => void;
+}) {
+  if (!status) return null;
+
+  if (status.configured) {
+    const label = status.source === 'connector'
+      ? 'Twilio connected via Replit integration'
+      : 'Twilio connected via environment variables';
+    return (
+      <div
+        data-testid="banner-telephony-connected"
+        style={{
+          ...cardStyle,
+          display: 'flex', alignItems: 'center', gap: space.sm,
+          background: 'rgba(46,160,67,0.08)',
+          border: `1px solid ${semantic.accentSuccess}44`,
+          color: semantic.accentSuccess,
+          fontSize: fontSize.sm, fontWeight: 600,
+        }}
+      >
+        <CheckCircle2 size={14} />
+        <span data-testid={`text-telephony-source-${status.source ?? 'unknown'}`}>{label}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      data-testid="banner-telephony-disconnected"
+      style={{
+        ...cardStyle,
+        background: 'rgba(244,182,68,0.08)',
+        border: `1px solid ${semantic.accentWarning}55`,
+        color: semantic.text,
+        display: 'grid', gap: space.sm,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
+        <Plug size={16} color={semantic.accentWarning} />
+        <div style={{ flex: 1, fontSize: fontSize.sm, color: semantic.textMuted }}>
+          Twilio is not connected — test calls will be simulated with a stub
+          response instead of dialing a real number.
+        </div>
+        {status.connectorAvailable ? (
+          <button
+            type="button"
+            data-testid="button-connect-twilio"
+            onClick={onConnect}
+            disabled={connectPending}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: radius.sm, border: 'none',
+              background: connectPending ? 'rgba(139,148,158,0.4)' : semantic.accent,
+              color: '#fff', cursor: connectPending ? 'wait' : 'pointer',
+              fontWeight: 600, fontSize: fontSize.sm,
+            }}
+          >
+            <Link2 size={14} /> {connectPending ? 'Opening…' : 'Connect Twilio'}
+          </button>
+        ) : null}
+      </div>
+
+      {connectError && (
+        <div
+          data-testid="text-connect-twilio-error"
+          style={{ color: semantic.accentDanger, fontSize: fontSize.sm }}
+        >
+          {connectError}
+        </div>
+      )}
+
+      {connectInfo && (
+        <div
+          data-testid="panel-connect-twilio-info"
+          style={{
+            background: semantic.bg,
+            border: `1px solid ${semantic.border}`,
+            borderRadius: radius.sm,
+            padding: space.md,
+            color: semantic.textMuted,
+            fontSize: fontSize.sm,
+            lineHeight: 1.55,
+          }}
+        >
+          <div style={{ color: '#fff', fontWeight: 600, marginBottom: 6 }}>
+            Finish the connection in Replit
+          </div>
+          <p style={{ margin: '0 0 6px' }}>{connectInfo.instructions}</p>
+          <a
+            href={connectInfo.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="link-connect-twilio-workspace"
+            style={{ color: semantic.accent }}
+          >
+            Open the Replit workspace ↗
+          </a>
+        </div>
+      )}
+
+      {!status.connectorAvailable && (
+        <div
+          data-testid="panel-connect-twilio-envvars"
+          style={{
+            background: semantic.bg,
+            border: `1px solid ${semantic.border}`,
+            borderRadius: radius.sm,
+            padding: space.md,
+            color: semantic.textMuted,
+            fontSize: fontSize.sm,
+            lineHeight: 1.55,
+          }}
+        >
+          <div style={{ color: '#fff', fontWeight: 600, marginBottom: 6 }}>
+            Configure Twilio via environment variables
+          </div>
+          <p style={{ margin: '0 0 6px' }}>
+            The Replit connector proxy is not available in this environment.
+            Set the following secrets and restart the API:
+          </p>
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            <li><code>TWILIO_ACCOUNT_SID</code></li>
+            <li><code>TWILIO_AUTH_TOKEN</code></li>
+            <li><code>TWILIO_FROM_NUMBER</code></li>
+            <li><code>TWILIO_PUBLIC_BASE_URL</code> (or <code>APP_URL</code>)</li>
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
