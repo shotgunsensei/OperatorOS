@@ -132,11 +132,27 @@ export async function isTelephonyConfigured(): Promise<boolean> {
   return (await resolveTelephonyConfig()) !== null;
 }
 
+/**
+ * Mask a Twilio Account SID for display. Twilio SIDs are `AC` + 32 hex
+ * chars; the prefix is not sensitive (it identifies the account type),
+ * but the body is. We surface the last 4 chars so admins can match
+ * against the Twilio console without exposing the full identifier in
+ * logs/UI. Example: `AC0123…cdef` -> `AC••••cdef`.
+ */
+export function maskAccountSid(sid: string): string {
+  if (sid.length <= 6) return '••••';
+  const prefix = sid.slice(0, 2);
+  const tail = sid.slice(-4);
+  return `${prefix}••••${tail}`;
+}
+
 export async function getTelephonyInfo(): Promise<{
   configured: boolean;
   provider: 'twilio';
   source: TelephonySource | null;
   connectorAvailable: boolean;
+  fromNumber: string | null;
+  accountSid: string | null;
 }> {
   const cfg = await resolveTelephonyConfig();
   return {
@@ -150,6 +166,13 @@ export async function getTelephonyInfo(): Promise<{
       process.env.REPLIT_CONNECTORS_HOSTNAME &&
         (process.env.REPL_IDENTITY || process.env.WEB_REPL_RENEWAL),
     ),
+    // Task #96 — surface the active Twilio identity so tenant admins can
+    // confirm which number CallCommand will dial from before placing a
+    // real test call. The from-number is the E.164 the call will
+    // originate from; the SID is masked because the body identifies the
+    // Twilio account and should not be exposed in full in the UI/logs.
+    fromNumber: cfg?.fromNumber ?? null,
+    accountSid: cfg ? maskAccountSid(cfg.accountSid) : null,
   };
 }
 

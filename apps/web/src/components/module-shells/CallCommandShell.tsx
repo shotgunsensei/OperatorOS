@@ -61,6 +61,12 @@ interface TelephonyStatus {
   provider: 'twilio';
   source: 'connector' | 'env' | null;
   connectorAvailable: boolean;
+  // Task #96 — active Twilio identity so admins can confirm which line
+  // will be used before placing a real test call. `accountSid` is masked
+  // server-side (e.g. `AC••••1234`); `fromNumber` is the E.164 the call
+  // will originate from. Both are null when not configured.
+  fromNumber: string | null;
+  accountSid: string | null;
 }
 
 export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
@@ -392,20 +398,46 @@ function TelephonyBanner({
     const label = status.source === 'connector'
       ? 'Twilio connected via Replit integration'
       : 'Twilio connected via environment variables';
+    // Task #96 — surface the active from-number (and masked account SID
+    // when available) beneath the source label so admins can confirm
+    // which Twilio line CallCommand will dial from before placing a real
+    // test call. Tenants with multiple Twilio numbers (sandbox vs prod,
+    // region-specific) need this to avoid placing test calls on the
+    // wrong line.
+    const identityParts: string[] = [];
+    if (status.fromNumber) identityParts.push(`From ${status.fromNumber}`);
+    if (status.accountSid) identityParts.push(status.accountSid);
+    const identityLabel = identityParts.join(' · ');
     return (
       <div
         data-testid="banner-telephony-connected"
         style={{
           ...cardStyle,
-          display: 'flex', alignItems: 'center', gap: space.sm,
+          display: 'grid', gap: 2,
           background: 'rgba(46,160,67,0.08)',
           border: `1px solid ${semantic.accentSuccess}44`,
           color: semantic.accentSuccess,
           fontSize: fontSize.sm, fontWeight: 600,
         }}
       >
-        <CheckCircle2 size={14} />
-        <span data-testid={`text-telephony-source-${status.source ?? 'unknown'}`}>{label}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
+          <CheckCircle2 size={14} />
+          <span data-testid={`text-telephony-source-${status.source ?? 'unknown'}`}>{label}</span>
+        </div>
+        {identityLabel && (
+          <span
+            data-testid="text-telephony-identity"
+            style={{
+              marginLeft: 14 + space.sm,
+              fontWeight: 500,
+              fontSize: fontSize.xs,
+              color: semantic.textMuted,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {identityLabel}
+          </span>
+        )}
       </div>
     );
   }
