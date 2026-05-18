@@ -1,6 +1,8 @@
 import React from 'react';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import PricingSection from '@/components/marketing/sections/PricingSection';
+import AddOnPriceTable from '@/components/marketing/sections/AddOnPriceTable';
+import PricingFaq from '@/components/marketing/sections/PricingFaq';
 import TrustSection from '@/components/marketing/sections/TrustSection';
 import FinalCta from '@/components/marketing/sections/FinalCta';
 import { brand } from '@/lib/brand';
@@ -60,6 +62,8 @@ export default function MarketingPricingPage() {
         </p>
       </section>
       <PricingSection />
+      <AddOnPriceTable />
+      <PricingFaq />
       <TrustSection
         heading="Operators trust OperatorOS with the work that has to stay running."
         subheading="Designed for teams that need role-aware access, tenant-scoped data, and an audit trail they can show their customers."
