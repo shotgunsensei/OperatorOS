@@ -8,6 +8,8 @@ import CommandOrbit from '@/components/marketing/sections/CommandOrbit';
 import PlatformPositioning from '@/components/marketing/sections/PlatformPositioning';
 import ModuleGatewayGrid from '@/components/marketing/sections/ModuleGatewayGrid';
 import HowItWorks from '@/components/marketing/sections/HowItWorks';
+import PricingTeaser from '@/components/marketing/sections/PricingTeaser';
+import TrustSection from '@/components/marketing/sections/TrustSection';
 import FinalCta from '@/components/marketing/sections/FinalCta';
 import { useAuth } from '@/components/AuthProvider';
 
@@ -37,6 +39,8 @@ function HomeBody() {
       <PlatformPositioning />
       <ModuleGatewayGrid />
       <HowItWorks />
+      <PricingTeaser />
+      <TrustSection />
       <FinalCta />
     </>
   );

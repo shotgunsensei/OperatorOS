@@ -582,10 +582,66 @@ test('marketing phase 2 · no buzzwords in homepage copy', () => {
     'src/components/marketing/sections/ModuleGatewayGrid.tsx',
     'src/components/marketing/sections/HowItWorks.tsx',
     'src/components/marketing/sections/FinalCta.tsx',
+    'src/components/marketing/sections/PricingTeaser.tsx',
+    'src/components/marketing/sections/TrustSection.tsx',
+    'src/components/marketing/sections/PricingSection.tsx',
+    'src/lib/marketing-pricing.ts',
   ];
   const banned = /\b(revolutionary|game[- ]changing|next[- ]gen)\b/i;
   for (const rel of files) {
     const src = read(rel);
     assert.doesNotMatch(src, banned, `${rel} contains a banned buzzword`);
   }
+});
+
+test('marketing phase 3 · homepage composes pricing teaser and trust section in order', () => {
+  const src = read('src/app/page.tsx');
+  const order = [
+    'Hero', 'CommandOrbit', 'PlatformPositioning', 'ModuleGatewayGrid',
+    'HowItWorks', 'PricingTeaser', 'TrustSection', 'FinalCta',
+  ];
+  const positions = order.map(name => src.indexOf(`<${name}`));
+  for (let i = 1; i < positions.length; i++) {
+    assert.ok(
+      positions[i] > positions[i - 1] && positions[i - 1] >= 0,
+      `expected <${order[i]}> after <${order[i - 1]}> in src/app/page.tsx`,
+    );
+  }
+});
+
+test('marketing phase 3 · /pricing renders the pricing + trust sections inside the marketing shell', () => {
+  const src = read('src/app/pricing/page.tsx');
+  assert.match(src, /MarketingLayout/, '/pricing must stay inside the marketing shell');
+  assert.match(src, /PricingSection/, '/pricing must render the shared PricingSection');
+  assert.match(src, /TrustSection/,   '/pricing should surface the trust section alongside tiers');
+});
+
+test('marketing phase 3 · pricing teaser links to /pricing with the required CTA test-id', () => {
+  const src = read('src/components/marketing/sections/PricingTeaser.tsx');
+  assert.match(src, /data-testid="marketing-pricing-teaser"/);
+  assert.match(src, /data-testid="pricing-teaser-cta"/);
+  assert.match(src, /href="\/pricing"/);
+});
+
+test('marketing phase 3 · trust section avoids unsupported compliance claims', () => {
+  const src = read('src/components/marketing/sections/TrustSection.tsx');
+  // Strip comments so the JSDoc that *explains* why these claims are
+  // banned isn't itself flagged as a banned claim.
+  const stripped = src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  // No SOC 2 / HIPAA / ISO 27001 / PCI / FedRAMP badges — brief forbids
+  // claims tied to certifications we have not actually completed.
+  const banned = /\b(SOC\s*2|HIPAA|ISO\s*27001|PCI[- ]DSS|FedRAMP)\b/i;
+  assert.doesNotMatch(stripped, banned, 'TrustSection must not assert unsupported compliance certifications');
+  // Required positioning bullets from the brief.
+  assert.match(src, /[Rr]ole-based access/);
+  assert.match(src, /[Tt]enant-aware/);
+  assert.match(src, /[Aa]udit/);
+});
+
+test('marketing phase 3 · billing CTA helper centralizes the auth-aware routing rule', () => {
+  const src = read('src/lib/marketing-cta.ts');
+  assert.match(src, /billingCtaTarget/, 'should export billingCtaTarget helper');
+  assert.match(src, /'\/app\/billing'/, 'signed-in billing CTA must point at /app/billing');
 });

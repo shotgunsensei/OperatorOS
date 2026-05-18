@@ -31,6 +31,23 @@ export function primaryCtaTarget(signedIn: boolean): CtaTarget {
     : { href: '/login', label: 'Launch OperatorOS' };
 }
 
+/**
+ * Pricing CTA targeting — used by the pricing teaser strip and any
+ * "See pricing" / "Manage billing" affordances on marketing pages.
+ *
+ * Signed-out → /login (so they can come back to billing afterwards)
+ * Signed-in  → /app/billing (the existing billing route in the console)
+ *
+ * Marketing surfaces never talk to billing routes directly; this just
+ * routes the visitor to the place that already knows how to manage
+ * the subscription.
+ */
+export function billingCtaTarget(signedIn: boolean): CtaTarget {
+  return signedIn
+    ? { href: '/app/billing', label: 'Manage billing' }
+    : { href: '/login',       label: 'See pricing' };
+}
+
 export function moduleCtaTarget(
   status: MarketingStatus,
   signedIn: boolean,
