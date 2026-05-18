@@ -36,16 +36,19 @@ export function primaryCtaTarget(signedIn: boolean): CtaTarget {
  * "See pricing" / "Manage billing" affordances on marketing pages.
  *
  * Signed-out → /login (so they can come back to billing afterwards)
- * Signed-in  → /app/billing (the existing billing route in the console)
+ * Signed-in  → /app (the console entry; the in-console sidebar exposes
+ *              the Billing page from there). There is no top-level
+ *              Next route at /app/billing — billing lives inside the
+ *              console shell behind `activePage='billing'`, so routing
+ *              directly to /app/billing would 404.
  *
  * Marketing surfaces never talk to billing routes directly; this just
- * routes the visitor to the place that already knows how to manage
- * the subscription.
+ * routes the visitor to the console where billing is reachable.
  */
 export function billingCtaTarget(signedIn: boolean): CtaTarget {
   return signedIn
-    ? { href: '/app/billing', label: 'Manage billing' }
-    : { href: '/login',       label: 'See pricing' };
+    ? { href: '/app',   label: 'Manage billing' }
+    : { href: '/login', label: 'See pricing' };
 }
 
 export function moduleCtaTarget(

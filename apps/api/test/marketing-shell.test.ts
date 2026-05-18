@@ -643,5 +643,13 @@ test('marketing phase 3 · trust section avoids unsupported compliance claims', 
 test('marketing phase 3 · billing CTA helper centralizes the auth-aware routing rule', () => {
   const src = read('src/lib/marketing-cta.ts');
   assert.match(src, /billingCtaTarget/, 'should export billingCtaTarget helper');
-  assert.match(src, /'\/app\/billing'/, 'signed-in billing CTA must point at /app/billing');
+  // Signed-in billing CTA must point at a reachable console route.
+  // `/app/billing` is NOT a Next route in this repo — Billing lives
+  // inside the console shell behind `activePage='billing'` — so the
+  // helper resolves to `/app` and lets the in-app sidebar take over.
+  assert.match(
+    src,
+    /signedIn[\s\S]*\?\s*\{\s*href:\s*'\/app'\s*,\s*label:\s*'Manage billing'/,
+    'signed-in billing CTA must resolve to /app with "Manage billing" copy',
+  );
 });

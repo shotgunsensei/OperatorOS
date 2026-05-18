@@ -194,9 +194,13 @@ test('marketing pricing · resolvePricingCta routes every tier correctly for sig
     resolvePricingCta(billingTier, false),
     { href: '/login', label: 'See plans' },
   );
+  // Billing CTA resolves signed-in viewers to `/app` (the console
+  // entry) — there is no top-level `/app/billing` Next route in this
+  // repo. The Billing surface lives inside the console shell behind
+  // `activePage='billing'`, reachable from the in-app sidebar.
   assert.deepEqual(
     resolvePricingCta(billingTier, true),
-    { href: '/app/billing', label: 'Manage billing' },
+    { href: '/app', label: 'Manage billing' },
   );
 
   const consoleTier = { ctaHref: '/app' as const, ctaLabel: 'Start free' };
