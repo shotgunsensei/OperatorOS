@@ -23,7 +23,7 @@ import { eq, and, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
   users, tenants, tenantUsers, tenantModules, tenantUserModuleAccess,
-  modules, planModules, subscriptions, subscriptionPlans,
+  modules, planModules, subscriptions, subscriptionPlans, billingEvents,
 } from '../schema.js';
 import { PLAN_CONFIGS } from './plans.js';
 
@@ -65,26 +65,42 @@ export async function launchFixPreSeed(): Promise<void> {
     // then drop the legacy row.
     const legacyId = legacy.id;
     const targetId = target.id;
+    const repointed: Record<string, number> = {
+      plan_modules: 0,
+      tenant_modules: 0,
+      tenant_user_module_access: 0,
+      addon_subscriptions: 0,
+      entitlement_overrides: 0,
+    };
+    const dropped: Record<string, number> = {
+      plan_modules: 0,
+      tenant_modules: 0,
+      tenant_user_module_access: 0,
+    };
     await db.transaction(async (tx) => {
-      await tx.execute(sql`
+      const pmUpd = await tx.execute(sql`
         UPDATE plan_modules SET module_id = ${targetId}
         WHERE module_id = ${legacyId}
           AND NOT EXISTS (
             SELECT 1 FROM plan_modules pm2
             WHERE pm2.plan_id = plan_modules.plan_id AND pm2.module_id = ${targetId}
           )`);
-      await tx.execute(sql`DELETE FROM plan_modules WHERE module_id = ${legacyId}`);
+      repointed.plan_modules = pmUpd.rowCount ?? 0;
+      const pmDel = await tx.execute(sql`DELETE FROM plan_modules WHERE module_id = ${legacyId}`);
+      dropped.plan_modules = pmDel.rowCount ?? 0;
 
-      await tx.execute(sql`
+      const tmUpd = await tx.execute(sql`
         UPDATE tenant_modules SET module_id = ${targetId}
         WHERE module_id = ${legacyId}
           AND NOT EXISTS (
             SELECT 1 FROM tenant_modules tm2
             WHERE tm2.tenant_id = tenant_modules.tenant_id AND tm2.module_id = ${targetId}
           )`);
-      await tx.execute(sql`DELETE FROM tenant_modules WHERE module_id = ${legacyId}`);
+      repointed.tenant_modules = tmUpd.rowCount ?? 0;
+      const tmDel = await tx.execute(sql`DELETE FROM tenant_modules WHERE module_id = ${legacyId}`);
+      dropped.tenant_modules = tmDel.rowCount ?? 0;
 
-      await tx.execute(sql`
+      const tumaUpd = await tx.execute(sql`
         UPDATE tenant_user_module_access SET module_id = ${targetId}
         WHERE module_id = ${legacyId}
           AND NOT EXISTS (
@@ -93,16 +109,43 @@ export async function launchFixPreSeed(): Promise<void> {
               AND tuma2.user_id   = tenant_user_module_access.user_id
               AND tuma2.module_id = ${targetId}
           )`);
-      await tx.execute(sql`DELETE FROM tenant_user_module_access WHERE module_id = ${legacyId}`);
+      repointed.tenant_user_module_access = tumaUpd.rowCount ?? 0;
+      const tumaDel = await tx.execute(sql`DELETE FROM tenant_user_module_access WHERE module_id = ${legacyId}`);
+      dropped.tenant_user_module_access = tumaDel.rowCount ?? 0;
 
       // addon_subscriptions + entitlement_overrides: re-point in place;
       // there's no composite uniqueness preventing a straight UPDATE.
-      await tx.execute(sql`UPDATE addon_subscriptions   SET module_id = ${targetId} WHERE module_id = ${legacyId}`);
-      await tx.execute(sql`UPDATE entitlement_overrides SET module_id = ${targetId} WHERE module_id = ${legacyId}`);
+      const addonUpd = await tx.execute(sql`UPDATE addon_subscriptions   SET module_id = ${targetId} WHERE module_id = ${legacyId}`);
+      repointed.addon_subscriptions = addonUpd.rowCount ?? 0;
+      const entUpd = await tx.execute(sql`UPDATE entitlement_overrides SET module_id = ${targetId} WHERE module_id = ${legacyId}`);
+      repointed.entitlement_overrides = entUpd.rowCount ?? 0;
 
       await tx.delete(modules).where(eq(modules.id, legacyId));
     });
     console.log('[launch-fix:pre] Migrated FK refs from bf-os -> brandforgeos and dropped duplicate row');
+
+    // Surface the heal through billing_events so admin DLQ / alert
+    // tooling picks it up. Repeated boots without the duplicate won't
+    // re-enter this branch, so this stays silent on healthy runs.
+    try {
+      await db.insert(billingEvents).values({
+        userId: null,
+        eventType: 'launch_fix_module_slug_heal',
+        metadata: {
+          legacySlug: 'bf-os',
+          canonicalSlug: 'brandforgeos',
+          legacyModuleId: legacyId,
+          canonicalModuleId: targetId,
+          repointed,
+          dropped,
+          source: 'launchFixPreSeed',
+          note: 'Duplicate legacy module row detected at boot; FK dependents migrated and legacy row dropped. Investigate why both bf-os and brandforgeos exist.',
+        },
+        processedAt: new Date(),
+      });
+    } catch (err) {
+      console.error('[launch-fix:pre] failed to record duplicate-heal billing_event:', err);
+    }
   }
 }
 
