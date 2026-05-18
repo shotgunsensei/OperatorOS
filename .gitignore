@@ -15,3 +15,4 @@ apps/web/android/.gradle/
 apps/web/android/local.properties
 *.keystore
 *.jks
+test-results/
