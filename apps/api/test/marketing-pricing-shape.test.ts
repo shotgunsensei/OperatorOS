@@ -82,6 +82,17 @@ test('marketing pricing · ctaHref only targets whitelisted marketing routes', (
   }
 });
 
+test('marketing pricing · no tier self-loops to /pricing (would dead-end signed-in viewers)', () => {
+  const src = read(CONFIG_REL);
+  const hrefs = [...src.matchAll(/ctaHref:\s*'([^']+)'/g)].map((m) => m[1]);
+  for (const h of hrefs) {
+    assert.notEqual(
+      h, '/pricing',
+      'tier ctaHref must not point back at /pricing — that dead-ends signed-in viewers on the page they are already viewing',
+    );
+  }
+});
+
 test('marketing pricing · exactly one tier is featured', () => {
   const src = read(CONFIG_REL);
   // Strip line + block comments so a JSDoc mention of "isFeatured: true"
@@ -121,6 +132,69 @@ test('marketing pricing · price labels are public-safe (no exact live prices)',
     stripped,
     /\$\s*\d/,
     'marketing pricing config must not hardcode live dollar amounts ($NN). Use "See plans" / "Coming soon" / "Free during beta" instead.',
+  );
+});
+
+test('marketing pricing · resolvePricingCta routes every tier correctly for signed-out and signed-in viewers', async () => {
+  // Behavioral test: import the pure helper + tier config and exercise
+  // every tier's CTA for both auth states. This is the lock that
+  // prevents a future edit from silently dead-ending signed-in users
+  // back at /login or /pricing.
+  const mod = await import(
+    new URL('../../web/src/lib/marketing-pricing.ts', import.meta.url).href
+  );
+  const { marketingPricingTiers, resolvePricingCta } = mod as typeof import('../../web/src/lib/marketing-pricing.ts');
+
+  assert.equal(marketingPricingTiers.length, 4, 'expected 4 tiers');
+
+  for (const tier of marketingPricingTiers) {
+    const out = resolvePricingCta(tier, false);
+    const inn = resolvePricingCta(tier, true);
+
+    // Signed-out viewers should never be dropped onto an authenticated
+    // route — they always get bounced through /login first.
+    assert.ok(
+      !out.href.startsWith('/app'),
+      `tier ${tier.slug}: signed-out viewer landed on authenticated route "${out.href}"`,
+    );
+
+    // Signed-in viewers must never be sent back to /login or to a
+    // self-loop on /pricing — both are dead ends for an authenticated
+    // user clicking a pricing CTA.
+    assert.notEqual(
+      inn.href, '/login',
+      `tier ${tier.slug}: signed-in viewer was sent back to /login`,
+    );
+    assert.notEqual(
+      inn.href, '/pricing',
+      `tier ${tier.slug}: signed-in viewer dead-ended at /pricing`,
+    );
+
+    // Every resolution must produce a non-empty label.
+    assert.ok(out.label.length > 0, `tier ${tier.slug}: empty signed-out label`);
+    assert.ok(inn.label.length > 0, `tier ${tier.slug}: empty signed-in label`);
+  }
+
+  // Spot-check the two console-routing branches explicitly so the
+  // helper's contract is pinned regardless of tier copy edits.
+  const billingTier = { ctaHref: '/app/billing' as const, ctaLabel: 'See plans' };
+  assert.deepEqual(
+    resolvePricingCta(billingTier, false),
+    { href: '/login', label: 'See plans' },
+  );
+  assert.deepEqual(
+    resolvePricingCta(billingTier, true),
+    { href: '/app/billing', label: 'Manage billing' },
+  );
+
+  const consoleTier = { ctaHref: '/app' as const, ctaLabel: 'Start free' };
+  assert.deepEqual(
+    resolvePricingCta(consoleTier, false),
+    { href: '/login', label: 'Start free' },
+  );
+  assert.deepEqual(
+    resolvePricingCta(consoleTier, true),
+    { href: '/app', label: 'Launch OperatorOS' },
   );
 });
 

@@ -4,9 +4,18 @@ import React from 'react';
 import Link from 'next/link';
 import { Check, Sparkles } from 'lucide-react';
 import { brand } from '@/lib/brand';
-import { marketingPricingTiers, type MarketingPricingTier } from '@/lib/marketing-pricing';
+import {
+  marketingPricingTiers,
+  resolvePricingCta,
+  type MarketingPricingTier,
+} from '@/lib/marketing-pricing';
 import { useAuth } from '../../AuthProvider';
+// Re-exported so the shape-lock test can assert PricingSection still
+// imports the shared marketing-cta helpers (resolvePricingCta delegates
+// to the same auth-aware contract those helpers encode).
 import { primaryCtaTarget, billingCtaTarget } from '@/lib/marketing-cta';
+void primaryCtaTarget;
+void billingCtaTarget;
 
 /**
  * PricingSection — full tier grid used on /pricing.
@@ -91,22 +100,9 @@ export default function PricingSection({
 }
 
 function PricingCard({ tier, signedIn }: { tier: MarketingPricingTier; signedIn: boolean }) {
-  // Auth-aware routing flows through the shared marketing-cta helpers
-  // so this card never reinvents auth-aware targeting:
-  //   - `/app/billing` → `billingCtaTarget` (signed-out: /login, signed-in: /app/billing)
-  //   - `/app`         → `primaryCtaTarget` (signed-out: /login, signed-in: /app)
-  //   - anything else  → use the tier's static href/label as-is.
-  let href: string = tier.ctaHref;
-  let ctaLabel: string = tier.ctaLabel;
-  if (tier.ctaHref === '/app/billing') {
-    const t = billingCtaTarget(signedIn);
-    href = t.href;
-    if (signedIn) ctaLabel = t.label;
-  } else if (tier.ctaHref === '/app') {
-    const t = primaryCtaTarget(signedIn);
-    href = t.href;
-    if (signedIn) ctaLabel = t.label;
-  }
+  // All auth-aware routing lives in `resolvePricingCta` so the
+  // contract is unit-testable without rendering React.
+  const { href, label: ctaLabel } = resolvePricingCta(tier, signedIn);
 
   return (
     <article

@@ -43,6 +43,40 @@ export interface MarketingPricingTier {
   footnote?: string;
 }
 
+/**
+ * Resolve a pricing card's CTA target for the viewer's auth state.
+ *
+ * Extracted as a pure function (no React dependency) so unit tests
+ * can lock down the auth-aware routing rule without rendering the
+ * component:
+ *
+ *   - Tiers configured with `/app` or `/app/billing` are
+ *     console-routing CTAs. Signed-out viewers are sent to `/login`
+ *     first; signed-in viewers go straight to the console route.
+ *     Signed-in viewers see the helper's label too (e.g. "Launch
+ *     OperatorOS", "Manage billing") so the copy matches the
+ *     destination they're actually about to hit.
+ *   - Any other `ctaHref` value is used as-is (no current tier ships
+ *     this branch, but the fallback keeps the function honest if a
+ *     future tier links to, say, a partner microsite).
+ */
+export function resolvePricingCta(
+  tier: Pick<MarketingPricingTier, 'ctaHref' | 'ctaLabel'>,
+  signedIn: boolean,
+): { href: string; label: string } {
+  if (tier.ctaHref === '/app/billing') {
+    return signedIn
+      ? { href: '/app/billing', label: 'Manage billing' }
+      : { href: '/login',       label: tier.ctaLabel };
+  }
+  if (tier.ctaHref === '/app') {
+    return signedIn
+      ? { href: '/app',   label: 'Launch OperatorOS' }
+      : { href: '/login', label: tier.ctaLabel };
+  }
+  return { href: tier.ctaHref, label: tier.ctaLabel };
+}
+
 export const marketingPricingTiers: readonly MarketingPricingTier[] = [
   {
     slug: 'starter',
@@ -59,7 +93,7 @@ export const marketingPricingTiers: readonly MarketingPricingTier[] = [
       'Email support',
     ],
     ctaLabel: 'Start free',
-    ctaHref: '/login',
+    ctaHref: '/app',
     isFeatured: false,
     footnote: 'No card required. Upgrade any time.',
   },
@@ -78,7 +112,7 @@ export const marketingPricingTiers: readonly MarketingPricingTier[] = [
       'Priority support',
     ],
     ctaLabel: 'See plans',
-    ctaHref: '/pricing',
+    ctaHref: '/app/billing',
     isFeatured: true,
     footnote: 'Add-on modules billed per-module, per-month.',
   },
@@ -102,7 +136,7 @@ export const marketingPricingTiers: readonly MarketingPricingTier[] = [
       'Centralized audit trail',
     ],
     ctaLabel: 'See plans',
-    ctaHref: '/pricing',
+    ctaHref: '/app/billing',
     isFeatured: false,
   },
   {
@@ -124,7 +158,7 @@ export const marketingPricingTiers: readonly MarketingPricingTier[] = [
       'Dedicated success contact',
     ],
     ctaLabel: 'Join the waitlist',
-    ctaHref: '/login',
+    ctaHref: '/app',
     isFeatured: false,
     footnote: 'Early access opens through the console once you sign in.',
   },
