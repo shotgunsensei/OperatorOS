@@ -1,16 +1,20 @@
 /**
  * Marketing-side pricing tier catalog.
  *
- * Drives the Phase 3 `/pricing` section and the homepage teaser strip.
- * This is intentionally a **static UI shell**: it carries the public-
- * facing copy for the four tiers without ever touching live billing
- * data. The field shape mirrors what `/v1/billing/plans` would return
- * so we can swap the source in a follow-up task with no UI rework.
+ * Drives the `/pricing` section and the homepage teaser strip.
  *
- * Constraints (Phase 3 brief):
- *   - No Stripe price IDs, secret keys, or live prices.
- *   - Public copy uses "Starting at", "Coming soon", or "See plans"
- *     where exact prices are not public-safe yet.
+ * As of task #98, this file owns only the *public copy* (tier name,
+ * description, included module copy, feature bullets, CTA target,
+ * footnote). Live dollar amounts are no longer hardcoded here — the
+ * UI hydrates them from `/v1/billing/plans` and maps each tier to a
+ * plan slug via the `planSlug` field below. Tiers without a matching
+ * billing plan (e.g. `business-command`, which is a tailored offer)
+ * still render their public-safe `priceLabel` fallback.
+ *
+ * Constraints:
+ *   - No Stripe price IDs, secret keys, or live prices in this file.
+ *   - `priceLabel` is the public-safe fallback shown before the live
+ *     fetch completes or for tiers without a matching plan slug.
  *   - One tier carries `isFeatured: true` so the UI can render a
  *     "Most popular" badge without sprinkling marketing decisions
  *     into the component.
@@ -25,7 +29,15 @@ export interface MarketingPricingTier {
   description: string;
   /** Who this tier is *for* — surfaces under the description. */
   idealFor: string;
-  /** Public-safe price label (no exact figures). */
+  /**
+   * Matching slug in the billing plan catalog (`/v1/billing/plans`).
+   * When set, the UI replaces `priceLabel` with the live amount for
+   * the viewer's selected interval (monthly | annual). Tiers without
+   * a matching plan (e.g. tailored `business-command`) leave this
+   * undefined and fall back to `priceLabel`.
+   */
+  planSlug?: 'starter' | 'pro' | 'elite';
+  /** Public-safe price label fallback (shown before hydration or when planSlug is unset). */
   priceLabel: string;
   /** Optional sub-label under the price (e.g. "per operator / month"). */
   priceCadence?: string;
@@ -92,6 +104,7 @@ export const marketingPricingTiers: readonly MarketingPricingTier[] = [
     tierName: 'Starter',
     description: 'The smallest console that still feels like a command layer.',
     idealFor: 'Solo operators and 1–2 person teams running a single trade.',
+    planSlug: 'starter',
     priceLabel: 'Free during beta',
     priceCadence: 'one operator seat included',
     includedModules: ['TradeFlowKit', 'TorqueShed', 'TechDeck'],
@@ -111,6 +124,7 @@ export const marketingPricingTiers: readonly MarketingPricingTier[] = [
     tierName: 'Pro Operator',
     description: 'The full operator stack for growing service businesses.',
     idealFor: 'Teams of 3–15 running multiple trades or service lines.',
+    planSlug: 'pro',
     priceLabel: 'See plans',
     priceCadence: 'per operator, per month',
     includedModules: ['Everything in Starter', 'PulseDesk', 'FaultlineLab', 'BrandForgeOS'],
@@ -154,6 +168,7 @@ export const marketingPricingTiers: readonly MarketingPricingTier[] = [
     tierName: 'Elite — Full Arsenal',
     description: 'Every Shotgun Ninjas module, with the AI-native command layer.',
     idealFor: 'MSPs, multi-brand operators, and AI-forward teams.',
+    planSlug: 'elite',
     priceLabel: 'Coming soon',
     priceCadence: 'talk to us about early access',
     includedModules: [

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { db } from '../db.js';
-import { subscriptions, subscriptionPlans, billingEvents } from '../schema.js';
-import { eq, desc } from 'drizzle-orm';
+import { subscriptions, subscriptionPlans, billingEvents, modules } from '../schema.js';
+import { eq, desc, isNull, asc } from 'drizzle-orm';
 import { authenticate, getUserPlanLimits } from '../lib/auth.js';
 import { writeAudit } from '../lib/audit.js';
 import { canPurchaseAddon, resolveTenantContext } from '../lib/tenant-auth.js';
@@ -58,6 +58,28 @@ export async function registerBillingRoutes(app: FastifyInstance) {
   });
 
   app.get('/v1/billing/plans', async () => {
+    // Task #98: marketing /pricing now sources live amounts from this
+    // endpoint, so we also surface the per-add-on display prices that
+    // the platform admin sets on `modules.metadata.addonPriceCents`.
+    // Returned shape is public-safe: slug, name, and display price only —
+    // no Stripe price IDs, env keys, or admin-only fields.
+    const addonRows = await db.select({
+      slug: modules.slug,
+      name: modules.name,
+      metadata: modules.metadata,
+    })
+      .from(modules)
+      .where(isNull(modules.archivedAt))
+      .orderBy(asc(modules.ord), asc(modules.slug));
+    const addons = addonRows.map(row => {
+      const cents = (row.metadata as Record<string, unknown> | null)?.addonPriceCents;
+      return {
+        slug: row.slug,
+        name: row.name,
+        addonPriceCents: typeof cents === 'number' ? cents : null,
+      };
+    });
+
     return {
       plans: PLAN_CONFIGS.map(p => {
         // Task #66 round 3: thread shared display pricing through to the
@@ -74,6 +96,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
           displayAnnualPriceCents: cat?.annualPriceCents ?? null,
         };
       }),
+      addons,
       featureLabels: FEATURE_LABELS,
       limitLabels: LIMIT_LABELS,
     };

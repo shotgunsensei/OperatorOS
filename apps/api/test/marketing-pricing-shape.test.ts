@@ -1,19 +1,21 @@
 /**
- * Marketing pricing config — shape lock test (Phase 3, task #87).
+ * Marketing pricing config — shape lock test (tasks #87, #98).
  *
- * The /pricing UI is intentionally a static UI shell for Phase 3 and
- * sources its tiers from `apps/web/src/lib/marketing-pricing.ts`. A
- * follow-up task will swap that source for live `/v1/billing/plans`
- * data. To make that swap safe, this test pins the contract by
- * statically parsing the config file and asserting:
+ * The /pricing UI sources copy from
+ * `apps/web/src/lib/marketing-pricing.ts` and hydrates live dollar
+ * amounts from `/v1/billing/plans` per task #98. This test pins the
+ * contract by statically parsing the config file and asserting:
  *
  *   - It defines exactly the four required tiers, in order.
  *   - Each tier carries every required field with the right type.
  *   - `ctaHref` only points at the four whitelisted marketing
  *     destinations (no leaks of /v1/billing or external URLs).
  *   - Exactly one tier is marked `isFeatured: true`.
- *   - No raw Stripe price IDs, secret-looking keys, or live dollar
- *     prices appear in the public copy.
+ *   - No raw Stripe price IDs or secret-looking keys are embedded.
+ *   - Tiers that map to a billing plan carry a `planSlug` referencing
+ *     the public billing plan catalog (starter | pro | elite).
+ *   - PricingSection hydrates from `/v1/billing/plans` and exposes
+ *     the monthly/annual interval toggle.
  *
  * This is a structural file-shape test (matches the existing
  * marketing-shell.test.ts pattern); it does not import the TS module
@@ -128,13 +130,15 @@ test('marketing pricing · no Stripe price IDs or secret-looking keys leak', () 
   assert.doesNotMatch(src, /\bsk_(live|test)_[A-Za-z0-9]+/,  'must not embed Stripe secret keys');
 });
 
-test('marketing pricing · price labels are public-safe (no exact live prices)', () => {
+test('marketing pricing · fallback price labels stay public-safe (no hardcoded live prices)', () => {
   const src = read(CONFIG_REL);
-  // Brief: marketing config must not hardcode live currency amounts
-  // anywhere in the public copy. Public-safe labels only:
-  //   "Free during beta", "See plans", "Coming soon", "Starting at <free term>".
+  // Task #98: live amounts are sourced from /v1/billing/plans at
+  // render time. The static config still must not hardcode dollar
+  // amounts — those would silently shadow the live data if the fetch
+  // fails. Public-safe fallbacks only:
+  //   "Free during beta", "See plans", "Coming soon".
   assert.match(src, /Free during beta|See plans|Coming soon/,
-    'pricing copy should lean on Free / See plans / Coming soon');
+    'pricing copy should lean on Free / See plans / Coming soon as fallbacks');
   // Strip comments first so the JSDoc that *describes* the rule
   // isn't itself flagged.
   const stripped = src
@@ -143,7 +147,58 @@ test('marketing pricing · price labels are public-safe (no exact live prices)',
   assert.doesNotMatch(
     stripped,
     /\$\s*\d/,
-    'marketing pricing config must not hardcode live dollar amounts ($NN). Use "See plans" / "Coming soon" / "Free during beta" instead.',
+    'marketing pricing config must not hardcode live dollar amounts ($NN). Live amounts come from /v1/billing/plans.',
+  );
+});
+
+test('marketing pricing · tiers map to billing plan catalog via planSlug', () => {
+  // Task #98: tiers that map to a live billing plan must declare a
+  // `planSlug` so the UI can hydrate the real price from
+  // /v1/billing/plans. Allowed slugs match the billing PLAN_CATALOG
+  // (starter | pro | elite). The tailored `business-command` tier has
+  // no matching plan and therefore must NOT declare a planSlug — the
+  // UI keeps its static priceLabel as the disclosure.
+  const src = read(CONFIG_REL);
+  const slugs = ['starter', 'pro', 'elite'];
+  for (const s of slugs) {
+    const re = new RegExp(`planSlug:\\s*'${s}'`);
+    assert.match(src, re, `tier "${s}" must declare planSlug: '${s}'`);
+  }
+  const allPlanSlugs = [...src.matchAll(/planSlug:\s*'([^']+)'/g)].map(m => m[1]);
+  const allowed = new Set(['starter', 'pro', 'elite']);
+  for (const s of allPlanSlugs) {
+    assert.ok(
+      allowed.has(s),
+      `planSlug "${s}" must be one of ${[...allowed].join(', ')} (matches /v1/billing/plans)`,
+    );
+  }
+  // business-command is tailored and not in the public plan catalog.
+  assert.doesNotMatch(
+    src,
+    /planSlug:\s*'business-command'/,
+    'business-command is a tailored tier and has no matching billing plan slug',
+  );
+});
+
+test('marketing pricing · PricingSection hydrates from /v1/billing/plans and exposes interval toggle', () => {
+  const section = readFileSync(
+    resolve(WEB_ROOT, 'src/components/marketing/sections/PricingSection.tsx'),
+    'utf-8',
+  );
+  assert.match(
+    section,
+    /\/api\/billing\/plans/,
+    'PricingSection must hydrate live amounts from /v1/billing/plans (proxied as /api/billing/plans on the web)',
+  );
+  assert.match(
+    section,
+    /pricing-interval-toggle/,
+    'PricingSection must render the monthly/annual interval toggle',
+  );
+  assert.match(
+    section,
+    /pricing-card-.*-addons|addonPriceCents/,
+    'PricingSection must surface an add-on price disclosure on each tier card',
   );
 });
 
