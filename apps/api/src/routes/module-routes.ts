@@ -734,6 +734,27 @@ export async function registerModuleRoutes(app: FastifyInstance) {
         : 'Handoff would fail with NO_BASE_URL. Set modules.base_url (or the matching <SLUG>_URL env var).',
     };
 
+    // 2b. Module status gate mirrors the handoff path: an entitled caller
+    // launching a `coming_soon` or `disabled` module gets a 400 with the
+    // matching code. Diagnose must surface this — otherwise the operator
+    // sees ok:true here but the actual launch still rejects.
+    const launchableStatuses = ['live', 'beta'];
+    const launchable = !!mod && launchableStatuses.includes(mod.status as string);
+    checks.moduleLaunchable = {
+      ok: launchable,
+      expected: `module.status in [${launchableStatuses.join(', ')}]`,
+      claimed: mod?.status ?? null,
+      hint: launchable
+        ? undefined
+        : !mod
+          ? 'Module row missing — see moduleExists above.'
+          : mod.status === 'coming_soon'
+            ? 'Handoff would reject with MODULE_COMING_SOON.'
+            : mod.status === 'disabled'
+              ? 'Handoff would reject with MODULE_DISABLED.'
+              : `Module status "${mod.status}" is not in the launchable set.`,
+    };
+
     // 3. Hub secret configured (not in fallback mode).
     checks.hubSecretConfigured = {
       ok: !SSO_FALLBACK,
@@ -771,7 +792,10 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     };
 
     // 6. Shared secret LENGTH parity (never the secret itself).
-    const hubSecretLen = process.env.MODULE_SSO_SECRET?.length ?? 0;
+    // Read from the startup-resolved constant — NOT process.env directly —
+    // so diagnose reports the same value the handoff signer is actually
+    // using. Env edits without a restart would otherwise cause drift.
+    const hubSecretLen = MODULE_SSO_SECRET?.length ?? 0;
     const lenOk = typeof body.claimedSecretLength === 'number'
       && body.claimedSecretLength === hubSecretLen
       && hubSecretLen >= 16;

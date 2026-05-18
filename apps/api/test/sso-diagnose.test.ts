@@ -18,7 +18,9 @@ import {
   createTestModule,
   cleanupUser,
   cleanupModule,
+  captureConsole,
 } from './_setup.js';
+import { modules } from '../src/schema.js';
 
 let app: any;
 let superAdminId: string;
@@ -29,8 +31,9 @@ let moduleSlug: string;
 let moduleId: string;
 
 async function tokenFor(userId: string): Promise<string> {
-  const { signSession } = await import('../src/lib/auth.js');
-  return signSession(userId);
+  const { signToken } = await import('../src/lib/auth.js');
+  const [u] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  return signToken({ userId: u.id, email: u.email, role: u.role });
 }
 
 before(async () => {
@@ -175,6 +178,66 @@ test('sso/diagnose · 403 for non-super-admin callers', async () => {
   }, normalUserToken);
   assert.equal(r.status, 403);
   assert.equal(r.body.code, 'PLATFORM_ROLE_REQUIRED');
+});
+
+test('sso/diagnose · flags coming_soon module as not launchable', async () => {
+  await db.update(modules).set({ status: 'coming_soon' }).where(eq(modules.id, moduleId));
+  try {
+    const r = await diagnose({
+      moduleSlug,
+      claimedIssuer: 'https://operatoros.test',
+      claimedEnv: 'dev',
+      claimedSecretLength: 32,
+    }, superAdminToken);
+    assert.equal(r.body.ok, false);
+    assert.equal(r.body.checks.moduleLaunchable.ok, false);
+    assert.equal(r.body.checks.moduleLaunchable.claimed, 'coming_soon');
+    assert.match(r.body.checks.moduleLaunchable.hint, /MODULE_COMING_SOON/);
+    // Other fields still pass on their own merits.
+    assert.equal(r.body.checks.moduleExists.ok, true);
+    assert.equal(r.body.checks.issuerMatch.ok, true);
+  } finally {
+    await db.update(modules).set({ status: 'live' }).where(eq(modules.id, moduleId));
+  }
+});
+
+test('sso/diagnose · flags disabled module as not launchable', async () => {
+  await db.update(modules).set({ status: 'disabled' }).where(eq(modules.id, moduleId));
+  try {
+    const r = await diagnose({
+      moduleSlug,
+      claimedIssuer: 'https://operatoros.test',
+      claimedEnv: 'dev',
+      claimedSecretLength: 32,
+    }, superAdminToken);
+    assert.equal(r.body.ok, false);
+    assert.equal(r.body.checks.moduleLaunchable.ok, false);
+    assert.match(r.body.checks.moduleLaunchable.hint, /MODULE_DISABLED/);
+  } finally {
+    await db.update(modules).set({ status: 'live' }).where(eq(modules.id, moduleId));
+  }
+});
+
+test('sso/diagnose · writes an SSO audit record naming the failed checks', async () => {
+  const cap = captureConsole();
+  try {
+    await diagnose({
+      moduleSlug,
+      claimedIssuer: 'https://wrong.example',
+      claimedEnv: 'production',
+      claimedSecretLength: 999,
+    }, superAdminToken);
+  } finally {
+    cap.restore();
+  }
+  const line = cap.logs.find(l =>
+    l.line.startsWith('[AUDIT sso]') && l.line.includes('"action":"module_sso_diagnose"')
+  );
+  assert.ok(line, 'expected an [AUDIT sso] line for module_sso_diagnose');
+  assert.match(line!.line, /"overallOk":false/);
+  assert.match(line!.line, /"issuerMatch"/);
+  assert.match(line!.line, /"envMatch"/);
+  assert.match(line!.line, /"secretLengthMatch"/);
 });
 
 test('sso/diagnose · 401 without auth', async () => {
