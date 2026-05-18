@@ -63,9 +63,16 @@ export default function PricingTeaser() {
             Four tiers, one console. No per-module rebuilds. No surprise migrations.
           </p>
         </div>
+        <style>{`
+          .pricing-teaser-cta:focus-visible {
+            outline: 2px solid ${brand.accentCyan};
+            outline-offset: 2px;
+          }
+        `}</style>
         <Link
           href="/pricing"
           data-testid="pricing-teaser-cta"
+          className="pricing-teaser-cta"
           style={{
             display: 'inline-flex',
             alignItems: 'center',

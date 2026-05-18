@@ -54,9 +54,13 @@ import { primaryCtaTarget, billingCtaTarget } from './marketing-cta';
  * the same contract:
  *
  *   - `ctaHref: '/app/billing'` → `billingCtaTarget(signedIn)`
- *     (signed-out → /login, signed-in → /app/billing).
+ *     (signed-out → /login, signed-in → /app with "Manage billing"
+ *     copy). Note: there is no top-level `/app/billing` Next route —
+ *     Billing lives inside the console shell behind
+ *     `activePage='billing'`, so the helper resolves to `/app` and the
+ *     in-app sidebar takes the viewer the rest of the way.
  *   - `ctaHref: '/app'`         → `primaryCtaTarget(signedIn)`
- *     (signed-out → /login, signed-in → /app).
+ *     (signed-out → /login, signed-in → /app with "Launch OperatorOS").
  *   - Any other `ctaHref`        → returned as-is. No current tier
  *     ships this branch; it keeps the function honest if a future
  *     tier links somewhere outside the marketing/console split.
