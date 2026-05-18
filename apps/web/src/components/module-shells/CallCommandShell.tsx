@@ -189,6 +189,11 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
         setError('Enter a phone number with country code (e.g. +14155550123).');
       } else if (code === 'INVALID_PERSONA') {
         setError('Pick one of the agent personas above.');
+      } else if (code === 'CALL_RATE_LIMITED') {
+        setError(
+          err?.error ||
+            'You have placed too many test calls in a short window. Wait a few minutes before trying again.',
+        );
       } else if (code === 'TELEPHONY_FAILED') {
         setError(
           err?.message

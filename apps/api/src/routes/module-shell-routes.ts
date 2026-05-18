@@ -19,6 +19,15 @@ import {
   summarizeTranscript,
 } from '../lib/telephony.js';
 import { getAiProvider } from '../lib/ai-provider.js';
+import { checkRateLimit } from '../lib/rate-limiter.js';
+
+// Task #91 — per-tenant + per-user budget for outbound calls. Each placed
+// call burns real Twilio minutes, so we cap dial attempts to a small
+// number per window. The limit is keyed by tenant+user so one noisy user
+// in a tenant can't starve their teammates, and one tenant can't burn
+// another tenant's quota.
+const CALL_RATE_MAX = 5;
+const CALL_RATE_WINDOW_MS = 5 * 60_000;
 
 // Per-module guard chains. `requireTenantMember` confirms the caller belongs
 // to the active tenant; `requireTenantModuleAccess(slug)` then enforces that
@@ -318,6 +327,17 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       const user = (request as any).user;
       const ctx = (request as any).tenantContext;
       const { phone, name, persona } = (request.body as any) ?? {};
+
+      // Rate limit BEFORE input validation so a flood of malformed payloads
+      // still gets shut down, but AFTER the tenant guards so unauthenticated
+      // traffic can't pollute the bucket for legitimate tenants.
+      const rateKey = `callcommand:place:${ctx.tenantId}:${user.id}`;
+      if (!checkRateLimit(rateKey, CALL_RATE_MAX, CALL_RATE_WINDOW_MS)) {
+        return reply.code(429).send({
+          error: `Too many calls placed. Limit is ${CALL_RATE_MAX} every ${CALL_RATE_WINDOW_MS / 60_000} minutes.`,
+          code: 'CALL_RATE_LIMITED',
+        });
+      }
 
       const tel = normalisePhone(phone);
       if (!tel) {
