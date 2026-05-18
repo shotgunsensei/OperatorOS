@@ -68,6 +68,26 @@ export default function PricingSection({
         </p>
       </header>
 
+      {/*
+        Reduced-motion-aware hover/focus polish. Inline <style> keeps
+        the CSS colocated with the component while still letting the
+        :hover, :focus-visible, and prefers-reduced-motion selectors
+        do work that inline styles can't express.
+      */}
+      <style>{`
+        .pricing-card { transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease; }
+        .pricing-card:hover { transform: translateY(-2px); border-color: ${brand.borderStrong}; }
+        .pricing-card .pricing-cta:focus-visible {
+          outline: 2px solid ${brand.accentCyan};
+          outline-offset: 2px;
+        }
+        .pricing-card .pricing-cta { transition: transform 160ms ease, box-shadow 200ms ease; }
+        .pricing-card:hover .pricing-cta { box-shadow: ${brand.ctaGlowHover}; }
+        @media (prefers-reduced-motion: reduce) {
+          .pricing-card, .pricing-card .pricing-cta { transition: none; }
+          .pricing-card:hover { transform: none; }
+        }
+      `}</style>
       <div
         style={{
           display: 'grid',
@@ -103,6 +123,7 @@ function PricingCard({ tier, signedIn }: { tier: MarketingPricingTier; signedIn:
     <article
       data-testid={`pricing-card-${tier.slug}`}
       aria-labelledby={`pricing-card-${tier.slug}-title`}
+      className="pricing-card"
       style={{
         position: 'relative',
         display: 'flex',
@@ -203,6 +224,7 @@ function PricingCard({ tier, signedIn }: { tier: MarketingPricingTier; signedIn:
         <Link
           href={href}
           data-testid={`pricing-cta-${tier.slug}`}
+          className="pricing-cta"
           style={{
             display: 'inline-flex',
             alignItems: 'center',

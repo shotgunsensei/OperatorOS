@@ -116,6 +116,14 @@ export default function TrustSection({
         </p>
       </header>
 
+      <style>{`
+        .trust-card { transition: transform 200ms ease, border-color 200ms ease; }
+        .trust-card:hover { transform: translateY(-2px); border-color: ${brand.borderStrong}; }
+        @media (prefers-reduced-motion: reduce) {
+          .trust-card { transition: none; }
+          .trust-card:hover { transform: none; }
+        }
+      `}</style>
       <ul
         style={{
           listStyle: 'none',
@@ -130,6 +138,7 @@ export default function TrustSection({
           <li
             key={item.title}
             data-testid={`trust-card-${slugify(item.title)}`}
+            className="trust-card"
             style={{
               padding: '24px 20px',
               borderRadius: 14,
