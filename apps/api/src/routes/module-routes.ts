@@ -672,6 +672,150 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     };
   });
 
+  // -------------------------------------------------------------------------
+  // POST /v1/modules/sso/diagnose — operator-side smoke test for child apps.
+  //
+  // Onboarding a child module into the SSO handoff requires SIX env values
+  // to line up exactly across the hub and the child:
+  //
+  //   1. The module slug must exist in the hub's `modules` table.
+  //   2. The module row must carry a `base_url` (else handoff 400s).
+  //   3. The hub must have `MODULE_SSO_SECRET` set (else it falls into
+  //      unsigned-fallback mode and the child receives no token).
+  //   4. The child's `OPERATOROS_BASE_URL` must match the hub's
+  //      `OPERATOROS_BASE_URL` byte-for-byte (compared against `iss`).
+  //   5. The child's `APP_ENV` must normalize to the same tri-state
+  //      (`prod`/`staging`/`dev`) as the hub's.
+  //   6. The child's `MODULE_SSO_SECRET` must equal the hub's — we can't
+  //      verify equality without transmitting it (and we won't), but we
+  //      can rule out a one-side-not-set / length-drift bug if the child
+  //      reports the LENGTH of its secret.
+  //
+  // Hitting this endpoint with a one-line curl from the operator's
+  // console shortens onboarding from "stare at silent failures for an
+  // hour" to "see exactly which value is off".
+  //
+  // Super-admin only — the response leaks the hub's `OPERATOROS_BASE_URL`,
+  // its normalized `APP_ENV`, and whether `MODULE_SSO_SECRET` is set.
+  // That's harmless to operators and toxic to anonymous callers.
+  // -------------------------------------------------------------------------
+  app.post('/v1/modules/sso/diagnose', { preHandler: [requireSuperAdmin] }, async (request, reply) => {
+    const body = (request.body ?? {}) as {
+      moduleSlug?: string;
+      claimedIssuer?: string;
+      claimedEnv?: string;
+      claimedSecretLength?: number;
+    };
+    if (!body.moduleSlug || typeof body.moduleSlug !== 'string') {
+      return reply.code(400).send({ error: 'moduleSlug is required', code: 'BAD_REQUEST' });
+    }
+
+    const checks: Record<string, {
+      ok: boolean;
+      expected: unknown;
+      claimed: unknown;
+      hint?: string;
+    }> = {};
+
+    // 1 + 2. Module slug + base_url.
+    const [mod] = await db.select().from(modules).where(eq(modules.slug, body.moduleSlug)).limit(1);
+    checks.moduleExists = {
+      ok: !!mod,
+      expected: 'row in modules table',
+      claimed: body.moduleSlug,
+      hint: mod ? undefined : 'No `modules` row with this slug. Check spelling, or seed the module.',
+    };
+    checks.moduleHasBaseUrl = {
+      ok: !!mod?.baseUrl,
+      expected: 'non-empty modules.base_url',
+      claimed: mod?.baseUrl ?? null,
+      hint: mod?.baseUrl
+        ? undefined
+        : 'Handoff would fail with NO_BASE_URL. Set modules.base_url (or the matching <SLUG>_URL env var).',
+    };
+
+    // 3. Hub secret configured (not in fallback mode).
+    checks.hubSecretConfigured = {
+      ok: !SSO_FALLBACK,
+      expected: 'MODULE_SSO_SECRET set on the hub (>=16 chars)',
+      claimed: SSO_FALLBACK ? 'missing or too short' : 'set',
+      hint: SSO_FALLBACK
+        ? 'Hub is in unsigned-fallback mode — launches send a bare base_url with no ?token=. Set MODULE_SSO_SECRET on the hub and restart.'
+        : undefined,
+    };
+
+    // 4. Issuer string equality (compared verbatim against JWT `iss`).
+    const issuerOk = typeof body.claimedIssuer === 'string'
+      && body.claimedIssuer === OPERATOROS_BASE_URL;
+    checks.issuerMatch = {
+      ok: issuerOk,
+      expected: OPERATOROS_BASE_URL,
+      claimed: body.claimedIssuer ?? null,
+      hint: issuerOk
+        ? undefined
+        : 'Child app would reject with launchError=bad_issuer. Match this string exactly — no trailing slash, same protocol/port.',
+    };
+
+    // 5. Env tri-state equality after normalization on both sides.
+    const claimedEnvNormalized = normalizeEnv(body.claimedEnv);
+    const envOk = body.claimedEnv != null && claimedEnvNormalized === APP_ENV;
+    checks.envMatch = {
+      ok: envOk,
+      expected: APP_ENV,
+      claimed: body.claimedEnv == null
+        ? null
+        : { raw: body.claimedEnv, normalized: claimedEnvNormalized },
+      hint: envOk
+        ? undefined
+        : 'Child app would reject with launchError=env_mismatch. Set the child APP_ENV so it normalizes to the hub value above.',
+    };
+
+    // 6. Shared secret LENGTH parity (never the secret itself).
+    const hubSecretLen = process.env.MODULE_SSO_SECRET?.length ?? 0;
+    const lenOk = typeof body.claimedSecretLength === 'number'
+      && body.claimedSecretLength === hubSecretLen
+      && hubSecretLen >= 16;
+    checks.secretLengthMatch = {
+      ok: lenOk,
+      expected: hubSecretLen,
+      claimed: body.claimedSecretLength ?? null,
+      hint: lenOk
+        ? undefined
+        : 'Length parity check only — does NOT prove the strings are equal, but a mismatch here guarantees signature verification will fail with launchError=bad_signature. Use the same secret on hub and child.',
+    };
+
+    const overallOk = Object.values(checks).every(c => c.ok);
+
+    // Log every diagnose call for audit — operators running this against
+    // prod from arbitrary IPs is exactly the kind of thing we want
+    // observable in admin_audit_logs after the fact.
+    await auditSso({
+      userId: (request as any).user?.id ?? null,
+      action: 'module_sso_diagnose',
+      details: {
+        moduleSlug: body.moduleSlug,
+        overallOk,
+        failed: Object.entries(checks).filter(([, v]) => !v.ok).map(([k]) => k),
+      },
+      ip: getClientIp(request),
+      level: 'info',
+    });
+
+    return {
+      ok: overallOk,
+      hub: {
+        issuer: OPERATOROS_BASE_URL,
+        env: APP_ENV,
+        secretConfigured: !SSO_FALLBACK,
+        secretLength: hubSecretLen,
+      },
+      module: mod
+        ? { slug: mod.slug, baseUrl: mod.baseUrl, status: mod.status }
+        : null,
+      checks,
+    };
+  });
+
   // Spec-aliased admin surfaces under /v1/modules/admin/*.
   // Returns the catalog plus per-module entitlement counts grouped by source
   // (plan / addon / override) and a deduplicated total. Used by the admin
