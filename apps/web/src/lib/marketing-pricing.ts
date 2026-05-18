@@ -143,6 +143,7 @@ export const marketingPricingTiers: readonly MarketingPricingTier[] = [
     ctaLabel: 'See plans',
     ctaHref: '/app/billing',
     isFeatured: false,
+    footnote: 'Seat counts and module mix tailored in the console.',
   },
   {
     slug: 'elite',

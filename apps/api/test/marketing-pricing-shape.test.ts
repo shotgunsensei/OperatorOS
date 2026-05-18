@@ -82,6 +82,18 @@ test('marketing pricing · ctaHref only targets whitelisted marketing routes', (
   }
 });
 
+test('marketing pricing · every tier ships a footnote so card heights stay balanced', () => {
+  // Architect feedback: `footnote` is declared optional in the type
+  // but the visual grid balances better when every tier provides one.
+  // This test pins the contract: all four tiers must carry a footnote.
+  const src = read(CONFIG_REL);
+  const footnotes = [...src.matchAll(/footnote:\s*'/g)];
+  assert.ok(
+    footnotes.length >= 4,
+    `every tier must declare a footnote (found ${footnotes.length})`,
+  );
+});
+
 test('marketing pricing · no tier self-loops to /pricing (would dead-end signed-in viewers)', () => {
   const src = read(CONFIG_REL);
   const hrefs = [...src.matchAll(/ctaHref:\s*'([^']+)'/g)].map((m) => m[1]);
