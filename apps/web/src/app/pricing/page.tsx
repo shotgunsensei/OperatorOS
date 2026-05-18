@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import PricingSection from '@/components/marketing/sections/PricingSection';

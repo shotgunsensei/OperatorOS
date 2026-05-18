@@ -32,17 +32,17 @@ const ITEMS: readonly TrustItem[] = [
   {
     icon: ShieldCheck,
     title: 'Role-based access ready',
-    body: 'Owners, admins, and members get only the surface they need. Roles are enforced server-side on every sensitive action.',
+    body: 'Designed so owners, admins, and members only see the surface they need. Sensitive actions are built to be checked server-side.',
   },
   {
     icon: Users,
     title: 'Tenant-aware by design',
-    body: 'Every record, module grant, and audit row is scoped to a tenant. Cross-tenant reads are blocked at the API.',
+    body: 'Every record, module grant, and audit row is scoped to a tenant. The API is built to keep tenant data separated.',
   },
   {
     icon: KeyRound,
-    title: 'Secure module entitlement model',
-    body: 'Module access is granted per tenant + per user. Unsubscribing revokes access the moment billing settles.',
+    title: 'Module entitlement model',
+    body: 'Module access is granted per tenant and per user. Designed to revoke access when a subscription ends.',
   },
   {
     icon: LogIn,
