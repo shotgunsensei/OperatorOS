@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Phone, PhoneCall, CheckCircle2, Clock, AlertTriangle, Link2, Plug } from 'lucide-react';
+import { Phone, PhoneCall, CheckCircle2, Clock, AlertTriangle, Link2, Plug, MicOff } from 'lucide-react';
 import {
   semantic, space, fontSize, radius, cardStyle,
 } from '@/lib/design-tokens';
@@ -18,6 +18,7 @@ import { ShellLiveBadge, ShellLaunchButton } from './ShellChrome';
 import { moduleShellApi } from '@/lib/auth';
 
 type CallStatus = 'queued' | 'ringing' | 'completed' | 'failed';
+type TranscriptStatus = 'pending' | 'ready' | 'unavailable';
 interface TestCall {
   id: string;
   phone: string;
@@ -26,6 +27,7 @@ interface TestCall {
   status: CallStatus;
   summary?: string | null;
   transcript?: string | null;
+  transcriptStatus?: TranscriptStatus | null;
   recordingUrl?: string | null;
   errorMessage?: string | null;
   provider?: string | null;
@@ -332,6 +334,31 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
                     {c.callerName} · {PERSONAS.find((p) => p.value === c.persona)?.label ?? c.persona}
                   </div>
                 </div>
+                {/* Task #94 — when Twilio never produced a transcript,
+                    surface a dedicated badge so users notice the gap
+                    instead of skimming past a quiet summary swap. We key
+                    the badge off the backend's explicit
+                    `transcript_status='unavailable'` signal so a row
+                    that is still in-flight (status='completed' but
+                    transcript polling not finished) does NOT mislabel
+                    itself. */}
+                {c.transcriptStatus === 'unavailable' && (
+                  <div
+                    data-testid={`badge-callcommand-transcript-unavailable-${c.id}`}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      marginTop: space.sm,
+                      padding: '3px 10px', borderRadius: 999,
+                      background: `${semantic.accentWarning}1a`,
+                      border: `1px solid ${semantic.accentWarning}55`,
+                      color: semantic.accentWarning,
+                      fontSize: 11, fontWeight: 600,
+                      textTransform: 'uppercase', letterSpacing: 0.4,
+                    }}
+                  >
+                    <MicOff size={12} /> Transcript unavailable
+                  </div>
+                )}
                 {c.summary && (
                   <p
                     data-testid={`text-callcommand-summary-${c.id}`}

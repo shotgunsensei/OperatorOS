@@ -197,23 +197,79 @@ async function finalizeTranscript(
       log.warn({ err, callId }, 'AI summary failed; storing raw transcript only');
       summary = transcript.slice(0, 500);
     }
-    await db
+    // Monotonic transition: only flip a still-pending row to `ready`. If
+    // another poller already finalised (ready) or the fallback already
+    // ran (unavailable), do not clobber that state.
+    const finalised = await db
       .update(moduleCallLogs)
-      .set({ transcript, summary, updatedAt: new Date() })
-      .where(eq(moduleCallLogs.id, callId));
-    log.info({ callId, attempt: i + 1 }, 'Transcript finalised');
+      .set({ transcript, summary, transcriptStatus: 'ready', updatedAt: new Date() })
+      .where(and(
+        eq(moduleCallLogs.id, callId),
+        eq(moduleCallLogs.transcriptStatus, 'pending'),
+      ))
+      .returning({ id: moduleCallLogs.id });
+    if (finalised.length === 0) {
+      log.info({ callId, attempt: i + 1 }, 'Transcript finalise skipped; row no longer pending');
+    } else {
+      log.info({ callId, attempt: i + 1 }, 'Transcript finalised');
+    }
     return;
   }
   // Transcription never landed — leave a clear, grounded fallback so the
   // shell doesn't display a stale canned blurb or an empty summary.
-  await db
+  //
+  // Task #94 — idempotency: gate the status transition on the row NOT
+  // already being `unavailable`. Twilio recording webhooks can retry, and
+  // a stuck poller could in principle fire more than once for the same
+  // call; using `RETURNING` lets us tell whether this invocation was the
+  // one that actually flipped the row, so the activity_feed entry is
+  // written at most once per call.
+  const transitioned = await db
     .update(moduleCallLogs)
     .set({
       summary: `Call with ${callerName} completed but Twilio did not return a transcript within the polling window.`,
+      transcriptStatus: 'unavailable',
       updatedAt: new Date(),
     })
-    .where(eq(moduleCallLogs.id, callId));
+    .where(and(
+      eq(moduleCallLogs.id, callId),
+      eq(moduleCallLogs.transcriptStatus, 'pending'),
+    ))
+    .returning({
+      userId: moduleCallLogs.userId,
+      tenantId: moduleCallLogs.tenantId,
+      phone: moduleCallLogs.phone,
+    });
+  if (transitioned.length === 0) {
+    log.info({ callId, recordingSid }, 'Transcript fallback skipped; row no longer pending');
+    return;
+  }
   log.warn({ callId, recordingSid }, 'Transcript never produced; wrote fallback summary');
+
+  // Proactively notify the user who placed the call. Until now the only
+  // signal was a summary swap on the row, which the user only sees if
+  // they happen to be looking at the CallCommand shell. Writing an
+  // `activity_feed` row makes the bell/inbox surface it so they know to
+  // retry or check the recording.
+  try {
+    const row = transitioned[0];
+    await db.insert(activityFeed).values({
+      userId: row.userId,
+      tenantId: row.tenantId,
+      action: 'call_transcript_unavailable',
+      entityType: 'module_call_log',
+      entityId: callId,
+      metadata: {
+        phone: row.phone,
+        callerName,
+        persona,
+        reason: 'transcript_polling_timeout',
+      },
+    });
+  } catch (err) {
+    // Activity feed is best-effort — never let it mask the fallback summary.
+    log.warn({ err, callId }, 'Failed to write activity_feed entry for transcript fallback');
+  }
 }
 
 export async function registerModuleShellRoutes(app: FastifyInstance) {
@@ -552,14 +608,31 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     } else {
       // No recording was produced (e.g. caller hung up immediately). Leave
       // a clear fallback summary so the row isn't silently empty.
+      // Task #94 — also mark transcript_status='unavailable' so the shell
+      // surfaces the same badge it shows when polling times out; no
+      // recording means no transcript will ever land. Monotonic guard
+      // (`transcript_status='pending'`) prevents a retried no-recording
+      // webhook from clobbering a row that has since become `ready`.
       if (!row.summary) {
         await db
           .update(moduleCallLogs)
           .set({
             summary: `Call with ${row.callerName} completed but no recording was produced.`,
+            transcriptStatus: 'unavailable',
             updatedAt: new Date(),
           })
-          .where(eq(moduleCallLogs.id, row.id));
+          .where(and(
+            eq(moduleCallLogs.id, row.id),
+            eq(moduleCallLogs.transcriptStatus, 'pending'),
+          ));
+      } else {
+        await db
+          .update(moduleCallLogs)
+          .set({ transcriptStatus: 'unavailable', updatedAt: new Date() })
+          .where(and(
+            eq(moduleCallLogs.id, row.id),
+            eq(moduleCallLogs.transcriptStatus, 'pending'),
+          ));
       }
     }
     return { ok: true };

@@ -921,6 +921,21 @@ export async function ensureModuleShellTables() {
     ALTER TABLE module_call_logs ADD COLUMN IF NOT EXISTS recording_url TEXT;
     ALTER TABLE module_call_logs ADD COLUMN IF NOT EXISTS error_message TEXT;
     ALTER TABLE module_call_logs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW() NOT NULL;
+    -- Task #94 — deterministic transcript lifecycle flag so the shell can
+    -- distinguish "still polling" from "Twilio never produced one" without
+    -- pattern-matching the summary string. Default 'pending'; webhook
+    -- recording handler bumps to 'ready' on success, fallback branch to
+    -- 'unavailable'. Backfill existing rows: any 'completed' row that
+    -- already has a transcript is 'ready', everything else stays pending
+    -- (safe: the fallback branch only runs for in-flight polls).
+    ALTER TABLE module_call_logs
+      ADD COLUMN IF NOT EXISTS transcript_status TEXT NOT NULL DEFAULT 'pending';
+    DO $$ BEGIN
+      ALTER TABLE module_call_logs ADD CONSTRAINT module_call_logs_transcript_status_check
+        CHECK (transcript_status IN ('pending','ready','unavailable'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    UPDATE module_call_logs SET transcript_status = 'ready'
+      WHERE transcript IS NOT NULL AND transcript_status = 'pending';
     CREATE INDEX IF NOT EXISTS idx_module_call_logs_provider_sid
       ON module_call_logs(provider_sid);
 

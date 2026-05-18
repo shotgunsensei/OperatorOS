@@ -751,6 +751,13 @@ export const moduleCallLogs = pgTable('module_call_logs', {
   provider: text('provider'),
   providerSid: text('provider_sid'),
   transcript: text('transcript'),
+  // Task #94 — explicit lifecycle for transcript fetch so the shell can
+  // tell "still waiting" apart from "Twilio gave up". `pending` is the
+  // default the moment a Twilio call kicks off; `ready` is set when a
+  // transcript is stored; `unavailable` is the fallback branch in
+  // `finalizeTranscript`. Stub provider rows stay at the default and
+  // are ignored by the badge UI.
+  transcriptStatus: text('transcript_status', { enum: ['pending', 'ready', 'unavailable'] }).notNull().default('pending'),
   recordingUrl: text('recording_url'),
   errorMessage: text('error_message'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
