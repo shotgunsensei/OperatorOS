@@ -198,14 +198,21 @@ test('marketing pricing · resolvePricingCta routes every tier correctly for sig
   );
 });
 
-test('marketing pricing · PricingSection consumes the shared auth-aware CTA helpers', () => {
-  // Architect feedback: pricing CTAs must route through the
-  // marketing-cta helpers (not reinvent the auth-aware logic inline).
-  const src = readFileSync(
+test('marketing pricing · resolvePricingCta is the single source of truth for pricing CTA routing', () => {
+  // The pricing helper must compose the Phase 2 marketing-cta helpers
+  // (primaryCtaTarget / billingCtaTarget) rather than reinvent the
+  // auth-aware contract. Static check: marketing-pricing.ts imports
+  // both helpers from marketing-cta.
+  const cfg = read(CONFIG_REL);
+  assert.match(cfg, /from\s+['"]\.\/marketing-cta['"]/, 'marketing-pricing must import from ./marketing-cta');
+  assert.match(cfg, /primaryCtaTarget/, 'resolvePricingCta should compose primaryCtaTarget');
+  assert.match(cfg, /billingCtaTarget/, 'resolvePricingCta should compose billingCtaTarget');
+
+  // And PricingSection consumes the composed helper (not the raw
+  // routing helpers) so there is exactly one routing source.
+  const section = readFileSync(
     resolve(WEB_ROOT, 'src/components/marketing/sections/PricingSection.tsx'),
     'utf-8',
   );
-  assert.match(src, /from\s+['"]@\/lib\/marketing-cta['"]/, 'PricingSection should import from marketing-cta');
-  assert.match(src, /billingCtaTarget/, 'PricingSection should consume billingCtaTarget');
-  assert.match(src, /primaryCtaTarget/, 'PricingSection should consume primaryCtaTarget');
+  assert.match(section, /resolvePricingCta/, 'PricingSection must use resolvePricingCta');
 });

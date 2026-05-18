@@ -43,36 +43,41 @@ export interface MarketingPricingTier {
   footnote?: string;
 }
 
+import { primaryCtaTarget, billingCtaTarget } from './marketing-cta';
+
 /**
  * Resolve a pricing card's CTA target for the viewer's auth state.
  *
- * Extracted as a pure function (no React dependency) so unit tests
- * can lock down the auth-aware routing rule without rendering the
- * component:
+ * Single source of truth for pricing CTA routing — it does NOT
+ * reinvent auth-aware logic, it composes the Phase 2 marketing-cta
+ * helpers so /pricing, the marketplace, and the homepage all share
+ * the same contract:
  *
- *   - Tiers configured with `/app` or `/app/billing` are
- *     console-routing CTAs. Signed-out viewers are sent to `/login`
- *     first; signed-in viewers go straight to the console route.
- *     Signed-in viewers see the helper's label too (e.g. "Launch
- *     OperatorOS", "Manage billing") so the copy matches the
- *     destination they're actually about to hit.
- *   - Any other `ctaHref` value is used as-is (no current tier ships
- *     this branch, but the fallback keeps the function honest if a
- *     future tier links to, say, a partner microsite).
+ *   - `ctaHref: '/app/billing'` → `billingCtaTarget(signedIn)`
+ *     (signed-out → /login, signed-in → /app/billing).
+ *   - `ctaHref: '/app'`         → `primaryCtaTarget(signedIn)`
+ *     (signed-out → /login, signed-in → /app).
+ *   - Any other `ctaHref`        → returned as-is. No current tier
+ *     ships this branch; it keeps the function honest if a future
+ *     tier links somewhere outside the marketing/console split.
+ *
+ * Signed-out viewers see the tier's own copy (e.g. "Start free",
+ * "See plans") so the CTA still reads naturally before /login takes
+ * over. Signed-in viewers see the helper's destination-aware label
+ * (e.g. "Launch OperatorOS", "Manage billing") so the button text
+ * matches the page they're actually about to land on.
  */
 export function resolvePricingCta(
   tier: Pick<MarketingPricingTier, 'ctaHref' | 'ctaLabel'>,
   signedIn: boolean,
 ): { href: string; label: string } {
   if (tier.ctaHref === '/app/billing') {
-    return signedIn
-      ? { href: '/app/billing', label: 'Manage billing' }
-      : { href: '/login',       label: tier.ctaLabel };
+    const t = billingCtaTarget(signedIn);
+    return { href: t.href, label: signedIn ? t.label : tier.ctaLabel };
   }
   if (tier.ctaHref === '/app') {
-    return signedIn
-      ? { href: '/app',   label: 'Launch OperatorOS' }
-      : { href: '/login', label: tier.ctaLabel };
+    const t = primaryCtaTarget(signedIn);
+    return { href: t.href, label: signedIn ? t.label : tier.ctaLabel };
   }
   return { href: tier.ctaHref, label: tier.ctaLabel };
 }

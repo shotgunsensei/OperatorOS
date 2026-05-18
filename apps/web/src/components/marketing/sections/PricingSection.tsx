@@ -10,12 +10,6 @@ import {
   type MarketingPricingTier,
 } from '@/lib/marketing-pricing';
 import { useAuth } from '../../AuthProvider';
-// Re-exported so the shape-lock test can assert PricingSection still
-// imports the shared marketing-cta helpers (resolvePricingCta delegates
-// to the same auth-aware contract those helpers encode).
-import { primaryCtaTarget, billingCtaTarget } from '@/lib/marketing-cta';
-void primaryCtaTarget;
-void billingCtaTarget;
 
 /**
  * PricingSection — full tier grid used on /pricing.
@@ -100,8 +94,9 @@ export default function PricingSection({
 }
 
 function PricingCard({ tier, signedIn }: { tier: MarketingPricingTier; signedIn: boolean }) {
-  // All auth-aware routing lives in `resolvePricingCta` so the
-  // contract is unit-testable without rendering React.
+  // `resolvePricingCta` composes the shared marketing-cta helpers
+  // (primaryCtaTarget / billingCtaTarget) so this card never reinvents
+  // auth-aware routing — see `apps/web/src/lib/marketing-pricing.ts`.
   const { href, label: ctaLabel } = resolvePricingCta(tier, signedIn);
 
   return (
