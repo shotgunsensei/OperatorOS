@@ -123,26 +123,27 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const launch = (slug: string) => {
-    // Open the popup synchronously so browsers don't flag it as a popup,
-    // then navigate it once the handoff token is back.
-    const popup = window.open('about:blank', '_blank', 'noopener,noreferrer');
-    if (!popup) {
-      toast('Popup blocked — please allow popups for OperatorOS', 'error');
-      return;
-    }
+  const launch = async (slug: string) => {
+    // Launch path is Capacitor-aware: on native Android/iOS we route through
+    // @capacitor/browser so the child app opens in an in-app Chrome Custom
+    // Tab the user can swipe back from. On the web we just window.open after
+    // the handoff resolves. The old pre-open-blank trick was incompatible
+    // with Capacitor's WebView (popup reference was severed → about:blank).
     setLaunching(slug);
-    modulesApi.handoff(slug)
-      .then((result: any) => {
-        if (result.warning) toast(result.warning, 'error');
-        if (result.launchUrl) popup.location.replace(result.launchUrl);
-        else { popup.close(); toast('No launch URL configured', 'error'); }
-      })
-      .catch(err => {
-        popup.close();
-        toast(`Could not launch: ${err.error || err.message}`, 'error');
-      })
-      .finally(() => setLaunching(null));
+    try {
+      const result: any = await modulesApi.handoff(slug);
+      if (result.warning) toast(result.warning, 'error');
+      if (result.launchUrl) {
+        const { openExternal } = await import('@/lib/launch');
+        await openExternal(result.launchUrl);
+      } else {
+        toast('No launch URL configured', 'error');
+      }
+    } catch (err: any) {
+      toast(`Could not launch: ${err.error || err.message}`, 'error');
+    } finally {
+      setLaunching(null);
+    }
   };
 
   const subscribe = async (slug: string) => {

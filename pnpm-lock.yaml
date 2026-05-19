@@ -11,6 +11,9 @@ importers:
       '@capacitor/android':
         specifier: ^8.2.0
         version: 8.3.1(@capacitor/core@8.3.1)
+      '@capacitor/browser':
+        specifier: ^8.0.3
+        version: 8.0.3(@capacitor/core@8.3.1)
       '@capacitor/cli':
         specifier: ^7.6.0
         version: 7.6.2
@@ -542,6 +545,11 @@ packages:
     resolution: {integrity: sha512-hjskIG8YcBEh3X4yaTXvE9gcqpdcxunTgFruSKnuPxtMxAUzEK4Oq25x0Z1g3cz+MQPc+lRG09R7Ovc+ydKsNw==}
     peerDependencies:
       '@capacitor/core': ^8.3.0
+
+  '@capacitor/browser@8.0.3':
+    resolution: {integrity: sha512-WJWPHEPbweiFoHYmVlCbZf5yrqJ2Rchx2Xvbmd+3Lf+Zkpq3nXBThThY2CF69lYEg1NINGF9BcHThIOEU1gZlQ==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
 
   '@capacitor/cli@7.6.2':
     resolution: {integrity: sha512-uPm+GDVhdWrM/DBWZ/L6c8uBVaEcge4MAXhqrIJWSkwad/9vNoVfUjtHaVgXxPE1g399PhlGm4kU8U7Qdfmwow==}
@@ -4534,6 +4542,10 @@ snapshots:
       '@babel/helper-validator-identifier': 7.28.5
 
   '@capacitor/android@8.3.1(@capacitor/core@8.3.1)':
+    dependencies:
+      '@capacitor/core': 8.3.1
+
+  '@capacitor/browser@8.0.3(@capacitor/core@8.3.1)':
     dependencies:
       '@capacitor/core': 8.3.1
 

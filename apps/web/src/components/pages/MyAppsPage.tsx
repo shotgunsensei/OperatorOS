@@ -88,7 +88,10 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
       const r = await modulesApi.handoff(slug);
       pushRecent(slug);
       setRecentSlugs(readRecent());
-      if (r?.launchUrl) window.open(r.launchUrl, '_blank', 'noopener');
+      if (r?.launchUrl) {
+        const { openExternal } = await import('@/lib/launch');
+        await openExternal(r.launchUrl);
+      }
     } catch (e: any) {
       window.alert(e?.error || 'Launch failed');
     } finally {
