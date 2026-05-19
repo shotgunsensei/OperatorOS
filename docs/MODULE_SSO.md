@@ -228,10 +228,13 @@ the snapshot.
     "members": [
       { "operatorosUserId": "u_…", "moduleRole": "module_admin",
         "enabled": true, "tenantRole": "tenant_admin" }
-    ],
-    "_meta": { "event": "...", "reason": "...", "receiver_slug": "tradeflowkit" }
+    ]
   }
   ```
+  The envelope is **strict** — no extra top-level keys (TFK rejects
+  unknown fields with `400 invalid_body`). Transport metadata
+  (event/reason/receiver) lives only in OperatorOS's local audit log,
+  never on the wire.
 - **`accessLevel` derivation**: `active|trialing|grace|past_due_grace`
   → `"full"`, everything else → `"revoked"`.
 - **Feature whitelist** — TradeFlowKit only accepts these 12 keys.

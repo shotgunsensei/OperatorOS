@@ -522,6 +522,17 @@ export async function seedModules() {
     const m = MODULE_SEEDS.find(x => x.slug === spec.slug)!;
     const existing = await db.select().from(modules).where(eq(modules.slug, spec.slug)).limit(1);
     if (existing.length === 0) {
+      // Task #109 — TradeFlowKit MUST be inserted with its non-default
+      // push config (tradeflowkit_v1 + bearer auth + env var name) on
+      // fresh installs. Without this, first-boot pushes to TFK fall
+      // back to canonical/HMAC shape and 400 invalid_body at TFK.
+      const tfkPushConfig = spec.slug === 'tradeflowkit'
+        ? {
+            pushShape: 'tradeflowkit_v1' as const,
+            pushAuthMode: 'bearer_token' as const,
+            pushBearerEnvVar: 'TRADEFLOWKIT_OPERATOROS_SERVICE_TOKEN' as const,
+          }
+        : {};
       await db.insert(modules).values({
         slug: m.slug, name: m.name, description: m.description,
         category: m.category, status: m.status, baseUrl: m.baseUrl,
@@ -529,6 +540,7 @@ export async function seedModules() {
         // Seed default addon price into metadata so the buy_addon CTA
         // surfaces in the UI on first install. Admin can edit later.
         metadata: { addonPriceCents: spec.addonPriceCents },
+        ...tfkPushConfig,
       });
     } else {
       // Re-apply env-derived fields so adding/removing an env URL between
