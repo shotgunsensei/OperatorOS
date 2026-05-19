@@ -78,12 +78,15 @@ export async function registerEntitlementRoutes(app: FastifyInstance) {
   // GET /v1/sso/entitlements/introspect?user_id=&tenant_id=
   // -------------------------------------------------------------------
   app.get('/v1/sso/entitlements/introspect', { preHandler: [requireServiceToken] }, async (request, reply) => {
+    // Task #108 — accept BOTH camelCase (userId/tenantId, per spec) and
+    // snake_case (user_id/tenant_id, legacy) query-param styles so
+    // integrators picking either convention from the docs both work.
     const q = (request.query ?? {}) as Record<string, string | undefined>;
-    const userId = q.user_id;
-    const tenantId = q.tenant_id;
+    const userId = q.userId ?? q.user_id;
+    const tenantId = q.tenantId ?? q.tenant_id;
     if (!userId || !tenantId) {
       return reply.code(400).send({
-        error: 'user_id and tenant_id query params are required',
+        error: 'userId (or user_id) and tenantId (or tenant_id) query params are required',
         code: 'INTROSPECT_PARAMS_REQUIRED',
       });
     }

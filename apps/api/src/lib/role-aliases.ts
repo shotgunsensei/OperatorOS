@@ -50,19 +50,46 @@ const MODULE_LEVEL_TO_PUBLIC: Record<InternalModuleAccessLevel, PublicModuleRole
   none: 'none',
 };
 
-export function tenantRoleToPublic(role: InternalTenantRole | string | null | undefined): PublicTenantRole {
+/**
+ * Read-path normalization (Task #108): a stored row may now hold EITHER
+ * the legacy internal vocabulary OR the new public vocabulary because
+ * the DB CHECK was widened to accept both. Both functions below MUST
+ * map any accepted DB value deterministically to the public taxonomy.
+ */
+const PUBLIC_TENANT_ROLES: ReadonlySet<PublicTenantRole> = new Set(
+  ['owner', 'tenant_admin', 'billing_admin', 'user', 'viewer'],
+);
+
+export function tenantRoleToPublic(role: InternalTenantRole | PublicTenantRole | string | null | undefined): PublicTenantRole {
   if (!role) return 'user';
-  return TENANT_ROLE_TO_PUBLIC[role as InternalTenantRole] ?? 'user';
+  const v = String(role).trim().toLowerCase();
+  // Stored value is already a public-taxonomy value — pass through.
+  if (PUBLIC_TENANT_ROLES.has(v as PublicTenantRole)) return v as PublicTenantRole;
+  // Stored value is in the legacy internal taxonomy — map deterministically.
+  if (v in TENANT_ROLE_TO_PUBLIC) return TENANT_ROLE_TO_PUBLIC[v as InternalTenantRole];
+  return 'user';
 }
 
 export function tenantRoleToInternal(role: PublicTenantRole | string | null | undefined): InternalTenantRole {
   if (!role) return 'member';
-  return TENANT_ROLE_TO_INTERNAL[role as PublicTenantRole] ?? 'member';
+  const v = String(role).trim().toLowerCase();
+  if (v === 'owner' || v === 'admin' || v === 'member') return v as InternalTenantRole;
+  if (v in TENANT_ROLE_TO_INTERNAL) return TENANT_ROLE_TO_INTERNAL[v as PublicTenantRole];
+  return 'member';
 }
 
-export function moduleAccessLevelToPublic(level: InternalModuleAccessLevel | string | null | undefined): PublicModuleRole {
+const PUBLIC_MODULE_ROLES: ReadonlySet<PublicModuleRole> = new Set(
+  ['module_admin', 'module_user', 'viewer', 'none'],
+);
+
+export function moduleAccessLevelToPublic(level: InternalModuleAccessLevel | PublicModuleRole | string | null | undefined): PublicModuleRole {
   if (!level) return 'none';
-  return MODULE_LEVEL_TO_PUBLIC[level as InternalModuleAccessLevel] ?? 'none';
+  const v = String(level).trim().toLowerCase();
+  // Stored value is already a public-taxonomy value — pass through.
+  if (PUBLIC_MODULE_ROLES.has(v as PublicModuleRole)) return v as PublicModuleRole;
+  // Stored value is in the legacy internal taxonomy — map deterministically.
+  if (v in MODULE_LEVEL_TO_PUBLIC) return MODULE_LEVEL_TO_PUBLIC[v as InternalModuleAccessLevel];
+  return 'none';
 }
 
 /** Accepts either vocabulary on the wire — used when a caller PATCHes a
@@ -73,5 +100,24 @@ export function normalizeIncomingTenantRole(value: unknown): InternalTenantRole 
   const v = value.trim().toLowerCase();
   if (v === 'owner' || v === 'admin' || v === 'member') return v as InternalTenantRole;
   if (v in TENANT_ROLE_TO_INTERNAL) return TENANT_ROLE_TO_INTERNAL[v as PublicTenantRole];
+  return null;
+}
+
+/**
+ * Public → internal mapping for module access levels. Accepts either
+ * vocabulary on write and returns the canonical internal value.
+ */
+const MODULE_LEVEL_TO_INTERNAL: Record<PublicModuleRole, InternalModuleAccessLevel> = {
+  module_admin: 'manager',
+  module_user: 'user',
+  viewer: 'user',
+  none: 'none',
+};
+
+export function normalizeIncomingModuleAccessLevel(value: unknown): InternalModuleAccessLevel | null {
+  if (typeof value !== 'string') return null;
+  const v = value.trim().toLowerCase();
+  if (v === 'none' || v === 'user' || v === 'manager') return v as InternalModuleAccessLevel;
+  if (v in MODULE_LEVEL_TO_INTERNAL) return MODULE_LEVEL_TO_INTERNAL[v as PublicModuleRole];
   return null;
 }

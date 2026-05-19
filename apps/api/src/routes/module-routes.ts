@@ -737,12 +737,35 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       request.log.warn({ err }, '[module-sso] consume entitlement enrichment failed');
     }
 
-    // Task #108 — canonical-shape contract. Spread the snapshot at
-    // the TOP LEVEL so the response shape matches /introspect and the
-    // outbound webhook body. Legacy fields (moduleSlug/planSlug/jti/
-    // accessSource/user/...) are retained alongside.
+    // Task #108 — canonical-shape contract. The snapshot is returned
+    // BYTE-FOR-BYTE at the top level so consume / introspect / webhook
+    // bodies are all the SAME shape (snapshot.user has the canonical
+    // {id,email,platformRole} block). Legacy fields used by older
+    // module SDKs are nested under `legacy` so they cannot clobber any
+    // snapshot key. The transport metadata field `event: 'consumed'`
+    // is added alongside, mirroring the webhook envelope.
+    if (snapshot) {
+      return {
+        ...snapshot,
+        event: 'consumed',
+        legacy: {
+          ok: true,
+          user: user ? { id: user.id, email: user.email, name: user.name, role: user.role } : null,
+          moduleSlug: row.moduleSlug,
+          operatoros_tenant_id: row.tenantId,
+          planSlug,
+          organizationId: null,
+          env: row.env,
+          jti,
+          issuer: OPERATOROS_BASE_URL,
+          accessSource: access.source,
+        },
+      };
+    }
+    // Snapshot resolution failed — fall back to the legacy-only shape
+    // so existing receivers don't break, but flag it so callers can
+    // detect the missing canonical payload.
     return {
-      ...(snapshot ?? {}),
       ok: true,
       user: user ? { id: user.id, email: user.email, name: user.name, role: user.role } : null,
       moduleSlug: row.moduleSlug,
@@ -753,6 +776,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       jti,
       issuer: OPERATOROS_BASE_URL,
       accessSource: access.source,
+      snapshot: null,
     };
   });
 
