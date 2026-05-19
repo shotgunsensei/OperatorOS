@@ -725,29 +725,14 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       console.warn('[module-sso] recordModuleUsage (consume) failed:', usageErr);
     }
 
-    // Task #108: echo the spec entitlement fields so receivers that
-    // prefer /sso/consume over verifying the JWT themselves get the full
-    // snapshot without an extra introspect round-trip. Best-effort — a
-    // resolver hiccup falls through to the legacy response shape only.
-    let entitlement: any = null;
+    // Task #108: echo the canonical snapshot byte-for-byte. Receivers
+    // get the SAME shape they would get from /v1/sso/entitlements/introspect
+    // — no renamed/transformed fields, so the same client-side code path
+    // can consume both responses.
+    let snapshot: any = null;
     try {
       const { resolveEntitlements } = await import('../lib/entitlement-resolver.js');
-      const snap = await resolveEntitlements(row.userId, row.tenantId);
-      if (snap) {
-        const modEntry = snap.modules.find(m => m.slug === row.moduleSlug);
-        entitlement = {
-          version: snap.version,
-          computed_at: snap.computedAt,
-          tenant: snap.tenant,
-          user: snap.user,
-          subscription: snap.subscription,
-          target_module_enabled: !!modEntry?.enabled,
-          target_module_access_level: modEntry?.accessLevel,
-          target_module_role: modEntry?.moduleRole,
-          target_module_features: modEntry?.features ?? {},
-          all_enabled_modules: snap.modules.filter(m => m.enabled).map(m => m.slug),
-        };
-      }
+      snapshot = await resolveEntitlements(row.userId, row.tenantId);
     } catch (err) {
       request.log.warn({ err }, '[module-sso] consume entitlement enrichment failed');
     }
@@ -763,7 +748,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       jti,
       issuer: OPERATOROS_BASE_URL,
       accessSource: access.source,
-      entitlement,
+      snapshot,
     };
   });
 

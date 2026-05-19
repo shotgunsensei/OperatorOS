@@ -833,6 +833,16 @@ export async function ensureTenantTables() {
       ALTER TABLE tenant_users ADD CONSTRAINT tenant_users_role_check
         CHECK (role IN ('owner', 'admin', 'member'));
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    -- Task #108: extend the role taxonomy to accept the public spec
+    -- vocabulary alongside the legacy internal one. We drop the old
+    -- strict CHECK and add a permissive one so writers can store any
+    -- of: owner|admin|member|tenant_admin|billing_admin|user|viewer.
+    -- Resolvers normalize on read via role-aliases.ts.
+    DO $$ BEGIN
+      ALTER TABLE tenant_users DROP CONSTRAINT IF EXISTS tenant_users_role_check;
+      ALTER TABLE tenant_users ADD CONSTRAINT tenant_users_role_check
+        CHECK (role IN ('owner','admin','member','tenant_admin','billing_admin','user','viewer'));
+    EXCEPTION WHEN others THEN NULL; END $$;
 
     -- tenant_modules ------------------------------------------------------
     CREATE TABLE IF NOT EXISTS tenant_modules (
@@ -875,6 +885,15 @@ export async function ensureTenantTables() {
       ALTER TABLE tenant_user_module_access ADD CONSTRAINT tuma_level_check
         CHECK (access_level IN ('none','user','manager'));
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    -- Task #108: extend access_level vocabulary alongside legacy values.
+    -- Accepted: none|user|manager|module_user|module_admin|viewer.
+    -- Validators normalize on the write path; this CHECK exists so a
+    -- direct DB insert with the public vocabulary is also valid.
+    DO $$ BEGIN
+      ALTER TABLE tenant_user_module_access DROP CONSTRAINT IF EXISTS tuma_level_check;
+      ALTER TABLE tenant_user_module_access ADD CONSTRAINT tuma_level_check
+        CHECK (access_level IN ('none','user','manager','module_user','module_admin','viewer'));
+    EXCEPTION WHEN others THEN NULL; END $$;
 
     -- tenant_invites ------------------------------------------------------
     CREATE TABLE IF NOT EXISTS tenant_invites (

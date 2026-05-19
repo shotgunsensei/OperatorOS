@@ -115,8 +115,13 @@ export async function resolveEntitlements(
     ? tenantRoleToPublic(internalRole)
     : 'viewer';
 
-  // Subscription block — source of truth for the user's plan today.
-  const sub = await getActiveSubscription(userId);
+  // Task #108: subscription is TENANT-AUTHORITATIVE. The tenant owner's
+  // active subscription drives module inclusion, feature flags, limits,
+  // and capabilities for every member. A member's own personal plan is
+  // irrelevant here — they could be on Starter while their employer is
+  // on Elite, and they get Elite-tier access through that tenant.
+  const subscriptionOwnerId = tenant.ownerUserId || userId;
+  const sub = await getActiveSubscription(subscriptionOwnerId);
   let subBlock: EntitlementSnapshot['subscription'] = null;
   let activePlanId: string | null = null;
   if (sub) {
@@ -157,19 +162,12 @@ export async function resolveEntitlements(
     .where(eq(tenantModules.tenantId, tenantId));
   const tmByModuleId = new Map(tms.map(tm => [tm.moduleId, tm]));
 
-  // Plan feature defaults: the tenant's modules are unlocked by the
-  // TENANT OWNER's plan, so every member sees the same plan-side feature
-  // defaults regardless of their personal subscription. Fall back to the
-  // calling user's plan only when there is no distinct owner sub.
+  // Plan feature defaults are sourced from the same tenant-authoritative
+  // plan resolved above (activePlanId == owner's plan).
   const planFeatureByModuleId = new Map<string, ModuleFeatureMap>();
-  let featurePlanId: string | null = activePlanId;
-  if (tenant.ownerUserId && tenant.ownerUserId !== userId) {
-    const ownerSub = await getActiveSubscription(tenant.ownerUserId);
-    if (ownerSub?.planId) featurePlanId = ownerSub.planId;
-  }
-  if (featurePlanId) {
+  if (activePlanId) {
     const pmRows = await db.select().from(planModules)
-      .where(eq(planModules.planId, featurePlanId));
+      .where(eq(planModules.planId, activePlanId));
     for (const pm of pmRows) {
       if (pm.featureFlagsJson) planFeatureByModuleId.set(pm.moduleId, pm.featureFlagsJson);
     }
@@ -205,7 +203,9 @@ export async function resolveEntitlements(
     };
   });
 
-  const { config } = await getUserPlanConfig(userId);
+  // Tenant-authoritative limits + capabilities: derived from the OWNER's
+  // plan config, not the calling user's. Same rationale as subscription.
+  const { config } = await getUserPlanConfig(subscriptionOwnerId);
   const limits: Record<string, number | boolean> = { ...config.limits };
   const capabilities: Record<string, boolean> = { ...config.features };
 

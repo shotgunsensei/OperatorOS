@@ -32,9 +32,13 @@ import {
 import { writeAudit } from './audit.js';
 import { resolveEntitlements, type EntitlementSnapshot } from './entitlement-resolver.js';
 
-function signPayload(body: string): string | null {
+function getSigningSecret(): string | null {
   const secret = process.env.MODULE_SSO_SECRET;
   if (!secret || secret.length < 16) return null;
+  return secret;
+}
+
+function signPayload(body: string, secret: string): string {
   return 'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');
 }
 
@@ -44,13 +48,13 @@ interface PushTarget {
   url: string;
 }
 
-async function pushOne(target: PushTarget, body: string, signature: string | null): Promise<{ ok: boolean; status?: number; error?: string }> {
+async function pushOne(target: PushTarget, body: string, signature: string): Promise<{ ok: boolean; status?: number; error?: string }> {
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'User-Agent': 'OperatorOS-Entitlement-Webhook/1',
+      'X-Operatoros-Signature': signature,
     };
-    if (signature) headers['X-Operatoros-Signature'] = signature;
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 5000);
     try {
@@ -238,6 +242,35 @@ export async function recomputeAndPropagateEntitlements(
     }
   }
 
+  // Task #108 — fail-closed signing. Unsigned outbound pushes are a
+  // contract + security failure (receivers reject them and we'd leak
+  // entitlement state in the clear). If the secret is missing/short,
+  // skip the push pass entirely and record the failure in the audit.
+  const signingSecret = getSigningSecret();
+  if (!signingSecret) {
+    if (targets.length > 0 && memberSnapshots.length > 0) {
+      console.warn('[entitlement-propagate] MODULE_SSO_SECRET missing/short — skipping outbound push (fail-closed).');
+      try {
+        await writeAudit({
+          actorUserId: actor, tenantId,
+          targetType: 'tenant', targetId: tenantId,
+          action: 'entitlement_change',
+          extra: {
+            kind: 'propagation_skipped_unsigned',
+            reason,
+            members: result.membersComputed,
+            receivers: targets.length,
+            droppedModuleSlugs: result.droppedModuleSlugs,
+            revokedAccessRows: result.revokedAccessRows,
+          },
+        });
+      } catch (err) {
+        console.warn('[entitlement-propagate] audit failed:', err);
+      }
+    }
+    return result;
+  }
+
   if (targets.length === 0 || memberSnapshots.length === 0) {
     try {
       await writeAudit({
@@ -264,19 +297,20 @@ export async function recomputeAndPropagateEntitlements(
   for (const target of targets) {
     for (const { userId, snapshot } of memberSnapshots) {
       const moduleEntry = snapshot.modules.find(m => m.slug === target.moduleSlug);
+      // Task #108 — canonical-shape contract. The push body is the
+      // resolver snapshot BYTE-FOR-BYTE under `snapshot`, with only
+      // top-level transport fields (event/reason/receiver_slug) added.
+      // No field is renamed or transformed; receivers can pass the
+      // `snapshot` block to the same code paths that consume
+      // /v1/sso/entitlements/introspect.
       const payload = {
         event: 'entitlements.changed',
         reason,
-        tenant: snapshot.tenant,
-        user: snapshot.user,
-        subscription: snapshot.subscription,
-        module: moduleEntry ?? null,
-        all_enabled_modules: snapshot.modules.filter(m => m.enabled).map(m => m.slug),
-        version: snapshot.version,
-        computed_at: snapshot.computedAt,
+        receiver_slug: target.moduleSlug,
+        snapshot,
       };
       const body = JSON.stringify(payload);
-      const signature = signPayload(body);
+      const signature = signPayload(body, signingSecret);
       const r = await pushOne(target, body, signature);
       allResults.push({ ...r, receiver: target.moduleSlug, userId });
       result.pushAttempts += 1;
