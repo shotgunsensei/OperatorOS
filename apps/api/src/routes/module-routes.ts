@@ -555,7 +555,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   // Body: { jti, aud, env }. Status semantics:
   //   200 ok | 400 bad_request|audience|env_mismatch | 404 unknown_jti
   //   409 replayed | 410 expired_or_revoked | 429 rate_limited
-  const consumeHandler = async (request: any, reply: any) => {
+  const consumeHandler = async (request: FastifyRequest, reply: FastifyReply) => {
     const ip = getClientIp(request);
     const userAgent = (request.headers['user-agent'] as string) || null;
 
