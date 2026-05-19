@@ -55,26 +55,35 @@ Build `POST {your_root}/webhooks/operatoros/entitlements`:
 2. Compute `sha256=` HMAC of the raw body with `MODULE_SSO_SECRET` and
    constant-time-compare to the `X-Operatoros-Signature` header. Reject
    401 on mismatch.
-3. Parse the JSON body. Schema:
+3. Parse the JSON body. The body is the **canonical snapshot at the
+   top level** (the same shape `/v1/sso/entitlements/introspect`
+   returns), plus three transport metadata fields:
    ```jsonc
    {
-     "event": "entitlements.changed",
-     "reason": "stripe:customer.subscription.updated",
+     "version": 1,
+     "computedAt": "2026-05-19T12:34:56.000Z",
      "tenant":       { "id": "...", "slug": "...", "role": "admin", "roleAlias": "tenant_admin", ... },
      "user":         { "id": "...", "email": "...", "platformRole": "user" },
      "subscription": { "status": "active", "planSlug": "elite", ... } | null,
-     "module":       { "slug": "<YOUR_SLUG>", "enabled": true, "accessLevel": "manager",
-                       "moduleRole": "module_admin", "features": { ... }, "source": "plan", ... } | null,
-     "all_enabled_modules": ["...", "..."],
-     "version": 1,
-     "computed_at": "2026-05-19T12:34:56.000Z"
+     "modules": [
+       { "slug": "<YOUR_SLUG>", "enabled": true, "accessLevel": "manager",
+         "moduleRole": "module_admin", "features": { ... }, "source": "plan", ... },
+       { "slug": "<OTHER_SLUG>", ... }
+     ],
+     "limits":       { ... },
+     "capabilities": { ... },
+     "event": "entitlements.changed",
+     "reason": "stripe:customer.subscription.updated",
+     "receiver_slug": "<YOUR_SLUG>"
    }
    ```
-4. Look up the local user by `user.id`. If `module === null` OR
-   `module.enabled === false`, revoke their session and lock further
-   logins for `(user, tenant)`. Otherwise, update the cached
-   `accessLevel`, `moduleRole`, and `features` map.
-5. If the incoming `computed_at` is older than what you already have
+4. Locate your module entry with
+   `modules.find(m => m.slug === receiver_slug)`. Look up the local
+   user by `user.id`. If your entry is missing OR
+   `yourEntry.enabled === false`, revoke their session and lock
+   further logins for `(user, tenant)`. Otherwise, update the cached
+   `accessLevel`, `moduleRole`, and `features` map from your entry.
+5. If the incoming `computedAt` is older than what you already have
    stored for `(user.id, tenant.id)`, drop it.
 6. Return `200 OK` immediately. Do downstream work asynchronously.
 

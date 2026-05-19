@@ -737,7 +737,12 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       request.log.warn({ err }, '[module-sso] consume entitlement enrichment failed');
     }
 
+    // Task #108 — canonical-shape contract. Spread the snapshot at
+    // the TOP LEVEL so the response shape matches /introspect and the
+    // outbound webhook body. Legacy fields (moduleSlug/planSlug/jti/
+    // accessSource/user/...) are retained alongside.
     return {
+      ...(snapshot ?? {}),
       ok: true,
       user: user ? { id: user.id, email: user.email, name: user.name, role: user.role } : null,
       moduleSlug: row.moduleSlug,
@@ -748,7 +753,6 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       jti,
       issuer: OPERATOROS_BASE_URL,
       accessSource: access.source,
-      snapshot,
     };
   });
 

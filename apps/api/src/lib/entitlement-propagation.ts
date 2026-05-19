@@ -296,18 +296,17 @@ export async function recomputeAndPropagateEntitlements(
   const allResults: Array<{ ok: boolean; status?: number; error?: string; receiver: string; userId: string }> = [];
   for (const target of targets) {
     for (const { userId, snapshot } of memberSnapshots) {
-      const moduleEntry = snapshot.modules.find(m => m.slug === target.moduleSlug);
-      // Task #108 — canonical-shape contract. The push body is the
-      // resolver snapshot BYTE-FOR-BYTE under `snapshot`, with only
-      // top-level transport fields (event/reason/receiver_slug) added.
-      // No field is renamed or transformed; receivers can pass the
-      // `snapshot` block to the same code paths that consume
-      // /v1/sso/entitlements/introspect.
+      // Task #108 — canonical-shape contract. The push body IS the
+      // resolver snapshot at the TOP LEVEL, with only transport
+      // metadata (event/reason/receiver_slug) added alongside. No
+      // field is renamed, moved, or removed. Receivers can pipe this
+      // body into the same code path that consumes the
+      // /v1/sso/entitlements/introspect response.
       const payload = {
+        ...snapshot,
         event: 'entitlements.changed',
         reason,
         receiver_slug: target.moduleSlug,
-        snapshot,
       };
       const body = JSON.stringify(payload);
       const signature = signPayload(body, signingSecret);

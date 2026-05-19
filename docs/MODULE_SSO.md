@@ -155,30 +155,39 @@ The response is the canonical snapshot from §2.
 Whenever entitlements change for your tenant, OperatorOS will POST
 to your registered URL **once per affected (member × receiver)**.
 
+The body is the **canonical snapshot from §2 at the top level**, with
+three transport metadata fields added alongside (`event`, `reason`,
+`receiver_slug`). No field is renamed or relocated — the same code
+that parses the `/introspect` response works here unchanged.
+
 ```http
 POST {your_webhook_url}
 Content-Type: application/json
 X-Operatoros-Signature: sha256=<hex>
 
 {
-  "event": "entitlements.changed",
-  "reason": "stripe:customer.subscription.updated",
+  "version": 1,
+  "computedAt": "2026-05-19T12:34:56.000Z",
   "tenant":       { ...tenant block from §2 },
   "user":         { ...user block from §2 },
   "subscription": { ...subscription block from §2 },
-  "module":       { ...the module entry for your slug },
-  "all_enabled_modules": ["torqueshed", "bf-os"],
-  "version": 1,
-  "computed_at": "2026-05-19T12:34:56.000Z"
+  "modules":      [ { ...all module entries from §2 } ],
+  "limits":       { ... },
+  "capabilities": { ... },
+  "event": "entitlements.changed",
+  "reason": "stripe:customer.subscription.updated",
+  "receiver_slug": "torqueshed"
 }
 ```
 
 Verify the signature with HMAC-SHA256 over the **raw body** using the
 shared `MODULE_SSO_SECRET`. Reject anything older than your last seen
-`computed_at` per (user, tenant).
+`computedAt` per (user, tenant).
 
-If `module.enabled === false`, you must **revoke** the user's access in
-your app. If `module === null`, your module is no longer enabled for
+Find your module entry with
+`modules.find(m => m.slug === receiver_slug)`. If that entry's
+`enabled` is `false`, you must **revoke** the user's access in your
+app. If the entry is missing, your module is no longer enabled for
 that tenant — treat the user as unauthorized.
 
 ### 3.5 Failure modes
