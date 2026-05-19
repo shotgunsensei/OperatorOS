@@ -268,7 +268,9 @@ test('tfk: member-only reason omits planSlug/features/limits', () => {
       'member-only payload must omit limits');
     assert.equal(body.subscriptionStatus, undefined,
       'member-only payload must omit subscriptionStatus');
-    assert.equal(body._meta.memberOnly, true);
+    // TFK envelope is strict — no extra top-level keys allowed.
+    assert.equal(body._meta, undefined,
+      'TFK adapter must not add extra top-level keys (strict envelope)');
   } finally {
     delete process.env.TRADEFLOWKIT_TEST_TOKEN;
   }
@@ -288,7 +290,11 @@ test('tfk: non-member-only reason (e.g. stripe:*) keeps full payload', () => {
     assert.equal(typeof body.planSlug, 'string');
     assert.equal(typeof body.features, 'object');
     assert.equal(typeof body.limits, 'object');
-    assert.equal(body._meta.memberOnly, false);
+    // Body shape is locked: exactly the 7 documented top-level keys.
+    assert.deepEqual(
+      Object.keys(body).sort(),
+      ['accessLevel', 'features', 'limits', 'members', 'planSlug', 'subscriptionStatus', 'tenantId'],
+    );
   } finally {
     delete process.env.TRADEFLOWKIT_TEST_TOKEN;
   }

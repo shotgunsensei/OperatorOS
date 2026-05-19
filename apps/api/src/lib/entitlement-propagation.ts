@@ -321,6 +321,26 @@ export async function recomputeAndPropagateEntitlements(
         console.warn(`[entitlement-propagate] MODULE_SSO_SECRET missing/short — skipping ${target.moduleSlug} (fail-closed).`);
       } else if (outcome.reason === 'missing_bearer_env_var' || outcome.reason === 'bearer_env_value_empty') {
         console.warn(`[entitlement-propagate] receiver ${target.moduleSlug} has push_auth_mode=bearer_token but env var ${target.pushBearerEnvVar ?? '<unset>'} resolves empty — skipping (fail-closed).`);
+        // Task #109 — emit the explicit per-receiver audit kind for
+        // bearer-token misconfiguration so operators can grep for it
+        // separately from generic propagation summaries.
+        try {
+          await writeAudit({
+            actorUserId: actor, tenantId,
+            targetType: 'tenant', targetId: tenantId,
+            action: 'entitlement_change',
+            extra: {
+              kind: 'propagation_skipped_unconfigured',
+              receiver: target.moduleSlug,
+              shape: target.pushShape,
+              reason: outcome.reason,
+              detail: outcome.detail ?? target.pushBearerEnvVar ?? null,
+              propagationReason: reason,
+            },
+          });
+        } catch (err) {
+          console.warn('[entitlement-propagate] audit (skipped_unconfigured) failed:', err);
+        }
       }
       continue;
     }

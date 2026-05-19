@@ -79,12 +79,10 @@ test('legacy alias /modules/sso/consume returns the same body as /v1/...', async
     'alias /modules/sso/consume must be mounted');
   // Both paths share the same handler — same status, same shape.
   assert.equal(resAlias.statusCode, resV1.statusCode);
-  const bodyV1 = resV1.json();
-  const bodyAlias = resAlias.json();
   // Everything else MUST match shape — same top-level keys.
   assert.deepEqual(
-    Object.keys(bodyAlias).sort(),
-    Object.keys(bodyV1).sort(),
+    Object.keys(resAlias.json()).sort(),
+    Object.keys(resV1.json()).sort(),
     'alias must echo the same top-level keys as /v1',
   );
 });

@@ -151,7 +151,7 @@ export async function registerEntitlementRoutes(app: FastifyInstance) {
     // registration body carries a `features` field with any out-of-spec
     // key, reject with `400 invalid_body` so the operator catches the
     // drift at register-time instead of seeing 400s on every push.
-    if ((mod as any).pushShape === 'tradeflowkit_v1' && body.features !== undefined) {
+    if (mod.pushShape === 'tradeflowkit_v1' && body.features !== undefined) {
       const fv = body.features;
       if (!fv || typeof fv !== 'object' || Array.isArray(fv)) {
         return reply.code(400).send({

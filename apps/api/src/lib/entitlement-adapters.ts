@@ -264,6 +264,11 @@ export const tradeflowkitAdapter: EntitlementPushAdapter = {
     // delta and leaves tenant-wide state untouched. We use that mode
     // for reasons that don't reflect plan/subscription changes (e.g.
     // a tenant admin flipping a single user's module access).
+    // Task #109 — TFK's documented envelope is strictly:
+    // {tenantId, planSlug, subscriptionStatus, accessLevel, features,
+    //  limits, members[]} (member-only variant drops the four tenant-
+    //  wide keys). We do NOT add extra top-level keys: TFK's body
+    //  validator rejects unknown fields with 400 invalid_body.
     const memberOnly = isMemberOnlyReason(ctx.reason);
     const payload: Record<string, unknown> = memberOnly
       ? { tenantId, accessLevel, members: membersOut }
@@ -271,12 +276,6 @@ export const tradeflowkitAdapter: EntitlementPushAdapter = {
           tenantId, planSlug, subscriptionStatus, accessLevel,
           features, limits, members: membersOut,
         };
-    payload._meta = {
-      event: 'entitlements.changed',
-      reason: ctx.reason,
-      receiver_slug: target.moduleSlug,
-      memberOnly,
-    };
     const body = JSON.stringify(payload);
     return {
       kind: 'ok',
