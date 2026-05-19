@@ -135,7 +135,8 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
       // Replit integration drawer. We deliberately do not block on it —
       // the focus listener above will pick up the new status when the
       // admin tabs back.
-      window.open(res.url, '_blank', 'noopener,noreferrer');
+      const { openExternal } = await import('@/lib/launch');
+      await openExternal(res.url);
     } catch (err: unknown) {
       const e = err as { code?: string; error?: string; message?: string };
       if (e?.code === 'CONNECTOR_UNAVAILABLE') {
@@ -381,6 +382,10 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
                     href={c.recordingUrl}
                     target="_blank"
                     rel="noreferrer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      import('@/lib/launch').then(({ openExternal }) => openExternal(c.recordingUrl!));
+                    }}
                     style={{ display: 'inline-block', marginTop: space.sm, color: semantic.accent, fontSize: fontSize.sm }}
                   >
                     Recording ↗
@@ -536,6 +541,10 @@ function TelephonyBanner({
             target="_blank"
             rel="noopener noreferrer"
             data-testid="link-connect-twilio-workspace"
+            onClick={(e) => {
+              e.preventDefault();
+              import('@/lib/launch').then(({ openExternal }) => openExternal(connectInfo.url));
+            }}
             style={{ color: semantic.accent }}
           >
             Open the Replit workspace ↗

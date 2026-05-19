@@ -158,6 +158,10 @@ function InternalAppContent() {
               target="_blank"
               rel="noopener noreferrer"
               data-testid={`link-launch-${mod.slug}`}
+              onClick={(e) => {
+                e.preventDefault();
+                import('@/lib/launch').then(({ openExternal }) => openExternal(mod.baseUrl!));
+              }}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '10px 18px', borderRadius: radius.sm,

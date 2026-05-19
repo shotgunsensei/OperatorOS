@@ -58,8 +58,10 @@ export default function TenantBillingPage() {
     setErr(null); setBusy('portal');
     try {
       const r = await billingApi.createPortalSession();
-      if (r?.url) window.open(r.url, '_blank', 'noopener');
-      else setErr('Billing portal not configured');
+      if (r?.url) {
+        const { openExternal } = await import('@/lib/launch');
+        await openExternal(r.url);
+      } else setErr('Billing portal not configured');
     } catch (e: any) {
       setErr(e?.error || 'Could not open billing portal');
     } finally { setBusy(null); }

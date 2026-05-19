@@ -94,6 +94,10 @@ export function ShellLaunchButton({
       target="_blank"
       rel="noopener noreferrer"
       data-testid={testId}
+      onClick={(e) => {
+        e.preventDefault();
+        import('@/lib/launch').then(({ openExternal }) => openExternal(baseUrl));
+      }}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 8,
         padding: '10px 18px', borderRadius: radius.sm,
