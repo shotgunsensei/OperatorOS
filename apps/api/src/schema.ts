@@ -468,6 +468,16 @@ export const modules = pgTable('modules', {
   // entitlement-change snapshots to. Nullable means "no live push, do
   // on-demand introspect instead".
   entitlementWebhookUrl: text('entitlement_webhook_url'),
+  // Task #109: per-module push-adapter selection.
+  //   pushShape       — 'canonical_snapshot' (default) | 'tradeflowkit_v1'
+  //   pushAuthMode    — 'hmac_signature' (default) | 'bearer_token'
+  //   pushBearerEnvVar — env-var NAME holding the bearer token when
+  //                      pushAuthMode='bearer_token'. Null for HMAC.
+  // The adapter is a transport/presentation layer only — it does not
+  // alter the resolver snapshot. See entitlement-adapters/ for details.
+  pushShape: text('push_shape').notNull().default('canonical_snapshot'),
+  pushAuthMode: text('push_auth_mode').notNull().default('hmac_signature'),
+  pushBearerEnvVar: text('push_bearer_env_var'),
   // Gate 2: soft-delete. Module rows are never hard-deleted; archived rows
   // are excluded from default catalogs but kept for audit + entitlement
   // history.

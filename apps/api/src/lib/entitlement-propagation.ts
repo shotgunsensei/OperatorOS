@@ -22,7 +22,6 @@
  * are expected to re-introspect on-demand if they suspect drift.
  */
 
-import crypto from 'node:crypto';
 import { db } from '../db.js';
 import { eq, and, inArray, isNotNull, ne } from 'drizzle-orm';
 import {
@@ -31,6 +30,10 @@ import {
 } from '../schema.js';
 import { writeAudit } from './audit.js';
 import { resolveEntitlements, type EntitlementSnapshot } from './entitlement-resolver.js';
+import {
+  getAdapter, type AdapterTarget, type AdapterRequest, type PushShape,
+  type PushAuthMode, type AdapterSkipReason,
+} from './entitlement-adapters.js';
 
 function getSigningSecret(): string | null {
   const secret = process.env.MODULE_SSO_SECRET;
@@ -38,28 +41,13 @@ function getSigningSecret(): string | null {
   return secret;
 }
 
-function signPayload(body: string, secret: string): string {
-  return 'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');
-}
-
-interface PushTarget {
-  moduleId: string;
-  moduleSlug: string;
-  url: string;
-}
-
-async function pushOne(target: PushTarget, body: string, signature: string): Promise<{ ok: boolean; status?: number; error?: string }> {
+async function executeRequest(req: AdapterRequest): Promise<{ ok: boolean; status?: number; error?: string }> {
   try {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'User-Agent': 'OperatorOS-Entitlement-Webhook/1',
-      'X-Operatoros-Signature': signature,
-    };
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 5000);
     try {
-      const res = await fetch(target.url, {
-        method: 'POST', headers, body, signal: controller.signal,
+      const res = await fetch(req.url, {
+        method: req.method, headers: req.headers, body: req.body, signal: controller.signal,
       });
       return { ok: res.ok, status: res.status };
     } finally {
@@ -249,11 +237,13 @@ export async function recomputeAndPropagateEntitlements(
       eq(tenantModules.status, 'enabled'),
     ));
   const enabledModuleIds = tmAfter.map(tm => tm.moduleId);
-  let targets: PushTarget[] = [];
+  let targets: AdapterTarget[] = [];
   if (enabledModuleIds.length > 0) {
     const modRows = await db.select({
       id: modules.id, slug: modules.slug,
       url: modules.entitlementWebhookUrl, status: modules.status,
+      pushShape: modules.pushShape, pushAuthMode: modules.pushAuthMode,
+      pushBearerEnvVar: modules.pushBearerEnvVar,
     }).from(modules).where(and(
       inArray(modules.id, enabledModuleIds),
       isNotNull(modules.entitlementWebhookUrl),
@@ -261,7 +251,14 @@ export async function recomputeAndPropagateEntitlements(
     ));
     targets = modRows
       .filter(r => !!r.url)
-      .map(r => ({ moduleId: r.id, moduleSlug: r.slug, url: r.url as string }));
+      .map(r => ({
+        moduleId: r.id,
+        moduleSlug: r.slug,
+        url: r.url as string,
+        pushShape: (r.pushShape ?? 'canonical_snapshot') as PushShape,
+        pushAuthMode: (r.pushAuthMode ?? 'hmac_signature') as PushAuthMode,
+        pushBearerEnvVar: r.pushBearerEnvVar ?? null,
+      }));
   }
   result.receiversPushed = targets.length;
 
@@ -280,35 +277,6 @@ export async function recomputeAndPropagateEntitlements(
     } catch (err) {
       console.warn(`[entitlement-propagate] resolve failed for ${m.userId}:`, err);
     }
-  }
-
-  // Task #108 — fail-closed signing. Unsigned outbound pushes are a
-  // contract + security failure (receivers reject them and we'd leak
-  // entitlement state in the clear). If the secret is missing/short,
-  // skip the push pass entirely and record the failure in the audit.
-  const signingSecret = getSigningSecret();
-  if (!signingSecret) {
-    if (targets.length > 0 && memberSnapshots.length > 0) {
-      console.warn('[entitlement-propagate] MODULE_SSO_SECRET missing/short — skipping outbound push (fail-closed).');
-      try {
-        await writeAudit({
-          actorUserId: actor, tenantId,
-          targetType: 'tenant', targetId: tenantId,
-          action: 'entitlement_change',
-          extra: {
-            kind: 'propagation_skipped_unsigned',
-            reason,
-            members: result.membersComputed,
-            receivers: targets.length,
-            droppedModuleSlugs: result.droppedModuleSlugs,
-            revokedAccessRows: result.revokedAccessRows,
-          },
-        });
-      } catch (err) {
-        console.warn('[entitlement-propagate] audit failed:', err);
-      }
-    }
-    return result;
   }
 
   if (targets.length === 0 || memberSnapshots.length === 0) {
@@ -331,27 +299,33 @@ export async function recomputeAndPropagateEntitlements(
     return result;
   }
 
-  // One push per (member × receiver). The body is per-receiver so the
-  // child app only sees the entry for its own module slug.
-  const allResults: Array<{ ok: boolean; status?: number; error?: string; receiver: string; userId: string }> = [];
+  // Task #109 — per-receiver adapter dispatch. Each adapter projects
+  // the canonical snapshots into its receiver's wire shape. Skip
+  // reasons (missing HMAC secret, missing bearer env var, etc.) are
+  // surfaced into the audit so operators can see WHY a push didn't go
+  // out.
+  const signingSecret = getSigningSecret();
+  const skips: Array<{ receiver: string; shape: string; reason: AdapterSkipReason; detail?: string }> = [];
+
   for (const target of targets) {
-    for (const { userId, snapshot } of memberSnapshots) {
-      // Task #108 — canonical-shape contract. The push body IS the
-      // resolver snapshot at the TOP LEVEL, with only transport
-      // metadata (event/reason/receiver_slug) added alongside. No
-      // field is renamed, moved, or removed. Receivers can pipe this
-      // body into the same code path that consumes the
-      // /v1/sso/entitlements/introspect response.
-      const payload = {
-        ...snapshot,
-        event: 'entitlements.changed',
-        reason,
-        receiver_slug: target.moduleSlug,
-      };
-      const body = JSON.stringify(payload);
-      const signature = signPayload(body, signingSecret);
-      const r = await pushOne(target, body, signature);
-      allResults.push({ ...r, receiver: target.moduleSlug, userId });
+    const adapter = getAdapter(target.pushShape);
+    const outcome = adapter.buildRequests(memberSnapshots, target, {
+      reason, signingSecret,
+    });
+    if (outcome.kind === 'skipped') {
+      skips.push({
+        receiver: target.moduleSlug, shape: target.pushShape,
+        reason: outcome.reason, detail: outcome.detail,
+      });
+      if (outcome.reason === 'missing_signing_secret') {
+        console.warn(`[entitlement-propagate] MODULE_SSO_SECRET missing/short — skipping ${target.moduleSlug} (fail-closed).`);
+      } else if (outcome.reason === 'missing_bearer_env_var' || outcome.reason === 'bearer_env_value_empty') {
+        console.warn(`[entitlement-propagate] receiver ${target.moduleSlug} has push_auth_mode=bearer_token but env var ${target.pushBearerEnvVar ?? '<unset>'} resolves empty — skipping (fail-closed).`);
+      }
+      continue;
+    }
+    for (const req of outcome.requests) {
+      const r = await executeRequest(req);
       result.pushAttempts += 1;
       if (r.ok) result.pushSucceeded += 1; else result.pushFailed += 1;
     }
@@ -370,6 +344,7 @@ export async function recomputeAndPropagateEntitlements(
         pushAttempts: result.pushAttempts,
         pushSucceeded: result.pushSucceeded,
         pushFailed: result.pushFailed,
+        skipped: skips,
         droppedModuleSlugs: result.droppedModuleSlugs,
         revokedAccessRows: result.revokedAccessRows,
       },

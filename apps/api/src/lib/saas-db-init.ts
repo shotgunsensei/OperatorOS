@@ -564,6 +564,26 @@ export async function seedModules() {
       if (spec.slug === 'brandforgeos' && existing[0].name !== 'BrandForgeOS') {
         updates.name = 'BrandForgeOS';
       }
+      // Task #109: keep TradeFlowKit's push adapter pointed at the
+      // tradeflowkit_v1 shape (bearer-token, flat body). Only nudge rows
+      // that still hold the platform default; never stomp an admin who
+      // explicitly switched the receiver back to canonical.
+      if (spec.slug === 'tradeflowkit') {
+        const cur = existing[0] as unknown as {
+          pushShape?: string | null;
+          pushAuthMode?: string | null;
+          pushBearerEnvVar?: string | null;
+        };
+        if (!cur.pushShape || cur.pushShape === 'canonical_snapshot') {
+          updates.pushShape = 'tradeflowkit_v1';
+        }
+        if (!cur.pushAuthMode || cur.pushAuthMode === 'hmac_signature') {
+          updates.pushAuthMode = 'bearer_token';
+        }
+        if (!cur.pushBearerEnvVar) {
+          updates.pushBearerEnvVar = 'TRADEFLOWKIT_OPERATOROS_SERVICE_TOKEN';
+        }
+      }
       await db.update(modules).set(updates).where(eq(modules.slug, spec.slug));
     }
   }
@@ -811,6 +831,21 @@ export async function ensureTenantTables() {
     ALTER TABLE modules ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP;
     -- Task #108: receiver-registered entitlement-change webhook URL.
     ALTER TABLE modules ADD COLUMN IF NOT EXISTS entitlement_webhook_url TEXT;
+    -- Task #109: per-module push adapter selection. Defaults preserve the
+    -- pre-#109 behaviour (canonical HMAC-signed snapshot per receiver).
+    ALTER TABLE modules ADD COLUMN IF NOT EXISTS push_shape TEXT NOT NULL DEFAULT 'canonical_snapshot';
+    ALTER TABLE modules ADD COLUMN IF NOT EXISTS push_auth_mode TEXT NOT NULL DEFAULT 'hmac_signature';
+    ALTER TABLE modules ADD COLUMN IF NOT EXISTS push_bearer_env_var TEXT;
+    DO $$ BEGIN
+      ALTER TABLE modules DROP CONSTRAINT IF EXISTS modules_push_shape_check;
+      ALTER TABLE modules ADD CONSTRAINT modules_push_shape_check
+        CHECK (push_shape IN ('canonical_snapshot','tradeflowkit_v1'));
+    EXCEPTION WHEN others THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE modules DROP CONSTRAINT IF EXISTS modules_push_auth_mode_check;
+      ALTER TABLE modules ADD CONSTRAINT modules_push_auth_mode_check
+        CHECK (push_auth_mode IN ('hmac_signature','bearer_token'));
+    EXCEPTION WHEN others THEN NULL; END $$;
     -- Task #108: per-(plan, module) feature flag defaults. Tenants can
     -- override individual keys via tenant_modules.metadata.features.
     ALTER TABLE plan_modules ADD COLUMN IF NOT EXISTS feature_flags_json JSONB;

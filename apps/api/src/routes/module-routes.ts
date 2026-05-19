@@ -555,7 +555,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   // Body: { jti, aud, env }. Status semantics:
   //   200 ok | 400 bad_request|audience|env_mismatch | 404 unknown_jti
   //   409 replayed | 410 expired_or_revoked | 429 rate_limited
-  app.post('/v1/modules/sso/consume', async (request, reply) => {
+  const consumeHandler = async (request: any, reply: any) => {
     const ip = getClientIp(request);
     const userAgent = (request.headers['user-agent'] as string) || null;
 
@@ -749,13 +749,25 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // `{platformRole, ...}` is appended (snapshot fields take
     // precedence on overlap so id/email always reflect the snapshot
     // truth). `event: 'consumed'` mirrors the webhook envelope.
+    // Task #109 — pin legacy `user.role` to the documented 2-value
+    // taxonomy ('super_admin' | 'user'). Receivers like TradeFlowKit
+    // branch on this field to mirror `isSuperAdmin` and the doc is
+    // explicit: super_admin promotes, anything-else demotes. Without
+    // the clamp, a DB-level admin/user/owner could surface verbatim
+    // and silently no-op the demotion path.
+    const legacyRole: 'super_admin' | 'user' =
+      (snapshot?.user?.platformRole === 'super_admin' || (user?.role as string) === 'super_admin')
+        ? 'super_admin'
+        : 'user';
     const legacyUser = user
-      ? { id: user.id, email: user.email, name: user.name, role: user.role }
+      ? { id: user.id, email: user.email, name: user.name, role: legacyRole }
       : null;
     const mergedUser =
       snapshot && legacyUser
-        ? { ...legacyUser, ...snapshot.user }
-        : (snapshot?.user ?? legacyUser);
+        ? { ...legacyUser, ...snapshot.user, role: legacyRole }
+        : (snapshot?.user
+            ? { ...snapshot.user, role: legacyRole }
+            : legacyUser);
     return {
       // Legacy top-level (preserved verbatim, except `user` is merged).
       ok: true,
@@ -783,7 +795,14 @@ export async function registerModuleRoutes(app: FastifyInstance) {
           }
         : { snapshot: null }),
     };
-  });
+  };
+  app.post('/v1/modules/sso/consume', consumeHandler);
+  // Task #109 — legacy alias path (no /v1 prefix). TradeFlowKit's
+  // integration doc hard-codes the consume URL as
+  //   POST {OPERATOROS_API_URL}/modules/sso/consume
+  // where OPERATOROS_API_URL=https://operatoros.net/api. Without this
+  // alias every TradeFlowKit launch 404s, blocking the whole module.
+  app.post('/modules/sso/consume', consumeHandler);
 
   // -------------------------------------------------------------------------
   // POST /v1/modules/sso/diagnose — operator-side smoke test for child apps.

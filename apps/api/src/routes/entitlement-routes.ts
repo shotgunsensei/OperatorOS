@@ -24,6 +24,7 @@ import { authenticate } from '../lib/auth.js';
 import { resolveTenantContext } from '../lib/tenant-auth.js';
 import { resolveEntitlements } from '../lib/entitlement-resolver.js';
 import { requireServiceToken } from '../lib/service-token.js';
+import { isTradeFlowKitFeatureKey, TRADEFLOWKIT_FEATURE_KEYS } from '../lib/entitlement-adapters.js';
 
 /**
  * Webhook URL validator. Hardened against SSRF on the outbound push path:
@@ -143,6 +144,32 @@ export async function registerEntitlementRoutes(app: FastifyInstance) {
         error: `Module ${moduleSlug} not found`,
         code: 'MODULE_NOT_FOUND',
       });
+    }
+
+    // Task #109 — receivers configured as `tradeflowkit_v1` MUST only
+    // declare keys from the TradeFlowKit feature whitelist. If the
+    // registration body carries a `features` field with any out-of-spec
+    // key, reject with `400 invalid_body` so the operator catches the
+    // drift at register-time instead of seeing 400s on every push.
+    if ((mod as any).pushShape === 'tradeflowkit_v1' && body.features !== undefined) {
+      const fv = body.features;
+      if (!fv || typeof fv !== 'object' || Array.isArray(fv)) {
+        return reply.code(400).send({
+          error: 'features must be an object keyed by feature name',
+          code: 'invalid_body',
+        });
+      }
+      const unknown: string[] = [];
+      for (const k of Object.keys(fv as Record<string, unknown>)) {
+        if (!isTradeFlowKitFeatureKey(k)) unknown.push(k);
+      }
+      if (unknown.length > 0) {
+        return reply.code(400).send({
+          error: `Unknown feature keys for tradeflowkit_v1: ${unknown.join(', ')}. Allowed: ${TRADEFLOWKIT_FEATURE_KEYS.join(', ')}`,
+          code: 'invalid_body',
+          unknownKeys: unknown,
+        });
+      }
     }
 
     const before = mod.entitlementWebhookUrl;

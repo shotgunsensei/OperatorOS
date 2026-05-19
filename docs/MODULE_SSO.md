@@ -190,6 +190,89 @@ Find your module entry with
 app. If the entry is missing, your module is no longer enabled for
 that tenant — treat the user as unauthorized.
 
+### 3.6 Per-receiver push adapters (Task #109)
+
+The canonical shape in §3.4 is the **default** push format and what
+every receiver gets unless the operator selects otherwise. A small set
+of receivers need a different wire shape because their existing
+integration contract pre-dates OperatorOS. Each `modules` row carries
+three columns that select the adapter:
+
+| Column                  | Default               | Meaning                                                          |
+| ----------------------- | --------------------- | ---------------------------------------------------------------- |
+| `push_shape`            | `canonical_snapshot`  | `canonical_snapshot` (§3.4) or `tradeflowkit_v1` (below).        |
+| `push_auth_mode`        | `hmac_signature`      | `hmac_signature` (X-Operatoros-Signature) or `bearer_token`.     |
+| `push_bearer_env_var`   | NULL                  | Name of env var holding the bearer token (bearer mode only).     |
+
+The adapter is a **transport/presentation layer only** — the resolver
+snapshot is the single source of truth and is not modified by any
+adapter. New receivers cannot change tenant-authoritative state by
+speaking their own dialect; they only choose how they want to receive
+the snapshot.
+
+#### TradeFlowKit (`push_shape='tradeflowkit_v1'`)
+
+- **Auth**: bearer token from `process.env[push_bearer_env_var]`. The
+  default seed sets `push_bearer_env_var='TRADEFLOWKIT_OPERATOROS_SERVICE_TOKEN'`.
+- **Batching**: ONE POST per receiver (all members in `members[]`),
+  not one POST per (member × receiver).
+- **Body**:
+  ```jsonc
+  {
+    "tenantId": "tnt_…",
+    "planSlug": "pro",
+    "subscriptionStatus": "active",
+    "accessLevel": "full",            // full|revoked, derived from status
+    "features": { "automations": true, ... },
+    "limits":   { "teamMembers": 25, ... },
+    "members": [
+      { "operatorosUserId": "u_…", "moduleRole": "module_admin",
+        "enabled": true, "tenantRole": "tenant_admin" }
+    ],
+    "_meta": { "event": "...", "reason": "...", "receiver_slug": "tradeflowkit" }
+  }
+  ```
+- **`accessLevel` derivation**: `active|trialing|grace|past_due_grace`
+  → `"full"`, everything else → `"revoked"`.
+- **Feature whitelist** — TradeFlowKit only accepts these 12 keys.
+  Anything else is dropped silently at push-time, and rejected with
+  `400 invalid_body` if surfaced through `/v1/sso/entitlements/sync`'s
+  optional `features` field:
+  ```
+  automations, recurring_jobs, analytics, team_invites,
+  unlimited_entities, call_recovery, audit_log, accounting_export,
+  customer_portal, review_requests, recurring_invoices, stripe_connect
+  ```
+- **Fail-closed**: if `push_bearer_env_var` is null OR resolves to an
+  empty string, the push is skipped and an audit row records
+  `kind: 'propagation', skipped: [{receiver, reason: 'bearer_env_value_empty', ...}]`.
+
+#### Adding another adapter later
+
+1. Implement `EntitlementPushAdapter` in
+   `apps/api/src/lib/entitlement-adapters.ts` (your adapter receives
+   the member snapshots + target + context and returns an array of
+   `{url, method, headers, body}` requests).
+2. Register the shape name in the `ADAPTERS` registry.
+3. Add the shape to the `modules.push_shape` CHECK constraint in
+   `saas-db-init.ts`.
+4. Update the seed for the receiver's `modules` row to point at your
+   shape; ship a doc paragraph here under §3.6.
+
+### 3.7 Legacy consume URL alias
+
+TradeFlowKit's integration contract hard-codes the consume URL as
+`POST {OPERATOROS_API_URL}/modules/sso/consume` (no `/v1`). OperatorOS
+mounts both paths to the **same handler**, so the alias and the
+versioned path return byte-identical bodies. Receivers SHOULD use the
+versioned `/v1/modules/sso/consume`; the alias exists for legacy
+compatibility only.
+
+The merged `user.role` field on the consume response is clamped to
+`"super_admin" | "user"` regardless of the underlying `users.role`
+column value (which may carry historical values like `"admin"`). The
+canonical taxonomy stays on `user.platformRole`.
+
 ### 3.5 Failure modes
 
 OperatorOS pushes are best-effort and may be retried but are not
