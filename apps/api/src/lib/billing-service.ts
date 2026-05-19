@@ -347,6 +347,15 @@ export interface WebhookProcessResult {
   action?: string;
   error?: string;
   /**
+   * Task #108: gate the centralized entitlement propagation. Set true
+   * ONLY when local subscription state is durably written so the
+   * recompute pass sees the correct owner plan. Out-of-order
+   * `customer.subscription.created` events that arrive before checkout
+   * has persisted the local row set this false to avoid revoking
+   * valid module access based on missing subscription state.
+   */
+  shouldPropagate?: boolean;
+  /**
    * For addon update/delete branches: the number of local
    * addon_subscriptions rows that were actually mutated. `0` means the
    * webhook was understood but no local row matched (the missed-webhook
@@ -526,7 +535,7 @@ export async function processWebhookEvent(event: { type: string; data: { object:
   //      (covers subscription.updated/deleted where Stripe doesn't echo
   //      our metadata back)
   //   3. Local subscriptions row joined by stripe_customer_id (invoice.*)
-  if (result.handled) {
+  if (result.handled && result.shouldPropagate !== false) {
     let userId: string | null = obj?.metadata?.userId
       ?? obj?.metadata?.user_id
       ?? null;
@@ -601,7 +610,7 @@ async function handleCheckoutCompleted(session: any): Promise<WebhookProcessResu
   });
 
   console.log(`[billing-service] Checkout completed: user=${userId} plan=${planSlug}`);
-  return { handled: true, action: 'checkout_completed' };
+  return { handled: true, action: 'checkout_completed', shouldPropagate: true };
 }
 
 async function handleSubscriptionCreated(subscription: any): Promise<WebhookProcessResult> {
@@ -612,6 +621,12 @@ async function handleSubscriptionCreated(subscription: any): Promise<WebhookProc
   const customerId = subscription.customer;
   const status = mapStripeStatus(subscription.status);
 
+  // Task #108: only propagate when the local subscription row already
+  // exists (was upserted by checkout.session.completed). If Stripe
+  // delivers `customer.subscription.created` BEFORE the checkout
+  // webhook lands — perfectly legal under out-of-order delivery — we
+  // would otherwise propagate against an empty subscriptions table
+  // and the recompute pass would mass-revoke module access.
   const [existingSub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
   if (existingSub) {
     await db.update(subscriptions).set({
@@ -620,10 +635,15 @@ async function handleSubscriptionCreated(subscription: any): Promise<WebhookProc
       currentPeriodStart: new Date(subscription.current_period_start * 1000),
       currentPeriodEnd: new Date(subscription.current_period_end * 1000),
     }).where(eq(subscriptions.id, existingSub.id));
+    console.log(`[billing-service] Subscription created (synced): user=${userId} stripe_sub=${stripeSubId}`);
+    return { handled: true, action: 'subscription_created', shouldPropagate: true };
   }
 
-  console.log(`[billing-service] Subscription created: user=${userId} stripe_sub=${stripeSubId}`);
-  return { handled: true, action: 'subscription_created' };
+  console.warn(
+    `[billing-service] subscription.created arrived before local row for user=${userId} ` +
+    `stripe_sub=${stripeSubId}; skipping propagation (will run once checkout webhook lands).`,
+  );
+  return { handled: true, action: 'subscription_created_deferred', shouldPropagate: false };
 }
 
 async function handleSubscriptionUpdated(subscription: any): Promise<WebhookProcessResult> {

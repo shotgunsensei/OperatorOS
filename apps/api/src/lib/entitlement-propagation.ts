@@ -109,12 +109,14 @@ export async function recomputeAndPropagateEntitlements(
   const ownerId = tenant.ownerUserId;
   const actor = opts.actorUserId ?? ownerId;
 
-  // Owner's active subscription drives plan inclusion for the tenant.
-  const [ownerSub] = await db.select().from(subscriptions)
-    .where(and(
-      eq(subscriptions.userId, ownerId),
-      inArray(subscriptions.status, ['active', 'trialing']),
-    )).limit(1);
+  // Task #108 — DETERMINISTIC plan selection. Use the canonical
+  // getActiveSubscription helper so module-drop decisions are based on
+  // the same plan that resolveEntitlements() and every other surface
+  // sees. An inline status-filter query with no ordering could pick a
+  // different row when multiple exist and produce inconsistent
+  // include/exclude decisions across recompute passes.
+  const { getActiveSubscription } = await import('./entitlement-service.js');
+  const ownerSub = await getActiveSubscription(ownerId);
   const includedModuleIds = new Set<string>();
   if (ownerSub) {
     const pmRows = await db.select({ moduleId: planModules.moduleId })
@@ -135,6 +137,44 @@ export async function recomputeAndPropagateEntitlements(
     tm.status === 'enabled' &&
     !includedModuleIds.has(tm.moduleId),
   );
+
+  // Task #108 — two-way reconciliation. Modules NEWLY included by the
+  // owner's plan (e.g. on an upgrade) and currently disabled with
+  // source='included' should be re-enabled here. This makes the
+  // pipeline reconcile both directions instead of being revoke-only,
+  // so admins don't have to manually re-enable plan modules after a
+  // plan upgrade.
+  const reEnabled = tmRows.filter(tm =>
+    tm.source === 'included' &&
+    tm.status === 'disabled' &&
+    includedModuleIds.has(tm.moduleId),
+  );
+  if (reEnabled.length > 0) {
+    const reEnabledIds = reEnabled.map(r => r.moduleId);
+    await db.update(tenantModules)
+      .set({ status: 'enabled', updatedAt: new Date() })
+      .where(and(
+        eq(tenantModules.tenantId, tenantId),
+        inArray(tenantModules.moduleId, reEnabledIds),
+      ));
+    try {
+      const modSlugRows = await db.select({ id: modules.id, slug: modules.slug })
+        .from(modules).where(inArray(modules.id, reEnabledIds));
+      const slugById = new Map(modSlugRows.map(r => [r.id, r.slug]));
+      await writeAudit({
+        actorUserId: actor, tenantId,
+        targetType: 'tenant', targetId: tenantId,
+        action: 'entitlement_change',
+        extra: {
+          kind: 'modules_reenabled',
+          reenabledModuleSlugs: reEnabledIds.map(id => slugById.get(id) ?? id),
+          reason,
+        },
+      });
+    } catch (err) {
+      console.warn('[entitlement-propagate] audit failed for re-enable:', err);
+    }
+  }
 
   if (dropped.length > 0) {
     const droppedIds = dropped.map(d => d.moduleId);
