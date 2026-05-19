@@ -1,25 +1,29 @@
 /**
- * Task #108 — Unified entitlement resolver.
+ * Task #108 — Unified entitlement resolver (SPEC-ALIGNED shape).
  *
  * `resolveEntitlements(userId, tenantId)` is the SINGLE function every
  * surface (internal /me, S2S introspect, SSO JWT claim builder, downstream
- * webhook payload) consults. It composes the existing primitives:
- *   - getActiveSubscription / subscription_plans   (plan)
- *   - hasModuleAccess / getUserModules             (per-module access)
+ * webhook payload) consults. It composes existing primitives:
+ *   - getActiveSubscription / subscription_plans   (subscription)
+ *   - getUserModules / hasModuleAccess             (per-module access)
+ *   - plan_modules.feature_flags_json              (feature defaults)
+ *   - tenant_modules.metadata.features             (per-tenant overrides)
  *   - tenant_users / tenant_user_module_access     (roles)
  *   - PLAN_CONFIGS                                  (limits, capabilities)
  *
- * Output is a versioned, JSON-serializable snapshot suitable for transport.
- * The shape is intentionally flat and translation-friendly: every role
- * value carries both the internal token AND the public alias, so older
- * receivers keep working while new receivers consume the alias.
+ * Returns the spec-shaped payload:
+ *   { version, computedAt, tenant, user, subscription, modules[], limits,
+ *     capabilities }
+ * with each module entry carrying `enabled`, `accessLevel`, `moduleRole`,
+ * and merged `features`.
  */
 
 import { db } from '../db.js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import {
   users, subscriptions, subscriptionPlans,
-  tenants, tenantUsers, tenantModules, tenantUserModuleAccess, modules,
+  tenants, tenantUsers, tenantModules, tenantUserModuleAccess,
+  modules, planModules,
 } from '../schema.js';
 import {
   getActiveSubscription, getUserModules,
@@ -33,31 +37,29 @@ import {
 
 export const ENTITLEMENT_SNAPSHOT_VERSION = 1 as const;
 
+export type ModuleFeatureMap = Record<string, boolean | number | string>;
+
 export interface EntitlementModuleEntry {
   slug: string;
   name: string;
-  base_url: string;
+  baseUrl: string;
   status: string;
-  /** Final has-access decision from the canonical hasModuleAccess(). */
-  has_access: boolean;
+  /** TRUE iff the user can launch this module right now (final answer). */
+  enabled: boolean;
+  /** Internal column value (none|user|manager) — kept for back-compat. */
+  accessLevel: InternalModuleAccessLevel;
+  /** Public alias (module_admin|module_user|viewer|none). */
+  moduleRole: PublicModuleRole;
+  /** Merged feature flags: plan_modules.feature_flags_json overlaid with
+   *  tenant_modules.metadata.features. Empty object if neither configured. */
+  features: ModuleFeatureMap;
   /** How the user got access: 'plan' | 'addon' | 'override' | 'admin_role' | null */
   source: 'plan' | 'addon' | 'override' | 'admin_role' | null;
-  /** Internal column value (none|user|manager) — kept for back-compat. */
-  access_level: InternalModuleAccessLevel;
-  /** Public alias (module_admin|module_user|viewer|none). */
-  module_role: PublicModuleRole;
-  /** Convenience: receivers can match on either value. */
-  module_role_alias: PublicModuleRole;
 }
 
 export interface EntitlementSnapshot {
   version: typeof ENTITLEMENT_SNAPSHOT_VERSION;
-  computed_at: string;
-  user: {
-    id: string;
-    email: string;
-    platform_role: string;
-  };
+  computedAt: string;
   tenant: {
     id: string;
     slug: string;
@@ -66,16 +68,21 @@ export interface EntitlementSnapshot {
     /** Internal role value owner|admin|member, or null if super_admin viewing without membership. */
     role: InternalTenantRole | null;
     /** Public alias (owner|tenant_admin|billing_admin|user|viewer). */
-    role_alias: PublicTenantRole;
+    roleAlias: PublicTenantRole;
     /** True when access comes from platform super_admin (no membership row required). */
-    via_platform_role: boolean;
+    viaPlatformRole: boolean;
   };
-  plan: {
-    slug: string;
-    name: string;
+  user: {
+    id: string;
+    email: string;
+    platformRole: string;
+  };
+  subscription: {
     status: string | null;
-    current_period_end: string | null;
-    cancel_at_period_end: boolean;
+    planSlug: string;
+    planName: string;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
   } | null;
   modules: EntitlementModuleEntry[];
   limits: Record<string, number | boolean>;
@@ -84,7 +91,8 @@ export interface EntitlementSnapshot {
 
 /**
  * Resolve a single snapshot for one (user, tenant) pair.
- * Throws if the user doesn't exist; returns null if the tenant doesn't exist.
+ * Throws if the user doesn't exist; returns null if the tenant doesn't
+ * exist OR the user isn't a member AND isn't a platform super_admin.
  */
 export async function resolveEntitlements(
   userId: string,
@@ -96,62 +104,76 @@ export async function resolveEntitlements(
   const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
   if (!tenant) return null;
 
-  // Role: prefer membership row; super_admin without membership is allowed
-  // (matches resolveTenantContext semantics) but tenant.role is reported
-  // as null so downstream tools can distinguish observer vs member.
   const [member] = await db.select().from(tenantUsers)
     .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, userId)))
     .limit(1);
   const isSuper = user.platformRole === 'super_admin';
-  if (!member && !isSuper) {
-    // User is not a member of this tenant and not super_admin — treated as
-    // "no entitlements in this tenant".
-    return null;
-  }
+  if (!member && !isSuper) return null;
+
   const internalRole: InternalTenantRole | null = (member?.role as InternalTenantRole) ?? null;
   const roleAlias: PublicTenantRole = internalRole
     ? tenantRoleToPublic(internalRole)
     : 'viewer';
 
-  // Plan: source-of-truth is the user's active subscription (today, plan
-  // is per-user; tenant-scoped billing is a separate follow-up). We
-  // duplicate the slug into the snapshot so receivers don't have to call
-  // the legacy /v1/billing/subscription endpoint.
+  // Subscription block — source of truth for the user's plan today.
   const sub = await getActiveSubscription(userId);
-  let planBlock: EntitlementSnapshot['plan'] = null;
+  let subBlock: EntitlementSnapshot['subscription'] = null;
+  let activePlanId: string | null = null;
   if (sub) {
     const [planRow] = await db.select().from(subscriptionPlans)
       .where(eq(subscriptionPlans.id, sub.planId)).limit(1);
     if (planRow) {
-      planBlock = {
-        slug: planRow.slug,
-        name: planRow.name,
+      activePlanId = planRow.id;
+      subBlock = {
         status: sub.status,
-        current_period_end: sub.currentPeriodEnd ? sub.currentPeriodEnd.toISOString() : null,
-        cancel_at_period_end: !!sub.cancelAtPeriodEnd,
+        planSlug: planRow.slug,
+        planName: planRow.name,
+        currentPeriodEnd: sub.currentPeriodEnd ? sub.currentPeriodEnd.toISOString() : null,
+        cancelAtPeriodEnd: !!sub.cancelAtPeriodEnd,
       };
     }
   }
 
-  // Modules: lean on the existing getUserModules() so the access decision
-  // matches every other call site (launchpad, marketplace, requireModuleAccess).
-  // Per-user access_level is read from tenant_user_module_access; if absent
-  // we derive a default from the tenant_modules row (allow_all → 'user').
+  // Module access (canonical decision).
   const summaries = await getUserModules(userId, tenantId);
+
+  // Per-user explicit grants.
   const grants = await db.select().from(tenantUserModuleAccess)
     .where(and(
       eq(tenantUserModuleAccess.tenantId, tenantId),
       eq(tenantUserModuleAccess.userId, userId),
     ));
-  const grantBySlug = new Map<string, InternalModuleAccessLevel>();
   const allModules = await db.select().from(modules);
   const modBySlug = new Map(allModules.map(m => [m.slug, m]));
+  const modById = new Map(allModules.map(m => [m.id, m]));
+  const grantBySlug = new Map<string, InternalModuleAccessLevel>();
   for (const g of grants) {
-    const mod = allModules.find(m => m.id === g.moduleId);
+    const mod = modById.get(g.moduleId);
     if (mod) grantBySlug.set(mod.slug, g.accessLevel as InternalModuleAccessLevel);
   }
-  const tms = await db.select().from(tenantModules).where(eq(tenantModules.tenantId, tenantId));
+
+  // Tenant-level module rows (allowAllMembers, metadata overrides).
+  const tms = await db.select().from(tenantModules)
+    .where(eq(tenantModules.tenantId, tenantId));
   const tmByModuleId = new Map(tms.map(tm => [tm.moduleId, tm]));
+
+  // Plan feature defaults: the tenant's modules are unlocked by the
+  // TENANT OWNER's plan, so every member sees the same plan-side feature
+  // defaults regardless of their personal subscription. Fall back to the
+  // calling user's plan only when there is no distinct owner sub.
+  const planFeatureByModuleId = new Map<string, ModuleFeatureMap>();
+  let featurePlanId: string | null = activePlanId;
+  if (tenant.ownerUserId && tenant.ownerUserId !== userId) {
+    const ownerSub = await getActiveSubscription(tenant.ownerUserId);
+    if (ownerSub?.planId) featurePlanId = ownerSub.planId;
+  }
+  if (featurePlanId) {
+    const pmRows = await db.select().from(planModules)
+      .where(eq(planModules.planId, featurePlanId));
+    for (const pm of pmRows) {
+      if (pm.featureFlagsJson) planFeatureByModuleId.set(pm.moduleId, pm.featureFlagsJson);
+    }
+  }
 
   const moduleEntries: EntitlementModuleEntry[] = summaries.map(s => {
     const mod = modBySlug.get(s.module.slug);
@@ -163,46 +185,55 @@ export async function resolveEntitlements(
     }
     if (!s.unlocked) level = 'none';
     const moduleRole = moduleAccessLevelToPublic(level);
+
+    // Merge features: plan defaults first, then per-tenant overrides.
+    const planFeatures = mod ? (planFeatureByModuleId.get(mod.id) ?? {}) : {};
+    const tm = mod ? tmByModuleId.get(mod.id) : undefined;
+    const tenantOverride = (tm?.metadata?.features ?? {}) as ModuleFeatureMap;
+    const features: ModuleFeatureMap = { ...planFeatures, ...tenantOverride };
+
     return {
       slug: s.module.slug,
       name: s.module.name,
-      base_url: s.module.baseUrl,
+      baseUrl: s.module.baseUrl,
       status: s.module.status,
-      has_access: s.unlocked,
+      enabled: s.unlocked,
+      accessLevel: level,
+      moduleRole,
+      features,
       source: s.access_source,
-      access_level: level,
-      module_role: moduleRole,
-      module_role_alias: moduleRole,
     };
   });
 
-  // Limits + capabilities come from the plan config table so we present
-  // them next to the plan slug instead of forcing downstream code to
-  // re-derive them.
   const { config } = await getUserPlanConfig(userId);
   const limits: Record<string, number | boolean> = { ...config.limits };
   const capabilities: Record<string, boolean> = { ...config.features };
 
   return {
     version: ENTITLEMENT_SNAPSHOT_VERSION,
-    computed_at: new Date().toISOString(),
-    user: {
-      id: user.id,
-      email: user.email,
-      platform_role: user.platformRole ?? 'user',
-    },
+    computedAt: new Date().toISOString(),
     tenant: {
       id: tenant.id,
       slug: tenant.slug,
       name: tenant.name,
       type: tenant.type as 'personal' | 'company',
       role: internalRole,
-      role_alias: roleAlias,
-      via_platform_role: !member && isSuper,
+      roleAlias,
+      viaPlatformRole: !member && isSuper,
     },
-    plan: planBlock,
+    user: {
+      id: user.id,
+      email: user.email,
+      platformRole: user.platformRole ?? 'user',
+    },
+    subscription: subBlock,
     modules: moduleEntries,
     limits,
     capabilities,
   };
+}
+
+/** Convenience helper for callers that need a list of currently-enabled module slugs. */
+export function enabledModuleSlugs(snap: EntitlementSnapshot): string[] {
+  return snap.modules.filter(m => m.enabled).map(m => m.slug);
 }

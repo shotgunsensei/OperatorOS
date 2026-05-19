@@ -86,5 +86,5 @@ test('valid token + valid params -> 200 + snapshot', async () => {
   assert.equal(body.version, 1);
   assert.equal(body.user.id, owner.id);
   assert.equal(body.tenant.id, tenant.id);
-  assert.equal(body.tenant.role_alias, 'owner');
+  assert.equal(body.tenant.roleAlias, 'owner');
 });

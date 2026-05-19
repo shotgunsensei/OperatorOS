@@ -1,17 +1,21 @@
 /**
- * Task #108 — Recompute + propagate pipeline.
+ * Task #108 — Recompute + propagate pipeline (TENANT-SCOPED).
  *
- * Triggered after any event that may change a user's effective
- * entitlements:
- *   - Stripe subscription state change (created/updated/deleted)
- *   - Add-on subscription promote / cancel
- *   - Tenant admin grant change (tenant_user_module_access set)
- *   - Tenant module enable/disable
+ * `recomputeAndPropagateEntitlements(tenantId, opts)` is the canonical
+ * way to push entitlement state to receivers. It:
  *
- * For each receiver module that has registered a webhook URL
- * (`modules.entitlement_webhook_url`), we POST a signed snapshot. The
- * HMAC signature reuses MODULE_SSO_SECRET (same trust boundary as the
- * SSO JWT) and is sent as `X-Operatoros-Signature: sha256=<hex>`.
+ *   1. Looks up the tenant owner's active subscription, derives the
+ *      currently-included plan_modules set.
+ *   2. For each tenant_modules row marked source='included' whose module
+ *      is no longer in the plan: marks the row 'disabled' and revokes
+ *      every tenant_user_module_access row pointing at it (audited).
+ *   3. Computes a fresh snapshot per member.
+ *   4. POSTs the per-member snapshot to EVERY tenant-enabled module that
+ *      has registered an entitlement_webhook_url. Modules whose
+ *      tenant_modules row is disabled / missing are NOT notified.
+ *
+ * The HMAC signature reuses MODULE_SSO_SECRET and is sent as
+ * `X-Operatoros-Signature: sha256=<hex>`.
  *
  * Propagation is FIRE-AND-FORGET and best-effort. A failure to reach
  * a receiver MUST NOT block the originating user mutation — receivers
@@ -20,8 +24,11 @@
 
 import crypto from 'node:crypto';
 import { db } from '../db.js';
-import { eq, isNotNull, and, ne } from 'drizzle-orm';
-import { modules } from '../schema.js';
+import { eq, and, inArray, isNotNull, ne } from 'drizzle-orm';
+import {
+  modules, planModules, subscriptions, subscriptionPlans,
+  tenants, tenantUsers, tenantModules, tenantUserModuleAccess,
+} from '../schema.js';
 import { writeAudit } from './audit.js';
 import { resolveEntitlements, type EntitlementSnapshot } from './entitlement-resolver.js';
 
@@ -32,28 +39,9 @@ function signPayload(body: string): string | null {
 }
 
 interface PushTarget {
-  slug: string;
+  moduleId: string;
+  moduleSlug: string;
   url: string;
-}
-
-async function loadPushTargets(restrictToSlugs?: string[]): Promise<PushTarget[]> {
-  const rows = await db.select({
-    slug: modules.slug,
-    url: modules.entitlementWebhookUrl,
-    status: modules.status,
-  })
-    .from(modules)
-    .where(and(
-      isNotNull(modules.entitlementWebhookUrl),
-      ne(modules.status, 'disabled'),
-    ));
-  const out: PushTarget[] = [];
-  for (const r of rows) {
-    if (!r.url) continue;
-    if (restrictToSlugs && !restrictToSlugs.includes(r.slug)) continue;
-    out.push({ slug: r.slug, url: r.url });
-  }
-  return out;
 }
 
 async function pushOne(target: PushTarget, body: string, signature: string | null): Promise<{ ok: boolean; status?: number; error?: string }> {
@@ -63,7 +51,6 @@ async function pushOne(target: PushTarget, body: string, signature: string | nul
       'User-Agent': 'OperatorOS-Entitlement-Webhook/1',
     };
     if (signature) headers['X-Operatoros-Signature'] = signature;
-    // 5-second hard timeout; downstream is best-effort.
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 5000);
     try {
@@ -80,103 +67,261 @@ async function pushOne(target: PushTarget, body: string, signature: string | nul
 }
 
 export interface PropagationResult {
-  pushed: number;
-  succeeded: number;
-  failed: number;
-  snapshot: EntitlementSnapshot | null;
+  tenantId: string;
+  reason: string | null;
+  membersComputed: number;
+  receiversPushed: number;
+  pushAttempts: number;
+  pushSucceeded: number;
+  pushFailed: number;
+  droppedModuleSlugs: string[];
+  revokedAccessRows: number;
 }
 
 /**
- * Recompute the snapshot and push it to every registered receiver.
- * `restrictToSlugs` narrows the push to specific modules (e.g. after a
- * single-module grant change).
+ * Recompute + propagate for a SINGLE tenant. Spec-aligned trigger surface.
  */
 export async function recomputeAndPropagateEntitlements(
-  userId: string,
   tenantId: string,
-  opts: { restrictToSlugs?: string[]; reason?: string } = {},
+  opts: { reason?: string; actorUserId?: string | null } = {},
 ): Promise<PropagationResult> {
-  let snapshot: EntitlementSnapshot | null = null;
-  try {
-    snapshot = await resolveEntitlements(userId, tenantId);
-  } catch (err) {
-    console.warn('[entitlement-propagate] resolve failed:', err);
-    return { pushed: 0, succeeded: 0, failed: 0, snapshot: null };
-  }
-  if (!snapshot) {
-    // Tenant doesn't exist or user isn't a member — nothing to push.
-    return { pushed: 0, succeeded: 0, failed: 0, snapshot: null };
+  const reason = opts.reason ?? null;
+  const result: PropagationResult = {
+    tenantId, reason,
+    membersComputed: 0,
+    receiversPushed: 0,
+    pushAttempts: 0,
+    pushSucceeded: 0,
+    pushFailed: 0,
+    droppedModuleSlugs: [],
+    revokedAccessRows: 0,
+  };
+
+  // -------------------------------------------------------------------
+  // 1. Tenant + owner + active plan_modules set.
+  // -------------------------------------------------------------------
+  const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
+  if (!tenant) return result;
+  const ownerId = tenant.ownerUserId;
+  const actor = opts.actorUserId ?? ownerId;
+
+  // Owner's active subscription drives plan inclusion for the tenant.
+  const [ownerSub] = await db.select().from(subscriptions)
+    .where(and(
+      eq(subscriptions.userId, ownerId),
+      inArray(subscriptions.status, ['active', 'trialing']),
+    )).limit(1);
+  const includedModuleIds = new Set<string>();
+  if (ownerSub) {
+    const pmRows = await db.select({ moduleId: planModules.moduleId })
+      .from(planModules)
+      .where(eq(planModules.planId, ownerSub.planId));
+    for (const r of pmRows) includedModuleIds.add(r.moduleId);
   }
 
-  const targets = await loadPushTargets(opts.restrictToSlugs);
-  if (targets.length === 0) {
-    // Still audit the recompute so admins see the cause/effect chain.
+  // -------------------------------------------------------------------
+  // 2. Find dropped modules: tenant_modules.source='included' AND status='enabled'
+  //    AND moduleId NOT IN includedModuleIds. Disable each and revoke
+  //    every per-user access row attached to it.
+  // -------------------------------------------------------------------
+  const tmRows = await db.select().from(tenantModules)
+    .where(eq(tenantModules.tenantId, tenantId));
+  const dropped = tmRows.filter(tm =>
+    tm.source === 'included' &&
+    tm.status === 'enabled' &&
+    !includedModuleIds.has(tm.moduleId),
+  );
+
+  if (dropped.length > 0) {
+    const droppedIds = dropped.map(d => d.moduleId);
+    // Disable tenant_modules row(s).
+    await db.update(tenantModules)
+      .set({ status: 'disabled', updatedAt: new Date() })
+      .where(and(
+        eq(tenantModules.tenantId, tenantId),
+        inArray(tenantModules.moduleId, droppedIds),
+      ));
+
+    // Snapshot module slug map for audit details.
+    const modSlugRows = await db.select({ id: modules.id, slug: modules.slug })
+      .from(modules).where(inArray(modules.id, droppedIds));
+    const slugById = new Map(modSlugRows.map(r => [r.id, r.slug]));
+    result.droppedModuleSlugs = droppedIds.map(id => slugById.get(id) ?? id);
+
+    // Revoke per-user access rows pointing at dropped modules.
+    const accessRows = await db.select().from(tenantUserModuleAccess)
+      .where(and(
+        eq(tenantUserModuleAccess.tenantId, tenantId),
+        inArray(tenantUserModuleAccess.moduleId, droppedIds),
+        ne(tenantUserModuleAccess.accessLevel, 'none'),
+      ));
+    for (const row of accessRows) {
+      await db.update(tenantUserModuleAccess)
+        .set({ accessLevel: 'none', updatedAt: new Date() })
+        .where(eq(tenantUserModuleAccess.id, row.id));
+      result.revokedAccessRows += 1;
+      try {
+        await writeAudit({
+          actorUserId: actor, tenantId,
+          targetType: 'user', targetId: row.userId,
+          action: 'entitlement_change',
+          extra: {
+            kind: 'access_revoked',
+            moduleSlug: slugById.get(row.moduleId) ?? row.moduleId,
+            before: row.accessLevel,
+            after: 'none',
+            reason,
+          },
+        });
+      } catch (err) {
+        console.warn('[entitlement-propagate] audit failed for revoke:', err);
+      }
+    }
+
+    // Audit the tenant-level drop too.
     try {
       await writeAudit({
-        actorUserId: userId, tenantId,
-        targetType: 'user', targetId: userId,
+        actorUserId: actor, tenantId,
+        targetType: 'tenant', targetId: tenantId,
+        action: 'entitlement_change',
+        extra: {
+          kind: 'modules_dropped',
+          droppedModuleSlugs: result.droppedModuleSlugs,
+          reason,
+        },
+      });
+    } catch (err) {
+      console.warn('[entitlement-propagate] audit failed for drop:', err);
+    }
+  }
+
+  // -------------------------------------------------------------------
+  // 3. Compute receiver targets — modules that are (a) tenant-enabled
+  //    after the drop pass AND (b) have a webhook URL registered.
+  // -------------------------------------------------------------------
+  const tmAfter = await db.select().from(tenantModules)
+    .where(and(
+      eq(tenantModules.tenantId, tenantId),
+      eq(tenantModules.status, 'enabled'),
+    ));
+  const enabledModuleIds = tmAfter.map(tm => tm.moduleId);
+  let targets: PushTarget[] = [];
+  if (enabledModuleIds.length > 0) {
+    const modRows = await db.select({
+      id: modules.id, slug: modules.slug,
+      url: modules.entitlementWebhookUrl, status: modules.status,
+    }).from(modules).where(and(
+      inArray(modules.id, enabledModuleIds),
+      isNotNull(modules.entitlementWebhookUrl),
+      ne(modules.status, 'disabled'),
+    ));
+    targets = modRows
+      .filter(r => !!r.url)
+      .map(r => ({ moduleId: r.id, moduleSlug: r.slug, url: r.url as string }));
+  }
+  result.receiversPushed = targets.length;
+
+  // -------------------------------------------------------------------
+  // 4. Compute per-member snapshots and push.
+  // -------------------------------------------------------------------
+  const members = await db.select().from(tenantUsers).where(eq(tenantUsers.tenantId, tenantId));
+  const memberSnapshots: Array<{ userId: string; snapshot: EntitlementSnapshot }> = [];
+  for (const m of members) {
+    try {
+      const snap = await resolveEntitlements(m.userId, tenantId);
+      if (snap) {
+        memberSnapshots.push({ userId: m.userId, snapshot: snap });
+        result.membersComputed += 1;
+      }
+    } catch (err) {
+      console.warn(`[entitlement-propagate] resolve failed for ${m.userId}:`, err);
+    }
+  }
+
+  if (targets.length === 0 || memberSnapshots.length === 0) {
+    try {
+      await writeAudit({
+        actorUserId: actor, tenantId,
+        targetType: 'tenant', targetId: tenantId,
         action: 'entitlement_recomputed',
-        extra: { reason: opts.reason ?? null, pushTargets: 0 },
+        extra: {
+          reason,
+          members: result.membersComputed,
+          receivers: 0,
+          droppedModuleSlugs: result.droppedModuleSlugs,
+          revokedAccessRows: result.revokedAccessRows,
+        },
       });
     } catch (err) {
       console.warn('[entitlement-propagate] audit failed:', err);
     }
-    return { pushed: 0, succeeded: 0, failed: 0, snapshot };
+    return result;
   }
 
-  const payload = {
-    event: 'entitlements.changed',
-    reason: opts.reason ?? null,
-    tenant_id: tenantId,
-    user_id: userId,
-    snapshot,
-  };
-  const body = JSON.stringify(payload);
-  const signature = signPayload(body);
-
-  const results = await Promise.all(targets.map(t => pushOne(t, body, signature)));
-  const succeeded = results.filter(r => r.ok).length;
-  const failed = results.length - succeeded;
+  // One push per (member × receiver). The body is per-receiver so the
+  // child app only sees the entry for its own module slug.
+  const allResults: Array<{ ok: boolean; status?: number; error?: string; receiver: string; userId: string }> = [];
+  for (const target of targets) {
+    for (const { userId, snapshot } of memberSnapshots) {
+      const moduleEntry = snapshot.modules.find(m => m.slug === target.moduleSlug);
+      const payload = {
+        event: 'entitlements.changed',
+        reason,
+        tenant: snapshot.tenant,
+        user: snapshot.user,
+        subscription: snapshot.subscription,
+        module: moduleEntry ?? null,
+        all_enabled_modules: snapshot.modules.filter(m => m.enabled).map(m => m.slug),
+        version: snapshot.version,
+        computed_at: snapshot.computedAt,
+      };
+      const body = JSON.stringify(payload);
+      const signature = signPayload(body);
+      const r = await pushOne(target, body, signature);
+      allResults.push({ ...r, receiver: target.moduleSlug, userId });
+      result.pushAttempts += 1;
+      if (r.ok) result.pushSucceeded += 1; else result.pushFailed += 1;
+    }
+  }
 
   try {
     await writeAudit({
-      actorUserId: userId, tenantId,
-      targetType: 'user', targetId: userId,
+      actorUserId: actor, tenantId,
+      targetType: 'tenant', targetId: tenantId,
       action: 'entitlement_change',
       extra: {
-        reason: opts.reason ?? null,
-        pushTargets: targets.length,
-        succeeded, failed,
-        receivers: targets.map((t, i) => ({
-          slug: t.slug,
-          ok: results[i].ok,
-          status: results[i].status ?? null,
-          error: results[i].error ?? null,
-        })),
+        kind: 'propagation',
+        reason,
+        members: result.membersComputed,
+        receivers: result.receiversPushed,
+        pushAttempts: result.pushAttempts,
+        pushSucceeded: result.pushSucceeded,
+        pushFailed: result.pushFailed,
+        droppedModuleSlugs: result.droppedModuleSlugs,
+        revokedAccessRows: result.revokedAccessRows,
       },
     });
   } catch (err) {
     console.warn('[entitlement-propagate] audit failed:', err);
   }
 
-  return { pushed: targets.length, succeeded, failed, snapshot };
+  return result;
 }
 
-/** Fire-and-forget wrapper: never throws, never blocks. */
+/** Fire-and-forget single-tenant scheduler. */
 export function schedulePropagation(
-  userId: string,
   tenantId: string,
-  opts: { restrictToSlugs?: string[]; reason?: string } = {},
+  opts: { reason?: string; actorUserId?: string | null } = {},
 ): void {
-  recomputeAndPropagateEntitlements(userId, tenantId, opts).catch(err => {
+  recomputeAndPropagateEntitlements(tenantId, opts).catch(err => {
     console.warn('[entitlement-propagate] background error:', err);
   });
 }
 
 /**
- * Propagate to every tenant the user is a member of. Used after plan-
- * level (per-user) subscription changes since the same plan affects
- * entitlements in every membership.
+ * Trigger recompute for every tenant where the given user is the OWNER.
+ * Used after billing webhooks since plan is per-user but materially
+ * affects every tenant that user owns.
  */
 export function schedulePropagationForUser(
   userId: string,
@@ -184,12 +329,10 @@ export function schedulePropagationForUser(
 ): void {
   (async () => {
     try {
-      const { tenantUsers } = await import('../schema.js');
-      const rows = await db.select({ tenantId: tenantUsers.tenantId })
-        .from(tenantUsers)
-        .where(eq(tenantUsers.userId, userId));
-      await Promise.all(rows.map(r =>
-        recomputeAndPropagateEntitlements(userId, r.tenantId, opts),
+      const ownedTenants = await db.select({ id: tenants.id })
+        .from(tenants).where(eq(tenants.ownerUserId, userId));
+      await Promise.all(ownedTenants.map(t =>
+        recomputeAndPropagateEntitlements(t.id, { ...opts, actorUserId: userId }),
       ));
     } catch (err) {
       console.warn('[entitlement-propagate] schedulePropagationForUser error:', err);

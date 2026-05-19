@@ -811,6 +811,11 @@ export async function ensureTenantTables() {
     ALTER TABLE modules ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP;
     -- Task #108: receiver-registered entitlement-change webhook URL.
     ALTER TABLE modules ADD COLUMN IF NOT EXISTS entitlement_webhook_url TEXT;
+    -- Task #108: per-(plan, module) feature flag defaults. Tenants can
+    -- override individual keys via tenant_modules.metadata.features.
+    ALTER TABLE plan_modules ADD COLUMN IF NOT EXISTS feature_flags_json JSONB;
+    -- Task #108: per-tenant overrides for tenant_modules (notably .features).
+    ALTER TABLE tenant_modules ADD COLUMN IF NOT EXISTS metadata JSONB;
     CREATE INDEX IF NOT EXISTS idx_modules_archived ON modules(archived_at);
 
     -- tenant_users --------------------------------------------------------

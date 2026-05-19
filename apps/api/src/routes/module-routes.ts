@@ -102,15 +102,30 @@ interface SsoClaims {
   iat: number;
   exp: number;
   // ---- Task #108: append-only entitlement claims (do NOT rename above) ----
-  /** Active tenant the launch is scoped to. */
+  /** Active tenant the launch is scoped to (legacy short name). */
   tenant_id?: string;
-  /** Internal tenant role (owner|admin|member) for back-compat. */
+  /** Spec name — duplicate of tenant_id so receivers can match on the
+   *  canonical key without breaking older receivers that read tenant_id. */
+  operatoros_tenant_id?: string;
+  /** Internal tenant role (owner|admin|member). */
   tenant_role?: string;
   /** Public tenant role alias (owner|tenant_admin|billing_admin|user|viewer). */
   tenant_role_alias?: string;
-  /** Internal per-module access level (none|user|manager). */
+  /** Current subscription.status at issue time (active|trialing|past_due|canceled|null). */
+  subscription_status?: string | null;
+  /** TRUE iff target module is enabled for this user right now. */
+  target_module_enabled?: boolean;
+  /** Internal access level for the target module (none|user|manager). */
+  target_module_access_level?: string;
+  /** Public role for the target module (module_admin|module_user|viewer|none). */
+  target_module_role?: string;
+  /** Merged feature flags for the target module. */
+  target_module_features?: Record<string, boolean | number | string>;
+  /** Summary list of slugs for every module currently enabled for the user. */
+  all_enabled_modules?: string[];
+  /** Internal per-module access level (legacy name, kept for back-compat). */
   module_role?: string;
-  /** Public module role alias (module_admin|module_user|viewer|none). */
+  /** Public module role alias (legacy name, kept for back-compat). */
   module_role_alias?: string;
   /** Plan capability map (feature flags) at issue time. */
   plan_capabilities?: Record<string, boolean>;
@@ -414,11 +429,20 @@ export async function registerModuleRoutes(app: FastifyInstance) {
           if (snapshot) {
             const modEntry = snapshot.modules.find(m => m.slug === slug);
             extraClaims = {
+              // Legacy + spec names side-by-side (append-only).
               tenant_id: snapshot.tenant.id,
+              operatoros_tenant_id: snapshot.tenant.id,
               tenant_role: snapshot.tenant.role ?? undefined,
-              tenant_role_alias: snapshot.tenant.role_alias,
-              module_role: modEntry?.access_level,
-              module_role_alias: modEntry?.module_role_alias,
+              tenant_role_alias: snapshot.tenant.roleAlias,
+              subscription_status: snapshot.subscription?.status ?? null,
+              target_module_enabled: !!modEntry?.enabled,
+              target_module_access_level: modEntry?.accessLevel,
+              target_module_role: modEntry?.moduleRole,
+              target_module_features: modEntry?.features ?? {},
+              all_enabled_modules: snapshot.modules.filter(m => m.enabled).map(m => m.slug),
+              // Legacy names retained for back-compat:
+              module_role: modEntry?.accessLevel,
+              module_role_alias: modEntry?.moduleRole,
               plan_capabilities: snapshot.capabilities,
               limits: snapshot.limits,
             };
@@ -701,16 +725,45 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       console.warn('[module-sso] recordModuleUsage (consume) failed:', usageErr);
     }
 
+    // Task #108: echo the spec entitlement fields so receivers that
+    // prefer /sso/consume over verifying the JWT themselves get the full
+    // snapshot without an extra introspect round-trip. Best-effort — a
+    // resolver hiccup falls through to the legacy response shape only.
+    let entitlement: any = null;
+    try {
+      const { resolveEntitlements } = await import('../lib/entitlement-resolver.js');
+      const snap = await resolveEntitlements(row.userId, row.tenantId);
+      if (snap) {
+        const modEntry = snap.modules.find(m => m.slug === row.moduleSlug);
+        entitlement = {
+          version: snap.version,
+          computed_at: snap.computedAt,
+          tenant: snap.tenant,
+          user: snap.user,
+          subscription: snap.subscription,
+          target_module_enabled: !!modEntry?.enabled,
+          target_module_access_level: modEntry?.accessLevel,
+          target_module_role: modEntry?.moduleRole,
+          target_module_features: modEntry?.features ?? {},
+          all_enabled_modules: snap.modules.filter(m => m.enabled).map(m => m.slug),
+        };
+      }
+    } catch (err) {
+      request.log.warn({ err }, '[module-sso] consume entitlement enrichment failed');
+    }
+
     return {
       ok: true,
       user: user ? { id: user.id, email: user.email, name: user.name, role: user.role } : null,
       moduleSlug: row.moduleSlug,
+      operatoros_tenant_id: row.tenantId,
       planSlug,
       organizationId: null,
       env: row.env,
       jti,
       issuer: OPERATOROS_BASE_URL,
       accessSource: access.source,
+      entitlement,
     };
   });
 

@@ -484,6 +484,9 @@ export const planModules = pgTable('plan_modules', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   planId: varchar('plan_id', { length: 36 }).notNull().references(() => subscriptionPlans.id),
   moduleId: varchar('module_id', { length: 36 }).notNull().references(() => modules.id),
+  // Task #108: per-(plan, module) feature flag defaults. Tenants can
+  // override individual keys via `tenant_modules.metadata.features`.
+  featureFlagsJson: jsonb('feature_flags_json').$type<Record<string, boolean | number | string>>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_plan_modules_plan').on(t.planId),
@@ -683,6 +686,10 @@ export const tenantModules = pgTable('tenant_modules', {
   status: text('status', { enum: ['enabled', 'trial', 'purchased', 'beta', 'disabled', 'archived'] }).notNull().default('enabled'),
   source: text('source', { enum: ['included', 'addon', 'trial', 'admin'] }).notNull().default('included'),
   allowAllMembers: boolean('allow_all_members').notNull().default(false),
+  // Task #108: per-tenant overrides for the module. Currently used for
+  // `metadata.features` (a feature-flag map that overlays the plan-side
+  // defaults from `plan_modules.feature_flags_json`).
+  metadata: jsonb('metadata').$type<{ features?: Record<string, boolean | number | string> } & Record<string, unknown>>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (t) => [
