@@ -101,6 +101,21 @@ interface SsoClaims {
   jti: string;
   iat: number;
   exp: number;
+  // ---- Task #108: append-only entitlement claims (do NOT rename above) ----
+  /** Active tenant the launch is scoped to. */
+  tenant_id?: string;
+  /** Internal tenant role (owner|admin|member) for back-compat. */
+  tenant_role?: string;
+  /** Public tenant role alias (owner|tenant_admin|billing_admin|user|viewer). */
+  tenant_role_alias?: string;
+  /** Internal per-module access level (none|user|manager). */
+  module_role?: string;
+  /** Public module role alias (module_admin|module_user|viewer|none). */
+  module_role_alias?: string;
+  /** Plan capability map (feature flags) at issue time. */
+  plan_capabilities?: Record<string, boolean>;
+  /** Plan limit map (numeric/boolean caps) at issue time. */
+  limits?: Record<string, number | boolean>;
 }
 
 // Launch URL shape: `{module_base_url}/sso?token={jwt}`. baseUrl is the
@@ -388,6 +403,32 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // *why* it failed — required for handoff reject-path observability.
     try {
       if (MODULE_SSO_SECRET) {
+        // Task #108: enrich JWT claims with the centralized entitlement
+        // snapshot so receivers can read tenant role, module role, plan
+        // capabilities, and limits without a follow-up API call.
+        // Append-only: every original claim above stays as-is.
+        let extraClaims: Partial<SsoClaims> = {};
+        try {
+          const { resolveEntitlements } = await import('../lib/entitlement-resolver.js');
+          const snapshot = await resolveEntitlements(user.id, ctx.tenantId);
+          if (snapshot) {
+            const modEntry = snapshot.modules.find(m => m.slug === slug);
+            extraClaims = {
+              tenant_id: snapshot.tenant.id,
+              tenant_role: snapshot.tenant.role ?? undefined,
+              tenant_role_alias: snapshot.tenant.role_alias,
+              module_role: modEntry?.access_level,
+              module_role_alias: modEntry?.module_role_alias,
+              plan_capabilities: snapshot.capabilities,
+              limits: snapshot.limits,
+            };
+          }
+        } catch (enrichErr) {
+          // Enrichment is best-effort; never block the launch on a
+          // resolver hiccup. Receivers can fall back to introspect.
+          console.warn('[module-sso] entitlement enrichment failed:', enrichErr);
+        }
+
         const claims: SsoClaims = {
           iss: OPERATOROS_BASE_URL,
           aud: slug,
@@ -402,6 +443,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
           jti,
           iat: now,
           exp: now + SSO_TOKEN_TTL_SECONDS,
+          ...extraClaims,
         };
         token = jwt.sign(claims, MODULE_SSO_SECRET, { algorithm: 'HS256' });
       }

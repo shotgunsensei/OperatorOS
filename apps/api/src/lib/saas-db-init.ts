@@ -809,6 +809,8 @@ export async function ensureTenantTables() {
     CREATE INDEX IF NOT EXISTS idx_tenants_status ON tenants(status);
     -- Gate 2: modules soft-delete column.
     ALTER TABLE modules ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP;
+    -- Task #108: receiver-registered entitlement-change webhook URL.
+    ALTER TABLE modules ADD COLUMN IF NOT EXISTS entitlement_webhook_url TEXT;
     CREATE INDEX IF NOT EXISTS idx_modules_archived ON modules(archived_at);
 
     -- tenant_users --------------------------------------------------------

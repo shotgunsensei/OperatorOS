@@ -40,6 +40,7 @@ Commands:
 - **Plan Configuration:** `apps/api/src/lib/plans.ts`
 - **Platform Command (Super Admin):** `apps/api/src/routes/platform-routes.ts` + `apps/web/src/components/pages/PlatformPage.tsx`
 - **Centralized Audit:** `apps/api/src/lib/audit.ts` (`writeAudit`, `pickSafe`, field allowlists)
+- **Centralized Entitlements (Task #108):** `apps/api/src/lib/entitlement-resolver.ts` (`resolveEntitlements(userId, tenantId)` — the single snapshot every surface reads). Role aliases live in `apps/api/src/lib/role-aliases.ts`. Receivers register a push URL via `POST /v1/sso/entitlements/sync` and read live snapshots via `GET /v1/sso/entitlements/introspect` (both service-token gated by `OPERATOROS_SERVICE_TOKEN`). The user-facing surface is `GET /v1/entitlements/me`. Propagation pipeline `apps/api/src/lib/entitlement-propagation.ts` is fired from Stripe webhooks and tenant-admin grant changes.
 - **AI Provider Abstraction:** `apps/api/src/lib/ai-provider.ts`
 - **UI Layout:** `apps/web/src/components/SaasLayout.tsx`
 - **Runner Gateway Logic:** `apps/runner-gateway/src/`

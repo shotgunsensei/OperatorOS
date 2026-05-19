@@ -36,6 +36,7 @@ import { registerModuleShellRoutes } from './routes/module-shell-routes.js';
 import { registerTenantRoutes } from './routes/tenant-routes.js';
 import { registerTenantAdminRoutes } from './routes/tenant-admin-routes.js';
 import { registerPlatformRoutes } from './routes/platform-routes.js';
+import { registerEntitlementRoutes } from './routes/entitlement-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
 import { runAgentLoop } from './agent.js';
 import type { AgentEvent } from './agent.js';
@@ -103,6 +104,7 @@ await registerModuleShellRoutes(app);
 await registerTenantRoutes(app);
 await registerTenantAdminRoutes(app);
 await registerPlatformRoutes(app);
+await registerEntitlementRoutes(app);
 
 async function ensureTables() {
   await db.execute(`

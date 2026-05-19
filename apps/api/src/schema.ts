@@ -464,6 +464,10 @@ export const modules = pgTable('modules', {
   requiresOrg: boolean('requires_org').notNull().default(false),
   ord: integer('ord').notNull().default(0),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  // Task #108: optional receiver-registered URL we POST signed
+  // entitlement-change snapshots to. Nullable means "no live push, do
+  // on-demand introspect instead".
+  entitlementWebhookUrl: text('entitlement_webhook_url'),
   // Gate 2: soft-delete. Module rows are never hard-deleted; archived rows
   // are excluded from default catalogs but kept for audit + entitlement
   // history.

@@ -496,29 +496,72 @@ export async function processWebhookEvent(event: { type: string; data: { object:
 
   console.log(`[billing-service] Processing webhook: ${type}`);
 
+  let result: WebhookProcessResult;
   switch (type) {
     case 'checkout.session.completed':
-      return await handleCheckoutCompleted(obj);
-
+      result = await handleCheckoutCompleted(obj); break;
     case 'customer.subscription.created':
-      return await handleSubscriptionCreated(obj);
-
+      result = await handleSubscriptionCreated(obj); break;
     case 'customer.subscription.updated':
-      return await handleSubscriptionUpdated(obj);
-
+      result = await handleSubscriptionUpdated(obj); break;
     case 'customer.subscription.deleted':
-      return await handleSubscriptionDeleted(obj);
-
+      result = await handleSubscriptionDeleted(obj); break;
     case 'invoice.payment_failed':
-      return await handlePaymentFailed(obj);
-
+      result = await handlePaymentFailed(obj); break;
     case 'invoice.paid':
-      return await handleInvoicePaid(obj);
-
+      result = await handleInvoicePaid(obj); break;
     default:
       console.log(`[billing-service] Unhandled webhook event: ${type}`);
       return { handled: false };
   }
+
+  // Task #108: centralized recompute + propagation. After any successful
+  // plan-affecting event, fire entitlement push for the affected user
+  // across every tenant they belong to. Fire-and-forget — receivers'
+  // availability MUST NOT block our webhook ack.
+  //
+  // SOURCE-OF-TRUTH for userId (in order of reliability):
+  //   1. Stripe metadata.userId / user_id (set on checkout we initiated)
+  //   2. Local subscriptions row joined by stripe_subscription_id
+  //      (covers subscription.updated/deleted where Stripe doesn't echo
+  //      our metadata back)
+  //   3. Local subscriptions row joined by stripe_customer_id (invoice.*)
+  if (result.handled) {
+    let userId: string | null = obj?.metadata?.userId
+      ?? obj?.metadata?.user_id
+      ?? null;
+    if (!userId) {
+      const stripeSubId = obj?.subscription ?? obj?.id ?? null;
+      if (stripeSubId && typeof stripeSubId === 'string') {
+        const [row] = await db.select({ userId: subscriptions.userId })
+          .from(subscriptions)
+          .where(eq(subscriptions.stripeSubscriptionId, stripeSubId))
+          .limit(1);
+        if (row) userId = row.userId;
+      }
+    }
+    if (!userId) {
+      const stripeCustomerId = obj?.customer ?? null;
+      if (stripeCustomerId && typeof stripeCustomerId === 'string') {
+        const [row] = await db.select({ userId: subscriptions.userId })
+          .from(subscriptions)
+          .where(eq(subscriptions.stripeCustomerId, stripeCustomerId))
+          .limit(1);
+        if (row) userId = row.userId;
+      }
+    }
+    if (userId) {
+      try {
+        const { schedulePropagationForUser } = await import('./entitlement-propagation.js');
+        schedulePropagationForUser(userId, { reason: `stripe:${type}` });
+      } catch (err) {
+        console.warn('[billing-service] entitlement propagate import failed:', err);
+      }
+    } else {
+      console.warn(`[billing-service] could not resolve userId for ${type}; skipping entitlement push`);
+    }
+  }
+  return result;
 }
 
 async function handleCheckoutCompleted(session: any): Promise<WebhookProcessResult> {

@@ -565,6 +565,19 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
         extra: { moduleSlug, targetUserId: userId },
         ipAddress: request.ip,
       }, request);
+
+      // Task #108: centralized propagation. The grant changed for one
+      // user in this tenant; push a fresh snapshot for that user only.
+      try {
+        const { schedulePropagation } = await import('../lib/entitlement-propagation.js');
+        schedulePropagation(userId, tenantId, {
+          restrictToSlugs: [moduleSlug],
+          reason: 'tenant_user_module_access_set',
+        });
+      } catch (err) {
+        request.log.warn({ err }, 'entitlement propagate import failed');
+      }
+
       return { access: after };
     },
   );
