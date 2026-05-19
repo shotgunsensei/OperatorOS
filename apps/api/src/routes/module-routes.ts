@@ -737,37 +737,29 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       request.log.warn({ err }, '[module-sso] consume entitlement enrichment failed');
     }
 
-    // Task #108 — canonical-shape contract. The snapshot is returned
-    // BYTE-FOR-BYTE at the top level so consume / introspect / webhook
-    // bodies are all the SAME shape (snapshot.user has the canonical
-    // {id,email,platformRole} block). Legacy fields used by older
-    // module SDKs are nested under `legacy` so they cannot clobber any
-    // snapshot key. The transport metadata field `event: 'consumed'`
-    // is added alongside, mirroring the webhook envelope.
-    if (snapshot) {
-      return {
-        ...snapshot,
-        event: 'consumed',
-        legacy: {
-          ok: true,
-          user: user ? { id: user.id, email: user.email, name: user.name, role: user.role } : null,
-          moduleSlug: row.moduleSlug,
-          operatoros_tenant_id: row.tenantId,
-          planSlug,
-          organizationId: null,
-          env: row.env,
-          jti,
-          issuer: OPERATOROS_BASE_URL,
-          accessSource: access.source,
-        },
-      };
-    }
-    // Snapshot resolution failed — fall back to the legacy-only shape
-    // so existing receivers don't break, but flag it so callers can
-    // detect the missing canonical payload.
+    // Task #108 — backward-compatible canonical contract. ALL legacy
+    // top-level fields (ok, user, moduleSlug, operatoros_tenant_id,
+    // planSlug, jti, env, issuer, accessSource, ...) are preserved
+    // for existing SDK consumers. The canonical snapshot blocks
+    // (version, computedAt, tenant, subscription, modules[], limits,
+    // capabilities) are added ALONGSIDE so new receivers can read the
+    // same shape that /v1/sso/entitlements/introspect returns. The
+    // only field that exists in both is `user`: we merge it so the
+    // legacy `{id,email,name,role}` is preserved AND the canonical
+    // `{platformRole, ...}` is appended (snapshot fields take
+    // precedence on overlap so id/email always reflect the snapshot
+    // truth). `event: 'consumed'` mirrors the webhook envelope.
+    const legacyUser = user
+      ? { id: user.id, email: user.email, name: user.name, role: user.role }
+      : null;
+    const mergedUser =
+      snapshot && legacyUser
+        ? { ...legacyUser, ...snapshot.user }
+        : (snapshot?.user ?? legacyUser);
     return {
+      // Legacy top-level (preserved verbatim, except `user` is merged).
       ok: true,
-      user: user ? { id: user.id, email: user.email, name: user.name, role: user.role } : null,
+      user: mergedUser,
       moduleSlug: row.moduleSlug,
       operatoros_tenant_id: row.tenantId,
       planSlug,
@@ -776,7 +768,20 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       jti,
       issuer: OPERATOROS_BASE_URL,
       accessSource: access.source,
-      snapshot: null,
+      // Canonical snapshot blocks (added — append-only). All omitted
+      // when the resolver failed so callers can detect the gap.
+      ...(snapshot
+        ? {
+            event: 'consumed',
+            version: snapshot.version,
+            computedAt: snapshot.computedAt,
+            tenant: snapshot.tenant,
+            subscription: snapshot.subscription,
+            modules: snapshot.modules,
+            limits: snapshot.limits,
+            capabilities: snapshot.capabilities,
+          }
+        : { snapshot: null }),
     };
   });
 

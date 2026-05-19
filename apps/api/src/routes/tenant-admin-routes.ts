@@ -51,15 +51,19 @@ function notFound(reply: any, code: string, msg: string) {
  * (owner|admin|member) or the public spec vocabulary
  * (owner|tenant_admin|billing_admin|user|viewer). Returns the
  * normalized INTERNAL value, or null when nothing matches.
+ *
+ * Delegates to the canonical mapper in `role-aliases.ts` so every
+ * write path agrees on the public→internal mapping (in particular
+ * `viewer` maps to `member` here and to `'user'` on the module-access
+ * side — i.e. read-only access, NOT revocation).
  */
+import {
+  normalizeIncomingTenantRole,
+  normalizeIncomingModuleAccessLevel,
+} from '../lib/role-aliases.js';
+
 function normalizeRoleInput(r: any): 'owner' | 'admin' | 'member' | null {
-  if (typeof r !== 'string') return null;
-  const v = r.trim().toLowerCase();
-  if (v === 'owner' || v === 'admin' || v === 'member') return v;
-  if (v === 'tenant_admin' || v === 'billing_admin') return 'admin';
-  if (v === 'user') return 'member';
-  if (v === 'viewer') return 'member';
-  return null;
+  return normalizeIncomingTenantRole(r);
 }
 function isValidRole(r: any): r is 'owner' | 'admin' | 'member' {
   return normalizeRoleInput(r) !== null;
@@ -67,15 +71,12 @@ function isValidRole(r: any): r is 'owner' | 'admin' | 'member' {
 /**
  * Task #108 — accept either internal access levels (none|user|manager)
  * or public module role aliases (none|module_user|module_admin|viewer).
+ * Delegates to the canonical mapper so `viewer` maps consistently to
+ * read-only access (`'user'`) and NOT to `'none'` (which would silently
+ * revoke the grant).
  */
 function normalizeAccessLevelInput(v: any): 'none' | 'user' | 'manager' | null {
-  if (typeof v !== 'string') return null;
-  const s = v.trim().toLowerCase();
-  if (s === 'none' || s === 'user' || s === 'manager') return s;
-  if (s === 'module_user') return 'user';
-  if (s === 'module_admin') return 'manager';
-  if (s === 'viewer') return 'none';
-  return null;
+  return normalizeIncomingModuleAccessLevel(v);
 }
 function isValidEmail(e: any): e is string {
   return typeof e === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
