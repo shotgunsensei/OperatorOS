@@ -42,7 +42,12 @@ export type CaseStudy = {
 
 export type ResumeVariant = {
   title: string;
+  /** One-line value statement shown directly under the title. */
+  positioning: string;
+  /** Longer narrative kept for tooltip/aria/secondary read. */
   bestFor: string;
+  /** Concrete role titles the variant is tuned for — render as pills. */
+  targets: string[];
   filename: string;
 };
 
@@ -301,20 +306,47 @@ export const CASE_STUDIES: CaseStudy[] = [
 export const RESUME_VARIANTS: ResumeVariant[] = [
   {
     title: 'Infrastructure & MSP Operations Engineer',
+    positioning:
+      'Tier-3 escalation engineer for Microsoft estates, healthcare infrastructure, and multi-site MSP operations.',
     bestFor:
       'MSP escalation, systems engineering, healthcare infrastructure, and operations roles.',
+    targets: [
+      'Senior Systems Engineer',
+      'MSP Escalation / Tier 3',
+      'Infrastructure Engineer',
+      'Healthcare IT Engineer',
+      'IT Operations Manager',
+    ],
     filename: 'Infrastructure_MSP_Engineer_Resume.pdf',
   },
   {
     title: 'Security Operations & Automation Engineer',
+    positioning:
+      'SOC-adjacent engineer who runs EDR, identity hardening, and incident response with PowerShell-first automation.',
     bestFor:
       'SOC, MSSP, EDR, incident response, remediation, identity security, and automation roles.',
+    targets: [
+      'Security Engineer',
+      'SOC / MSSP Analyst (Tier 2-3)',
+      'Incident Response Engineer',
+      'Identity & Access Engineer',
+      'Automation Engineer',
+    ],
     filename: 'Security_Automation_Engineer_Resume.pdf',
   },
   {
     title: 'Cloud Infrastructure & Solutions Architect',
+    positioning:
+      'Architect who designs hybrid Microsoft / Azure systems and translates business goals into resilient operational designs.',
     bestFor:
       'Cloud infrastructure, platform engineering, solutions architecture, technical consulting, and systems design roles.',
+    targets: [
+      'Cloud / Solutions Architect',
+      'Platform Engineer',
+      'Principal Infrastructure Engineer',
+      'Technical Consultant',
+      'Systems Architect',
+    ],
     filename: 'Cloud_Solutions_Architect_Resume.pdf',
   },
 ];

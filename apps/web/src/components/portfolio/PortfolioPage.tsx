@@ -581,13 +581,13 @@ function ResumeHub({ availability }: { availability: ResumesAvailability }) {
     >
       <SectionHeader
         eyebrow="Resume variants"
-        title="Pick the version that matches your role"
-        subtitle="Three resumes, each tailored to a different hiring lane. Click to download — recruiters welcome."
+        title="Three resumes. Pick the one tuned to your role."
+        subtitle="Each version reframes the same career around a different hiring lane — so you skip the noise and get to the relevant evidence in one read."
       />
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap: 16,
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: 18,
       }}>
         {RESUME_VARIANTS.map((r, idx) => {
           // Default to available when the prop is omitted (e.g. tests).
@@ -599,47 +599,88 @@ function ResumeHub({ availability }: { availability: ResumesAvailability }) {
           );
           return (
             <Card key={r.filename} accent={brand.accentBlue} testId={`card-resume-${idx}`}>
+              {/* Header row: icon + status chip */}
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
               }}>
                 <div style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 38, height: 38, borderRadius: 10,
+                  width: 40, height: 40, borderRadius: 10,
                   background: 'rgba(37, 99, 235, 0.10)',
                   border: `1px solid rgba(37, 99, 235, 0.28)`,
                   color: brand.accentBlue,
                 }}>
                   <ScrollText size={18} />
                 </div>
-                {!isAvailable && (
-                  <span style={{
+                <span
+                  aria-label={isAvailable ? 'PDF available' : 'PDF available on request'}
+                  style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4,
                     padding: '4px 8px', borderRadius: 999,
-                    fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
+                    fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
                     textTransform: 'uppercase',
-                    background: 'rgba(245, 158, 11, 0.10)',
-                    color: brand.accentAmber,
-                    border: `1px solid rgba(245, 158, 11, 0.28)`,
-                  }}>
-                    <FileWarning size={10} /> On request
-                  </span>
-                )}
+                    background: isAvailable ? 'rgba(34, 197, 94, 0.10)' : 'rgba(245, 158, 11, 0.10)',
+                    color: isAvailable ? brand.accentGreen : brand.accentAmber,
+                    border: `1px solid ${isAvailable ? 'rgba(34, 197, 94, 0.28)' : 'rgba(245, 158, 11, 0.28)'}`,
+                  }}
+                >
+                  {isAvailable
+                    ? (<><span style={{ width: 5, height: 5, borderRadius: 999, background: brand.accentGreen }} /> PDF · 2 pages</>)
+                    : (<><FileWarning size={10} /> On request</>)}
+                </span>
               </div>
-              <h3 style={{
-                fontFamily: brand.fontDisplay, fontSize: 18, fontWeight: 700,
-                color: brand.textPrimary, margin: 0,
-              }}>{r.title}</h3>
-              <p style={{ fontSize: 13.5, lineHeight: 1.55, color: brand.textSecondary, margin: 0 }}>
-                {r.bestFor}
-              </p>
+
+              {/* Title + positioning — the two-second read */}
+              <div>
+                <h3 style={{
+                  fontFamily: brand.fontDisplay, fontSize: 18, fontWeight: 700,
+                  color: brand.textPrimary, margin: '0 0 6px', lineHeight: 1.25,
+                }}>{r.title}</h3>
+                <p style={{
+                  fontSize: 13.5, lineHeight: 1.55, color: brand.textSecondary,
+                  margin: 0, fontStyle: 'italic',
+                }}>
+                  {r.positioning}
+                </p>
+              </div>
+
+              {/* Best-fit role targets — concrete titles, ATS-friendly */}
+              <div>
+                <p style={{
+                  fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em',
+                  textTransform: 'uppercase', color: brand.accentCyan,
+                  margin: '0 0 8px',
+                }}>Best-fit role targets</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {r.targets.map((t) => (
+                    <span
+                      key={t}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center',
+                        padding: '4px 10px', borderRadius: 999,
+                        fontSize: 11.5, fontWeight: 500,
+                        color: brand.textSecondary,
+                        background: brand.bgGlass,
+                        border: `1px solid ${brand.borderSoft}`,
+                      }}
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Download CTA — pinned to bottom; fallback to email if PDF
+                  missing or empty on disk (server-side fs.statSync check) */}
               {isAvailable ? (
                 <a
                   href={`/resumes/${r.filename}`}
                   download
+                  aria-label={`Download ${r.title} resume (PDF)`}
                   data-testid={`download-resume-${idx}`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    padding: '10px 16px', borderRadius: 10,
+                    padding: '11px 16px', borderRadius: 10,
                     marginTop: 'auto',
                     background: `linear-gradient(135deg, ${brand.accentCyan} 0%, ${brand.accentViolet} 100%)`,
                     color: brand.accentInk, fontWeight: 600, fontSize: 13,
@@ -650,16 +691,13 @@ function ResumeHub({ availability }: { availability: ResumesAvailability }) {
                   <Download size={14} /> Download PDF
                 </a>
               ) : (
-                // Graceful fallback if the maintainer hasn't dropped the
-                // real PDF yet — keeps the CTA clickable, routes the
-                // request straight to John's inbox with a pre-filled
-                // subject so he knows which variant to send back.
                 <a
                   href={`mailto:${PERSON.email}?subject=${mailtoSubject}&body=${mailtoBody}`}
+                  aria-label={`Request ${r.title} resume by email`}
                   data-testid={`request-resume-${idx}`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    padding: '10px 16px', borderRadius: 10,
+                    padding: '11px 16px', borderRadius: 10,
                     marginTop: 'auto',
                     background: 'transparent',
                     color: brand.textPrimary, fontWeight: 600, fontSize: 13,
@@ -674,6 +712,16 @@ function ResumeHub({ availability }: { availability: ResumesAvailability }) {
           );
         })}
       </div>
+
+      <p
+        data-testid="resume-helper"
+        style={{
+          textAlign: 'center', fontSize: 12, color: brand.textMuted,
+          margin: '24px auto 0', maxWidth: 560,
+        }}
+      >
+        Recruiter shortcut: download all three and share with the hiring manager — the variants are written to read clearly side-by-side.
+      </p>
     </section>
   );
 }
