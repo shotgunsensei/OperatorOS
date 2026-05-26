@@ -19,7 +19,10 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin', '/platform', '/apps/', '/invites/', '/app'],
+        // `/portfolio` and `/john` (Task #113) are hidden share-by-link
+        // pages — kept out of search even though they reuse the public
+        // marketing chrome.
+        disallow: ['/admin', '/platform', '/apps/', '/invites/', '/app', '/portfolio', '/john'],
       },
     ],
   };
