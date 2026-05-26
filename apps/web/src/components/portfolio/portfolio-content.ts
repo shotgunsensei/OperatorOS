@@ -10,6 +10,16 @@ export type PortfolioCTA = {
   external?: boolean;
 };
 
+export type Metric = {
+  value: string;
+  label: string;
+};
+
+export type OperatingPrinciple = {
+  title: string;
+  body: string;
+};
+
 export type SpecializationCard = {
   title: string;
   blurb: string;
@@ -47,7 +57,7 @@ export const PERSON = {
   positioning:
     'Infrastructure • Security • Automation • Healthcare IT • Systems Architecture',
   heroCopy:
-    'Senior infrastructure and security engineer specializing in MSP operations, healthcare IT, automation systems, hybrid infrastructure, Microsoft ecosystems, endpoint security, networking, and scalable operational tooling.',
+    'Top-tier escalation engineer for healthcare, radiology, and MSP-managed environments. I keep Microsoft estates, security controls, clinical imaging, and multi-site networks running — and build the automation and runbooks that keep them that way.',
 };
 
 export const HERO_CTAS: PortfolioCTA[] = [
@@ -57,6 +67,31 @@ export const HERO_CTAS: PortfolioCTA[] = [
   { label: 'GitHub', href: PERSON.github, variant: 'secondary', external: true },
   { label: 'LinkedIn', href: PERSON.linkedin, variant: 'secondary', external: true },
   { label: 'Contact', href: '#contact', variant: 'secondary' },
+];
+
+// At-a-glance credibility strip directly under the hero copy. Numbers
+// are deliberately conservative — they reflect publicly defensible
+// experience, not internal counters.
+export const KEY_METRICS: Metric[] = [
+  { value: '20+', label: 'Years hands-on IT' },
+  { value: 'Tier 3', label: 'MSP escalation' },
+  { value: 'HIPAA', label: 'Healthcare-regulated' },
+  { value: 'Multi-site', label: 'Hybrid infrastructure' },
+];
+
+export const OPERATING_PRINCIPLES: OperatingPrinciple[] = [
+  {
+    title: 'Fail closed by default',
+    body: 'Security posture defaults to deny. Identity, conditional access, and EDR are configured so the system is safe when nothing else is.',
+  },
+  {
+    title: 'Document the runbook before the incident',
+    body: 'SOPs, escalation paths, and client-facing summaries are written first. When the page goes off, the team executes the plan — not their memory.',
+  },
+  {
+    title: 'Automate what you touch twice',
+    body: 'PowerShell, RMM components, and remediation scripts replace tribal knowledge. Repeat work becomes a reusable playbook.',
+  },
 ];
 
 export const SPECIALIZATIONS: SpecializationCard[] = [
@@ -232,7 +267,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     actions:
       'Investigated suspicious endpoint behavior, ransomware exposure, mailbox compromise indicators, malicious forwarding rules, endpoint detections, and email-header anomalies.',
     outcome:
-      'Produced remediation plans, client-facing summaries, internal reports, and hardened operational workflows.',
+      'Delivered remediation plans, client-facing executive summaries, internal incident reports, and hardened operational workflows.',
   },
   {
     title: 'Radiology Infrastructure & Remote Reading Support',
@@ -250,16 +285,16 @@ export const CASE_STUDIES: CaseStudy[] = [
     actions:
       'Built PowerShell scripts, RMM components, SOPs, alert-handling workflows, cleanup routines, and standardized troubleshooting processes.',
     outcome:
-      'Reduced repeat work, improved ticket consistency, and produced reusable technical playbooks.',
+      'Reduced repeat work, improved ticket consistency, and produced reusable technical playbooks adopted across the technician team.',
   },
   {
     title: 'Multi-Site Infrastructure Troubleshooting',
     problem:
-      'Business and healthcare clients suffer from complex connectivity issues across firewalls, switches, VPNs, VoIP, VLANs, wireless, and WAN paths.',
+      'Business and healthcare clients face complex connectivity issues across firewalls, switches, VPNs, VoIP, VLANs, wireless, and WAN paths.',
     actions:
       'Troubleshot ArubaOS switching, VPN routing, Metro-E circuits, firewall policies, Allworx VoIP, DNS/DHCP, and network segmentation.',
     outcome:
-      'Restored operational stability and produced clear escalation documentation for future support.',
+      'Restored operational stability and produced clear escalation documentation that shortened the next incident on the same surface.',
   },
 ];
 

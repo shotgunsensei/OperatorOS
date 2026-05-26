@@ -5,17 +5,17 @@ import Link from 'next/link';
 import {
   ArrowRight, ExternalLink, Download, Mail, Github, Linkedin, MapPin,
   Server, Shield, Wrench, HeartPulse, Network, Bot, Briefcase, FolderGit2,
-  AlertTriangle, ScrollText,
+  AlertTriangle, ScrollText, Compass, FileWarning,
 } from 'lucide-react';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import { brand } from '@/lib/brand';
 import {
-  PERSON, HERO_CTAS, SPECIALIZATIONS, PROJECTS, CASE_STUDIES,
-  RESUME_VARIANTS, AVAILABLE_FOR,
+  PERSON, HERO_CTAS, KEY_METRICS, OPERATING_PRINCIPLES, SPECIALIZATIONS,
+  PROJECTS, CASE_STUDIES, RESUME_VARIANTS, AVAILABLE_FOR,
 } from './portfolio-content';
 
 /**
- * John Travis Williams Jr. portfolio — Task #113.
+ * John Travis Williams Jr. portfolio — Task #113 + refinement pass.
  *
  * Hidden technical-authority page reachable at /portfolio and /john.
  * Reuses MarketingLayout so the public navbar + footer chrome stays
@@ -23,9 +23,25 @@ import {
  * from /robots.txt so the URL doesn't leak into search.
  *
  * All copy lives in `./portfolio-content.ts` — never edit JSX strings.
+ *
+ * Server-rendered routes pass `resumesAvailability` so the resume hub
+ * shows a download button when the PDF exists on disk and a "Request
+ * by email" fallback when it doesn't. This prevents the buttons from
+ * ever serving a 404 in production.
  */
 
 const SPEC_ICONS = [Server, Shield, Wrench, HeartPulse, Network, Bot];
+
+export type ResumesAvailability = Record<string, boolean>;
+
+interface PortfolioPageProps {
+  /**
+   * Map of resume PDF filename → whether the file exists in
+   * apps/web/public/resumes/. Optional — when omitted, every resume
+   * is treated as available (legacy callers / Storybook).
+   */
+  resumesAvailability?: ResumesAvailability;
+}
 
 // ─── Shared primitives ────────────────────────────────────────────
 
@@ -40,8 +56,9 @@ function SectionHeader({
       }}>{eyebrow}</p>
       <h2 style={{
         fontFamily: brand.fontDisplay,
-        fontSize: 'clamp(26px, 3.6vw, 38px)', fontWeight: 700,
+        fontSize: 'clamp(24px, 3.4vw, 36px)', fontWeight: 700,
         color: brand.textPrimary, margin: '0 0 12px', letterSpacing: '-0.02em',
+        lineHeight: 1.15,
       }}>{title}</h2>
       {subtitle && (
         <p style={{ fontSize: 16, lineHeight: 1.55, color: brand.textSecondary, margin: 0 }}>
@@ -58,6 +75,7 @@ function Card({
   return (
     <div
       data-testid={testId}
+      className="portfolio-card"
       style={{
         position: 'relative',
         padding: 24,
@@ -70,6 +88,7 @@ function Card({
         display: 'flex',
         flexDirection: 'column',
         gap: 14,
+        transition: 'border-color 0.2s ease, transform 0.2s ease',
       }}
     >
       {accent && (
@@ -140,7 +159,6 @@ function CtaButton({
     ...(cta.external ? { target: '_blank', rel: 'noopener noreferrer' } : {}),
   } as const;
 
-  // Anchor link or external — use plain <a>. Internal route uses Link.
   if (cta.href.startsWith('#') || cta.external) {
     return (
       <a {...props}>
@@ -165,7 +183,7 @@ function Hero() {
       data-testid="portfolio-hero"
       style={{
         position: 'relative',
-        padding: '88px 24px 64px',
+        padding: 'clamp(64px, 9vw, 96px) clamp(20px, 4vw, 24px) clamp(40px, 6vw, 56px)',
         maxWidth: brand.contentMaxWidth,
         margin: '0 auto',
         textAlign: 'center',
@@ -191,7 +209,7 @@ function Hero() {
 
         <h1 style={{
           fontFamily: brand.fontDisplay,
-          fontSize: 'clamp(36px, 6vw, 60px)', fontWeight: 800,
+          fontSize: 'clamp(32px, 6.4vw, 60px)', fontWeight: 800,
           color: brand.textPrimary, margin: '20px 0 14px',
           letterSpacing: '-0.025em', lineHeight: 1.05,
         }}>
@@ -199,14 +217,14 @@ function Hero() {
         </h1>
 
         <p style={{
-          fontFamily: brand.fontDisplay, fontSize: 18, fontWeight: 600,
+          fontFamily: brand.fontDisplay, fontSize: 'clamp(15px, 2.2vw, 18px)', fontWeight: 600,
           color: brand.textPrimary, margin: '0 0 10px',
         }}>
           {PERSON.title}
         </p>
 
         <p style={{
-          fontSize: 13, fontWeight: 600, letterSpacing: '0.08em',
+          fontSize: 12, fontWeight: 700, letterSpacing: '0.10em',
           textTransform: 'uppercase', color: brand.accentCyan,
           margin: '0 0 20px',
         }}>
@@ -214,26 +232,120 @@ function Hero() {
         </p>
 
         <p style={{
-          fontSize: 17, lineHeight: 1.6, color: brand.textSecondary,
+          fontSize: 'clamp(15px, 1.8vw, 17px)', lineHeight: 1.6, color: brand.textSecondary,
           maxWidth: 720, margin: '0 auto 14px',
         }}>
           {PERSON.heroCopy}
         </p>
 
         <p style={{
-          fontSize: 13, color: brand.textMuted, margin: '0 0 32px',
-          display: 'inline-flex', alignItems: 'center', gap: 6,
+          fontSize: 13, color: brand.textMuted, margin: '0 0 28px',
+          display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+          justifyContent: 'center',
         }}>
           <MapPin size={13} /> {PERSON.location} · {PERSON.founder}
         </p>
 
         <div style={{
           display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center',
+          marginBottom: 36,
         }}>
           {HERO_CTAS.map((cta) => (
             <CtaButton key={cta.label} cta={cta} large />
           ))}
         </div>
+
+        {/* At-a-glance credibility strip — gives recruiters a 2-second
+            read on seniority without scrolling. Responsive 2x2 → 4-up. */}
+        <div
+          data-testid="portfolio-metrics"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            gap: 12,
+            maxWidth: 720,
+            margin: '0 auto',
+          }}
+        >
+          {KEY_METRICS.map((m) => (
+            <div
+              key={m.label}
+              style={{
+                padding: '14px 16px',
+                borderRadius: 12,
+                background: brand.bgGlass,
+                border: `1px solid ${brand.borderSoft}`,
+                textAlign: 'center',
+              }}
+            >
+              <p style={{
+                fontFamily: brand.fontDisplay, fontWeight: 700,
+                fontSize: 22, margin: '0 0 4px',
+                background: `linear-gradient(135deg, ${brand.accentCyan} 0%, ${brand.accentViolet} 100%)`,
+                WebkitBackgroundClip: 'text', backgroundClip: 'text',
+                WebkitTextFillColor: 'transparent', color: 'transparent',
+                letterSpacing: '-0.01em',
+              }}>{m.value}</p>
+              <p style={{
+                fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
+                textTransform: 'uppercase', color: brand.textMuted, margin: 0,
+              }}>{m.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function OperatingPrinciples() {
+  return (
+    <section
+      data-testid="portfolio-principles"
+      style={{
+        padding: 'clamp(32px, 5vw, 48px) clamp(20px, 4vw, 24px)',
+        maxWidth: brand.contentMaxWidth,
+        margin: '0 auto',
+        width: '100%',
+      }}
+    >
+      <SectionHeader
+        eyebrow="How I operate"
+        title="Three principles, every engagement."
+        subtitle="The shorthand for how I think about infrastructure, security, and team workflows."
+      />
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+        gap: 16,
+      }}>
+        {OPERATING_PRINCIPLES.map((p, idx) => (
+          <Card key={p.title} accent={brand.accentCyan} testId={`card-principle-${idx}`}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 36, height: 36, borderRadius: 10,
+                background: 'rgba(0, 229, 255, 0.10)',
+                border: `1px solid rgba(0, 229, 255, 0.25)`,
+                color: brand.accentCyan,
+                flexShrink: 0,
+              }}>
+                <Compass size={18} />
+              </div>
+              <p style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: '0.12em',
+                textTransform: 'uppercase', color: brand.textMuted, margin: 0,
+              }}>Principle {String(idx + 1).padStart(2, '0')}</p>
+            </div>
+            <h3 style={{
+              fontFamily: brand.fontDisplay, fontSize: 18, fontWeight: 700,
+              color: brand.textPrimary, margin: 0,
+            }}>{p.title}</h3>
+            <p style={{
+              fontSize: 14, lineHeight: 1.6, color: brand.textSecondary, margin: 0,
+            }}>{p.body}</p>
+          </Card>
+        ))}
       </div>
     </section>
   );
@@ -245,7 +357,7 @@ function SpecializationsGrid() {
       id="specializations"
       data-testid="portfolio-specializations"
       style={{
-        padding: '48px 24px',
+        padding: 'clamp(32px, 5vw, 48px) clamp(20px, 4vw, 24px)',
         maxWidth: brand.contentMaxWidth,
         margin: '0 auto',
         width: '100%',
@@ -315,7 +427,7 @@ function ProjectsGrid() {
       id="projects"
       data-testid="portfolio-projects"
       style={{
-        padding: '48px 24px',
+        padding: 'clamp(32px, 5vw, 48px) clamp(20px, 4vw, 24px)',
         maxWidth: brand.contentMaxWidth,
         margin: '0 auto',
         width: '100%',
@@ -401,7 +513,7 @@ function CaseStudies() {
       id="case-studies"
       data-testid="portfolio-case-studies"
       style={{
-        padding: '48px 24px',
+        padding: 'clamp(32px, 5vw, 48px) clamp(20px, 4vw, 24px)',
         maxWidth: brand.contentMaxWidth,
         margin: '0 auto',
         width: '100%',
@@ -455,13 +567,13 @@ function CaseStudies() {
   );
 }
 
-function ResumeHub() {
+function ResumeHub({ availability }: { availability: ResumesAvailability }) {
   return (
     <section
       id="resumes"
       data-testid="portfolio-resumes"
       style={{
-        padding: '48px 24px',
+        padding: 'clamp(32px, 5vw, 48px) clamp(20px, 4vw, 24px)',
         maxWidth: brand.contentMaxWidth,
         margin: '0 auto',
         width: '100%',
@@ -477,42 +589,90 @@ function ResumeHub() {
         gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
         gap: 16,
       }}>
-        {RESUME_VARIANTS.map((r, idx) => (
-          <Card key={r.filename} accent={brand.accentBlue} testId={`card-resume-${idx}`}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 38, height: 38, borderRadius: 10,
-              background: 'rgba(37, 99, 235, 0.10)',
-              border: `1px solid rgba(37, 99, 235, 0.28)`,
-              color: brand.accentBlue,
-            }}>
-              <ScrollText size={18} />
-            </div>
-            <h3 style={{
-              fontFamily: brand.fontDisplay, fontSize: 18, fontWeight: 700,
-              color: brand.textPrimary, margin: 0,
-            }}>{r.title}</h3>
-            <p style={{ fontSize: 13.5, lineHeight: 1.55, color: brand.textSecondary, margin: 0 }}>
-              {r.bestFor}
-            </p>
-            <a
-              href={`/resumes/${r.filename}`}
-              download
-              data-testid={`download-resume-${idx}`}
-              style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '10px 16px', borderRadius: 10,
-                marginTop: 'auto',
-                background: `linear-gradient(135deg, ${brand.accentCyan} 0%, ${brand.accentViolet} 100%)`,
-                color: brand.accentInk, fontWeight: 600, fontSize: 13,
-                textDecoration: 'none',
-                boxShadow: brand.ctaGlowSoft,
-              }}
-            >
-              <Download size={14} /> Download PDF
-            </a>
-          </Card>
-        ))}
+        {RESUME_VARIANTS.map((r, idx) => {
+          // Default to available when the prop is omitted (e.g. tests).
+          // The route page passes the real fs check.
+          const isAvailable = availability[r.filename] !== false;
+          const mailtoSubject = encodeURIComponent(`Resume request: ${r.title}`);
+          const mailtoBody = encodeURIComponent(
+            `Hi John,\n\nCould you send the latest "${r.title}" resume? I found you via your portfolio page.\n\nThanks,`
+          );
+          return (
+            <Card key={r.filename} accent={brand.accentBlue} testId={`card-resume-${idx}`}>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              }}>
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 38, height: 38, borderRadius: 10,
+                  background: 'rgba(37, 99, 235, 0.10)',
+                  border: `1px solid rgba(37, 99, 235, 0.28)`,
+                  color: brand.accentBlue,
+                }}>
+                  <ScrollText size={18} />
+                </div>
+                {!isAvailable && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '4px 8px', borderRadius: 999,
+                    fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    background: 'rgba(245, 158, 11, 0.10)',
+                    color: brand.accentAmber,
+                    border: `1px solid rgba(245, 158, 11, 0.28)`,
+                  }}>
+                    <FileWarning size={10} /> On request
+                  </span>
+                )}
+              </div>
+              <h3 style={{
+                fontFamily: brand.fontDisplay, fontSize: 18, fontWeight: 700,
+                color: brand.textPrimary, margin: 0,
+              }}>{r.title}</h3>
+              <p style={{ fontSize: 13.5, lineHeight: 1.55, color: brand.textSecondary, margin: 0 }}>
+                {r.bestFor}
+              </p>
+              {isAvailable ? (
+                <a
+                  href={`/resumes/${r.filename}`}
+                  download
+                  data-testid={`download-resume-${idx}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '10px 16px', borderRadius: 10,
+                    marginTop: 'auto',
+                    background: `linear-gradient(135deg, ${brand.accentCyan} 0%, ${brand.accentViolet} 100%)`,
+                    color: brand.accentInk, fontWeight: 600, fontSize: 13,
+                    textDecoration: 'none',
+                    boxShadow: brand.ctaGlowSoft,
+                  }}
+                >
+                  <Download size={14} /> Download PDF
+                </a>
+              ) : (
+                // Graceful fallback if the maintainer hasn't dropped the
+                // real PDF yet — keeps the CTA clickable, routes the
+                // request straight to John's inbox with a pre-filled
+                // subject so he knows which variant to send back.
+                <a
+                  href={`mailto:${PERSON.email}?subject=${mailtoSubject}&body=${mailtoBody}`}
+                  data-testid={`request-resume-${idx}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '10px 16px', borderRadius: 10,
+                    marginTop: 'auto',
+                    background: 'transparent',
+                    color: brand.textPrimary, fontWeight: 600, fontSize: 13,
+                    textDecoration: 'none',
+                    border: `1px solid ${brand.borderStrong}`,
+                  }}
+                >
+                  <Mail size={14} /> Request by email
+                </a>
+              )}
+            </Card>
+          );
+        })}
       </div>
     </section>
   );
@@ -523,7 +683,7 @@ function AvailableFor() {
     <section
       data-testid="portfolio-available-for"
       style={{
-        padding: '32px 24px',
+        padding: 'clamp(24px, 4vw, 32px) clamp(20px, 4vw, 24px)',
         maxWidth: brand.contentMaxWidth,
         margin: '0 auto',
         width: '100%',
@@ -558,7 +718,7 @@ function ContactPanel() {
       id="contact"
       data-testid="portfolio-contact"
       style={{
-        padding: '48px 24px 96px',
+        padding: 'clamp(32px, 5vw, 48px) clamp(20px, 4vw, 24px) clamp(64px, 9vw, 96px)',
         maxWidth: brand.contentMaxWidth,
         margin: '0 auto',
         width: '100%',
@@ -615,14 +775,62 @@ function ContactPanel() {
 
 // ─── Page composition ─────────────────────────────────────────────
 
-export default function PortfolioPage() {
+function PersonJsonLd() {
+  // schema.org Person markup — gives LinkedIn/Google a structured
+  // profile to read so recruiter previews and rich-result panels show
+  // the right role, location, and links.
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: PERSON.name,
+    jobTitle: PERSON.title,
+    description: PERSON.heroCopy,
+    url: 'https://operatoros.net/portfolio',
+    email: `mailto:${PERSON.email}`,
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: 'Salemburg',
+      addressRegion: 'NC',
+      addressCountry: 'US',
+    },
+    knowsAbout: [
+      'Infrastructure Engineering', 'Security Operations', 'MSP Operations',
+      'Healthcare IT', 'Networking', 'Automation', 'Cloud Architecture',
+      'Microsoft 365', 'Entra ID', 'Active Directory', 'Datto RMM',
+      'HIPAA', 'Intelerad', 'PowerScribe', 'PowerShell',
+    ],
+    sameAs: [PERSON.github, PERSON.linkedin],
+  };
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
+export default function PortfolioPage({
+  resumesAvailability = {},
+}: PortfolioPageProps) {
   return (
     <MarketingLayout testId="page-portfolio">
+      <PersonJsonLd />
+      <style dangerouslySetInnerHTML={{ __html: `
+        .portfolio-card:hover {
+          border-color: ${brand.borderStrong};
+          transform: translateY(-2px);
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .portfolio-card { transition: none; }
+          .portfolio-card:hover { transform: none; }
+        }
+      ` }} />
       <Hero />
+      <OperatingPrinciples />
       <SpecializationsGrid />
       <ProjectsGrid />
       <CaseStudies />
-      <ResumeHub />
+      <ResumeHub availability={resumesAvailability} />
       <AvailableFor />
       <ContactPanel />
     </MarketingLayout>
