@@ -1,6 +1,27 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
+import { Inter, Space_Grotesk } from 'next/font/google';
 import { brand, brandCssVariables } from '@/lib/brand';
+
+// Brand typography loaded via next/font so Next self-hosts the files and
+// fully manages the document <head>. Hand-writing <link> tags for Google
+// Fonts in a manual <head> conflicts with the <link>s the Metadata API
+// injects (favicon/manifest/apple-icon), which broke hydration and caused
+// sections to overlap on first paint. next/font removes that conflict and
+// exposes a CSS variable each font is bound to.
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  display: 'swap',
+  variable: '--brand-font-inter',
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--brand-font-space-grotesk',
+});
 
 export const metadata: Metadata = {
   title: 'OperatorOS — The Command Layer for Modern Operations',
@@ -57,22 +78,17 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Brand typography: Space Grotesk drives display/headline text,
-            Inter remains the body font. Both loaded with display=swap so
-            the first paint is not blocked by font fetch. */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-        {/* Expose brand tokens as CSS custom properties so unstyled HTML,
-            SVG fills, and inline animations can pull them without
-            re-importing the TS module. */}
-        <style dangerouslySetInnerHTML={{ __html: `:root { ${brandCssVariables} }` }} />
-      </head>
+    <html
+      lang="en"
+      className={`${inter.variable} ${spaceGrotesk.variable}`}
+      suppressHydrationWarning
+    >
+      {/* No manual <head>: in the App Router Next.js owns the document head
+          (metadata, fonts, icons). Authoring our own <head> here interleaved
+          with Next's injected tags and broke hydration, which made sections
+          paint on top of each other. Brand CSS custom properties are emitted
+          as a <style> at the top of <body> instead — :root variables cascade
+          regardless of where the style tag lives. */}
       <body
         style={{
           margin: 0,
@@ -82,6 +98,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         }}
         suppressHydrationWarning
       >
+        <style dangerouslySetInnerHTML={{ __html: `:root { ${brandCssVariables} }` }} />
         {children}
       </body>
     </html>
