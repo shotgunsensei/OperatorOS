@@ -25,7 +25,7 @@ import { db } from './db.js';
 import { workspaces, runners, tasks, taskEvents, toolTraces, publishRuns, users } from './schema.js';
 import { serveUI } from './ui.js';
 import { ensureExtendedTables } from './lib/db-init.js';
-import { ensureSaasTables, seedPlansAndAdmin, seedModules, ensureTenantTables, ensureModuleShellTables, backfillPersonalTenants, bootstrapSuperAdmin, seedDemoCoTenant } from './lib/saas-db-init.js';
+import { ensureSaasTables, seedPlansAndAdmin, seedModules, seedPlatformComponents, ensureTenantTables, ensureModuleShellTables, backfillPersonalTenants, bootstrapSuperAdmin, seedDemoCoTenant } from './lib/saas-db-init.js';
 import { registerOsRoutes } from './routes/os-routes.js';
 import { registerAuthRoutes } from './routes/auth-routes.js';
 import { registerSaasRoutes } from './routes/saas-routes.js';
@@ -209,6 +209,10 @@ await seedPlansAndAdmin();
 // column add BEFORE seedModules so the seeder finds the renamed row.
 const { launchFixPreSeed, launchFixPostSeed } = await import('./lib/launch-fix-init.js');
 await launchFixPreSeed();
+// Task #114: seed the four platform components BEFORE seedModules so the
+// module seeder can back-fill modules.component_id by resolving component
+// slugs to ids. Purely additive — no entitlement/billing/SSO impact.
+await seedPlatformComponents();
 await seedModules();
 // Backfill + tenant-aware seeds run last so the data they need is present.
 await backfillPersonalTenants();

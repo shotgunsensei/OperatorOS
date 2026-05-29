@@ -15,6 +15,23 @@ export type ModuleCategory = 'ops' | 'support' | 'ai';
 export type ModulePlanTier = 'starter' | 'pro' | 'elite';
 export type ModuleStatus = 'live' | 'coming_soon' | 'beta';
 
+/**
+ * Task #114: OperatorOS "platform components" are the top-level grouping
+ * layer above modules. There are exactly four, all under the single
+ * OperatorOS brand. `command-center` is reserved for future internal
+ * surfaces and has no live modules assigned yet.
+ *
+ * The DB component slug is `command-center`; this is intentionally the
+ * same identifier already used by the tenant nav id + TenantCommandCenterPage.
+ * Keep the distinction clear in code between `platformComponentSlug`
+ * (this catalog), `activeNavId` (web sidebar), and `moduleSlug`.
+ */
+export type PlatformComponentSlug =
+  | 'command-center'
+  | 'operations-deck'
+  | 'diagnostic-lab'
+  | 'growth-forge';
+
 export interface ModuleCatalogEntry {
   slug: string;
   name: string;
@@ -27,6 +44,21 @@ export interface ModuleCatalogEntry {
   /** Internal MVP shell available at `/apps/<slug>` even without an env URL. */
   internal: boolean;
   defaultStatus: ModuleStatus;
+  /**
+   * Task #114: the platform component this module belongs to. This — not
+   * the legacy `category` field — is the source of truth for grouping
+   * modules under platform components. Optional so future modules can be
+   * added before being assigned a component.
+   */
+  component?: PlatformComponentSlug;
+}
+
+export interface PlatformComponentCatalogEntry {
+  slug: PlatformComponentSlug;
+  name: string;
+  description: string;
+  audience: string;
+  ord: number;
 }
 
 export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
@@ -37,6 +69,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['TRADEFLOWKIT_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_TRADEFLOWKIT'],
     internal: false, defaultStatus: 'live',
+    component: 'operations-deck',
   },
   {
     slug: 'torqueshed', name: 'TorqueShed',
@@ -45,6 +78,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['TORQUESHED_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_TORQUESHED'],
     internal: false, defaultStatus: 'live',
+    component: 'diagnostic-lab',
   },
   {
     slug: 'techdeck', name: 'TechDeck',
@@ -53,6 +87,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['TECHDECK_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_TECHDECK'],
     internal: false, defaultStatus: 'live',
+    component: 'diagnostic-lab',
   },
   {
     slug: 'pulsedesk', name: 'PulseDesk',
@@ -61,6 +96,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['PULSEDESK_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_PULSEDESK'],
     internal: false, defaultStatus: 'live',
+    component: 'operations-deck',
   },
   {
     slug: 'faultlinelab', name: 'FaultlineLab',
@@ -69,6 +105,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['FAULTLINELAB_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_FAULTLINELAB'],
     internal: false, defaultStatus: 'live',
+    component: 'diagnostic-lab',
   },
   {
     // Renamed from `bf-os` in Task #66. BF_OS_URL / STRIPE_PRICE_ADDON_BF_OS
@@ -79,6 +116,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['BRANDFORGEOS_URL', 'BF_OS_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_BRANDFORGEOS', 'STRIPE_PRICE_ADDON_BF_OS'],
     internal: false, defaultStatus: 'live',
+    component: 'growth-forge',
   },
   {
     slug: 'snapproofos', name: 'SnapProofOS',
@@ -87,6 +125,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['SNAPPROOFOS_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_SNAPPROOFOS'],
     internal: false, defaultStatus: 'live',
+    component: 'operations-deck',
   },
   {
     slug: 'studyforge-ai', name: 'StudyForge AI',
@@ -95,6 +134,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['STUDYFORGE_AI_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_STUDYFORGE_AI'],
     internal: true, defaultStatus: 'live',
+    component: 'diagnostic-lab',
   },
   {
     slug: 'ninja-launch-kit', name: 'Ninja Launch Kit',
@@ -103,6 +143,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['NINJA_LAUNCH_KIT_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_NINJA_LAUNCH_KIT'],
     internal: true, defaultStatus: 'live',
+    component: 'growth-forge',
   },
   {
     slug: 'callcommand-ai', name: 'CallCommand AI',
@@ -111,6 +152,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['CALLCOMMAND_AI_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_CALLCOMMAND_AI'],
     internal: true, defaultStatus: 'live',
+    component: 'operations-deck',
   },
   {
     slug: 'ninjamation', name: 'Ninjamation',
@@ -119,11 +161,55 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['NINJAMATION_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_NINJAMATION'],
     internal: true, defaultStatus: 'live',
+    component: 'growth-forge',
   },
 ] as const;
 
 export const MODULE_CATALOG_BY_SLUG: Readonly<Record<string, ModuleCatalogEntry>> =
   Object.freeze(Object.fromEntries(MODULE_CATALOG.map(m => [m.slug, m])));
+
+// ---------------------------------------------------------------------------
+// Platform component catalog (Task #114) — the top-level grouping layer
+// above modules. Exactly four components under the single OperatorOS
+// brand. This is the source of truth for grouping; `modules.component_id`
+// is back-filled from these slugs via the module `component` field above.
+// `command-center` is reserved for future internal surfaces and has no
+// live modules assigned yet.
+// ---------------------------------------------------------------------------
+
+export const PLATFORM_COMPONENTS: readonly PlatformComponentCatalogEntry[] = [
+  {
+    slug: 'command-center', name: 'Command Center', ord: 10,
+    description:
+      'Central OperatorOS control surface for daily overview, modules, ' +
+      'billing, tenants, entitlements, SSO launch, and command history.',
+    audience: 'Operators, admins, teams, builders, and business owners.',
+  },
+  {
+    slug: 'operations-deck', name: 'Operations Deck', ord: 20,
+    description:
+      'Daily business operations, service workflows, coordination, calls, ' +
+      'proof of work, customer flow, and job execution.',
+    audience: 'Small businesses, service companies, clinics, contractors, and teams.',
+  },
+  {
+    slug: 'diagnostic-lab', name: 'Diagnostic Lab', ord: 30,
+    description:
+      'Technical diagnostics, troubleshooting, repair intelligence, scripts, ' +
+      'cases, training, and problem-solving workflows.',
+    audience: 'IT professionals, MSPs, mechanics, technicians, troubleshooters, and learners.',
+  },
+  {
+    slug: 'growth-forge', name: 'Growth Forge', ord: 40,
+    description:
+      'Brand building, launches, content, campaigns, offers, automation, ' +
+      'and monetizable asset creation.',
+    audience: 'Creators, founders, freelancers, agencies, and side-hustle builders.',
+  },
+] as const;
+
+export const PLATFORM_COMPONENTS_BY_SLUG: Readonly<Record<string, PlatformComponentCatalogEntry>> =
+  Object.freeze(Object.fromEntries(PLATFORM_COMPONENTS.map(c => [c.slug, c])));
 
 /**
  * Resolve the first non-empty `process.env` value across an env-key

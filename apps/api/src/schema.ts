@@ -458,6 +458,11 @@ export const modules = pgTable('modules', {
   description: text('description').default(''),
   iconUrl: text('icon_url'),
   category: text('category').default('app'),
+  // Task #114: nullable FK-style reference to platform_components.id. The
+  // grouping source of truth is the SDK catalog; this column is back-filled
+  // by the module seeder (only when null) and may be admin-overridden.
+  // Kept nullable for safe rollout — never required for module behavior.
+  componentId: varchar('component_id', { length: 36 }),
   baseUrl: text('base_url').notNull().default(''),
   status: text('status').notNull().default('coming_soon'),
   planMin: text('plan_min').notNull().default('elite'),
@@ -488,6 +493,29 @@ export const modules = pgTable('modules', {
   index('idx_modules_slug').on(t.slug),
   index('idx_modules_status').on(t.status),
   index('idx_modules_archived').on(t.archivedAt),
+  // Task #114: lookups by platform component (grouping queries).
+  index('idx_modules_component').on(t.componentId),
+]);
+
+// Task #114: platform components — the top-level grouping layer above
+// modules (Command Center, Operations Deck, Diagnostic Lab, Growth Forge).
+// Seeded from the SDK PLATFORM_COMPONENTS catalog. Purely additive: no
+// entitlement, billing, SSO, or launch behavior reads this table yet.
+export const platformComponents = pgTable('platform_components', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  slug: text('slug').notNull().unique(),
+  name: text('name').notNull(),
+  description: text('description').default(''),
+  audience: text('audience').default(''),
+  ord: integer('ord').notNull().default(0),
+  iconUrl: text('icon_url'),
+  status: text('status').notNull().default('active'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_platform_components_slug').on(t.slug),
+  index('idx_platform_components_ord').on(t.ord),
 ]);
 
 export const planModules = pgTable('plan_modules', {

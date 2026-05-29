@@ -1,9 +1,9 @@
 import { db } from '../db.js';
 import { hashPassword } from './auth.js';
-import { users, subscriptionPlans, subscriptions, saasWorkspaces, saasProjects, saasTasks, notes, activityFeed, workspaceMemberships, modules, planModules, tenants, tenantUsers, tenantModules, tenantUserModuleAccess } from '../schema.js';
-import { eq, and, sql } from 'drizzle-orm';
+import { users, subscriptionPlans, subscriptions, saasWorkspaces, saasProjects, saasTasks, notes, activityFeed, workspaceMemberships, modules, planModules, tenants, tenantUsers, tenantModules, tenantUserModuleAccess, platformComponents } from '../schema.js';
+import { eq, and, sql, isNull } from 'drizzle-orm';
 import { PLAN_CONFIGS } from './plans.js';
-import { MODULE_CATALOG, pickEnv } from '@operatoros/sdk';
+import { MODULE_CATALOG, MODULE_CATALOG_BY_SLUG, PLATFORM_COMPONENTS, pickEnv } from '@operatoros/sdk';
 
 export async function ensureSaasTables() {
   await db.execute(`
@@ -308,6 +308,31 @@ export async function ensureSaasTables() {
         CHECK (status IN ('live', 'active', 'beta', 'coming_soon', 'hidden', 'deprecated', 'disabled'));
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+    -- Task #114: platform components — top-level grouping layer above
+    -- modules. Idempotent CREATE so fresh + existing DBs both boot. Must
+    -- run before module seeding/back-fill so seedModules can resolve
+    -- component ids by slug.
+    CREATE TABLE IF NOT EXISTS platform_components (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      audience TEXT DEFAULT '',
+      ord INTEGER NOT NULL DEFAULT 0,
+      icon_url TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      metadata JSONB DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_platform_components_slug ON platform_components(slug);
+    CREATE INDEX IF NOT EXISTS idx_platform_components_ord ON platform_components(ord);
+
+    -- Task #114: nullable component reference on modules. Stays nullable
+    -- for safe rollout; back-filled from the catalog only when null.
+    ALTER TABLE modules ADD COLUMN IF NOT EXISTS component_id VARCHAR(36);
+    CREATE INDEX IF NOT EXISTS idx_modules_component ON modules(component_id);
+
     CREATE TABLE IF NOT EXISTS plan_modules (
       id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
       plan_id VARCHAR(36) NOT NULL REFERENCES subscription_plans(id),
@@ -517,6 +542,82 @@ export const MODULE_SEEDS: ModuleSeed[] = MODULE_SEED_SPECS.map(s => ({
   ord: s.ord,
 }));
 
+/**
+ * Task #114: idempotently seed the four platform components from the SDK
+ * catalog. Insert-if-missing by slug; on existing rows refresh only the
+ * catalog-derived display fields (name, description, audience, ord) so
+ * copy changes propagate on restart. Admin-set icon_url / status /
+ * metadata are never stomped. Must run BEFORE seedModules so the module
+ * back-fill can resolve component ids by slug.
+ */
+export async function seedPlatformComponents() {
+  for (const c of PLATFORM_COMPONENTS) {
+    const existing = await db.select().from(platformComponents)
+      .where(eq(platformComponents.slug, c.slug)).limit(1);
+    if (existing.length === 0) {
+      await db.insert(platformComponents).values({
+        slug: c.slug, name: c.name, description: c.description,
+        audience: c.audience, ord: c.ord,
+      });
+    } else {
+      const row = existing[0];
+      if (
+        row.name !== c.name || row.description !== c.description ||
+        row.audience !== c.audience || row.ord !== c.ord
+      ) {
+        await db.update(platformComponents).set({
+          name: c.name, description: c.description,
+          audience: c.audience, ord: c.ord, updatedAt: new Date(),
+        }).where(eq(platformComponents.slug, c.slug));
+      }
+    }
+  }
+  console.log(`[seed] Platform components: ${PLATFORM_COMPONENTS.length} seeded/updated`);
+}
+
+/**
+ * Task #114: back-fill `modules.component_id` from the SDK catalog's
+ * per-module `component` slug. Only fills rows where component_id IS NULL
+ * (never overwrites an admin-set value). Missing components or modules are
+ * tolerated — they are logged for visibility and skipped, never fatal.
+ */
+async function backfillModuleComponents() {
+  const components = await db.select().from(platformComponents);
+  const componentIdBySlug = new Map(components.map(c => [c.slug, c.id]));
+
+  // Modules that need a component assigned (currently null).
+  const unassigned = await db.select().from(modules).where(isNull(modules.componentId));
+
+  let backfilled = 0;
+  const unmapped: string[] = [];
+  for (const mod of unassigned) {
+    const catalogEntry = MODULE_CATALOG_BY_SLUG[mod.slug];
+    const componentSlug = catalogEntry?.component;
+    if (!componentSlug) {
+      // No catalog mapping (e.g. command-center has no live modules, or
+      // an admin-created module not in the catalog). Leave null.
+      unmapped.push(mod.slug);
+      continue;
+    }
+    const componentId = componentIdBySlug.get(componentSlug);
+    if (!componentId) {
+      // Catalog points at a component that isn't seeded yet — skip safely.
+      console.warn(`[seed] module '${mod.slug}' maps to unknown component '${componentSlug}'; leaving component_id null`);
+      continue;
+    }
+    await db.update(modules)
+      .set({ componentId, updatedAt: new Date() })
+      .where(and(eq(modules.id, mod.id), isNull(modules.componentId)));
+    backfilled++;
+  }
+  if (backfilled > 0) {
+    console.log(`[seed] Back-filled component_id on ${backfilled} module(s)`);
+  }
+  if (unmapped.length > 0) {
+    console.log(`[seed] Modules without a catalog component (left unassigned): ${unmapped.join(', ')}`);
+  }
+}
+
 export async function seedModules() {
   for (const spec of MODULE_SEED_SPECS) {
     const m = MODULE_SEEDS.find(x => x.slug === spec.slug)!;
@@ -600,6 +701,9 @@ export async function seedModules() {
     }
   }
   console.log(`[seed] Modules: ${MODULE_SEEDS.length} seeded/updated`);
+
+  // Task #114: back-fill modules.component_id from the catalog (null-only).
+  await backfillModuleComponents();
 
   // Plan -> module mapping (idempotent)
   const allPlans = await db.select().from(subscriptionPlans);
