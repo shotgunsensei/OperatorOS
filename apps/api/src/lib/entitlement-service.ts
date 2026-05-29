@@ -2,7 +2,7 @@ import { db } from '../db.js';
 import {
   users, subscriptions, subscriptionPlans,
   modules, planModules, addonSubscriptions, entitlementOverrides,
-  tenantModules, tenantUsers, tenantUserModuleAccess,
+  tenantModules, tenantUsers, tenantUserModuleAccess, platformComponents,
 } from '../schema.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import type { FastifyRequest, FastifyReply } from 'fastify';
@@ -39,6 +39,19 @@ export interface ModuleAccess {
   expiresAt?: Date | null;
 }
 
+/**
+ * Task #115: the platform component a module belongs to, denormalized onto
+ * the module summary so the web marketplace can group cards under component
+ * headings without hardcoding the slug→component mapping. `null` when the
+ * module has no `component_id` assigned (admin-created modules outside the
+ * SDK catalog, or components with no live modules).
+ */
+export interface ModuleComponentRef {
+  slug: string;
+  name: string;
+  ord: number;
+}
+
 export interface UserModuleSummary {
   module: {
     id: string;
@@ -51,6 +64,7 @@ export interface UserModuleSummary {
     planMin: string;
     baseUrl: string;
     ord: number;
+    component: ModuleComponentRef | null;
   };
   // Server-authoritative rendering hints. The UI MUST NOT recompute these.
   unlocked: boolean;
@@ -240,6 +254,23 @@ function pickCta(args: {
 }
 
 /**
+ * Task #115: load all platform components keyed by id. Used to denormalize
+ * each module's component (slug/name/ord) onto the catalog summary so the
+ * web marketplace can group cards by component without a hardcoded map.
+ */
+async function loadComponentMap(): Promise<Map<string, ModuleComponentRef>> {
+  const rows = await db.select().from(platformComponents);
+  return new Map(rows.map(c => [c.id, { slug: c.slug, name: c.name, ord: c.ord }]));
+}
+
+/** Single-component lookup by id (for the per-module summary path). */
+async function loadComponentRef(componentId: string): Promise<ModuleComponentRef | null> {
+  const [c] = await db.select().from(platformComponents)
+    .where(eq(platformComponents.id, componentId)).limit(1);
+  return c ? { slug: c.slug, name: c.name, ord: c.ord } : null;
+}
+
+/**
  * Returns every module in the catalog with the user's access state attached
  * AND server-resolved rendering fields (unlocked / cta / upgrade target /
  * addon price). UI consumes this directly — never compute access on the client.
@@ -247,6 +278,7 @@ function pickCta(args: {
 export async function getUserModules(userId: string, tenantId: string): Promise<UserModuleSummary[]> {
   const allModules = await db.select().from(modules);
   const sorted = allModules.sort((a, b) => a.ord - b.ord);
+  const componentMap = await loadComponentMap();
   const out: UserModuleSummary[] = [];
   for (const m of sorted) {
     const access = await hasModuleAccess(userId, tenantId, m.slug);
@@ -272,6 +304,7 @@ export async function getUserModules(userId: string, tenantId: string): Promise<
         planMin: m.planMin,
         baseUrl: m.baseUrl,
         ord: m.ord,
+        component: m.componentId ? componentMap.get(m.componentId) ?? null : null,
       },
       unlocked: access.hasAccess && (m.status === 'live' || m.status === 'beta') && !!m.baseUrl,
       access_source: access.source,
@@ -301,11 +334,12 @@ export async function getModuleForUser(userId: string, tenantId: string, moduleS
     addonPriceCents,
     addonPurchasable: isAddonPurchasable(m),
   });
+  const component = m.componentId ? await loadComponentRef(m.componentId) : null;
   return {
     module: {
       id: m.id, slug: m.slug, name: m.name, description: m.description,
       iconUrl: m.iconUrl, category: m.category, status: m.status,
-      planMin: m.planMin, baseUrl: m.baseUrl, ord: m.ord,
+      planMin: m.planMin, baseUrl: m.baseUrl, ord: m.ord, component,
     },
     unlocked: access.hasAccess && (m.status === 'live' || m.status === 'beta') && !!m.baseUrl,
     access_source: access.source,

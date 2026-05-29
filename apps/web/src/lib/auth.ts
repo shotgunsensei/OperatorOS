@@ -273,9 +273,21 @@ export const moduleShellApi = {
   },
 };
 
+export interface ModuleComponentRef {
+  slug: string;
+  name: string;
+  ord: number;
+}
+
 export interface ModulesListResponse {
   modules: Array<{
-    module: { slug: string; name: string; description: string | null; status: string };
+    module: {
+      slug: string;
+      name: string;
+      description: string | null;
+      status: string;
+      component?: ModuleComponentRef | null;
+    };
     unlocked: boolean;
     cta: string;
     planMin?: string;

@@ -10,6 +10,12 @@ import { colors } from '@/lib/design-tokens';
 type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
 type ModuleCta = 'open' | 'upgrade' | 'buy_addon' | 'coming_soon' | 'disabled';
 
+interface ModuleComponentRef {
+  slug: string;
+  name: string;
+  ord: number;
+}
+
 interface ModuleSummary {
   module: {
     id: string;
@@ -22,6 +28,7 @@ interface ModuleSummary {
     planMin: string;
     baseUrl: string;
     ord: number;
+    component?: ModuleComponentRef | null;
   };
   unlocked: boolean;
   access_source: AccessSource;
@@ -194,6 +201,213 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
     });
   }, [modules, search, activeCategory, statusFilter]);
 
+  // Task #115: group the (already filtered) cards under their platform
+  // component heading, ordered by component `ord`. The component metadata
+  // is server-provided (no hardcoded slug→component map here). Sections
+  // with no matching modules are dropped, so empty components (e.g. Command
+  // Center, which has no live modules) never render a header. Modules with
+  // no component fall into a trailing "Other" bucket.
+  const groupedSections = useMemo(() => {
+    const bySlug = new Map<string, { component: ModuleComponentRef; modules: ModuleSummary[] }>();
+    const ungrouped: ModuleSummary[] = [];
+    for (const s of filtered) {
+      const c = s.module.component;
+      if (!c) { ungrouped.push(s); continue; }
+      let bucket = bySlug.get(c.slug);
+      if (!bucket) { bucket = { component: c, modules: [] }; bySlug.set(c.slug, bucket); }
+      bucket.modules.push(s);
+    }
+    const sections = Array.from(bySlug.values())
+      .sort((a, b) => a.component.ord - b.component.ord)
+      .map(b => ({ slug: b.component.slug, name: b.component.name, modules: b.modules }));
+    if (ungrouped.length > 0) {
+      sections.push({ slug: 'other', name: 'Other', modules: ungrouped });
+    }
+    return sections;
+  }, [filtered]);
+
+  const renderCard = ({ module: m, unlocked, access_source, cta, upgrade_target_plan, addon_price_cents, reason }: ModuleSummary) => {
+    const srcKey = unlocked && access_source ? access_source : 'locked';
+    const src = sourceLabel[srcKey] || sourceLabel.locked;
+    const status = statusLabel[m.status] || statusLabel.coming_soon;
+
+    return (
+      <div
+        key={m.slug}
+        data-testid={`module-card-${m.slug}`}
+        style={{
+          background: colors.bgSecondary,
+          border: `1px solid ${colors.border}`,
+          borderRadius: 12,
+          padding: 20,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+          opacity: unlocked ? 1 : 0.85,
+          transition: 'transform 0.15s, border-color 0.15s, box-shadow 0.15s',
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.borderColor = colors.accent;
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(88,166,255,0.12)';
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = 'none';
+          e.currentTarget.style.borderColor = colors.border;
+          e.currentTarget.style.boxShadow = 'none';
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 10,
+            background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 18, fontWeight: 800, color: '#fff', flexShrink: 0,
+          }}>{m.name.charAt(0)}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: 15, color: '#fff' }} data-testid={`module-name-${m.slug}`}>{m.name}</div>
+            <div style={{ fontSize: 11, color: status.color, fontWeight: 500 }}>{status.label}</div>
+          </div>
+          <span data-testid={`module-source-${m.slug}`} style={{
+            fontSize: 10, padding: '3px 8px', borderRadius: 6,
+            background: src.bg, color: src.color, fontWeight: 600,
+          }}>{src.label}</span>
+        </div>
+
+        <div style={{ fontSize: 13, color: colors.textMuted, minHeight: 36 }}>
+          {m.description || 'No description.'}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: colors.textDim }}>
+          <span>Min plan: <strong style={{ color: colors.text }}>{planTierLabel[m.planMin] || m.planMin}</strong></span>
+          {!unlocked && reason && (
+            <span data-testid={`module-reason-${m.slug}`} style={{ fontStyle: 'italic' }}>
+              {reason.replace(/_/g, ' ')}
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
+          {cta === 'open' && (
+            <button
+              data-testid={`button-launch-${m.slug}`}
+              onClick={() => launch(m.slug)}
+              disabled={launching === m.slug}
+              style={{
+                flex: 1, padding: '8px 14px', borderRadius: 8, border: 'none',
+                background: colors.accent, color: '#fff', fontWeight: 600,
+                fontSize: 13, cursor: launching === m.slug ? 'wait' : 'pointer',
+              }}
+            >
+              {launching === m.slug ? 'Launching\u2026' : 'Open App'}
+            </button>
+          )}
+          {isTenantAdmin && (
+            <button
+              data-testid={`button-manage-${m.slug}`}
+              onClick={() => onNavigate ? onNavigate('tenant-modules') : null}
+              title="Manage this module for your tenant"
+              style={{
+                padding: '8px 12px', borderRadius: 8,
+                border: `1px solid ${colors.border}`, background: 'transparent',
+                color: colors.textMuted, fontSize: 12, cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+              }}
+            >
+              <SettingsIcon size={12} /> Manage
+            </button>
+          )}
+          {cta === 'coming_soon' && (
+            <button
+              data-testid={`button-comingsoon-${m.slug}`}
+              disabled
+              title={reason ? reason.replace(/_/g, ' ') : 'This app is coming soon'}
+              style={{
+                flex: 1, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
+                background: 'transparent', color: colors.textMuted, fontSize: 13, cursor: 'not-allowed',
+              }}
+            >Coming Soon</button>
+          )}
+          {cta === 'buy_addon' && (
+            <button
+              data-testid={`button-subscribe-${m.slug}`}
+              onClick={() => subscribe(m.slug)}
+              style={{
+                flex: 1, padding: '8px 14px', borderRadius: 8,
+                border: `1px solid ${colors.accent}`, background: 'transparent',
+                color: colors.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              {priceLabel(addon_price_cents) ? `Add-on — ${priceLabel(addon_price_cents)}` : 'Add to plan'}
+            </button>
+          )}
+          {cta === 'upgrade' && (
+            <button
+              data-testid={`button-upgrade-${m.slug}`}
+              onClick={() => onNavigate ? onNavigate('billing') : (window.location.href = '/')}
+              style={{
+                flex: 1, padding: '8px 14px', borderRadius: 8,
+                border: `1px solid ${colors.accent}`, background: 'transparent',
+                color: colors.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              Upgrade to {planTierLabel[upgrade_target_plan || ''] || 'higher plan'}
+            </button>
+          )}
+          {cta === 'disabled' && (() => {
+            // Disambiguate the disabled state:
+            //   - module is live & not assigned to caller -> Request access
+            //     (regular members) or Manage (tenant admins, already
+            //     rendered above).
+            //   - module is offline or hard-disabled -> Unavailable.
+            //   - addon-shaped but Stripe price missing -> show the
+            //     Stripe-missing tooltip on the disabled button so
+            //     admins know why the buy CTA never rendered.
+            const stripeMissing = !!addon_price_cents && addon_price_cents > 0;
+            const isLockedLive = m.status === 'live' && !unlocked && !stripeMissing;
+            if (isLockedLive && !isTenantAdmin) {
+              const sent = !!requested[m.slug];
+              return (
+                <button
+                  data-testid={`button-request-${m.slug}`}
+                  onClick={() => {
+                    setRequested(r => ({ ...r, [m.slug]: true }));
+                    toast('Access request sent to your tenant admins.', 'success');
+                  }}
+                  disabled={sent}
+                  style={{
+                    flex: 1, padding: '8px 14px', borderRadius: 8,
+                    border: `1px solid ${colors.accentPurple}`, background: 'transparent',
+                    color: colors.accentPurple, fontSize: 13, fontWeight: 600,
+                    cursor: sent ? 'default' : 'pointer',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}
+                >
+                  <Lock size={12} /> {sent ? 'Requested' : 'Request access'}
+                </button>
+              );
+            }
+            return (
+              <button
+                data-testid={`button-disabled-${m.slug}`}
+                disabled
+                title={
+                  stripeMissing
+                    ? 'Stripe billing is not configured for this add-on; ask a platform admin to set STRIPE_PRICE_*.'
+                    : (reason ? reason.replace(/_/g, ' ') : 'This app is currently unavailable')
+                }
+                style={{
+                  flex: 1, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
+                  background: 'transparent', color: colors.textMuted, fontSize: 13, cursor: 'not-allowed',
+                }}
+              >{stripeMissing ? 'Billing not configured' : 'Unavailable'}</button>
+            );
+          })()}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div style={{ padding: 32, color: colors.textMuted, fontSize: 14 }} data-testid="apps-loading">
@@ -272,197 +486,34 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
         })}
       </div>
 
-      <div style={{
-        display: 'grid', gap: 16,
-        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-      }}>
-        {filtered.length === 0 && (
-          <div data-testid="marketplace-empty" style={{ gridColumn: '1 / -1', padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 13, border: `1px dashed ${colors.border}`, borderRadius: 12 }}>
-            No apps match your filters.
+      {filtered.length === 0 && (
+        <div data-testid="marketplace-empty" style={{ padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 13, border: `1px dashed ${colors.border}`, borderRadius: 12 }}>
+          No apps match your filters.
+        </div>
+      )}
+
+      {/* Task #115: cards grouped under platform component headings,
+          ordered by component `ord`. */}
+      {groupedSections.map(section => (
+        <section key={section.slug} data-testid={`component-section-${section.slug}`} style={{ marginBottom: 32 }}>
+          <h2
+            data-testid={`component-heading-${section.slug}`}
+            style={{
+              fontSize: 13, fontWeight: 700, color: colors.textMuted,
+              textTransform: 'uppercase', letterSpacing: '0.06em',
+              margin: '0 0 14px',
+            }}
+          >
+            {section.name}
+          </h2>
+          <div style={{
+            display: 'grid', gap: 16,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+          }}>
+            {section.modules.map(renderCard)}
           </div>
-        )}
-        {filtered.map(({ module: m, unlocked, access_source, cta, upgrade_target_plan, addon_price_cents, reason }) => {
-          const srcKey = unlocked && access_source ? access_source : 'locked';
-          const src = sourceLabel[srcKey] || sourceLabel.locked;
-          const status = statusLabel[m.status] || statusLabel.coming_soon;
-
-          return (
-            <div
-              key={m.slug}
-              data-testid={`module-card-${m.slug}`}
-              style={{
-                background: colors.bgSecondary,
-                border: `1px solid ${colors.border}`,
-                borderRadius: 12,
-                padding: 20,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 12,
-                opacity: unlocked ? 1 : 0.85,
-                transition: 'transform 0.15s, border-color 0.15s, box-shadow 0.15s',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.borderColor = colors.accent;
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(88,166,255,0.12)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.borderColor = colors.border;
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: 10,
-                  background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 18, fontWeight: 800, color: '#fff', flexShrink: 0,
-                }}>{m.name.charAt(0)}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 15, color: '#fff' }} data-testid={`module-name-${m.slug}`}>{m.name}</div>
-                  <div style={{ fontSize: 11, color: status.color, fontWeight: 500 }}>{status.label}</div>
-                </div>
-                <span data-testid={`module-source-${m.slug}`} style={{
-                  fontSize: 10, padding: '3px 8px', borderRadius: 6,
-                  background: src.bg, color: src.color, fontWeight: 600,
-                }}>{src.label}</span>
-              </div>
-
-              <div style={{ fontSize: 13, color: colors.textMuted, minHeight: 36 }}>
-                {m.description || 'No description.'}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: colors.textDim }}>
-                <span>Min plan: <strong style={{ color: colors.text }}>{planTierLabel[m.planMin] || m.planMin}</strong></span>
-                {!unlocked && reason && (
-                  <span data-testid={`module-reason-${m.slug}`} style={{ fontStyle: 'italic' }}>
-                    {reason.replace(/_/g, ' ')}
-                  </span>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
-                {cta === 'open' && (
-                  <button
-                    data-testid={`button-launch-${m.slug}`}
-                    onClick={() => launch(m.slug)}
-                    disabled={launching === m.slug}
-                    style={{
-                      flex: 1, padding: '8px 14px', borderRadius: 8, border: 'none',
-                      background: colors.accent, color: '#fff', fontWeight: 600,
-                      fontSize: 13, cursor: launching === m.slug ? 'wait' : 'pointer',
-                    }}
-                  >
-                    {launching === m.slug ? 'Launching\u2026' : 'Open App'}
-                  </button>
-                )}
-                {isTenantAdmin && (
-                  <button
-                    data-testid={`button-manage-${m.slug}`}
-                    onClick={() => onNavigate ? onNavigate('tenant-modules') : null}
-                    title="Manage this module for your tenant"
-                    style={{
-                      padding: '8px 12px', borderRadius: 8,
-                      border: `1px solid ${colors.border}`, background: 'transparent',
-                      color: colors.textMuted, fontSize: 12, cursor: 'pointer',
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                    }}
-                  >
-                    <SettingsIcon size={12} /> Manage
-                  </button>
-                )}
-                {cta === 'coming_soon' && (
-                  <button
-                    data-testid={`button-comingsoon-${m.slug}`}
-                    disabled
-                    title={reason ? reason.replace(/_/g, ' ') : 'This app is coming soon'}
-                    style={{
-                      flex: 1, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
-                      background: 'transparent', color: colors.textMuted, fontSize: 13, cursor: 'not-allowed',
-                    }}
-                  >Coming Soon</button>
-                )}
-                {cta === 'buy_addon' && (
-                  <button
-                    data-testid={`button-subscribe-${m.slug}`}
-                    onClick={() => subscribe(m.slug)}
-                    style={{
-                      flex: 1, padding: '8px 14px', borderRadius: 8,
-                      border: `1px solid ${colors.accent}`, background: 'transparent',
-                      color: colors.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                    }}
-                  >
-                    {priceLabel(addon_price_cents) ? `Add-on — ${priceLabel(addon_price_cents)}` : 'Add to plan'}
-                  </button>
-                )}
-                {cta === 'upgrade' && (
-                  <button
-                    data-testid={`button-upgrade-${m.slug}`}
-                    onClick={() => onNavigate ? onNavigate('billing') : (window.location.href = '/')}
-                    style={{
-                      flex: 1, padding: '8px 14px', borderRadius: 8,
-                      border: `1px solid ${colors.accent}`, background: 'transparent',
-                      color: colors.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                    }}
-                  >
-                    Upgrade to {planTierLabel[upgrade_target_plan || ''] || 'higher plan'}
-                  </button>
-                )}
-                {cta === 'disabled' && (() => {
-                  // Disambiguate the disabled state:
-                  //   - module is live & not assigned to caller -> Request access
-                  //     (regular members) or Manage (tenant admins, already
-                  //     rendered above).
-                  //   - module is offline or hard-disabled -> Unavailable.
-                  //   - addon-shaped but Stripe price missing -> show the
-                  //     Stripe-missing tooltip on the disabled button so
-                  //     admins know why the buy CTA never rendered.
-                  const stripeMissing = !!addon_price_cents && addon_price_cents > 0;
-                  const isLockedLive = m.status === 'live' && !unlocked && !stripeMissing;
-                  if (isLockedLive && !isTenantAdmin) {
-                    const sent = !!requested[m.slug];
-                    return (
-                      <button
-                        data-testid={`button-request-${m.slug}`}
-                        onClick={() => {
-                          setRequested(r => ({ ...r, [m.slug]: true }));
-                          toast('Access request sent to your tenant admins.', 'success');
-                        }}
-                        disabled={sent}
-                        style={{
-                          flex: 1, padding: '8px 14px', borderRadius: 8,
-                          border: `1px solid ${colors.accentPurple}`, background: 'transparent',
-                          color: colors.accentPurple, fontSize: 13, fontWeight: 600,
-                          cursor: sent ? 'default' : 'pointer',
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        }}
-                      >
-                        <Lock size={12} /> {sent ? 'Requested' : 'Request access'}
-                      </button>
-                    );
-                  }
-                  return (
-                    <button
-                      data-testid={`button-disabled-${m.slug}`}
-                      disabled
-                      title={
-                        stripeMissing
-                          ? 'Stripe billing is not configured for this add-on; ask a platform admin to set STRIPE_PRICE_*.'
-                          : (reason ? reason.replace(/_/g, ' ') : 'This app is currently unavailable')
-                      }
-                      style={{
-                        flex: 1, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
-                        background: 'transparent', color: colors.textMuted, fontSize: 13, cursor: 'not-allowed',
-                      }}
-                    >{stripeMissing ? 'Billing not configured' : 'Unavailable'}</button>
-                  );
-                })()}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+        </section>
+      ))}
     </div>
   );
 }

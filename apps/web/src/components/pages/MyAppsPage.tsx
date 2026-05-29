@@ -15,6 +15,12 @@ interface MyAppsPageProps {
   onNavigate: (page: string) => void;
 }
 
+interface ModuleComponentRef {
+  slug: string;
+  name: string;
+  ord: number;
+}
+
 interface UnlockedModule {
   slug: string;
   name: string;
@@ -22,6 +28,7 @@ interface UnlockedModule {
   category: string | null;
   iconUrl: string | null;
   baseUrl: string | null;
+  component?: ModuleComponentRef | null;
 }
 
 interface CatalogModule {
@@ -113,6 +120,76 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
     return recentSlugs.map(s => bySlug.get(s)).filter(Boolean) as UnlockedModule[];
   }, [recentSlugs, modules]);
 
+  // Task #115: group the launchpad apps under their platform component
+  // heading, ordered by component `ord`. Component metadata is server-
+  // provided (no hardcoded slug→component map). Apps with no component fall
+  // into a trailing "Other" bucket. Empty components never render a header.
+  const groupedModules = useMemo(() => {
+    const bySlug = new Map<string, { component: ModuleComponentRef; modules: UnlockedModule[] }>();
+    const ungrouped: UnlockedModule[] = [];
+    for (const m of modules) {
+      const c = m.component;
+      if (!c) { ungrouped.push(m); continue; }
+      let bucket = bySlug.get(c.slug);
+      if (!bucket) { bucket = { component: c, modules: [] }; bySlug.set(c.slug, bucket); }
+      bucket.modules.push(m);
+    }
+    const sections = Array.from(bySlug.values())
+      .sort((a, b) => a.component.ord - b.component.ord)
+      .map(b => ({ slug: b.component.slug, name: b.component.name, modules: b.modules }));
+    if (ungrouped.length > 0) {
+      sections.push({ slug: 'other', name: 'Other', modules: ungrouped });
+    }
+    return sections;
+  }, [modules]);
+
+  const renderAppCard = (m: UnlockedModule) => (
+    <button
+      key={m.slug}
+      data-testid={`card-app-${m.slug}`}
+      onClick={() => launch(m.slug)}
+      disabled={launching === m.slug}
+      style={{
+        ...cardStyle,
+        textAlign: 'left',
+        cursor: launching === m.slug ? 'wait' : 'pointer',
+        color: semantic.text,
+        transition: 'transform 0.15s, border-color 0.15s, box-shadow 0.15s',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.transform = 'translateY(-2px)';
+        e.currentTarget.style.borderColor = semantic.accent;
+        e.currentTarget.style.boxShadow = '0 4px 16px rgba(88,166,255,0.15)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = 'none';
+        e.currentTarget.style.borderColor = semantic.border;
+        e.currentTarget.style.boxShadow = '';
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: space.md, marginBottom: space.md }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: radius.md,
+          background: 'linear-gradient(135deg, #58a6ff22, #bc8cff22)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: `1px solid ${semantic.border}`,
+        }}>
+          <Rocket size={20} color={semantic.accent} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: fontSize.md, color: '#fff' }}>{m.name}</div>
+          <div style={{ fontSize: fontSize.xs, color: semantic.textDim, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            {m.category || 'app'}
+          </div>
+        </div>
+        <ExternalLink size={14} color={semantic.textDim} />
+      </div>
+      <p style={{ fontSize: fontSize.body, color: semantic.textMuted, margin: 0, minHeight: 36 }}>
+        {m.description || 'Open this app.'}
+      </p>
+    </button>
+  );
+
   return (
     <div style={{ padding: space.xxl, maxWidth: 1200, margin: '0 auto' }} data-testid="page-my-apps">
       <header style={{ marginBottom: space.xl }}>
@@ -153,100 +230,75 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
       {loading ? (
         <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="my-apps-loading">Loading\u2026</div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: space.lg }}>
-          {modules.map(m => (
+        <>
+          {/* Task #115: apps grouped under their platform component heading,
+              ordered by component `ord`. */}
+          {groupedModules.map(section => (
+            <section key={section.slug} data-testid={`component-section-${section.slug}`} style={{ marginBottom: space.xl }}>
+              <h2
+                data-testid={`component-heading-${section.slug}`}
+                style={{
+                  fontSize: fontSize.sm, color: semantic.textDim,
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                  margin: `0 0 ${space.md}px`,
+                }}
+              >
+                {section.name}
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: space.lg }}>
+                {section.modules.map(renderAppCard)}
+              </div>
+            </section>
+          ))}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: space.lg }}>
             <button
-              key={m.slug}
-              data-testid={`card-app-${m.slug}`}
-              onClick={() => launch(m.slug)}
-              disabled={launching === m.slug}
+              data-testid="card-marketplace-cta"
+              onClick={() => onNavigate('apps')}
               style={{
                 ...cardStyle,
                 textAlign: 'left',
-                cursor: launching === m.slug ? 'wait' : 'pointer',
+                background: 'linear-gradient(135deg, #58a6ff15, #bc8cff15)',
+                border: `1px dashed ${semantic.accent}`,
+                cursor: 'pointer',
                 color: semantic.text,
-                transition: 'transform 0.15s, border-color 0.15s, box-shadow 0.15s',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.borderColor = semantic.accent;
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(88,166,255,0.15)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.borderColor = semantic.border;
-                e.currentTarget.style.boxShadow = '';
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: space.md, marginBottom: space.md }}>
                 <div style={{
                   width: 40, height: 40, borderRadius: radius.md,
-                  background: 'linear-gradient(135deg, #58a6ff22, #bc8cff22)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: `1px solid ${semantic.border}`,
+                  background: semantic.bgHover, display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Rocket size={20} color={semantic.accent} />
+                  <Store size={20} color={semantic.accentInfo} />
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: fontSize.md, color: '#fff' }}>{m.name}</div>
-                  <div style={{ fontSize: fontSize.xs, color: semantic.textDim, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    {m.category || 'app'}
-                  </div>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: fontSize.md, color: '#fff' }}>Browse the Marketplace</div>
+                  <div style={{ fontSize: fontSize.xs, color: semantic.textMuted }}>Discover more apps</div>
                 </div>
-                <ExternalLink size={14} color={semantic.textDim} />
               </div>
-              <p style={{ fontSize: fontSize.body, color: semantic.textMuted, margin: 0, minHeight: 36 }}>
-                {m.description || 'Open this app.'}
+              <p style={{ fontSize: fontSize.body, color: semantic.textMuted, margin: 0 }}>
+                Need more capability? Activate trials or purchase add-ons.
               </p>
             </button>
-          ))}
 
-          <button
-            data-testid="card-marketplace-cta"
-            onClick={() => onNavigate('apps')}
-            style={{
-              ...cardStyle,
-              textAlign: 'left',
-              background: 'linear-gradient(135deg, #58a6ff15, #bc8cff15)',
-              border: `1px dashed ${semantic.accent}`,
-              cursor: 'pointer',
-              color: semantic.text,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: space.md, marginBottom: space.md }}>
-              <div style={{
-                width: 40, height: 40, borderRadius: radius.md,
-                background: semantic.bgHover, display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Store size={20} color={semantic.accentInfo} />
+            {modules.length === 0 && (
+              <div
+                data-testid="my-apps-empty"
+                style={{
+                  gridColumn: '1 / -1',
+                  padding: space.xxl, textAlign: 'center',
+                  color: semantic.textMuted, fontSize: fontSize.md,
+                  background: semantic.bgPanel, border: `1px dashed ${semantic.border}`,
+                  borderRadius: radius.lg,
+                }}
+              >
+                <Sparkles size={32} color={semantic.accentInfo} style={{ marginBottom: 12 }} />
+                <div>You don\u2019t have any apps yet \u2014 head to the marketplace to activate one.</div>
               </div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: fontSize.md, color: '#fff' }}>Browse the Marketplace</div>
-                <div style={{ fontSize: fontSize.xs, color: semantic.textMuted }}>Discover more apps</div>
-              </div>
-            </div>
-            <p style={{ fontSize: fontSize.body, color: semantic.textMuted, margin: 0 }}>
-              Need more capability? Activate trials or purchase add-ons.
-            </p>
-          </button>
-
-          {modules.length === 0 && (
-            <div
-              data-testid="my-apps-empty"
-              style={{
-                gridColumn: '1 / -1',
-                padding: space.xxl, textAlign: 'center',
-                color: semantic.textMuted, fontSize: fontSize.md,
-                background: semantic.bgPanel, border: `1px dashed ${semantic.border}`,
-                borderRadius: radius.lg,
-              }}
-            >
-              <Sparkles size={32} color={semantic.accentInfo} style={{ marginBottom: 12 }} />
-              <div>You don\u2019t have any apps yet \u2014 head to the marketplace to activate one.</div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Request access strip */}

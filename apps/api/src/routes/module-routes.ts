@@ -5,7 +5,7 @@ import { db } from '../db.js';
 import {
   users, subscriptions, subscriptionPlans,
   modules, ssoHandoffTokens, activityFeed, adminAuditLogs,
-  tenantUsers, tenantModules, tenantUserModuleAccess,
+  tenantUsers, tenantModules, tenantUserModuleAccess, platformComponents,
 } from '../schema.js';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { authenticate, logAudit } from '../lib/auth.js';
@@ -240,6 +240,21 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     const allowed = await db.select().from(modules)
       .where(inArray(modules.id, Array.from(allowedModuleIds)));
+
+    // Task #115: denormalize each module's platform component (slug/name/ord)
+    // so the launchpad can group cards by component without hardcoding the
+    // slug→component map. Only fetch the components actually referenced.
+    const componentIds = Array.from(
+      new Set(allowed.map(m => m.componentId).filter((id): id is string => !!id)),
+    );
+    const componentRows = componentIds.length
+      ? await db.select().from(platformComponents)
+          .where(inArray(platformComponents.id, componentIds))
+      : [];
+    const componentById = new Map(
+      componentRows.map(c => [c.id, { slug: c.slug, name: c.name, ord: c.ord }]),
+    );
+
     // Launchpad only surfaces actually-launchable modules: live OR beta
     // status AND a baseUrl configured.
     const unlocked = allowed
@@ -252,6 +267,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
         category: m.category,
         iconUrl: m.iconUrl,
         baseUrl: m.baseUrl,
+        component: m.componentId ? componentById.get(m.componentId) ?? null : null,
       }));
     return { modules: unlocked };
   });
