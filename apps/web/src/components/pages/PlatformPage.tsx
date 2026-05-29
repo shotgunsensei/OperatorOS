@@ -1064,6 +1064,7 @@ function ModuleDetail({ slug, onBack }: { slug: string; onBack: () => void }) {
         </div>
       </Card>
       {!data.archivedAt && <ModuleEditForm module={data} onSaved={load} />}
+      {!data.archivedAt && <ModuleComponentEditor module={data} onSaved={load} />}
       {!data.archivedAt && <ModulePlanMapping moduleSlug={slug} onSaved={load} />}
       {!data.archivedAt && <ModuleAddonPriceEditor module={data} onSaved={load} />}
       <ModuleMembers moduleSlug={slug} />
@@ -2033,6 +2034,75 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
       </div>
 
       <Btn data-testid="button-save-module" variant="primary" disabled={busy} onClick={save} style={{ marginTop: 12 }}>{busy ? 'Saving…' : 'Save module'}</Btn>
+    </Card>
+  );
+}
+
+// Task #116: lets a super-admin pick which platform component (section) a
+// module belongs to, or clear the assignment. Loads the live component list
+// and PATCHes the dedicated /component endpoint, which validates the choice
+// and audits the change. An admin selection persists across reboots because
+// the seeder only back-fills NULL component_id.
+function ModuleComponentEditor({ module: m, onSaved }: { module: any; onSaved: () => void }) {
+  const [components, setComponents] = useState<any[] | null>(null);
+  const [componentId, setComponentId] = useState<string>(m.componentId ?? '');
+  const [err, setErr] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    apiCall('/v1/platform/components')
+      .then(d => setComponents(d.components ?? []))
+      .catch(e => { setComponents([]); setErr(e); });
+  }, []);
+  useEffect(() => { setComponentId(m.componentId ?? ''); }, [m.componentId]);
+
+  const current = (components ?? []).find((c: any) => c.id === m.componentId);
+  const dirty = (componentId || null) !== (m.componentId ?? null);
+
+  const save = async () => {
+    setErr(null); setBusy(true);
+    try {
+      await apiCall(`/v1/platform/modules/${m.slug}/component`, {
+        method: 'PATCH',
+        body: JSON.stringify({ componentId: componentId === '' ? null : componentId }),
+      });
+      onSaved();
+    } catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+
+  return (
+    <Card style={{ marginTop: 12 }} data-testid="form-module-component">
+      <h3 style={{ marginTop: 0, fontSize: 14 }}>Platform component (section)</h3>
+      <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8 }}>
+        Controls which top-level section this app is grouped under in the marketplace and sidebar.
+        Currently: {current ? <strong data-testid="text-current-component">{current.name}</strong> : <span data-testid="text-current-component">— Unassigned —</span>}
+      </div>
+      <ErrorBlock err={err} />
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Component</label>
+          <select
+            data-testid="select-module-component"
+            value={componentId}
+            onChange={e => setComponentId(e.target.value)}
+            disabled={components === null}
+            style={{ ...inp, width: '100%' }}
+          >
+            <option value="">— Unassigned —</option>
+            {(components ?? []).map((c: any) => (
+              <option key={c.id} value={c.id}>{c.name} ({c.slug})</option>
+            ))}
+          </select>
+        </div>
+        <Btn
+          data-testid="button-save-module-component"
+          variant="primary"
+          disabled={busy || !dirty || components === null}
+          onClick={save}
+        >
+          {busy ? 'Saving…' : 'Save section'}
+        </Btn>
+      </div>
     </Card>
   );
 }

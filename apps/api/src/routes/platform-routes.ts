@@ -30,7 +30,7 @@ import {
   tenants, tenantUsers, users, modules, tenantModules, tenantUserModuleAccess,
   moduleCallLogs, moduleStudySessions, moduleAutomations, moduleScaffolds,
   addonSubscriptions, entitlementOverrides, billingEvents, adminAuditLogs,
-  subscriptions, subscriptionPlans, planModules,
+  subscriptions, subscriptionPlans, planModules, platformComponents,
   saasWorkspaces, saasProjects, saasTasks, notes, workspaceMemberships,
   activityFeed,
 } from '../schema.js';
@@ -861,6 +861,75 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         ipAddress: request.ip,
       }, request);
       return { module: after };
+    },
+  );
+
+  // Task #116: list platform components (the top-level grouping layer above
+  // modules). Used by the Platform Command surface to let a super-admin pick
+  // which component a module belongs to. Ordered by `ord` for stable display.
+  app.get('/v1/platform/components', { preHandler: [requireSuperAdmin] }, async () => {
+    const rows = await db.select().from(platformComponents).orderBy(platformComponents.ord);
+    return { components: rows, total: rows.length };
+  });
+
+  // Task #116: set or clear a module's platform component (the section it
+  // belongs to). `componentId` must be either the id of an existing
+  // platform_components row, or null to clear the assignment. The module
+  // seeder only back-fills NULL component_id, so an admin choice made here is
+  // never overwritten on reboot. Gated by super_admin and fully audited.
+  app.patch<{ Params: { slug: string } }>(
+    '/v1/platform/modules/:slug/component',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { slug } = request.params;
+      const body = (request.body ?? {}) as any;
+      if (!('componentId' in body)) {
+        return badRequest(reply, 'componentId is required (the id of a platform component, or null to clear)');
+      }
+      const componentId = body.componentId;
+      if (componentId !== null && typeof componentId !== 'string') {
+        return badRequest(reply, 'componentId must be a string id or null');
+      }
+
+      const [before] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
+      if (before.archivedAt) {
+        return reply.code(409).send({ error: 'Module is archived', code: 'MODULE_ARCHIVED' });
+      }
+
+      // Validate the target component exists before assigning. Clearing
+      // (null) skips this check.
+      let component: typeof platformComponents.$inferSelect | null = null;
+      if (componentId !== null) {
+        const [found] = await db.select().from(platformComponents)
+          .where(eq(platformComponents.id, componentId)).limit(1);
+        if (!found) {
+          return reply.code(404).send({ error: 'Platform component not found', code: 'COMPONENT_NOT_FOUND' });
+        }
+        component = found;
+      }
+
+      // No-op if unchanged — return current state without writing/auditing.
+      if (before.componentId === componentId) {
+        return { module: before, component };
+      }
+
+      const [after] = await db.update(modules)
+        .set({ componentId, updatedAt: new Date() })
+        .where(eq(modules.slug, slug)).returning();
+
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'module',
+        targetId: before.id,
+        action: componentId === null ? 'module_component_cleared' : 'module_component_set',
+        before: pickSafe(before, [...MODULE_SAFE_FIELDS]),
+        after: pickSafe(after, [...MODULE_SAFE_FIELDS]),
+        ipAddress: request.ip,
+      }, request);
+
+      return { module: after, component };
     },
   );
 

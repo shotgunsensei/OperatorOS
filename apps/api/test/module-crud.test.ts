@@ -14,7 +14,7 @@ import { eq, like } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
   users, tenants, modules, addonSubscriptions, entitlementOverrides,
-  adminAuditLogs,
+  adminAuditLogs, platformComponents,
 } from '../src/schema.js';
 import { signToken } from '../src/lib/auth.js';
 import { ensureSchemaReady, createTestUser, cleanupUser, uniqueId } from './_setup.js';
@@ -24,6 +24,7 @@ let superAdmin: any;
 let owner: any;
 let tenantA: any;
 const createdModuleIds: string[] = [];
+const createdComponentIds: string[] = [];
 
 before(async () => {
   await ensureSchemaReady();
@@ -49,6 +50,9 @@ after(async () => {
     try { await db.delete(addonSubscriptions).where(eq(addonSubscriptions.moduleId, id)); } catch {}
     try { await db.delete(entitlementOverrides).where(eq(entitlementOverrides.moduleId, id)); } catch {}
     try { await db.delete(modules).where(eq(modules.id, id)); } catch {}
+  }
+  for (const id of createdComponentIds) {
+    try { await db.delete(platformComponents).where(eq(platformComponents.id, id)); } catch {}
   }
   if (tenantA) try { await db.delete(tenants).where(eq(tenants.id, tenantA.id)); } catch {}
   // Audit cleanup (best-effort) for module-targeting rows.
@@ -137,4 +141,82 @@ test('archive idempotency: archiving again returns already_archived', async () =
   const b = await app.inject({ method: 'POST', url: `/v1/platform/modules/${m.slug}/archive`, headers: bearer(superAdmin) });
   assert.equal(b.statusCode, 200);
   assert.equal(b.json().action, 'already_archived');
+});
+
+// ── Task #116: reassign a module's platform component ────────────────────
+
+async function createComponent(slugSuffix: string) {
+  const [c] = await db.insert(platformComponents).values({
+    slug: `mcrud-comp-${slugSuffix}-${uniqueId('c').replace(/_/g, '-')}`,
+    name: `Comp ${slugSuffix}`,
+    ord: 99,
+  }).returning();
+  createdComponentIds.push(c.id);
+  return c;
+}
+
+test('GET /v1/platform/components lists seeded components', async () => {
+  const c = await createComponent('list');
+  const res = await app.inject({ method: 'GET', url: '/v1/platform/components', headers: bearer(superAdmin) });
+  assert.equal(res.statusCode, 200);
+  const ids = res.json().components.map((x: any) => x.id);
+  assert.ok(ids.includes(c.id), 'created component returned by list');
+});
+
+test('PATCH .../component sets, then clears component_id with audit', async () => {
+  const m = await createModule('component-set');
+  const c = await createComponent('target');
+  assert.equal(m.componentId, null);
+
+  // Set
+  const set = await app.inject({
+    method: 'PATCH', url: `/v1/platform/modules/${m.slug}/component`,
+    headers: bearer(superAdmin), payload: { componentId: c.id },
+  });
+  assert.equal(set.statusCode, 200, set.body);
+  assert.equal(set.json().module.componentId, c.id);
+  const [rowAfterSet] = await db.select().from(modules).where(eq(modules.id, m.id));
+  assert.equal(rowAfterSet.componentId, c.id, 'persisted to DB');
+
+  // Audit row written
+  const audits = await db.select().from(adminAuditLogs).where(eq(adminAuditLogs.adminId, superAdmin.id));
+  assert.ok(audits.some(a => a.action === 'module_component_set'), 'module_component_set audited');
+
+  // Clear
+  const clear = await app.inject({
+    method: 'PATCH', url: `/v1/platform/modules/${m.slug}/component`,
+    headers: bearer(superAdmin), payload: { componentId: null },
+  });
+  assert.equal(clear.statusCode, 200, clear.body);
+  assert.equal(clear.json().module.componentId, null);
+});
+
+test('PATCH .../component 404 COMPONENT_NOT_FOUND for unknown component', async () => {
+  const m = await createModule('component-bad');
+  const res = await app.inject({
+    method: 'PATCH', url: `/v1/platform/modules/${m.slug}/component`,
+    headers: bearer(superAdmin), payload: { componentId: 'does-not-exist-id' },
+  });
+  assert.equal(res.statusCode, 404);
+  assert.equal(res.json().code, 'COMPONENT_NOT_FOUND');
+});
+
+test('PATCH .../component 404 MODULE_NOT_FOUND for unknown module', async () => {
+  const c = await createComponent('orphan');
+  const res = await app.inject({
+    method: 'PATCH', url: `/v1/platform/modules/no-such-module-slug/component`,
+    headers: bearer(superAdmin), payload: { componentId: c.id },
+  });
+  assert.equal(res.statusCode, 404);
+  assert.equal(res.json().code, 'MODULE_NOT_FOUND');
+});
+
+test('PATCH .../component 400 when componentId missing', async () => {
+  const m = await createModule('component-missing');
+  const res = await app.inject({
+    method: 'PATCH', url: `/v1/platform/modules/${m.slug}/component`,
+    headers: bearer(superAdmin), payload: {},
+  });
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.json().code, 'BAD_REQUEST');
 });

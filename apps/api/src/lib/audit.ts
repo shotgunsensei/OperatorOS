@@ -87,6 +87,7 @@ export const TENANT_SAFE_FIELDS = [
 export const MODULE_SAFE_FIELDS = [
   'id', 'slug', 'name', 'description', 'category', 'baseUrl', 'status',
   'planMin', 'ord', 'metadata', 'archivedAt', 'iconUrl', 'requiresOrg',
+  'componentId',
 ] as const;
 
 export const TENANT_MODULE_SAFE_FIELDS = [
