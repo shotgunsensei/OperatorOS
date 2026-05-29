@@ -580,8 +580,11 @@ export async function seedPlatformComponents() {
  * per-module `component` slug. Only fills rows where component_id IS NULL
  * (never overwrites an admin-set value). Missing components or modules are
  * tolerated — they are logged for visibility and skipped, never fatal.
+ *
+ * Exported for automated coverage (Task #117): the seed/back-fill path
+ * was previously only verified manually via boot logs.
  */
-async function backfillModuleComponents() {
+export async function backfillModuleComponents() {
   const components = await db.select().from(platformComponents);
   const componentIdBySlug = new Map(components.map(c => [c.slug, c.id]));
 
