@@ -1,0 +1,290 @@
+You are working inside my existing OperatorOS project hosted on Replit.
+
+Goal:
+Begin converting OperatorOS into the central ecosystem control plane for all related applications, while keeping Replit as the current host. The immediate example is that techdeck.app will become techdeck.operatoros.net, and future apps will follow the same pattern.
+
+Important:
+Do not break the current working deployment.
+Do not remove existing routes, pages, APIs, environment variables, or startup scripts.
+Do not assume all product apps already exist in this repo.
+Create the scaffolding, registry, documentation, config structure, and reusable routing/linking logic needed to support the OperatorOS ecosystem.
+
+Current intended ecosystem model:
+operatoros.net = public ecosystem website
+app.operatoros.net = main OperatorOS user dashboard / launcher
+api.operatoros.net = shared API layer
+admin.operatoros.net = admin dashboard
+auth.operatoros.net = future shared auth layer
+docs.operatoros.net = documentation
+status.operatoros.net = status/health page
+
+Product apps should be represented as modules:
+techdeck.operatoros.net
+tradeflowkit.operatoros.net
+pulsedesk.operatoros.net
+snapproofos.operatoros.net
+brandforge.operatoros.net
+faultlinelab.operatoros.net
+studyforge.operatoros.net
+launchkit.operatoros.net
+callcommand.operatoros.net
+ninjamation.operatoros.net
+
+Primary first app:
+Tech Deck
+Legacy domain: techdeck.app
+New OperatorOS ecosystem domain: techdeck.operatoros.net
+Category: IT Operations
+Purpose: MSP/IT operations, tickets, time, invoices, evidence, accountability, remote access, workflow control.
+
+Your job in this Replit project:
+
+1. Audit the project structure first.
+   - Identify whether this is a monorepo, single frontend app, full-stack app, or separate frontend/backend.
+   - Identify package manager: pnpm, npm, yarn, or bun.
+   - Identify framework: Vite, React, Next.js, Express, Fastify, Hono, etc.
+   - Identify current startup scripts and do not break them.
+   - After auditing, adapt the implementation to the existing structure.
+
+2. Create a centralized ecosystem registry.
+   Add a file in the most appropriate shared location. Preferred names:
+   - src/config/ecosystem.ts
+   - apps/web/src/config/ecosystem.ts
+   - packages/shared/ecosystem.ts
+
+   The registry should export structured module data like this:
+
+   type EcosystemModule = {
+     slug: string;
+     name: string;
+     category: string;
+     description: string;
+     ecosystemUrl: string;
+     legacyUrl?: string;
+     status: "active" | "planned" | "internal" | "external";
+     launchMode: "internal-route" | "external-subdomain" | "placeholder";
+     authMode: "operatoros-sso" | "standalone" | "planned";
+     billingMode: "operatoros" | "standalone" | "planned";
+     iconKey?: string;
+   };
+
+   Include at minimum:
+   - techdeck
+   - tradeflowkit
+   - pulsedesk
+   - snapproofos
+   - brandforge
+   - faultlinelab
+   - studyforge
+   - launchkit
+   - callcommand
+   - ninjamation
+
+   Include platform domains:
+   - operatoros.net
+   - app.operatoros.net
+   - api.operatoros.net
+   - admin.operatoros.net
+   - auth.operatoros.net
+   - docs.operatoros.net
+   - status.operatoros.net
+
+3. Add environment variable support.
+   Create or update .env.example without exposing secrets.
+
+   Include:
+
+   OPERATOROS_PUBLIC_URL=https://operatoros.net
+   OPERATOROS_APP_URL=https://app.operatoros.net
+   OPERATOROS_API_URL=https://api.operatoros.net
+   OPERATOROS_ADMIN_URL=https://admin.operatoros.net
+   OPERATOROS_AUTH_URL=https://auth.operatoros.net
+   OPERATOROS_DOCS_URL=https://docs.operatoros.net
+   OPERATOROS_STATUS_URL=https://status.operatoros.net
+
+   TECHDECK_PUBLIC_URL=https://techdeck.operatoros.net
+   TECHDECK_LEGACY_URL=https://techdeck.app
+
+   CORS_ALLOWED_ORIGINS=https://operatoros.net,https://app.operatoros.net,https://api.operatoros.net,https://admin.operatoros.net,https://auth.operatoros.net,https://techdeck.operatoros.net
+
+   COOKIE_DOMAIN=.operatoros.net
+
+4. Create a reusable ecosystem URL helper.
+   Add helper functions such as:
+   - getEcosystemModule(slug)
+   - getModuleUrl(slug)
+   - getLegacyUrl(slug)
+   - getAllModules()
+   - getActiveModules()
+   - getPlannedModules()
+   - getModulesByCategory(category)
+
+   The helper should avoid hard-coded URLs scattered throughout the app.
+
+5. Add an OperatorOS ecosystem launcher page.
+   Create a page or route using the existing frontend framework.
+
+   Preferred route:
+   /ecosystem
+
+   Optional additional route:
+   /apps
+
+   The page should:
+   - Display all ecosystem modules as cards.
+   - Show name, category, status, description, and launch URL.
+   - Put Tech Deck first.
+   - Show active modules separately from planned modules.
+   - Add a clear message that OperatorOS is the central command layer for the product ecosystem.
+   - Use existing project styling/components if available.
+   - Avoid introducing a heavy UI library unless the project already uses one.
+
+6. Add a Tech Deck placeholder integration.
+   Since the actual Tech Deck app may still be separate, add a safe module card that links to:
+   https://techdeck.operatoros.net
+
+   Also add a legacy reference showing:
+   https://techdeck.app
+
+   Do not build the full Tech Deck app here unless it already exists inside this repository.
+
+7. Add host/subdomain awareness if this project has a server layer.
+   If the app has Express, Fastify, Hono, Next middleware, or another server/router layer, add safe host detection logic that can identify:
+
+   operatoros.net
+   app.operatoros.net
+   api.operatoros.net
+   admin.operatoros.net
+   techdeck.operatoros.net
+
+   Do not force redirects yet.
+   Create a utility only, such as:
+   detectOperatorOSHost(hostname)
+
+   It should return:
+   {
+     hostname,
+     subdomain,
+     isRootDomain,
+     isAppDomain,
+     isApiDomain,
+     isAdminDomain,
+     matchedModuleSlug
+   }
+
+   This will prepare the project for future subdomain-aware routing without breaking the current Replit deployment.
+
+8. Add optional redirect config documentation.
+   Create:
+   docs/DOMAIN-MIGRATION.md
+
+   Include step-by-step manual instructions for:
+   - Adding techdeck.operatoros.net inside Replit Publishing > Domains.
+   - Copying the A and TXT records generated by Replit.
+   - Adding those records in the DNS provider for operatoros.net.
+   - Waiting for Replit to show Verified.
+   - Testing https://techdeck.operatoros.net.
+   - Only after testing, redirecting techdeck.app to techdeck.operatoros.net.
+   - Keeping techdeck.app as a legacy alias/redirect, not the primary app identity.
+
+   Include a warning:
+   Do not redirect techdeck.app until techdeck.operatoros.net loads successfully with HTTPS.
+
+9. Add a domain validation script.
+   Create a scripts folder if needed.
+
+   Add:
+   scripts/check-ecosystem-domains.ps1
+
+   The script should check DNS and HTTPS status for:
+   operatoros.net
+   app.operatoros.net
+   api.operatoros.net
+   admin.operatoros.net
+   auth.operatoros.net
+   docs.operatoros.net
+   status.operatoros.net
+   techdeck.operatoros.net
+   tradeflowkit.operatoros.net
+   pulsedesk.operatoros.net
+   snapproofos.operatoros.net
+   brandforge.operatoros.net
+   faultlinelab.operatoros.net
+   studyforge.operatoros.net
+   launchkit.operatoros.net
+   callcommand.operatoros.net
+   ninjamation.operatoros.net
+
+   The script should output a readable table with:
+   - Domain
+   - DNS status
+   - Resolved target
+   - HTTPS status
+
+   Also create a bash version if the project already has shell scripts:
+   scripts/check-ecosystem-domains.sh
+
+10. Add a module registry JSON file for future automation.
+   Create:
+   ecosystem.registry.json
+
+   Include all modules and URLs in machine-readable format.
+   This file will later be used by OperatorOS, deployment scripts, docs generation, and app launcher UI.
+
+11. Add health/status endpoint if backend exists.
+   If there is an API/backend server, add or preserve:
+   GET /health
+   GET /api/health
+   GET /api/ecosystem/modules
+
+   /api/ecosystem/modules should return the ecosystem module registry as JSON.
+
+   Do not expose secrets.
+   Do not require authentication for basic public module metadata.
+
+12. Add tests or smoke checks.
+   Add lightweight tests if the project already uses a test framework.
+   Otherwise add a simple script that validates:
+   - ecosystem registry loads
+   - techdeck module exists
+   - techdeck ecosystemUrl equals https://techdeck.operatoros.net
+   - no module has an empty slug
+   - no module has an empty ecosystemUrl
+
+13. Update README.
+   Add a section called:
+   OperatorOS Ecosystem Alignment
+
+   Include:
+   - Purpose of the ecosystem
+   - Current Replit hosting model
+   - Product subdomain pattern
+   - First migration target: Tech Deck
+   - Manual DNS steps required
+   - Link to docs/DOMAIN-MIGRATION.md
+   - How to run the domain check script
+
+14. Preserve current deployment behavior.
+   After implementation:
+   - Run the existing build command.
+   - Run the existing typecheck/lint command if available.
+   - Fix errors caused by your changes.
+   - Do not make risky framework migrations.
+   - Do not rename the project.
+   - Do not move large directories unless required.
+
+15. Commit-style summary.
+   At the end, provide a clear summary of:
+   - Files created
+   - Files modified
+   - Commands run
+   - Any manual steps I still need to perform in Replit or DNS
+   - Any assumptions you made because of the existing project structure
+
+Implementation style:
+Use clean, production-minded TypeScript or JavaScript depending on the project.
+Prefer small reusable config files over hard-coded values.
+Prefer additive changes over destructive changes.
+Make this the foundation for turning OperatorOS into the umbrella ecosystem for all related apps.
+
+Begin by auditing the project structure, then implement the safest version of this plan.
