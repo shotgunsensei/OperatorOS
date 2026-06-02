@@ -33,6 +33,22 @@ const nextConfig = {
   // pass here to keep production builds reproducible.
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
+  // The transpiled `@operatoros/sdk` package is authored as ESM TypeScript
+  // and uses explicit `.js` extensions in its relative imports
+  // (e.g. `export * from './catalog.js'`). `tsc` resolves these to the
+  // `.ts` sources via `moduleResolution`, but webpack does not unless we
+  // teach it to try the TS extensions first. This `extensionAlias` is
+  // additive — real `.js` files still resolve because `.js` stays in the
+  // candidate list — and is required for the web app to import the shared
+  // ecosystem registry helpers from the SDK.
+  webpack: (config) => {
+    config.resolve = config.resolve || {};
+    config.resolve.extensionAlias = {
+      ...(config.resolve.extensionAlias || {}),
+      '.js': ['.ts', '.tsx', '.js', '.jsx'],
+    };
+    return config;
+  },
   ...(isMobileBuild ? {
     output: 'export',
     distDir: 'out',

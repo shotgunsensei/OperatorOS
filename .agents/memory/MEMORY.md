@@ -1,0 +1,1 @@
+- [SDK web import](sdk-web-import.md) — importing @operatoros/sdk in apps/web needs webpack extensionAlias (.js→.ts) or it 500s "Module not found .js" despite passing typecheck.

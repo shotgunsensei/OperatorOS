@@ -174,6 +174,45 @@ infra/
 - **Max timeout**: 300s
 - **Max output**: 1MB (truncated with flag)
 
+## OperatorOS Ecosystem Alignment
+
+OperatorOS is the **central command layer** for the whole product ecosystem.
+Every unlockable product is a **module** that launches from OperatorOS, while
+the top-level system areas (app, api, admin, auth, docs, status) are
+**platform components**. The public `/ecosystem` launcher page renders every
+module from the shared registry — there is no separate module list to keep in
+sync.
+
+- **Hosting model:** Replit remains the current host for OperatorOS and its
+  modules. Migrating a module to its ecosystem domain points a new subdomain at
+  the existing Replit deployment; it does not move hosting.
+- **Subdomain pattern:** modules live at `module.operatoros.net` (for example
+  `techdeck.operatoros.net`, `tradeflowkit.operatoros.net`). The canonical URLs
+  are declared in `ecosystem.registry.json`, derived from the module catalog.
+- **First migration target:** Tech Deck moves from the legacy
+  `techdeck.app` to `techdeck.operatoros.net`. The legacy domain is kept as a
+  redirecting alias **only after** the new subdomain is verified and tested.
+- **Manual DNS:** all DNS and domain-linking steps happen **outside the
+  codebase** (Replit Publishing → Domains + the DNS provider for
+  `operatoros.net`). This repo performs no DNS changes and forces no redirects.
+- **Runbook:** see [`docs/DOMAIN-MIGRATION.md`](docs/DOMAIN-MIGRATION.md) for
+  the full ordered migration flow, including the explicit
+  do-not-redirect-early warning and rollback notes.
+
+### Checking ecosystem domains
+
+Two read-only scripts print a `Domain | DNS Status | Resolved Target |
+HTTPS Status` table for every platform component and module domain (sourced
+from `ecosystem.registry.json` where practical). They make no changes:
+
+```bash
+# macOS / Linux (uses dig/nslookup + curl)
+bash scripts/check-ecosystem-domains.sh
+
+# Windows / PowerShell (uses Resolve-DnsName + Invoke-WebRequest)
+pwsh scripts/check-ecosystem-domains.ps1
+```
+
 ## License
 
 Apache-2.0
