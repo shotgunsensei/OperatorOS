@@ -37,6 +37,7 @@ import { registerTenantRoutes } from './routes/tenant-routes.js';
 import { registerTenantAdminRoutes } from './routes/tenant-admin-routes.js';
 import { registerPlatformRoutes } from './routes/platform-routes.js';
 import { registerEntitlementRoutes } from './routes/entitlement-routes.js';
+import { registerEcosystemRoutes } from './routes/ecosystem-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
 import { runAgentLoop } from './agent.js';
 import type { AgentEvent } from './agent.js';
@@ -105,6 +106,7 @@ await registerTenantRoutes(app);
 await registerTenantAdminRoutes(app);
 await registerPlatformRoutes(app);
 await registerEntitlementRoutes(app);
+await registerEcosystemRoutes(app);
 
 async function ensureTables() {
   await db.execute(`
@@ -360,16 +362,27 @@ app.get('/', async (req, reply) => {
   });
 });
 
-app.get('/healthz', async (_req, reply) => {
-  const response: HealthResponse = {
+function healthSnapshot(): HealthResponse {
+  return {
     status: 'healthy',
     service: 'operatoros-api',
     version: '0.2.0',
     timestamp: new Date().toISOString(),
     uptime: Math.floor((Date.now() - startTime) / 1000),
   };
-  return reply.send(response);
+}
+
+app.get('/healthz', async (_req, reply) => {
+  return reply.send(healthSnapshot());
 });
+
+// Non-breaking health aliases. `/healthz` above is unchanged. `/v1/health`
+// makes the check reachable from the web as `/api/health` via the existing
+// `/api/* -> /v1/*` rewrite; `/health` and `/api/health` answer for direct
+// API callers regardless of the proxy.
+app.get('/health', async (_req, reply) => reply.send(healthSnapshot()));
+app.get('/v1/health', async (_req, reply) => reply.send(healthSnapshot()));
+app.get('/api/health', async (_req, reply) => reply.send(healthSnapshot()));
 
 app.get('/readyz', async (_req, reply) => {
   return reply.send({ ready: true });
