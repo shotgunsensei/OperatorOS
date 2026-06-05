@@ -6,6 +6,7 @@ import { ArrowRight, Lock } from 'lucide-react';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import FinalCta from '@/components/marketing/sections/FinalCta';
 import { OperatorLogo } from '@/components/brand';
+import AppLogo from '@/components/AppLogo';
 import { brand } from '@/lib/brand';
 import { useAuth } from '@/components/AuthProvider';
 import { useEntitlements } from '@/lib/use-entitlements';
@@ -245,14 +246,6 @@ function statusBadge(status: EcosystemModuleStatus): {
   }
 }
 
-/** Compact monogram used as a per-app logo stand-in (no logo assets yet). */
-function monogram(name: string): string {
-  const caps = name.match(/[A-Z]/g) ?? [];
-  if (caps.length >= 2) return (caps[0] + caps[1]).toUpperCase();
-  const letters = name.replace(/[^A-Za-z]/g, '');
-  return letters.slice(0, 2).toUpperCase() || '?';
-}
-
 const cardStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
@@ -290,26 +283,7 @@ function AppCard({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-          <span
-            aria-hidden="true"
-            data-testid={`img-app-logo-${m.slug}`}
-            style={{
-              flexShrink: 0,
-              width: 44,
-              height: 44,
-              borderRadius: 11,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontFamily: brand.fontDisplay,
-              fontSize: 16,
-              fontWeight: 700,
-              color: brand.accentInk,
-              background: `linear-gradient(135deg, ${brand.accentCyan}, ${brand.accentViolet})`,
-            }}
-          >
-            {monogram(m.name)}
-          </span>
+          <AppLogo name={m.name} slug={m.slug} iconKey={m.iconKey} size={44} />
           <h3
             data-testid={`text-app-name-${m.slug}`}
             style={{
