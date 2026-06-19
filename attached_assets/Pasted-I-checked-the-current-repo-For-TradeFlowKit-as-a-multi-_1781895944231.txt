@@ -1,0 +1,137 @@
+I checked the current repo. For TradeFlowKit as a multi-tenant SaaS, these are the platform/super-admin things you need to create/provide. This excludes normal tenant-admin setup like their company profile, team members, invoice branding, customer data, and their connected payment account.
+Minimum Required To Run
+Hosting account
+Current repo is built for Replit Reserved VM.
+Provide:Replit project/deployment access
+Production domain you want attached, likely tradeflowkit.com
+Deployment URL/domain list for REPLIT_DOMAINS
+
+
+PostgreSQL database
+Recommended provider: Neon Postgres.
+Alternatives: Railway Postgres, Render Postgres, AWS RDS Postgres, Supabase Postgres used only as plain Postgres.
+Create:One production Postgres database for the whole SaaS, not one DB per tenant.
+PostgreSQL 14+ recommended.
+SSL-enabled connection string.
+
+Provide secret:DATABASE_URL=postgresql://...
+
+After this is available, schema is pushed with:npm run db:push
+
+
+Session secret
+Generate a strong random secret, 32+ bytes.
+Provide secret:SESSION_SECRET=...
+
+
+Runtime mode
+Production should use:NODE_ENV=production
+
+Host usually provides:PORT
+
+
+Platform Billing / Subscriptions
+5. Stripe platform account
+Needed for SaaS plans, subscriptions, checkout, customer portal, Stripe webhooks, and Stripe Connect.
+Current code primarily expects the Replit Stripe connector, not plain STRIPE_SECRET_KEY usage.
+On Replit, connect Stripe through the Replit connector.
+In Stripe, create:Platform account
+Products/prices for TradeFlowKit SaaS plans
+Billing customer portal configuration
+Webhook support
+Stripe Connect platform/OAuth app
+
+Provide/configure:Replit Stripe connector connected to the correct Stripe account
+STRIPE_CLIENT_ID=ca_... for Stripe Connect OAuth
+PLATFORM_FEE_PERCENT=0.5 or your chosen platform fee
+
+Important: tenant contractors later connect their own Stripe accounts. You only provide the platform Stripe account and Connect client ID.
+Email
+6. SendGrid account
+Needed for quote emails, invoice emails, lead email outreach, and live email tests.
+Create:SendGrid account
+Verified sender or authenticated domain
+API key with Mail Send permission
+
+Provide secrets:SENDGRID_API_KEY=...
+SENDGRID_FROM_EMAIL=no-reply@tradeflowkit.com or another verified sender
+
+SMS / Call Recovery
+7. Twilio account
+Needed for SMS reminders, review requests, Call Recovery AI, missed-call workflows, and live lead SMS if enabled.
+Create:Twilio account
+SMS-capable phone number
+Voice-capable number if using Call Recovery
+
+Provide secrets:TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_PHONE_NUMBER=+1...
+
+Configure Twilio webhooks to the deployed app:Missed call webhook: https://YOUR_DOMAIN/api/call-recovery/webhook/missed-call
+SMS reply webhook: https://YOUR_DOMAIN/api/call-recovery/webhook/sms
+
+This is the platform Twilio setup. Tenant-specific numbers/settings are tenant-admin territory unless you want the platform to manage numbers centrally.
+AI
+8. OpenAI account
+Needed for real Call Recovery AI conversation quality.
+App has fallback behavior if missing, but production AI requires it.
+Provide secret:OPENAI_API_KEY=...
+
+OperatorOS / SSO / Entitlements
+9. OperatorOS platform configuration
+Needed if TradeFlowKit is launched from OperatorOS and entitlements are centrally managed.
+Provide:MODULE_SSO_SECRET=...
+OPERATOROS_BASE_URL=https://operatoros.net
+OPERATOROS_API_URL=https://operatoros.net/api
+OPERATOROS_SSO_AUDIENCE=tradeflowkit
+OPERATOROS_SSO_ENV=prod
+OPERATOROS_SERVICE_TOKEN=...
+VITE_OPERATOROS_BASE_URL=https://operatoros.net
+
+Super-admin access should come from OperatorOS SSO role super_admin or a controlled internal bootstrap process. Do not rely on demo/seed credentials in production.
+Domain / DNS
+10. Domain and DNS
+Provide:tradeflowkit.com DNS access
+DNS records required by Replit deployment
+HTTPS-enabled public app URL
+
+Set:REPLIT_DOMAINS=tradeflowkit.com,www.tradeflowkit.com as appropriate
+
+This is used for public links, Stripe webhook setup, invoice payment links, and email links.
+Optional Platform Settings
+11. Operational envs
+Optional but useful:LOG_LEVEL=info
+SOFT_DELETE_RETENTION_DAYS=30
+E2E_BASE_URL=https://tradeflowkit.com for browser tests
+BASE_URL=https://tradeflowkit.com for audit/lighthouse scripts
+
+What I Need From You
+Give me these, preferably by adding them directly to the deployment secret store instead of pasting live secrets into chat:
+DATABASE_URL=
+SESSION_SECRET=
+NODE_ENV=production
+REPLIT_DOMAINS=
+
+STRIPE_CLIENT_ID=
+PLATFORM_FEE_PERCENT=0.5
+
+SENDGRID_API_KEY=
+SENDGRID_FROM_EMAIL=
+
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE_NUMBER=
+
+OPENAI_API_KEY=
+
+MODULE_SSO_SECRET=
+OPERATOROS_BASE_URL=https://operatoros.net
+OPERATOROS_API_URL=https://operatoros.net/api
+OPERATOROS_SSO_AUDIENCE=tradeflowkit
+OPERATOROS_SSO_ENV=prod
+OPERATOROS_SERVICE_TOKEN=
+VITE_OPERATOROS_BASE_URL=https://operatoros.net
+One Important Stripe Decision
+Because the current code reads Stripe credentials from the Replit Stripe connector, plain STRIPE_SECRET_KEY / STRIPE_PUBLISHABLE_KEY are not enough unless we patch the Stripe client. If you deploy on Replit, use the connector. If you deploy somewhere else, I should modify the code to support direct Stripe env vars safely.
+Not Needed From You As Super Admin
+You do not need to provide tenant company setup data, tenant team members, tenant customers, tenant invoice templates, tenant lead forms, tenant notification phones/emails, or tenant Stripe connected-account credentials. Those belong inside each tenant org after the SaaS is running.
