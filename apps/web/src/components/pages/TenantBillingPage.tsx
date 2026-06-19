@@ -100,14 +100,14 @@ export default function TenantBillingPage() {
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: '#fff' }}>Tenant Billing</h1>
           <p style={{ color: semantic.textMuted, margin: '4px 0 0', fontSize: fontSize.body }}>
-            Subscription, usage and add-ons for {tenantName ? <strong>{tenantName}</strong> : 'the active tenant'}.
+            Subscription, usage, and add-ons for {tenantName ? <strong>{tenantName}</strong> : 'the active tenant'}.
             {!isOwner && <span style={{ marginLeft: 8, color: semantic.accentWarning }}>Read-only \u2014 only owners can manage billing.</span>}
           </p>
         </div>
       </header>
 
       {loading ? (
-        <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="tenant-billing-loading">Loading\u2026</div>
+        <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="tenant-billing-loading">Loading tenant billing...</div>
       ) : (
         <>
           <div
@@ -174,7 +174,7 @@ export default function TenantBillingPage() {
             </div>
             {addons.length === 0 ? (
               <div data-testid="tenant-addons-empty" style={{ padding: space.lg, color: semantic.textMuted, fontSize: fontSize.body }}>
-                No add-ons available or active. Browse the App Marketplace to add capabilities.
+                No add-ons are active for this tenant. Browse the Module Marketplace to review available upgrades.
               </div>
             ) : addons.map(a => (
               <div

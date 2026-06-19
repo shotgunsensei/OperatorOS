@@ -25,7 +25,7 @@ const CARDS: PositioningCard[] = [
   {
     icon: Server,
     title: 'IT & MSP Operations',
-    outcome: 'Triage tickets and ship fixes from a shared inbox built for small teams.',
+    outcome: 'Keep tickets, scripts, endpoint context, and technician work in one operator surface.',
     accent: brand.accentCyan,
   },
   {
@@ -43,13 +43,13 @@ const CARDS: PositioningCard[] = [
   {
     icon: Sparkles,
     title: 'Branding & Launch Systems',
-    outcome: 'Stand up the next launch — pages, assets, and rollout — in a single weekend.',
+    outcome: 'Plan offers, assets, pages, and rollout work from one creative command system.',
     accent: brand.accentViolet,
   },
   {
     icon: Bot,
     title: 'AI Automation',
-    outcome: 'Hand off the repetitive work to AI agents that fit your existing flows.',
+    outcome: 'Automate repetitive handoffs without separating them from tenants, roles, and access.',
     accent: brand.accentRed,
   },
 ];
@@ -138,7 +138,7 @@ export default function PlatformPositioning() {
             letterSpacing: 0,
           }}
         >
-          One platform. Multiple operating systems inside.
+          One parent platform. Every module in formation.
         </h2>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: brand.textSecondary, margin: '0 auto', maxWidth: 680 }}>
           Pick the operations you actually run. OperatorOS gives each one a focused surface

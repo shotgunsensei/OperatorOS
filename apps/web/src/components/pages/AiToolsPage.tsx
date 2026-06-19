@@ -199,7 +199,7 @@ export default function AiToolsPage() {
             </span>
           </h1>
           <p style={{ fontSize: 14, color: colors.textMuted, margin: 0 }}>
-            AI-powered tools to supercharge your operations
+            Operator tools for repeatable planning, writing, and workflow support.
           </p>
         </div>
         {usage && (

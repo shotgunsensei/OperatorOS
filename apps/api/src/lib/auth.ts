@@ -9,6 +9,7 @@ import { requireSessionSecret } from './session-secret.js';
 
 const JWT_SECRET = requireSessionSecret();
 const JWT_EXPIRY = '7d';
+const JWT_ALGORITHM = 'HS256' as const;
 const MAX_FAILED_LOGINS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
@@ -28,15 +29,32 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function signToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY, algorithm: JWT_ALGORITHM });
 }
 
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] });
+    if (!isJwtPayload(decoded)) return null;
+    return decoded;
   } catch {
     return null;
   }
+}
+
+function isJwtPayload(decoded: unknown): decoded is JWTPayload {
+  if (!decoded || typeof decoded !== 'object') return false;
+  const payload = decoded as Record<string, unknown>;
+  const hasIdentity =
+    typeof payload.userId === 'string' &&
+    payload.userId.length > 0 &&
+    typeof payload.email === 'string' &&
+    payload.email.length > 0 &&
+    typeof payload.role === 'string' &&
+    payload.role.length > 0;
+  if (!hasIdentity) return false;
+  if (payload.tokenVersion !== undefined && typeof payload.tokenVersion !== 'number') return false;
+  return true;
 }
 
 export async function authenticate(request: FastifyRequest, reply: FastifyReply) {

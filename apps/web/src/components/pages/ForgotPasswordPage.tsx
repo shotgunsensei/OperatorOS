@@ -22,7 +22,7 @@ export default function ForgotPasswordPage({ onSwitch }: ForgotPasswordPageProps
       await authApi.forgotPassword(email);
       setSent(true);
     } catch (err: any) {
-      setError(err.error || 'Failed to send reset email');
+      setError(err.error || 'We could not process that reset request. Try again in a moment.');
     } finally {
       setLoading(false);
     }
@@ -35,7 +35,8 @@ export default function ForgotPasswordPage({ onSwitch }: ForgotPasswordPageProps
     }}>
       <div style={{
         width: '100%', maxWidth: 420, background: colors.bgSecondary,
-        border: `1px solid ${colors.border}`, borderRadius: 16, padding: 40,
+        border: `1px solid ${colors.border}`, borderRadius: 16,
+        padding: 'clamp(24px, 7vw, 40px)', boxSizing: 'border-box',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
@@ -44,9 +45,9 @@ export default function ForgotPasswordPage({ onSwitch }: ForgotPasswordPageProps
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 24, fontWeight: 800, color: '#fff',
           }}>O</div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Forgot password</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Reset OperatorOS access</h1>
           <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>
-            {sent ? 'Check your email for reset instructions' : 'Enter your email to receive a reset link'}
+            {sent ? 'If the account exists, reset instructions are on the way.' : 'Enter your email to request a reset link.'}
           </p>
         </div>
 
@@ -68,13 +69,13 @@ export default function ForgotPasswordPage({ onSwitch }: ForgotPasswordPageProps
             </div>
             <button type="submit" data-testid="button-reset" disabled={loading}
               style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: loading ? colors.textDim : colors.accent, color: '#fff', fontSize: 14, fontWeight: 600, cursor: loading ? 'default' : 'pointer' }}>
-              {loading ? 'Sending...' : 'Send reset link'}
+              {loading ? 'Sending...' : 'Request reset link'}
             </button>
           </form>
         ) : (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <div data-testid="reset-sent" style={{ color: colors.accentGreen, fontSize: 14, marginBottom: 16 }}>
-              Reset instructions have been sent to your email.
+              If that email exists, reset instructions have been sent.
             </div>
             <button
               data-testid="link-reset-password"

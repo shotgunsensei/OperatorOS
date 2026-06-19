@@ -44,7 +44,9 @@ export default function SettingsPage() {
     if (newPassword.length < 8) { setPwMessage('Password must be at least 8 characters'); return; }
     setPwSaving(true); setPwMessage('');
     try {
-      await authApi.changePassword(currentPassword, newPassword);
+      const data = await authApi.changePassword(currentPassword, newPassword);
+      if (data.token) localStorage.setItem('token', data.token);
+      await refresh();
       toast('Password changed successfully');
       setPwMessage('');
       setCurrentPassword(''); setNewPassword('');

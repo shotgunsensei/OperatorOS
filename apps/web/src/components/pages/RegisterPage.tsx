@@ -40,7 +40,7 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
         setSubmitted(true);
         return;
       }
-      setError(err.error || 'Registration failed');
+      setError(err.error || 'We could not create the account. Review the fields and try again.');
     } finally {
       setLoading(false);
     }
@@ -53,7 +53,8 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
     }}>
       <div style={{
         width: '100%', maxWidth: 420, background: colors.bgSecondary,
-        border: `1px solid ${colors.border}`, borderRadius: 16, padding: 40,
+        border: `1px solid ${colors.border}`, borderRadius: 16,
+        padding: 'clamp(24px, 7vw, 40px)', boxSizing: 'border-box',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
@@ -62,8 +63,10 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 24, fontWeight: 800, color: '#fff',
           }}>O</div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Create your account</h1>
-          <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>Start your OperatorOS journey</p>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Create OperatorOS access</h1>
+          <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>
+            Join the parent command layer for tenant-aware modules.
+          </p>
         </div>
 
         {submitted ? (
@@ -92,7 +95,7 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
             <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>Full name</label>
             <input data-testid="input-name" type="text" value={name} onChange={e => setName(e.target.value)} required
               style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.bg, color: colors.text, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
-              placeholder="John Doe" />
+              placeholder="Your name" />
           </div>
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>Email</label>
@@ -104,11 +107,11 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
             <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>Password</label>
             <input data-testid="input-password" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8}
               style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.bg, color: colors.text, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
-              placeholder="Min 8 characters" />
+              placeholder="At least 8 characters" />
           </div>
           <button type="submit" data-testid="button-register" disabled={loading}
             style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: loading ? colors.textDim : colors.accent, color: '#fff', fontSize: 14, fontWeight: 600, cursor: loading ? 'default' : 'pointer' }}>
-            {loading ? 'Creating account...' : 'Create account'}
+            {loading ? 'Creating account...' : 'Create OperatorOS account'}
           </button>
         </form>
 

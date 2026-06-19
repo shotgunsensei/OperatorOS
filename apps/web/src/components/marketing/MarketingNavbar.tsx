@@ -25,8 +25,8 @@ const NAV_LINKS: NavLink[] = [
  * MarketingNavbar — sticky glass-blurred top bar for public pages.
  *
  * Renders OperatorOS logo, primary nav links, and a context-aware CTA:
- *   - Signed in   → "Go to Console" (→ /app)
- *   - Signed out  → "Sign in" + "Launch console"
+ *   - Signed in   -> "Open console" (-> /app)
+ *   - Signed out  -> "Sign in" + "Launch OperatorOS"
  *
  * Mobile (< 768px): collapses links into a hamburger drawer.
  */
@@ -174,7 +174,7 @@ export default function MarketingNavbar() {
                   className="operatoros-cta-primary"
                   data-testid="cta-go-to-console"
                 >
-                  Go to console <ArrowRight size={14} />
+                  Open console <ArrowRight size={14} />
                 </Link>
               ) : (
                 <>
@@ -190,7 +190,7 @@ export default function MarketingNavbar() {
                     className="operatoros-cta-primary"
                     data-testid="cta-launch-console"
                   >
-                    Launch console <ArrowRight size={14} />
+                    Launch OperatorOS <ArrowRight size={14} />
                   </Link>
                 </>
               )
@@ -254,7 +254,7 @@ export default function MarketingNavbar() {
                     style={{ flex: 1, justifyContent: 'center' }}
                     data-testid="cta-mobile-go-to-console"
                   >
-                    Go to console <ArrowRight size={14} />
+                    Open console <ArrowRight size={14} />
                   </Link>
                 ) : (
                   <>
@@ -272,7 +272,7 @@ export default function MarketingNavbar() {
                       style={{ flex: 1, justifyContent: 'center' }}
                       data-testid="cta-mobile-launch-console"
                     >
-                      Launch <ArrowRight size={14} />
+                      Launch OperatorOS <ArrowRight size={14} />
                     </Link>
                   </>
                 )

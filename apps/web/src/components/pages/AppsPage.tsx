@@ -288,7 +288,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
         </div>
 
         <div style={{ fontSize: 13, color: colors.textMuted, minHeight: 36, padding: '0 20px' }}>
-          {marketing?.outcome || m.description || 'No description.'}
+          {marketing?.outcome || m.description || 'OperatorOS module in the parent ecosystem.'}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: colors.textDim, padding: '0 20px' }}>
@@ -334,12 +334,12 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
             <button
               data-testid={`button-comingsoon-${m.slug}`}
               disabled
-              title={reason ? reason.replace(/_/g, ' ') : 'This app is coming soon'}
+              title={reason ? reason.replace(/_/g, ' ') : 'This module is not available yet'}
               style={{
                 flex: 1, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
                 background: 'transparent', color: colors.textMuted, fontSize: 13, cursor: 'not-allowed',
               }}
-            >Coming Soon</button>
+            >Not available yet</button>
           )}
           {cta === 'buy_addon' && (
             <button
@@ -385,7 +385,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                   data-testid={`button-request-${m.slug}`}
                   onClick={() => {
                     setRequested(r => ({ ...r, [m.slug]: true }));
-                    toast('Access request sent to your tenant admins.', 'success');
+        toast('Ask a tenant admin to grant this module from Tenant Modules.', 'success');
                   }}
                   disabled={sent}
                   style={{
@@ -396,7 +396,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}
                 >
-                  <Lock size={12} /> {sent ? 'Requested' : 'Request access'}
+                  <Lock size={12} /> {sent ? 'Guidance shown' : 'Ask admin'}
                 </button>
               );
             }
@@ -424,26 +424,26 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
   if (loading) {
     return (
       <div style={{ padding: 32, color: colors.textMuted, fontSize: 14 }} data-testid="apps-loading">
-        Loading apps...
+        Loading tenant-aware modules...
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '24px 32px', maxWidth: 1200, margin: '0 auto' }} data-testid="apps-page">
+    <div style={{ padding: 'clamp(16px, 4vw, 32px)', maxWidth: 1200, margin: '0 auto' }} data-testid="apps-page">
       <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
         <Sparkles size={24} color={colors.accentPurple} />
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>App Marketplace</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Module Marketplace</h1>
           <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 6 }}>
-            Single sign-on into every product in the Shotgun ecosystem. Your access updates instantly when your plan changes.
+            One login into the OperatorOS ecosystem. Access is tenant-aware and entitlement-driven.
           </p>
         </div>
       </div>
 
       {/* Search + category pills */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 8, padding: '6px 10px', flex: '1 1 240px', maxWidth: 320 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 8, padding: '6px 10px', flex: '1 1 240px', maxWidth: 360, minWidth: 0 }}>
           <Search size={14} color={colors.textDim} />
           <input
             data-testid="input-marketplace-search"
@@ -453,7 +453,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
             style={{ flex: 1, background: 'transparent', border: 'none', color: colors.text, fontSize: 13, outline: 'none' }}
           />
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', minWidth: 0 }}>
           <Filter size={12} color={colors.textDim} />
           {categories.map(c => {
             const isActive = activeCategory === c;
@@ -481,7 +481,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
           const isActive = statusFilter === f;
           const labels: Record<StatusFilter, string> = {
             all: 'All', installed: 'Installed', available: 'Available',
-            addons: 'Add-ons', beta: 'Beta', coming_soon: 'Coming Soon',
+            addons: 'Add-ons', beta: 'Beta', coming_soon: 'Planned',
           };
           return (
             <button
@@ -501,7 +501,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
 
       {filtered.length === 0 && (
         <div data-testid="marketplace-empty" style={{ padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 13, border: `1px dashed ${colors.border}`, borderRadius: 12 }}>
-          No apps match your filters.
+          No modules match these filters. Clear search or switch to All to review the full ecosystem.
         </div>
       )}
 
@@ -521,7 +521,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
           </h2>
           <div style={{
             display: 'grid', gap: 16,
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
           }}>
             {section.modules.map(renderCard)}
           </div>

@@ -238,10 +238,10 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
       </section>
 
       {loading ? (
-        <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="cc-loading">Loading\u2026</div>
+        <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="cc-loading">Loading tenant command center...</div>
       ) : !tenantId ? (
         <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="cc-no-tenant">
-          No active tenant. Switch tenant from the user menu.
+          No active tenant is selected. Choose a tenant before managing modules, billing, or members.
         </div>
       ) : (
         <>
@@ -335,7 +335,7 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
               </div>
               {activity.usageByModule.length === 0 ? (
                 <div data-testid="cc-usage-empty" style={{ padding: space.lg, color: semantic.textMuted, fontSize: fontSize.body }}>
-                  No modules enabled yet for this tenant.
+                  No module launches yet. Enable a tenant module, then launch it from My Apps to build usage history.
                 </div>
               ) : (
                 <div style={{ padding: space.lg, display: 'flex', flexDirection: 'column', gap: space.lg }}>
@@ -393,7 +393,7 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
             </div>
             {!activity || activity.recentEvents.length === 0 ? (
               <div data-testid="cc-activity-empty" style={{ padding: space.lg, color: semantic.textMuted, fontSize: fontSize.body }}>
-                No recent audit events visible to your role.
+                No recent audit events are visible to your role yet.
               </div>
             ) : activity.recentEvents.map(r => (
               <div

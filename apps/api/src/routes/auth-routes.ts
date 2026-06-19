@@ -11,6 +11,7 @@ import {
   sanitizeUser,
   logAudit,
   logUserActivity,
+  recordFailedLogin,
   resetFailedLogins,
 } from '../lib/auth.js';
 import { checkRateLimit } from '../lib/rate-limiter.js';
@@ -131,6 +132,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
     const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) {
+      await recordFailedLogin(user.id);
       await logAudit(user.id, 'login_failed', user.id, { reason: 'wrong_password' }, request.ip);
       return reply.code(401).send({ error: 'Invalid email or password', code: 'INVALID_CREDENTIALS' });
     }
@@ -259,15 +261,25 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     const passwordHash = await hashPassword(newPassword);
-    await db.update(users).set({
+    const [updated] = await db.update(users).set({
       passwordHash,
       tokenVersion: sql`token_version + 1`,
       updatedAt: new Date(),
-    }).where(eq(users.id, user.id));
+    }).where(eq(users.id, user.id)).returning();
     await logAudit(user.id, 'password_changed', user.id, {}, request.ip);
     await logUserActivity(user.id, 'password_changed', 'user', user.id);
 
-    return { message: 'Password changed successfully' };
+    const token = signToken({ userId: updated.id, email: updated.email, role: updated.role, tokenVersion: updated.tokenVersion });
+
+    reply.setCookie('token', token, {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60,
+    });
+
+    return { user: sanitizeUser(updated), token, message: 'Password changed successfully' };
   });
 
   app.put('/v1/auth/change-email', { preHandler: [authenticate] }, async (request, reply) => {

@@ -28,8 +28,8 @@ interface ModuleGatewayGridProps {
  * the `/modules` page.
  */
 export default function ModuleGatewayGrid({
-  heading = 'Modules that unlock as your operation grows.',
-  subheading = 'Every module ships with the same single sign-on, billing, and admin surface. Turn one on and it joins your console.',
+  heading = 'Tenant-aware modules under one parent platform.',
+  subheading = 'Every module uses the same login, tenant model, entitlement checks, and billing surface. Activate what your operation actually needs.',
   testId = 'marketing-module-grid',
 }: ModuleGatewayGridProps) {
   const { user } = useAuth();
@@ -97,7 +97,7 @@ export default function ModuleGatewayGrid({
           }}
         >
           <Boxes size={14} />
-          Module Ecosystem
+          Module ecosystem
         </span>
         <h2
           data-testid={`${testId}-title`}
@@ -252,7 +252,7 @@ function ModuleCard({ module: m, signedIn }: { module: MarketingModule; signedIn
           }}
         >
           <div style={{ fontSize: 11, color: brand.accentCyan, fontWeight: 700, textTransform: 'uppercase', marginBottom: 5 }}>
-            Solves
+            Operator value
           </div>
           <p style={{ fontSize: 12, lineHeight: 1.45, color: brand.textSecondary, margin: 0 }}>
             {m.solves}

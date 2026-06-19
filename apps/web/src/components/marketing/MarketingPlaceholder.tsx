@@ -15,19 +15,19 @@ interface MarketingPlaceholderProps {
 }
 
 /**
- * MarketingPlaceholder — Phase 1 body for the four public routes.
+ * MarketingPlaceholder — reusable public-route fallback.
  *
  * Renders a centered hero with eyebrow chip, large display title,
  * supporting copy, and a single primary CTA. Phase 2 and Phase 3
- * replace this with real home / modules / pricing / how-it-works
- * content (tasks #86, #87).
+ * Prefer dedicated pages for primary launch surfaces; keep this only for
+ * public routes that do not yet need custom composition.
  */
 export default function MarketingPlaceholder({
-  eyebrow = 'Coming soon',
+  eyebrow = 'OperatorOS',
   title,
   subtitle,
   ctaHref = '/app',
-  ctaLabel = 'Launch console',
+  ctaLabel = 'Launch OperatorOS',
   testId = 'marketing-placeholder',
 }: MarketingPlaceholderProps) {
   return (
@@ -41,7 +41,7 @@ export default function MarketingPlaceholder({
         width: '100%',
       }}
     >
-      {/* Soft accent glow behind the headline — purely decorative. */}
+      {/* Soft accent glow behind the headline. */}
       <div
         aria-hidden
         style={{

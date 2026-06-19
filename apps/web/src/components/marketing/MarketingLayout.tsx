@@ -15,7 +15,7 @@ interface MarketingLayoutProps {
  * MarketingLayout — public-page shell.
  *
  * Wraps content in:
- *   - AuthProvider — so the navbar can show "Go to console" when the
+ *   - AuthProvider — so the navbar can show "Open console" when the
  *     visitor is signed in. AuthProvider's /me call is best-effort and
  *     fails silently for anonymous visitors, so this is safe on the
  *     public surface.

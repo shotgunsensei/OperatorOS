@@ -33,7 +33,7 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
     try {
       await login(email, password);
     } catch (err: any) {
-      setError(err.error || 'Login failed');
+      setError(err.error || 'We could not sign you in. Check your credentials and try again.');
     } finally {
       setLoading(false);
     }
@@ -46,7 +46,8 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
     }}>
       <div style={{
         width: '100%', maxWidth: 420, background: colors.bgSecondary,
-        border: `1px solid ${colors.border}`, borderRadius: 16, padding: 40,
+        border: `1px solid ${colors.border}`, borderRadius: 16,
+        padding: 'clamp(24px, 7vw, 40px)', boxSizing: 'border-box',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
@@ -55,8 +56,10 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 24, fontWeight: 800, color: '#fff',
           }}>O</div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Welcome back</h1>
-          <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>Sign in to OperatorOS</p>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>One login. Every operation.</h1>
+          <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>
+            Sign in to the OperatorOS parent command layer.
+          </p>
         </div>
 
         {error && (
@@ -123,16 +126,16 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
               background: loading ? colors.textDim : colors.accent,
               color: '#fff', fontSize: 14, fontWeight: 600, cursor: loading ? 'default' : 'pointer',
             }}
-          >{loading ? 'Signing in...' : 'Sign in'}</button>
+          >{loading ? 'Signing in...' : 'Enter OperatorOS'}</button>
         </form>
 
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: colors.textMuted }}>
-          Don't have an account?{' '}
+          Need access to OperatorOS?{' '}
           <button
             data-testid="link-register"
             onClick={() => onSwitch('register')}
             style={{ background: 'none', border: 'none', color: colors.accent, cursor: 'pointer', fontSize: 13 }}
-          >Sign up</button>
+          >Create account</button>
         </div>
       </div>
     </div>

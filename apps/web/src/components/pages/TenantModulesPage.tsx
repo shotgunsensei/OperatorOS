@@ -52,16 +52,16 @@ export default function TenantModulesPage() {
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#fff' }}>Tenant Modules</h1>
           <p style={{ color: colors.textMuted, margin: '4px 0 0', fontSize: 13 }}>
-            Modules currently provisioned for this tenant. Platform admins manage enable/disable from Platform Command.
+            Entitlement-driven module access for the active tenant. Platform admins control provisioning from Platform Command.
           </p>
         </div>
       </header>
 
       {loading ? (
-        <div style={{ color: colors.textMuted, padding: 24 }} data-testid="modules-loading">Loading…</div>
+        <div style={{ color: colors.textMuted, padding: 24 }} data-testid="modules-loading">Loading tenant modules...</div>
       ) : items.length === 0 ? (
         <div style={{ color: colors.textMuted, padding: 24 }} data-testid="modules-empty">
-          No modules provisioned for this tenant yet.
+          No modules are provisioned for this tenant yet. Open the Marketplace to review available modules or ask a platform admin to provision access.
         </div>
       ) : (
         <div style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: 'hidden' }}>

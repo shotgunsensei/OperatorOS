@@ -21,7 +21,7 @@ const COL_MODULES = [
 
 const COL_ACTIONS = [
   { href: '/login', label: 'Login' },
-  { href: '/app', label: 'Dashboard' },
+  { href: '/app', label: 'Operator Console' },
   { href: '/modules', label: 'View Modules' },
 ];
 
@@ -62,8 +62,8 @@ export default function MarketingFooter() {
               maxWidth: 320,
             }}
           >
-            The modular command layer for modern business operations.
-            One console, every tool your team launches.
+            Parent command layer for a modular business operating system.
+            One login. Every operation.
           </p>
         </div>
 

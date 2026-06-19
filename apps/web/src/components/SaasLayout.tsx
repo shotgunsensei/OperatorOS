@@ -100,7 +100,7 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
         {(isMobile || !collapsed) && (
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.02em' }}>OperatorOS</div>
-            <div style={{ fontSize: 10, color: colors.textDim }}>Powered by Shotgun Ninjas</div>
+            <div style={{ fontSize: 10, color: colors.textDim }}>Parent command layer</div>
           </div>
         )}
         {isMobile && (

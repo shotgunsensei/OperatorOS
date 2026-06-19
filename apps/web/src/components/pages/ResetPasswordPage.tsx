@@ -27,10 +27,10 @@ export default function ResetPasswordPage({ onSwitch }: ResetPasswordPageProps) 
     setLoading(true);
     try {
       await authApi.resetPassword(token.trim(), newPassword);
-      setMessage('Password reset successfully. You can now sign in with your new password.');
+      setMessage('Password reset successfully. You can now sign in to OperatorOS.');
       setToken(''); setNewPassword(''); setConfirmPassword('');
     } catch (err: any) {
-      setError(err.error || 'Failed to reset password');
+      setError(err.error || 'We could not reset the password. Check the token and try again.');
     } finally { setLoading(false); }
   };
 
@@ -41,7 +41,8 @@ export default function ResetPasswordPage({ onSwitch }: ResetPasswordPageProps) 
     }}>
       <div style={{
         width: '100%', maxWidth: 420, background: colors.bgSecondary,
-        border: `1px solid ${colors.border}`, borderRadius: 16, padding: 40,
+        border: `1px solid ${colors.border}`, borderRadius: 16,
+        padding: 'clamp(24px, 7vw, 40px)', boxSizing: 'border-box',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
@@ -50,8 +51,10 @@ export default function ResetPasswordPage({ onSwitch }: ResetPasswordPageProps) 
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 24, fontWeight: 800, color: '#fff',
           }}>O</div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Reset password</h1>
-          <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>Enter your reset token and new password</p>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Set a new password</h1>
+          <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>
+            Use your reset token to restore OperatorOS access.
+          </p>
         </div>
 
         {error && (
@@ -99,7 +102,7 @@ export default function ResetPasswordPage({ onSwitch }: ResetPasswordPageProps) 
                 border: `1px solid ${colors.border}`, background: colors.bg,
                 color: colors.text, fontSize: 14, outline: 'none', boxSizing: 'border-box',
               }}
-              placeholder="Min 8 characters"
+              placeholder="At least 8 characters"
             />
           </div>
 

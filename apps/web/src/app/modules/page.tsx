@@ -41,7 +41,7 @@ export default function MarketingModulesPage() {
             textTransform: 'uppercase',
           }}
         >
-          Modules
+          Module ecosystem
         </span>
         <h1
           style={{
@@ -54,16 +54,16 @@ export default function MarketingModulesPage() {
             maxWidth: 840,
           }}
         >
-          Every Shotgun Ninjas module, one operator console.
+          One parent platform for every child module.
         </h1>
         <p style={{ fontSize: 17, color: brand.textSecondary, margin: '0 auto', maxWidth: 620 }}>
-          Browse the full arsenal. Status badges reflect availability today —
-          unlock more as your plan grows.
+          Browse tenant-aware modules built to share one login, one billing
+          layer, and entitlement-driven access.
         </p>
       </header>
       <ModuleGatewayGrid
-        heading="The full Shotgun Ninjas module arsenal."
-        subheading="One sign-in, one bill, one admin surface. Turn on what you need, when you need it."
+        heading="The OperatorOS module ecosystem."
+        subheading="One sign-in, one bill, one admin surface. Turn on the modules your operation needs without splitting the platform."
         testId="page-modules-grid"
       />
       <FinalCta />

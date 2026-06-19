@@ -49,7 +49,7 @@ export default function DashboardPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    saasApi.dashboard().then(setData).catch(() => toast('Failed to load dashboard', 'error')).finally(() => setLoading(false));
+    saasApi.dashboard().then(setData).catch(() => toast('Unable to load command center', 'error')).finally(() => setLoading(false));
   }, []);
 
   if (loading) return (
@@ -65,16 +65,20 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-  if (!data) return <div style={{ padding: 40, color: colors.accentRed }}>Failed to load dashboard</div>;
+  if (!data) return (
+    <div style={{ padding: 40, color: colors.accentRed }}>
+      Unable to load the command center. Refresh the page or try again after the API is reachable.
+    </div>
+  );
 
   const { stats, limits, usage, features, recentActivity } = data;
 
   return (
     <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 1200 }} data-testid="dashboard-page">
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Dashboard</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Command Center</h1>
         <p style={{ fontSize: 14, color: colors.textMuted, margin: 0 }}>
-          Your operations at a glance
+          Parent command layer status for your tenant, plan, and operating workflow.
           <span style={{
             display: 'inline-block', marginLeft: 10, padding: '2px 10px',
             borderRadius: 20, fontSize: 11, fontWeight: 600,
@@ -174,7 +178,7 @@ export default function DashboardPage() {
         <h3 style={{ fontSize: 14, fontWeight: 600, color: '#fff', margin: '0 0 16px' }}>Recent Activity</h3>
         {recentActivity.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 20, color: colors.textMuted, fontSize: 13 }}>
-            No recent activity. Start by creating a workspace!
+            No activity yet. Create a workspace, launch a module, or invite a teammate to start building an audit trail.
           </div>
         ) : (
           <div>

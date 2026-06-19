@@ -109,10 +109,10 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
   };
 
   const requestAccess = (slug: string) => {
-    // Fire-and-forget UX: log a lightweight signal and acknowledge inline.
-    // The actual workflow is owned by tenant admins via the Marketplace
-    // CTA matrix; this is the discovery-phase nudge from the launchpad.
+    // There is no backend "request access" route yet. Route the user to
+    // the Marketplace instead of pretending a request was sent.
     setRequestSent(slug);
+    onNavigate('apps');
     window.setTimeout(() => setRequestSent(null), 3500);
   };
 
@@ -228,7 +228,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
             One login. Every operation.
           </h1>
           <p style={{ color: semantic.textMuted, margin: '8px 0 0', fontSize: fontSize.md, maxWidth: 620, lineHeight: 1.55 }}>
-            Launch your unlocked modules, request higher-tier access, and keep recent work one click away.
+            Launch unlocked modules, review access options, and keep recent work one click away.
           </p>
         </div>
         <div
@@ -272,7 +272,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
       )}
 
       {loading ? (
-        <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="my-apps-loading">Loading\u2026</div>
+        <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="my-apps-loading">Loading module access...</div>
       ) : (
         <>
           {/* Task #115: apps grouped under their platform component heading,
@@ -289,7 +289,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
               >
                 {section.name}
               </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: space.lg }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%,260px),1fr))', gap: space.lg }}>
                 {section.modules.map(renderAppCard)}
               </div>
             </section>
@@ -338,7 +338,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
                 }}
               >
                 <Sparkles size={32} color={semantic.accentInfo} style={{ marginBottom: 12 }} />
-                <div>You don\u2019t have any apps yet \u2014 head to the marketplace to activate one.</div>
+                <div>No modules are unlocked for this tenant yet. Open the Marketplace to review plan and add-on options.</div>
               </div>
             )}
           </div>
@@ -353,10 +353,10 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: space.md }}>
             <Lock size={14} color={semantic.accentWarning} />
-            <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Request access</h2>
+            <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Access options</h2>
           </div>
           <p style={{ color: semantic.textMuted, fontSize: fontSize.sm, margin: `0 0 ${space.md}px` }}>
-            These apps are available on a higher plan or as add-ons. Request access and a tenant admin will be notified.
+            These modules require a higher plan, add-on purchase, or tenant admin grant. OperatorOS will not unlock them from this screen.
           </p>
           <div style={{ display: 'grid', gap: space.sm }}>
             {locked.map(l => (
@@ -364,7 +364,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
                 key={l.module.slug}
                 data-testid={`request-row-${l.module.slug}`}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: space.md,
+                  display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: space.md,
                   padding: '10px 12px', borderRadius: radius.md,
                   background: semantic.bg, border: `1px solid ${semantic.border}`,
                 }}
@@ -377,9 +377,9 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
                 <button
                   data-testid={`button-request-${l.module.slug}`}
                   onClick={() => requestAccess(l.module.slug)}
-                  style={{ ...buttonStyles.secondary, padding: '6px 12px', fontSize: fontSize.sm }}
+                  style={{ ...buttonStyles.secondary, padding: '6px 12px', fontSize: fontSize.sm, whiteSpace: 'nowrap' }}
                 >
-                  {requestSent === l.module.slug ? 'Requested' : 'Request access'}
+                  {requestSent === l.module.slug ? 'Opening Marketplace' : 'View access options'}
                 </button>
               </div>
             ))}
@@ -393,7 +393,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
         style={{
           marginTop: space.xxl,
           display: 'grid', gap: space.lg,
-          gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))',
+          gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,260px),1fr))',
         }}
       >
         <div data-testid="my-apps-announcements" style={cardStyle}>
@@ -403,7 +403,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
           </div>
           <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 }}>
             <li style={{ fontSize: fontSize.body, color: semantic.textMuted }}>
-              <span style={badgeStyles.info}>new</span> Per-user module access is now live for tenant admins.
+              <span style={badgeStyles.info}>new</span> Tenant admins can manage per-user module access.
             </li>
             <li style={{ fontSize: fontSize.body, color: semantic.textMuted }}>
               <span style={badgeStyles.success}>shipped</span> Marketplace status filters and add-on CTAs.

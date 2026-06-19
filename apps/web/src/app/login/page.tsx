@@ -13,7 +13,7 @@
  *
  * Keeping login on its own route (instead of overloading `/app`) is
  * what lets `/app` itself enforce the 307-redirect contract without
- * creating a redirect loop with the "Launch console" / "Sign in" CTAs.
+ * creating a redirect loop with the "Launch OperatorOS" / "Sign in" CTAs.
  */
 
 import React, { useEffect } from 'react';

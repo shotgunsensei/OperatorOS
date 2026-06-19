@@ -95,7 +95,7 @@ function InternalAppContent() {
   if (loading) {
     return (
       <div style={{ padding: space.xxl, color: semantic.textMuted }} data-testid="app-shell-loading">
-        Loading {slug}\u2026
+        Loading module access...
       </div>
     );
   }
@@ -116,10 +116,10 @@ function InternalAppContent() {
           <AlertTriangle size={18} color={semantic.accentDanger} />
           <div>
             <div style={{ color: semantic.accentDanger, fontWeight: 600 }}>
-              {err ? 'Could not load this module' : `${slug} is not enabled for your tenant`}
+              {err ? 'Could not load this module' : `${slug} is not enabled for this tenant`}
             </div>
             <div style={{ color: semantic.textMuted, fontSize: fontSize.sm, marginTop: 4 }}>
-              {err ?? 'Visit the App Marketplace to request access or upgrade your plan.'}
+              {err ?? 'Open the Module Marketplace or ask a tenant admin to grant access. OperatorOS will enforce entitlement before launch.'}
             </div>
           </div>
         </div>
@@ -176,7 +176,7 @@ function InternalAppContent() {
               data-testid={`text-no-baseurl-${mod.slug}`}
               style={{ color: semantic.textMuted, fontSize: fontSize.sm }}
             >
-              No external URL configured for this module yet.
+              This module is enabled, but no external launch URL is configured yet.
             </span>
           )}
         </div>

@@ -2,22 +2,22 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Boxes, KeyRound, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, Boxes, KeyRound, ShieldCheck, SlidersHorizontal } from 'lucide-react';
 import { brand } from '@/lib/brand';
 import { useAuth } from '../../AuthProvider';
 import { primaryCtaTarget } from '@/lib/marketing-cta';
 
 const HERO_STATS = [
-  { label: 'Login layer', value: 'SSO-ready' },
-  { label: 'Module model', value: 'Entitlements' },
-  { label: 'Operator flow', value: 'One console' },
+  { label: 'Parent layer', value: 'OperatorOS' },
+  { label: 'Access model', value: 'Entitlements' },
+  { label: 'Tenant model', value: 'Scoped modules' },
 ];
 
 const VALUE_STRIP = [
   { label: 'One login', icon: KeyRound },
-  { label: 'Multi-tenant ready', icon: ShieldCheck },
-  { label: 'Modular apps', icon: Boxes },
-  { label: 'Automation first', icon: Sparkles },
+  { label: 'Tenant-aware modules', icon: ShieldCheck },
+  { label: 'Modular business OS', icon: Boxes },
+  { label: 'Entitlement-driven access', icon: SlidersHorizontal },
 ];
 
 /**
@@ -69,6 +69,9 @@ export default function Hero() {
         .operatoros-hero-media {
           object-position: center;
         }
+        .operatoros-hero-module-row {
+          grid-template-columns: 112px minmax(0, 1fr) auto;
+        }
         @media (max-width: 980px) {
           .operatoros-hero-grid {
             grid-template-columns: 1fr;
@@ -90,6 +93,22 @@ export default function Hero() {
           }
           .operatoros-hero-visual {
             min-height: 420px;
+          }
+          .operatoros-hero-stat-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .operatoros-hero-module-row {
+            grid-template-columns: minmax(0, 1fr) auto;
+          }
+          .operatoros-hero-module-row .operatoros-module-meter {
+            display: none;
+          }
+          .operatoros-hero-floating {
+            position: relative !important;
+            left: auto !important;
+            bottom: auto !important;
+            width: auto !important;
+            margin-top: 14px;
           }
           .operatoros-hero-media {
             height: 92px !important;
@@ -125,7 +144,7 @@ export default function Hero() {
               marginBottom: 18,
             }}
           >
-            Your business command layer
+            Parent command layer
           </span>
           <h1
             className="operatoros-hero-title"
@@ -152,9 +171,9 @@ export default function Hero() {
               maxWidth: 640,
             }}
           >
-            OperatorOS is the parent command layer for business operations,
-            automation, field workflows, MSP systems, media tools, and
-            AI-powered execution.
+            OperatorOS is a modular business operating system for tenant-aware
+            modules, entitlement-driven access, billing control, and child-app
+            handoff.
           </p>
           <div className="operatoros-hero-actions">
             <Link
@@ -175,7 +194,7 @@ export default function Hero() {
                 boxShadow: brand.ctaGlowLarge,
               }}
             >
-              Enter OperatorOS <ArrowRight size={16} />
+              Launch OperatorOS <ArrowRight size={16} />
             </Link>
             <Link
               href="/modules"
@@ -195,7 +214,7 @@ export default function Hero() {
                 border: `1px solid ${brand.borderStrong}`,
               }}
             >
-              View Modules
+              View module ecosystem
             </Link>
           </div>
           <div
@@ -303,7 +322,7 @@ export default function Hero() {
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+            <div className="operatoros-hero-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
               {HERO_STATS.map((stat) => (
                 <div
                   key={stat.label}
@@ -332,9 +351,9 @@ export default function Hero() {
               {['TradeFlowKit', 'TechDeck', 'PulseDesk', 'Ninjamation'].map((name, index) => (
                 <div
                   key={name}
+                  className="operatoros-hero-module-row"
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '112px minmax(0, 1fr) auto',
                     gap: 10,
                     alignItems: 'center',
                     padding: index === 0 ? '0 0 12px' : '12px 0',
@@ -343,6 +362,7 @@ export default function Hero() {
                 >
                   <span style={{ color: brand.textPrimary, fontWeight: 700, fontSize: 13 }}>{name}</span>
                   <span
+                    className="operatoros-module-meter"
                     aria-hidden
                     style={{
                       height: 6,
@@ -369,6 +389,7 @@ export default function Hero() {
               border: `1px solid ${brand.borderSoft}`,
               backdropFilter: 'blur(12px)',
             }}
+            className="operatoros-hero-floating"
           >
             <div style={{ color: brand.accentCyan, fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>
               From chaos to command

@@ -55,9 +55,9 @@ export function moduleCtaTarget(
   status: MarketingStatus,
   signedIn: boolean,
 ): CtaTarget {
-  if (status === 'Coming Soon') return { href: '/pricing', label: 'Notify me' };
-  if (status === 'Locked')      return { href: '/pricing', label: 'Unlock' };
+  if (status === 'Coming Soon') return { href: '/pricing', label: 'View access options' };
+  if (status === 'Locked')      return { href: '/pricing', label: 'View access options' };
   // Available / Beta — surface depends on auth state only.
-  if (signedIn)                 return { href: '/app',     label: 'Open' };
+  if (signedIn)                 return { href: '/app',     label: 'Open in OperatorOS' };
   return { href: '/login', label: 'Sign in to launch' };
 }
