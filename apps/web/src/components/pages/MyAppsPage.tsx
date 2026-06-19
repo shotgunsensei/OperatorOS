@@ -10,6 +10,7 @@ import {
   semantic, space, radius, fontSize,
 } from '@/lib/design-tokens';
 import { meApi, modulesApi } from '@/lib/auth';
+import { MARKETING_MODULES } from '@/lib/marketing-catalog';
 
 interface MyAppsPageProps {
   onNavigate: (page: string) => void;
@@ -39,6 +40,7 @@ interface CatalogModule {
 
 const RECENT_KEY = 'operatoros.recentApps';
 const RECENT_MAX = 4;
+const marketingBySlug = new Map(MARKETING_MODULES.map((m) => [m.slug, m]));
 
 function readRecent(): string[] {
   if (typeof window === 'undefined') return [];
@@ -151,6 +153,8 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
       disabled={launching === m.slug}
       style={{
         ...cardStyle,
+        padding: 0,
+        overflow: 'hidden',
         textAlign: 'left',
         cursor: launching === m.slug ? 'wait' : 'pointer',
         color: semantic.text,
@@ -167,38 +171,78 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
         e.currentTarget.style.boxShadow = '';
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: space.md, marginBottom: space.md }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: radius.md,
-          background: 'linear-gradient(135deg, #58a6ff22, #bc8cff22)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          border: `1px solid ${semantic.border}`,
-        }}>
-          <Rocket size={20} color={semantic.accent} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: fontSize.md, color: '#fff' }}>{m.name}</div>
-          <div style={{ fontSize: fontSize.xs, color: semantic.textDim, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            {m.category || 'app'}
+      {marketingBySlug.get(m.slug)?.imageSrc && (
+        <img
+          src={marketingBySlug.get(m.slug)?.imageSrc}
+          alt={`${m.name} application launch card visual.`}
+          loading="lazy"
+          style={{ width: '100%', height: 118, objectFit: 'cover', display: 'block' }}
+        />
+      )}
+      <div style={{ padding: space.lg }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: space.md, marginBottom: space.md }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: radius.md,
+            background: 'linear-gradient(135deg, #58a6ff22, #bc8cff22)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: `1px solid ${semantic.border}`,
+          }}>
+            <Rocket size={20} color={semantic.accent} />
           </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 600, fontSize: fontSize.md, color: '#fff' }}>{m.name}</div>
+            <div style={{ fontSize: fontSize.xs, color: semantic.textDim, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              {m.category || 'app'}
+            </div>
+          </div>
+          <ExternalLink size={14} color={semantic.textDim} />
         </div>
-        <ExternalLink size={14} color={semantic.textDim} />
+        <p style={{ fontSize: fontSize.body, color: semantic.textMuted, margin: 0, minHeight: 36 }}>
+          {marketingBySlug.get(m.slug)?.outcome || m.description || 'Open this app.'}
+        </p>
       </div>
-      <p style={{ fontSize: fontSize.body, color: semantic.textMuted, margin: 0, minHeight: 36 }}>
-        {m.description || 'Open this app.'}
-      </p>
     </button>
   );
 
   return (
     <div style={{ padding: space.xxl, maxWidth: 1200, margin: '0 auto' }} data-testid="page-my-apps">
-      <header style={{ marginBottom: space.xl }}>
-        <h1 style={{ fontSize: fontSize.h1, fontWeight: 700, margin: 0, color: '#fff', letterSpacing: '-0.02em' }}>
-          My Apps
-        </h1>
-        <p style={{ color: semantic.textMuted, margin: '6px 0 0', fontSize: fontSize.md }}>
-          Launchpad for every module you have access to.
-        </p>
+      <header
+        style={{
+          marginBottom: space.xl,
+          padding: '24px 24px 22px',
+          borderRadius: 16,
+          border: `1px solid ${semantic.border}`,
+          background:
+            'linear-gradient(135deg, rgba(88,166,255,0.13), rgba(188,140,255,0.08)), linear-gradient(180deg, #0d1117, #010409)',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: 18,
+          alignItems: 'center',
+        }}
+      >
+        <div>
+          <div style={{ fontSize: fontSize.xs, color: semantic.accent, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+            Operator launchpad
+          </div>
+          <h1 style={{ fontSize: 30, fontWeight: 800, margin: 0, color: '#fff', letterSpacing: 0 }}>
+            One login. Every operation.
+          </h1>
+          <p style={{ color: semantic.textMuted, margin: '8px 0 0', fontSize: fontSize.md, maxWidth: 620, lineHeight: 1.55 }}>
+            Launch your unlocked modules, request higher-tier access, and keep recent work one click away.
+          </p>
+        </div>
+        <div
+          aria-hidden
+          style={{
+            display: 'grid',
+            gap: 8,
+            minWidth: 170,
+          }}
+        >
+          <span style={{ ...badgeStyles.success, textAlign: 'center' }}>Auth active</span>
+          <span style={{ ...badgeStyles.info, textAlign: 'center' }}>Entitlements synced</span>
+          <span style={{ ...badgeStyles.neutral, textAlign: 'center' }}>Module handoff ready</span>
+        </div>
       </header>
 
       {/* Recent apps strip */}

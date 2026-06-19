@@ -6,6 +6,7 @@ import { modulesApi, meApi } from '@/lib/auth';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/components/AuthProvider';
 import { colors } from '@/lib/design-tokens';
+import { MARKETING_MODULES } from '@/lib/marketing-catalog';
 
 type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
 type ModuleCta = 'open' | 'upgrade' | 'buy_addon' | 'coming_soon' | 'disabled';
@@ -64,6 +65,8 @@ const statusLabel: Record<string, { label: string; color: string }> = {
   coming_soon: { label: 'Coming Soon', color: '#8b949e' },
   disabled:    { label: 'Disabled',    color: '#f85149' },
 };
+
+const marketingBySlug = new Map(MARKETING_MODULES.map((m) => [m.slug, m]));
 
 function priceLabel(cents: number | null): string {
   if (!cents || cents <= 0) return '';
@@ -230,6 +233,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
     const srcKey = unlocked && access_source ? access_source : 'locked';
     const src = sourceLabel[srcKey] || sourceLabel.locked;
     const status = statusLabel[m.status] || statusLabel.coming_soon;
+    const marketing = marketingBySlug.get(m.slug);
 
     return (
       <div
@@ -239,10 +243,11 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
           background: colors.bgSecondary,
           border: `1px solid ${colors.border}`,
           borderRadius: 12,
-          padding: 20,
+          padding: 0,
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
+          overflow: 'hidden',
           opacity: unlocked ? 1 : 0.85,
           transition: 'transform 0.15s, border-color 0.15s, box-shadow 0.15s',
         }}
@@ -257,7 +262,15 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
           e.currentTarget.style.boxShadow = 'none';
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {marketing?.imageSrc && (
+          <img
+            src={marketing.imageSrc}
+            alt={`${m.name} marketplace module visual.`}
+            loading="lazy"
+            style={{ width: '100%', height: 128, objectFit: 'cover', display: 'block' }}
+          />
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: marketing?.imageSrc ? '0 20px' : '20px 20px 0' }}>
           <div style={{
             width: 40, height: 40, borderRadius: 10,
             background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)',
@@ -274,11 +287,11 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
           }}>{src.label}</span>
         </div>
 
-        <div style={{ fontSize: 13, color: colors.textMuted, minHeight: 36 }}>
-          {m.description || 'No description.'}
+        <div style={{ fontSize: 13, color: colors.textMuted, minHeight: 36, padding: '0 20px' }}>
+          {marketing?.outcome || m.description || 'No description.'}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: colors.textDim }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: colors.textDim, padding: '0 20px' }}>
           <span>Min plan: <strong style={{ color: colors.text }}>{planTierLabel[m.planMin] || m.planMin}</strong></span>
           {!unlocked && reason && (
             <span data-testid={`module-reason-${m.slug}`} style={{ fontStyle: 'italic' }}>
@@ -287,7 +300,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 'auto', padding: '0 20px 20px' }}>
           {cta === 'open' && (
             <button
               data-testid={`button-launch-${m.slug}`}

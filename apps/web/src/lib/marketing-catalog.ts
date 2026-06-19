@@ -51,6 +51,12 @@ export interface MarketingModule {
   name: string;
   /** One-sentence outcome (not feature). */
   outcome: string;
+  /** Primary user or buyer the module is built for. */
+  audience: string;
+  /** Plain-language problem the module solves. */
+  solves: string;
+  /** Optional curated public media asset for card thumbnails. */
+  imageSrc?: string;
   /** Default public-facing status — overlaid with entitlement data when signed in. */
   status: MarketingStatus;
   /** Source-of-truth entry for plan tier / ord. */
@@ -58,17 +64,56 @@ export interface MarketingModule {
 }
 
 const OUTCOMES: Record<string, string> = {
-  'tradeflowkit':     'Run every job, quote, and tech from one screen.',
-  'torqueshed':       'Move cars through the shop without losing an invoice.',
-  'techdeck':         'Give onsite techs a command center in their pocket.',
-  'pulsedesk':        'Resolve tickets faster with a lean shared inbox.',
-  'faultlinelab':     'Diagnose, document, and learn from every fault.',
-  'brandforgeos':     'Run the body shop floor end-to-end with one OS.',
-  'snapproofos':      'Prove the work was done with one tap of the camera.',
-  'studyforge-ai':    'Turn any document into a personal training plan.',
-  'ninja-launch-kit': 'Stand up internal tools in hours, not sprints.',
-  'callcommand-ai':   'Let an AI agent handle the calls you cannot.',
-  'ninjamation':      'Connect your apps and let the workflows run themselves.',
+  'tradeflowkit':     'Run quotes, jobs, invoices, and payments from one operating lane.',
+  'torqueshed':       'Move vehicles through diagnostics, repair, proof, and closeout.',
+  'techdeck':         'Give technicians a dense MSP command surface for daily work.',
+  'pulsedesk':        'Coordinate clinical and support workflows without losing escalations.',
+  'faultlinelab':     'Turn hard failures into documented diagnostic evidence trails.',
+  'brandforgeos':     'Plan, generate, and ship brand assets from one creative console.',
+  'snapproofos':      'Capture proof, screenshots, and work evidence before trust breaks.',
+  'studyforge-ai':    'Turn operational knowledge into repeatable training sessions.',
+  'ninja-launch-kit': 'Stand up launch assets and internal tools without a long rebuild.',
+  'callcommand-ai':   'Route phone work through an AI-assisted call operations layer.',
+  'ninjamation':      'Connect modules and automate cross-app handoffs.',
+};
+
+const AUDIENCES: Record<string, string> = {
+  'tradeflowkit':     'Service businesses and operators',
+  'torqueshed':       'Mechanics and repair shops',
+  'techdeck':         'MSP teams and field technicians',
+  'pulsedesk':        'Healthcare operations teams',
+  'faultlinelab':     'Troubleshooters and technical leads',
+  'brandforgeos':     'Founders, marketers, and creators',
+  'snapproofos':      'Teams that need proof and verification',
+  'studyforge-ai':    'Training teams and operators',
+  'ninja-launch-kit': 'Builders shipping internal tools',
+  'callcommand-ai':   'Teams with high-volume calls',
+  'ninjamation':      'Automation-heavy operators',
+};
+
+const SOLVES: Record<string, string> = {
+  'tradeflowkit':     'Revenue work scattered across quotes, invoices, and status updates.',
+  'torqueshed':       'Repair knowledge trapped in conversations and disconnected tickets.',
+  'techdeck':         'Technicians jumping between notes, scripts, tickets, and tools.',
+  'pulsedesk':        'Escalations and handoffs disappearing between busy departments.',
+  'faultlinelab':     'Root-cause analysis that never becomes reusable knowledge.',
+  'brandforgeos':     'Campaign assets and positioning spread across disconnected docs.',
+  'snapproofos':      'Missing evidence when customers, auditors, or teams ask what happened.',
+  'studyforge-ai':    'Training material that is hard to reuse, test, or operationalize.',
+  'ninja-launch-kit': 'Slow setup work before a new product or internal tool can ship.',
+  'callcommand-ai':   'Missed calls and repetitive phone workflows draining operator time.',
+  'ninjamation':      'Manual handoffs between tools that should already know what changed.',
+};
+
+const IMAGE_SRC: Record<string, string> = {
+  'tradeflowkit': '/media/operatoros/module-tradeflowkit.jpg',
+  'torqueshed': '/media/operatoros/module-torqueshed.jpg',
+  'techdeck': '/media/operatoros/module-techdeck.jpg',
+  'pulsedesk': '/media/operatoros/module-pulsedesk.jpg',
+  'faultlinelab': '/media/operatoros/module-faultlinelab.jpg',
+  'brandforgeos': '/media/operatoros/module-brandforgeos.jpg',
+  'snapproofos': '/media/operatoros/module-snapproofos.jpg',
+  'ninjamation': '/media/operatoros/module-ninjamation.jpg',
 };
 
 function statusFor(entry: MarketingCatalogSource): MarketingStatus {
@@ -87,6 +132,9 @@ export const MARKETING_MODULES: readonly MarketingModule[] = SOURCE
     slug: entry.slug,
     name: entry.name,
     outcome: OUTCOMES[entry.slug] ?? entry.description,
+    audience: AUDIENCES[entry.slug] ?? 'Operations teams',
+    solves: SOLVES[entry.slug] ?? entry.description,
+    imageSrc: IMAGE_SRC[entry.slug],
     status: statusFor(entry),
     source: entry,
   }));

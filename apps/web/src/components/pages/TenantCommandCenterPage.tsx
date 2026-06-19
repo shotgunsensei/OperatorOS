@@ -155,19 +155,55 @@ export default function TenantCommandCenterPage({ onNavigate }: Props) {
 
   return (
     <div style={{ padding: space.xxl, maxWidth: 1200, margin: '0 auto' }} data-testid="page-command-center">
-      <header style={{ marginBottom: space.xl, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <Building2 size={28} color={semantic.accent} />
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#fff' }}>{tenantName || 'Tenant Command Center'}</h1>
-          <p style={{ color: semantic.textMuted, margin: '4px 0 0', fontSize: fontSize.body }}>
-            Operational overview for the active tenant.
-          </p>
-        </div>
-        {tenantStatus && tenantStatus !== 'active' && (
-          <span data-testid="tenant-status-badge" style={badgeStyles.warning}>
-            <AlertTriangle size={10} style={{ marginRight: 4, verticalAlign: 'middle' }} /> {tenantStatus}
+      <header
+        style={{
+          marginBottom: space.xl,
+          padding: '24px 24px 22px',
+          borderRadius: 16,
+          border: `1px solid ${semantic.border}`,
+          background:
+            'linear-gradient(135deg, rgba(88,166,255,0.12), rgba(63,185,80,0.08)), linear-gradient(180deg, #0d1117, #010409)',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: 18,
+          alignItems: 'center',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 14,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, rgba(88,166,255,0.22), rgba(188,140,255,0.18))',
+              border: `1px solid ${semantic.border}`,
+            }}
+          >
+            <Building2 size={24} color={semantic.accent} />
           </span>
-        )}
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: fontSize.xs, color: semantic.accent, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+              Tenant command center
+            </div>
+            <h1 style={{ fontSize: 30, fontWeight: 800, margin: 0, color: '#fff', letterSpacing: 0 }}>{tenantName || 'Tenant Command Center'}</h1>
+            <p style={{ color: semantic.textMuted, margin: '6px 0 0', fontSize: fontSize.body, lineHeight: 1.55 }}>
+              Parent-level view of members, modules, billing, usage, and audit activity.
+            </p>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+          <span style={{ ...badgeStyles.info, textAlign: 'center' }}>Role gated</span>
+          <span style={{ ...badgeStyles.success, textAlign: 'center' }}>Tenant scoped</span>
+          <span style={{ ...badgeStyles.neutral, textAlign: 'center' }}>Audit aware</span>
+          {tenantStatus && tenantStatus !== 'active' && (
+            <span data-testid="tenant-status-badge" style={{ ...badgeStyles.warning, gridColumn: '1 / -1', textAlign: 'center' }}>
+              <AlertTriangle size={10} style={{ marginRight: 4, verticalAlign: 'middle' }} /> {tenantStatus}
+            </span>
+          )}
+        </div>
       </header>
 
       {/* Primary CTAs */}

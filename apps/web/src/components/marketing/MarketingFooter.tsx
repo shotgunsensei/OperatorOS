@@ -7,26 +7,27 @@ import { brand } from '@/lib/design-tokens';
 
 const COL_PRODUCT = [
   { href: '/modules', label: 'Modules' },
+  { href: '/ecosystem', label: 'Ecosystem' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/how-it-works', label: 'How It Works' },
 ];
 
-const COL_COMPANY = [
-  { href: '/', label: 'About' },
-  { href: '/', label: 'Contact' },
+const COL_MODULES = [
+  { href: '/modules', label: 'TradeFlowKit' },
+  { href: '/modules', label: 'TechDeck' },
+  { href: '/modules', label: 'PulseDesk' },
+  { href: '/modules', label: 'Ninjamation' },
 ];
 
-const COL_LEGAL = [
-  { href: '/', label: 'Privacy' },
-  { href: '/', label: 'Terms' },
+const COL_ACTIONS = [
+  { href: '/login', label: 'Login' },
+  { href: '/app', label: 'Dashboard' },
+  { href: '/modules', label: 'View Modules' },
 ];
 
 /**
  * MarketingFooter — closes the public layout with brand identity,
  * link columns, and the "Powered by Shotgun Ninjas Productions" attribution.
- *
- * Legal column links are placeholders pointed at `/`; Phase 3 swaps
- * them for real policy pages.
  */
 export default function MarketingFooter() {
   const year = new Date().getFullYear();
@@ -67,8 +68,8 @@ export default function MarketingFooter() {
         </div>
 
         <FooterColumn title="Product" links={COL_PRODUCT} />
-        <FooterColumn title="Company" links={COL_COMPANY} />
-        <FooterColumn title="Legal" links={COL_LEGAL} />
+        <FooterColumn title="Modules" links={COL_MODULES} />
+        <FooterColumn title="Actions" links={COL_ACTIONS} />
       </div>
 
       <div
