@@ -13,8 +13,8 @@ import { marketingPricingFaqs, type MarketingPricingFaq } from '@/lib/marketing-
  *   - the section is still scannable with JavaScript disabled,
  *   - each question is independently expandable without managing state.
  *
- * Styling sticks to the Phase 3 brand tokens (`brand.*`) so the block
- * reads as part of the same surface as the tier grid and add-on table.
+ * Styling uses the shared marketing brand tokens so the block reads as
+ * part of the stack configurator.
  */
 export default function PricingFaq({
   testId = 'marketing-pricing-faq',

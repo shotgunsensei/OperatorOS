@@ -57,10 +57,10 @@ export default function PricingTeaser() {
               letterSpacing: '-0.01em',
             }}
           >
-            Start free. Add modules as your operation grows.
+            OperatorOS is free. Build the paid app stack you need.
           </h2>
           <p style={{ fontSize: 14, lineHeight: 1.55, color: brand.textSecondary, margin: 0 }}>
-            Four tiers, one console. No per-module rebuilds. No surprise migrations.
+            Choose TradeFlowKit, PulseDesk, or TechDeck with 5 seats, included apps, and one free companion module.
           </p>
         </div>
         <style>{`
@@ -90,7 +90,7 @@ export default function PricingTeaser() {
             whiteSpace: 'nowrap',
           }}
         >
-          See pricing <ArrowRight size={16} aria-hidden />
+          Build Your Stack <ArrowRight size={16} aria-hidden />
         </Link>
       </div>
     </section>

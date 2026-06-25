@@ -1,7 +1,7 @@
 /**
  * Marketing-side module catalog.
  *
- * A public-safe mirror of the 11-module Shotgun Ninjas ecosystem used
+ * A public-safe mirror of the Shotgun Ninjas module ecosystem used
  * by Phase 2 marketing surfaces (homepage orbit, gateway grid,
  * /modules page, /how-it-works page). Mirrors the slug/name/plan/ord
  * from `packages/sdk/src/catalog.ts` and adds the outcome-led
@@ -36,12 +36,13 @@ const SOURCE: readonly MarketingCatalogSource[] = [
   { slug: 'techdeck',         name: 'TechDeck',         description: 'Onsite tech command center',                 planMin: 'starter', ord: 3,  defaultStatus: 'live' },
   { slug: 'pulsedesk',        name: 'PulseDesk',        description: 'Healthcare operations coordination',         planMin: 'pro',     ord: 4,  defaultStatus: 'live' },
   { slug: 'faultlinelab',     name: 'FaultlineLab',     description: 'Diagnostic + RCA workflow',                  planMin: 'pro',     ord: 5,  defaultStatus: 'live' },
-  { slug: 'brandforgeos',     name: 'BrandForgeOS',     description: 'Brand and marketing command system',         planMin: 'pro',     ord: 6,  defaultStatus: 'live' },
-  { slug: 'snapproofos',      name: 'SnapProofOS',      description: 'Photo-based proof of work',                  planMin: 'elite',   ord: 7,  defaultStatus: 'live' },
-  { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                planMin: 'elite',   ord: 8,  defaultStatus: 'live' },
-  { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Build & ship internal tools fast',           planMin: 'elite',   ord: 9,  defaultStatus: 'live' },
-  { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'AI phone agent + call automation',           planMin: 'elite',   ord: 10, defaultStatus: 'live' },
-  { slug: 'ninjamation',      name: 'Ninjamation',      description: 'Cross-app workflow automation',              planMin: 'elite',   ord: 11, defaultStatus: 'live' },
+  { slug: 'ninja-pool-hall',  name: 'Ninja Pool Hall',  description: 'Companion engagement experience',            planMin: 'starter', ord: 6,  defaultStatus: 'coming_soon' },
+  { slug: 'brandforgeos',     name: 'BrandForgeOS',     description: 'Brand and marketing command system',         planMin: 'pro',     ord: 7,  defaultStatus: 'live' },
+  { slug: 'snapproofos',      name: 'SnapProofOS',      description: 'Photo-based proof of work',                  planMin: 'elite',   ord: 8,  defaultStatus: 'live' },
+  { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                planMin: 'elite',   ord: 9,  defaultStatus: 'live' },
+  { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Build & ship internal tools fast',           planMin: 'elite',   ord: 10, defaultStatus: 'live' },
+  { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'AI phone agent + call automation',           planMin: 'elite',   ord: 11, defaultStatus: 'live' },
+  { slug: 'ninjamation',      name: 'Ninjamation',      description: 'Cross-app workflow automation',              planMin: 'elite',   ord: 12, defaultStatus: 'live' },
 ];
 
 export type MarketingStatus = 'Available' | 'Coming Soon' | 'Beta' | 'Locked';
@@ -69,6 +70,7 @@ const OUTCOMES: Record<string, string> = {
   'techdeck':         'Give technicians a dense MSP command surface for daily work.',
   'pulsedesk':        'Coordinate clinical and support workflows without losing escalations.',
   'faultlinelab':     'Turn hard failures into documented diagnostic evidence trails.',
+  'ninja-pool-hall':  'Give the organization an included companion engagement experience.',
   'brandforgeos':     'Plan, generate, and ship brand assets from one creative console.',
   'snapproofos':      'Capture proof, screenshots, and work evidence before trust breaks.',
   'studyforge-ai':    'Turn operational knowledge into repeatable training sessions.',
@@ -83,6 +85,7 @@ const AUDIENCES: Record<string, string> = {
   'techdeck':         'MSP teams and field technicians',
   'pulsedesk':        'Healthcare operations teams',
   'faultlinelab':     'Troubleshooters and technical leads',
+  'ninja-pool-hall':  'Operator teams and communities',
   'brandforgeos':     'Founders, marketers, and creators',
   'snapproofos':      'Teams that need proof and verification',
   'studyforge-ai':    'Training teams and operators',
@@ -97,6 +100,7 @@ const SOLVES: Record<string, string> = {
   'techdeck':         'Technicians jumping between notes, scripts, tickets, and tools.',
   'pulsedesk':        'Escalations and handoffs disappearing between busy departments.',
   'faultlinelab':     'Root-cause analysis that never becomes reusable knowledge.',
+  'ninja-pool-hall':  'Teams lacking a lightweight shared engagement space.',
   'brandforgeos':     'Campaign assets and positioning spread across disconnected docs.',
   'snapproofos':      'Missing evidence when customers, auditors, or teams ask what happened.',
   'studyforge-ai':    'Training material that is hard to reuse, test, or operationalize.',

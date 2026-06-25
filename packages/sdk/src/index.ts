@@ -1,5 +1,6 @@
 export * from './catalog.js';
 export * from './ecosystem.js';
+export * from './products.js';
 
 export interface HealthResponse {
   status: 'healthy' | 'degraded' | 'unhealthy';

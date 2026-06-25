@@ -76,6 +76,19 @@
       "ord": 5
     },
     {
+      "slug": "ninja-pool-hall",
+      "name": "Ninja Pool Hall",
+      "category": "support",
+      "description": "Companion engagement experience",
+      "ecosystemUrl": "https://ninja-pool-hall.operatoros.net",
+      "status": "planned",
+      "launchMode": "subdomain",
+      "authMode": "sso",
+      "billingMode": "operatoros",
+      "iconKey": "ninja-pool-hall",
+      "ord": 6
+    },
+    {
       "slug": "brandforgeos",
       "name": "BrandForgeOS",
       "category": "ops",
@@ -86,7 +99,7 @@
       "authMode": "sso",
       "billingMode": "operatoros",
       "iconKey": "brandforgeos",
-      "ord": 6
+      "ord": 7
     },
     {
       "slug": "snapproofos",
@@ -99,7 +112,7 @@
       "authMode": "sso",
       "billingMode": "operatoros",
       "iconKey": "snapproofos",
-      "ord": 7
+      "ord": 8
     },
     {
       "slug": "studyforge-ai",
@@ -112,7 +125,7 @@
       "authMode": "sso",
       "billingMode": "operatoros",
       "iconKey": "studyforge-ai",
-      "ord": 8
+      "ord": 9
     },
     {
       "slug": "ninja-launch-kit",
@@ -125,7 +138,7 @@
       "authMode": "sso",
       "billingMode": "operatoros",
       "iconKey": "ninja-launch-kit",
-      "ord": 9
+      "ord": 10
     },
     {
       "slug": "callcommand-ai",
@@ -138,7 +151,7 @@
       "authMode": "sso",
       "billingMode": "operatoros",
       "iconKey": "callcommand-ai",
-      "ord": 10
+      "ord": 11
     },
     {
       "slug": "ninjamation",
@@ -151,7 +164,7 @@
       "authMode": "sso",
       "billingMode": "operatoros",
       "iconKey": "ninjamation",
-      "ord": 11
+      "ord": 12
     }
   ]
 }

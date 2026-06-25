@@ -7,6 +7,7 @@ import {
   semantic, space, fontSize,
 } from '@/lib/design-tokens';
 import { billingApi, meApi, modulesApi } from '@/lib/auth';
+import { COMPANION_MODULES, CORE_PRODUCTS_BY_KEY } from '@operatoros/sdk';
 
 interface AddonRow {
   module: { slug: string; name: string };
@@ -22,6 +23,7 @@ export default function TenantBillingPage() {
   const [subscription, setSubscription] = useState<any | null>(null);
   const [usage, setUsage] = useState<any | null>(null);
   const [addons, setAddons] = useState<AddonRow[]>([]);
+  const [stack, setStack] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -31,13 +33,15 @@ export default function TenantBillingPage() {
     const current = me.current ?? me.tenants?.[0]?.id ?? null;
     const t = current ? me.tenants.find((x: any) => x.id === current) : null;
     if (t) { setTenantName(t.name); setTenantRole(t.role ?? null); }
-    const [sub, use, mods] = await Promise.all([
+    const [sub, use, mods, stackData] = await Promise.all([
       billingApi.getSubscription().catch(() => null),
       billingApi.getUsage().catch(() => null),
       modulesApi.list().catch(() => ({ modules: [] })),
+      billingApi.getStack().catch(() => null),
     ]);
     setSubscription(sub);
     setUsage(use);
+    setStack(stackData);
     const all: AddonRow[] = (mods.modules ?? []) as any;
     setAddons(all.filter(m =>
       m.access_source === 'addon' || m.cta === 'buy_addon',
@@ -78,6 +82,16 @@ export default function TenantBillingPage() {
     } finally { setBusy(null); }
   };
 
+  const changeFreeCompanion = async (moduleKey: string) => {
+    setErr(null); setBusy('free-companion');
+    try {
+      await billingApi.changeFreeCompanion(moduleKey);
+      await refresh();
+    } catch (e: any) {
+      setErr(e?.error || e?.message || 'Could not change included companion module');
+    } finally { setBusy(null); }
+  };
+
   const planSlug = subscription?.subscription?.planSlug
     ?? subscription?.plan?.slug
     ?? subscription?.planSlug
@@ -92,6 +106,12 @@ export default function TenantBillingPage() {
     : status === 'past_due' ? badgeStyles.warning
     : status === 'canceled' || status === 'unpaid' ? badgeStyles.danger
     : badgeStyles.neutral;
+  const activeEntitlements = stack?.entitlements ?? [];
+  const coreEntitlement = activeEntitlements.find((row: any) => row.entitlementType === 'core_product');
+  const freeCompanionEntitlement = activeEntitlements.find((row: any) => row.source === 'selected_free_companion');
+  const coreProductName = coreEntitlement
+    ? CORE_PRODUCTS_BY_KEY[coreEntitlement.entitlementKey as keyof typeof CORE_PRODUCTS_BY_KEY]?.name ?? coreEntitlement.entitlementKey
+    : 'No core product';
 
   return (
     <div style={{ padding: space.xxl, maxWidth: 1100, margin: '0 auto' }} data-testid="page-tenant-billing">
@@ -120,17 +140,17 @@ export default function TenantBillingPage() {
           >
             <div style={cardStyle} data-testid="tenant-billing-plan">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: semantic.textMuted, fontSize: fontSize.sm, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                <CreditCard size={14} /> Plan
+                <CreditCard size={14} /> Core Product
               </div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginTop: space.sm, textTransform: 'capitalize' }}>{planSlug}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginTop: space.sm }}>{coreProductName}</div>
               <div style={{ marginTop: space.sm }}><span style={statusBadge}>{status}</span></div>
             </div>
             <div style={cardStyle} data-testid="tenant-billing-usage">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: semantic.textMuted, fontSize: fontSize.sm, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                <Package size={14} /> Add-ons active
+                <Package size={14} /> Seats Included
               </div>
               <div style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginTop: space.sm }}>
-                {addons.filter(a => a.unlocked).length}
+                {stack?.seatLimit ?? 0}
               </div>
               {usage?.aiCallsThisMonth != null && (
                 <div style={{ marginTop: space.sm, fontSize: fontSize.sm, color: semantic.textMuted }}>
@@ -167,14 +187,43 @@ export default function TenantBillingPage() {
             </div>
           )}
 
+          {coreEntitlement && (
+            <section style={{ ...panelStyle, marginBottom: space.xl }} data-testid="tenant-billing-free-companion">
+              <div style={{ padding: '12px 16px', borderBottom: `1px solid ${semantic.border}` }}>
+                <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Included Companion Module</h2>
+                <p style={{ color: semantic.textMuted, fontSize: fontSize.sm, margin: '5px 0 0' }}>
+                  One companion module is included at $0 while your core product is active.
+                </p>
+              </div>
+              <div style={{ padding: 16 }}>
+                <select
+                  aria-label="Included companion module"
+                  value={freeCompanionEntitlement?.entitlementKey ?? ''}
+                  disabled={!isOwner || busy === 'free-companion'}
+                  onChange={event => changeFreeCompanion(event.target.value)}
+                  style={{
+                    width: '100%', maxWidth: 420, padding: '10px 12px', borderRadius: 8,
+                    border: `1px solid ${semantic.border}`, background: colors.bgSecondary,
+                    color: '#fff', fontSize: fontSize.body,
+                  }}
+                >
+                  <option value="" disabled>Select a companion module</option>
+                  {COMPANION_MODULES.map(module => (
+                    <option key={module.key} value={module.key}>{module.name} — $0 included</option>
+                  ))}
+                </select>
+              </div>
+            </section>
+          )}
+
           <section style={{ ...panelStyle, marginBottom: space.xl }} data-testid="tenant-billing-addons">
             <div style={{ padding: '12px 16px', borderBottom: `1px solid ${semantic.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Package size={14} color={semantic.accentInfo} />
-              <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Add-on subscriptions</h2>
+              <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Additional Modules</h2>
             </div>
             {addons.length === 0 ? (
               <div data-testid="tenant-addons-empty" style={{ padding: space.lg, color: semantic.textMuted, fontSize: fontSize.body }}>
-                No add-ons are active for this tenant. Browse the Module Marketplace to review available upgrades.
+                No additional paid modules are active for this tenant.
               </div>
             ) : addons.map(a => (
               <div

@@ -1,289 +1,118 @@
-/**
- * Marketing pricing config — shape lock test (tasks #87, #98).
- *
- * The /pricing UI sources copy from
- * `apps/web/src/lib/marketing-pricing.ts` and hydrates live dollar
- * amounts from `/v1/billing/plans` per task #98. This test pins the
- * contract by statically parsing the config file and asserting:
- *
- *   - It defines exactly the four required tiers, in order.
- *   - Each tier carries every required field with the right type.
- *   - `ctaHref` only points at the four whitelisted marketing
- *     destinations (no leaks of /v1/billing or external URLs).
- *   - Exactly one tier is marked `isFeatured: true`.
- *   - No raw Stripe price IDs or secret-looking keys are embedded.
- *   - Tiers that map to a billing plan carry a `planSlug` referencing
- *     the public billing plan catalog (starter | pro | elite).
- *   - PricingSection hydrates from `/v1/billing/plans` and exposes
- *     the monthly/annual interval toggle.
- *
- * This is a structural file-shape test (matches the existing
- * marketing-shell.test.ts pattern); it does not import the TS module
- * directly because apps/api can't resolve apps/web aliases.
- */
-
-import { test } from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  calculateStackMonthlyPrice,
+  COMPANION_MODULES,
+  CORE_PRODUCTS,
+  INCLUDED_WITH_ANY_PAID_CORE,
+} from '@operatoros/sdk';
 
-const WEB_ROOT = resolve(import.meta.dirname, '..', '..', 'web');
-const CONFIG_REL = 'src/lib/marketing-pricing.ts';
+const here = path.dirname(fileURLToPath(import.meta.url));
+const webRoot = path.resolve(here, '../../web/src');
+const pricingSection = fs.readFileSync(
+  path.join(webRoot, 'components/marketing/sections/PricingSection.tsx'),
+  'utf8',
+);
+const pricingCopy = fs.readFileSync(
+  path.join(webRoot, 'lib/marketing-pricing.ts'),
+  'utf8',
+);
 
-function read(rel: string): string {
-  const p = resolve(WEB_ROOT, rel);
-  assert.ok(existsSync(p), `Expected file to exist: ${rel}`);
-  return readFileSync(p, 'utf-8');
-}
-
-test('marketing pricing · config file exists and exports the array', () => {
-  const src = read(CONFIG_REL);
-  assert.match(src, /export\s+const\s+marketingPricingTiers/, 'must export marketingPricingTiers');
-  assert.match(src, /MarketingPricingTier/, 'must declare MarketingPricingTier interface');
-});
-
-test('marketing pricing · all four required tiers are defined in order', () => {
-  const src = read(CONFIG_REL);
-  const slugMatches = [...src.matchAll(/slug:\s*'([a-z][a-z0-9-]*)'/g)].map((m) => m[1]);
-  // First match in the file is the config — interface has no slugs.
-  const expected = ['starter', 'pro', 'business-command', 'elite'];
+test('pricing catalog exposes the finalized three core products', () => {
   assert.deepEqual(
-    slugMatches.slice(0, expected.length),
-    expected,
-    `tiers must appear in order: ${expected.join(', ')} (got ${slugMatches.slice(0, expected.length).join(', ')})`,
-  );
-});
-
-test('marketing pricing · each tier carries every required field', () => {
-  const src = read(CONFIG_REL);
-  const required = [
-    'slug', 'tierName', 'description', 'idealFor', 'priceLabel',
-    'includedModules', 'highlightedFeatures', 'ctaLabel', 'ctaHref',
-    'isFeatured',
-  ];
-  for (const field of required) {
-    const matches = src.match(new RegExp(`\\b${field}:`, 'g')) ?? [];
-    // 4 tiers + 1 interface declaration = at least 5 hits.
-    assert.ok(
-      matches.length >= 5,
-      `field "${field}" should appear in interface + every tier (got ${matches.length})`,
-    );
-  }
-});
-
-test('marketing pricing · ctaHref only targets whitelisted marketing routes', () => {
-  const src = read(CONFIG_REL);
-  const hrefs = [...src.matchAll(/ctaHref:\s*'([^']+)'/g)].map((m) => m[1]);
-  assert.ok(hrefs.length >= 4, 'every tier should set a ctaHref');
-  const allowed = new Set(['/login', '/app', '/pricing', '/app/billing']);
-  for (const h of hrefs) {
-    assert.ok(
-      allowed.has(h),
-      `ctaHref "${h}" must be one of ${[...allowed].join(', ')} — marketing CTAs may not point at billing API routes or external URLs`,
-    );
-  }
-});
-
-test('marketing pricing · every tier ships a footnote so card heights stay balanced', () => {
-  // Architect feedback: `footnote` is declared optional in the type
-  // but the visual grid balances better when every tier provides one.
-  // This test pins the contract: all four tiers must carry a footnote.
-  const src = read(CONFIG_REL);
-  const footnotes = [...src.matchAll(/footnote:\s*'/g)];
-  assert.ok(
-    footnotes.length >= 4,
-    `every tier must declare a footnote (found ${footnotes.length})`,
-  );
-});
-
-test('marketing pricing · no tier self-loops to /pricing (would dead-end signed-in viewers)', () => {
-  const src = read(CONFIG_REL);
-  const hrefs = [...src.matchAll(/ctaHref:\s*'([^']+)'/g)].map((m) => m[1]);
-  for (const h of hrefs) {
-    assert.notEqual(
-      h, '/pricing',
-      'tier ctaHref must not point back at /pricing — that dead-ends signed-in viewers on the page they are already viewing',
-    );
-  }
-});
-
-test('marketing pricing · exactly one tier is featured', () => {
-  const src = read(CONFIG_REL);
-  // Strip line + block comments so a JSDoc mention of "isFeatured: true"
-  // doesn't count as a second featured tier.
-  const stripped = src
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-  const featuredTrue = [...stripped.matchAll(/isFeatured:\s*true/g)];
-  assert.equal(
-    featuredTrue.length, 1,
-    'exactly one tier should set isFeatured: true so the UI knows which card to ribbon',
-  );
-});
-
-test('marketing pricing · no Stripe price IDs or secret-looking keys leak', () => {
-  const src = read(CONFIG_REL);
-  // Stripe price IDs follow `price_<alnum>` and secret keys start
-  // with `sk_`. Either appearing in a public marketing config is a
-  // ship-blocker.
-  assert.doesNotMatch(src, /\bprice_[A-Za-z0-9]{8,}\b/, 'must not embed Stripe price IDs');
-  assert.doesNotMatch(src, /\bsk_(live|test)_[A-Za-z0-9]+/,  'must not embed Stripe secret keys');
-});
-
-test('marketing pricing · fallback price labels stay public-safe (no hardcoded live prices)', () => {
-  const src = read(CONFIG_REL);
-  // Task #98: live amounts are sourced from /v1/billing/plans at
-  // render time. The static config still must not hardcode dollar
-  // amounts — those would silently shadow the live data if the fetch
-  // fails. Public-safe fallbacks only:
-  //   "Free during beta", "See plans", "Coming soon".
-  assert.match(src, /Free during beta|See plans|Coming soon/,
-    'pricing copy should lean on Free / See plans / Coming soon as fallbacks');
-  // Strip comments first so the JSDoc that *describes* the rule
-  // isn't itself flagged.
-  const stripped = src
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-  assert.doesNotMatch(
-    stripped,
-    /\$\s*\d/,
-    'marketing pricing config must not hardcode live dollar amounts ($NN). Live amounts come from /v1/billing/plans.',
-  );
-});
-
-test('marketing pricing · tiers map to billing plan catalog via planSlug', () => {
-  // Task #98: tiers that map to a live billing plan must declare a
-  // `planSlug` so the UI can hydrate the real price from
-  // /v1/billing/plans. Allowed slugs match the billing PLAN_CATALOG
-  // (starter | pro | elite). The tailored `business-command` tier has
-  // no matching plan and therefore must NOT declare a planSlug — the
-  // UI keeps its static priceLabel as the disclosure.
-  const src = read(CONFIG_REL);
-  const slugs = ['starter', 'pro', 'elite'];
-  for (const s of slugs) {
-    const re = new RegExp(`planSlug:\\s*'${s}'`);
-    assert.match(src, re, `tier "${s}" must declare planSlug: '${s}'`);
-  }
-  const allPlanSlugs = [...src.matchAll(/planSlug:\s*'([^']+)'/g)].map(m => m[1]);
-  const allowed = new Set(['starter', 'pro', 'elite']);
-  for (const s of allPlanSlugs) {
-    assert.ok(
-      allowed.has(s),
-      `planSlug "${s}" must be one of ${[...allowed].join(', ')} (matches /v1/billing/plans)`,
-    );
-  }
-  // business-command is tailored and not in the public plan catalog.
-  assert.doesNotMatch(
-    src,
-    /planSlug:\s*'business-command'/,
-    'business-command is a tailored tier and has no matching billing plan slug',
-  );
-});
-
-test('marketing pricing · PricingSection hydrates from /v1/billing/plans and exposes interval toggle', () => {
-  const section = readFileSync(
-    resolve(WEB_ROOT, 'src/components/marketing/sections/PricingSection.tsx'),
-    'utf-8',
-  );
-  assert.match(
-    section,
-    /\/api\/billing\/plans/,
-    'PricingSection must hydrate live amounts from /v1/billing/plans (proxied as /api/billing/plans on the web)',
-  );
-  assert.match(
-    section,
-    /pricing-interval-toggle/,
-    'PricingSection must render the monthly/annual interval toggle',
-  );
-  assert.match(
-    section,
-    /pricing-card-.*-addons|addonPriceCents/,
-    'PricingSection must surface an add-on price disclosure on each tier card',
-  );
-});
-
-test('marketing pricing · resolvePricingCta routes every tier correctly for signed-out and signed-in viewers', async () => {
-  // Behavioral test: import the pure helper + tier config and exercise
-  // every tier's CTA for both auth states. This is the lock that
-  // prevents a future edit from silently dead-ending signed-in users
-  // back at /login or /pricing.
-  const mod = await import(
-    new URL('../../web/src/lib/marketing-pricing.ts', import.meta.url).href
-  );
-  const { marketingPricingTiers, resolvePricingCta } = mod as typeof import('../../web/src/lib/marketing-pricing.ts');
-
-  assert.equal(marketingPricingTiers.length, 4, 'expected 4 tiers');
-
-  for (const tier of marketingPricingTiers) {
-    const out = resolvePricingCta(tier, false);
-    const inn = resolvePricingCta(tier, true);
-
-    // Signed-out viewers should never be dropped onto an authenticated
-    // route — they always get bounced through /login first.
-    assert.ok(
-      !out.href.startsWith('/app'),
-      `tier ${tier.slug}: signed-out viewer landed on authenticated route "${out.href}"`,
-    );
-
-    // Signed-in viewers must never be sent back to /login or to a
-    // self-loop on /pricing — both are dead ends for an authenticated
-    // user clicking a pricing CTA.
-    assert.notEqual(
-      inn.href, '/login',
-      `tier ${tier.slug}: signed-in viewer was sent back to /login`,
-    );
-    assert.notEqual(
-      inn.href, '/pricing',
-      `tier ${tier.slug}: signed-in viewer dead-ended at /pricing`,
-    );
-
-    // Every resolution must produce a non-empty label.
-    assert.ok(out.label.length > 0, `tier ${tier.slug}: empty signed-out label`);
-    assert.ok(inn.label.length > 0, `tier ${tier.slug}: empty signed-in label`);
-  }
-
-  // Spot-check the two console-routing branches explicitly so the
-  // helper's contract is pinned regardless of tier copy edits.
-  const billingTier = { ctaHref: '/app/billing' as const, ctaLabel: 'See plans' };
-  assert.deepEqual(
-    resolvePricingCta(billingTier, false),
-    { href: '/login', label: 'See plans' },
-  );
-  // Billing CTA resolves signed-in viewers to `/app` (the console
-  // entry) — there is no top-level `/app/billing` Next route in this
-  // repo. The Billing surface lives inside the console shell behind
-  // `activePage='billing'`, reachable from the in-app sidebar.
-  assert.deepEqual(
-    resolvePricingCta(billingTier, true),
-    { href: '/app', label: 'Manage billing' },
-  );
-
-  const consoleTier = { ctaHref: '/app' as const, ctaLabel: 'Start free' };
-  assert.deepEqual(
-    resolvePricingCta(consoleTier, false),
-    { href: '/login', label: 'Start free' },
+    CORE_PRODUCTS.map(product => [product.key, product.monthlyPriceCents, product.includedSeats]),
+    [
+      ['tradeflowkit', 14900, 5],
+      ['pulsedesk', 14900, 5],
+      ['techdeck', 9900, 5],
+    ],
   );
   assert.deepEqual(
-    resolvePricingCta(consoleTier, true),
-    { href: '/app', label: 'Launch OperatorOS' },
+    INCLUDED_WITH_ANY_PAID_CORE.map(app => app.key),
+    ['torqueshed', 'faultlinelab', 'ninja-pool-hall'],
   );
+  assert.equal(COMPANION_MODULES.length, 6);
 });
 
-test('marketing pricing · resolvePricingCta is the single source of truth for pricing CTA routing', () => {
-  // The pricing helper must compose the Phase 2 marketing-cta helpers
-  // (primaryCtaTarget / billingCtaTarget) rather than reinvent the
-  // auth-aware contract. Static check: marketing-pricing.ts imports
-  // both helpers from marketing-cta.
-  const cfg = read(CONFIG_REL);
-  assert.match(cfg, /from\s+['"]\.\/marketing-cta['"]/, 'marketing-pricing must import from ./marketing-cta');
-  assert.match(cfg, /primaryCtaTarget/, 'resolvePricingCta should compose primaryCtaTarget');
-  assert.match(cfg, /billingCtaTarget/, 'resolvePricingCta should compose billingCtaTarget');
+test('pricing calculator keeps the selected companion free', () => {
+  const price = calculateStackMonthlyPrice({
+    coreProduct: 'tradeflowkit',
+    freeCompanionModule: 'snapproofos',
+    additionalModules: [],
+    additionalSeats: 0,
+  });
+  assert.equal(price.includedCompanionCents, 0);
+  assert.equal(price.totalMonthlyCents, 14900);
+});
 
-  // And PricingSection consumes the composed helper (not the raw
-  // routing helpers) so there is exactly one routing source.
-  const section = readFileSync(
-    resolve(WEB_ROOT, 'src/components/marketing/sections/PricingSection.tsx'),
-    'utf-8',
-  );
-  assert.match(section, /resolvePricingCta/, 'PricingSection must use resolvePricingCta');
+test('pricing calculator charges $29 per additional module and $15 per seat', () => {
+  const price = calculateStackMonthlyPrice({
+    coreProduct: 'techdeck',
+    freeCompanionModule: 'snapproofos',
+    additionalModules: ['brandforgeos', 'ninjamation'],
+    additionalSeats: 2,
+  });
+  assert.equal(price.additionalModulesCents, 5800);
+  assert.equal(price.additionalSeatsCents, 3000);
+  assert.equal(price.totalMonthlyCents, 18700);
+});
+
+test('duplicate/free companion selections cannot be billed as additional modules', () => {
+  const price = calculateStackMonthlyPrice({
+    coreProduct: 'pulsedesk',
+    freeCompanionModule: 'ninjamation',
+    additionalModules: ['ninjamation', 'brandforgeos', 'brandforgeos'],
+    additionalSeats: 0,
+  });
+  assert.equal(price.additionalModulesCents, 2900);
+  assert.equal(price.totalMonthlyCents, 17800);
+});
+
+test('pricing surface contains required product and configurator labels', () => {
+  for (const copy of [
+    'OperatorOS command layer',
+    'Fully Unlocked',
+    '5 Seats Included',
+    'Build Your Stack',
+    'Included Companion Module',
+    'Additional Modules',
+    'Additional Seats',
+  ]) {
+    assert.match(pricingSection, new RegExp(copy));
+  }
+});
+
+test('pricing FAQ contains all finalized questions', () => {
+  for (const question of [
+    'What is OperatorOS?',
+    'Do I pay for OperatorOS?',
+    'What comes with a core product?',
+    'How many seats are included?',
+    'Can I buy more seats?',
+    'What apps are included with every paid product?',
+    'How does the free companion module work?',
+    'What do additional modules cost?',
+    'Is PulseDesk only for healthcare?',
+    'What happens if I cancel?',
+  ]) {
+    assert.ok(pricingCopy.includes(question), `missing FAQ: ${question}`);
+  }
+});
+
+test('public pricing files do not contain retired packaging copy', () => {
+  const publicPricing = `${pricingSection}\n${pricingCopy}`;
+  for (const stale of [
+    'Pro Operator',
+    'Business Command',
+    'Full Arsenal',
+    'Four tiers',
+    'per operator, per month',
+    'All 11 modules',
+    'early access',
+  ]) {
+    assert.equal(publicPricing.toLowerCase().includes(stale.toLowerCase()), false, `stale copy: ${stale}`);
+  }
 });

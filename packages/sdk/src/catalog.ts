@@ -1,6 +1,6 @@
 /**
  * Shotgun Ninjas module catalog — single source of truth for the
- * 11-module ecosystem. Both the API seed (`saas-db-init.ts`) and the
+ * OperatorOS module ecosystem. Both the API seed (`saas-db-init.ts`) and the
  * web app (`/apps/[slug]` route + module shells) consume this so the
  * slug list, env-key chain, and plan tiers can never drift between
  * surfaces.
@@ -108,11 +108,20 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     component: 'diagnostic-lab',
   },
   {
+    slug: 'ninja-pool-hall', name: 'Ninja Pool Hall',
+    description: 'Companion engagement experience',
+    category: 'support', planMin: 'starter', ord: 6,
+    envUrlKeys: ['NINJA_POOL_HALL_URL'],
+    stripeAddonEnvKeys: [],
+    internal: false, defaultStatus: 'coming_soon',
+    component: 'operations-deck',
+  },
+  {
     // Renamed from `bf-os` in Task #66. BF_OS_URL / STRIPE_PRICE_ADDON_BF_OS
     // remain as fallbacks so live secrets keep working pre-cutover.
     slug: 'brandforgeos', name: 'BrandForgeOS',
     description: 'Body shop / collision OS',
-    category: 'ops', planMin: 'pro', ord: 6,
+    category: 'ops', planMin: 'pro', ord: 7,
     envUrlKeys: ['BRANDFORGEOS_URL', 'BF_OS_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_BRANDFORGEOS', 'STRIPE_PRICE_ADDON_BF_OS'],
     internal: false, defaultStatus: 'live',
@@ -121,7 +130,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'snapproofos', name: 'SnapProofOS',
     description: 'Photo-based proof of work',
-    category: 'ops', planMin: 'elite', ord: 7,
+    category: 'ops', planMin: 'elite', ord: 8,
     envUrlKeys: ['SNAPPROOFOS_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_SNAPPROOFOS'],
     internal: false, defaultStatus: 'live',
@@ -130,7 +139,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'studyforge-ai', name: 'StudyForge AI',
     description: 'AI study & training partner',
-    category: 'ai', planMin: 'elite', ord: 8,
+    category: 'ai', planMin: 'elite', ord: 9,
     envUrlKeys: ['STUDYFORGE_AI_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_STUDYFORGE_AI'],
     internal: true, defaultStatus: 'live',
@@ -139,7 +148,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'ninja-launch-kit', name: 'Ninja Launch Kit',
     description: 'Build & ship internal tools fast',
-    category: 'ai', planMin: 'elite', ord: 9,
+    category: 'ai', planMin: 'elite', ord: 10,
     envUrlKeys: ['NINJA_LAUNCH_KIT_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_NINJA_LAUNCH_KIT'],
     internal: true, defaultStatus: 'live',
@@ -148,7 +157,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'callcommand-ai', name: 'CallCommand AI',
     description: 'AI phone agent + call automation',
-    category: 'ai', planMin: 'elite', ord: 10,
+    category: 'ai', planMin: 'elite', ord: 11,
     envUrlKeys: ['CALLCOMMAND_AI_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_CALLCOMMAND_AI'],
     internal: true, defaultStatus: 'live',
@@ -157,7 +166,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'ninjamation', name: 'Ninjamation',
     description: 'Cross-app workflow automation',
-    category: 'ai', planMin: 'elite', ord: 11,
+    category: 'ai', planMin: 'elite', ord: 12,
     envUrlKeys: ['NINJAMATION_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_NINJAMATION'],
     internal: true, defaultStatus: 'live',

@@ -8,6 +8,10 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { authenticate } from './auth.js';
 import { isAddonPurchasable } from './billing-service.js';
+import {
+  isUserWithinTenantSeatLimit,
+  tenantHasActiveEntitlement,
+} from './product-entitlements.js';
 
 /**
  * Access-source taxonomy — the single source of truth for how a user got
@@ -544,6 +548,16 @@ async function hasModuleAccessTenantScoped(
     const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
     if (!mod) {
       return { moduleSlug, hasAccess: false, source: null, reason: 'module_not_found' };
+    }
+
+    // Finalized packaging authority: app/module entitlements belong to the
+    // tenant, and seats are enforced at tenant membership level. A purchased
+    // product is fully unlocked; there are no feature-level checks here.
+    if (await tenantHasActiveEntitlement(tenantId, moduleSlug)) {
+      const withinSeatLimit = await isUserWithinTenantSeatLimit(tenantId, userId);
+      return withinSeatLimit
+        ? { moduleSlug, hasAccess: true, source: 'plan' }
+        : { moduleSlug, hasAccess: false, source: null, reason: 'seat_limit_exceeded' };
     }
 
     const [tm] = await db.select().from(tenantModules)

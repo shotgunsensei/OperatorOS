@@ -9,6 +9,21 @@ import { eq, and, sql } from 'drizzle-orm';
 import {
   getUserPlanConfig, getDowngradeViolations, isUpgrade, isDowngrade, PLAN_CONFIGS,
 } from './plans.js';
+import {
+  COMPANION_MODULE_KEYS,
+  COMPANION_MODULE_PRICE_CENTS,
+  CORE_PRODUCTS_BY_KEY,
+  getAdditionalSeatPriceCents,
+  normalizeStackSelection,
+  type CompanionModuleKey,
+  type StackSelection,
+} from '@operatoros/sdk';
+import {
+  deactivateSubscriptionEntitlements,
+  grantStackEntitlements,
+  isCoreProductKey,
+} from './product-entitlements.js';
+import { writeAudit } from './audit.js';
 
 // Task #66: `apps/api/package.json` is `"type":"module"`, so the previous
 // `require('stripe')` inside `getStripe()` was undefined and every checkout
@@ -76,7 +91,7 @@ function getStripe() {
     const StripeModule = esmRequire('stripe') as { default?: unknown } | unknown;
     const StripeCtor = (StripeModule as { default?: unknown })?.default ?? StripeModule;
     type StripeFactory = new (key: string, opts: { apiVersion: string }) => StripeClient;
-    __stripeSingleton = new (StripeCtor as StripeFactory)(STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
+    __stripeSingleton = new (StripeCtor as StripeFactory)(STRIPE_SECRET_KEY, { apiVersion: '2026-02-25.clover' });
     return __stripeSingleton;
   } catch (err) {
     throw new Error(`Stripe SDK could not be loaded: ${(err as Error)?.message ?? 'unknown'}`);
@@ -119,6 +134,11 @@ export interface SubscribeResult {
 export interface CheckoutSessionResult {
   url: string;
   sessionId: string;
+}
+
+export interface StackCheckoutInput extends StackSelection {
+  tenantId: string;
+  userId: string;
 }
 
 export interface PortalSessionResult {
@@ -311,6 +331,82 @@ export async function createCheckoutSession(
     cancel_url: `${appUrl}?billing=canceled`,
     metadata: { userId, planSlug },
     subscription_data: { metadata: { userId, planSlug } },
+  });
+
+  return { url: session.url!, sessionId: session.id };
+}
+
+export async function createStackCheckoutSession(
+  input: StackCheckoutInput,
+): Promise<CheckoutSessionResult> {
+  if (!isStripeEnabled()) {
+    throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE=live');
+  }
+
+  const normalized = normalizeStackSelection(input);
+  const product = CORE_PRODUCTS_BY_KEY[normalized.coreProduct];
+  const corePriceId = process.env[product.stripePriceEnvKey] || '';
+  const companionPriceId = process.env.STRIPE_PRICE_COMPANION_MODULE_MONTHLY || '';
+  const seatPriceId = process.env.STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY || '';
+
+  if (!corePriceId) throw new Error(`Set ${product.stripePriceEnvKey}`);
+  if ((normalized.additionalModules?.length ?? 0) > 0 && !companionPriceId) {
+    throw new Error('Set STRIPE_PRICE_COMPANION_MODULE_MONTHLY');
+  }
+  if ((normalized.additionalSeats ?? 0) > 0 && !seatPriceId) {
+    throw new Error('Set STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY');
+  }
+
+  const [user] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+  if (!user) throw new Error('User not found');
+
+  const [existingSub] = await db.select().from(subscriptions)
+    .where(eq(subscriptions.userId, input.userId))
+    .limit(1);
+  let customerId = existingSub?.stripeCustomerId;
+  const stripe = getStripe();
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: user.email,
+      name: user.name,
+      metadata: { userId: input.userId, tenantId: input.tenantId },
+    });
+    customerId = customer.id;
+    if (existingSub) {
+      await db.update(subscriptions)
+        .set({ stripeCustomerId: customerId })
+        .where(eq(subscriptions.id, existingSub.id));
+    }
+  }
+
+  const lineItems: Array<{ price: string; quantity: number }> = [
+    { price: corePriceId, quantity: 1 },
+  ];
+  if (normalized.additionalModules?.length) {
+    lineItems.push({ price: companionPriceId, quantity: normalized.additionalModules.length });
+  }
+  if ((normalized.additionalSeats ?? 0) > 0) {
+    lineItems.push({ price: seatPriceId, quantity: normalized.additionalSeats! });
+  }
+
+  const metadata = {
+    billing_model: 'core_product_stack',
+    tenant_id: input.tenantId,
+    user_id: input.userId,
+    selected_core_product: normalized.coreProduct,
+    selected_free_companion_module: normalized.freeCompanionModule,
+    additional_module_keys: (normalized.additionalModules ?? []).join(','),
+    additional_seats: String(normalized.additionalSeats ?? 0),
+  };
+  const appUrl = process.env.APP_URL || 'http://localhost:5000';
+  const session = await stripe.checkout.sessions.create({
+    customer: customerId,
+    mode: 'subscription',
+    line_items: lineItems,
+    success_url: `${appUrl}/pricing?billing=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl}/pricing?billing=canceled`,
+    metadata,
+    subscription_data: { metadata },
   });
 
   return { url: session.url!, sessionId: session.id };
@@ -574,6 +670,9 @@ export async function processWebhookEvent(event: { type: string; data: { object:
 }
 
 async function handleCheckoutCompleted(session: any): Promise<WebhookProcessResult> {
+  if (session.metadata?.billing_model === 'core_product_stack') {
+    return handleStackCheckoutCompleted(session);
+  }
   const userId = session.metadata?.userId;
   const planSlug = session.metadata?.planSlug;
   const stripeSubscriptionId = session.subscription;
@@ -611,6 +710,67 @@ async function handleCheckoutCompleted(session: any): Promise<WebhookProcessResu
 
   console.log(`[billing-service] Checkout completed: user=${userId} plan=${planSlug}`);
   return { handled: true, action: 'checkout_completed', shouldPropagate: true };
+}
+
+async function handleStackCheckoutCompleted(session: any): Promise<WebhookProcessResult> {
+  const metadata = session.metadata ?? {};
+  const tenantId = metadata.tenant_id;
+  const userId = metadata.user_id;
+  const coreProduct = metadata.selected_core_product;
+  const freeCompanionModule = metadata.selected_free_companion_module;
+  const stripeSubscriptionId = typeof session.subscription === 'string'
+    ? session.subscription
+    : session.subscription?.id;
+  if (!tenantId || !userId || !stripeSubscriptionId || !isCoreProductKey(coreProduct)) {
+    return { handled: false, error: 'Invalid core product checkout metadata' };
+  }
+
+  const additionalModules = String(metadata.additional_module_keys ?? '')
+    .split(',')
+    .map((value: string) => value.trim())
+    .filter((value: string): value is CompanionModuleKey =>
+      COMPANION_MODULE_KEYS.has(value as CompanionModuleKey),
+    );
+  const additionalSeats = Number.parseInt(metadata.additional_seats ?? '0', 10);
+  const product = CORE_PRODUCTS_BY_KEY[coreProduct];
+
+  await grantStackEntitlements({
+    tenantId,
+    coreProduct,
+    freeCompanionModule,
+    additionalModules,
+    additionalSeats,
+    stripeSubscriptionId,
+    corePriceId: process.env[product.stripePriceEnvKey] || null,
+    companionPriceId: process.env.STRIPE_PRICE_COMPANION_MODULE_MONTHLY || null,
+    additionalSeatPriceId: process.env.STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY || null,
+  });
+
+  await db.insert(billingEvents).values({
+    userId,
+    tenantId,
+    eventType: 'core_product_stack_activated',
+    amount:
+      product.monthlyPriceCents +
+      additionalModules.length * COMPANION_MODULE_PRICE_CENTS +
+      additionalSeats * getAdditionalSeatPriceCents(process.env.ADDITIONAL_SEAT_PRICE_CENTS),
+    metadata: {
+      coreProduct,
+      freeCompanionModule,
+      additionalModules,
+      additionalSeats,
+      stripeSubscriptionId,
+    },
+  });
+  await writeAudit({
+    actorUserId: userId,
+    tenantId,
+    targetType: 'tenant_entitlements',
+    targetId: stripeSubscriptionId,
+    action: 'core_product_stack_activated',
+    after: { coreProduct, freeCompanionModule, additionalModules, additionalSeats },
+  });
+  return { handled: true, action: 'core_product_stack_activated', shouldPropagate: true };
 }
 
 async function handleSubscriptionCreated(subscription: any): Promise<WebhookProcessResult> {
@@ -681,6 +841,11 @@ async function handleSubscriptionUpdated(subscription: any): Promise<WebhookProc
 
 async function handleSubscriptionDeleted(subscription: any): Promise<WebhookProcessResult> {
   const stripeSubId = subscription.id;
+
+  const deactivatedTenantId = await deactivateSubscriptionEntitlements(stripeSubId);
+  if (deactivatedTenantId) {
+    return { handled: true, action: 'core_product_stack_deactivated', shouldPropagate: true };
+  }
 
   const [existingSub] = await db.select().from(subscriptions)
     .where(eq(subscriptions.stripeSubscriptionId, stripeSubId)).limit(1);

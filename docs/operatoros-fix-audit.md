@@ -17,7 +17,8 @@ is back-filled from it on each boot via `launchFixPostSeed()`.
 
 ## Stripe price IDs
 
-- `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_ELITE` are now
+- The retired package Price variables were replaced by the finalized
+  core-product, companion-module, and additional-seat Price variables.
   treated as the **monthly** fallback.
 - New `STRIPE_PRICE_<PLAN>_MONTHLY` and `STRIPE_PRICE_<PLAN>_ANNUAL` env
   keys are picked up first.
@@ -99,7 +100,7 @@ immediately without requiring a page reload.
 ## Internal `/apps/<slug>` routes
 
 New Next.js dynamic route at `apps/web/src/app/apps/[slug]/page.tsx`
-handles all 11 modules. The 4 newly-live MVP modules render polished
+handles the complete module catalog. The newly-live MVP modules render polished
 shells (`apps/web/src/components/module-shells/*Shell.tsx`); the other 7
 render a simple launcher card that hands off to the external `baseUrl`.
 

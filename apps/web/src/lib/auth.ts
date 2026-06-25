@@ -109,6 +109,8 @@ export const billingApi = {
   getSubscription: () => apiFetch('/billing/subscription'),
   getUsage: () => apiFetch('/billing/usage'),
   getPlans: () => apiFetch('/billing/plans'),
+  getCatalog: () => apiFetch('/billing/catalog'),
+  getStack: () => apiFetch('/billing/stack'),
   getMode: () => apiFetch('/billing/mode'),
   checkDowngrade: (planSlug: string) =>
     apiFetch('/billing/check-downgrade', { method: 'POST', body: JSON.stringify({ planSlug }) }),
@@ -116,6 +118,14 @@ export const billingApi = {
     apiFetch('/billing/subscribe', { method: 'POST', body: JSON.stringify({ planSlug, interval }) }),
   createCheckoutSession: (planSlug: string, interval: 'month' | 'year' = 'month') =>
     apiFetch('/billing/create-checkout-session', { method: 'POST', body: JSON.stringify({ planSlug, interval }) }),
+  createStackCheckout: (selection: {
+    coreProduct: string;
+    freeCompanionModule: string;
+    additionalModules: string[];
+    additionalSeats: number;
+  }) => apiFetch('/billing/stack/checkout', { method: 'POST', body: JSON.stringify(selection) }),
+  changeFreeCompanion: (moduleKey: string) =>
+    apiFetch('/billing/stack/free-companion', { method: 'POST', body: JSON.stringify({ moduleKey }) }),
   createPortalSession: () =>
     apiFetch('/billing/create-portal-session', { method: 'POST' }),
   cancel: () => apiFetch('/billing/cancel', { method: 'POST' }),

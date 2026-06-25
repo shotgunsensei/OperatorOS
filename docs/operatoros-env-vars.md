@@ -32,10 +32,12 @@ keeps billing in local mode.
 | --- | ----- |
 | `STRIPE_SECRET_KEY` | live secret key. |
 | `STRIPE_WEBHOOK_SECRET` | webhook signing secret. |
-| `STRIPE_PRICE_STARTER` | Monthly price (legacy bare-name; treated as monthly fallback). |
-| `STRIPE_PRICE_STARTER_MONTHLY` / `_ANNUAL` | New monthly + annual price IDs. |
-| `STRIPE_PRICE_PRO` / `STRIPE_PRICE_PRO_MONTHLY` / `_ANNUAL` | Same pattern. |
-| `STRIPE_PRICE_ELITE` / `STRIPE_PRICE_ELITE_MONTHLY` / `_ANNUAL` | Same pattern. |
+| `STRIPE_PRICE_TRADEFLOWKIT_MONTHLY` | TradeFlowKit recurring monthly Price. |
+| `STRIPE_PRICE_PULSEDESK_MONTHLY` | PulseDesk recurring monthly Price. |
+| `STRIPE_PRICE_TECHDECK_MONTHLY` | TechDeck recurring monthly Price. |
+| `STRIPE_PRICE_COMPANION_MODULE_MONTHLY` | Shared recurring Price for each paid companion module. |
+| `STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY` | Recurring Price for each additional operator seat. |
+| `ADDITIONAL_SEAT_PRICE_CENTS` | Display/config amount for an additional seat; defaults to `1500`. |
 
 Resolution order for a plan: `STRIPE_PRICE_<PLAN>_<INTERVAL>` →
 `STRIPE_PRICE_<PLAN>` (only if interval is monthly). Annual checkout

@@ -941,11 +941,49 @@ export async function ensureTenantTables() {
     ALTER TABLE tenants ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
     ALTER TABLE tenants ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMP;
     ALTER TABLE tenants ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP;
+    ALTER TABLE tenants ADD COLUMN IF NOT EXISTS seat_limit INTEGER NOT NULL DEFAULT 0;
     DO $$ BEGIN
       ALTER TABLE tenants ADD CONSTRAINT tenants_status_check
         CHECK (status IN ('active','suspended','archived'));
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
     CREATE INDEX IF NOT EXISTS idx_tenants_status ON tenants(status);
+
+    -- Finalized product packaging: explicit tenant/app entitlements.
+    CREATE TABLE IF NOT EXISTS tenant_entitlements (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      entitlement_key TEXT NOT NULL,
+      entitlement_type TEXT NOT NULL,
+      source TEXT NOT NULL,
+      active BOOLEAN NOT NULL DEFAULT true,
+      stripe_subscription_id TEXT,
+      stripe_price_id TEXT,
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_tenant_entitlements_tenant
+      ON tenant_entitlements(tenant_id);
+    CREATE INDEX IF NOT EXISTS idx_tenant_entitlements_key
+      ON tenant_entitlements(entitlement_key);
+    CREATE INDEX IF NOT EXISTS idx_tenant_entitlements_subscription
+      ON tenant_entitlements(stripe_subscription_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_tenant_entitlement_active_key_subscription
+      ON tenant_entitlements(tenant_id, entitlement_key, source, COALESCE(stripe_subscription_id, ''))
+      WHERE active = true;
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_free_companion_per_core_subscription
+      ON tenant_entitlements(tenant_id, stripe_subscription_id)
+      WHERE active = true
+        AND source = 'selected_free_companion'
+        AND stripe_subscription_id IS NOT NULL;
+    DO $$ BEGIN
+      ALTER TABLE tenant_entitlements ADD CONSTRAINT tenant_entitlements_type_check
+        CHECK (entitlement_type IN ('core_product','included_app','companion_module','seat_pack','system'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE tenant_entitlements ADD CONSTRAINT tenant_entitlements_source_check
+        CHECK (source IN ('stripe','included_with_core','selected_free_companion','manual','admin'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
     -- Gate 2: modules soft-delete column.
     ALTER TABLE modules ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP;
     -- Task #108: receiver-registered entitlement-change webhook URL.

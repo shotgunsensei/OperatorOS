@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { db } from '../db.js';
-import { subscriptions, subscriptionPlans, billingEvents, modules } from '../schema.js';
-import { eq, desc, isNull, asc } from 'drizzle-orm';
+import { subscriptions, subscriptionPlans, billingEvents, modules, tenantEntitlements, tenants } from '../schema.js';
+import { eq, desc, isNull, asc, and } from 'drizzle-orm';
 import { authenticate, getUserPlanLimits } from '../lib/auth.js';
 import { writeAudit } from '../lib/audit.js';
 import { canPurchaseAddon, resolveTenantContext } from '../lib/tenant-auth.js';
@@ -17,9 +17,122 @@ import {
   subscribeToAddon, cancelAddon, processAddonWebhookEvent,
   AddonNotPurchasableError, classifyWebhookEvent, claimStripeEvent,
   markStripeEventProcessed, markStripeEventFailed,
+  createStackCheckoutSession,
 } from '../lib/billing-service.js';
+import {
+  COMPANION_MODULES,
+  COMPANION_MODULE_PRICE_CENTS,
+  CORE_PRODUCTS,
+  getAdditionalSeatPriceCents,
+  INCLUDED_WITH_ANY_PAID_CORE,
+} from '@operatoros/sdk';
+import { changeFreeCompanionModule } from '../lib/product-entitlements.js';
 
 export async function registerBillingRoutes(app: FastifyInstance) {
+  app.get('/v1/billing/catalog', async () => ({
+    operatorOsMonthlyPriceCents: 0,
+    coreProducts: CORE_PRODUCTS,
+    includedApps: INCLUDED_WITH_ANY_PAID_CORE,
+    companionModules: COMPANION_MODULES,
+    companionModuleMonthlyPriceCents: COMPANION_MODULE_PRICE_CENTS,
+    additionalSeatMonthlyPriceCents: getAdditionalSeatPriceCents(process.env.ADDITIONAL_SEAT_PRICE_CENTS),
+    stripeConfigured: {
+      tradeflowkit: !!process.env.STRIPE_PRICE_TRADEFLOWKIT_MONTHLY,
+      pulsedesk: !!process.env.STRIPE_PRICE_PULSEDESK_MONTHLY,
+      techdeck: !!process.env.STRIPE_PRICE_TECHDECK_MONTHLY,
+      companionModule: !!process.env.STRIPE_PRICE_COMPANION_MODULE_MONTHLY,
+      additionalSeat: !!process.env.STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY,
+    },
+  }));
+
+  app.get('/v1/billing/stack', { preHandler: [authenticate] }, async (request, reply) => {
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    const [tenant] = await db.select({ seatLimit: tenants.seatLimit })
+      .from(tenants)
+      .where(eq(tenants.id, ctx.tenantId))
+      .limit(1);
+    const entitlements = await db.select().from(tenantEntitlements)
+      .where(and(
+        eq(tenantEntitlements.tenantId, ctx.tenantId),
+        eq(tenantEntitlements.active, true),
+      ))
+      .orderBy(asc(tenantEntitlements.createdAt));
+    return { tenantId: ctx.tenantId, seatLimit: tenant?.seatLimit ?? 0, entitlements };
+  });
+
+  app.post('/v1/billing/stack/checkout', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    if (!ctx.viaPlatformRole && ctx.role !== 'owner' && ctx.role !== 'admin') {
+      return reply.code(403).send({ error: 'Tenant owner or admin access required', code: 'TENANT_ROLE_INSUFFICIENT' });
+    }
+    if (!isStripeEnabled()) {
+      return reply.code(409).send({ error: 'Stripe checkout is not configured', code: 'STRIPE_NOT_CONFIGURED' });
+    }
+
+    try {
+      const body = (request.body ?? {}) as any;
+      const result = await createStackCheckoutSession({
+        tenantId: ctx.tenantId,
+        userId: user.id,
+        coreProduct: body.coreProduct,
+        freeCompanionModule: body.freeCompanionModule,
+        additionalModules: body.additionalModules,
+        additionalSeats: body.additionalSeats,
+      });
+      await writeAudit({
+        actorUserId: user.id,
+        tenantId: ctx.tenantId,
+        targetType: 'stripe_checkout',
+        targetId: result.sessionId,
+        action: 'core_product_stack_checkout_created',
+        extra: {
+          coreProduct: body.coreProduct,
+          freeCompanionModule: body.freeCompanionModule,
+          additionalModules: body.additionalModules ?? [],
+          additionalSeats: body.additionalSeats ?? 0,
+        },
+        ipAddress: request.ip,
+      }, request);
+      return result;
+    } catch (error) {
+      return reply.code(400).send({
+        error: error instanceof Error ? error.message : 'Could not create checkout',
+        code: 'STACK_CHECKOUT_INVALID',
+      });
+    }
+  });
+
+  app.post('/v1/billing/stack/free-companion', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    if (!ctx.viaPlatformRole && ctx.role !== 'owner' && ctx.role !== 'admin') {
+      return reply.code(403).send({ error: 'Tenant owner or admin access required', code: 'TENANT_ROLE_INSUFFICIENT' });
+    }
+    try {
+      const moduleKey = (request.body as any)?.moduleKey;
+      await changeFreeCompanionModule(ctx.tenantId, moduleKey);
+      await writeAudit({
+        actorUserId: user.id,
+        tenantId: ctx.tenantId,
+        targetType: 'tenant_entitlement',
+        targetId: moduleKey,
+        action: 'free_companion_changed',
+        after: { moduleKey },
+        ipAddress: request.ip,
+      }, request);
+      return { ok: true, moduleKey };
+    } catch (error) {
+      return reply.code(400).send({
+        error: error instanceof Error ? error.message : 'Could not change companion module',
+        code: 'FREE_COMPANION_INVALID',
+      });
+    }
+  });
+
   app.get('/v1/billing/subscription', { preHandler: [authenticate] }, async (request) => {
     const user = (request as any).user;
     const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id)).limit(1);

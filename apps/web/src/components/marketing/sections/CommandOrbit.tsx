@@ -7,7 +7,7 @@ import { MARKETING_MODULES } from '@/lib/marketing-catalog';
 
 /**
  * Command Orbit — the OperatorOS core surrounded by every module
- * orbiting it. Two rings keep the layout readable when all 11 modules
+ * orbiting it. Two rings keep the layout readable as the module catalog grows
  * are visible:
  *
  *   - Inner ring (first 5 modules, ord 1..5)  — radius 38%

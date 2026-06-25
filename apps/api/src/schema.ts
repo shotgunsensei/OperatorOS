@@ -683,6 +683,7 @@ export const tenants = pgTable('tenants', {
   status: text('status', { enum: ['active', 'suspended', 'archived'] }).notNull().default('active'),
   suspendedAt: timestamp('suspended_at'),
   archivedAt: timestamp('archived_at'),
+  seatLimit: integer('seat_limit').notNull().default(0),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -690,6 +691,28 @@ export const tenants = pgTable('tenants', {
   index('idx_tenants_owner').on(t.ownerUserId),
   index('idx_tenants_type').on(t.type),
   index('idx_tenants_status').on(t.status),
+]);
+
+export const tenantEntitlements = pgTable('tenant_entitlements', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  entitlementKey: text('entitlement_key').notNull(),
+  entitlementType: text('entitlement_type', {
+    enum: ['core_product', 'included_app', 'companion_module', 'seat_pack', 'system'],
+  }).notNull(),
+  source: text('source', {
+    enum: ['stripe', 'included_with_core', 'selected_free_companion', 'manual', 'admin'],
+  }).notNull(),
+  active: boolean('active').notNull().default(true),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  stripePriceId: text('stripe_price_id'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_tenant_entitlements_tenant').on(t.tenantId),
+  index('idx_tenant_entitlements_key').on(t.entitlementKey),
+  index('idx_tenant_entitlements_subscription').on(t.stripeSubscriptionId),
 ]);
 
 export const tenantUsers = pgTable('tenant_users', {
@@ -770,6 +793,7 @@ export const tenantInvites = pgTable('tenant_invites', {
 
 export type TenantRow = typeof tenants.$inferSelect;
 export type TenantUserRow = typeof tenantUsers.$inferSelect;
+export type TenantEntitlementRow = typeof tenantEntitlements.$inferSelect;
 export type TenantModuleRow = typeof tenantModules.$inferSelect;
 export type TenantUserModuleAccessRow = typeof tenantUserModuleAccess.$inferSelect;
 export type TenantInviteRow = typeof tenantInvites.$inferSelect;
