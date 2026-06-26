@@ -1,0 +1,119 @@
+Stripe setup checklist for OperatorOS
+
+1. Create Stripe products
+
+Create these products:
+
+Core products:
+- TradeFlowKit
+- PulseDesk
+- TechDeck
+
+Shared billing products:
+- OperatorOS Companion Module
+- OperatorOS Additional Seat
+
+Do not create separate Stripe products for every add-on module unless Codex specifically needs that later. Use one shared Companion Module product at $29/month and pass the selected module key through metadata.
+
+2. Create monthly prices
+
+TradeFlowKit:
+- $149/month recurring
+- Copy price ID into STRIPE_PRICE_TRADEFLOWKIT_MONTHLY
+
+PulseDesk:
+- $149/month recurring
+- Copy price ID into STRIPE_PRICE_PULSEDESK_MONTHLY
+
+TechDeck:
+- $99/month recurring
+- Copy price ID into STRIPE_PRICE_TECHDECK_MONTHLY
+
+OperatorOS Companion Module:
+- $29/month recurring
+- Copy price ID into STRIPE_PRICE_COMPANION_MODULE_MONTHLY
+
+OperatorOS Additional Seat:
+- $15/month recurring
+- Copy price ID into STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY
+
+3. Webhook
+
+Create webhook endpoint pointing to your production API webhook route.
+
+Likely route:
+https://YOUR_API_DOMAIN/api/billing/stripe/webhook
+
+Enable events:
+- checkout.session.completed
+- customer.subscription.created
+- customer.subscription.updated
+- customer.subscription.deleted
+- invoice.payment_succeeded
+- invoice.payment_failed
+
+Copy webhook signing secret into:
+STRIPE_WEBHOOK_SECRET
+
+4. Environment variables
+
+Add these to production and local env:
+
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_TRADEFLOWKIT_MONTHLY=
+STRIPE_PRICE_PULSEDESK_MONTHLY=
+STRIPE_PRICE_TECHDECK_MONTHLY=
+STRIPE_PRICE_COMPANION_MODULE_MONTHLY=
+STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY=
+
+5. Stripe checkout metadata
+
+Make sure checkout sends:
+
+tenant_id
+user_id
+selected_core_product
+selected_free_companion_module
+additional_module_keys
+additional_seats
+
+6. Test checkout
+
+Test these purchase paths:
+
+A. TradeFlowKit only
+Expected:
+- TradeFlowKit unlocked
+- TorqueShed unlocked
+- FaultlineLab unlocked
+- Ninja Pool Hall unlocked
+- one selected companion module unlocked
+- seat limit = 5
+
+B. PulseDesk + 2 extra modules + 3 extra seats
+Expected:
+- PulseDesk unlocked
+- included apps unlocked
+- selected free companion unlocked
+- 2 paid modules unlocked
+- seat limit = 8
+
+C. TechDeck canceled
+Expected:
+- TechDeck disabled
+- paid modules disabled
+- included apps disabled unless tenant still has another active core product
+- user data retained
+
+7. Recommended Stripe naming
+
+Use clear Stripe product names:
+
+TradeFlowKit — OperatorOS Core Product
+PulseDesk — OperatorOS Core Product
+TechDeck — OperatorOS Core Product
+OperatorOS Companion Module
+OperatorOS Additional Seat
+
+This keeps Stripe clean and avoids a bloated product catalog.
