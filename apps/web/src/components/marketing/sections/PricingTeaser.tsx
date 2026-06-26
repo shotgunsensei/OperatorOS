@@ -21,6 +21,7 @@ export default function PricingTeaser() {
         maxWidth: brand.contentMaxWidth,
         margin: '0 auto',
         width: '100%',
+        boxSizing: 'border-box',
       }}
     >
       <div

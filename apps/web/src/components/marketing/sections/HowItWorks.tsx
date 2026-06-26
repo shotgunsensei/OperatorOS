@@ -46,6 +46,7 @@ export default function HowItWorks() {
         maxWidth: brand.contentMaxWidth,
         margin: '0 auto',
         width: '100%',
+        boxSizing: 'border-box',
       }}
     >
       <style dangerouslySetInnerHTML={{ __html: `

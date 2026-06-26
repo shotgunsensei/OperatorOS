@@ -20,6 +20,7 @@ import { brand } from './brand';
 
 export type ModulePlanTier = 'starter' | 'pro' | 'elite';
 export type ModuleDefaultStatus = 'live' | 'beta' | 'coming_soon';
+export type MarketingPackageType = 'core' | 'included' | 'companion';
 
 export interface MarketingCatalogSource {
   slug: string;
@@ -50,6 +51,10 @@ export type MarketingStatus = 'Available' | 'Coming Soon' | 'Beta' | 'Locked';
 export interface MarketingModule {
   slug: string;
   name: string;
+  /** Current OperatorOS product-packaging lane. */
+  packageType: MarketingPackageType;
+  /** Public packaging label used on marketing cards. */
+  packageLabel: string;
   /** One-sentence outcome (not feature). */
   outcome: string;
   /** Primary user or buyer the module is built for. */
@@ -109,15 +114,46 @@ const SOLVES: Record<string, string> = {
   'ninjamation':      'Manual handoffs between tools that should already know what changed.',
 };
 
+export const PACKAGE_LABELS: Record<MarketingPackageType, string> = {
+  core: 'Core Product',
+  included: 'Included With Any Core',
+  companion: 'Companion Module',
+};
+
+export const PACKAGE_DESCRIPTIONS: Record<MarketingPackageType, string> = {
+  core: 'Fully unlocked flagship products that anchor the OperatorOS stack.',
+  included: 'Utility and diagnostic modules bundled with every paid core product.',
+  companion: 'One companion can be selected free; additional companions can be added as paid modules.',
+};
+
+const PACKAGE_BY_SLUG: Record<string, MarketingPackageType> = {
+  'tradeflowkit': 'core',
+  'pulsedesk': 'core',
+  'techdeck': 'core',
+  'torqueshed': 'included',
+  'faultlinelab': 'included',
+  'ninja-pool-hall': 'included',
+  'snapproofos': 'companion',
+  'brandforgeos': 'companion',
+  'studyforge-ai': 'companion',
+  'ninja-launch-kit': 'companion',
+  'callcommand-ai': 'companion',
+  'ninjamation': 'companion',
+};
+
 const IMAGE_SRC: Record<string, string> = {
-  'tradeflowkit': '/media/operatoros/module-tradeflowkit.jpg',
-  'torqueshed': '/media/operatoros/module-torqueshed.jpg',
-  'techdeck': '/media/operatoros/module-techdeck.jpg',
-  'pulsedesk': '/media/operatoros/module-pulsedesk.jpg',
-  'faultlinelab': '/media/operatoros/module-faultlinelab.jpg',
-  'brandforgeos': '/media/operatoros/module-brandforgeos.jpg',
-  'snapproofos': '/media/operatoros/module-snapproofos.jpg',
-  'ninjamation': '/media/operatoros/module-ninjamation.jpg',
+  'tradeflowkit': '/media/operatoros/module-tradeflowkit.png',
+  'torqueshed': '/media/operatoros/module-torqueshed.png',
+  'techdeck': '/media/operatoros/module-techdeck.png',
+  'pulsedesk': '/media/operatoros/module-pulsedesk.png',
+  'faultlinelab': '/media/operatoros/module-faultlinelab.png',
+  'ninja-pool-hall': '/media/operatoros/module-ninja-pool-hall.png',
+  'brandforgeos': '/media/operatoros/module-brandforgeos.png',
+  'snapproofos': '/media/operatoros/module-snapproofos.png',
+  'studyforge-ai': '/media/operatoros/module-studyforge-ai.png',
+  'ninja-launch-kit': '/media/operatoros/module-ninja-launch-kit.png',
+  'callcommand-ai': '/media/operatoros/module-callcommand-ai.png',
+  'ninjamation': '/media/operatoros/module-ninjamation.png',
 };
 
 function statusFor(entry: MarketingCatalogSource): MarketingStatus {
@@ -135,6 +171,8 @@ export const MARKETING_MODULES: readonly MarketingModule[] = SOURCE
   .map((entry) => ({
     slug: entry.slug,
     name: entry.name,
+    packageType: PACKAGE_BY_SLUG[entry.slug] ?? 'companion',
+    packageLabel: PACKAGE_LABELS[PACKAGE_BY_SLUG[entry.slug] ?? 'companion'],
     outcome: OUTCOMES[entry.slug] ?? entry.description,
     audience: AUDIENCES[entry.slug] ?? 'Operations teams',
     solves: SOLVES[entry.slug] ?? entry.description,

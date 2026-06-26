@@ -79,6 +79,7 @@ export default function TrustSection({
         maxWidth: brand.contentMaxWidth,
         margin: '0 auto',
         width: '100%',
+        boxSizing: 'border-box',
       }}
     >
       <header style={{ textAlign: 'center', marginBottom: 48 }}>
