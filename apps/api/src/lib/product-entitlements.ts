@@ -152,12 +152,41 @@ export async function deactivateSubscriptionEntitlements(
     .limit(1);
   if (!row) return null;
 
+  const now = new Date();
   await db.transaction(async tx => {
+    // 1. Deactivate ONLY the cancelled subscription's rows. Entitlements
+    //    belonging to any OTHER active core subscription (its included apps,
+    //    companion, and seat packs) are left untouched.
     await tx.update(tenantEntitlements)
-      .set({ active: false, updatedAt: new Date() })
+      .set({ active: false, updatedAt: now })
       .where(eq(tenantEntitlements.stripeSubscriptionId, stripeSubscriptionId));
+
+    // 2. Recompute the tenant seat limit from what REMAINS active. If the
+    //    tenant still owns at least one active core product, the seat limit
+    //    is the included base plus every still-active seat-pack quantity.
+    //    If no active core remains, the seat limit collapses to 0.
+    const remaining = await tx.select({
+      entitlementType: tenantEntitlements.entitlementType,
+      metadata: tenantEntitlements.metadata,
+    })
+      .from(tenantEntitlements)
+      .where(and(
+        eq(tenantEntitlements.tenantId, row.tenantId),
+        eq(tenantEntitlements.active, true),
+      ));
+
+    const hasActiveCore = remaining.some(r => r.entitlementType === 'core_product');
+    const activeSeatPackTotal = remaining
+      .filter(r => r.entitlementType === 'seat_pack')
+      .reduce((sum, r) => {
+        const qty = Number((r.metadata as { quantity?: unknown } | null)?.quantity ?? 0);
+        return sum + (Number.isFinite(qty) && qty > 0 ? qty : 0);
+      }, 0);
+
+    const seatLimit = hasActiveCore ? INCLUDED_SEATS + activeSeatPackTotal : 0;
+
     await tx.update(tenants)
-      .set({ seatLimit: 0, updatedAt: new Date() })
+      .set({ seatLimit, updatedAt: now })
       .where(eq(tenants.id, row.tenantId));
   });
   return row.tenantId;

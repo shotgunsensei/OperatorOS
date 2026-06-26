@@ -1401,8 +1401,9 @@ function logCapabilityBanner(): void {
   const onOff = (cond: boolean) => (cond ? 'ON ' : 'off');
   const env = process.env.NODE_ENV ?? 'development';
 
+  const stripeMode = process.env.STRIPE_MODE ?? '';
   const stripeOn =
-    !!process.env.STRIPE_SECRET_KEY && process.env.STRIPE_MODE === 'live';
+    !!process.env.STRIPE_SECRET_KEY && (stripeMode === 'test' || stripeMode === 'live');
   const openaiOn = !!process.env.OPENAI_API_KEY;
   const ssoOn = !!process.env.MODULE_SSO_SECRET;
   const bootstrapAdminOn = !!process.env.OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL;

@@ -48,11 +48,12 @@ let __stripeSingleton: StripeClient | null = null;
 // ---------------------------------------------------------------------------
 // Stripe Configuration
 // ---------------------------------------------------------------------------
-// To enable live Stripe:
+// To enable Stripe (test sandbox OR live production):
 //   1. Set STRIPE_SECRET_KEY in your environment secrets
+//      (sk_test_… for the sandbox, sk_live_… for production)
 //   2. Set STRIPE_WEBHOOK_SECRET in your environment secrets
 //   3. Set stripePriceId on each subscription_plans row (or STRIPE_PRICE_MAP below)
-//   4. Set STRIPE_MODE=live
+//   4. Set STRIPE_MODE=test (sandbox) or STRIPE_MODE=live (production)
 //
 // Price ID mapping — fill these in when you create Stripe products:
 //   STRIPE_PRICE_STARTER = price_xxx (free tier — no checkout needed)
@@ -62,7 +63,9 @@ let __stripeSingleton: StripeClient | null = null;
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
-const STRIPE_MODE = process.env.STRIPE_MODE || 'test';
+// Raw env value (empty string when unset). Stripe is only enabled when this is
+// EXPLICITLY 'test' or 'live' — a missing/unknown mode leaves billing disabled.
+const STRIPE_MODE = process.env.STRIPE_MODE ?? '';
 
 // Test-only injection seam. Allows tests to force Stripe-mode behavior and
 // substitute a stubbed Stripe client without touching real env vars or
@@ -76,7 +79,7 @@ export function isStripeEnabled(): boolean {
   if (__stripeTestOverride && typeof __stripeTestOverride.enabled === 'boolean') {
     return __stripeTestOverride.enabled;
   }
-  return !!STRIPE_SECRET_KEY && STRIPE_MODE === 'live';
+  return !!STRIPE_SECRET_KEY && (STRIPE_MODE === 'test' || STRIPE_MODE === 'live');
 }
 
 function getStripe() {
@@ -285,7 +288,7 @@ export async function createCheckoutSession(
   interval: BillingInterval = 'month',
 ): Promise<CheckoutSessionResult> {
   if (!isStripeEnabled()) {
-    throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE=live');
+    throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE (test or live).');
   }
 
   const stripe = getStripe();
@@ -340,7 +343,7 @@ export async function createStackCheckoutSession(
   input: StackCheckoutInput,
 ): Promise<CheckoutSessionResult> {
   if (!isStripeEnabled()) {
-    throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE=live');
+    throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE (test or live).');
   }
 
   const normalized = normalizeStackSelection(input);
@@ -414,7 +417,7 @@ export async function createStackCheckoutSession(
 
 export async function createPortalSession(userId: string): Promise<PortalSessionResult> {
   if (!isStripeEnabled()) {
-    throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE=live');
+    throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE (test or live).');
   }
 
   const stripe = getStripe();
@@ -613,7 +616,11 @@ export async function processWebhookEvent(event: { type: string; data: { object:
       result = await handleSubscriptionDeleted(obj); break;
     case 'invoice.payment_failed':
       result = await handlePaymentFailed(obj); break;
+    // Stripe sends both `invoice.paid` and `invoice.payment_succeeded` for a
+    // successful invoice. Route them to the same handler so subscribing to
+    // EITHER event in the dashboard works (no silently-ignored events).
     case 'invoice.paid':
+    case 'invoice.payment_succeeded':
       result = await handleInvoicePaid(obj); break;
     default:
       console.log(`[billing-service] Unhandled webhook event: ${type}`);
@@ -1064,8 +1071,8 @@ export async function lookupAddonStripePrice(
 // Creates a brand-new recurring (monthly) Stripe Price for a module's add-on.
 // Used by the super-admin "Create new Stripe price" drift-fix action so an
 // admin can rotate to a corrected unit_amount without leaving the UI.
-// Requires Stripe to be live (secret + STRIPE_MODE=live) — local/test stubs
-// are intentionally rejected so we never invent priceIds against a real env.
+// Requires Stripe to be enabled (secret + STRIPE_MODE=test or live) — when no
+// key is configured we reject so we never invent priceIds against a dead env.
 export interface CreateAddonStripePriceArgs {
   moduleSlug: string;
   moduleName: string;
@@ -1082,7 +1089,7 @@ export async function createAddonStripePrice(
   args: CreateAddonStripePriceArgs,
 ): Promise<CreateAddonStripePriceResult> {
   if (!isStripeEnabled()) {
-    throw new Error('Stripe is not enabled (set STRIPE_SECRET_KEY and STRIPE_MODE=live)');
+    throw new Error('Stripe is not enabled (set STRIPE_SECRET_KEY and STRIPE_MODE=test or live)');
   }
   if (!Number.isInteger(args.unitAmountCents) || args.unitAmountCents <= 0) {
     throw new Error('unitAmountCents must be a positive integer (cents)');
