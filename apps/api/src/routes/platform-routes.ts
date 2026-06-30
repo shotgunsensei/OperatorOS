@@ -38,7 +38,7 @@ import { count } from 'drizzle-orm';
 import { requireSuperAdmin } from '../lib/tenant-auth.js';
 import { sanitizeUser } from '../lib/auth.js';
 import {
-  writeAudit, pickSafe, registerAuditEnforcement, AUDIT_FLAG,
+  writeAudit, pickSafe, registerAuditEnforcement, registerPlatformFailureLogging, AUDIT_FLAG,
   TENANT_SAFE_FIELDS, MODULE_SAFE_FIELDS,
   TENANT_MODULE_SAFE_FIELDS, TENANT_USER_ACCESS_SAFE_FIELDS,
 } from '../lib/audit.js';
@@ -84,6 +84,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
   // surface). Billing endpoints already self-audit but are not enforced here
   // to avoid noisy `audit_missing` rows from low-risk routes.
   registerAuditEnforcement(app, { prefixes: ['/v1/platform/'] });
+  registerPlatformFailureLogging(app, { prefixes: ['/v1/platform/'] });
 
   // =====================================================================
   // TENANTS — list / detail / create / patch / lifecycle
@@ -1111,6 +1112,61 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     };
   });
 
+  app.get('/v1/platform/plans', { preHandler: [requireSuperAdmin] }, async () => {
+    const dbPlans = await db.select().from(subscriptionPlans);
+    const dbPlanBySlug = Object.fromEntries(dbPlans.map(p => [p.slug, p]));
+    const catalogBySlug = Object.fromEntries(PLAN_CATALOG.map(p => [p.slug, p]));
+    const configuredSlugs = new Set(PLAN_CONFIGS.map(p => p.slug));
+
+    const plans = PLAN_CONFIGS.map(cfg => {
+      const row = dbPlanBySlug[cfg.slug];
+      const catalog = catalogBySlug[cfg.slug];
+      return {
+        id: row?.id ?? null,
+        slug: cfg.slug,
+        name: row?.name ?? cfg.name,
+        price: row?.price ?? cfg.price,
+        interval: row?.interval ?? cfg.interval,
+        description: cfg.description,
+        highlight: cfg.highlight ?? false,
+        limits: cfg.limits,
+        features: cfg.features,
+        isActive: row?.isActive ?? false,
+        createdAt: row?.createdAt ?? null,
+        stripePriceConfigured: !!row?.stripePriceId,
+        stripeProductConfigured: !!row?.stripeProductId,
+        displayMonthlyPriceCents: catalog?.monthlyPriceCents ?? cfg.price,
+        displayAnnualPriceCents: catalog?.annualPriceCents ?? null,
+      };
+    });
+
+    const extras = dbPlans
+      .filter(row => !configuredSlugs.has(row.slug))
+      .map(row => ({
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        price: row.price,
+        interval: row.interval,
+        description: '',
+        highlight: false,
+        limits: null,
+        features: null,
+        isActive: row.isActive,
+        createdAt: row.createdAt,
+        stripePriceConfigured: !!row.stripePriceId,
+        stripeProductConfigured: !!row.stripeProductId,
+        displayMonthlyPriceCents: row.interval === 'month' ? row.price : null,
+        displayAnnualPriceCents: row.interval === 'year' ? row.price : null,
+      }));
+
+    return {
+      plans: [...plans, ...extras],
+      total: plans.length + extras.length,
+      seeded: dbPlans.length >= PLAN_CONFIGS.length,
+    };
+  });
+
   app.get('/v1/platform/pricing', { preHandler: [requireSuperAdmin] }, async () => {
     const all = await db.select().from(modules).where(isNull(modules.archivedAt)).orderBy(modules.ord);
     const out = [] as any[];
@@ -1340,9 +1396,17 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     if (process.env.NODE_ENV === 'production') {
       return reply.code(404).send({ error: 'not found', code: 'NOT_FOUND' });
     }
+    const admin = (request as any).user;
     const body = (request.body ?? {}) as any;
     if (body.reset === true) {
       __setStripeTestOverrides(null);
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'stripe_test_override',
+        action: 'stripe_test_override_reset',
+        extra: { reset: true },
+        ipAddress: request.ip,
+      }, request);
       return { ok: true, action: 'reset' };
     }
     const retrievePrice = body.retrievePrice || null;
@@ -1354,6 +1418,17 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       },
     };
     __setStripeTestOverrides({ enabled: body.enabled !== false, client });
+    await writeAudit({
+      actorUserId: admin.id,
+      targetType: 'stripe_test_override',
+      action: 'stripe_test_override_installed',
+      extra: {
+        enabled: body.enabled !== false,
+        hasRetrievePrice: !!retrievePrice,
+        hasCreatePrice: !!createPrice,
+      },
+      ipAddress: request.ip,
+    }, request);
     return { ok: true, action: 'installed' };
   });
 
@@ -1462,6 +1537,40 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     'id', 'userId', 'planId', 'status', 'currentPeriodStart',
     'currentPeriodEnd', 'cancelAtPeriodEnd',
   ] as const;
+  const PLATFORM_ROLES = ['user', 'super_admin'] as const;
+
+  async function countPlatformSuperAdmins(options: { excludeUserId?: string; activeOnly?: boolean } = {}) {
+    const filters: any[] = [eq(users.platformRole, 'super_admin')];
+    if (options.activeOnly) filters.push(eq(users.status, 'active'));
+    const rows = await db.select({ id: users.id }).from(users).where(and(...filters));
+    return rows.filter(u => u.id !== options.excludeUserId).length;
+  }
+
+  async function wouldRemoveLastPlatformSuperAdmin(
+    target: any,
+    changes: { platformRole?: string; status?: string; hardDelete?: boolean },
+  ): Promise<boolean> {
+    if (target.platformRole !== 'super_admin') return false;
+
+    if (changes.hardDelete) {
+      return (await countPlatformSuperAdmins({ excludeUserId: target.id })) === 0;
+    }
+
+    const nextPlatformRole = changes.platformRole ?? target.platformRole;
+    const nextStatus = changes.status ?? target.status;
+    const removesActiveAuthority = target.status === 'active'
+      && (nextPlatformRole !== 'super_admin' || nextStatus !== 'active');
+
+    if (!removesActiveAuthority) return false;
+    return (await countPlatformSuperAdmins({ excludeUserId: target.id, activeOnly: true })) === 0;
+  }
+
+  function lastPlatformSuperAdmin(reply: any) {
+    return reply.code(409).send({
+      error: 'Cannot remove the last active platform super admin',
+      code: 'LAST_SUPER_ADMIN',
+    });
+  }
 
   app.get('/v1/platform/users', { preHandler: [requireSuperAdmin] }, async (request) => {
     const q = (request.query ?? {}) as any;
@@ -1538,11 +1647,22 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       const recentActivity = await db.select().from(activityFeed).where(eq(activityFeed.userId, id)).orderBy(desc(activityFeed.createdAt)).limit(10);
       const auditHistory = await db.select().from(adminAuditLogs).where(eq(adminAuditLogs.targetUserId, id)).orderBy(desc(adminAuditLogs.createdAt)).limit(20);
       const userBillingEvents = await db.select().from(billingEvents).where(eq(billingEvents.userId, id)).orderBy(desc(billingEvents.createdAt)).limit(20);
+      const planRank = new Map(PLAN_CONFIGS.map((p, index) => [p.slug, index]));
+      const activePlans = (await db.select({
+        id: subscriptionPlans.id,
+        slug: subscriptionPlans.slug,
+        name: subscriptionPlans.name,
+        price: subscriptionPlans.price,
+        interval: subscriptionPlans.interval,
+        isActive: subscriptionPlans.isActive,
+      }).from(subscriptionPlans).where(eq(subscriptionPlans.isActive, true)))
+        .sort((a, b) => (planRank.get(a.slug) ?? 999) - (planRank.get(b.slug) ?? 999));
 
       return {
         user: sanitizeUser(user),
         subscription: sub ?? null,
         plan,
+        plans: activePlans,
         stats: { workspaces: wsCount, projects: projCount, tasks: taskCount, notes: noteCount },
         recentActivity,
         auditHistory,
@@ -1564,6 +1684,9 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       if (id === admin.id) return badRequest(reply, 'Cannot change your own status');
       const [before] = await db.select().from(users).where(eq(users.id, id)).limit(1);
       if (!before) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      if (await wouldRemoveLastPlatformSuperAdmin(before, { status })) {
+        return lastPlatformSuperAdmin(reply);
+      }
 
       const updates: any = { status, updatedAt: new Date() };
       if (status === 'deleted') updates.deletedAt = new Date();
@@ -1613,6 +1736,36 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         ipAddress: request.ip,
       }, request);
       return { user: sanitizeUser(after), previousRole: before.role };
+    },
+  );
+
+  app.put<{ Params: { id: string }; Body: any }>(
+    '/v1/platform/users/:id/platform-role',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const { platformRole } = (request.body ?? {}) as any;
+      if (!PLATFORM_ROLES.includes(platformRole)) {
+        return badRequest(reply, 'Invalid platformRole. Allowed: user, super_admin');
+      }
+      if (id === admin.id) return badRequest(reply, 'Cannot change your own platform role');
+      const [before] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      if (await wouldRemoveLastPlatformSuperAdmin(before, { platformRole })) {
+        return lastPlatformSuperAdmin(reply);
+      }
+      const [after] = await db.update(users).set({ platformRole, updatedAt: new Date() }).where(eq(users.id, id)).returning();
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'user',
+        targetId: id,
+        action: 'user_platform_role_changed',
+        before: pickSafe(before, [...USER_SAFE_FIELDS]),
+        after: pickSafe(after, [...USER_SAFE_FIELDS]),
+        ipAddress: request.ip,
+      }, request);
+      return { user: sanitizeUser(after), previousPlatformRole: before.platformRole };
     },
   );
 
@@ -1758,6 +1911,9 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       if (id === admin.id) return badRequest(reply, 'Cannot delete yourself');
       const [before] = await db.select().from(users).where(eq(users.id, id)).limit(1);
       if (!before) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      if (await wouldRemoveLastPlatformSuperAdmin(before, { status: 'deleted' })) {
+        return lastPlatformSuperAdmin(reply);
+      }
       const [after] = await db.update(users).set({
         status: 'deleted', deletedAt: new Date(), updatedAt: new Date(),
       }).where(eq(users.id, id)).returning();
@@ -1784,6 +1940,9 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       if (id === admin.id) return badRequest(reply, 'Cannot delete yourself');
       const [target] = await db.select().from(users).where(eq(users.id, id)).limit(1);
       if (!target) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      if (await wouldRemoveLastPlatformSuperAdmin(target, { hardDelete: true })) {
+        return lastPlatformSuperAdmin(reply);
+      }
       if (target.status !== 'deleted') {
         return reply.code(400).send({ error: 'User must be soft-deleted first before hard delete', code: 'USER_NOT_SOFT_DELETED' });
       }

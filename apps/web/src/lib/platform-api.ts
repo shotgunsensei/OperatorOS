@@ -1,0 +1,134 @@
+'use client';
+
+export const PLATFORM_API_PROXY_BASE = '/api';
+
+export class PlatformApiError extends Error {
+  status: number;
+  code?: string;
+  body: unknown;
+  endpoint: string;
+  action: string;
+
+  constructor(
+    message: string,
+    status: number,
+    code: string | undefined,
+    body: unknown,
+    endpoint: string,
+    action: string,
+  ) {
+    super(message);
+    this.name = 'PlatformApiError';
+    this.status = status;
+    this.code = code;
+    this.body = body;
+    this.endpoint = endpoint;
+    this.action = action;
+  }
+}
+
+export function normalizePlatformPath(path: string): string {
+  const raw = String(path ?? '').trim();
+  if (!raw) throw new Error('Platform API path is required');
+
+  let next = raw.startsWith('/') ? raw : `/${raw}`;
+
+  if (next === '/api') {
+    throw new Error('Platform API path must include /platform');
+  }
+  if (next.startsWith('/api/')) {
+    next = next.slice('/api'.length);
+  }
+  if (next.startsWith('/v1/platform')) {
+    next = next.replace(/^\/v1(?=\/platform(?:$|[/?#]))/, '');
+  }
+
+  if (next === '/platform' || next.startsWith('/platform/') || next.startsWith('/platform?')) {
+    return next;
+  }
+
+  throw new Error(`Platform API path must target /platform, got ${raw}`);
+}
+
+export function platformApiUrl(path: string): string {
+  return `${PLATFORM_API_PROXY_BASE}${normalizePlatformPath(path)}`;
+}
+
+function readClientStorage(key: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function shouldJsonEncodeBody(body: RequestInit['body'] | Record<string, unknown>): body is Record<string, unknown> {
+  if (body == null || typeof body !== 'object') return false;
+  if (typeof FormData !== 'undefined' && body instanceof FormData) return false;
+  if (typeof Blob !== 'undefined' && body instanceof Blob) return false;
+  if (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams) return false;
+  if (typeof ArrayBuffer !== 'undefined' && body instanceof ArrayBuffer) return false;
+  if (typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView(body)) return false;
+  return !(typeof ReadableStream !== 'undefined' && body instanceof ReadableStream);
+}
+
+async function parseResponseBody(res: Response): Promise<unknown> {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+export async function platformApiCall<T = any>(
+  path: string,
+  init: Omit<RequestInit, 'body'> & {
+    body?: RequestInit['body'] | Record<string, unknown>;
+    action?: string;
+  } = {},
+): Promise<T> {
+  const { action: requestedAction, ...fetchInit } = init;
+  const token = readClientStorage('token');
+  const tenantId = readClientStorage('activeTenantId');
+  const headers = new Headers(fetchInit.headers);
+  const body = shouldJsonEncodeBody(fetchInit.body) ? JSON.stringify(fetchInit.body) : fetchInit.body;
+  const endpoint = platformApiUrl(path);
+  const method = String(fetchInit.method || 'GET').toUpperCase();
+  const action = requestedAction || `${method} ${normalizePlatformPath(path)}`;
+
+  if (body != null && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (tenantId && !headers.has('X-Tenant-Id')) {
+    headers.set('X-Tenant-Id', tenantId);
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(endpoint, {
+      ...fetchInit,
+      body: body as RequestInit['body'],
+      headers,
+      credentials: 'include',
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Network request failed';
+    throw new PlatformApiError(message, 0, 'NETWORK_ERROR', null, endpoint, action);
+  }
+  const parsed = await parseResponseBody(res);
+
+  if (!res.ok) {
+    const bodyObj = parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {};
+    const message = typeof bodyObj.error === 'string' ? bodyObj.error : res.statusText || `HTTP ${res.status}`;
+    const code = typeof bodyObj.code === 'string' ? bodyObj.code : undefined;
+    throw new PlatformApiError(message, res.status, code, parsed, endpoint, action);
+  }
+
+  return parsed as T;
+}

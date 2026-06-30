@@ -3,8 +3,9 @@
 /**
  * Task #66 — /admin/health
  *
- * Super-admin-only launch-readiness dashboard. Fetches
- * `GET /v1/platform/health` and renders every probe as a red/green dot.
+ * Super-admin-only launch-readiness dashboard. Fetches through the frontend
+ * proxy as `/api/platform/health`, which rewrites to backend
+ * `GET /v1/platform/health`, and renders every probe as a red/green dot.
  * Booleans only by design — secret values and PII never reach the DOM,
  * so a screenshot of this page is always safe to share.
  *
@@ -15,21 +16,7 @@
 
 import { useEffect, useState } from 'react';
 import AuthProvider, { useAuth } from '@/components/AuthProvider';
-
-// Local fetch helper — mirrors the apiCall pattern used in PlatformPage so
-// /admin/health doesn't take a dependency on the private auth.ts internals.
-const API = '/api';
-async function apiCall(path: string): Promise<unknown> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const res = await fetch(`${API}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
+import { platformApiCall } from '@/lib/platform-api';
 
 interface HealthResponse {
   ok: boolean;
@@ -107,7 +94,7 @@ function HealthDashboard() {
     let alive = true;
     (async () => {
       try {
-        const res = (await apiCall('/v1/platform/health')) as HealthResponse;
+        const res = await platformApiCall<HealthResponse>('/platform/health');
         if (alive) setHealth(res);
       } catch (e) {
         const msg = (e as { error?: string; message?: string })?.error
