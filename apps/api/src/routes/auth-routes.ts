@@ -15,6 +15,11 @@ import {
   resetFailedLogins,
 } from '../lib/auth.js';
 import { checkRateLimit } from '../lib/rate-limiter.js';
+import {
+  getSessionClearCookieOptions,
+  getSessionCookieOptions,
+  SESSION_COOKIE_NAME,
+} from '../../../../packages/auth/index.js';
 
 const AUTH_IP_RATE_LIMIT = 10;
 const AUTH_RATE_WINDOW_MS = 15 * 60 * 1000;
@@ -143,27 +148,25 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
     const token = signToken({ userId: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion });
 
-    reply.setCookie('token', token, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
-    });
+    reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
 
     return { user: sanitizeUser(user), token };
   });
 
-  app.post('/v1/auth/logout', { preHandler: [authenticate] }, async (request, reply) => {
+  const logoutHandler = async (request: any, reply: any) => {
     const user = (request as any).user;
     await logAudit(user.id, 'logout', user.id, {}, request.ip);
-    reply.clearCookie('token', { path: '/' });
+    reply.clearCookie(SESSION_COOKIE_NAME, getSessionClearCookieOptions());
     return { ok: true };
-  });
+  };
+  app.post('/v1/auth/logout', { preHandler: [authenticate] }, logoutHandler);
+  app.post('/api/auth/logout', { preHandler: [authenticate] }, logoutHandler);
 
-  app.get('/v1/auth/me', { preHandler: [authenticate] }, async (request) => {
+  const meHandler = async (request: any) => {
     return { user: sanitizeUser((request as any).user) };
-  });
+  };
+  app.get('/v1/auth/me', { preHandler: [authenticate] }, meHandler);
+  app.get('/api/auth/me', { preHandler: [authenticate] }, meHandler);
 
   app.post('/v1/auth/forgot-password', async (request, reply) => {
     const ip = getIp(request);
@@ -271,13 +274,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
     const token = signToken({ userId: updated.id, email: updated.email, role: updated.role, tokenVersion: updated.tokenVersion });
 
-    reply.setCookie('token', token, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
-    });
+    reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
 
     return { user: sanitizeUser(updated), token, message: 'Password changed successfully' };
   });
@@ -318,13 +315,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
     const token = signToken({ userId: updated.id, email: updated.email, role: updated.role, tokenVersion: updated.tokenVersion });
 
-    reply.setCookie('token', token, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
-    });
+    reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
 
     return { user: sanitizeUser(updated), token, message: 'Email updated successfully' };
   });
@@ -355,7 +346,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     await logAudit(user.id, 'account_deletion_requested', user.id, {}, request.ip);
     await logUserActivity(user.id, 'account_deleted', 'user', user.id);
 
-    reply.clearCookie('token', { path: '/' });
+    reply.clearCookie(SESSION_COOKIE_NAME, getSessionClearCookieOptions());
     return { ok: true, message: 'Account has been deleted' };
   });
 }

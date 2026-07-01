@@ -14,6 +14,7 @@ import { safeWorkspaceExec } from '../lib/exec.js';
 import { addSystemEvent, addSystemNotification } from '../lib/system-events.js';
 import { getProfile } from '../../../../packages/profiles/src/index.js';
 import { authenticate } from '../lib/auth.js';
+import { hasPlatformAdminAuthority } from '../lib/rbac.js';
 
 function shellEscape(input: string) {
   return `'${input.replace(/'/g, `'\\''`)}'`;
@@ -31,7 +32,7 @@ async function getAuthorizedWorkspace(
     reply.status(404).send({ error: 'Workspace not found' });
     return null;
   }
-  if (user.platformRole !== 'super_admin' && ws.userId !== user.id) {
+  if (!hasPlatformAdminAuthority(user) && ws.userId !== user.id) {
     reply.status(404).send({ error: 'Workspace not found' });
     return null;
   }
@@ -39,7 +40,7 @@ async function getAuthorizedWorkspace(
 }
 
 async function getUserWorkspaceIds(user: AuthUser): Promise<string[]> {
-  if (user.platformRole === 'super_admin') return [];
+  if (hasPlatformAdminAuthority(user)) return [];
   const rows = await db.select({ id: workspaces.id }).from(workspaces).where(eq(workspaces.userId, user.id));
   return rows.map((r) => r.id);
 }
@@ -48,7 +49,7 @@ export async function registerOsRoutes(app: FastifyInstance) {
   app.get('/v1/system/status', { preHandler: [authenticate] }, async (req) => {
     const user = (req as any).user as AuthUser;
     const userWsIds = await getUserWorkspaceIds(user);
-    const isSuperAdmin = user.platformRole === 'super_admin';
+    const isSuperAdmin = hasPlatformAdminAuthority(user);
 
     const wsFilter = isSuperAdmin ? undefined : (userWsIds.length ? inArray(workspaces.id, userWsIds) : sql<boolean>`false`);
     const procFilter = isSuperAdmin ? eq(workspaceProcesses.status, 'running') : (userWsIds.length ? and(eq(workspaceProcesses.status, 'running'), inArray(workspaceProcesses.workspaceId, userWsIds)) : sql<boolean>`false`);
@@ -83,11 +84,11 @@ export async function registerOsRoutes(app: FastifyInstance) {
     let rows;
     if (q.workspaceId) {
       const [ws] = await db.select({ id: workspaces.id, userId: workspaces.userId }).from(workspaces).where(eq(workspaces.id, q.workspaceId));
-      if (!ws || (user.platformRole !== 'super_admin' && ws.userId !== user.id)) {
+      if (!ws || (!hasPlatformAdminAuthority(user) && ws.userId !== user.id)) {
         return { events: [], total: 0 };
       }
       rows = await db.select().from(systemEvents).where(eq(systemEvents.workspaceId, q.workspaceId)).orderBy(desc(systemEvents.ts)).limit(limit);
-    } else if (user.platformRole === 'super_admin') {
+    } else if (hasPlatformAdminAuthority(user)) {
       rows = await db.select().from(systemEvents).orderBy(desc(systemEvents.ts)).limit(limit);
     } else {
       const wsIds = await getUserWorkspaceIds(user);
@@ -105,11 +106,11 @@ export async function registerOsRoutes(app: FastifyInstance) {
     let rows;
     if (q.workspaceId) {
       const [ws] = await db.select({ id: workspaces.id, userId: workspaces.userId }).from(workspaces).where(eq(workspaces.id, q.workspaceId));
-      if (!ws || (user.platformRole !== 'super_admin' && ws.userId !== user.id)) {
+      if (!ws || (!hasPlatformAdminAuthority(user) && ws.userId !== user.id)) {
         return { notifications: [], total: 0 };
       }
       rows = await db.select().from(systemNotifications).where(eq(systemNotifications.workspaceId, q.workspaceId)).orderBy(desc(systemNotifications.createdAt)).limit(limit);
-    } else if (user.platformRole === 'super_admin') {
+    } else if (hasPlatformAdminAuthority(user)) {
       rows = await db.select().from(systemNotifications).orderBy(desc(systemNotifications.createdAt)).limit(limit);
     } else {
       const wsIds = await getUserWorkspaceIds(user);
@@ -127,11 +128,11 @@ export async function registerOsRoutes(app: FastifyInstance) {
     if (!notif) return reply.status(404).send({ error: 'Notification not found' });
     if (notif.workspaceId) {
       const [ws] = await db.select({ id: workspaces.id, userId: workspaces.userId }).from(workspaces).where(eq(workspaces.id, notif.workspaceId));
-      if (!ws || (user.platformRole !== 'super_admin' && ws.userId !== user.id)) {
+      if (!ws || (!hasPlatformAdminAuthority(user) && ws.userId !== user.id)) {
         return reply.status(404).send({ error: 'Notification not found' });
       }
     } else {
-      if (user.platformRole !== 'super_admin') {
+      if (!hasPlatformAdminAuthority(user)) {
         return reply.status(404).send({ error: 'Notification not found' });
       }
     }

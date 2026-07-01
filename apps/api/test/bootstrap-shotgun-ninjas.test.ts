@@ -15,7 +15,10 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../src/db.js';
-import { users, tenants, tenantUsers, tenantModules, tenantUserModuleAccess, subscriptions, addonSubscriptions } from '../src/schema.js';
+import {
+  users, tenants, tenantUsers, tenantModules, tenantUserModuleAccess,
+  subscriptions, addonSubscriptions, tenantEntitlements,
+} from '../src/schema.js';
 import { fixShotgunTenant } from '../src/lib/launch-fix-init.js';
 import { ensureSchemaReady, uniqueId } from './_setup.js';
 
@@ -48,6 +51,7 @@ before(async () => {
   const stale = await db.select().from(tenants).where(eq(tenants.slug, 'shotgun-ninjas'));
   for (const s of stale) {
     await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, s.id));
+    await db.delete(tenantEntitlements).where(eq(tenantEntitlements.tenantId, s.id));
     await db.delete(tenantModules).where(eq(tenantModules.tenantId, s.id));
     await db.delete(addonSubscriptions).where(eq(addonSubscriptions.tenantId, s.id));
     await db.delete(subscriptions).where(eq(subscriptions.tenantId, s.id));
@@ -69,6 +73,7 @@ after(async () => {
   for (const t of canonical) {
     if (t.ownerUserId === john.id) {
       await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, t.id));
+      await db.delete(tenantEntitlements).where(eq(tenantEntitlements.tenantId, t.id));
       await db.delete(tenantModules).where(eq(tenantModules.tenantId, t.id));
       await db.delete(addonSubscriptions).where(eq(addonSubscriptions.tenantId, t.id));
       await db.delete(subscriptions).where(eq(subscriptions.tenantId, t.id));

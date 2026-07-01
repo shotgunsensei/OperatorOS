@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": "../..",
     "jsx": "preserve",
     "lib": [
       "ES2022",
@@ -29,7 +29,10 @@
   "include": [
     "src",
     "next-env.d.ts",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "../../packages/auth/**/*.ts",
+    "../../packages/modules/**/*.ts",
+    "../../packages/sdk/src/**/*.ts"
   ],
   "exclude": [
     "node_modules",

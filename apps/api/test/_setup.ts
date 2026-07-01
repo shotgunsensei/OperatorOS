@@ -3,6 +3,7 @@ import { db } from '../src/db.js';
 import {
   users, modules, addonSubscriptions, billingEvents, ssoHandoffTokens,
   tenants, tenantUsers, tenantModules, tenantUserModuleAccess,
+  tenantEntitlements,
   saasWorkspaces, saasProjects, saasTasks, notes, activityFeed,
   usageTracking, aiActionsLog, aiPromptTemplates,
 } from '../src/schema.js';
@@ -86,6 +87,7 @@ export async function cleanupUser(userId: string) {
     const owned = await db.select().from(tenants).where(eq(tenants.ownerUserId, userId));
     for (const t of owned) {
       try { await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, t.id)); } catch {}
+      try { await db.delete(tenantEntitlements).where(eq(tenantEntitlements.tenantId, t.id)); } catch {}
       try { await db.delete(tenantModules).where(eq(tenantModules.tenantId, t.id)); } catch {}
       try { await db.delete(tenantUsers).where(eq(tenantUsers.tenantId, t.id)); } catch {}
       try { await db.delete(tenants).where(eq(tenants.id, t.id)); } catch {}

@@ -24,6 +24,7 @@ import { db } from '../db.js';
 import {
   users, tenants, tenantUsers, tenantModules, tenantUserModuleAccess,
   modules, planModules, subscriptions, subscriptionPlans, billingEvents,
+  tenantEntitlements,
 } from '../schema.js';
 import { PLAN_CONFIGS } from './plans.js';
 
@@ -259,6 +260,8 @@ export async function fixShotgunTenant(): Promise<void> {
   }
   const tenantId = canonical.id;
 
+  await ensureShotgunCoreModuleEntitlements(tenantId, john.id);
+
   // Back-fill tenant_modules for every plan-included live module on
   // John's tenant. Mirrors the Demo Co pattern.
   const [activeSub] = await db.select().from(subscriptions)
@@ -297,5 +300,64 @@ export async function fixShotgunTenant(): Promise<void> {
   }
   if (backfilled > 0) {
     console.log(`[launch-fix:post] Back-filled ${backfilled} tenant_modules rows on John's tenant`);
+  }
+}
+
+async function ensureShotgunCoreModuleEntitlements(tenantId: string, johnUserId: string): Promise<void> {
+  const coreSlugs = ['techdeck', 'pulsedesk', 'tradeflowkit'];
+  let granted = 0;
+
+  for (const slug of coreSlugs) {
+    const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+    if (!mod) {
+      console.warn(`[launch-fix:post] module ${slug} not found; skipping Shotgun entitlement seed`);
+      continue;
+    }
+
+    await db.insert(tenantModules).values({
+      tenantId,
+      moduleId: mod.id,
+      status: 'enabled',
+      source: 'admin',
+      allowAllMembers: true,
+      metadata: { seededBy: 'fixShotgunTenant', phase: 'operatoros_phase_6' },
+    }).onConflictDoNothing({ target: [tenantModules.tenantId, tenantModules.moduleId] });
+
+    await db.insert(tenantUserModuleAccess).values({
+      tenantId,
+      userId: johnUserId,
+      moduleId: mod.id,
+      accessLevel: 'manager',
+      grantedByUserId: johnUserId,
+    }).onConflictDoNothing({
+      target: [tenantUserModuleAccess.tenantId, tenantUserModuleAccess.userId, tenantUserModuleAccess.moduleId],
+    });
+
+    const [activeEntitlement] = await db.select().from(tenantEntitlements)
+      .where(and(
+        eq(tenantEntitlements.tenantId, tenantId),
+        eq(tenantEntitlements.entitlementKey, slug),
+        eq(tenantEntitlements.active, true),
+      ))
+      .limit(1);
+    if (!activeEntitlement) {
+      await db.insert(tenantEntitlements).values({
+        tenantId,
+        entitlementKey: slug,
+        entitlementType: 'system',
+        source: 'admin',
+        active: true,
+        metadata: {
+          seededBy: 'fixShotgunTenant',
+          phase: 'operatoros_phase_6',
+          moduleId: mod.id,
+        },
+      });
+      granted++;
+    }
+  }
+
+  if (granted > 0) {
+    console.log(`[launch-fix:post] Seeded ${granted} Shotgun Ninjas module entitlement(s)`);
   }
 }

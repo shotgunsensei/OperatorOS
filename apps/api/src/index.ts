@@ -35,6 +35,8 @@ import { registerModuleRoutes } from './routes/module-routes.js';
 import { registerModuleShellRoutes } from './routes/module-shell-routes.js';
 import { registerTenantRoutes } from './routes/tenant-routes.js';
 import { registerTenantAdminRoutes } from './routes/tenant-admin-routes.js';
+import { registerSsoRoutes } from './routes/sso-routes.js';
+import { registerAdminRoutes } from './routes/admin-routes.js';
 import { registerPlatformRoutes } from './routes/platform-routes.js';
 import { registerEntitlementRoutes } from './routes/entitlement-routes.js';
 import { registerEcosystemRoutes } from './routes/ecosystem-routes.js';
@@ -45,6 +47,7 @@ import { analyzeWorkspace, generatePlan, generateArtifacts, runProof } from './p
 import type { DetectionResult } from './publish/types.js';
 import { requireSessionSecret } from './lib/session-secret.js';
 import { authenticate } from './lib/auth.js';
+import { hasPlatformAdminAuthority } from './lib/rbac.js';
 
 const startTime = Date.now();
 const sessionSecret = requireSessionSecret();
@@ -101,9 +104,11 @@ await registerSaasRoutes(app);
 await registerBillingRoutes(app);
 await registerAiRoutes(app);
 await registerModuleRoutes(app);
+await registerSsoRoutes(app);
 await registerModuleShellRoutes(app);
 await registerTenantRoutes(app);
 await registerTenantAdminRoutes(app);
+await registerAdminRoutes(app);
 await registerPlatformRoutes(app);
 await registerEntitlementRoutes(app);
 await registerEcosystemRoutes(app);
@@ -314,7 +319,7 @@ async function getAuthorizedWorkspace(
     reply.status(404).send({ error: 'Workspace not found' });
     return null;
   }
-  if (user.platformRole !== 'super_admin' && ws.userId !== user.id) {
+  if (!hasPlatformAdminAuthority(user) && ws.userId !== user.id) {
     reply.status(404).send({ error: 'Workspace not found' });
     return null;
   }
@@ -322,7 +327,7 @@ async function getAuthorizedWorkspace(
 }
 
 async function getUserWorkspaceIds(user: AuthUser): Promise<string[]> {
-  if (user.platformRole === 'super_admin') return [];
+  if (hasPlatformAdminAuthority(user)) return [];
   const rows = await db.select({ id: workspaces.id }).from(workspaces).where(eq(workspaces.userId, user.id));
   return rows.map((r) => r.id);
 }
@@ -417,7 +422,7 @@ app.post<{ Body: CreateWorkspaceRequest }>(
 
 app.get('/v1/workspaces', { preHandler: [authenticate] }, async (req, reply) => {
   const user = (req as any).user as AuthUser;
-  const rows = user.platformRole === 'super_admin'
+  const rows = hasPlatformAdminAuthority(user)
     ? await db.select().from(workspaces)
     : await db.select().from(workspaces).where(eq(workspaces.userId, user.id));
   return reply.send({ workspaces: rows, total: rows.length });
@@ -425,7 +430,7 @@ app.get('/v1/workspaces', { preHandler: [authenticate] }, async (req, reply) => 
 
 app.get('/v1/workspaces/unowned', { preHandler: [authenticate] }, async (req, reply) => {
   const user = (req as any).user as AuthUser;
-  if (user.platformRole !== 'super_admin') {
+  if (!hasPlatformAdminAuthority(user)) {
     return reply.status(403).send({ error: 'PLATFORM_ROLE_REQUIRED' });
   }
   const rows = await db.select().from(workspaces).where(isNull(workspaces.userId));
@@ -437,7 +442,7 @@ app.patch<{ Params: { id: string }; Body: { userId: string } }>(
   { preHandler: [authenticate] },
   async (req, reply) => {
     const user = (req as any).user as AuthUser;
-    if (user.platformRole !== 'super_admin') {
+    if (!hasPlatformAdminAuthority(user)) {
       return reply.status(403).send({ error: 'PLATFORM_ROLE_REQUIRED' });
     }
     const { id } = req.params;
@@ -1119,7 +1124,7 @@ app.get('/v1/tasks', { preHandler: [authenticate] }, async (req, reply) => {
     const ws = await getAuthorizedWorkspace(wsId, user, reply);
     if (!ws) return;
     rows = await db.select().from(tasks).where(eq(tasks.workspaceId, wsId)).orderBy(desc(tasks.createdAt));
-  } else if (user.platformRole === 'super_admin') {
+  } else if (hasPlatformAdminAuthority(user)) {
     rows = await db.select().from(tasks).orderBy(desc(tasks.createdAt));
   } else {
     const userWsIds = await getUserWorkspaceIds(user);
@@ -1137,7 +1142,7 @@ app.get<{ Params: { workspaceId: string } }>(
     const workspaceId = (req.params as { workspaceId: string }).workspaceId;
     const user = (req as any).user as AuthUser;
     const [wsRecord] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    if (!wsRecord || (user.platformRole !== 'super_admin' && wsRecord.userId !== user.id)) {
+    if (!wsRecord || (!hasPlatformAdminAuthority(user) && wsRecord.userId !== user.id)) {
       socket.close(4403, 'Workspace not found or access denied');
       return;
     }

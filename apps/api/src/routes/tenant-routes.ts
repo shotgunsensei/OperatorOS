@@ -18,6 +18,7 @@ import { db } from '../db.js';
 import { tenants, tenantUsers, users } from '../schema.js';
 import { authenticate } from '../lib/auth.js';
 import { requireSuperAdmin, requireTenantMember } from '../lib/tenant-auth.js';
+import { hasPlatformAdminAuthority } from '../lib/rbac.js';
 
 export async function registerTenantRoutes(app: FastifyInstance) {
   // ──────────────────────────────────────────────────────────────────────
@@ -86,7 +87,7 @@ export async function registerTenantRoutes(app: FastifyInstance) {
       const [membership] = await db.select().from(tenantUsers)
         .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, user.id)))
         .limit(1);
-      if (!membership && user.platformRole !== 'super_admin') {
+      if (!membership && !hasPlatformAdminAuthority(user)) {
         return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
       }
       const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
@@ -95,10 +96,10 @@ export async function registerTenantRoutes(app: FastifyInstance) {
       }
       // Archived tenants are invisible to non-super-admins; suspended tenants
       // are visible but cannot be made the active tenant for the session.
-      if ((tenant as any).status === 'archived' && user.platformRole !== 'super_admin') {
+      if ((tenant as any).status === 'archived' && !hasPlatformAdminAuthority(user)) {
         return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
       }
-      if ((tenant as any).status === 'suspended' && user.platformRole !== 'super_admin') {
+      if ((tenant as any).status === 'suspended' && !hasPlatformAdminAuthority(user)) {
         return reply.code(403).send({
           error: 'Tenant is suspended. Contact platform administrator.',
           code: 'TENANT_SUSPENDED',

@@ -34,6 +34,7 @@ import {
   type InternalTenantRole, type PublicTenantRole,
   type InternalModuleAccessLevel, type PublicModuleRole,
 } from './role-aliases.js';
+import { hasPlatformAdminAuthority } from './rbac.js';
 
 export const ENTITLEMENT_SNAPSHOT_VERSION = 1 as const;
 
@@ -107,7 +108,7 @@ export async function resolveEntitlements(
   const [member] = await db.select().from(tenantUsers)
     .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, userId)))
     .limit(1);
-  const isSuper = user.platformRole === 'super_admin';
+  const isSuper = hasPlatformAdminAuthority(user);
   if (!member && !isSuper) return null;
 
   const internalRole: InternalTenantRole | null = (member?.role as InternalTenantRole) ?? null;
@@ -224,7 +225,7 @@ export async function resolveEntitlements(
     user: {
       id: user.id,
       email: user.email,
-      platformRole: user.platformRole ?? 'user',
+      platformRole: isSuper ? 'super_admin' : (user.platformRole ?? 'user'),
     },
     subscription: subBlock,
     modules: moduleEntries,

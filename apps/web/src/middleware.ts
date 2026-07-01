@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import {
+  resolveModuleContext,
+  type ResolvedOperatorOSModuleContext,
+} from '../../../packages/modules/registry.js';
 
 /**
- * Marketing-redesign Phase 1 — server-side auth gate for /app/*.
+ * Marketing-redesign Phase 1 plus OperatorOS consolidation Phase 5:
+ * server-side auth gate for /app/* and host-based module routing.
  *
  * The Fastify API issues a session JWT in the `token` cookie on
  * /v1/auth/login + /v1/auth/register (see apps/api/src/routes/auth-
@@ -31,10 +36,13 @@ import { NextResponse, type NextRequest } from 'next/server';
  *   protected console tree so the contract is "nested /app/* needs auth".
  *
  * `next.config.js` already 308-redirects legacy /platform, /apps/:slug,
- * /invites/:token to their /app/* equivalents, so the matcher below
- * captures every authenticated console surface transitively.
+ * /invites/:token to their /app/* equivalents. Phase 5 additionally
+ * rewrites `<module>.operatoros.net/*` and local `/modules/:slug` to
+ * the shared module shell while leaving API entitlement checks as the
+ * authoritative authorization layer.
  */
 const AUTH_COOKIE = 'token';
+const AUTH_HOST = 'auth.operatoros.net';
 
 function isExempt(pathname: string): boolean {
   // Invite-accept flow handles its own pre-auth logic + localStorage
@@ -43,24 +51,88 @@ function isExempt(pathname: string): boolean {
   return false;
 }
 
+function isProtectedAppPath(pathname: string): boolean {
+  return pathname === '/app' || pathname.startsWith('/app/');
+}
+
+function isModuleSurface(context: ResolvedOperatorOSModuleContext): boolean {
+  return context.surface === 'module' || context.surface === 'local-module';
+}
+
+function redirectToLogin(req: NextRequest, context: ResolvedOperatorOSModuleContext) {
+  const url = req.nextUrl.clone();
+  const target = req.nextUrl.pathname + (req.nextUrl.search || '');
+
+  if ((context.surface === 'module' || context.surface === 'app') && context.isOperatorOSHost) {
+    url.hostname = AUTH_HOST;
+  }
+
+  url.pathname = '/login';
+  url.search = `?next=${encodeURIComponent(target)}`;
+  return NextResponse.redirect(url, 307);
+}
+
+function rewriteTo(pathname: string, req: NextRequest) {
+  const url = req.nextUrl.clone();
+  url.pathname = pathname;
+  return NextResponse.rewrite(url);
+}
+
 export function middleware(req: NextRequest) {
-  if (isExempt(req.nextUrl.pathname)) return NextResponse.next();
+  const pathname = req.nextUrl.pathname;
+  if (isExempt(pathname)) return NextResponse.next();
+
+  const context = resolveModuleContext({
+    url: req.url,
+    pathname,
+    headers: req.headers,
+    cookies: req.cookies,
+  });
+
+  if (context.surface === 'auth' && pathname === '/') {
+    return rewriteTo('/login', req);
+  }
+
+  if (context.surface === 'app' && pathname === '/') {
+    if (!req.cookies.has(AUTH_COOKIE)) return redirectToLogin(req, context);
+    return rewriteTo('/app', req);
+  }
+
+  if (context.status === 'unknown_host' && context.isOperatorOSHost && !isModuleSurface(context)) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/modules/unknown-host';
+    url.searchParams.set('host', context.host);
+    return NextResponse.rewrite(url);
+  }
+
+  if ((isProtectedAppPath(pathname) || isModuleSurface(context)) && !req.cookies.has(AUTH_COOKIE)) {
+    return redirectToLogin(req, context);
+  }
+
+  if (isModuleSurface(context)) {
+    if (context.module) {
+      return rewriteTo(`/modules/${context.module.slug}`, req);
+    }
+    return rewriteTo('/modules/unknown-host', req);
+  }
+
   if (req.cookies.has(AUTH_COOKIE)) return NextResponse.next();
 
   // Anonymous → bounce to the dedicated /login surface. `?next=`
   // preserves the intended destination so LoginGate can deep-link the
   // user back to where they tried to go (e.g. /app/platform/tenants)
   // immediately after sign-in.
-  const url = req.nextUrl.clone();
-  const target = url.pathname + (url.search || '');
-  url.pathname = '/login';
-  url.search = `?next=${encodeURIComponent(target)}`;
-  return NextResponse.redirect(url, 307);
+  if (isProtectedAppPath(pathname)) return redirectToLogin(req, context);
+
+  return NextResponse.next();
 }
 
 export const config = {
-  // Match the canonical /app tree only. Legacy /platform, /apps/:slug,
-  // /invites/:token are 308-redirected into /app/* by next.config.js
-  // before this middleware runs, so they get gated transitively.
-  matcher: ['/app/:path*'],
+  // Match console routes, local module fallbacks, and hostname-routed
+  // page requests. API routes and static assets stay out of middleware.
+  matcher: [
+    '/app/:path*',
+    '/modules/:path*',
+    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.json|.*\\..*).*)',
+  ],
 };

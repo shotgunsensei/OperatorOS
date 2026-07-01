@@ -48,8 +48,6 @@ const PLATFORM_PAGE_CONTRACTS: FrontendContract[] = [
   { name: 'tenant restore', frontend: '/platform/tenants/${t.id}/restore', backend: '/v1/platform/tenants/:id/restore' },
   { name: 'tenant patch', frontend: '/platform/tenants/${tenant.id}', backend: '/v1/platform/tenants/:id' },
   { name: 'tenant delete', frontend: '/platform/tenants/${id}?confirm=', backend: '/v1/platform/tenants/:id' },
-  { name: 'tenant module enable', frontend: '/platform/tenants/${id}/modules/${slug}/enable', backend: '/v1/platform/tenants/:id/modules/:slug/enable' },
-  { name: 'tenant module disable', frontend: '/platform/tenants/${id}/modules/${slug}/disable', backend: '/v1/platform/tenants/:id/modules/:slug/disable' },
   { name: 'tenant user module access', frontend: '/platform/tenants/${id}/users/${userId}/module-access', backend: '/v1/platform/tenants/:id/users/:userId/module-access' },
   { name: 'module list', frontend: '/platform/modules?includeArchived=1', backend: '/v1/platform/modules' },
   { name: 'module create', frontend: '/platform/modules', backend: '/v1/platform/modules' },
@@ -83,6 +81,12 @@ const PLATFORM_PAGE_CONTRACTS: FrontendContract[] = [
   { name: 'module override list', frontend: '/platform/users/${userId}/module-overrides', backend: '/v1/platform/users/:id/module-overrides' },
   { name: 'module override create', frontend: '/platform/users/${userId}/module-overrides', backend: '/v1/platform/users/:id/module-overrides' },
   { name: 'module override delete', frontend: '/platform/users/${userId}/module-overrides/${overrideId}', backend: '/v1/platform/users/:id/module-overrides/:overrideId' },
+];
+
+const ADMIN_PAGE_CONTRACTS: FrontendContract[] = [
+  { name: 'tenant entitlement grant', frontend: '/admin/tenants/${id}/entitlements', backend: '${prefix}/tenants/:tenantId/entitlements' },
+  { name: 'tenant entitlement revoke', frontend: '/admin/tenants/${id}/entitlements/${encodeURIComponent(slug)}', backend: '${prefix}/tenants/:tenantId/entitlements/:moduleId' },
+  { name: 'tenant audit log', frontend: '/admin/audit-logs?tenantId=${id}&limit=100', backend: '${prefix}/audit-logs' },
 ];
 
 function hasFrontendNeedle(source: string, needle: string | RegExp): boolean {
@@ -257,12 +261,13 @@ test('canonical Platform route, legacy redirects, and middleware auth gate stay 
   assert.match(canonicalRoute, /export \{ default \} from '..\/..\/..\/platform\/\[\[\.\.\.slug\]\]\/page'/);
   assert.match(middleware, /url\.pathname = '\/login'/);
   assert.match(middleware, /next=\$\{encodeURIComponent\(target\)\}/);
-  assert.match(middleware, /matcher:\s*\['\/app\/:path\*'\]/);
+  assert.match(middleware, /matcher:\s*\[[\s\S]*'\/app\/:path\*'/);
 });
 
 test('Platform Command frontend calls have registered backend route contracts', () => {
   const platformPage = readRepoFile('apps/web/src/components/pages/PlatformPage.tsx');
   const platformRoutes = readRepoFile('apps/api/src/routes/platform-routes.ts');
+  const adminRoutes = readRepoFile('apps/api/src/routes/admin-routes.ts');
 
   for (const contract of PLATFORM_PAGE_CONTRACTS) {
     assert.ok(
@@ -272,6 +277,19 @@ test('Platform Command frontend calls have registered backend route contracts', 
     for (const backend of Array.isArray(contract.backend) ? contract.backend : [contract.backend]) {
       assert.ok(
         platformRoutes.includes(backend),
+        `${contract.name} backend route ${backend} was not found`,
+      );
+    }
+  }
+
+  for (const contract of ADMIN_PAGE_CONTRACTS) {
+    assert.ok(
+      hasFrontendNeedle(platformPage, contract.frontend),
+      `${contract.name} frontend call was not found`,
+    );
+    for (const backend of Array.isArray(contract.backend) ? contract.backend : [contract.backend]) {
+      assert.ok(
+        adminRoutes.includes(backend),
         `${contract.name} backend route ${backend} was not found`,
       );
     }
@@ -289,7 +307,7 @@ test('Platform Command auth, last-admin, and failure-logging invariants stay wir
   const authProvider = readRepoFile('apps/web/src/components/AuthProvider.tsx');
   const audit = readRepoFile('apps/api/src/lib/audit.ts');
 
-  assert.match(tenantAuth, /await authenticate\(request, reply\);[\s\S]*isSuperAdmin\(user\.platformRole\)/);
+  assert.match(tenantAuth, /await authenticate\(request, reply\);[\s\S]*hasPlatformAdminAuthority\(user\)/);
   assert.match(tenantAuth, /code: 'PLATFORM_ROLE_REQUIRED'/);
   assert.match(auth, /const authHeader = request\.headers\.authorization/);
   assert.match(auth, /const cookieToken = \(request as any\)\.cookies\?\.token/);

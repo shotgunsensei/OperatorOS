@@ -8,14 +8,16 @@
  * Modules / Billing / Pricing / Health / Audit, plus inline detail panes
  * for tenant/:id and module/:slug. Reuses the SaasLayout color palette.
  *
- * All Platform Command API calls go through `platformApiCall`, which targets
- * the frontend proxy as /api/platform/* and surfaces backend error codes
- * verbatim so admins see the policy reason for any 403/404/409.
+ * Platform Command API calls go through `platformApiCall` for /api/platform/*
+ * and `adminApiCall` for the Phase 8 /api/admin/* entitlement-management
+ * contract. Both helpers surface backend error codes verbatim so admins see
+ * the policy reason for any 403/404/409.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../AuthProvider';
 import { platformApiCall as apiCall } from '@/lib/platform-api';
+import { adminApiCall } from '@/lib/admin-api';
 import type { PlatformView } from '@/lib/platform-routes';
 
 export type { PlatformView } from '@/lib/platform-routes';
@@ -547,7 +549,7 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
   useEffect(() => {
     if (tab === 'audit') {
-      apiCall(`/platform/audit?tenantId=${id}&limit=100`).then(d => setAudit(d.logs)).catch(setErr);
+      adminApiCall(`/admin/audit-logs?tenantId=${id}&limit=100`).then(d => setAudit(d.logs)).catch(setErr);
     }
   }, [tab, id]);
 
@@ -570,12 +572,12 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
   };
   const enableModule = async (slug: string, allowAllMembers: boolean) => {
     setErr(null);
-    try { await apiCall(`/platform/tenants/${id}/modules/${slug}/enable`, { method: 'POST', body: JSON.stringify({ allowAllMembers }) }); await load(); }
+    try { await adminApiCall(`/admin/tenants/${id}/entitlements`, { method: 'POST', body: { moduleId: slug, allowAllMembers } }); await load(); }
     catch (e) { setErr(e); }
   };
   const disableModule = async (slug: string) => {
     setErr(null);
-    try { await apiCall(`/platform/tenants/${id}/modules/${slug}/disable`, { method: 'POST' }); await load(); }
+    try { await adminApiCall(`/admin/tenants/${id}/entitlements/${encodeURIComponent(slug)}`, { method: 'DELETE' }); await load(); }
     catch (e) { setErr(e); }
   };
   const setUserAccess = async (userId: string, moduleSlug: string, accessLevel: 'none' | 'user' | 'manager') => {

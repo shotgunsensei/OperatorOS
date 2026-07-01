@@ -2,16 +2,14 @@ import { db } from '../db.js';
 import {
   users, subscriptions, subscriptionPlans,
   modules, planModules, addonSubscriptions, entitlementOverrides,
-  tenantModules, tenantUsers, tenantUserModuleAccess, platformComponents,
+  platformComponents,
 } from '../schema.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { authenticate } from './auth.js';
 import { isAddonPurchasable } from './billing-service.js';
-import {
-  isUserWithinTenantSeatLimit,
-  tenantHasActiveEntitlement,
-} from './product-entitlements.js';
+import { hasPlatformAdminAuthority } from './rbac.js';
+import { resolveTenantModuleAccess } from './tenant-entitlements.js';
 
 /**
  * Access-source taxonomy — the single source of truth for how a user got
@@ -199,7 +197,7 @@ async function activeOverrideForUser(userId: string, moduleId: string) {
 export async function evaluateUserEntitlement(userId: string, moduleId: string): Promise<AccessSource> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user || user.status !== 'active') return null;
-  if (user.platformRole === 'super_admin') return 'admin_role';
+  if (hasPlatformAdminAuthority(user)) return 'admin_role';
 
   const override = await activeOverrideForUser(userId, moduleId);
   if (override) return override.grant ? 'override' : null;
@@ -383,7 +381,7 @@ export async function getModuleAccessTrace(userId: string, tenantId: string, mod
     planGrants,
     addonGrants,
     overrideGrants,
-    isAdmin: user?.platformRole === 'super_admin',
+    isAdmin: hasPlatformAdminAuthority(user),
     moduleStatus: mod.status,
     reason: access.reason,
   };
@@ -398,7 +396,7 @@ export async function getModuleAccessTrace(userId: string, tenantId: string, mod
  */
 export async function getAccessBreakdown(userId: string): Promise<AccessBreakdown> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  const isAdmin = user?.platformRole === 'super_admin';
+  const isAdmin = hasPlatformAdminAuthority(user);
   const planSlug = await getUserPlanSlug(userId);
 
   const allModules = await db.select().from(modules);
@@ -503,33 +501,12 @@ export function requireModuleAccess(moduleSlug: string) {
 }
 
 // ===========================================================================
-// Gate 1 — Tenant-aware entitlement (PRIMARY contract)
+// Tenant-aware entitlement facade
 // ===========================================================================
 //
-// `hasModuleAccess(userId, tenantId, slug)` is the canonical entitlement
-// check. Resolution order:
-//   1. user inactive        -> denied
-//   2. platform super_admin -> granted (source = 'admin_role')
-//   3. module not found     -> denied
-//   4. tenant_modules row missing or status not in
-//      {enabled, trial, purchased, beta} -> denied
-//      (NB: an `archived` or `disabled` tenant_module always denies, even
-//       for explicit grants, so revocation cascades cleanly.)
-//   5. tenant_user_module_access row with accessLevel='none' -> DENIED
-//      (explicit deny overrides the tenant-wide allowAllMembers opt-in)
-//   6. tenant_user_module_access row with accessLevel ∈ {user, manager}
-//      -> granted
-//   7. tm.allowAllMembers && user is a tenant member -> granted
-//   8. otherwise -> denied
-//
-// `source` is reported as 'plan' for any tenant-grant path so existing UI
-// badges keep working without a breaking shape change. A future gate will
-// likely introduce a more specific 'tenant_grant' source.
-//
-// LEGACY FALLBACK: callers that have not yet been migrated to tenants
-// pass `{ legacy: true }` and a placeholder tenantId; the call delegates to
-// the original per-user plan/addon/override check (`hasModuleAccessLegacy`).
-// Every legacy call site is tagged with a TODO referencing follow-up #19.
+// `tenant-entitlements.ts` is the central Phase 6 decision engine for
+// tenant/module access. This file keeps the legacy marketplace-facing return
+// shape stable while delegating the actual access decision to that helper.
 
 async function hasModuleAccessTenantScoped(
   userId: string,
@@ -537,88 +514,13 @@ async function hasModuleAccessTenantScoped(
   moduleSlug: string,
 ): Promise<ModuleAccess> {
   try {
-    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (!user || user.status !== 'active') {
-      return { moduleSlug, hasAccess: false, source: null, reason: 'user_inactive' };
-    }
-    if (user.platformRole === 'super_admin') {
-      return { moduleSlug, hasAccess: true, source: 'admin_role' };
-    }
-
-    const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
-    if (!mod) {
-      return { moduleSlug, hasAccess: false, source: null, reason: 'module_not_found' };
-    }
-
-    // Finalized packaging authority: app/module entitlements belong to the
-    // tenant, and seats are enforced at tenant membership level. A purchased
-    // product is fully unlocked; there are no feature-level checks here.
-    if (await tenantHasActiveEntitlement(tenantId, moduleSlug)) {
-      const withinSeatLimit = await isUserWithinTenantSeatLimit(tenantId, userId);
-      return withinSeatLimit
-        ? { moduleSlug, hasAccess: true, source: 'plan' }
-        : { moduleSlug, hasAccess: false, source: null, reason: 'seat_limit_exceeded' };
-    }
-
-    const [tm] = await db.select().from(tenantModules)
-      .where(and(eq(tenantModules.tenantId, tenantId), eq(tenantModules.moduleId, mod.id)))
-      .limit(1);
-    const launchable = ['enabled', 'trial', 'purchased', 'beta'];
-    if (!tm) {
-      // Task #66: default-enabled fallback. The data layer often lags
-      // behind plan changes — a tenant on Elite can have ZERO
-      // tenant_modules rows on first boot. Rather than denying every
-      // plan-included module until an admin clicks through the
-      // marketplace, we look up plan inclusion at runtime and grant
-      // (source='plan'). Explicit-deny semantics still win below
-      // because we only enter this branch when the row is *absent*.
-      const [planGrant] = await db.select({ planId: subscriptions.planId })
-        .from(subscriptions)
-        .innerJoin(planModules, eq(planModules.planId, subscriptions.planId))
-        .where(and(
-          eq(subscriptions.userId, userId),
-          eq(subscriptions.status, 'active'),
-          eq(planModules.moduleId, mod.id),
-        ))
-        .limit(1);
-      if (planGrant) {
-        return { moduleSlug, hasAccess: true, source: 'plan' };
-      }
-      return { moduleSlug, hasAccess: false, source: null, reason: 'no_plan_grant' };
-    }
-    if (!launchable.includes(tm.status)) {
-      // Explicit disabled / archived / etc. — never override with the
-      // plan fallback. Admins shut these off intentionally.
-      return { moduleSlug, hasAccess: false, source: null, reason: 'tenant_module_disabled' };
-    }
-    // The tenant_modules row encodes how the tenant got access. 'purchased'
-    // is the addon path (Stripe subscription); everything else (enabled,
-    // trial, beta) is the plan path. We surface that distinction to the
-    // UI through `source` so the marketplace badge stays correct.
-    const tmSource: 'addon' | 'plan' = tm.status === 'purchased' ? 'addon' : 'plan';
-
-    const [acc] = await db.select().from(tenantUserModuleAccess)
-      .where(and(
-        eq(tenantUserModuleAccess.tenantId, tenantId),
-        eq(tenantUserModuleAccess.userId, userId),
-        eq(tenantUserModuleAccess.moduleId, mod.id),
-      ))
-      .limit(1);
-    if (acc) {
-      if (acc.accessLevel === 'none') {
-        return { moduleSlug, hasAccess: false, source: null, reason: 'explicit_deny' };
-      }
-      return { moduleSlug, hasAccess: true, source: tmSource };
-    }
-
-    if (tm.allowAllMembers) {
-      const [tu] = await db.select().from(tenantUsers)
-        .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, userId)))
-        .limit(1);
-      if (tu) return { moduleSlug, hasAccess: true, source: tmSource };
-    }
-
-    return { moduleSlug, hasAccess: false, source: null, reason: 'no_tenant_grant' };
+    const decision = await resolveTenantModuleAccess(userId, tenantId, moduleSlug);
+    return {
+      moduleSlug: decision.moduleSlug,
+      hasAccess: decision.hasAccess,
+      source: decision.source,
+      reason: decision.reason,
+    };
   } catch (err) {
     console.error('[entitlement] hasModuleAccess (tenant-scoped) error:', err);
     return { moduleSlug, hasAccess: false, source: null, reason: 'evaluation_error' };

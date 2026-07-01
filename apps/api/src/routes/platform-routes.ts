@@ -37,6 +37,7 @@ import {
 import { count } from 'drizzle-orm';
 import { requireSuperAdmin } from '../lib/tenant-auth.js';
 import { sanitizeUser } from '../lib/auth.js';
+import { hasPlatformAdminAuthority } from '../lib/rbac.js';
 import {
   writeAudit, pickSafe, registerAuditEnforcement, registerPlatformFailureLogging, AUDIT_FLAG,
   TENANT_SAFE_FIELDS, MODULE_SAFE_FIELDS,
@@ -201,7 +202,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       db.select().from(modules),
       db.select().from(addonSubscriptions),
       db.select().from(billingEvents),
-      db.select({ id: users.id, status: users.status, platformRole: users.platformRole }).from(users),
+      db.select({ id: users.id, email: users.email, status: users.status, platformRole: users.platformRole }).from(users),
     ]);
     const byStatus = (rows: any[], k = 'status') => rows.reduce((acc: Record<string, number>, r) => {
       const v = r[k] ?? 'unknown';
@@ -248,7 +249,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       },
       users: {
         total: usersAll.length,
-        superAdmins: usersAll.filter(u => u.platformRole === 'super_admin').length,
+        superAdmins: usersAll.filter(u => hasPlatformAdminAuthority(u)).length,
         active: usersAll.filter(u => u.status === 'active').length,
       },
       warnings,
@@ -434,7 +435,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           eq(tenantModules.tenantId, id),
           inArray(tenantModules.status, launchableModuleStatuses),
         )),
-        db.select({ userId: tenantUsers.userId, platformRole: users.platformRole })
+        db.select({ userId: tenantUsers.userId, email: users.email, platformRole: users.platformRole })
           .from(tenantUsers).innerJoin(users, eq(users.id, tenantUsers.userId))
           .where(eq(tenantUsers.tenantId, id)),
         db.select().from(subscriptions).where(and(
@@ -443,7 +444,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         )),
       ]);
 
-      const nonAdminMembers = memberRows.filter(m => m.platformRole !== 'super_admin');
+      const nonAdminMembers = memberRows.filter(m => !hasPlatformAdminAuthority(m));
       const dependents = {
         activeAddons: activeAddons.length,
         launchableModules: launchableModulesRows.length,
@@ -1540,17 +1541,24 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
   const PLATFORM_ROLES = ['user', 'super_admin'] as const;
 
   async function countPlatformSuperAdmins(options: { excludeUserId?: string; activeOnly?: boolean } = {}) {
-    const filters: any[] = [eq(users.platformRole, 'super_admin')];
-    if (options.activeOnly) filters.push(eq(users.status, 'active'));
-    const rows = await db.select({ id: users.id }).from(users).where(and(...filters));
-    return rows.filter(u => u.id !== options.excludeUserId).length;
+    const rows = await db.select({
+      id: users.id,
+      email: users.email,
+      status: users.status,
+      platformRole: users.platformRole,
+    }).from(users);
+    return rows.filter(u =>
+      u.id !== options.excludeUserId &&
+      (!options.activeOnly || u.status === 'active') &&
+      hasPlatformAdminAuthority(u)
+    ).length;
   }
 
   async function wouldRemoveLastPlatformSuperAdmin(
     target: any,
     changes: { platformRole?: string; status?: string; hardDelete?: boolean },
   ): Promise<boolean> {
-    if (target.platformRole !== 'super_admin') return false;
+    if (!hasPlatformAdminAuthority(target)) return false;
 
     if (changes.hardDelete) {
       return (await countPlatformSuperAdmins({ excludeUserId: target.id })) === 0;
@@ -1559,7 +1567,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     const nextPlatformRole = changes.platformRole ?? target.platformRole;
     const nextStatus = changes.status ?? target.status;
     const removesActiveAuthority = target.status === 'active'
-      && (nextPlatformRole !== 'super_admin' || nextStatus !== 'active');
+      && (!hasPlatformAdminAuthority({ ...target, platformRole: nextPlatformRole }) || nextStatus !== 'active');
 
     if (!removesActiveAuthority) return false;
     return (await countPlatformSuperAdmins({ excludeUserId: target.id, activeOnly: true })) === 0;

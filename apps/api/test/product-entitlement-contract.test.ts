@@ -47,11 +47,16 @@ test('Stripe checkout and webhook carry the finalized stack metadata', () => {
 });
 
 test('module access checks tenant entitlement and seat capacity', () => {
+  const tenantEntitlements = fs.readFileSync(
+    path.join(root, 'apps/api/src/lib/tenant-entitlements.ts'),
+    'utf8',
+  );
   const entitlementService = fs.readFileSync(
     path.join(root, 'apps/api/src/lib/entitlement-service.ts'),
     'utf8',
   );
-  assert.match(entitlementService, /tenantHasActiveEntitlement/);
-  assert.match(entitlementService, /isUserWithinTenantSeatLimit/);
-  assert.match(entitlementService, /seat_limit_exceeded/);
+  assert.match(tenantEntitlements, /tenantHasActiveEntitlement/);
+  assert.match(tenantEntitlements, /isUserWithinTenantSeatLimit/);
+  assert.match(tenantEntitlements, /seat_limit_exceeded/);
+  assert.match(entitlementService, /resolveTenantModuleAccess/);
 });

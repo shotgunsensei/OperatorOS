@@ -5,6 +5,7 @@ import { eq, desc, isNull, asc, and } from 'drizzle-orm';
 import { authenticate, getUserPlanLimits } from '../lib/auth.js';
 import { writeAudit } from '../lib/audit.js';
 import { canPurchaseAddon, resolveTenantContext } from '../lib/tenant-auth.js';
+import { hasPlatformAdminAuthority } from '../lib/rbac.js';
 import {
   getUserPlanConfig, getUserUsageSummary, getDowngradeViolations,
   isDowngrade, PLAN_CONFIGS, FEATURE_LABELS, LIMIT_LABELS,
@@ -354,7 +355,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       // billed to tenant B (whose entitlement they'd then receive via the
       // webhook). canPurchaseAddon also enforces module existence,
       // purchasability, and the no-double-buy invariant in one shot.
-      if (tenantId && user.platformRole !== 'super_admin') {
+      if (tenantId && !hasPlatformAdminAuthority(user)) {
         const check = await canPurchaseAddon(user.id, tenantId, moduleSlug);
         if (!check.allowed) {
           // Mirror the documented HTTP code policy:

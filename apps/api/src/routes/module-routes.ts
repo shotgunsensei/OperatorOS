@@ -10,6 +10,7 @@ import {
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { authenticate, logAudit } from '../lib/auth.js';
 import { resolveTenantContext, requireTenantMember, requireSuperAdmin } from '../lib/tenant-auth.js';
+import { hasPlatformAdminAuthority } from '../lib/rbac.js';
 import { recordModuleUsage } from '../lib/plans.js';
 import {
   hasModuleAccess, getUserModules, getModuleForUser,
@@ -283,7 +284,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // not an end-user concern. Surface the human-readable warning to
     // admins only; non-admins get the boolean so the UI can still adapt
     // its launch flow without exposing internal misconfiguration.
-    const isAdmin = user.platformRole === 'super_admin';
+    const isAdmin = hasPlatformAdminAuthority(user);
     return {
       modules: summary,
       ssoFallback: SSO_FALLBACK,
@@ -296,7 +297,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   app.get('/v1/modules/debug', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     const { user_id: queryUserId } = request.query as { user_id?: string };
-    if (queryUserId && queryUserId !== user.id && user.platformRole !== 'super_admin') {
+    if (queryUserId && queryUserId !== user.id && !hasPlatformAdminAuthority(user)) {
       return reply.code(403).send({
         error: 'Only super-admins may inspect another user\'s entitlement state.',
         code: 'PLATFORM_ROLE_REQUIRED',
@@ -336,7 +337,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const user = (request as any).user;
     const { slug } = request.params as { slug: string };
     const { user_id: queryUserId } = request.query as { user_id?: string };
-    if (queryUserId && queryUserId !== user.id && user.platformRole !== 'super_admin') {
+    if (queryUserId && queryUserId !== user.id && !hasPlatformAdminAuthority(user)) {
       return reply.code(403).send({
         error: 'Only super-admins may inspect another user\'s entitlement state.',
         code: 'PLATFORM_ROLE_REQUIRED',
@@ -552,7 +553,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // repo) consume `launchUrl`. Emit both so the spec name is
     // canonical and the existing UI keeps working.
     const launchUrl = buildLaunchUrl(mod.baseUrl, token);
-    const isAdmin = user.platformRole === 'super_admin';
+    const isAdmin = hasPlatformAdminAuthority(user);
     return {
       token,
       redirect_url: launchUrl,
@@ -772,7 +773,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // the clamp, a DB-level admin/user/owner could surface verbatim
     // and silently no-op the demotion path.
     const legacyRole: 'super_admin' | 'user' =
-      (snapshot?.user?.platformRole === 'super_admin' || (user?.role as string) === 'super_admin')
+      (snapshot?.user?.platformRole === 'super_admin' || hasPlatformAdminAuthority(user))
         ? 'super_admin'
         : 'user';
     const legacyUser = user

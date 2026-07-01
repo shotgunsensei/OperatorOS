@@ -7,6 +7,7 @@ import { useToast } from '@/components/Toast';
 import { useAuth } from '@/components/AuthProvider';
 import { colors } from '@/lib/design-tokens';
 import { MARKETING_MODULES } from '@/lib/marketing-catalog';
+import { friendlyModuleLaunchError, launchModuleViaSso } from '@/lib/module-launch';
 
 type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
 type ModuleCta = 'open' | 'upgrade' | 'buy_addon' | 'coming_soon' | 'disabled';
@@ -134,23 +135,12 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const launch = async (slug: string) => {
-    // Launch path is Capacitor-aware: on native Android/iOS we route through
-    // @capacitor/browser so the child app opens in an in-app Chrome Custom
-    // Tab the user can swipe back from. On the web we just window.open after
-    // the handoff resolves. The old pre-open-blank trick was incompatible
-    // with Capacitor's WebView (popup reference was severed → about:blank).
     setLaunching(slug);
     try {
-      const result: any = await modulesApi.handoff(slug);
-      if (result.warning) toast(result.warning, 'error');
-      if (result.launchUrl) {
-        const { openExternal } = await import('@/lib/launch');
-        await openExternal(result.launchUrl);
-      } else {
-        toast('No launch URL configured', 'error');
-      }
+      await launchModuleViaSso(slug);
+      toast('Launching module through OperatorOS SSO', 'success');
     } catch (err: any) {
-      toast(`Could not launch: ${err.error || err.message}`, 'error');
+      toast(friendlyModuleLaunchError(err), 'error');
     } finally {
       setLaunching(null);
     }
