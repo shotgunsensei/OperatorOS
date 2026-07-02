@@ -26,13 +26,17 @@ import ForgotPasswordPage from '@/components/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/components/pages/ResetPasswordPage';
 import OperatorLoader from '@/components/brand/OperatorLoader';
 import { brand } from '@/lib/brand';
+import { sanitizeReturnTo } from '../../../../../packages/modules/public-url.js';
 
+// Open-redirect guard. Delegates to the shared `sanitizeReturnTo` (the single
+// source of truth used by the API and edge middleware) so the accept policy
+// can't drift: relative in-app paths (rejecting protocol-relative `//evil.com`)
+// or absolute URLs whose host is same-site (`*.operatoros.net`, or local in
+// dev), so after signing in on auth.operatoros.net we can hand the user back to
+// the ORIGINAL subdomain (e.g. techdeck.operatoros.net) instead of stranding
+// them on the auth host.
 function safeNext(raw: string | null): string {
-  // Only honor in-app destinations — never let `?next=` bounce us to
-  // an external origin (open-redirect guard).
-  if (!raw) return '/app';
-  if (!raw.startsWith('/') || raw.startsWith('//')) return '/app';
-  return raw;
+  return sanitizeReturnTo(raw, '/app');
 }
 
 type AuthMode = 'login' | 'register' | 'forgot-password' | 'reset-password';
@@ -52,7 +56,16 @@ function LoginGate() {
   const [mode, setMode] = React.useState<AuthMode>(initialMode);
 
   useEffect(() => {
-    if (!loading && user) router.replace(next);
+    if (!loading && user) {
+      // An absolute same-site `next` means the user came from another subdomain
+      // (module/app host). Use a full navigation so we cross hosts cleanly; the
+      // shared `.operatoros.net` session cookie carries the login across.
+      if (/^https?:\/\//i.test(next)) {
+        window.location.assign(next);
+      } else {
+        router.replace(next);
+      }
+    }
   }, [loading, user, next, router]);
 
   if (loading || user) {

@@ -17,6 +17,7 @@
  * should be added here as named functions, not as ad-hoc HTTP calls in
  * route handlers.
  */
+import { resolveAppBaseUrl } from './public-url.js';
 
 export interface InviteEmailInput {
   to: string;
@@ -177,7 +178,9 @@ export function buildInviteAcceptUrl(token: string): string {
     process.env.INVITE_ACCEPT_BASE_URL ||
     process.env.APP_BASE_URL ||
     process.env.WEB_BASE_URL ||
-    'http://localhost:3000'
+    // Prod-aware fallback: never bake an unreachable localhost link into an
+    // outbound invite email when running in production.
+    resolveAppBaseUrl()
   ).replace(/\/+$/, '');
   return `${base}/invites/${encodeURIComponent(token)}`;
 }

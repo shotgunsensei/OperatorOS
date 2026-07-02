@@ -3,6 +3,7 @@ import {
   resolveModuleContext,
   type ResolvedOperatorOSModuleContext,
 } from '../../../packages/modules/registry.js';
+import { getPublicOrigin } from '../../../packages/modules/public-url.js';
 
 /**
  * Marketing-redesign Phase 1 plus OperatorOS consolidation Phase 5:
@@ -61,9 +62,25 @@ function isModuleSurface(context: ResolvedOperatorOSModuleContext): boolean {
 
 function redirectToLogin(req: NextRequest, context: ResolvedOperatorOSModuleContext) {
   const url = req.nextUrl.clone();
-  const target = req.nextUrl.pathname + (req.nextUrl.search || '');
 
+  // Preserve where the user was trying to go as an ABSOLUTE, clean public URL
+  // (never carrying the internal `:5000` port). `getPublicOrigin` collapses
+  // recognized production hosts to `https://<host>` and keeps dev origins as-is,
+  // so after sign-in on the auth host we can hand the user back to the correct
+  // subdomain (e.g. techdeck.operatoros.net) instead of stranding them on auth.
+  const origin = getPublicOrigin({
+    host: req.headers.get('host'),
+    forwardedHost: req.headers.get('x-forwarded-host'),
+    forwardedProto: req.headers.get('x-forwarded-proto'),
+  });
+  const target = `${origin}${req.nextUrl.pathname}${req.nextUrl.search || ''}`;
+
+  // Cross-host redirect to the auth subdomain. Behind Replit's proxy the
+  // inbound URL still carries the internal port + `http`, so we MUST clear the
+  // port and force HTTPS or the browser gets `http://auth.operatoros.net:5000`.
   if ((context.surface === 'module' || context.surface === 'app') && context.isOperatorOSHost) {
+    url.protocol = 'https:';
+    url.port = '';
     url.hostname = AUTH_HOST;
   }
 

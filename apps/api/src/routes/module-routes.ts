@@ -12,6 +12,7 @@ import { authenticate, logAudit } from '../lib/auth.js';
 import { resolveTenantContext, requireTenantMember, requireSuperAdmin } from '../lib/tenant-auth.js';
 import { hasPlatformAdminAuthority } from '../lib/rbac.js';
 import { recordModuleUsage } from '../lib/plans.js';
+import { resolvePlatformBaseUrl } from '../lib/public-url.js';
 import {
   hasModuleAccess, getUserModules, getModuleForUser,
   getAccessBreakdown, getModuleAccessTrace, evaluateUserEntitlement,
@@ -27,7 +28,7 @@ function normalizeEnv(raw: string | undefined): 'prod' | 'staging' | 'dev' {
 }
 const APP_ENV: 'prod' | 'staging' | 'dev' = normalizeEnv(process.env.APP_ENV || process.env.NODE_ENV);
 const SSO_TOKEN_TTL_SECONDS = 90;
-const OPERATOROS_BASE_URL = process.env.OPERATOROS_BASE_URL || 'http://localhost:5000';
+const OPERATOROS_BASE_URL = resolvePlatformBaseUrl();
 
 // Shared HS256 signing key. When unset we fall back to issuing unsigned
 // launch URLs (the response carries `ssoFallback: true` + a warning) so

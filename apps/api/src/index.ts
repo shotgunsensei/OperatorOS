@@ -40,6 +40,7 @@ import { registerAdminRoutes } from './routes/admin-routes.js';
 import { registerPlatformRoutes } from './routes/platform-routes.js';
 import { registerEntitlementRoutes } from './routes/entitlement-routes.js';
 import { registerEcosystemRoutes } from './routes/ecosystem-routes.js';
+import { registerDiagnosticsRoutes } from './routes/diagnostics-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
 import { runAgentLoop } from './agent.js';
 import type { AgentEvent } from './agent.js';
@@ -48,6 +49,26 @@ import type { DetectionResult } from './publish/types.js';
 import { requireSessionSecret } from './lib/session-secret.js';
 import { authenticate } from './lib/auth.js';
 import { hasPlatformAdminAuthority } from './lib/rbac.js';
+import { isProductionEnv, isProductionHost, isSameSiteHost } from './lib/public-url.js';
+
+/**
+ * CORS origin policy. In production only same-site OperatorOS subdomains
+ * (`*.operatoros.net`) may make credentialed cross-origin requests — never a
+ * wildcard, which browsers reject alongside credentials anyway. In development
+ * we additionally allow localhost / Replit preview origins so `pnpm dev` and
+ * the in-browser preview keep working. A missing Origin header (same-origin or
+ * non-browser callers like Stripe webhooks) is always permitted.
+ */
+function isAllowedCorsOrigin(origin: string | undefined): boolean {
+  if (!origin) return true;
+  let hostname: string;
+  try {
+    hostname = new URL(origin).hostname;
+  } catch {
+    return false;
+  }
+  return isProductionEnv() ? isProductionHost(hostname) : isSameSiteHost(hostname);
+}
 
 const startTime = Date.now();
 const sessionSecret = requireSessionSecret();
@@ -61,7 +82,10 @@ const app = Fastify({
   },
 });
 
-await app.register(cors, { origin: true, credentials: true });
+await app.register(cors, {
+  origin: (origin, cb) => cb(null, isAllowedCorsOrigin(origin ?? undefined)),
+  credentials: true,
+});
 await app.register(cookie, { secret: sessionSecret });
 
 // Replace the default JSON parser with one that preserves the raw buffer on
@@ -112,6 +136,7 @@ await registerAdminRoutes(app);
 await registerPlatformRoutes(app);
 await registerEntitlementRoutes(app);
 await registerEcosystemRoutes(app);
+await registerDiagnosticsRoutes(app);
 
 async function ensureTables() {
   await db.execute(`
@@ -1047,12 +1072,21 @@ app.get<{ Params: { taskId: string } }>(
     const wsAuth = await getAuthorizedWorkspace(task.workspaceId, user, reply);
     if (!wsAuth) return;
 
-    reply.raw.writeHead(200, {
+    // The event stream sets its own CORS headers because it writes the raw
+    // response directly (bypassing @fastify/cors). Never emit a wildcard with
+    // credentials — reflect the request origin only when it is on the allowlist.
+    const sseOrigin = req.headers.origin;
+    const sseHeaders: Record<string, string> = {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-    });
+    };
+    if (sseOrigin && isAllowedCorsOrigin(sseOrigin)) {
+      sseHeaders['Access-Control-Allow-Origin'] = sseOrigin;
+      sseHeaders['Access-Control-Allow-Credentials'] = 'true';
+      sseHeaders['Vary'] = 'Origin';
+    }
+    reply.raw.writeHead(200, sseHeaders);
 
     const existingEvents = await db.select().from(taskEvents).where(eq(taskEvents.taskId, taskId)).orderBy(taskEvents.ts);
     for (const evt of existingEvents) {

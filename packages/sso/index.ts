@@ -76,9 +76,21 @@ export function normalizeSsoIssuer(raw: string | null | undefined): string {
   return value.replace(/\/+$/, '');
 }
 
+/** Clean HTTPS issuer used in production when no explicit override is set. */
+export const PRODUCTION_SSO_ISSUER = 'https://operatoros.net';
+
+function isProductionRuntime(): boolean {
+  if (typeof process === 'undefined') return false;
+  const v = (process.env.APP_ENV || process.env.NODE_ENV || '').toLowerCase();
+  return v === 'production' || v === 'prod';
+}
+
 export function resolveSsoIssuer(): string {
   const explicit = typeof process !== 'undefined' ? process.env.OPERATOROS_BASE_URL : undefined;
-  return normalizeSsoIssuer(explicit);
+  if (explicit && explicit.trim()) return normalizeSsoIssuer(explicit);
+  // Never emit the localhost dev default in production — it would leak an
+  // unreachable `http://localhost:5000` issuer into signed SSO handoff tokens.
+  return normalizeSsoIssuer(isProductionRuntime() ? PRODUCTION_SSO_ISSUER : DEFAULT_SSO_ISSUER);
 }
 
 export function resolveSsoSecret(raw?: string | null): string | null {

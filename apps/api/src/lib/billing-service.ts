@@ -6,6 +6,7 @@ import {
   modules, addonSubscriptions,
 } from '../schema.js';
 import { eq, and, sql } from 'drizzle-orm';
+import { resolveAppBaseUrl } from './public-url.js';
 import {
   getUserPlanConfig, getDowngradeViolations, isUpgrade, isDowngrade, PLAN_CONFIGS,
 } from './plans.js';
@@ -324,7 +325,7 @@ export async function createCheckoutSession(
     }
   }
 
-  const appUrl = process.env.APP_URL || 'http://localhost:5000';
+  const appUrl = resolveAppBaseUrl();
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
@@ -401,7 +402,7 @@ export async function createStackCheckoutSession(
     additional_module_keys: (normalized.additionalModules ?? []).join(','),
     additional_seats: String(normalized.additionalSeats ?? 0),
   };
-  const appUrl = process.env.APP_URL || 'http://localhost:5000';
+  const appUrl = resolveAppBaseUrl();
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: 'subscription',
@@ -427,7 +428,7 @@ export async function createPortalSession(userId: string): Promise<PortalSession
     throw new Error('No Stripe customer found. The user must have a Stripe subscription first.');
   }
 
-  const appUrl = process.env.APP_URL || 'http://localhost:5000';
+  const appUrl = resolveAppBaseUrl();
 
   const session = await stripe.billingPortal.sessions.create({
     customer: sub.stripeCustomerId,
@@ -1242,7 +1243,7 @@ export async function subscribeToAddon(
       });
       customerId = customer.id;
     }
-    const appUrl = process.env.APP_URL || 'http://localhost:5000';
+    const appUrl = resolveAppBaseUrl();
 
     // Gate 2: pre-create the addon_subscriptions row in 'incomplete' so
     // the webhook handler can `UPDATE` instead of `INSERT`. This row is
