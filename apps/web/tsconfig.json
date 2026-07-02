@@ -30,6 +30,9 @@
     "src",
     "next-env.d.ts",
     ".next/types/**/*.ts",
+    "../../apps/modules/techdeck/adapter.ts",
+    "../../apps/modules/pulsedesk/adapter.ts",
+    "../../apps/modules/tradeflowkit/adapter.ts",
     "../../packages/auth/**/*.ts",
     "../../packages/modules/**/*.ts",
     "../../packages/sdk/src/**/*.ts"

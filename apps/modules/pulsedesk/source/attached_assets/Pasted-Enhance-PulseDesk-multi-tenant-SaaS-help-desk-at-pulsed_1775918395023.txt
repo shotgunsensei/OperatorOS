@@ -1,0 +1,266 @@
+Enhance PulseDesk (multi-tenant SaaS help desk at pulsedesk.support) with a fully functional, production-minded “Email-to-Ticket” system that is available ONLY to tenants on the Enterprise or Unlimited subscription plans.
+
+PROJECT GOAL
+Build a secure, tenant-isolated inbound email processing feature where each qualified tenant gets a dedicated inbound support email identity that automatically creates tickets in that tenant’s workspace when emails are received. This must be a real backend feature, not a front-end simulation.
+
+CORE BUSINESS RULES
+- PulseDesk is multi-tenant.
+- Only tenants with subscription plan = "enterprise" or "unlimited" can access and use Email-to-Ticket.
+- Lower plans must not have access to the feature in UI or backend.
+- If a tenant downgrades below Enterprise, inbound email-to-ticket creation must be disabled immediately for future inbound messages.
+- Historical tickets remain intact after downgrade, but new incoming emails must no longer create tickets.
+- Access to this feature must be derived from a proper entitlement or feature flag system, not hardcoded UI checks.
+
+TENANT-SPECIFIC INBOUND EMAIL DESIGN
+Implement a scalable inbound email design using a tenant-specific alias such as:
+- support+tenant-slug@pulsedesk.support
+or an equivalent clean routing model.
+
+Requirements:
+- Each Enterprise or Unlimited tenant gets a unique inbound support email alias.
+- Store the alias in the database.
+- Prevent alias collisions.
+- Tenant admins can view and copy their assigned address from settings.
+- Alias regeneration should be restricted to super admin or protected by a strong confirmation warning because it affects routing.
+- Do NOT create one separate real mailbox per tenant. Use a scalable alias-routing model instead.
+
+PLAN GATING / ENTITLEMENTS
+Implement a robust feature entitlement system for billing plans:
+- enterprise and unlimited => email_to_ticket = true
+- all lower plans => email_to_ticket = false
+- Enforce this in backend services, API routes, and middleware.
+- UI should show Email-to-Ticket settings only to eligible tenants.
+- Lower plans should see a locked premium feature card with upgrade messaging.
+- Unauthorized tenants must not be able to enable or invoke the feature through manual requests or API tampering.
+
+EMAIL INGESTION ARCHITECTURE
+Create a provider-agnostic inbound email processing system with an adapter abstraction so the platform can later connect to:
+- SendGrid Inbound Parse
+- Mailgun Routes
+- AWS SES inbound
+- Postmark inbound
+
+Build the system so provider implementation can be swapped later without major rewrites.
+
+Required processing flow:
+1. Receive inbound webhook payload or normalized parsed email object
+2. Identify target tenant from destination alias/address
+3. Verify tenant exists and entitlement is active
+4. Parse sender name, sender email, recipient alias, subject, plain text body, HTML body, message-id, in-reply-to, references, headers, attachments, timestamps, SPF/DKIM/DMARC metadata if available
+5. Determine whether the message belongs to an existing thread or should create a new ticket
+6. Create ticket or append reply accordingly
+7. Log the inbound event and outcome
+
+TICKET CREATION LOGIC
+When a new inbound email is received and no matching thread exists:
+- Create a ticket inside the correct tenant only
+- Title = subject line
+- Source = "email"
+- Default status = "open"
+- Default priority = "normal" unless tenant rules say otherwise
+- Create requester contact from sender email if no matching contact exists in that tenant
+- Store original email metadata for audit/history
+- Build initial description from cleaned plain text body
+- Strip signatures, excessive quote chains, and obvious reply history where reasonably possible
+- Optionally map to queue/department/team if tenant settings define a default
+
+THREADING / REPLY MATCHING
+Implement proper email reply threading using:
+- Message-ID
+- In-Reply-To
+- References
+- optional subject token support like [PD-1234]
+
+Requirements:
+- If inbound mail matches an existing ticket thread, append it as a ticket reply/comment instead of creating a duplicate ticket
+- Preserve sender identity and original email metadata
+- Maintain full audit history of the inbound message
+- Do NOT rely on subject line alone for threading
+
+SECURITY / ABUSE PROTECTION
+Implement strong protections:
+- Validate webhook authenticity/signatures where provider supports it
+- Sanitize all email content before storage/rendering
+- Never render raw HTML without sanitization
+- Prevent XSS via HTML email bodies
+- Validate attachments by size and extension
+- Add a placeholder hook/service for malware scanning
+- Add rate limiting / abuse controls on inbound endpoints
+- Reject mail to invalid, disabled, or unauthorized aliases
+- Prevent cross-tenant routing under all circumstances
+- Support optional allowed sender domains / allowlist per tenant
+- Surface spoofing risk flags when SPF/DKIM/DMARC results are present
+- Log all accepted, rejected, failed, threaded, and created events with reason codes
+
+DATABASE / SCHEMA WORK
+Add or update the schema to support:
+- tenants
+- subscriptions / plans
+- feature entitlements
+- tenant email settings
+- inbound email aliases
+- inbound email events log
+- ticket email thread mappings
+- contacts/requesters
+- tickets
+- ticket replies/comments
+- attachment metadata
+
+Include proper indexes on:
+- tenant_id
+- inbound alias
+- message_id
+- in_reply_to
+- ticket_id
+- requester email where appropriate
+
+Use clean relational design with strong tenant scoping on all relevant records.
+
+TENANT ADMIN UI
+Create an “Email-to-Ticket” settings area in tenant admin settings that is only visible to Enterprise and Unlimited tenants.
+
+Include:
+- assigned inbound support email address
+- copy-to-clipboard button
+- enable / disable toggle
+- default queue or department mapping
+- optional auto-assignment to agent/team
+- allowed sender domains
+- auto-create contacts toggle
+- append replies to existing tickets toggle
+- unknown sender behavior options
+- recent inbound email processing events/status list
+- simple setup instructions for customers on how to use the inbound address
+
+Show recent event statuses such as:
+- accepted
+- rejected
+- failed
+- threaded
+- created
+
+For lower tiers:
+- show a locked premium feature panel
+- show upgrade CTA
+- do not expose working controls
+
+SUPER ADMIN TOOLS
+Add platform-level admin controls so super admins can:
+- view all tenant inbound aliases
+- inspect inbound email settings by tenant
+- disable or regenerate aliases
+- inspect failed inbound events
+- replay failed parse events where safe
+- monitor provider/webhook health
+- verify feature entitlement status by tenant
+- only enable feature for Enterprise / Unlimited plans
+
+SERVICE / CODE STRUCTURE
+Refactor cleanly into modular services with separation of concerns. At minimum, implement:
+- billing / entitlements service
+- tenant email settings service
+- inbound email provider adapter interface
+- inbound email processor service
+- threading service
+- ticket creation service
+- contact/requester service
+- audit/event logging service
+- attachment validation service
+- alias routing resolver
+- authorization/middleware layer for entitlements
+
+Use maintainable code with thorough developer comments.
+
+MOCK MODE FOR DEVELOPMENT
+Implement a local development mode with a mock inbound email provider so the feature works end-to-end in development/testing even without a live provider.
+
+Mock mode must support:
+- simulating inbound email payloads
+- generating new tickets
+- threading replies
+- storing event logs
+- testing entitlement gating
+- testing invalid alias rejection
+
+REAL PROVIDER READINESS
+Prepare the code for production email providers using environment variables and clear integration points. Document exactly where to connect:
+- SendGrid
+- Mailgun
+- AWS SES
+- Postmark
+
+Do not hardwire the system to only one provider.
+
+DOWNGRADE / BILLING BEHAVIOR
+Implement plan-aware behavior:
+- If plan changes from enterprise/unlimited to lower tier, disable inbound email creation for that tenant
+- Preserve history
+- Keep settings readable if useful, but prevent ingestion
+- Ensure backend rejects future messages for downgraded tenants
+- Show upgrade/reactivation messaging in UI where appropriate
+
+TESTING REQUIREMENTS
+Add meaningful tests for:
+- tenant alias routing correctness
+- plan entitlement enforcement
+- new ticket creation from inbound email
+- reply threading into existing tickets
+- invalid alias rejection
+- disabled feature rejection
+- downgrade behavior
+- cross-tenant isolation
+- webhook verification stubs
+- attachment validation flow
+- UI gating for lower plans
+
+UX / PRODUCT POLISH
+Present this as a premium business feature:
+- Enterprise: Dedicated inbound email-to-ticket automation for your organization
+- Unlimited: Advanced email intake and future-ready automation at scale
+
+Use polished, modern UI matching PulseDesk branding.
+Make error states clear, useful, and actionable.
+
+IMPORTANT ANTI-PATTERNS TO AVOID
+- Do not create one real mailbox per tenant
+- Do not fake ticket creation on the frontend
+- Do not implement plan checks only in UI
+- Do not trust subject line alone for threading
+- Do not allow tenants to freely alter aliases without validation
+- Do not mix records from different tenants in unscoped queries
+- Do not render unsanitized HTML email content
+- Do not skip audit logging on failures/rejections
+- Do not leave placeholder buttons that do nothing
+
+IMPLEMENTATION PRIORITY
+Build in this order:
+1. backend entitlements and plan gating
+2. database/schema changes
+3. alias routing and inbound processor
+4. ticket creation + threading
+5. tenant admin settings UI
+6. super admin tools
+7. tests
+8. provider hookup documentation
+
+SEED / DEMO DATA
+Seed at least:
+- one Enterprise tenant with Email-to-Ticket enabled
+- one Unlimited tenant with Email-to-Ticket enabled
+- one lower-tier tenant that cannot access it
+
+DELIVERABLES
+Return a fully integrated implementation including:
+- updated database schema
+- entitlement-aware billing logic
+- tenant-specific inbound alias system
+- inbound email processing endpoints/services
+- mock provider development mode
+- ticket creation and threading logic
+- tenant admin Email-to-Ticket settings UI
+- super admin tooling
+- event logging and audit history
+- test coverage
+- developer documentation for connecting a live email provider later
+
+Build this as a real multi-tenant SaaS feature, fully functional in development mode, secure by default, modular, and ready for future expansion into outbound email replies from within PulseDesk.

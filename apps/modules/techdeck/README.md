@@ -1,10 +1,38 @@
-# TechDeck Module Placeholder
+# TechDeck Module Import
 
-Reserved for a future TechDeck consolidation phase.
+Phase 9 imports TechDeck as the first OperatorOS-consolidated module.
 
-Phase 1 does not import TechDeck code. Future work must keep OperatorOS as the
-owner of login, tenants, billing, entitlements, SSO, and platform admin policy.
+## Active OperatorOS Integration
 
-Expected future contents may include module UI, module-local API handlers,
-module-local service code, tests, and documentation after the module migration
-phase is explicitly approved.
+- `adapter.ts` defines the OperatorOS-to-TechDeck context mapping.
+- `apps/web/src/components/module-shells/TechDeckShell.tsx` is the active OperatorOS shell for `/modules/techdeck` and `techdeck.operatoros.net`.
+- `apps/web/src/app/apps/[slug]/page.tsx` performs the current auth and entitlement gate before rendering the shell.
+
+## Imported Legacy Source
+
+The TechDeck source snapshot lives under `source/`.
+
+Imported:
+
+- `client/`
+- `server/`
+- `shared/`
+- `tests/`
+- `docs/`
+- build/config files required to understand the standalone app
+- image assets referenced by the TechDeck client
+
+Excluded:
+
+- `node_modules/`
+- `dist/`
+- `.git/`
+- local runtime uploads under `data/`
+- `package-lock.json`
+- pasted prompt text artifacts from `attached_assets/`
+
+## Boundary
+
+OperatorOS owns identity, sessions, tenants, roles, billing, entitlements, module registry, and platform admin authority. The imported TechDeck source is not executed as an independent app inside OperatorOS in Phase 9. It is preserved for adapter work and later route-by-route conversion.
+
+Do not re-enable standalone TechDeck billing, checkout, registration, or module entitlement authority from this directory.

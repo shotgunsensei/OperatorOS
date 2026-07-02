@@ -1,9 +1,8 @@
 # OperatorOS Module Workspace
 
-This directory is reserved for future module consolidation work.
-
-No module implementation has been imported in Phase 1. The current production
-surfaces remain in `apps/web`, `apps/api`, and the existing module shell routes.
+This directory holds imported module snapshots and module adapters for
+OperatorOS consolidation work. The current production surfaces remain in
+`apps/web`, `apps/api`, and the existing OperatorOS module shell routes.
 
 ## Intended Boundary
 
@@ -28,9 +27,9 @@ entitlements, launch, SSO, and audit.
 
 ## Reserved Modules
 
-- `techdeck`
-- `pulsedesk`
-- `tradeflowkit`
+- `techdeck` - imported as a source snapshot with an OperatorOS adapter.
+- `pulsedesk` - imported as a source snapshot with an OperatorOS adapter.
+- `tradeflowkit` - imported as a source snapshot with an OperatorOS adapter.
 
-These folders are placeholders only. Do not import code into them until a
+Do not import additional module source into this workspace until the matching
 module-specific migration phase is approved.
