@@ -147,30 +147,56 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
             {section.items.map(item => {
               const isActive = activePage === item.id;
               const Icon = item.Icon;
+              const itemStyle = {
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: (!isMobile && collapsed) ? '10px 14px' : '10px 12px',
+                margin: '1px 0',
+                border: 'none',
+                borderRadius: 8,
+                background: isActive ? colors.bgHover : 'transparent',
+                color: isActive ? colors.accent : colors.text,
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: isActive ? 600 : 400,
+                textAlign: 'left' as const,
+                transition: 'background 0.15s',
+                textDecoration: 'none',
+                boxSizing: 'border-box' as const,
+              };
+              const hoverOn = (e: React.MouseEvent) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = colors.bgHover; };
+              const hoverOff = (e: React.MouseEvent) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; };
+
+              // External links (e.g. Contact) navigate away instead of switching
+              // the in-app page, so they render as an anchor rather than a button.
+              if (item.href) {
+                return (
+                  <a
+                    key={item.id}
+                    href={item.href}
+                    data-testid={`nav-${item.id}`}
+                    onClick={() => { if (isMobile) setMobileOpen(false); }}
+                    style={itemStyle}
+                    onMouseEnter={hoverOn}
+                    onMouseLeave={hoverOff}
+                    title={collapsed && !isMobile ? item.label : undefined}
+                  >
+                    <Icon size={16} style={{ flexShrink: 0 }} />
+                    {(isMobile || !collapsed) && <span>{item.label}</span>}
+                  </a>
+                );
+              }
+
               return (
                 <button
                   key={item.id}
                   data-testid={`nav-${item.id}`}
                   onClick={() => handleNavigate(item.id)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: (!isMobile && collapsed) ? '10px 14px' : '10px 12px',
-                    margin: '1px 0',
-                    border: 'none',
-                    borderRadius: 8,
-                    background: isActive ? colors.bgHover : 'transparent',
-                    color: isActive ? colors.accent : colors.text,
-                    cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: isActive ? 600 : 400,
-                    textAlign: 'left',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = colors.bgHover; }}
-                  onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                  style={itemStyle}
+                  onMouseEnter={hoverOn}
+                  onMouseLeave={hoverOff}
                   title={collapsed && !isMobile ? item.label : undefined}
                 >
                   <Icon size={16} style={{ flexShrink: 0 }} />

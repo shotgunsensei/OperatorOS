@@ -28,6 +28,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { tenantApi } from '@/lib/auth';
 import AuthProvider, { useAuth } from '@/components/AuthProvider';
+import ContactLink from '@/components/ContactLink';
 
 const PENDING_INVITE_KEY = 'operatoros.pendingInviteToken';
 const PENDING_INVITE_EMAIL_KEY = 'operatoros.pendingInviteEmail';
@@ -261,6 +262,7 @@ export default function InviteAcceptPage() {
   return (
     <AuthProvider>
       <InviteAcceptInner />
+      <ContactLink />
     </AuthProvider>
   );
 }

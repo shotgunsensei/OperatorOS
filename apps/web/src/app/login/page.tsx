@@ -25,6 +25,7 @@ import RegisterPage from '@/components/pages/RegisterPage';
 import ForgotPasswordPage from '@/components/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/components/pages/ResetPasswordPage';
 import OperatorLoader from '@/components/brand/OperatorLoader';
+import ContactLink from '@/components/ContactLink';
 import { brand } from '@/lib/brand';
 import { sanitizeReturnTo } from '../../../../../packages/modules/public-url.js';
 
@@ -105,6 +106,7 @@ export default function LoginRoute() {
     <AuthProvider>
       <ToastProvider>
         <LoginGate />
+        <ContactLink />
       </ToastProvider>
     </AuthProvider>
   );

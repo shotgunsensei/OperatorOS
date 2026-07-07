@@ -16,6 +16,7 @@
 
 import { useEffect, useState } from 'react';
 import AuthProvider, { useAuth } from '@/components/AuthProvider';
+import ContactLink from '@/components/ContactLink';
 import { platformApiCall } from '@/lib/platform-api';
 
 interface HealthResponse {
@@ -224,6 +225,7 @@ export default function AdminHealthRoute() {
   return (
     <AuthProvider>
       <HealthDashboard />
+      <ContactLink />
     </AuthProvider>
   );
 }

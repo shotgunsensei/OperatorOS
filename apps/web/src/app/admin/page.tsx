@@ -14,6 +14,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthProvider, { useAuth } from '@/components/AuthProvider';
+import ContactLink from '@/components/ContactLink';
 
 function AdminRedirect() {
   const { user, loading } = useAuth();
@@ -34,6 +35,7 @@ export default function AdminRoute() {
   return (
     <AuthProvider>
       <AdminRedirect />
+      <ContactLink />
     </AuthProvider>
   );
 }
