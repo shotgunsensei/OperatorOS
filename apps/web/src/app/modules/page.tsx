@@ -4,7 +4,6 @@ import React from 'react';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import ModuleGatewayGrid from '@/components/marketing/sections/ModuleGatewayGrid';
 import FinalCta from '@/components/marketing/sections/FinalCta';
-import { brand } from '@/lib/brand';
 
 /**
  * Modules marketing page — Phase 2.
@@ -17,54 +16,11 @@ import { brand } from '@/lib/brand';
 export default function MarketingModulesPage() {
   return (
     <MarketingLayout testId="page-marketing-modules">
-      <header
-        style={{
-          padding: '72px 24px 16px',
-          maxWidth: brand.contentMaxWidth,
-          margin: '0 auto',
-          width: '100%',
-          textAlign: 'center',
-        }}
-      >
-        <span
-          style={{
-            display: 'inline-block',
-            padding: '6px 12px',
-            borderRadius: 999,
-            border: `1px solid ${brand.borderSoft}`,
-            background: brand.bgGlass,
-            fontFamily: brand.fontDisplay,
-            fontSize: 12,
-            fontWeight: 600,
-            color: brand.textSecondary,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-          }}
-        >
-          Module ecosystem
-        </span>
-        <h1
-          style={{
-            fontFamily: brand.fontDisplay,
-            fontSize: 'clamp(32px, 5vw, 52px)',
-            fontWeight: 700,
-            color: brand.textPrimary,
-            margin: '18px auto 12px',
-            letterSpacing: '-0.025em',
-            maxWidth: 840,
-          }}
-        >
-          One parent platform for every child module.
-        </h1>
-        <p style={{ fontSize: 17, color: brand.textSecondary, margin: '0 auto', maxWidth: 620 }}>
-          Browse tenant-aware modules built to share one login, one billing
-          layer, and entitlement-driven access.
-        </p>
-      </header>
       <ModuleGatewayGrid
-        heading="The OperatorOS module ecosystem."
-        subheading="One sign-in, one bill, one admin surface. Turn on the modules your operation needs without splitting the platform."
+        heading="Choose the operating lane you need now."
+        subheading="Start with one core product, then expand with included and companion modules that already share your team, billing, and access."
         testId="page-modules-grid"
+        headingLevel="h1"
       />
       <FinalCta />
     </MarketingLayout>

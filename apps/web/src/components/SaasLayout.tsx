@@ -6,6 +6,7 @@ import { useAuth } from './AuthProvider';
 import TenantSwitcher from './TenantSwitcher';
 import { buildNavSections } from '@/lib/sidebar-nav';
 import { isSuperAdmin, isTenantAdmin } from '@/lib/rbac';
+import OperatorMark from './brand/OperatorMark';
 
 // Centralized palette. Re-exported below + via lib/design-tokens.ts so all
 // downstream pages share the same source of truth.
@@ -91,12 +92,7 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
         onClick={() => { if (!isMobile) setCollapsed(!collapsed); }}
         data-testid="sidebar-logo"
       >
-        <div style={{
-          width: 32, height: 32, borderRadius: 8,
-          background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 16, fontWeight: 800, color: '#fff', flexShrink: 0,
-        }}>O</div>
+        <OperatorMark size={32} glow />
         {(isMobile || !collapsed) && (
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.02em' }}>OperatorOS</div>

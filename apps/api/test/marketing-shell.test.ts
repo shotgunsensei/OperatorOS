@@ -100,8 +100,8 @@ test('marketing shell · brand components present and exported', () => {
   // The navbar must toggle CTA based on the AuthProvider session.
   const nav = read('src/components/marketing/MarketingNavbar.tsx');
   assert.match(nav, /useAuth/);
-  assert.match(nav, /Go to console/);
-  assert.match(nav, /Launch console/);
+  assert.match(nav, /Open console/);
+  assert.match(nav, /Launch OperatorOS/);
 });
 
 test('marketing shell · robots disallows /app, manifest rebranded', () => {
@@ -213,7 +213,7 @@ test('marketing shell · console-internal links point at /app, not /', () => {
 
 test('marketing shell · root layout loads Space Grotesk + brand tokens', () => {
   const layout = read('src/app/layout.tsx');
-  assert.match(layout, /Space\+Grotesk/, 'layout.tsx should request Space Grotesk');
+  assert.match(layout, /Space_Grotesk/, 'layout.tsx should load Space Grotesk through next/font');
   assert.match(layout, /brandCssVariables/, 'layout.tsx should inject brand CSS variables');
   assert.match(layout, /brand\.bgPrimary/, 'layout.tsx should use the brand background token');
 });
@@ -320,18 +320,18 @@ test('marketing shell · /app/* server-side auth gate (middleware)', () => {
   // the "Launch console" CTA) and `/app/invites/:token` (the invite
   // page runs its own pre-auth localStorage handoff).
   const src = read('src/middleware.ts');
-  assert.match(src, /matcher.*\/app/);
+  assert.match(src, /matcher:[\s\S]*['"]\/app\/:path\*['"]/);
   assert.match(src, /token/, 'middleware should check the auth cookie issued by /v1/auth/login');
   assert.match(src, /NextResponse\.redirect/);
   assert.match(src, /\/login/, 'middleware must redirect anonymous traffic to the /login surface');
   assert.match(src, /\/app\/invites\//, 'middleware must exempt /app/invites/:token for the pre-auth handoff');
-  // /app itself is no longer exempt — the dedicated /login route
-  // means we can enforce the "/app/* requires auth" contract on every
-  // console surface, including the root /app landing.
-  assert.doesNotMatch(
+  // /app itself is protected — the dedicated /login route means the
+  // console root can participate in the same server-side gate as nested
+  // routes without creating an authentication loop.
+  assert.match(
     src,
-    /pathname === ['"]\/app['"]/,
-    'middleware must not exempt /app (login lives at /login, not /app)',
+    /function isProtectedAppPath[\s\S]*pathname === ['"]\/app['"]/,
+    'middleware must include /app in the protected console paths',
   );
 });
 
@@ -508,9 +508,9 @@ test('marketing phase 2 · homepage composes the six required sections in order'
 test('marketing phase 2 · section components exist with required test-ids', () => {
   const expectations: Array<[string, RegExp]> = [
     ['src/components/marketing/sections/Hero.tsx',                /data-testid="marketing-hero"/],
-    ['src/components/marketing/sections/Hero.tsx',                /Command Every Moving Part/],
-    ['src/components/marketing/sections/Hero.tsx',                /Launch OperatorOS/],
-    ['src/components/marketing/sections/Hero.tsx',                /Explore Modules/],
+    ['src/components/marketing/sections/Hero.tsx',                /Run Every Operation From One Place/],
+    ['src/components/marketing/sections/Hero.tsx',                /Open your free command layer/],
+    ['src/components/marketing/sections/Hero.tsx',                /Explore the ecosystem/],
     ['src/components/marketing/sections/CommandOrbit.tsx',        /data-testid="marketing-orbit"/],
     ['src/components/marketing/sections/CommandOrbit.tsx',        /prefers-reduced-motion/],
     ['src/components/marketing/sections/PlatformPositioning.tsx', /data-testid="marketing-positioning"/],

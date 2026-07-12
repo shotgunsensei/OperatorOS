@@ -22,6 +22,7 @@ interface ModuleGatewayGridProps {
   heading?: string;
   subheading?: string;
   testId?: string;
+  headingLevel?: 'h1' | 'h2';
 }
 
 const PACKAGE_ORDER: MarketingPackageType[] = ['core', 'included', 'companion'];
@@ -30,10 +31,12 @@ export default function ModuleGatewayGrid({
   heading = 'Tenant-aware modules under one parent platform.',
   subheading = 'Core products, bundled apps, and companion modules all launch through the same OperatorOS command layer.',
   testId = 'marketing-module-grid',
+  headingLevel = 'h2',
 }: ModuleGatewayGridProps) {
   const { user } = useAuth();
   const entitled = useEntitlements();
   const modules = applyEntitlements(MARKETING_MODULES, entitled);
+  const HeadingTag = headingLevel;
 
   return (
     <section
@@ -122,7 +125,7 @@ export default function ModuleGatewayGrid({
           <Boxes size={14} />
           Module ecosystem
         </span>
-        <h2
+        <HeadingTag
           data-testid={`${testId}-title`}
           style={{
             fontFamily: brand.fontDisplay,
@@ -134,7 +137,7 @@ export default function ModuleGatewayGrid({
           }}
         >
           {heading}
-        </h2>
+        </HeadingTag>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: brand.textSecondary, margin: '0 auto', maxWidth: 720 }}>
           {subheading}
         </p>

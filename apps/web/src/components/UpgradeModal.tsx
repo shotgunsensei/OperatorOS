@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { billingApi } from '@/lib/auth';
 import { colors } from './SaasLayout';
+import OperatorMark from './brand/OperatorMark';
+import { brand } from '@/lib/brand';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -21,10 +23,12 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
   const [downgradeWarnings, setDowngradeWarnings] = useState<string[]>([]);
   const [pendingDowngradeSlug, setPendingDowngradeSlug] = useState('');
   const [interval, setInterval] = useState<'month' | 'year'>('month');
+  const [actionError, setActionError] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
+    setActionError('');
     Promise.all([billingApi.getPlans(), billingApi.getUsage()])
       .then(([plansData, usageData]) => {
         setPlans(plansData.plans);
@@ -34,9 +38,19 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
       .finally(() => setLoading(false));
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !switching) onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, switching, onClose]);
+
   const handleSubscribe = async (slug: string) => {
     setSwitching(slug);
     setDowngradeWarnings([]);
+    setActionError('');
     try {
       const planIdx = ['starter', 'pro', 'elite'].indexOf(slug);
       const currentIdx = ['starter', 'pro', 'elite'].indexOf(currentPlan);
@@ -64,6 +78,7 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
       }
     } catch (err: any) {
       console.error(err);
+      setActionError(err?.error || err?.message || 'We could not update your stack. Please try again.');
     } finally {
       setSwitching('');
     }
@@ -71,6 +86,7 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
 
   const confirmDowngrade = async (slug: string) => {
     setSwitching(slug);
+    setActionError('');
     try {
       const result = await billingApi.subscribe(slug, interval);
       if (result.checkoutUrl) {
@@ -82,6 +98,7 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
       onClose();
     } catch (err: any) {
       console.error(err);
+      setActionError(err?.error || err?.message || 'We could not update your stack. Please try again.');
     } finally {
       setSwitching('');
     }
@@ -94,29 +111,51 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+      position: 'fixed', inset: 0, background: 'rgba(1,4,9,0.82)', backdropFilter: 'blur(10px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-    }} onClick={onClose} data-testid="upgrade-modal">
+      padding: 20,
+    }} onClick={onClose} data-testid="upgrade-modal" role="presentation">
       <div style={{
-        background: colors.bgSecondary, border: `1px solid ${colors.border}`,
-        borderRadius: 16, padding: 32, maxWidth: 720, width: '90%', maxHeight: '90vh', overflowY: 'auto',
-      }} onClick={e => e.stopPropagation()}>
+        background: 'linear-gradient(180deg, rgba(18,24,38,0.99), rgba(8,11,18,0.99))',
+        border: `1px solid ${brand.borderStrong}`,
+        borderRadius: 20, padding: 'clamp(22px, 4vw, 34px)', maxWidth: 760, width: '100%', maxHeight: '90vh', overflowY: 'auto',
+        boxShadow: '0 38px 120px rgba(0,0,0,.62), 0 0 70px rgba(124,58,237,.12)',
+      }} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="upgrade-modal-title">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#fff', margin: 0 }}>
-              <span style={{ background: 'linear-gradient(135deg, #58a6ff, #bc8cff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                Upgrade Your Plan
-              </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+            <OperatorMark size={40} glow />
+            <div>
+            <h2 id="upgrade-modal-title" style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: 0 }}>
+              Expand your OperatorOS stack
             </h2>
             {message ? (
               <p style={{ fontSize: 13, color: colors.accentYellow, margin: '8px 0 0' }}>{message}</p>
             ) : (
-              <p style={{ fontSize: 13, color: colors.textMuted, margin: '8px 0 0' }}>Unlock more power for your team</p>
+              <p style={{ fontSize: 13, color: colors.textMuted, margin: '6px 0 0' }}>
+                Choose the access level that fits your team now. You can adjust it later.
+              </p>
             )}
+            </div>
           </div>
-          <button onClick={onClose} data-testid="button-close-upgrade-modal"
+          <button onClick={onClose} data-testid="button-close-upgrade-modal" aria-label="Close upgrade options"
             style={{ background: 'none', border: 'none', color: colors.textDim, fontSize: 20, cursor: 'pointer', padding: 4 }}>{'\u2715'}</button>
         </div>
+
+        {resource && (
+          <div style={{ margin: '-8px 0 18px 53px', color: brand.accentCyan, fontSize: 12, fontWeight: 700 }}>
+            Unlocking: {resource}
+          </div>
+        )}
+
+        {actionError && (
+          <div role="alert" style={{
+            padding: '11px 13px', marginBottom: 18, borderRadius: 9,
+            background: 'rgba(239,35,60,.09)', border: `1px solid ${brand.accentRed}88`,
+            color: '#FF7185', fontSize: 13,
+          }}>
+            {actionError}
+          </div>
+        )}
 
         <div role="group" aria-label="Billing interval"
              style={{ display: 'inline-flex', borderRadius: 8, border: `1px solid ${colors.border}`, overflow: 'hidden', marginBottom: 20 }}>

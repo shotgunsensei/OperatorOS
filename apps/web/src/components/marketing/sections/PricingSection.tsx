@@ -133,9 +133,9 @@ export default function PricingSection() {
             boxShadow: '0 28px 80px rgba(0,0,0,.42)',
           }}>
             <img
-              src="/media/operatoros/operatoros-hero.png"
+              src="/media/operatoros/operatoros-command-nexus.png"
               alt="OperatorOS command layer visualization"
-              style={{ width: '100%', height: '100%', minHeight: 350, objectFit: 'cover', display: 'block' }}
+              style={{ width: '100%', height: '100%', minHeight: 350, objectFit: 'cover', objectPosition: 'center', display: 'block' }}
             />
           </div>
         </div>

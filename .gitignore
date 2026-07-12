@@ -9,6 +9,7 @@ dist/
 .DS_Store
 coverage/
 .turbo/
+.pnpm-store/
 apps/web/out/
 apps/web/android/app/build/
 apps/web/android/.gradle/

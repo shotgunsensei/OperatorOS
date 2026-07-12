@@ -17,10 +17,10 @@ import { useAuth } from '../../AuthProvider';
 import { primaryCtaTarget } from '@/lib/marketing-cta';
 
 const VALUE_STRIP = [
-  { label: 'SSO handoff', icon: KeyRound },
-  { label: 'Tenant scope', icon: ShieldCheck },
-  { label: 'Stripe control', icon: CreditCard },
-  { label: 'Entitlement rails', icon: SlidersHorizontal },
+  { label: 'Sign in once', icon: KeyRound },
+  { label: 'Team access', icon: ShieldCheck },
+  { label: 'One clear bill', icon: CreditCard },
+  { label: 'Connected apps', icon: SlidersHorizontal },
 ];
 
 const STACK_LAYERS = [
@@ -60,12 +60,12 @@ export default function Hero() {
         }
         .operatoros-hero-grid {
           display: grid;
-          grid-template-columns: minmax(0, 0.88fr) minmax(520px, 1.12fr);
+          grid-template-columns: minmax(0, 0.96fr) minmax(500px, 1.04fr);
           gap: 42px;
           align-items: center;
         }
         .operatoros-hero-title {
-          font-size: clamp(52px, 6.1vw, 92px);
+          font-size: clamp(50px, 5.4vw, 80px);
         }
         .operatoros-hero-actions {
           display: flex;
@@ -171,7 +171,7 @@ export default function Hero() {
             }}
           >
             <Sparkles size={14} />
-            Parent command nexus
+            One connected operating system
           </span>
 
           <h1
@@ -188,7 +188,7 @@ export default function Hero() {
               textShadow: '0 0 34px rgba(0,229,255,0.08), 0 0 52px rgba(239,35,60,0.08)',
             }}
           >
-            Command Every Moving Part.
+            Run Every Operation From One Place.
           </h1>
 
           <p
@@ -201,9 +201,9 @@ export default function Hero() {
               maxWidth: 660,
             }}
           >
-            OperatorOS is the parent control layer for login, Stripe billing,
-            tenant scope, entitlement checks, and SSO handoff across the entire
-            Shotgun Ninjas software ecosystem.
+            Give your team one secure place to enter, manage, and launch every
+            tool your operation depends on. Identity, billing, access, and module
+            handoffs stay connected behind the scenes.
           </p>
 
           <div className="operatoros-hero-actions">
@@ -225,7 +225,7 @@ export default function Hero() {
                 boxShadow: brand.ctaGlowLarge,
               }}
             >
-              Launch OperatorOS <ArrowRight size={16} />
+              Open your free command layer <ArrowRight size={16} />
             </Link>
             <Link
               href="/modules"
@@ -246,7 +246,7 @@ export default function Hero() {
                 backdropFilter: 'blur(10px)',
               }}
             >
-              View module ecosystem
+              Explore the ecosystem
             </Link>
           </div>
 

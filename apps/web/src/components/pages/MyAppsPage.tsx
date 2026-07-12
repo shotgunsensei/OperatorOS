@@ -3,8 +3,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowRight,
   Ban,
   Building2,
+  CheckCircle2,
+  Circle,
   Clock,
   KeyRound,
   Loader2,
@@ -384,6 +387,20 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
     return recentSlugs.map((slug) => bySlug.get(slug)).filter((card): card is LaunchpadModule => !!card && card.action === 'launch');
   }, [recentSlugs, cards]);
 
+  const activationSteps = [
+    { label: 'Team space ready', complete: !!activeTenant?.id },
+    { label: 'Product stack active', complete: activeCards.length > 0 },
+    { label: 'First workflow launched', complete: recentCards.length > 0 },
+  ];
+  const activationComplete = activationSteps.filter((step) => step.complete).length;
+  const nextActivationAction = !activeTenant?.id
+    ? { label: 'Choose a team space', page: 'settings' }
+    : activeCards.length === 0
+      ? { label: 'Choose a core product', page: 'billing' }
+      : recentCards.length === 0
+        ? { label: 'Open your first module', page: 'apps' }
+        : { label: 'Expand your ecosystem', page: 'apps' };
+
   const launch = async (card: LaunchpadModule) => {
     if (!activeTenant?.id && card.registry.requiresTenant) {
       setLaunchErrors((cur) => ({ ...cur, [card.registry.slug]: 'Select a tenant before launching.' }));
@@ -520,6 +537,67 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
           </div>
         </div>
       </header>
+
+      <section
+        data-testid="ecosystem-activation-path"
+        aria-label="Ecosystem activation path"
+        style={{
+          marginBottom: space.xl,
+          padding: '16px 18px',
+          borderRadius: radius.lg,
+          border: `1px solid ${semantic.border}`,
+          background: 'linear-gradient(105deg, rgba(188,140,255,0.09), rgba(88,166,255,0.05), rgba(13,17,23,0.96))',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) auto',
+          gap: space.lg,
+          alignItems: 'center',
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexWrap: 'wrap' }}>
+            <h2 style={{ margin: 0, color: '#fff', fontSize: fontSize.lg, fontWeight: 750 }}>
+              Your ecosystem activation path
+            </h2>
+            <span style={{ fontSize: fontSize.xs, color: semantic.textMuted }}>
+              {activationComplete} of {activationSteps.length} ready
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginTop: 12 }}>
+            {activationSteps.map((step, index) => (
+              <div
+                key={step.label}
+                data-testid={`activation-step-${index + 1}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  minHeight: 34, padding: '6px 10px', borderRadius: radius.pill,
+                  color: step.complete ? semantic.text : semantic.textMuted,
+                  border: `1px solid ${step.complete ? semantic.accentSuccess + '66' : semantic.border}`,
+                  background: step.complete ? 'rgba(63,185,80,0.08)' : 'rgba(1,4,9,0.36)',
+                  fontSize: fontSize.sm, fontWeight: 650,
+                }}
+              >
+                {step.complete
+                  ? <CheckCircle2 size={14} color={semantic.accentSuccess} />
+                  : <Circle size={14} color={semantic.textDim} />}
+                <span>{index + 1}. {step.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <button
+          data-testid="button-ecosystem-next-action"
+          onClick={() => onNavigate(nextActivationAction.page)}
+          style={{
+            ...buttonStyles.primary,
+            minHeight: 40,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+            background: 'linear-gradient(135deg, #58a6ff, #bc8cff)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {nextActivationAction.label} <ArrowRight size={14} />
+        </button>
+      </section>
 
       {recentCards.length > 0 && (
         <section style={{ marginBottom: space.xl }} data-testid="my-apps-recent">
