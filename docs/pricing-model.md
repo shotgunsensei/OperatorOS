@@ -31,3 +31,24 @@ The authoritative shared catalog is
 `packages/sdk/src/products.ts`. Public pricing, checkout line items, webhook
 grants, and tests must consume that catalog rather than duplicating amounts.
 
+## OperatorOS workspace capacity
+
+The legacy Starter, Pro, and Elite subscriptions remain as a compatibility
+layer for OperatorOS-native workspace allowances: workspaces, projects, tasks,
+team-member limits, AI actions, and related platform features. They do not
+define the customer-facing application stack and should not be presented as a
+module-access tier system.
+
+Customer-facing billing surfaces use two explicit lanes:
+
+- **Application stack:** core product, included apps, companion modules, and
+  tenant seats. This is the primary commercial model and uses the stack checkout.
+- **Workspace capacity:** OperatorOS-native usage allowances. This preserves
+  existing subscriptions and quota enforcement while the legacy plan model is
+  gradually retired or folded into the stack.
+
+Locked module CTAs should route customers to stack options. Resource-limit CTAs
+may continue opening the workspace-capacity selector. This separation prevents
+Starter/Pro/Elite language from conflicting with the finalized core-product
+pricing model.
+

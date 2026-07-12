@@ -280,7 +280,7 @@ function buildLaunchpadModule(
       category: summary.module.category ?? registry.category,
       statusLabel: 'Locked',
       statusTone: 'warning',
-      entitlementLabel: summary.upgrade_target_plan ? `Upgrade: ${titleCase(summary.upgrade_target_plan)}` : 'Upgrade required',
+      entitlementLabel: 'Core product required',
       entitlementTone: 'warning',
       action: 'upgrade',
       unlocked: false,
@@ -962,7 +962,7 @@ function renderActionButton({
         onClick={() => onNavigate('billing')}
         style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center', flex: 1 }}
       >
-        <Lock size={13} /> Upgrade
+        <Lock size={13} /> View stack options
       </button>
     );
   }

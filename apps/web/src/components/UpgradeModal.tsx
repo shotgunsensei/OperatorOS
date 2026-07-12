@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { ArrowRight, Layers3 } from 'lucide-react';
 import { billingApi } from '@/lib/auth';
 import { colors } from './SaasLayout';
 import OperatorMark from './brand/OperatorMark';
@@ -126,13 +128,13 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
             <OperatorMark size={40} glow />
             <div>
             <h2 id="upgrade-modal-title" style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: 0 }}>
-              Expand your OperatorOS stack
+              Increase workspace capacity
             </h2>
             {message ? (
               <p style={{ fontSize: 13, color: colors.accentYellow, margin: '8px 0 0' }}>{message}</p>
             ) : (
               <p style={{ fontSize: 13, color: colors.textMuted, margin: '6px 0 0' }}>
-                Choose the access level that fits your team now. You can adjust it later.
+                Adjust project, task, team, workspace, and AI allowances without changing your app access.
               </p>
             )}
             </div>
@@ -143,7 +145,7 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
 
         {resource && (
           <div style={{ margin: '-8px 0 18px 53px', color: brand.accentCyan, fontSize: 12, fontWeight: 700 }}>
-            Unlocking: {resource}
+            Capacity needed for: {resource}
           </div>
         )}
 
@@ -156,6 +158,31 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
             {actionError}
           </div>
         )}
+
+        <div
+          data-testid="workspace-capacity-stack-note"
+          style={{
+            marginBottom: 20, padding: '13px 14px', borderRadius: 12,
+            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+            border: `1px solid ${brand.borderSoft}`,
+            background: 'linear-gradient(105deg, rgba(0,229,255,.07), rgba(124,58,237,.08))',
+          }}
+        >
+          <Layers3 size={18} color={brand.accentCyan} />
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ color: '#fff', fontSize: 13, fontWeight: 750 }}>Looking for app or module access?</div>
+            <div style={{ color: brand.textSecondary, fontSize: 11, marginTop: 3 }}>
+              Core products, included apps, companion modules, and tenant seats are managed in your ecosystem stack.
+            </div>
+          </div>
+          <Link
+            href="/pricing#build-stack"
+            onClick={onClose}
+            style={{ color: brand.accentCyan, fontSize: 12, fontWeight: 800, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+          >
+            View app stack <ArrowRight size={13} />
+          </Link>
+        </div>
 
         <div role="group" aria-label="Billing interval"
              style={{ display: 'inline-flex', borderRadius: 8, border: `1px solid ${colors.border}`, overflow: 'hidden', marginBottom: 20 }}>
@@ -217,6 +244,9 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
                       padding: '2px 8px', borderRadius: 8, textTransform: 'uppercase',
                     }}>Recommended</div>
                   )}
+                  <div style={{ fontSize: 10, fontWeight: 800, color: brand.accentCyan, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>
+                    Workspace capacity
+                  </div>
                   <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{p.name}</div>
                   <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 12 }}>{p.description}</div>
                   <div style={{ marginBottom: 16 }}>
@@ -274,7 +304,7 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
                         color: isUpgradeOption ? '#fff' : colors.text,
                         fontSize: 12, fontWeight: 600, cursor: 'pointer', boxSizing: 'border-box',
                       }}>
-                      {switching === p.slug ? 'Processing...' : isUpgradeOption ? 'Upgrade' : 'Downgrade'}
+                      {switching === p.slug ? 'Processing...' : isUpgradeOption ? 'Increase capacity' : 'Reduce capacity'}
                     </button>
                   )}
                 </div>

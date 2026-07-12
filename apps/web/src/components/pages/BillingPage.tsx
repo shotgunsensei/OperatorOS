@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { ArrowRight, CheckCircle2, Layers3, Users } from 'lucide-react';
 import { billingApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import UpgradeModal from '../UpgradeModal';
+import { CORE_PRODUCTS_BY_KEY, INCLUDED_WITH_ANY_PAID_CORE } from '@operatoros/sdk';
+import { brand } from '@/lib/brand';
 
 function UsageBar({ label, used, limit, percentage }: { label: string; used: number; limit: number; percentage: number }) {
   const isUnlimited = limit >= 999;
@@ -44,20 +47,23 @@ export default function BillingPage() {
   const [downgradeCheck, setDowngradeCheck] = useState<{ slug: string; violations: any[] } | null>(null);
 
   const [billingMode, setBillingMode] = useState<any>(null);
+  const [stackData, setStackData] = useState<any>(null);
   const [interval, setInterval] = useState<'month' | 'year'>('month');
 
   const loadData = async () => {
     try {
-      const [usage, plansData, historyData, mode] = await Promise.all([
+      const [usage, plansData, historyData, mode, stack] = await Promise.all([
         billingApi.getUsage(),
         billingApi.getPlans(),
         billingApi.getHistory(),
         billingApi.getMode(),
+        billingApi.getStack().catch(() => null),
       ]);
       setUsageData(usage);
       setPlans(plansData.plans);
       setHistory(historyData.events);
       setBillingMode(mode);
+      setStackData(stack);
     } catch {} finally { setLoading(false); }
   };
 
@@ -127,10 +133,87 @@ export default function BillingPage() {
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : null;
 
+  const activeEntitlements = (stackData?.entitlements ?? []).filter((row: any) => row.active !== false);
+  const coreEntitlement = activeEntitlements.find((row: any) => row.entitlementType === 'core_product');
+  const coreProduct = coreEntitlement
+    ? CORE_PRODUCTS_BY_KEY[coreEntitlement.entitlementKey as keyof typeof CORE_PRODUCTS_BY_KEY]
+    : null;
+  const coreProductName = coreProduct?.name ?? coreEntitlement?.entitlementKey ?? 'No core product active';
+  const includedApps = activeEntitlements.filter((row: any) => row.entitlementType === 'included_app');
+  const companions = activeEntitlements.filter((row: any) => row.entitlementType === 'companion_module');
+  const includedSeatCount = coreProduct?.includedSeats ?? 0;
+  const seatLimit = stackData?.seatLimit ?? includedSeatCount;
+  const extraSeats = Math.max(0, seatLimit - includedSeatCount);
+
   return (
     <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 1200 }} data-testid="billing-page">
-      <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Billing & Subscription</h1>
-      <p style={{ fontSize: 14, color: colors.textMuted, margin: '0 0 32px' }}>Manage your plan, usage, and billing history</p>
+      <style>{`
+        .billing-stack-hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); }
+        @media (max-width: 820px) { .billing-stack-hero { grid-template-columns: 1fr; } }
+      `}</style>
+      <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Billing & Ecosystem</h1>
+      <p style={{ fontSize: 14, color: colors.textMuted, margin: '0 0 28px' }}>
+        Manage the applications your tenant operates, workspace capacity, invoices, and billing history.
+      </p>
+
+      <section
+        className="billing-stack-hero"
+        data-testid="billing-ecosystem-stack"
+        style={{
+          marginBottom: 28,
+          borderRadius: 18,
+          border: `1px solid ${brand.borderStrong}`,
+          background: 'linear-gradient(135deg, rgba(0,229,255,.09), rgba(124,58,237,.08) 54%, rgba(13,17,23,.98))',
+          overflow: 'hidden',
+          boxShadow: '0 24px 70px rgba(0,0,0,.24)',
+        }}
+      >
+        <div style={{ padding: 'clamp(22px, 4vw, 34px)' }}>
+          <div style={{ color: brand.accentCyan, fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em' }}>
+            Your application stack
+          </div>
+          <h2 style={{ margin: '9px 0 8px', color: '#fff', fontSize: 28, fontWeight: 800, letterSpacing: '-.03em' }}>
+            {coreProductName}
+          </h2>
+          <p style={{ margin: 0, color: brand.textSecondary, fontSize: 14, lineHeight: 1.6, maxWidth: 620 }}>
+            {coreProduct
+              ? 'Your core product anchors shared login, included apps, companion modules, and tenant seats.'
+              : 'Start with one fully unlocked core product. OperatorOS remains your free command layer.'}
+          </p>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginTop: 18 }}>
+            <StackMetric icon={<Users size={14} />} label={`${seatLimit} seat${seatLimit === 1 ? '' : 's'}`} />
+            <StackMetric icon={<CheckCircle2 size={14} />} label={`${includedApps.length || (coreProduct ? INCLUDED_WITH_ANY_PAID_CORE.length : 0)} included apps`} />
+            <StackMetric icon={<Layers3 size={14} />} label={`${companions.length} companion${companions.length === 1 ? '' : 's'}`} />
+            {extraSeats > 0 && <StackMetric icon={<Users size={14} />} label={`${extraSeats} extra seat${extraSeats === 1 ? '' : 's'}`} />}
+          </div>
+
+          <button
+            data-testid="button-build-ecosystem-stack"
+            onClick={() => { window.location.href = '/pricing#build-stack'; }}
+            style={{
+              marginTop: 22, minHeight: 42, padding: '10px 16px', borderRadius: 10, border: 'none',
+              background: `linear-gradient(135deg, ${brand.accentCyan}, ${brand.accentViolet})`,
+              color: brand.accentInk, fontSize: 13, fontWeight: 800, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: brand.ctaGlowSoft,
+            }}
+          >
+            {coreProduct ? 'Review & expand your stack' : 'Build your app stack'} <ArrowRight size={14} />
+          </button>
+        </div>
+
+        <div style={{ position: 'relative', minHeight: 260, background: brand.bgPrimary }}>
+          <img
+            src="/media/operatoros/operatoros-command-nexus.png"
+            alt="OperatorOS ecosystem connecting identity, billing, tenants, and modules."
+            style={{ width: '100%', height: '100%', minHeight: 260, objectFit: 'cover', display: 'block', opacity: .82 }}
+          />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(8,11,18,.96), transparent 48%), linear-gradient(0deg, rgba(8,11,18,.42), transparent)' }} />
+          <div style={{ position: 'absolute', right: 18, bottom: 18, padding: '7px 10px', borderRadius: 999, border: `1px solid ${brand.borderStrong}`, background: brand.bgGlass, color: brand.textSecondary, fontSize: 11, fontWeight: 700 }}>
+            OperatorOS command layer · $0
+          </div>
+        </div>
+      </section>
 
       {downgradeCheck && (
         <div style={{
@@ -163,7 +246,7 @@ export default function BillingPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginBottom: 32 }}>
         <div style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 24 }}>
-          <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Plan</div>
+          <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Workspace Capacity</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <span style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>{currentPlan.name}</span>
             <span style={{
@@ -193,7 +276,7 @@ export default function BillingPage() {
             {currentSlug !== 'elite' && (
               <button data-testid="button-upgrade-plan" onClick={() => setShowUpgradeModal(true)}
                 style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #58a6ff, #bc8cff)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                Upgrade plan
+                Increase capacity
               </button>
             )}
             {billingMode?.mode === 'stripe' && (
@@ -218,7 +301,7 @@ export default function BillingPage() {
               ) : (
                 <button data-testid="button-cancel-sub" onClick={() => setCancelConfirm(true)}
                   style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.accentRed, fontSize: 13, cursor: 'pointer' }}>
-                  Cancel plan
+                  Cancel capacity plan
                 </button>
               )
             )}
@@ -243,7 +326,12 @@ export default function BillingPage() {
 
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: 0 }}>Plan Comparison</h3>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: 0 }}>Workspace Capacity</h3>
+            <p style={{ color: colors.textMuted, fontSize: 12, margin: '5px 0 0' }}>
+              Controls OperatorOS workspaces, projects, tasks, team allowances, and AI actions—not module access.
+            </p>
+          </div>
           <div role="group" aria-label="Billing interval"
                style={{ display: 'inline-flex', borderRadius: 8, border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
             {(['month', 'year'] as const).map((v) => (
@@ -357,7 +445,7 @@ export default function BillingPage() {
                       color: isUpgradeOption ? '#fff' : colors.text,
                       fontSize: 13, fontWeight: 600, cursor: 'pointer', boxSizing: 'border-box',
                     }}>
-                    {switching === p.slug ? 'Processing...' : isUpgradeOption ? 'Upgrade' : 'Downgrade'}
+                    {switching === p.slug ? 'Processing...' : isUpgradeOption ? 'Increase capacity' : 'Reduce capacity'}
                   </button>
                 )}
               </div>
@@ -367,8 +455,8 @@ export default function BillingPage() {
       </div>
 
       <div style={{ marginBottom: 32 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>Feature Access</h3>
-        <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 16px' }}>Your current plan includes these features:</p>
+        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>OperatorOS Workspace Features</h3>
+        <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 16px' }}>Features included with your current workspace capacity:</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
           {Object.entries(features).map(([key, enabled]: [string, any]) => (
             <div key={key} style={{
@@ -386,7 +474,7 @@ export default function BillingPage() {
               {!enabled && (
                 <button onClick={() => setShowUpgradeModal(true)}
                   style={{ marginLeft: 'auto', padding: '2px 8px', borderRadius: 4, border: 'none', background: colors.accent + '22', color: colors.accent, fontSize: 10, cursor: 'pointer', fontWeight: 600 }}>
-                  Unlock
+                  Increase capacity
                 </button>
               )}
             </div>
@@ -434,7 +522,7 @@ export default function BillingPage() {
       </div>
 
       <div style={{ padding: 16, borderRadius: 8, background: colors.bgHover, fontSize: 12, color: colors.textDim }}>
-        <strong>Stripe Integration:</strong> This billing system is Stripe-ready. Connect Stripe by adding STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET environment variables.
+        Payments, invoices, and subscription changes are handled through secure Stripe checkout and the customer billing portal when enabled.
       </div>
 
       <UpgradeModal
@@ -443,5 +531,18 @@ export default function BillingPage() {
         onUpgraded={() => loadData()}
       />
     </div>
+  );
+}
+
+function StackMetric({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 32,
+      padding: '6px 10px', borderRadius: 999, border: `1px solid ${brand.borderSoft}`,
+      background: 'rgba(8,11,18,.54)', color: brand.textSecondary, fontSize: 12, fontWeight: 700,
+    }}>
+      <span style={{ color: brand.accentCyan, display: 'inline-flex' }}>{icon}</span>
+      {label}
+    </span>
   );
 }

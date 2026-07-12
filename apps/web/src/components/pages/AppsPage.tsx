@@ -54,12 +54,6 @@ const sourceLabel: Record<string, { label: string; color: string; bg: string }> 
   locked:     { label: 'Locked',    color: '#8b949e', bg: 'rgba(139,148,158,0.15)' },
 };
 
-const planTierLabel: Record<string, string> = {
-  starter: 'Starter',
-  pro: 'Pro',
-  elite: 'Elite',
-};
-
 const statusLabel: Record<string, { label: string; color: string }> = {
   live:        { label: 'Live',        color: '#3fb950' },
   beta:        { label: 'Beta',        color: '#d29922' },
@@ -219,7 +213,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
     return sections;
   }, [filtered]);
 
-  const renderCard = ({ module: m, unlocked, access_source, cta, upgrade_target_plan, addon_price_cents, reason }: ModuleSummary) => {
+  const renderCard = ({ module: m, unlocked, access_source, cta, addon_price_cents, reason }: ModuleSummary) => {
     const srcKey = unlocked && access_source ? access_source : 'locked';
     const src = sourceLabel[srcKey] || sourceLabel.locked;
     const status = statusLabel[m.status] || statusLabel.coming_soon;
@@ -282,7 +276,9 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: colors.textDim, padding: '0 20px' }}>
-          <span>Min plan: <strong style={{ color: colors.text }}>{planTierLabel[m.planMin] || m.planMin}</strong></span>
+          <span>
+            <strong style={{ color: colors.text }}>{marketing?.packageLabel ?? 'Ecosystem module'}</strong>
+          </span>
           {!unlocked && reason && (
             <span data-testid={`module-reason-${m.slug}`} style={{ fontStyle: 'italic' }}>
               {reason.replace(/_/g, ' ')}
@@ -341,7 +337,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                 color: colors.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
               }}
             >
-              {priceLabel(addon_price_cents) ? `Add-on — ${priceLabel(addon_price_cents)}` : 'Add to plan'}
+              {priceLabel(addon_price_cents) ? `Add to stack — ${priceLabel(addon_price_cents)}` : 'Add to stack'}
             </button>
           )}
           {cta === 'upgrade' && (
@@ -354,7 +350,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                 color: colors.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
               }}
             >
-              Upgrade to {planTierLabel[upgrade_target_plan || ''] || 'higher plan'}
+              View stack options
             </button>
           )}
           {cta === 'disabled' && (() => {

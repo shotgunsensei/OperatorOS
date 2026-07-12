@@ -20,6 +20,18 @@ const pricingCopy = fs.readFileSync(
   path.join(webRoot, 'lib/marketing-pricing.ts'),
   'utf8',
 );
+const billingPage = fs.readFileSync(
+  path.join(webRoot, 'components/pages/BillingPage.tsx'),
+  'utf8',
+);
+const upgradeModal = fs.readFileSync(
+  path.join(webRoot, 'components/UpgradeModal.tsx'),
+  'utf8',
+);
+const appsPage = fs.readFileSync(
+  path.join(webRoot, 'components/pages/AppsPage.tsx'),
+  'utf8',
+);
 
 test('pricing catalog exposes the finalized three core products', () => {
   assert.deepEqual(
@@ -115,4 +127,19 @@ test('public pricing files do not contain retired packaging copy', () => {
   ]) {
     assert.equal(publicPricing.toLowerCase().includes(stale.toLowerCase()), false, `stale copy: ${stale}`);
   }
+});
+
+test('signed-in billing separates the app stack from workspace capacity', () => {
+  for (const copy of [
+    'Billing & Ecosystem',
+    'Your application stack',
+    'Workspace Capacity',
+    'Review & expand your stack',
+  ]) {
+    assert.match(billingPage, new RegExp(copy));
+  }
+  assert.match(upgradeModal, /Increase workspace capacity/);
+  assert.match(upgradeModal, /View app stack/);
+  assert.match(appsPage, /View stack options/);
+  assert.doesNotMatch(appsPage, /Min plan:/);
 });

@@ -45,9 +45,9 @@ This pass aligns the highest-traffic surfaces around one outcome-led narrative: 
 
 ### 1. Pricing model convergence
 
-The public pricing flow sells core products plus modules and seats, while the legacy upgrade modal still reasons about Starter, Pro, and Elite plans. Styling is now aligned, but the commercial model is not. This should be resolved before scaling acquisition because two purchase vocabularies increase hesitation, support load, and entitlement mistakes.
+The public pricing flow sells core products plus modules and seats, while legacy Starter, Pro, and Elite subscriptions still enforce OperatorOS-native workspace, project, task, team, and AI limits. The signed-in billing experience now separates these lanes: the application stack is primary, and legacy plans are labeled as workspace capacity.
 
-Recommended direction: make the stack configurator the canonical purchase model everywhere, then map any retained tiers to internal billing metadata rather than exposing both models to customers.
+Longer-term direction: keep the stack configurator as the canonical purchase model, then decide whether workspace capacity becomes an add-on, an included allowance per core product, or internal billing metadata. The compatibility layer remains intact until that migration is explicit.
 
 ### 2. Child-module experience contract
 
