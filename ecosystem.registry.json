@@ -165,6 +165,19 @@
       "billingMode": "operatoros",
       "iconKey": "ninjamation",
       "ord": 12
+    },
+    {
+      "slug": "outcall",
+      "name": "OutCall",
+      "category": "support",
+      "description": "Discreet exit-assistance and personal-safety calling",
+      "ecosystemUrl": "https://outcall.operatoros.net",
+      "status": "planned",
+      "launchMode": "subdomain",
+      "authMode": "sso",
+      "billingMode": "operatoros",
+      "iconKey": "outcall",
+      "ord": 13
     }
   ]
 }

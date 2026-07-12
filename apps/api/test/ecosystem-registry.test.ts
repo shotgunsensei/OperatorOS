@@ -46,6 +46,15 @@ test('torqueshed is retained in the ecosystem (additive)', () => {
   assert.ok(getEcosystemModule('torqueshed'), 'torqueshed is present');
 });
 
+test('outcall is registered but remains unavailable until implementation is complete', () => {
+  const outcall = getEcosystemModule('outcall');
+  assert.ok(outcall, 'outcall is present');
+  assert.equal(outcall!.ecosystemUrl, 'https://outcall.operatoros.net');
+  assert.equal(outcall!.status, 'planned');
+  assert.equal(outcall!.authMode, 'sso');
+  assert.equal(outcall!.billingMode, 'operatoros');
+});
+
 test('no module has an empty slug or empty ecosystemUrl', () => {
   for (const m of getAllModules()) {
     assert.ok(typeof m.slug === 'string' && m.slug.length > 0, `slug present for ${m.name}`);
@@ -60,9 +69,9 @@ test('filter helpers return consistent subsets', () => {
   const all = getAllModules();
   const active = getActiveModules();
   assert.ok(active.length <= all.length);
-  assert.ok(active.every(m => m.status === 'active'));
+  assert.ok(active.every((m) => m.status === 'active'));
   const ai = getModulesByCategory('ai');
-  assert.ok(ai.every(m => m.category === 'ai'));
+  assert.ok(ai.every((m) => m.category === 'ai'));
 });
 
 test('ecosystem.registry.json matches the TS registry', () => {

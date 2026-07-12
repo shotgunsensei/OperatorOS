@@ -25,10 +25,11 @@ const REQUIRED_MODULE_IDS = [
   'ninja-launch-kit',
   'callcommand-ai',
   'ninjamation',
+  'outcall',
 ] as const;
 
 test('central module registry exposes the required OperatorOS modules', () => {
-  const ids = new Set(OPERATOROS_MODULE_REGISTRY.map(module => module.id));
+  const ids = new Set(OPERATOROS_MODULE_REGISTRY.map((module) => module.id));
   for (const id of REQUIRED_MODULE_IDS) {
     assert.ok(ids.has(id), `registry includes ${id}`);
   }
@@ -40,10 +41,26 @@ test('central module registry entries include the required routing and entitleme
     assert.equal(module.name.length > 0, true, `name present for ${module.slug}`);
     assert.equal(module.slug.length > 0, true, `slug present for ${module.id}`);
     assert.equal(module.hostname.length > 0, true, `hostname present for ${module.slug}`);
-    assert.equal(module.routePath.startsWith('/'), true, `routePath is local path for ${module.slug}`);
-    assert.equal(module.defaultRoute.startsWith('/'), true, `defaultRoute is local path for ${module.slug}`);
-    assert.equal(module.launchUrl.startsWith('https://'), true, `launchUrl is https for ${module.slug}`);
-    assert.equal(module.entitlementKey.length > 0, true, `entitlementKey present for ${module.slug}`);
+    assert.equal(
+      module.routePath.startsWith('/'),
+      true,
+      `routePath is local path for ${module.slug}`,
+    );
+    assert.equal(
+      module.defaultRoute.startsWith('/'),
+      true,
+      `defaultRoute is local path for ${module.slug}`,
+    );
+    assert.equal(
+      module.launchUrl.startsWith('https://'),
+      true,
+      `launchUrl is https for ${module.slug}`,
+    );
+    assert.equal(
+      module.entitlementKey.length > 0,
+      true,
+      `entitlementKey present for ${module.slug}`,
+    );
     assert.ok(['active', 'planned', 'hidden', 'disabled'].includes(module.status));
     assert.equal(module.iconName.length > 0, true, `iconName present for ${module.slug}`);
     assert.equal(typeof module.requiresSubscription, 'boolean');
@@ -54,6 +71,7 @@ test('central module registry entries include the required routing and entitleme
 test('getModuleById and getModuleByHost resolve platform and module hosts', () => {
   assert.equal(getModuleById('operatoros')?.hostname, 'app.operatoros.net');
   assert.equal(getModuleById('techdeck')?.hostname, 'techdeck.operatoros.net');
+  assert.equal(getModuleById('outcall')?.hostname, 'outcall.operatoros.net');
 
   assert.equal(getModuleByHost('https://techdeck.operatoros.net/sso?token=x')?.id, 'techdeck');
   assert.equal(getModuleByHost('brandforge.operatoros.net:443')?.id, 'brandforgeos');
@@ -67,7 +85,10 @@ test('getModuleById and getModuleByHost resolve platform and module hosts', () =
 });
 
 test('normalizeHost strips scheme, port, path, and casing', () => {
-  assert.equal(normalizeHost('HTTPS://TechDeck.OperatorOS.NET:443/sso?token=x'), 'techdeck.operatoros.net');
+  assert.equal(
+    normalizeHost('HTTPS://TechDeck.OperatorOS.NET:443/sso?token=x'),
+    'techdeck.operatoros.net',
+  );
   assert.equal(normalizeHost('brandforge.operatoros.net:443'), 'brandforge.operatoros.net');
   assert.equal(normalizeHost('operatoros.net.'), 'operatoros.net');
 });
@@ -179,8 +200,8 @@ test('resolveModuleRouteAccess allows root super-admin without module entitlemen
 test('getActiveModules returns only active registry entries', () => {
   const active = getActiveModules();
   assert.ok(active.length > 0);
-  assert.ok(active.every(module => module.status === 'active'));
-  assert.ok(active.some(module => module.id === 'operatoros'));
+  assert.ok(active.every((module) => module.status === 'active'));
+  assert.ok(active.some((module) => module.id === 'operatoros'));
 });
 
 test('getLaunchableModulesForEntitlements gates subscription modules by enabled entitlement', () => {
@@ -190,7 +211,7 @@ test('getLaunchableModulesForEntitlements gates subscription modules by enabled 
       { slug: 'pulsedesk', enabled: false },
     ],
   });
-  const ids = launchable.map(module => module.id);
+  const ids = launchable.map((module) => module.id);
   assert.ok(ids.includes('operatoros'), 'platform remains launchable without module entitlement');
   assert.ok(ids.includes('techdeck'), 'enabled module is launchable');
   assert.ok(!ids.includes('pulsedesk'), 'disabled entitlement is not launchable');
@@ -202,7 +223,7 @@ test('getLaunchableModulesForEntitlements accepts record-shaped entitlement maps
     tradeflowkit: { enabled: true },
     techdeck: false,
   });
-  const ids = launchable.map(module => module.id);
+  const ids = launchable.map((module) => module.id);
   assert.ok(ids.includes('operatoros'));
   assert.ok(ids.includes('tradeflowkit'));
   assert.ok(!ids.includes('techdeck'));

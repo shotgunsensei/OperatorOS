@@ -63,119 +63,181 @@ export interface PlatformComponentCatalogEntry {
 
 export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
-    slug: 'tradeflowkit', name: 'TradeFlowKit',
+    slug: 'tradeflowkit',
+    name: 'TradeFlowKit',
     description: 'Job tracker for trade & service businesses',
-    category: 'ops', planMin: 'starter', ord: 1,
+    category: 'ops',
+    planMin: 'starter',
+    ord: 1,
     envUrlKeys: ['TRADEFLOWKIT_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_TRADEFLOWKIT'],
-    internal: false, defaultStatus: 'live',
+    internal: false,
+    defaultStatus: 'live',
     component: 'operations-deck',
   },
   {
-    slug: 'torqueshed', name: 'TorqueShed',
+    slug: 'torqueshed',
+    name: 'TorqueShed',
     description: 'Mechanic shop dashboard & invoicing',
-    category: 'ops', planMin: 'starter', ord: 2,
+    category: 'ops',
+    planMin: 'starter',
+    ord: 2,
     envUrlKeys: ['TORQUESHED_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_TORQUESHED'],
-    internal: false, defaultStatus: 'live',
+    internal: false,
+    defaultStatus: 'live',
     component: 'diagnostic-lab',
   },
   {
-    slug: 'techdeck', name: 'TechDeck',
+    slug: 'techdeck',
+    name: 'TechDeck',
     description: 'Onsite tech command center',
-    category: 'ops', planMin: 'starter', ord: 3,
+    category: 'ops',
+    planMin: 'starter',
+    ord: 3,
     envUrlKeys: ['TECHDECK_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_TECHDECK'],
-    internal: false, defaultStatus: 'live',
+    internal: false,
+    defaultStatus: 'live',
     component: 'diagnostic-lab',
   },
   {
-    slug: 'pulsedesk', name: 'PulseDesk',
+    slug: 'pulsedesk',
+    name: 'PulseDesk',
     description: 'Lightweight ticketing for small teams',
-    category: 'support', planMin: 'pro', ord: 4,
+    category: 'support',
+    planMin: 'pro',
+    ord: 4,
     envUrlKeys: ['PULSEDESK_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_PULSEDESK'],
-    internal: false, defaultStatus: 'live',
+    internal: false,
+    defaultStatus: 'live',
     component: 'operations-deck',
   },
   {
-    slug: 'faultlinelab', name: 'FaultlineLab',
+    slug: 'faultlinelab',
+    name: 'FaultlineLab',
     description: 'Diagnostic + RCA workflow',
-    category: 'support', planMin: 'pro', ord: 5,
+    category: 'support',
+    planMin: 'pro',
+    ord: 5,
     envUrlKeys: ['FAULTLINELAB_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_FAULTLINELAB'],
-    internal: false, defaultStatus: 'live',
+    internal: false,
+    defaultStatus: 'live',
     component: 'diagnostic-lab',
   },
   {
-    slug: 'ninja-pool-hall', name: 'Ninja Pool Hall',
+    slug: 'ninja-pool-hall',
+    name: 'Ninja Pool Hall',
     description: 'Companion engagement experience',
-    category: 'support', planMin: 'starter', ord: 6,
+    category: 'support',
+    planMin: 'starter',
+    ord: 6,
     envUrlKeys: ['NINJA_POOL_HALL_URL'],
     stripeAddonEnvKeys: [],
-    internal: false, defaultStatus: 'coming_soon',
+    internal: false,
+    defaultStatus: 'coming_soon',
     component: 'operations-deck',
   },
   {
     // Renamed from `bf-os` in Task #66. BF_OS_URL / STRIPE_PRICE_ADDON_BF_OS
     // remain as fallbacks so live secrets keep working pre-cutover.
-    slug: 'brandforgeos', name: 'BrandForgeOS',
+    slug: 'brandforgeos',
+    name: 'BrandForgeOS',
     description: 'Body shop / collision OS',
-    category: 'ops', planMin: 'pro', ord: 7,
+    category: 'ops',
+    planMin: 'pro',
+    ord: 7,
     envUrlKeys: ['BRANDFORGEOS_URL', 'BF_OS_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_BRANDFORGEOS', 'STRIPE_PRICE_ADDON_BF_OS'],
-    internal: false, defaultStatus: 'live',
+    internal: false,
+    defaultStatus: 'live',
     component: 'growth-forge',
   },
   {
-    slug: 'snapproofos', name: 'SnapProofOS',
+    slug: 'snapproofos',
+    name: 'SnapProofOS',
     description: 'Photo-based proof of work',
-    category: 'ops', planMin: 'elite', ord: 8,
+    category: 'ops',
+    planMin: 'elite',
+    ord: 8,
     envUrlKeys: ['SNAPPROOFOS_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_SNAPPROOFOS'],
-    internal: false, defaultStatus: 'live',
+    internal: false,
+    defaultStatus: 'live',
     component: 'operations-deck',
   },
   {
-    slug: 'studyforge-ai', name: 'StudyForge AI',
+    slug: 'studyforge-ai',
+    name: 'StudyForge AI',
     description: 'AI study & training partner',
-    category: 'ai', planMin: 'elite', ord: 9,
+    category: 'ai',
+    planMin: 'elite',
+    ord: 9,
     envUrlKeys: ['STUDYFORGE_AI_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_STUDYFORGE_AI'],
-    internal: true, defaultStatus: 'live',
+    internal: true,
+    defaultStatus: 'live',
     component: 'diagnostic-lab',
   },
   {
-    slug: 'ninja-launch-kit', name: 'Ninja Launch Kit',
+    slug: 'ninja-launch-kit',
+    name: 'Ninja Launch Kit',
     description: 'Build & ship internal tools fast',
-    category: 'ai', planMin: 'elite', ord: 10,
+    category: 'ai',
+    planMin: 'elite',
+    ord: 10,
     envUrlKeys: ['NINJA_LAUNCH_KIT_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_NINJA_LAUNCH_KIT'],
-    internal: true, defaultStatus: 'live',
+    internal: true,
+    defaultStatus: 'live',
     component: 'growth-forge',
   },
   {
-    slug: 'callcommand-ai', name: 'CallCommand AI',
+    slug: 'callcommand-ai',
+    name: 'CallCommand AI',
     description: 'AI phone agent + call automation',
-    category: 'ai', planMin: 'elite', ord: 11,
+    category: 'ai',
+    planMin: 'elite',
+    ord: 11,
     envUrlKeys: ['CALLCOMMAND_AI_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_CALLCOMMAND_AI'],
-    internal: true, defaultStatus: 'live',
+    internal: true,
+    defaultStatus: 'live',
     component: 'operations-deck',
   },
   {
-    slug: 'ninjamation', name: 'Ninjamation',
+    slug: 'ninjamation',
+    name: 'Ninjamation',
     description: 'Cross-app workflow automation',
-    category: 'ai', planMin: 'elite', ord: 12,
+    category: 'ai',
+    planMin: 'elite',
+    ord: 12,
     envUrlKeys: ['NINJAMATION_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_NINJAMATION'],
-    internal: true, defaultStatus: 'live',
+    internal: true,
+    defaultStatus: 'live',
     component: 'growth-forge',
+  },
+  {
+    slug: 'outcall',
+    name: 'OutCall',
+    description: 'Discreet exit-assistance and personal-safety calling',
+    category: 'support',
+    planMin: 'starter',
+    ord: 13,
+    envUrlKeys: ['OUTCALL_URL'],
+    stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_OUTCALL'],
+    internal: false,
+    defaultStatus: 'coming_soon',
+    component: 'operations-deck',
   },
 ] as const;
 
-export const MODULE_CATALOG_BY_SLUG: Readonly<Record<string, ModuleCatalogEntry>> =
-  Object.freeze(Object.fromEntries(MODULE_CATALOG.map(m => [m.slug, m])));
+export const MODULE_CATALOG_BY_SLUG: Readonly<Record<string, ModuleCatalogEntry>> = Object.freeze(
+  Object.fromEntries(MODULE_CATALOG.map((m) => [m.slug, m])),
+);
 
 // ---------------------------------------------------------------------------
 // Platform component catalog (Task #114) — the top-level grouping layer
@@ -188,28 +250,36 @@ export const MODULE_CATALOG_BY_SLUG: Readonly<Record<string, ModuleCatalogEntry>
 
 export const PLATFORM_COMPONENTS: readonly PlatformComponentCatalogEntry[] = [
   {
-    slug: 'command-center', name: 'Command Center', ord: 10,
+    slug: 'command-center',
+    name: 'Command Center',
+    ord: 10,
     description:
       'Central OperatorOS control surface for daily overview, modules, ' +
       'billing, tenants, entitlements, SSO launch, and command history.',
     audience: 'Operators, admins, teams, builders, and business owners.',
   },
   {
-    slug: 'operations-deck', name: 'Operations Deck', ord: 20,
+    slug: 'operations-deck',
+    name: 'Operations Deck',
+    ord: 20,
     description:
       'Daily business operations, service workflows, coordination, calls, ' +
       'proof of work, customer flow, and job execution.',
     audience: 'Small businesses, service companies, clinics, contractors, and teams.',
   },
   {
-    slug: 'diagnostic-lab', name: 'Diagnostic Lab', ord: 30,
+    slug: 'diagnostic-lab',
+    name: 'Diagnostic Lab',
+    ord: 30,
     description:
       'Technical diagnostics, troubleshooting, repair intelligence, scripts, ' +
       'cases, training, and problem-solving workflows.',
     audience: 'IT professionals, MSPs, mechanics, technicians, troubleshooters, and learners.',
   },
   {
-    slug: 'growth-forge', name: 'Growth Forge', ord: 40,
+    slug: 'growth-forge',
+    name: 'Growth Forge',
+    ord: 40,
     description:
       'Brand building, launches, content, campaigns, offers, automation, ' +
       'and monetizable asset creation.',
@@ -218,7 +288,7 @@ export const PLATFORM_COMPONENTS: readonly PlatformComponentCatalogEntry[] = [
 ] as const;
 
 export const PLATFORM_COMPONENTS_BY_SLUG: Readonly<Record<string, PlatformComponentCatalogEntry>> =
-  Object.freeze(Object.fromEntries(PLATFORM_COMPONENTS.map(c => [c.slug, c])));
+  Object.freeze(Object.fromEntries(PLATFORM_COMPONENTS.map((c) => [c.slug, c])));
 
 /**
  * Resolve the first non-empty `process.env` value across an env-key
@@ -236,14 +306,17 @@ export function pickEnv(keys: readonly string[]): string | undefined {
  * Plans → tier rank. Mirrors `saas-db-init.ts::tierRank` so the catalog
  * stays self-contained.
  */
-export const PLAN_TIER_RANK: Readonly<Record<ModulePlanTier, number>> =
-  Object.freeze({ starter: 1, pro: 2, elite: 3 });
+export const PLAN_TIER_RANK: Readonly<Record<ModulePlanTier, number>> = Object.freeze({
+  starter: 1,
+  pro: 2,
+  elite: 3,
+});
 
 /** Modules included in a plan (plan tier ≥ module.planMin). */
 export function modulesIncludedInPlan(planSlug: string): ModuleCatalogEntry[] {
   const r = PLAN_TIER_RANK[planSlug as ModulePlanTier] ?? 0;
   if (!r) return [];
-  return MODULE_CATALOG.filter(m => PLAN_TIER_RANK[m.planMin] <= r);
+  return MODULE_CATALOG.filter((m) => PLAN_TIER_RANK[m.planMin] <= r);
 }
 
 // ---------------------------------------------------------------------------
@@ -272,30 +345,37 @@ export interface PlanCatalogEntry {
 
 export const PLAN_CATALOG: readonly PlanCatalogEntry[] = [
   {
-    slug: 'starter', name: 'Starter',
+    slug: 'starter',
+    name: 'Starter',
     description: 'For individuals getting started',
-    monthlyPriceCents: 4900, annualPriceCents: 49000,
+    monthlyPriceCents: 4900,
+    annualPriceCents: 49000,
     highlight: false,
     stripeMonthlyEnvKeys: ['STRIPE_PRICE_STARTER_MONTHLY', 'STRIPE_PRICE_STARTER'],
-    stripeAnnualEnvKeys:  ['STRIPE_PRICE_STARTER_ANNUAL'],
+    stripeAnnualEnvKeys: ['STRIPE_PRICE_STARTER_ANNUAL'],
   },
   {
-    slug: 'pro', name: 'Pro',
+    slug: 'pro',
+    name: 'Pro',
     description: 'For growing teams and power users',
-    monthlyPriceCents: 14900, annualPriceCents: 149000,
+    monthlyPriceCents: 14900,
+    annualPriceCents: 149000,
     highlight: true,
     stripeMonthlyEnvKeys: ['STRIPE_PRICE_PRO_MONTHLY', 'STRIPE_PRICE_PRO'],
-    stripeAnnualEnvKeys:  ['STRIPE_PRICE_PRO_ANNUAL'],
+    stripeAnnualEnvKeys: ['STRIPE_PRICE_PRO_ANNUAL'],
   },
   {
-    slug: 'elite', name: 'Elite',
+    slug: 'elite',
+    name: 'Elite',
     description: 'For enterprises and large teams',
-    monthlyPriceCents: 29900, annualPriceCents: 299000,
+    monthlyPriceCents: 29900,
+    annualPriceCents: 299000,
     highlight: false,
     stripeMonthlyEnvKeys: ['STRIPE_PRICE_ELITE_MONTHLY', 'STRIPE_PRICE_ELITE'],
-    stripeAnnualEnvKeys:  ['STRIPE_PRICE_ELITE_ANNUAL'],
+    stripeAnnualEnvKeys: ['STRIPE_PRICE_ELITE_ANNUAL'],
   },
 ] as const;
 
-export const PLAN_CATALOG_BY_SLUG: Readonly<Record<string, PlanCatalogEntry>> =
-  Object.freeze(Object.fromEntries(PLAN_CATALOG.map(p => [p.slug, p])));
+export const PLAN_CATALOG_BY_SLUG: Readonly<Record<string, PlanCatalogEntry>> = Object.freeze(
+  Object.fromEntries(PLAN_CATALOG.map((p) => [p.slug, p])),
+);
