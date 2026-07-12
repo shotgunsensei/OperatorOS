@@ -1,6 +1,6 @@
 import {
   LayoutGrid, Store, Sparkles, Receipt, Settings as SettingsIcon,
-  Building2, Users as UsersIcon, Boxes, ShieldCheck,
+  Building2, Users as UsersIcon, Boxes, ShieldCheck, Mail,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -8,6 +8,9 @@ export interface NavItem {
   id: string;
   label: string;
   Icon: LucideIcon;
+  // When set, the item is an external link (rendered as an anchor) instead of
+  // an internal page navigation handled by the console router.
+  href?: string;
 }
 
 export interface NavSection {
@@ -57,6 +60,7 @@ export function buildNavSections(opts: SidebarRoleFlags): NavSection[] {
     items: [
       { id: 'billing', label: 'Billing', Icon: Receipt },
       { id: 'settings', label: 'Settings', Icon: SettingsIcon },
+      { id: 'contact', label: 'Contact', Icon: Mail, href: 'https://operatoros.net/john' },
     ],
   });
 

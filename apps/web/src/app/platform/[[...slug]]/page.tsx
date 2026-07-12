@@ -30,6 +30,7 @@ import { ToastProvider } from '@/components/Toast';
 import LoginPage from '@/components/pages/LoginPage';
 import PlatformPage from '@/components/pages/PlatformPage';
 import { pathToPlatformView, platformViewToPath, type PlatformView } from '@/lib/platform-routes';
+import ContactLink from '@/components/ContactLink';
 import { useState, useEffect } from 'react';
 
 function PlatformGate() {
@@ -68,6 +69,7 @@ export default function PlatformRoute() {
     <AuthProvider>
       <ToastProvider>
         <PlatformGate />
+        <ContactLink />
       </ToastProvider>
     </AuthProvider>
   );

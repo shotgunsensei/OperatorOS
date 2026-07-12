@@ -23,6 +23,7 @@ const COL_ACTIONS = [
   { href: '/login', label: 'Login' },
   { href: '/app', label: 'Operator Console' },
   { href: '/modules', label: 'View Modules' },
+  { href: 'https://operatoros.net/john', label: 'Contact', external: true },
 ];
 
 /**
@@ -117,8 +118,14 @@ function FooterColumn({
   links,
 }: {
   title: string;
-  links: { href: string; label: string }[];
+  links: { href: string; label: string; external?: boolean }[];
 }) {
+  const linkStyle = {
+    color: brand.textSecondary,
+    textDecoration: 'none',
+    fontSize: 13,
+    transition: 'color 0.15s ease',
+  } as const;
   return (
     <div>
       <div
@@ -137,17 +144,15 @@ function FooterColumn({
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8 }}>
         {links.map((l) => (
           <li key={`${title}-${l.label}`}>
-            <Link
-              href={l.href}
-              style={{
-                color: brand.textSecondary,
-                textDecoration: 'none',
-                fontSize: 13,
-                transition: 'color 0.15s ease',
-              }}
-            >
-              {l.label}
-            </Link>
+            {l.external ? (
+              <a href={l.href} style={linkStyle}>
+                {l.label}
+              </a>
+            ) : (
+              <Link href={l.href} style={linkStyle}>
+                {l.label}
+              </Link>
+            )}
           </li>
         ))}
       </ul>

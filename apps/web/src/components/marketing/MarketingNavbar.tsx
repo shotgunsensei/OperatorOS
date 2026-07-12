@@ -11,6 +11,7 @@ import { brand } from '@/lib/design-tokens';
 interface NavLink {
   href: string;
   label: string;
+  external?: boolean;
 }
 
 const NAV_LINKS: NavLink[] = [
@@ -19,6 +20,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/ecosystem', label: 'Ecosystem' },
   { href: '/how-it-works', label: 'How It Works' },
   { href: '/pricing', label: 'Pricing' },
+  { href: 'https://operatoros.net/john', label: 'Contact', external: true },
 ];
 
 /**
@@ -148,17 +150,28 @@ export default function MarketingNavbar() {
             data-testid="marketing-nav-desktop"
             style={{ display: 'flex', alignItems: 'center', gap: 28, marginLeft: 16 }}
           >
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="operatoros-nav-link"
-                data-active={isActive(link.href)}
-                data-testid={`marketing-nav-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {NAV_LINKS.map((link) =>
+              link.external ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="operatoros-nav-link"
+                  data-testid={`marketing-nav-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="operatoros-nav-link"
+                  data-active={isActive(link.href)}
+                  data-testid={`marketing-nav-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {link.label}
+                </Link>
+              ),
+            )}
           </nav>
 
           <div style={{ flex: 1 }} />
@@ -232,18 +245,30 @@ export default function MarketingNavbar() {
             }}
           >
             <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="operatoros-nav-link"
-                  data-active={isActive(link.href)}
-                  data-testid={`marketing-nav-mobile-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
-                  style={{ padding: '10px 4px', fontSize: 15 }}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {NAV_LINKS.map((link) =>
+                link.external ? (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="operatoros-nav-link"
+                    data-testid={`marketing-nav-mobile-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
+                    style={{ padding: '10px 4px', fontSize: 15 }}
+                  >
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="operatoros-nav-link"
+                    data-active={isActive(link.href)}
+                    data-testid={`marketing-nav-mobile-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
+                    style={{ padding: '10px 4px', fontSize: 15 }}
+                  >
+                    {link.label}
+                  </Link>
+                ),
+              )}
             </nav>
             <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
               {!loading && (

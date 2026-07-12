@@ -9,6 +9,7 @@ import { moduleApi } from '@/lib/auth';
 import AuthProvider, { useAuth } from '@/components/AuthProvider';
 import TenantProvider from '@/components/TenantProvider';
 import { ToastProvider } from '@/components/Toast';
+import ContactLink from '@/components/ContactLink';
 import LoginPage from '@/components/pages/LoginPage';
 import OperatorLoader from '@/components/brand/OperatorLoader';
 import StudyForgeShell from '@/components/module-shells/StudyForgeShell';
@@ -236,6 +237,7 @@ export default function InternalAppPage() {
     <AuthProvider>
       <ToastProvider>
         <InternalAppGate />
+        <ContactLink />
       </ToastProvider>
     </AuthProvider>
   );

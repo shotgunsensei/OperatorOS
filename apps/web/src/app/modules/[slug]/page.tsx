@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import InternalAppPage from '../../apps/[slug]/page';
+import ContactLink from '@/components/ContactLink';
 import { getModuleBySlug } from '../../../../../../packages/modules/registry.js';
 
 interface ModuleFallbackPageProps {
@@ -109,6 +110,7 @@ function ModuleState({
           Return to Command Center
         </Link>
       </section>
+      <ContactLink />
     </main>
   );
 }
