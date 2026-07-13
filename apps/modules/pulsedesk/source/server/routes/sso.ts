@@ -43,6 +43,8 @@ import {
   loadConfig,
   verifyToken,
   consumeToken,
+  exchangeCode,
+  claimsFromExchange,
   peekJti,
   getPublicConfig,
   SsoRejectError,
@@ -50,6 +52,9 @@ import {
   mergeEntitlementClaims,
   isTargetModuleEnabled,
   type OperatorOsEntitlementClaims,
+  type OperatorOsTokenClaims,
+  type OperatorOsConsumeResponse,
+  type OperatorOsSsoConfig,
 } from "../auth/operatoros-sso";
 import { ssoRateLimiter } from "../middleware/rateLimit";
 import { cacheOperatorOsEntitlementSnapshot } from "../services/operatorosEntitlements";
@@ -119,9 +124,11 @@ router.get("/api/public/sso-config", (_req, res) => {
 router.get("/sso", ssoRateLimiter, async (req, res) => {
   const tokenRaw = req.query.token;
   const token = typeof tokenRaw === "string" ? tokenRaw.trim() : "";
+  const codeRaw = req.query.code;
+  const code = typeof codeRaw === "string" ? codeRaw.trim() : "";
   const earlyJti = peekJti(token);
 
-  if (!token) {
+  if (!token && !code) {
     return reject(req, res, "missing_token", 400, earlyJti, "validation_failed", { code: "missing_token" });
   }
 
@@ -130,26 +137,61 @@ router.get("/sso", ssoRateLimiter, async (req, res) => {
     return reject(req, res, "sso_not_configured", 503, earlyJti, "configuration_failed");
   }
 
-  let claims;
-  try {
-    claims = await verifyToken(token, cfg);
-  } catch (err) {
-    if (err instanceof SsoRejectError) {
-      return reject(req, res, err.code, err.httpStatus, earlyJti, "validation_failed", { code: err.code });
+  let claims: OperatorOsTokenClaims;
+  let consumeResponse: OperatorOsConsumeResponse | null = null;
+
+  // Task #140: opaque-code path (preferred). The JWT never rides in the
+  // browser URL — we redeem the code server-to-server for the same
+  // single-use consume payload the token path returns. `?token=` is kept
+  // working for backward compatibility during the migration window, and a
+  // present `?code=` always wins over a stray `?token=`.
+  if (code) {
+    try {
+      consumeResponse = await exchangeCode(code, cfg);
+      claims = claimsFromExchange(consumeResponse, cfg);
+    } catch (err) {
+      if (err instanceof SsoRejectError) {
+        return reject(req, res, err.code, err.httpStatus, null, "consume_failed", { code: err.code, via: "code" });
+      }
+      return reject(req, res, "consume_failed", 401, null, "consume_failed", { code: "consume_failed", via: "code" });
     }
-    return reject(req, res, "signature_invalid", 401, earlyJti, "validation_failed", { code: "signature_invalid" });
+  } else {
+    try {
+      claims = await verifyToken(token, cfg);
+    } catch (err) {
+      if (err instanceof SsoRejectError) {
+        return reject(req, res, err.code, err.httpStatus, earlyJti, "validation_failed", { code: err.code });
+      }
+      return reject(req, res, "signature_invalid", 401, earlyJti, "validation_failed", { code: "signature_invalid" });
+    }
+
+    try {
+      consumeResponse = await consumeToken(claims, cfg);
+    } catch (err) {
+      if (err instanceof SsoRejectError) {
+        return reject(req, res, err.code, err.httpStatus, claims.jti, "consume_failed", { code: err.code });
+      }
+      return reject(req, res, "consume_failed", 401, claims.jti, "consume_failed", { code: "consume_failed" });
+    }
   }
 
-  let consumeResponse = null;
-  try {
-    consumeResponse = await consumeToken(claims, cfg);
-  } catch (err) {
-    if (err instanceof SsoRejectError) {
-      return reject(req, res, err.code, err.httpStatus, claims.jti, "consume_failed", { code: err.code });
-    }
-    return reject(req, res, "consume_failed", 401, claims.jti, "consume_failed", { code: "consume_failed" });
-  }
+  return finishSso(req, res, claims, consumeResponse, cfg);
+});
 
+/**
+ * Shared post-consume flow: entitlement resolution, provisioning, snapshot
+ * caching, session establishment, and the final redirect. Both the token
+ * (`?token=`) and opaque-code (`?code=`) paths converge here with an
+ * identical `{ claims, consumeResponse }` pair, so provisioning behaviour
+ * is guaranteed the same regardless of how the handoff arrived.
+ */
+async function finishSso(
+  req: Request,
+  res: Response,
+  claims: OperatorOsTokenClaims,
+  consumeResponse: OperatorOsConsumeResponse | null,
+  cfg: OperatorOsSsoConfig,
+) {
   const entitlement = mergeEntitlementClaims(
     extractEntitlementClaims(claims, cfg.audience),
     extractEntitlementClaims(consumeResponse, cfg.audience)
@@ -263,6 +305,6 @@ router.get("/sso", ssoRateLimiter, async (req, res) => {
     );
     res.redirect(302, "/dashboard");
   });
-});
+}
 
 export default router;

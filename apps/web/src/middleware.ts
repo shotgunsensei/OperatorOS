@@ -45,11 +45,35 @@ import { getPublicOrigin } from '../../../packages/modules/public-url.js';
 const AUTH_COOKIE = 'token';
 const AUTH_HOST = 'auth.operatoros.net';
 
+// Task #140 loop-breaker. If we bounce an anonymous visitor to login this
+// many times without a session cookie ever taking hold, we stop redirecting
+// (which would loop forever in the browser) and land them on a clean login
+// surface with an error flag. The counter is a short-lived cookie scoped to
+// `.operatoros.net` so it survives the cross-subdomain hop to the auth host,
+// and it is cleared the moment a valid session cookie is seen.
+const LOOP_COOKIE = 'os_sso_redirects';
+const MAX_LOGIN_REDIRECTS = 3;
+const COOKIE_DOMAIN = '.operatoros.net';
+
 function isExempt(pathname: string): boolean {
   // Invite-accept flow handles its own pre-auth logic + localStorage
   // handoff; gating it would break invitation emails.
   if (pathname.startsWith('/app/invites/')) return true;
+  // SSO handoff landing (`/sso`) must never be auth-gated: it is precisely
+  // the endpoint that ESTABLISHES the session. Gating it would send an
+  // arriving module launch back to login before it can consume its
+  // token/code — the exact cross-subdomain loop Task #140 fixes.
+  if (pathname === '/sso' || pathname.startsWith('/sso/')) return true;
   return false;
+}
+
+function clearLoopCounter(res: NextResponse): NextResponse {
+  res.cookies.set(LOOP_COOKIE, '', {
+    domain: COOKIE_DOMAIN,
+    path: '/',
+    maxAge: 0,
+  });
+  return res;
 }
 
 function isProtectedAppPath(pathname: string): boolean {
@@ -61,6 +85,26 @@ function isModuleSurface(context: ResolvedOperatorOSModuleContext): boolean {
 }
 
 function redirectToLogin(req: NextRequest, context: ResolvedOperatorOSModuleContext) {
+  const onOperatorOSHost =
+    (context.surface === 'module' || context.surface === 'app') && context.isOperatorOSHost;
+  const redirectCount = Number(req.cookies.get(LOOP_COOKIE)?.value ?? '0') || 0;
+
+  // Loop breaker: we have already bounced this visitor to login
+  // MAX_LOGIN_REDIRECTS times and a session cookie still is not present.
+  // Redirecting again would spin the browser forever, so instead send them
+  // to a clean login surface with an explicit error flag and reset the
+  // counter. Only engages on OperatorOS hosts (the cross-subdomain case);
+  // local dev never sets the domain-scoped counter cookie.
+  if (onOperatorOSHost && redirectCount >= MAX_LOGIN_REDIRECTS) {
+    const stop = req.nextUrl.clone();
+    stop.protocol = 'https:';
+    stop.port = '';
+    stop.hostname = AUTH_HOST;
+    stop.pathname = '/login';
+    stop.search = '?launch_error=too_many_redirects';
+    return clearLoopCounter(NextResponse.redirect(stop, 307));
+  }
+
   const url = req.nextUrl.clone();
 
   // Preserve where the user was trying to go as an ABSOLUTE, clean public URL
@@ -78,7 +122,7 @@ function redirectToLogin(req: NextRequest, context: ResolvedOperatorOSModuleCont
   // Cross-host redirect to the auth subdomain. Behind Replit's proxy the
   // inbound URL still carries the internal port + `http`, so we MUST clear the
   // port and force HTTPS or the browser gets `http://auth.operatoros.net:5000`.
-  if ((context.surface === 'module' || context.surface === 'app') && context.isOperatorOSHost) {
+  if (onOperatorOSHost) {
     url.protocol = 'https:';
     url.port = '';
     url.hostname = AUTH_HOST;
@@ -86,7 +130,20 @@ function redirectToLogin(req: NextRequest, context: ResolvedOperatorOSModuleCont
 
   url.pathname = '/login';
   url.search = `?next=${encodeURIComponent(target)}`;
-  return NextResponse.redirect(url, 307);
+  const res = NextResponse.redirect(url, 307);
+  // Increment the cross-subdomain bounce counter (prod hosts only). Short
+  // TTL so a later, legitimately-anonymous visit doesn't inherit a stale
+  // count. Cleared on the first authenticated request (see middleware()).
+  if (onOperatorOSHost) {
+    res.cookies.set(LOOP_COOKIE, String(redirectCount + 1), {
+      domain: COOKIE_DOMAIN,
+      path: '/',
+      maxAge: 60,
+      sameSite: 'lax',
+      secure: true,
+    });
+  }
+  return res;
 }
 
 function rewriteTo(pathname: string, req: NextRequest) {
@@ -112,7 +169,7 @@ export function middleware(req: NextRequest) {
 
   if (context.surface === 'app' && pathname === '/') {
     if (!req.cookies.has(AUTH_COOKIE)) return redirectToLogin(req, context);
-    return rewriteTo('/app', req);
+    return clearLoopCounter(rewriteTo('/app', req));
   }
 
   if (context.status === 'unknown_host' && context.isOperatorOSHost && !isModuleSurface(context)) {
@@ -127,13 +184,15 @@ export function middleware(req: NextRequest) {
   }
 
   if (isModuleSurface(context)) {
+    // Reached only after the auth-cookie gate above, so the visitor is
+    // authenticated — clear any stale bounce counter from an earlier loop.
     if (context.module) {
-      return rewriteTo(`/modules/${context.module.slug}`, req);
+      return clearLoopCounter(rewriteTo(`/modules/${context.module.slug}`, req));
     }
-    return rewriteTo('/modules/unknown-host', req);
+    return clearLoopCounter(rewriteTo('/modules/unknown-host', req));
   }
 
-  if (req.cookies.has(AUTH_COOKIE)) return NextResponse.next();
+  if (req.cookies.has(AUTH_COOKIE)) return clearLoopCounter(NextResponse.next());
 
   // Anonymous → bounce to the dedicated /login surface. `?next=`
   // preserves the intended destination so LoginGate can deep-link the

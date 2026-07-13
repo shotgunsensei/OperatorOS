@@ -6,6 +6,7 @@ export interface OperatorOsSsoConfig {
   env: string;
   baseUrl: string;
   consumeUrl: string;
+  exchangeUrl: string;
   apiUrl?: string;
 }
 
@@ -163,6 +164,26 @@ export function resolveConsumeUrl(
   return stripTrailingSlash(apiUrl.toString());
 }
 
+/**
+ * Derive the opaque-code exchange URL from the resolved consume URL by
+ * swapping the trailing `/consume` segment for `/exchange`. An explicit
+ * `OPERATOROS_SSO_EXCHANGE_URL` overrides. The hub mounts both endpoints on
+ * the same base (`/modules/sso/{consume,exchange}` and their `/v1` twins),
+ * so this stays correct whether the consume URL is the bare or `/v1` form.
+ */
+export function resolveExchangeUrl(
+  exchangeUrlRaw: string | undefined,
+  consumeUrl: string
+): string {
+  const explicit = parseAbsoluteUrl(exchangeUrlRaw);
+  if (explicit) {
+    explicit.hash = "";
+    explicit.search = "";
+    return stripTrailingSlash(explicit.toString());
+  }
+  return consumeUrl.replace(/\/consume$/, "/exchange");
+}
+
 export function loadConfig(): OperatorOsSsoConfig | null {
   const secret = process.env.MODULE_SSO_SECRET;
   const audienceRaw = process.env.OPERATOROS_SSO_AUDIENCE;
@@ -179,6 +200,7 @@ export function loadConfig(): OperatorOsSsoConfig | null {
     env,
     apiUrl,
     consumeUrl,
+    exchangeUrl: resolveExchangeUrl(process.env.OPERATOROS_SSO_EXCHANGE_URL, consumeUrl),
     baseUrl: normalizeBaseUrl(baseUrl),
   };
 }
@@ -500,4 +522,122 @@ export async function consumeToken(
     default:
       throw new SsoRejectError("consume_failed", 401);
   }
+}
+
+/**
+ * Redeem an opaque `?code=` launch (Task #140) for the same single-use
+ * consume payload the token path receives. This is the browser-safe path:
+ * the JWT never touches the address bar. The exchange is a bearer-gated
+ * server-to-server POST; on success the hub has already atomically marked
+ * the underlying handoff consumed, so the returned payload cannot be
+ * replayed. Error mapping mirrors `consumeToken` so the /sso route handles
+ * both paths identically.
+ */
+export async function exchangeCode(
+  code: string,
+  cfg: OperatorOsSsoConfig
+): Promise<OperatorOsConsumeResponse> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), CONSUME_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(cfg.exchangeUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${cfg.secret}`,
+        "X-Module-Slug": cfg.audience,
+      },
+      body: JSON.stringify({ code, aud: cfg.audience, env: cfg.env }),
+      signal: ctrl.signal,
+    });
+  } catch {
+    throw new SsoRejectError("sso_consume_unavailable", 502);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  let body: OperatorOsConsumeResponse | null = null;
+  try {
+    body = parseJsonBody(await res.text());
+  } catch {
+    body = null;
+  }
+
+  if (res.status >= 200 && res.status < 300) {
+    if (!body || !isJsonObject(body.user)) {
+      throw new SsoRejectError("consume_failed", 401);
+    }
+    return body;
+  }
+
+  if (res.status >= 500) {
+    throw new SsoRejectError("sso_consume_unavailable", 502);
+  }
+
+  const errCode: string = body?.code || body?.error || "";
+  switch (errCode) {
+    case "INVALID_CODE":
+    case "UNAUTHORIZED":
+    case "TOKEN_UNKNOWN":
+    case "TOKEN_REPLAYED":
+      throw new SsoRejectError("consume_failed", 401);
+    case "TOKEN_EXPIRED":
+      throw new SsoRejectError("expired", 401);
+    case "AUDIENCE_MISMATCH":
+      throw new SsoRejectError("audience_mismatch", 401);
+    case "ENV_MISMATCH":
+      throw new SsoRejectError("env_mismatch", 401);
+    default:
+      throw new SsoRejectError("consume_failed", 401);
+  }
+}
+
+/**
+ * Reconstruct token-shaped claims from an exchange payload so the /sso
+ * route's provisioning code path is identical for tokens and codes. The
+ * exchange response already carries the authoritative identity (`user`)
+ * and the canonical entitlement snapshot; we only surface the fields
+ * `provisionOperatorOsUser` and `extractEntitlementClaims` read.
+ */
+export function claimsFromExchange(
+  response: OperatorOsConsumeResponse,
+  cfg: OperatorOsSsoConfig
+): OperatorOsTokenClaims {
+  const user = isJsonObject(response.user) ? response.user : {};
+  const sub = readString(user.id);
+  const email = readString(user.email);
+  if (!sub || !email || !email.includes("@")) {
+    throw new SsoRejectError("bad_request", 400);
+  }
+  const roleRaw = user.role;
+  const role: OperatorOsRole = isValidRole(roleRaw) ? roleRaw : "user";
+  const tenantId =
+    readStringOrNull(response.operatoros_tenant_id)
+    ?? readStringOrNull((response as Record<string, unknown>).operatorosTenantId)
+    ?? null;
+  const now = Math.floor(Date.now() / 1000);
+  const entitlement = extractEntitlementClaims(response, cfg.audience);
+
+  // Entitlement fields first (tenant_role, subscription_status,
+  // target_module_*, etc.), then the authoritative token envelope so the
+  // resolved identity + tenant + plan always win over any snapshot echo.
+  return {
+    ...(entitlement ?? {}),
+    iss: cfg.baseUrl,
+    aud: cfg.audience,
+    module_slug: cfg.audience,
+    env: cfg.env,
+    iat: now,
+    exp: now + 90,
+    jti: readString(response.jti) ?? "",
+    sub,
+    user_id: sub,
+    email,
+    role,
+    plan_slug: readStringOrNull(response.planSlug) ?? entitlement?.plan_slug ?? null,
+    organization_id: tenantId,
+    name: readString(user.name),
+  };
 }

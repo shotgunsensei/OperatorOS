@@ -105,6 +105,59 @@ does not grant root access by email string.
 9. Confirm normal users do not see Platform Command.
 10. Confirm platform admins see Platform Command.
 
+## Cross-Subdomain Handoff (Task #140)
+
+The hub (`operatoros.net` / `auth.operatoros.net`) and each module live on
+different subdomains. Two bugs previously combined into an infinite
+login/launch loop when a user launched a module: (1) the session cookie was
+scoped host-only instead of `.operatoros.net`, so the module subdomain never
+saw the hub session; and (2) an arriving launch could be auth-gated back to
+login before it had a chance to establish its own session.
+
+### Cookie scope
+
+The session cookie is emitted with `Domain=.operatoros.net` + `Secure` in
+production. Production is now detected from `APP_ENV` **or** `NODE_ENV`
+(`prod`/`production`), so the domain-scoped cookie is issued consistently
+regardless of which variable the deploy sets.
+
+### Opaque launch code (preferred) vs. legacy token
+
+Historically the launch URL carried the full handoff JWT in the browser
+address bar (`/sso?token=<JWT>`), exposing identity and entitlement claims.
+Task #140 replaces this with an opaque, single-use code:
+
+- The hub persists the handoff row (keyed by `jti`) exactly as before, then
+  emits `/sso?code=<jti>.<hmac>` — an integrity-MAC'd **reference** to that
+  row. No identity or entitlement data rides in the URL, and no database
+  migration is required (the code is derived, not stored).
+- The receiving module redeems the code **server-to-server** at
+  `POST /modules/sso/exchange` (and `/v1/modules/sso/exchange`). The exchange
+  endpoint is bearer-gated by `MODULE_SSO_SECRET`, verifies the code's MAC,
+  then runs the exact same single-use consume logic as the legacy path, so a
+  redeemed code cannot be replayed.
+- `?token=` continues to work during the migration window. A module opts into
+  codes via the hub env `SSO_EXCHANGE_CODE_MODULES` (comma-separated slugs, or
+  `*` for all). Unlisted modules keep receiving `?token=` URLs, so receivers
+  can be upgraded independently.
+
+The exchange response is byte-for-byte identical to the consume response
+(identity `user` + canonical entitlement snapshot), so the receiver's
+provisioning path is the same for both `?token=` and `?code=` arrivals.
+
+### Loop breaker
+
+The hub middleware exempts `/sso` from the auth gate (it is the endpoint that
+establishes the session) and bounds cross-subdomain login redirects with a
+short-lived `.operatoros.net`-scoped counter cookie. After a small number of
+bounces without a session cookie taking hold, the visitor is sent to a clean
+login surface with `?launch_error=too_many_redirects` instead of looping
+forever. The counter is cleared on the first authenticated request.
+
+All of the above authority remains **server-side**: the code only references a
+server-persisted, single-use handoff, and entitlement is always resolved by
+the API.
+
 ## Remaining Follow-Up
 
 Phase 8 should add admin entitlement management routes and UI so tenant/module

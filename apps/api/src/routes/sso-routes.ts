@@ -16,6 +16,8 @@ import {
 } from '../../../../packages/modules/registry.js';
 import {
   buildSsoLaunchUrl,
+  buildSsoLaunchUrlWithCode,
+  createSsoExchangeCode,
   createSsoHandoffClaims,
   decodeSsoHandoffToken,
   normalizeSsoEnv,
@@ -26,6 +28,27 @@ import {
   verifySsoHandoffToken,
   type OperatorOSSsoClaims,
 } from '../../../../packages/sso/index.js';
+
+/**
+ * Migration gate for the opaque-code launch (Task #140).
+ *
+ * The browser-facing handoff is moving from `?token=<JWT>` (identity +
+ * entitlement claims sitting in the address bar) to `?code=<opaque>` that
+ * the receiver redeems server-to-server. Because receivers are deployed
+ * independently, we must NOT flip every module at once — a module whose
+ * receiver still only reads `?token` would break. So the hub emits `?code`
+ * only for modules explicitly listed in `SSO_EXCHANGE_CODE_MODULES`
+ * (comma-separated slugs). Unlisted modules keep the legacy `?token` URL.
+ * Set `SSO_EXCHANGE_CODE_MODULES=*` to enable for all once every receiver
+ * supports codes.
+ */
+function moduleSupportsExchangeCode(slug: string): boolean {
+  const raw = process.env.SSO_EXCHANGE_CODE_MODULES;
+  if (!raw) return false;
+  const entries = raw.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  if (entries.includes('*')) return true;
+  return entries.includes(slug.trim().toLowerCase());
+}
 
 type IssueBody = {
   moduleId?: unknown;
@@ -358,9 +381,20 @@ async function issueSsoHandler(request: FastifyRequest, reply: FastifyReply) {
     level: 'info',
   });
 
-  const launchUrl = buildSsoLaunchUrl(module.launchUrl, token);
+  // Task #140: emit an opaque `?code=` launch URL for migrated modules so
+  // no JWT (identity + entitlement claims) rides in the browser address
+  // bar. The code is an integrity-MAC'd reference to the same handoff row;
+  // the receiver redeems it server-to-server at /modules/sso/exchange.
+  // Unmigrated modules keep the legacy `?token=` URL. `token` stays in the
+  // JSON body regardless for programmatic callers.
+  const usesCode = moduleSupportsExchangeCode(module.slug);
+  const code = usesCode ? createSsoExchangeCode(claims.jti, secret) : null;
+  const launchUrl = code
+    ? buildSsoLaunchUrlWithCode(module.launchUrl, code)
+    : buildSsoLaunchUrl(module.launchUrl, token);
   return reply.send({
     token,
+    ...(code ? { code } : {}),
     launchUrl,
     redirectUrl: launchUrl,
     redirect_url: launchUrl,

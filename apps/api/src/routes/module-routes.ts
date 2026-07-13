@@ -18,6 +18,7 @@ import {
   getAccessBreakdown, getModuleAccessTrace, evaluateUserEntitlement,
   getActiveSubscription,
 } from '../lib/entitlement-service.js';
+import { parseSsoExchangeCode } from '../../../../packages/sso/index.js';
 
 // Map APP_ENV/NODE_ENV to the spec env tri-state: prod | staging | dev.
 function normalizeEnv(raw: string | undefined): 'prod' | 'staging' | 'dev' {
@@ -821,6 +822,65 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   // where OPERATOROS_API_URL=https://operatoros.net/api. Without this
   // alias every TradeFlowKit launch 404s, blocking the whole module.
   app.post('/modules/sso/consume', consumeHandler);
+
+  // -------------------------------------------------------------------------
+  // POST /v1/modules/sso/exchange — Task #140 opaque-code redemption.
+  //
+  // The browser-facing launch now carries `?code=<jti>.<mac>` instead of a
+  // JWT. The receiver redeems that code here, server-to-server, for the
+  // same single-use consume result (identity `user` + canonical snapshot)
+  // it used to get from /modules/sso/consume. Because this response returns
+  // identity, the endpoint is gated by a bearer `MODULE_SSO_SECRET` (which
+  // migrated receivers already send on consume) — one step stronger than
+  // the open consume path. The code's integrity MAC is verified before any
+  // database work; single-use is still enforced by the atomic consume claim
+  // inside `consumeHandler`, so a redeemed code cannot be replayed.
+  //
+  // Body: { code, aud, env }. On success returns the byte-for-byte consume
+  // payload. Status set: 200 | 400 invalid_code | 401 unauthorized |
+  // 503 sso_not_configured, plus every status `consumeHandler` can emit.
+  const exchangeHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+    const ip = getClientIp(request);
+
+    if (!MODULE_SSO_SECRET) {
+      return reply.code(503).send({ error: 'SSO is not configured', code: 'SSO_NOT_CONFIGURED' });
+    }
+
+    // Constant-time bearer check (length-guarded so timingSafeEqual never throws).
+    const authz = (request.headers['authorization'] as string) || '';
+    const presented = authz.startsWith('Bearer ') ? authz.slice(7) : '';
+    const secretOk =
+      presented.length === MODULE_SSO_SECRET.length &&
+      crypto.timingSafeEqual(Buffer.from(presented), Buffer.from(MODULE_SSO_SECRET));
+    if (!secretOk) {
+      await auditSsoReject({
+        userId: null, action: 'module_exchange_unauthorized',
+        details: { ip, hasBearer: presented.length > 0 }, ip,
+      });
+      return reply.code(401).send({ error: 'Unauthorized', code: 'UNAUTHORIZED' });
+    }
+
+    const body = (request.body || {}) as { code?: string; aud?: string; env?: string };
+    const jti = parseSsoExchangeCode(body.code, MODULE_SSO_SECRET);
+    if (!jti) {
+      await auditSsoReject({
+        userId: null, action: 'module_exchange_invalid_code',
+        details: { ip, hasCode: typeof body.code === 'string' && body.code.length > 0 }, ip,
+      });
+      return reply.code(400).send({ error: 'Invalid or malformed code', code: 'INVALID_CODE' });
+    }
+
+    // Delegate to the exact single-use consume logic, keyed by the recovered
+    // jti. Rewriting the body to the canonical { jti, aud, env } contract
+    // means the exchange path shares one implementation (and one audit
+    // trail) with the legacy token/jti path — no logic drift possible.
+    (request as any).body = { jti, aud: body.aud, env: body.env };
+    return consumeHandler(request, reply);
+  };
+  app.post('/v1/modules/sso/exchange', exchangeHandler);
+  // Legacy alias (no /v1 prefix), mirroring the consume alias so receivers
+  // that build URLs from a bare OPERATOROS_API_URL keep working.
+  app.post('/modules/sso/exchange', exchangeHandler);
 
   // -------------------------------------------------------------------------
   // POST /v1/modules/sso/diagnose — operator-side smoke test for child apps.
