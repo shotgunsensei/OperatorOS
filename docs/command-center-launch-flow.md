@@ -128,14 +128,17 @@ address bar (`/sso?token=<JWT>`), exposing identity and entitlement claims.
 Task #140 replaces this with an opaque, single-use code:
 
 - The hub persists the handoff row (keyed by `jti`) exactly as before, then
-  emits `/sso?code=<jti>.<hmac>` — an integrity-MAC'd **reference** to that
-  row. No identity or entitlement data rides in the URL, and no database
-  migration is required (the code is derived, not stored).
+  emits `/sso?code=<opaque>` — an AES-256-GCM authenticated encryption of the
+  `{ jti, aud }` binding, i.e. an opaque **reference** to that row bound to a
+  single target module. No identity or entitlement data rides in the URL, and
+  no database migration is required (the code is derived, not stored).
 - The receiving module redeems the code **server-to-server** at
   `POST /modules/sso/exchange` (and `/v1/modules/sso/exchange`). The exchange
-  endpoint is bearer-gated by `MODULE_SSO_SECRET`, verifies the code's MAC,
-  then runs the exact same single-use consume logic as the legacy path, so a
-  redeemed code cannot be replayed.
+  endpoint is bearer-gated by `MODULE_SSO_SECRET`, verifies the code's GCM auth
+  tag and enforces its `aud` binding (a code minted for one module cannot be
+  redeemed by another — `403 BINDING_MISMATCH`), then runs the exact same
+  single-use consume logic as the legacy path, so a redeemed code cannot be
+  replayed.
 - `?token=` continues to work during the migration window. A module opts into
   codes via the hub env `SSO_EXCHANGE_CODE_MODULES` (comma-separated slugs, or
   `*` for all). Unlisted modules keep receiving `?token=` URLs, so receivers

@@ -388,7 +388,9 @@ async function issueSsoHandler(request: FastifyRequest, reply: FastifyReply) {
   // Unmigrated modules keep the legacy `?token=` URL. `token` stays in the
   // JSON body regardless for programmatic callers.
   const usesCode = moduleSupportsExchangeCode(module.slug);
-  const code = usesCode ? createSsoExchangeCode(claims.jti, secret) : null;
+  const code = usesCode
+    ? createSsoExchangeCode({ jti: claims.jti, aud: claims.aud }, secret)
+    : null;
   const launchUrl = code
     ? buildSsoLaunchUrlWithCode(module.launchUrl, code)
     : buildSsoLaunchUrl(module.launchUrl, token);

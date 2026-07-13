@@ -195,20 +195,23 @@ export function buildSsoLaunchUrl(baseUrl: string, token: string): string {
 // claims) in the browser's address bar, the hub hands the browser an opaque
 // *code* and lets the receiver redeem it server-to-server for the real
 // claims. The code is the AES-256-GCM authenticated encryption of the
-// handoff row's `jti` under a key derived from the shared module SSO secret:
+// handoff row's binding `{ jti, aud }` under a key derived from the shared
+// module SSO secret:
 //   code = base64url( iv(12) || ciphertext || tag(16) )
 //
-// Why encrypt rather than expose `<jti>.<mac>`: the legacy `/consume`
+// Why encrypt rather than expose the raw `jti`: the legacy `/consume`
 // endpoint remains unauthenticated during migration and accepts a raw
 // `{ jti }`. If the jti sat in the URL in plaintext, anyone who observed
 // the launch URL could redeem it directly at `/consume`, making the
 // bearer-gated `/exchange` endpoint's protection illusory. Encrypting the
-// jti means the URL carries NOTHING redeemable: only a holder of the secret
-// (i.e. the `/exchange` endpoint) can recover the jti, so a leaked code
-// cannot be spent against the public consume path.
+// binding means the URL carries NOTHING redeemable: only a holder of the
+// secret (i.e. the `/exchange` endpoint) can recover the jti, so a leaked
+// code cannot be spent against the public consume path. Sealing `aud`
+// alongside the jti also binds the code to one target module, so it cannot
+// be retargeted at a different receiver.
 //
-// GCM's auth tag also provides integrity (replacing the previous separate
-// HMAC), so a tampered/forged code fails closed with zero database work.
+// GCM's auth tag also provides integrity, so a tampered/forged code fails
+// closed with zero database work.
 // Single-use is still enforced downstream by the atomic `consumed_at` claim
 // on the handoff row (keyed by jti), exactly like the token path, and no
 // schema migration is required.
@@ -216,6 +219,20 @@ export function buildSsoLaunchUrl(baseUrl: string, token: string): string {
 
 const EXCHANGE_CODE_IV_BYTES = 12;
 const EXCHANGE_CODE_TAG_BYTES = 16;
+
+/**
+ * The binding a code carries. The code is only redeemable for exactly this
+ * handoff row (`jti`) targeting exactly this module (`aud`). `aud` is the
+ * module slug, which maps 1:1 to the module's launch host / redirect URI, so
+ * binding `aud` binds both the target module and its redirect target. The
+ * tenant is bound transitively: `jti` references a persisted handoff row that
+ * already carries the tenant, and the downstream consume re-verifies tenant
+ * entitlement.
+ */
+export interface SsoExchangeCodeBinding {
+  jti: string;
+  aud: string;
+}
 
 /** Derive a stable 32-byte AES key from the shared secret (domain-separated). */
 function exchangeCodeKey(secret: string): Buffer {
@@ -225,21 +242,30 @@ function exchangeCodeKey(secret: string): Buffer {
     .digest();
 }
 
-/** Build the opaque, encrypted exchange code for a persisted handoff. */
-export function createSsoExchangeCode(jti: string, secret: string): string {
+/**
+ * Build the opaque, encrypted exchange code for a persisted handoff. The
+ * binding (`jti` + `aud`) is serialized and authenticated-encrypted, so the
+ * URL carries nothing readable or redeemable, and a code minted for one
+ * module cannot be replayed against another.
+ */
+export function createSsoExchangeCode(binding: SsoExchangeCodeBinding, secret: string): string {
   const iv = crypto.randomBytes(EXCHANGE_CODE_IV_BYTES);
   const cipher = crypto.createCipheriv('aes-256-gcm', exchangeCodeKey(secret), iv);
-  const ciphertext = Buffer.concat([cipher.update(jti, 'utf8'), cipher.final()]);
+  const plaintext = JSON.stringify({ j: binding.jti, a: binding.aud });
+  const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
   return Buffer.concat([iv, ciphertext, tag]).toString('base64url');
 }
 
 /**
- * Decrypt an exchange code and return the embedded jti, or `null` if the
- * code is malformed, truncated, or fails its authentication tag (tampered,
- * wrong secret, or forged). Fails closed on any error.
+ * Decrypt an exchange code and return its `{ jti, aud }` binding, or `null`
+ * if the code is malformed, truncated, or fails its authentication tag
+ * (tampered, wrong secret, or forged). Fails closed on any error.
  */
-export function parseSsoExchangeCode(code: unknown, secret: string): string | null {
+export function parseSsoExchangeCode(
+  code: unknown,
+  secret: string,
+): SsoExchangeCodeBinding | null {
   if (typeof code !== 'string' || code.length === 0) return null;
   let raw: Buffer;
   try {
@@ -254,8 +280,13 @@ export function parseSsoExchangeCode(code: unknown, secret: string): string | nu
   try {
     const decipher = crypto.createDecipheriv('aes-256-gcm', exchangeCodeKey(secret), iv);
     decipher.setAuthTag(tag);
-    const jti = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
-    return jti.length > 0 ? jti : null;
+    const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString(
+      'utf8',
+    );
+    const parsed = JSON.parse(plaintext) as { j?: unknown; a?: unknown };
+    if (typeof parsed.j !== 'string' || parsed.j.length === 0) return null;
+    if (typeof parsed.a !== 'string' || parsed.a.length === 0) return null;
+    return { jti: parsed.j, aud: parsed.a };
   } catch {
     return null;
   }

@@ -3,7 +3,7 @@ import {
   resolveModuleContext,
   type ResolvedOperatorOSModuleContext,
 } from '../../../packages/modules/registry.js';
-import { getPublicOrigin } from '../../../packages/modules/public-url.js';
+import { getPublicOrigin, sanitizeReturnTo } from '../../../packages/modules/public-url.js';
 
 /**
  * Marketing-redesign Phase 1 plus OperatorOS consolidation Phase 5:
@@ -117,7 +117,13 @@ function redirectToLogin(req: NextRequest, context: ResolvedOperatorOSModuleCont
     forwardedHost: req.headers.get('x-forwarded-host'),
     forwardedProto: req.headers.get('x-forwarded-proto'),
   });
-  const target = `${origin}${req.nextUrl.pathname}${req.nextUrl.search || ''}`;
+  // Strict redirect allowlist: the `next` we hand to the login surface must
+  // point back at a canonical OperatorOS host only. `sanitizeReturnTo` rejects
+  // arbitrary/external origins (and protocol-relative `//evil.com`), collapsing
+  // anything off-allowlist to the safe app fallback so a spoofed Host header
+  // can never turn this into an open redirect.
+  const rawTarget = `${origin}${req.nextUrl.pathname}${req.nextUrl.search || ''}`;
+  const target = sanitizeReturnTo(rawTarget, `${origin}/app`);
 
   // Cross-host redirect to the auth subdomain. Behind Replit's proxy the
   // inbound URL still carries the internal port + `http`, so we MUST clear the

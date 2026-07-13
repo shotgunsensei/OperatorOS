@@ -120,26 +120,29 @@ test('shared SSO launch URL targets the module /sso receiver', () => {
   );
 });
 
-test('opaque exchange code round-trips the jti under the correct secret', () => {
+test('opaque exchange code round-trips the jti+aud binding under the correct secret', () => {
   const jti = 'handoff-jti-abc123';
-  const code = createSsoExchangeCode(jti, SECRET);
+  const aud = 'pulsedesk';
+  const code = createSsoExchangeCode({ jti, aud }, SECRET);
 
-  // The jti is AES-GCM encrypted, so it must NOT appear in the URL-safe code.
-  // (This is what makes a leaked launch URL non-redeemable at public /consume.)
+  // The binding is AES-GCM encrypted, so neither jti nor aud may appear in the
+  // URL-safe code. (This is what makes a leaked launch URL non-redeemable at
+  // public /consume, and un-retargetable to another module.)
   assert.ok(!code.includes(jti));
+  assert.ok(!code.includes(aud));
   assert.match(code, /^[A-Za-z0-9_-]+$/); // base64url, no padding/separators
-  assert.equal(parseSsoExchangeCode(code, SECRET), jti);
+  assert.deepEqual(parseSsoExchangeCode(code, SECRET), { jti, aud });
 
-  // Same jti encrypts to a different code each time (random IV) yet still
-  // decrypts back to the same jti — no deterministic ciphertext to correlate.
-  const code2 = createSsoExchangeCode(jti, SECRET);
+  // Same binding encrypts to a different code each time (random IV) yet still
+  // decrypts back to the same binding — no deterministic ciphertext to correlate.
+  const code2 = createSsoExchangeCode({ jti, aud }, SECRET);
   assert.notEqual(code, code2);
-  assert.equal(parseSsoExchangeCode(code2, SECRET), jti);
+  assert.deepEqual(parseSsoExchangeCode(code2, SECRET), { jti, aud });
 });
 
 test('opaque exchange code fails closed on tamper, wrong secret, or malformed input', () => {
   const jti = 'handoff-jti-xyz789';
-  const code = createSsoExchangeCode(jti, SECRET);
+  const code = createSsoExchangeCode({ jti, aud: 'pulsedesk' }, SECRET);
 
   // Wrong secret → auth tag mismatch → null (cannot be redeemed).
   assert.equal(parseSsoExchangeCode(code, 'a-different-secret-000000000000'), null);
@@ -162,7 +165,7 @@ test('opaque exchange code fails closed on tamper, wrong secret, or malformed in
 });
 
 test('shared SSO launch URL with code targets the module /sso receiver', () => {
-  const code = createSsoExchangeCode('jti-fixture', SECRET);
+  const code = createSsoExchangeCode({ jti: 'jti-fixture', aud: 'pulsedesk' }, SECRET);
   assert.equal(
     buildSsoLaunchUrlWithCode('https://techdeck.operatoros.net/', code),
     `https://techdeck.operatoros.net/sso?code=${encodeURIComponent(code)}`,

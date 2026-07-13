@@ -37,6 +37,7 @@
  *      as-is (full URL, no path appending). `replit.md` and
  *      `threat_model.md` updated to match.
  */
+import { randomUUID } from "crypto";
 import { Router, type Request, type Response } from "express";
 import { storage } from "../storage";
 import {
@@ -86,6 +87,28 @@ async function logAttempt(
   }
 }
 
+/**
+ * Task #140: instead of stranding a failed browser launch on a JSON error
+ * page (which invites the user to retry and re-enter the auth chain), send
+ * them back to the OperatorOS hub launcher with a user-visible error code and
+ * a correlation id they can quote to support. Falls back to JSON only when we
+ * cannot resolve the hub base URL (non-browser callers / misconfiguration).
+ */
+function launchErrorRedirect(
+  res: Response,
+  hubBaseUrl: string | undefined,
+  code: string,
+  cid: string,
+): boolean {
+  const base = (hubBaseUrl || process.env.OPERATOROS_BASE_URL || "").replace(/\/+$/, "");
+  if (!base) return false;
+  res.redirect(
+    302,
+    `${base}/app?launch_error=${encodeURIComponent(code)}&cid=${encodeURIComponent(cid)}`,
+  );
+  return true;
+}
+
 function reject(
   req: Request,
   res: Response,
@@ -93,10 +116,17 @@ function reject(
   status: number,
   jti: string | null,
   auditOutcome = code,
-  details: Record<string, unknown> = {}
+  details: Record<string, unknown> = {},
+  redirect?: { hubBaseUrl?: string; cid: string }
 ) {
-  void logAttempt(req, auditOutcome, false, jti ? { ...details, jti } : details);
-  return res.status(status).json({ code });
+  const auditDetails: Record<string, unknown> = { ...details };
+  if (jti) auditDetails.jti = jti;
+  if (redirect) auditDetails.cid = redirect.cid;
+  void logAttempt(req, auditOutcome, false, auditDetails);
+  if (redirect && launchErrorRedirect(res, redirect.hubBaseUrl, code, redirect.cid)) {
+    return;
+  }
+  return res.status(status).json(redirect ? { code, cid: redirect.cid } : { code });
 }
 
 function summarizeEntitlement(entitlement: OperatorOsEntitlementClaims | null | undefined) {
@@ -128,13 +158,22 @@ router.get("/sso", ssoRateLimiter, async (req, res) => {
   const code = typeof codeRaw === "string" ? codeRaw.trim() : "";
   const earlyJti = peekJti(token);
 
-  if (!token && !code) {
-    return reject(req, res, "missing_token", 400, earlyJti, "validation_failed", { code: "missing_token" });
-  }
+  // One correlation id per launch attempt: it appears in every audit row for
+  // this request and is surfaced to the user on the launcher error page, so a
+  // failed launch can be traced end to end from a single id.
+  const cid = randomUUID();
 
   const cfg = loadConfig();
+  // Redirect target for a failed browser launch. Resolvable even when cfg is
+  // null via the OPERATOROS_BASE_URL fallback inside `launchErrorRedirect`.
+  const redirect = { hubBaseUrl: cfg?.baseUrl, cid };
+
+  if (!token && !code) {
+    return reject(req, res, "missing_token", 400, earlyJti, "validation_failed", { code: "missing_token" }, redirect);
+  }
+
   if (!cfg) {
-    return reject(req, res, "sso_not_configured", 503, earlyJti, "configuration_failed");
+    return reject(req, res, "sso_not_configured", 503, earlyJti, "configuration_failed", {}, redirect);
   }
 
   let claims: OperatorOsTokenClaims;
@@ -151,31 +190,31 @@ router.get("/sso", ssoRateLimiter, async (req, res) => {
       claims = claimsFromExchange(consumeResponse, cfg);
     } catch (err) {
       if (err instanceof SsoRejectError) {
-        return reject(req, res, err.code, err.httpStatus, null, "consume_failed", { code: err.code, via: "code" });
+        return reject(req, res, err.code, err.httpStatus, null, "consume_failed", { code: err.code, via: "code" }, redirect);
       }
-      return reject(req, res, "consume_failed", 401, null, "consume_failed", { code: "consume_failed", via: "code" });
+      return reject(req, res, "consume_failed", 401, null, "consume_failed", { code: "consume_failed", via: "code" }, redirect);
     }
   } else {
     try {
       claims = await verifyToken(token, cfg);
     } catch (err) {
       if (err instanceof SsoRejectError) {
-        return reject(req, res, err.code, err.httpStatus, earlyJti, "validation_failed", { code: err.code });
+        return reject(req, res, err.code, err.httpStatus, earlyJti, "validation_failed", { code: err.code }, redirect);
       }
-      return reject(req, res, "signature_invalid", 401, earlyJti, "validation_failed", { code: "signature_invalid" });
+      return reject(req, res, "signature_invalid", 401, earlyJti, "validation_failed", { code: "signature_invalid" }, redirect);
     }
 
     try {
       consumeResponse = await consumeToken(claims, cfg);
     } catch (err) {
       if (err instanceof SsoRejectError) {
-        return reject(req, res, err.code, err.httpStatus, claims.jti, "consume_failed", { code: err.code });
+        return reject(req, res, err.code, err.httpStatus, claims.jti, "consume_failed", { code: err.code }, redirect);
       }
-      return reject(req, res, "consume_failed", 401, claims.jti, "consume_failed", { code: "consume_failed" });
+      return reject(req, res, "consume_failed", 401, claims.jti, "consume_failed", { code: "consume_failed" }, redirect);
     }
   }
 
-  return finishSso(req, res, claims, consumeResponse, cfg);
+  return finishSso(req, res, claims, consumeResponse, cfg, cid);
 });
 
 /**
@@ -191,7 +230,9 @@ async function finishSso(
   claims: OperatorOsTokenClaims,
   consumeResponse: OperatorOsConsumeResponse | null,
   cfg: OperatorOsSsoConfig,
+  cid: string,
 ) {
+  const redirect = { hubBaseUrl: cfg.baseUrl, cid };
   const entitlement = mergeEntitlementClaims(
     extractEntitlementClaims(claims, cfg.audience),
     extractEntitlementClaims(consumeResponse, cfg.audience)
@@ -207,7 +248,7 @@ async function finishSso(
     return reject(req, res, "entitlement_disabled", 403, claims.jti, "entitlement_denied", {
       code: "entitlement_disabled",
       entitlement: entitlementSummary,
-    });
+    }, redirect);
   }
 
   let provisioned;
@@ -256,11 +297,13 @@ async function finishSso(
           snapshotId: cachedSnapshot.id,
           staleIgnored: staleSnapshotIgnored,
           entitlement: entitlementSummary,
+          cid,
         },
         provisioned.user.id,
         provisioned.org.id
       );
-      return res.status(403).json({ code: "entitlement_disabled" });
+      if (launchErrorRedirect(res, cfg.baseUrl, "entitlement_disabled", cid)) return;
+      return res.status(403).json({ code: "entitlement_disabled", cid });
     }
   }
 

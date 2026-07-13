@@ -826,15 +826,17 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   // -------------------------------------------------------------------------
   // POST /v1/modules/sso/exchange — Task #140 opaque-code redemption.
   //
-  // The browser-facing launch now carries `?code=<jti>.<mac>` instead of a
-  // JWT. The receiver redeems that code here, server-to-server, for the
-  // same single-use consume result (identity `user` + canonical snapshot)
-  // it used to get from /modules/sso/consume. Because this response returns
-  // identity, the endpoint is gated by a bearer `MODULE_SSO_SECRET` (which
-  // migrated receivers already send on consume) — one step stronger than
-  // the open consume path. The code's integrity MAC is verified before any
-  // database work; single-use is still enforced by the atomic consume claim
-  // inside `consumeHandler`, so a redeemed code cannot be replayed.
+  // The browser-facing launch now carries an opaque AES-GCM `?code=` (the
+  // encrypted `{ jti, aud }` binding) instead of a JWT. The receiver redeems
+  // that code here, server-to-server, for the same single-use consume result
+  // (identity `user` + canonical snapshot) it used to get from
+  // /modules/sso/consume. Because this response returns identity, the
+  // endpoint is gated by a bearer `MODULE_SSO_SECRET` (which migrated
+  // receivers already send on consume) — one step stronger than the open
+  // consume path. The code's GCM auth tag is verified (and its `aud` binding
+  // enforced) before any database work; single-use is still enforced by the
+  // atomic consume claim inside `consumeHandler`, so a redeemed code cannot
+  // be replayed.
   //
   // Body: { code, aud, env }. On success returns the byte-for-byte consume
   // payload. Status set: 200 | 400 invalid_code | 401 unauthorized |
@@ -861,8 +863,8 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     }
 
     const body = (request.body || {}) as { code?: string; aud?: string; env?: string };
-    const jti = parseSsoExchangeCode(body.code, MODULE_SSO_SECRET);
-    if (!jti) {
+    const binding = parseSsoExchangeCode(body.code, MODULE_SSO_SECRET);
+    if (!binding) {
       await auditSsoReject({
         userId: null, action: 'module_exchange_invalid_code',
         details: { ip, hasCode: typeof body.code === 'string' && body.code.length > 0 }, ip,
@@ -870,11 +872,25 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Invalid or malformed code', code: 'INVALID_CODE' });
     }
 
+    // Enforce the code's module binding: a code minted for module A must not
+    // be redeemable by a receiver claiming to be module B. If the caller
+    // asserts an `aud`, it must equal the `aud` sealed into the code at issue
+    // time. The code's bound `aud` (not the caller-supplied one) is then
+    // treated as authoritative downstream.
+    if (typeof body.aud === 'string' && body.aud.length > 0 && body.aud !== binding.aud) {
+      await auditSsoReject({
+        userId: null, action: 'module_exchange_binding_mismatch',
+        details: { ip, presentedAud: body.aud, boundAud: binding.aud }, ip,
+      });
+      return reply.code(403).send({ error: 'Code is not bound to this module', code: 'BINDING_MISMATCH' });
+    }
+
     // Delegate to the exact single-use consume logic, keyed by the recovered
-    // jti. Rewriting the body to the canonical { jti, aud, env } contract
-    // means the exchange path shares one implementation (and one audit
-    // trail) with the legacy token/jti path — no logic drift possible.
-    (request as any).body = { jti, aud: body.aud, env: body.env };
+    // jti and the code's authoritative bound aud. Rewriting the body to the
+    // canonical { jti, aud, env } contract means the exchange path shares one
+    // implementation (and one audit trail) with the legacy token/jti path —
+    // no logic drift possible.
+    (request as any).body = { jti: binding.jti, aud: binding.aud, env: body.env };
     return consumeHandler(request, reply);
   };
   app.post('/v1/modules/sso/exchange', exchangeHandler);
