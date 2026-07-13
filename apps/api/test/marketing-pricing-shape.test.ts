@@ -7,7 +7,7 @@ import {
   calculateStackMonthlyPrice,
   COMPANION_MODULES,
   CORE_PRODUCTS,
-  INCLUDED_WITH_ANY_PAID_CORE,
+  FREE_WITH_ANY_ACCOUNT,
 } from '@operatoros/sdk';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -32,6 +32,14 @@ const appsPage = fs.readFileSync(
   path.join(webRoot, 'components/pages/AppsPage.tsx'),
   'utf8',
 );
+const commandOrbit = fs.readFileSync(
+  path.join(webRoot, 'components/marketing/sections/CommandOrbit.tsx'),
+  'utf8',
+);
+const hero = fs.readFileSync(
+  path.join(webRoot, 'components/marketing/sections/Hero.tsx'),
+  'utf8',
+);
 
 test('pricing catalog exposes the finalized three core products', () => {
   assert.deepEqual(
@@ -43,7 +51,7 @@ test('pricing catalog exposes the finalized three core products', () => {
     ],
   );
   assert.deepEqual(
-    INCLUDED_WITH_ANY_PAID_CORE.map(app => app.key),
+    FREE_WITH_ANY_ACCOUNT.map(app => app.key),
     ['torqueshed', 'faultlinelab', 'ninja-pool-hall'],
   );
   assert.equal(COMPANION_MODULES.length, 6);
@@ -92,9 +100,25 @@ test('pricing surface contains required product and configurator labels', () => 
     'Included Companion Module',
     'Additional Modules',
     'Additional Seats',
+    'no credit card required',
   ]) {
     assert.match(pricingSection, new RegExp(copy));
   }
+});
+
+test('homepage marketing sections carry no paid-core gating for the free apps', () => {
+  for (const [name, src] of [
+    ['CommandOrbit', commandOrbit],
+    ['Hero', hero],
+    ['PricingSection', pricingSection],
+  ] as const) {
+    assert.ok(
+      !/Included With Any Core/i.test(src),
+      `stale "Included With Any Core" paid-gating phrase found in ${name}`,
+    );
+  }
+  assert.match(commandOrbit, /Free With Any Account/);
+  assert.match(hero, /no credit card required/);
 });
 
 test('pricing FAQ contains all finalized questions', () => {
@@ -104,7 +128,7 @@ test('pricing FAQ contains all finalized questions', () => {
     'What comes with a core product?',
     'How many seats are included?',
     'Can I buy more seats?',
-    'What apps are included with every paid product?',
+    'Which apps are free with any account?',
     'How does the free companion module work?',
     'What do additional modules cost?',
     'Is PulseDesk only for healthcare?',

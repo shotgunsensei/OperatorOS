@@ -19,7 +19,7 @@ const dbInit = fs.readFileSync(
 );
 
 test('any core checkout grants every included app and the selected companion', () => {
-  assert.match(productService, /INCLUDED_WITH_ANY_PAID_CORE\.map/);
+  assert.match(productService, /FREE_WITH_ANY_ACCOUNT\.map/);
   assert.match(productService, /source:\s*'included_with_core'/);
   assert.match(productService, /source:\s*'selected_free_companion'/);
   assert.match(productService, /entitlementType:\s*'core_product'/);

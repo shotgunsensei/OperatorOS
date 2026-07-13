@@ -1,1 +1,2 @@
 - [SDK web import](sdk-web-import.md) — importing @operatoros/sdk in apps/web needs webpack extensionAlias (.js→.ts) or it 500s "Module not found .js" despite passing typecheck.
+- [Free-with-any-account apps](free-account-apps.md) — free app grants use tenant_modules(allowAllMembers) not tenant_entitlements; flip a module live with no URL via catalog `internal: true`.

@@ -119,7 +119,9 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     name: 'FaultlineLab',
     description: 'Diagnostic + RCA workflow',
     category: 'support',
-    planMin: 'pro',
+    // Task #139: free with any account — lowered from `pro` to `starter`
+    // so it is no longer gated behind a higher plan tier.
+    planMin: 'starter',
     ord: 5,
     envUrlKeys: ['FAULTLINELAB_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_FAULTLINELAB'],
@@ -136,8 +138,12 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     ord: 6,
     envUrlKeys: ['NINJA_POOL_HALL_URL'],
     stripeAddonEnvKeys: [],
-    internal: false,
-    defaultStatus: 'coming_soon',
+    // Task #139: flipped live. No external URL is configured yet, so
+    // `internal: true` keeps the seed status `live` (MODULE_SEEDS treats
+    // an internal shell as a launchable surface) and points baseUrl at
+    // /apps/ninja-pool-hall instead of leaving it coming_soon.
+    internal: true,
+    defaultStatus: 'live',
     component: 'operations-deck',
   },
   {

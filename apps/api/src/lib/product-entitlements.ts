@@ -3,7 +3,7 @@ import {
   COMPANION_MODULE_KEYS,
   CORE_PRODUCTS_BY_KEY,
   INCLUDED_SEATS,
-  INCLUDED_WITH_ANY_PAID_CORE,
+  FREE_WITH_ANY_ACCOUNT,
   normalizeStackSelection,
   type CompanionModuleKey,
   type CoreProductKey,
@@ -45,7 +45,7 @@ export async function grantStackEntitlements(input: GrantStackInput): Promise<vo
     });
 
     await tx.insert(tenantEntitlements).values(
-      INCLUDED_WITH_ANY_PAID_CORE.map(app => ({
+      FREE_WITH_ANY_ACCOUNT.map(app => ({
         tenantId: input.tenantId,
         entitlementKey: app.key,
         entitlementType: 'included_app' as const,

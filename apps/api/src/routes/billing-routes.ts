@@ -25,7 +25,7 @@ import {
   COMPANION_MODULE_PRICE_CENTS,
   CORE_PRODUCTS,
   getAdditionalSeatPriceCents,
-  INCLUDED_WITH_ANY_PAID_CORE,
+  FREE_WITH_ANY_ACCOUNT,
 } from '@operatoros/sdk';
 import { changeFreeCompanionModule } from '../lib/product-entitlements.js';
 
@@ -33,7 +33,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
   app.get('/v1/billing/catalog', async () => ({
     operatorOsMonthlyPriceCents: 0,
     coreProducts: CORE_PRODUCTS,
-    includedApps: INCLUDED_WITH_ANY_PAID_CORE,
+    includedApps: FREE_WITH_ANY_ACCOUNT,
     companionModules: COMPANION_MODULES,
     companionModuleMonthlyPriceCents: COMPANION_MODULE_PRICE_CENTS,
     additionalSeatMonthlyPriceCents: getAdditionalSeatPriceCents(process.env.ADDITIONAL_SEAT_PRICE_CENTS),

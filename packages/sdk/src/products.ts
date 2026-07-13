@@ -71,7 +71,11 @@ export const CORE_PRODUCTS: readonly ProductCatalogEntry[] = [
 export const CORE_PRODUCTS_BY_KEY: Readonly<Record<CoreProductKey, ProductCatalogEntry>> =
   Object.freeze(Object.fromEntries(CORE_PRODUCTS.map(product => [product.key, product])) as Record<CoreProductKey, ProductCatalogEntry>);
 
-export const INCLUDED_WITH_ANY_PAID_CORE: readonly ModuleCatalogItem[] = [
+// Task #139: these three apps are free with any OperatorOS account ($0),
+// not gated behind a paid core product. Every new free account's personal
+// tenant is granted them on signup, and existing tenants are back-filled on
+// boot. Paid core products still also include them (harmless overlap).
+export const FREE_WITH_ANY_ACCOUNT: readonly ModuleCatalogItem[] = [
   {
     key: 'torqueshed',
     name: 'TorqueShed',

@@ -9,7 +9,7 @@ import {
   COMPANION_MODULE_PRICE_CENTS,
   CORE_PRODUCTS,
   DEFAULT_ADDITIONAL_SEAT_PRICE_CENTS,
-  INCLUDED_WITH_ANY_PAID_CORE,
+  FREE_WITH_ANY_ACCOUNT,
   type CompanionModuleKey,
   type CoreProductKey,
 } from '@operatoros/sdk';
@@ -116,13 +116,23 @@ export default function PricingSection() {
               Build the stack your operation needs.
             </h1>
             <p style={{ color: brand.textSecondary, fontSize: 18, lineHeight: 1.65, margin: '0 0 30px' }}>
-              OperatorOS is free. Choose a fully unlocked core product, get 5 operator seats,
-              included apps, and one companion module at no additional cost.
+              OperatorOS is free — including TorqueShed, FaultlineLab, and Ninja Pool Hall with any account.
+              Add a fully unlocked core product for 5 operator seats and one companion module at no additional cost.
             </p>
             <div className="pricing-hero-actions" style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-              <a href="#build-stack" style={primaryButtonStyle}>Build Your Stack <ArrowRight size={16} /></a>
-              <Link href="/login" style={secondaryButtonStyle}>Sign In</Link>
+              {!user && (
+                <Link href="/login?mode=register" data-testid="pricing-create-account" style={primaryButtonStyle}>
+                  Create free account <ArrowRight size={16} />
+                </Link>
+              )}
+              <a href="#build-stack" style={user ? primaryButtonStyle : secondaryButtonStyle}>Build Your Stack <ArrowRight size={16} /></a>
+              {!user && <Link href="/login" style={secondaryButtonStyle}>Sign In</Link>}
             </div>
+            {!user && (
+              <p data-testid="pricing-no-card" style={{ color: brand.textMuted, fontSize: 13, margin: '14px 0 0' }}>
+                Free apps included — no credit card required.
+              </p>
+            )}
           </div>
           <div style={{
             minHeight: 350,
@@ -186,7 +196,7 @@ export default function PricingSection() {
                 {[
                   'Fully Unlocked',
                   '5 Seats Included',
-                  'TorqueShed + FaultlineLab + Ninja Pool Hall',
+                  'TorqueShed + FaultlineLab + Ninja Pool Hall (free for everyone)',
                   'Choose 1 free companion module',
                   'Extra modules $29/mo',
                   'Extra seats available',
@@ -268,7 +278,7 @@ export default function PricingSection() {
               <SummaryRow label={`${additionalModules.length} additional module${additionalModules.length === 1 ? '' : 's'}`} value={money(price.additionalModulesCents)} />
               <SummaryRow label={`${additionalSeats} additional seat${additionalSeats === 1 ? '' : 's'}`} value={money(price.additionalSeatsCents)} />
               <div style={{ borderTop: `1px solid ${brand.borderSoft}`, paddingTop: 16 }}>
-                <div style={{ color: brand.textMuted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>Included Apps</div>
+                <div style={{ color: brand.textMuted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>Free With Any Account</div>
                 <div style={{ color: brand.textSecondary, fontSize: 13, lineHeight: 1.6 }}>TorqueShed · FaultlineLab · Ninja Pool Hall</div>
               </div>
               {error && <p role="alert" style={{ color: '#ff7b72', fontSize: 13, margin: 0 }}>{error}</p>}
@@ -283,11 +293,19 @@ export default function PricingSection() {
       </section>
 
       <section className="pricing-shell" style={{ paddingTop: 88, paddingBottom: 72 }}>
-        <header style={{ marginBottom: 30 }}>
-          <h2 style={sectionHeadingStyle}>Everything included with a paid core product</h2>
+        <header style={{ marginBottom: 30, display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <div>
+            <h2 style={sectionHeadingStyle}>Free with any account</h2>
+            <p style={sectionCopyStyle}>These three apps come with every OperatorOS account at no cost — no paid core product required.</p>
+          </div>
+          {!user && (
+            <Link href="/login?mode=register" data-testid="pricing-free-apps-cta" style={primaryButtonStyle}>
+              Create free account <ArrowRight size={16} />
+            </Link>
+          )}
         </header>
         <div className="included-app-grid">
-          {INCLUDED_WITH_ANY_PAID_CORE.map(app => (
+          {FREE_WITH_ANY_ACCOUNT.map(app => (
             <div key={app.key} style={{ padding: '26px 0', borderTop: `1px solid ${brand.borderStrong}` }}>
               <h3 style={{ color: brand.textPrimary, fontSize: 18, margin: '0 0 9px' }}>{app.name}</h3>
               <p style={{ color: brand.textSecondary, fontSize: 14, lineHeight: 1.6, margin: 0 }}>{app.description}</p>

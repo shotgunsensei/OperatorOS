@@ -18,7 +18,7 @@ export const marketingPricingFaqs: readonly MarketingPricingFaq[] = [
   {
     slug: 'core-product-inclusions',
     question: 'What comes with a core product?',
-    answer: 'Every core product is fully unlocked and includes 5 operator seats, TorqueShed, FaultlineLab, Ninja Pool Hall, and one selectable companion module.',
+    answer: 'Every core product is fully unlocked and includes 5 operator seats and one selectable companion module. TorqueShed, FaultlineLab, and Ninja Pool Hall are already free with any account.',
   },
   {
     slug: 'included-seats',
@@ -32,8 +32,8 @@ export const marketingPricingFaqs: readonly MarketingPricingFaq[] = [
   },
   {
     slug: 'included-apps',
-    question: 'What apps are included with every paid product?',
-    answer: 'TorqueShed, FaultlineLab, and Ninja Pool Hall are automatically included with any active core product.',
+    question: 'Which apps are free with any account?',
+    answer: 'TorqueShed, FaultlineLab, and Ninja Pool Hall are free with any OperatorOS account — no paid core product required. Just create a free account to start using them.',
   },
   {
     slug: 'free-companion',
@@ -53,6 +53,6 @@ export const marketingPricingFaqs: readonly MarketingPricingFaq[] = [
   {
     slug: 'cancellation',
     question: 'What happens if I cancel?',
-    answer: 'Paid app entitlements and paid seat capacity end with the subscription. OperatorOS remains available as the free command layer, and billing history stays auditable.',
+    answer: 'Paid app entitlements and paid seat capacity end with the subscription. OperatorOS remains available as the free command layer — including TorqueShed, FaultlineLab, and Ninja Pool Hall — and billing history stays auditable.',
   },
 ] as const;

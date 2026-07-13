@@ -1205,6 +1205,91 @@ export async function ensureModuleShellTables() {
   `);
 }
 
+// Task #139: the apps that are free with any OperatorOS account. Kept as a
+// plain slug list here (rather than importing the SDK's FREE_WITH_ANY_ACCOUNT)
+// so the DB-seeding layer stays decoupled from the SDK catalog shape.
+export const FREE_ACCOUNT_APP_SLUGS = ['torqueshed', 'faultlinelab', 'ninja-pool-hall'] as const;
+
+/**
+ * Task #139: idempotently grant the free-with-any-account apps to a tenant.
+ *
+ * Insert-if-missing (ON CONFLICT DO NOTHING) on both `tenant_modules` and
+ * `tenant_user_module_access`, so re-running on boot never stomps an admin
+ * override (e.g. an owner who disabled one of these on their own tenant).
+ * `allowAllMembers: true` makes every member of the tenant a user of the
+ * module; the owner also gets an explicit `manager` grant so they can manage
+ * access for any future members. Mirrors the Demo Co / fixShotgunTenant seed
+ * pattern. Missing modules are logged and skipped, never fatal.
+ */
+export async function ensureFreeAccountApps(tenantId: string, ownerUserId: string): Promise<void> {
+  for (const slug of FREE_ACCOUNT_APP_SLUGS) {
+    const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+    if (!mod) {
+      console.warn(`[free-apps] module '${slug}' not found; skipping free-account grant`);
+      continue;
+    }
+    await db.insert(tenantModules).values({
+      tenantId,
+      moduleId: mod.id,
+      status: 'enabled',
+      source: 'included',
+      allowAllMembers: true,
+      metadata: { grantedBy: 'free_account', freeWithAnyAccount: true },
+    }).onConflictDoNothing({ target: [tenantModules.tenantId, tenantModules.moduleId] });
+
+    await db.insert(tenantUserModuleAccess).values({
+      tenantId,
+      userId: ownerUserId,
+      moduleId: mod.id,
+      accessLevel: 'manager',
+    }).onConflictDoNothing({
+      target: [tenantUserModuleAccess.tenantId, tenantUserModuleAccess.userId, tenantUserModuleAccess.moduleId],
+    });
+  }
+}
+
+/**
+ * Task #139: idempotently ensure a user has their personal tenant, an owner
+ * membership on it, and a `current_tenant_id` pointing at it. Extracted from
+ * `backfillPersonalTenants` so signup (`POST /v1/auth/register`) can provision
+ * the same personal tenant immediately instead of waiting for the next boot.
+ *
+ * Personal-tenant slug convention: `personal-<userId>`. Race-safe: parallel
+ * callers converge on the same globally-unique slug/tenant row.
+ */
+export async function ensurePersonalTenant(
+  user: { id: string; email: string; currentTenantId: string | null },
+): Promise<{ tenant: typeof tenants.$inferSelect; created: boolean }> {
+  const slug = `personal-${user.id}`;
+  const insertedTenant = await db.insert(tenants).values({
+    name: `${user.email} Personal`,
+    slug,
+    type: 'personal',
+    ownerUserId: user.id,
+  }).onConflictDoNothing({ target: tenants.slug }).returning();
+  let tenant = insertedTenant[0];
+  const created = !!tenant;
+  if (!tenant) {
+    [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
+  }
+
+  // Owner membership — race-safe via composite UNIQUE(tenant_id, user_id).
+  await db.insert(tenantUsers).values({
+    tenantId: tenant.id,
+    userId: user.id,
+    role: 'owner',
+  }).onConflictDoNothing({ target: [tenantUsers.tenantId, tenantUsers.userId] });
+
+  // Set current_tenant_id only if unset; never stomp an explicit choice.
+  if (!user.currentTenantId) {
+    await db.update(users)
+      .set({ currentTenantId: tenant.id, updatedAt: new Date() })
+      .where(eq(users.id, user.id));
+  }
+
+  return { tenant, created };
+}
+
 /**
  * Idempotent: every user must have exactly one personal tenant. Existing
  * billing/audit/etc. rows get back-filled to the user's personal tenant
@@ -1217,39 +1302,12 @@ export async function backfillPersonalTenants() {
   const allUsers = await db.select().from(users);
   let created = 0;
   for (const u of allUsers) {
-    const slug = `personal-${u.id}`;
-    // Race-safe insert: if a parallel boot wins the slug, ON CONFLICT DO
-    // NOTHING returns an empty array; we then re-select the winning row.
-    // Both racers converge on the same tenant.id (slug is globally unique),
-    // so all subsequent writes target the same row.
-    const insertedTenant = await db.insert(tenants).values({
-      name: `${u.email} Personal`,
-      slug,
-      type: 'personal',
-      ownerUserId: u.id,
-    }).onConflictDoNothing({ target: tenants.slug }).returning();
-    let tenant = insertedTenant[0];
-    if (tenant) {
-      created++;
-    } else {
-      [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
-    }
+    const { tenant, created: tenantCreated } = await ensurePersonalTenant(u);
+    if (tenantCreated) created++;
 
-    // Owner membership — race-safe via composite UNIQUE(tenant_id, user_id).
-    // Also heals legacy tenants that were created before the membership row
-    // was inserted (single statement covers both first-insert and heal paths).
-    await db.insert(tenantUsers).values({
-      tenantId: tenant.id,
-      userId: u.id,
-      role: 'owner',
-    }).onConflictDoNothing({ target: [tenantUsers.tenantId, tenantUsers.userId] });
-
-    // Set current_tenant_id only if unset; never stomp an explicit choice.
-    if (!u.currentTenantId) {
-      await db.update(users)
-        .set({ currentTenantId: tenant.id, updatedAt: new Date() })
-        .where(eq(users.id, u.id));
-    }
+    // Task #139: grant the three free-with-any-account apps to every personal
+    // tenant (idempotent; existing grants and admin overrides are preserved).
+    await ensureFreeAccountApps(tenant.id, u.id);
 
     // Back-fill tenant_id on user-owned billing & audit rows. Use Drizzle's
     // parameterized `sql` template so values are bound, not interpolated —

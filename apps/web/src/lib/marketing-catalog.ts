@@ -36,8 +36,8 @@ const SOURCE: readonly MarketingCatalogSource[] = [
   { slug: 'torqueshed',       name: 'TorqueShed',       description: 'Mechanic shop dashboard & invoicing',        planMin: 'starter', ord: 2,  defaultStatus: 'live' },
   { slug: 'techdeck',         name: 'TechDeck',         description: 'Onsite tech command center',                 planMin: 'starter', ord: 3,  defaultStatus: 'live' },
   { slug: 'pulsedesk',        name: 'PulseDesk',        description: 'Healthcare operations coordination',         planMin: 'pro',     ord: 4,  defaultStatus: 'live' },
-  { slug: 'faultlinelab',     name: 'FaultlineLab',     description: 'Diagnostic + RCA workflow',                  planMin: 'pro',     ord: 5,  defaultStatus: 'live' },
-  { slug: 'ninja-pool-hall',  name: 'Ninja Pool Hall',  description: 'Companion engagement experience',            planMin: 'starter', ord: 6,  defaultStatus: 'coming_soon' },
+  { slug: 'faultlinelab',     name: 'FaultlineLab',     description: 'Diagnostic + RCA workflow',                  planMin: 'starter', ord: 5,  defaultStatus: 'live' },
+  { slug: 'ninja-pool-hall',  name: 'Ninja Pool Hall',  description: 'Companion engagement experience',            planMin: 'starter', ord: 6,  defaultStatus: 'live' },
   { slug: 'brandforgeos',     name: 'BrandForgeOS',     description: 'Brand and marketing command system',         planMin: 'pro',     ord: 7,  defaultStatus: 'live' },
   { slug: 'snapproofos',      name: 'SnapProofOS',      description: 'Photo-based proof of work',                  planMin: 'elite',   ord: 8,  defaultStatus: 'live' },
   { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                planMin: 'elite',   ord: 9,  defaultStatus: 'live' },
@@ -116,13 +116,13 @@ const SOLVES: Record<string, string> = {
 
 export const PACKAGE_LABELS: Record<MarketingPackageType, string> = {
   core: 'Core Product',
-  included: 'Included With Any Core',
+  included: 'Free With Any Account',
   companion: 'Companion Module',
 };
 
 export const PACKAGE_DESCRIPTIONS: Record<MarketingPackageType, string> = {
   core: 'Fully unlocked flagship products that anchor the OperatorOS stack.',
-  included: 'Utility and diagnostic modules bundled with every paid core product.',
+  included: 'Utility and diagnostic apps free with any OperatorOS account — no paid product required.',
   companion: 'One companion can be selected free; additional companions can be added as paid modules.',
 };
 

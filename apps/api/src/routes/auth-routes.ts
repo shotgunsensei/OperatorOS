@@ -15,6 +15,7 @@ import {
   resetFailedLogins,
 } from '../lib/auth.js';
 import { checkRateLimit } from '../lib/rate-limiter.js';
+import { ensurePersonalTenant, ensureFreeAccountApps } from '../lib/saas-db-init.js';
 import {
   getSessionClearCookieOptions,
   getSessionCookieOptions,
@@ -87,6 +88,17 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
     await logUserActivity(user.id, 'registered', 'user', user.id);
     await logAudit(user.id, 'user_registered', user.id, { email: normalizedEmail });
+
+    // Task #139: provision the new free account's personal tenant and grant
+    // the three free-with-any-account apps immediately. Wrapped in try/catch so
+    // a provisioning hiccup never blocks account creation — the boot-time
+    // backfill (`backfillPersonalTenants`) heals any gap on the next restart.
+    try {
+      const { tenant } = await ensurePersonalTenant(user);
+      await ensureFreeAccountApps(tenant.id, user.id);
+    } catch (err) {
+      request.log?.error({ err, userId: user.id }, 'failed to provision personal tenant + free apps on register');
+    }
 
     return reply.code(202).send({ ok: true });
   });

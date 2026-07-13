@@ -25,7 +25,7 @@ const VALUE_STRIP = [
 
 const STACK_LAYERS = [
   { label: 'Core products', value: 'TradeFlowKit · PulseDesk · TechDeck', accent: brand.accentCyan },
-  { label: 'Included apps', value: 'TorqueShed · FaultlineLab · Ninja Pool Hall', accent: brand.accentGreen },
+  { label: 'Free with any account', value: 'TorqueShed · FaultlineLab · Ninja Pool Hall', accent: brand.accentGreen },
   { label: 'Companion modules', value: 'SnapProofOS · BrandForgeOS · Ninjamation', accent: brand.accentViolet },
 ];
 
@@ -33,7 +33,13 @@ const COMMAND_SIGNALS = ['Login', 'Billing', 'Tenants', 'SSO', 'Modules'];
 
 export default function Hero() {
   const { user, loading } = useAuth();
-  const primary = primaryCtaTarget(!!user);
+  const signedIn = !!user;
+  const primary = primaryCtaTarget(signedIn);
+  // Task #139: signed-out visitors get a "Create free account" CTA pointing at
+  // the register mode of the login page; signed-in users keep launching straight
+  // into the app.
+  const heroCtaHref = loading ? '/login' : signedIn ? primary.href : '/login?mode=register';
+  const heroCtaLabel = signedIn ? 'Open your free command layer' : 'Create free account';
 
   return (
     <section
@@ -208,7 +214,7 @@ export default function Hero() {
 
           <div className="operatoros-hero-actions">
             <Link
-              href={loading ? '/login' : primary.href}
+              href={heroCtaHref}
               data-testid="hero-cta-primary"
               style={{
                 display: 'inline-flex',
@@ -225,7 +231,7 @@ export default function Hero() {
                 boxShadow: brand.ctaGlowLarge,
               }}
             >
-              Open your free command layer <ArrowRight size={16} />
+              {heroCtaLabel} <ArrowRight size={16} />
             </Link>
             <Link
               href="/modules"
@@ -249,6 +255,12 @@ export default function Hero() {
               Explore the ecosystem
             </Link>
           </div>
+
+          {!signedIn && (
+            <p data-testid="hero-no-card" style={{ color: brand.textMuted, fontSize: 13, margin: '14px 0 0' }}>
+              TorqueShed, FaultlineLab, and Ninja Pool Hall are free with any account — no credit card required.
+            </p>
+          )}
 
           <div className="operatoros-value-strip" aria-label="OperatorOS platform value" style={{ marginTop: 34 }}>
             {VALUE_STRIP.map((item) => {

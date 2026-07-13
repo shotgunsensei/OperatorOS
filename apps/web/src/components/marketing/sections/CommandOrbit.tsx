@@ -14,7 +14,7 @@ const RINGS: Array<{
   testIdPrefix: string;
 }> = [
   { type: 'core', label: 'Core Products', radius: 24, accent: brand.accentCyan, testIdPrefix: 'orbit-node-core' },
-  { type: 'included', label: 'Included With Any Core', radius: 34, accent: brand.accentGreen, testIdPrefix: 'orbit-node-included' },
+  { type: 'included', label: 'Free With Any Account', radius: 34, accent: brand.accentGreen, testIdPrefix: 'orbit-node-included' },
   { type: 'companion', label: 'Companion Modules', radius: 40, accent: brand.accentViolet, testIdPrefix: 'orbit-node-companion' },
 ];
 

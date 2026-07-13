@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle2, Layers3, Users } from 'lucide-react';
 import { billingApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import UpgradeModal from '../UpgradeModal';
-import { CORE_PRODUCTS_BY_KEY, INCLUDED_WITH_ANY_PAID_CORE } from '@operatoros/sdk';
+import { CORE_PRODUCTS_BY_KEY, FREE_WITH_ANY_ACCOUNT } from '@operatoros/sdk';
 import { brand } from '@/lib/brand';
 
 function UsageBar({ label, used, limit, percentage }: { label: string; used: number; limit: number; percentage: number }) {
@@ -183,7 +183,7 @@ export default function BillingPage() {
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginTop: 18 }}>
             <StackMetric icon={<Users size={14} />} label={`${seatLimit} seat${seatLimit === 1 ? '' : 's'}`} />
-            <StackMetric icon={<CheckCircle2 size={14} />} label={`${includedApps.length || (coreProduct ? INCLUDED_WITH_ANY_PAID_CORE.length : 0)} included apps`} />
+            <StackMetric icon={<CheckCircle2 size={14} />} label={`${includedApps.length || (coreProduct ? FREE_WITH_ANY_ACCOUNT.length : 0)} included apps`} />
             <StackMetric icon={<Layers3 size={14} />} label={`${companions.length} companion${companions.length === 1 ? '' : 's'}`} />
             {extraSeats > 0 && <StackMetric icon={<Users size={14} />} label={`${extraSeats} extra seat${extraSeats === 1 ? '' : 's'}`} />}
           </div>
