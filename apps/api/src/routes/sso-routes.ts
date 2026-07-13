@@ -6,6 +6,7 @@ import { authenticate, sanitizeUser, signToken } from '../lib/auth.js';
 import { writeAudit } from '../lib/audit.js';
 import { hasPlatformAdminAuthority } from '../lib/rbac.js';
 import { resolveTenantModuleAccess } from '../lib/tenant-entitlements.js';
+import { moduleSupportsExchangeCode } from '../lib/sso-exchange-rollout.js';
 import {
   getSessionCookieOptions,
   SESSION_COOKIE_NAME,
@@ -28,27 +29,6 @@ import {
   verifySsoHandoffToken,
   type OperatorOSSsoClaims,
 } from '../../../../packages/sso/index.js';
-
-/**
- * Migration gate for the opaque-code launch (Task #140).
- *
- * The browser-facing handoff is moving from `?token=<JWT>` (identity +
- * entitlement claims sitting in the address bar) to `?code=<opaque>` that
- * the receiver redeems server-to-server. Because receivers are deployed
- * independently, we must NOT flip every module at once — a module whose
- * receiver still only reads `?token` would break. So the hub emits `?code`
- * only for modules explicitly listed in `SSO_EXCHANGE_CODE_MODULES`
- * (comma-separated slugs). Unlisted modules keep the legacy `?token` URL.
- * Set `SSO_EXCHANGE_CODE_MODULES=*` to enable for all once every receiver
- * supports codes.
- */
-function moduleSupportsExchangeCode(slug: string): boolean {
-  const raw = process.env.SSO_EXCHANGE_CODE_MODULES;
-  if (!raw) return false;
-  const entries = raw.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
-  if (entries.includes('*')) return true;
-  return entries.includes(slug.trim().toLowerCase());
-}
 
 type IssueBody = {
   moduleId?: unknown;

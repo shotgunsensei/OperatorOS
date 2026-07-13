@@ -91,6 +91,23 @@ test('sanitizeReturnTo blocks open redirects but keeps same-site destinations', 
   );
 });
 
+test('sanitizeReturnTo collapses hostile targets to a canonical, non-host-derived fallback', () => {
+  // The middleware fallback must NOT be built from the inbound Host header
+  // (Task #140). A canonical constant is passed instead; a spoofed host can
+  // never leak into it.
+  const CANON = buildPublicUrl('/app', 'root');
+  assert.equal(CANON, 'https://operatoros.net/app');
+  assert.equal(sanitizeReturnTo('https://evil.com/app', CANON), CANON);
+  assert.equal(sanitizeReturnTo('//evil.com', CANON), CANON);
+  assert.equal(sanitizeReturnTo('http://evil.com:5000/app/x', CANON), CANON);
+  assert.equal(sanitizeReturnTo('https://operatoros.net.evil.com/app', CANON), CANON);
+  // Legit same-site destinations still pass through untouched.
+  assert.equal(
+    sanitizeReturnTo('https://techdeck.operatoros.net/x', CANON),
+    'https://techdeck.operatoros.net/x',
+  );
+});
+
 test('getModuleByHost resolves the three module subdomains and ignores ports', () => {
   for (const slug of ['techdeck', 'pulsedesk', 'tradeflowkit'] as const) {
     const byHost = getModuleByHost(`${slug}.operatoros.net`);

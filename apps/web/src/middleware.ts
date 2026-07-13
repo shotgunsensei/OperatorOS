@@ -3,7 +3,7 @@ import {
   resolveModuleContext,
   type ResolvedOperatorOSModuleContext,
 } from '../../../packages/modules/registry.js';
-import { getPublicOrigin, sanitizeReturnTo } from '../../../packages/modules/public-url.js';
+import { buildPublicUrl, getPublicOrigin, sanitizeReturnTo } from '../../../packages/modules/public-url.js';
 
 /**
  * Marketing-redesign Phase 1 plus OperatorOS consolidation Phase 5:
@@ -54,6 +54,14 @@ const AUTH_HOST = 'auth.operatoros.net';
 const LOOP_COOKIE = 'os_sso_redirects';
 const MAX_LOGIN_REDIRECTS = 3;
 const COOKIE_DOMAIN = '.operatoros.net';
+
+// Task #140 open-redirect hardening. The fallback for a rejected `next` MUST
+// be a canonical, allowlisted OperatorOS URL that is NOT derived from the
+// inbound Host / X-Forwarded-Host header. Deriving it from the request host
+// (e.g. `${origin}/app`) let a spoofed Host header leak straight back into the
+// redirect target. `buildPublicUrl` resolves from the hard-coded ecosystem
+// root domain, so this constant is always `https://operatoros.net/app`.
+const CANONICAL_APP_URL = buildPublicUrl('/app', 'root');
 
 function isExempt(pathname: string): boolean {
   // Invite-accept flow handles its own pre-auth logic + localStorage
@@ -123,7 +131,7 @@ function redirectToLogin(req: NextRequest, context: ResolvedOperatorOSModuleCont
   // anything off-allowlist to the safe app fallback so a spoofed Host header
   // can never turn this into an open redirect.
   const rawTarget = `${origin}${req.nextUrl.pathname}${req.nextUrl.search || ''}`;
-  const target = sanitizeReturnTo(rawTarget, `${origin}/app`);
+  const target = sanitizeReturnTo(rawTarget, CANONICAL_APP_URL);
 
   // Cross-host redirect to the auth subdomain. Behind Replit's proxy the
   // inbound URL still carries the internal port + `http`, so we MUST clear the
