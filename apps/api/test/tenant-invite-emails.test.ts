@@ -71,7 +71,7 @@ after(async () => {
   }
 });
 
-const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` });
+const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` });
 
 async function findAudit(action: string, inviteId: string) {
   // We pull recent rows for the action then match details.targetId; cheaper

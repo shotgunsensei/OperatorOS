@@ -1,0 +1,318 @@
+{
+  "moduleSlug": "brandforgeos",
+  "sourceRemote": "https://github.com/shotgunsensei/BrandForge-OS.git",
+  "sourceCommit": "5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e",
+  "importedAtUtc": "2026-07-13T19:58:37.1314549Z",
+  "trackedFileCount": 348,
+  "fileCount": 272,
+  "totalBytes": 1254117,
+  "maxFileSizeMb": 25,
+  "excludedFiles": [
+    {
+      "path": ".replit",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": ".replitignore",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/api-server/.replit-artifact/artifact.toml",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/brandforge/.replit-artifact/artifact.toml",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/.replit-artifact/artifact.toml",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/components.json",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/index.html",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/mockupPreviewPlugin.ts",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/package.json",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/.generated/mockup-components.ts",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/App.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/accordion.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/alert-dialog.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/alert.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/aspect-ratio.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/avatar.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/badge.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/breadcrumb.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/button-group.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/button.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/calendar.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/card.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/carousel.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/chart.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/checkbox.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/collapsible.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/command.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/context-menu.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/dialog.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/drawer.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/dropdown-menu.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/empty.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/field.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/form.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/hover-card.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/input-group.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/input-otp.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/input.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/item.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/kbd.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/label.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/menubar.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/navigation-menu.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/pagination.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/popover.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/progress.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/radio-group.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/resizable.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/scroll-area.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/select.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/separator.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/sheet.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/sidebar.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/skeleton.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/slider.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/sonner.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/spinner.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/switch.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/table.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/tabs.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/textarea.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/toast.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/toaster.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/toggle-group.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/toggle.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/components/ui/tooltip.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/hooks/use-mobile.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/hooks/use-toast.ts",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/index.css",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/lib/utils.ts",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/src/main.tsx",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/tsconfig.json",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "artifacts/mockup-sandbox/vite.config.ts",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "attached_assets/Pasted-Build-a-production-ready-SaaS-web-application-called-Br_1775094541309.txt",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "attached_assets/Pasted-You-are-continuing-development-of-an-existing-SaaS-plat_1775097922125.txt",
+      "reason": "excluded path or sensitive filename"
+    },
+    {
+      "path": "attached_assets/Pasted-You-are-upgrading-an-existing-SaaS-application-called-B_1775097860426.txt",
+      "reason": "excluded path or sensitive filename"
+    }
+  ],
+  "highConfidenceSecretFindings": 0,
+  "policy": "tracked-files-only; generated artifacts, local data, private keys, credentials, and environment files excluded"
+}

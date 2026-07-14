@@ -188,7 +188,7 @@ test('OperatorOS module route shell wires PulseDesk host/local fallback to the a
   assert.match(shell, /pulsedesk-empty-state/);
   assert.match(shell, /pulsedesk-error-state/);
   assert.equal(getModuleById('pulsedesk')?.hostname, 'pulsedesk.operatoros.net');
-  assert.equal(getModuleByHost('https://pulsedesk.operatoros.net/sso?token=x')?.id, 'pulsedesk');
+  assert.equal(getModuleByHost('https://pulsedesk.operatoros.net/sso?code=probe')?.id, 'pulsedesk');
 });
 
 test('PulseDesk Phase 13 docs cover import notes, auth mapping, risks, and smoke checks', () => {
@@ -246,7 +246,7 @@ test('PulseDesk Phase 13 docs cover import notes, auth mapping, risks, and smoke
   }
 
   assert.match(readme, /Phase 13 Status/);
-  assert.match(moduleReadme, /pulsedesk` - imported as a source snapshot/);
+  assert.match(moduleReadme, /pulsedesk` - active shared-runtime shell plus imported source snapshot/);
 });
 
 test('PulseDesk Phase 13 removes duplicate local login and checkout ownership from active surfaces', () => {

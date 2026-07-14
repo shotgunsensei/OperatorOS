@@ -5,9 +5,9 @@ import {
   moduleSupportsExchangeCode,
 } from '../src/lib/sso-exchange-rollout.js';
 import {
-  buildSsoLaunchUrl,
   buildSsoLaunchUrlWithCode,
 } from '../../../packages/sso/index.js';
+import { OPERATOROS_MODULE_REGISTRY } from '../../../packages/modules/registry.js';
 
 const ENV_KEY = 'SSO_EXCHANGE_CODE_MODULES';
 
@@ -23,18 +23,20 @@ function withEnv(value: string | undefined, fn: () => void) {
   }
 }
 
-test('migrated modules (PulseDesk) use the code path by default', () => {
-  assert.ok(DEFAULT_EXCHANGE_CODE_MODULES.includes('pulsedesk'));
+test('all production modules use the code path by default', () => {
+  assert.deepEqual(
+    [...DEFAULT_EXCHANGE_CODE_MODULES].sort(),
+    OPERATOROS_MODULE_REGISTRY
+      .filter(module => module.status === 'active')
+      .map(module => module.slug)
+      .sort(),
+  );
   withEnv(undefined, () => {
-    assert.equal(moduleSupportsExchangeCode('pulsedesk'), true);
+    for (const slug of DEFAULT_EXCHANGE_CODE_MODULES) {
+      assert.equal(moduleSupportsExchangeCode(slug), true, `${slug} supports opaque-code SSO`);
+    }
     assert.equal(moduleSupportsExchangeCode('PulseDesk'), true);
-  });
-});
-
-test('unmigrated modules keep the legacy token path when unlisted', () => {
-  withEnv(undefined, () => {
-    assert.equal(moduleSupportsExchangeCode('techdeck'), false);
-    assert.equal(moduleSupportsExchangeCode('tradeflowkit'), false);
+    assert.equal(moduleSupportsExchangeCode('outcall'), false, 'planned module stays off by default');
   });
 });
 
@@ -43,7 +45,7 @@ test('operators can enable additional modules via env, case-insensitively', () =
     assert.equal(moduleSupportsExchangeCode('techdeck'), true);
     // default-migrated module stays on regardless of env contents
     assert.equal(moduleSupportsExchangeCode('pulsedesk'), true);
-    assert.equal(moduleSupportsExchangeCode('tradeflowkit'), false);
+    assert.equal(moduleSupportsExchangeCode('tradeflowkit'), true);
   });
   withEnv('  TechDeck , TRADEFLOWKIT ', () => {
     assert.equal(moduleSupportsExchangeCode('techdeck'), true);
@@ -58,7 +60,7 @@ test('wildcard enables every module', () => {
   });
 });
 
-test('an enabled module launches with ?code= (no JWT in the URL)', () => {
+test('an enabled module launches with ?code= and never a JWT URL parameter', () => {
   const base = 'https://pulsedesk.operatoros.net/sso';
   withEnv(undefined, () => {
     assert.equal(moduleSupportsExchangeCode('pulsedesk'), true);
@@ -67,8 +69,4 @@ test('an enabled module launches with ?code= (no JWT in the URL)', () => {
   assert.ok(codeUrl.includes('code=OPAQUE_CODE'), 'launch URL should carry the opaque code');
   assert.ok(!/token=/.test(codeUrl), 'code launch URL must not carry a JWT token param');
 
-  // Legacy path (module NOT enabled) still emits the token URL.
-  const tokenUrl = buildSsoLaunchUrl(base, 'HEADER.PAYLOAD.SIG');
-  assert.ok(tokenUrl.includes('token=HEADER.PAYLOAD.SIG'));
-  assert.ok(!/[?&]code=/.test(tokenUrl), 'token launch URL must not carry a code param');
 });

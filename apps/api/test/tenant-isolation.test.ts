@@ -33,7 +33,7 @@ let alice: any;
 let bob: any;
 
 function bearer(u: any) {
-  return { authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` };
+  return { authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` };
 }
 
 before(async () => {

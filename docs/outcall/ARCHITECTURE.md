@@ -17,12 +17,14 @@ some imported modules also use Drizzle Kit migrations. Before OutCall writes
 production data, it should add versioned SQL/Drizzle migrations and a migration
 lock rather than expand ad-hoc startup DDL.
 
-Authentication is a custom HS256 OperatorOS JWT in the `operatoros_session`
-cookie or bearer header. `authenticate` verifies signature, required claims,
-the current user, active status, and `token_version`. Child-module launch uses a
-separate short-lived HS256 `MODULE_SSO_SECRET` handoff through
-`POST /api/sso/issue`; handoffs contain a one-time `jti` persisted in
-`sso_handoff_tokens`. Tenant and module access are re-evaluated server-side.
+Authentication is an OperatorOS host session in the `operatoros_session`
+cookie. `authenticate` verifies signature, required claims, the current user,
+active status, and `token_version`. Module launch uses the SSO v1 browser lane:
+an exact callback, state, nonce, PKCE S256, and a 60-second encrypted one-time
+code persisted through `sso_handoff_tokens`. The same-origin server exchange
+atomically consumes the code, re-evaluates tenant and module access, and creates
+a host-only session sealed to OutCall and the selected tenant. No identity JWT
+or session credential appears in the URL.
 
 RBAC is split between `users.platform_role` and `tenant_users.role`. Tenant
 context precedence is route parameter, `X-Tenant-Id`, then the user's current

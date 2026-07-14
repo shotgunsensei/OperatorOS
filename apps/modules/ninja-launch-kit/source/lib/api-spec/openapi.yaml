@@ -1,0 +1,1190 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: NinjaLaunchKit API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: session
+  - name: kits
+  - name: brands
+  - name: exports
+  - name: dashboard
+  - name: admin
+  - name: billing
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /session:
+    get:
+      operationId: getSession
+      tags: [session]
+      summary: Current session/user
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+  /session/login:
+    post:
+      operationId: login
+      tags: [session]
+      summary: Demo login (no password) — creates or returns user by email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+  /session/signup:
+    post:
+      operationId: signup
+      tags: [session]
+      summary: Demo signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupBody"
+      responses:
+        "200":
+          description: Signed up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+  /session/logout:
+    post:
+      operationId: logout
+      tags: [session]
+      summary: Logout
+      responses:
+        "204":
+          description: Logged out
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Dashboard overview stats
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Recent kit activity
+      responses:
+        "200":
+          description: Activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /kits:
+    get:
+      operationId: listKits
+      tags: [kits]
+      summary: List launch kits for current user
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema: { type: string }
+        - name: businessType
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Kits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LaunchKit"
+    post:
+      operationId: createKit
+      tags: [kits]
+      summary: Generate and save a new launch kit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateKitBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaunchKit"
+  /kits/preview:
+    post:
+      operationId: previewKit
+      tags: [kits]
+      summary: Generate a launch kit without saving (demo/preview)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateKitBody"
+      responses:
+        "200":
+          description: Preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaunchKit"
+  /kits/{id}:
+    get:
+      operationId: getKit
+      tags: [kits]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Kit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaunchKit"
+    patch:
+      operationId: updateKit
+      tags: [kits]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateKitBody"
+      responses:
+        "200":
+          description: Kit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaunchKit"
+    delete:
+      operationId: deleteKit
+      tags: [kits]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+  /kits/{id}/duplicate:
+    post:
+      operationId: duplicateKit
+      tags: [kits]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "201":
+          description: Duplicated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaunchKit"
+  /kits/{id}/regenerate:
+    post:
+      operationId: regenerateKit
+      tags: [kits]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Regenerated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaunchKit"
+  /kits/{id}/export:
+    get:
+      operationId: exportKit
+      tags: [exports]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [txt, markdown, json]
+      responses:
+        "200":
+          description: Exported content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportResult"
+
+  /kits/{id}/visual-promo:
+    get:
+      operationId: getVisualPromoKit
+      tags: [kits]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Visual promo kit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisualPromoKit"
+  /kits/{id}/visual-promo/regenerate:
+    post:
+      operationId: regenerateVisualPromoKit
+      tags: [kits]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Regenerated visual promo kit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisualPromoKit"
+  /kits/{id}/visual-promo/export:
+    get:
+      operationId: exportVisualPromoKit
+      tags: [exports]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [txt, markdown, json]
+      responses:
+        "200":
+          description: Exported visual promo briefs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportResult"
+
+  /brands:
+    get:
+      operationId: listBrandProfiles
+      tags: [brands]
+      responses:
+        "200":
+          description: Brand profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BrandProfile"
+    post:
+      operationId: createBrandProfile
+      tags: [brands]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBrandBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandProfile"
+  /brands/{id}:
+    patch:
+      operationId: updateBrandProfile
+      tags: [brands]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBrandBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandProfile"
+    delete:
+      operationId: deleteBrandProfile
+      tags: [brands]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /exports:
+    get:
+      operationId: listExports
+      tags: [exports]
+      summary: Recent export history
+      responses:
+        "200":
+          description: Exports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExportRecord"
+
+  /billing/plans:
+    get:
+      operationId: listPlans
+      tags: [billing]
+      responses:
+        "200":
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Plan"
+  /billing/subscribe:
+    post:
+      operationId: subscribe
+      tags: [billing]
+      summary: Demo subscribe to a plan (no real payment)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscribeBody"
+      responses:
+        "200":
+          description: Subscription state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+  /billing/subscription:
+    get:
+      operationId: getSubscription
+      tags: [billing]
+      responses:
+        "200":
+          description: Subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+  /billing/checkout:
+    post:
+      operationId: createCheckoutSession
+      tags: [billing]
+      summary: Start a Stripe Checkout session for a paid plan; falls back to demo upgrade if Stripe is not configured.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutBody"
+      responses:
+        "200":
+          description: Checkout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutResponse"
+  /billing/portal:
+    post:
+      operationId: createBillingPortal
+      tags: [billing]
+      summary: Open a Stripe billing portal session for the current customer
+      responses:
+        "200":
+          description: Portal URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalResponse"
+
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [admin]
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+  /admin/settings:
+    get:
+      operationId: getAdminSettings
+      tags: [admin]
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSettings"
+    patch:
+      operationId: updateAdminSettings
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSettings"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSettings"
+  /admin/templates:
+    get:
+      operationId: listFeaturedTemplates
+      tags: [admin]
+      responses:
+        "200":
+          description: Templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeaturedTemplate"
+    post:
+      operationId: createFeaturedTemplate
+      tags: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTemplateBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeaturedTemplate"
+  /admin/templates/{id}:
+    delete:
+      operationId: deleteFeaturedTemplate
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /templates:
+    get:
+      operationId: listLaunchTemplates
+      tags: [templates]
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema: { type: string }
+        - name: category
+          in: query
+          required: false
+          schema: { type: string }
+        - name: tier
+          in: query
+          required: false
+          schema: { type: string, enum: [free, pro, agency] }
+      responses:
+        "200":
+          description: Templates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaunchTemplateListResponse"
+  /templates/{slug}:
+    get:
+      operationId: getLaunchTemplate
+      tags: [templates]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Template detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaunchTemplateDetail"
+        "404":
+          description: Not found
+
+  /contact:
+    post:
+      operationId: submitContact
+      tags: [session]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactBody"
+      responses:
+        "200":
+          description: Received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactReceipt"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status: { type: string }
+      required: [status]
+
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        name: { type: string }
+        plan:
+          type: string
+          enum: [free, pro, agency]
+        role:
+          type: string
+          enum: [user, admin]
+        createdAt: { type: string, format: date-time }
+      required: [id, email, name, plan, role, createdAt]
+
+    Session:
+      type: object
+      properties:
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/User"
+            - type: "null"
+        demoMode: { type: boolean }
+        usage:
+          $ref: "#/components/schemas/UsageLimits"
+      required: [demoMode]
+
+    UsageLimits:
+      type: object
+      properties:
+        kitsThisMonth: { type: integer }
+        monthlyLimit:
+          type: ["integer", "null"]
+          description: Null for unlimited
+      required: [kitsThisMonth]
+
+    LoginBody:
+      type: object
+      properties:
+        email: { type: string }
+      required: [email]
+
+    SignupBody:
+      type: object
+      properties:
+        email: { type: string }
+        name: { type: string }
+      required: [email, name]
+
+    KitFormInput:
+      type: object
+      properties:
+        businessName: { type: string }
+        businessType: { type: string }
+        targetCustomer: { type: string }
+        offer: { type: string }
+        price: { type: string }
+        location: { type: string }
+        tone:
+          type: string
+          enum: [bold, friendly, professional, playful, urgent, premium]
+        painPoint: { type: string }
+        desiredAction: { type: string }
+        promoDeadline: { type: string }
+        websiteUrl: { type: string }
+        socialLinks: { type: string }
+        brandProfileId:
+          type: ["integer", "null"]
+      required: [businessName, businessType, targetCustomer, offer, tone, painPoint, desiredAction]
+
+    KitContent:
+      type: object
+      properties:
+        heroHeadline: { type: string }
+        subheadline: { type: string }
+        valueProposition: { type: string }
+        offerStack:
+          type: array
+          items: { type: string }
+        adHeadlines:
+          type: array
+          items: { type: string }
+        adDescriptions:
+          type: array
+          items: { type: string }
+        googleAds:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoogleAd"
+        socialPosts:
+          type: array
+          items: { type: string }
+        smsPromos:
+          type: array
+          items: { type: string }
+        emailSequence:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailMessage"
+        faq:
+          type: array
+          items:
+            $ref: "#/components/schemas/FaqItem"
+        ctaButtons:
+          type: array
+          items: { type: string }
+        qrFlyerCopy: { type: string }
+        launchChecklist:
+          type: array
+          items: { type: string }
+      required:
+        - heroHeadline
+        - subheadline
+        - valueProposition
+        - offerStack
+        - adHeadlines
+        - adDescriptions
+        - googleAds
+        - socialPosts
+        - smsPromos
+        - emailSequence
+        - faq
+        - ctaButtons
+        - qrFlyerCopy
+        - launchChecklist
+
+    GoogleAd:
+      type: object
+      properties:
+        headline: { type: string }
+        description: { type: string }
+      required: [headline, description]
+
+    EmailMessage:
+      type: object
+      properties:
+        day: { type: integer }
+        subject: { type: string }
+        body: { type: string }
+      required: [day, subject, body]
+
+    FaqItem:
+      type: object
+      properties:
+        question: { type: string }
+        answer: { type: string }
+      required: [question, answer]
+
+    LaunchKit:
+      type: object
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        title: { type: string }
+        input:
+          $ref: "#/components/schemas/KitFormInput"
+        content:
+          $ref: "#/components/schemas/KitContent"
+        watermarked: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, userId, title, input, content, watermarked, createdAt, updatedAt]
+
+    CreateKitBody:
+      type: object
+      properties:
+        input:
+          $ref: "#/components/schemas/KitFormInput"
+        title:
+          type: ["string", "null"]
+      required: [input]
+
+    UpdateKitBody:
+      type: object
+      properties:
+        title:
+          type: ["string", "null"]
+        content:
+          oneOf:
+            - $ref: "#/components/schemas/KitContent"
+            - type: "null"
+
+    BrandProfile:
+      type: object
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        name: { type: string }
+        primaryColor: { type: string }
+        accentColor: { type: string }
+        logoText: { type: string }
+        voice: { type: string }
+        tagline: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, userId, name, primaryColor, accentColor, logoText, voice, tagline, createdAt]
+
+    CreateBrandBody:
+      type: object
+      properties:
+        name: { type: string }
+        primaryColor: { type: string }
+        accentColor: { type: string }
+        logoText: { type: string }
+        voice: { type: string }
+        tagline: { type: string }
+      required: [name, primaryColor, accentColor, logoText, voice, tagline]
+
+    VisualBrief:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        category:
+          type: string
+          enum: [image, brand]
+        dimensions:
+          type: ["string", "null"]
+        tools:
+          type: array
+          items: { type: string }
+        brief: { type: string }
+        locked: { type: boolean }
+      required: [id, title, category, dimensions, tools, brief, locked]
+
+    FontPairing:
+      type: object
+      properties:
+        heading: { type: string }
+        body: { type: string }
+        vibe: { type: string }
+      required: [heading, body, vibe]
+
+    VisualPromoKit:
+      type: object
+      properties:
+        briefs:
+          type: array
+          items:
+            $ref: "#/components/schemas/VisualBrief"
+        brandColors:
+          type: array
+          items: { type: string }
+        fontPairings:
+          type: array
+          items:
+            $ref: "#/components/schemas/FontPairing"
+        whiteLabel: { type: boolean }
+        currentPlan:
+          type: string
+          enum: [free, pro, agency]
+        generatedAt: { type: string, format: date-time }
+      required: [briefs, brandColors, fontPairings, whiteLabel, currentPlan, generatedAt]
+
+    ExportResult:
+      type: object
+      properties:
+        filename: { type: string }
+        mimeType: { type: string }
+        content: { type: string }
+        format:
+          type: string
+          enum: [txt, markdown, json]
+      required: [filename, mimeType, content, format]
+
+    ExportRecord:
+      type: object
+      properties:
+        id: { type: integer }
+        kitId: { type: integer }
+        kitTitle: { type: string }
+        format:
+          type: string
+          enum: [txt, markdown, json]
+        createdAt: { type: string, format: date-time }
+      required: [id, kitId, kitTitle, format, createdAt]
+
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+          enum: [free, pro, agency]
+        name: { type: string }
+        priceMonthly: { type: number }
+        tagline: { type: string }
+        features:
+          type: array
+          items: { type: string }
+        ctaLabel: { type: string }
+        highlighted: { type: boolean }
+      required: [id, name, priceMonthly, tagline, features, ctaLabel, highlighted]
+
+    SubscribeBody:
+      type: object
+      properties:
+        planId:
+          type: string
+          enum: [free, pro, agency]
+      required: [planId]
+
+    Subscription:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [free, pro, agency]
+        status:
+          type: string
+          enum: [active, canceled, demo, past_due, incomplete, trialing, unpaid]
+        currentPeriodEnd: { type: string, format: date-time }
+        stripeEnabled: { type: boolean }
+        hasStripeCustomer: { type: boolean }
+        limits:
+          $ref: "#/components/schemas/PlanLimits"
+        usage:
+          $ref: "#/components/schemas/PlanUsage"
+      required: [plan, status, currentPeriodEnd, stripeEnabled, hasStripeCustomer, limits, usage]
+
+    PlanLimits:
+      type: object
+      properties:
+        monthlyKits:
+          type: ["integer", "null"]
+        brandProfiles:
+          type: ["integer", "null"]
+        exportFormats:
+          type: array
+          items:
+            type: string
+            enum: [txt, markdown, json]
+        watermarkExports: { type: boolean }
+        adVariants: { type: boolean }
+        emailSmsSequences: { type: boolean }
+        clientWorkspaces: { type: boolean }
+        whiteLabel: { type: boolean }
+        teamAccess: { type: boolean }
+        commercialUseRights: { type: boolean }
+      required: [monthlyKits, brandProfiles, exportFormats, watermarkExports, adVariants, emailSmsSequences, clientWorkspaces, whiteLabel, teamAccess, commercialUseRights]
+
+    PlanUsage:
+      type: object
+      properties:
+        kitsThisMonth: { type: integer }
+        brandProfilesUsed: { type: integer }
+      required: [kitsThisMonth, brandProfilesUsed]
+
+    CheckoutBody:
+      type: object
+      properties:
+        planId:
+          type: string
+          enum: [pro, agency]
+      required: [planId]
+
+    CheckoutResponse:
+      type: object
+      properties:
+        url:
+          type: ["string", "null"]
+        demo: { type: boolean }
+        plan:
+          type: string
+          enum: [free, pro, agency]
+      required: [demo, plan]
+
+    PortalResponse:
+      type: object
+      properties:
+        url:
+          type: ["string", "null"]
+        available: { type: boolean }
+        reason:
+          type: ["string", "null"]
+      required: [available]
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalKits: { type: integer }
+        kitsThisMonth: { type: integer }
+        monthlyLimit:
+          type: ["integer", "null"]
+        totalExports: { type: integer }
+        brandProfileCount: { type: integer }
+        plan:
+          type: string
+          enum: [free, pro, agency]
+        kitsByType:
+          type: array
+          items:
+            $ref: "#/components/schemas/KitsByType"
+      required: [totalKits, kitsThisMonth, totalExports, brandProfileCount, plan, kitsByType]
+
+    KitsByType:
+      type: object
+      properties:
+        businessType: { type: string }
+        count: { type: integer }
+      required: [businessType, count]
+
+    ActivityItem:
+      type: object
+      properties:
+        id: { type: integer }
+        kind:
+          type: string
+          enum: [created, updated, exported, duplicated]
+        kitId: { type: integer }
+        kitTitle: { type: string }
+        timestamp: { type: string, format: date-time }
+      required: [id, kind, kitId, kitTitle, timestamp]
+
+    AdminStats:
+      type: object
+      properties:
+        userCount: { type: integer }
+        kitCount: { type: integer }
+        exportCount: { type: integer }
+        proCount: { type: integer }
+        agencyCount: { type: integer }
+        freeCount: { type: integer }
+      required: [userCount, kitCount, exportCount, proCount, agencyCount, freeCount]
+
+    AdminUser:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        name: { type: string }
+        plan:
+          type: string
+          enum: [free, pro, agency]
+        kitCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+      required: [id, email, name, plan, kitCount, createdAt]
+
+    AdminSettings:
+      type: object
+      properties:
+        demoMode: { type: boolean }
+        signupOpen: { type: boolean }
+        announcement: { type: string }
+      required: [demoMode, signupOpen, announcement]
+
+    FeaturedTemplate:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        businessType: { type: string }
+        description: { type: string }
+        tone:
+          type: string
+          enum: [bold, friendly, professional, playful, urgent, premium]
+        createdAt: { type: string, format: date-time }
+      required: [id, title, businessType, description, tone, createdAt]
+
+    CreateTemplateBody:
+      type: object
+      properties:
+        title: { type: string }
+        businessType: { type: string }
+        description: { type: string }
+        tone:
+          type: string
+          enum: [bold, friendly, professional, playful, urgent, premium]
+      required: [title, businessType, description, tone]
+
+    LaunchTemplateSummary:
+      type: object
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        category: { type: string }
+        tier: { type: string, enum: [free, pro, agency] }
+        description: { type: string }
+        recommendedOffer: { type: string }
+        suggestedAudience: { type: string }
+        tonePreset: { type: string, enum: [bold, friendly, professional, playful, urgent, premium] }
+        suggestedCTA: { type: string }
+        adAngle: { type: string }
+        locked: { type: boolean }
+      required: [slug, name, category, tier, description, recommendedOffer, suggestedAudience, tonePreset, suggestedCTA, adAngle, locked]
+
+    LaunchTemplateListResponse:
+      type: object
+      properties:
+        categories:
+          type: array
+          items: { type: string }
+        templates:
+          type: array
+          items:
+            $ref: "#/components/schemas/LaunchTemplateSummary"
+        currentPlan:
+          type: string
+          enum: [free, pro, agency]
+      required: [categories, templates, currentPlan]
+
+    LaunchTemplateDetail:
+      type: object
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        category: { type: string }
+        tier: { type: string, enum: [free, pro, agency] }
+        description: { type: string }
+        recommendedOffer: { type: string }
+        suggestedAudience: { type: string }
+        tonePreset: { type: string, enum: [bold, friendly, professional, playful, urgent, premium] }
+        landingPageStructure:
+          type: array
+          items: { type: string }
+        adAngle: { type: string }
+        suggestedCTA: { type: string }
+        launchChecklist:
+          type: array
+          items: { type: string }
+        socialHooks:
+          type: array
+          items: { type: string }
+        prefill:
+          oneOf:
+            - $ref: "#/components/schemas/KitFormInput"
+            - type: "null"
+        locked: { type: boolean }
+        currentPlan:
+          type: string
+          enum: [free, pro, agency]
+      required: [slug, name, category, tier, description, recommendedOffer, suggestedAudience, tonePreset, landingPageStructure, adAngle, suggestedCTA, launchChecklist, socialHooks, locked, currentPlan]
+
+    ContactBody:
+      type: object
+      properties:
+        name: { type: string }
+        email: { type: string }
+        message: { type: string }
+      required: [name, email, message]
+
+    ContactReceipt:
+      type: object
+      properties:
+        ok: { type: boolean }
+        message: { type: string }
+      required: [ok, message]

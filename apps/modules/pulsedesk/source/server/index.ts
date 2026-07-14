@@ -66,9 +66,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  if (!process.env.MODULE_SSO_SECRET) {
+  if (!process.env.OPERATOROS_SSO_CLIENT_SECRET) {
     log(
-      "FATAL: MODULE_SSO_SECRET is not set. PulseDesk requires the OperatorOS shared secret to be configured before startup. Refusing to boot.",
+      "FATAL: OPERATOROS_SSO_CLIENT_SECRET is not set. PulseDesk requires its per-client exchange secret before startup. Refusing to boot.",
       "startup"
     );
     process.exit(1);

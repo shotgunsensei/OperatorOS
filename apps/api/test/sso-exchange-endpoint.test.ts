@@ -2,7 +2,7 @@
 //
 // The exchange endpoint is the receiver's server-to-server redemption of an
 // opaque `?code=` handoff. This suite locks its security contract:
-//   1. bearer-gated (only a caller holding MODULE_SSO_SECRET may redeem)
+//   1. bearer-gated by an independent per-client secret
 //   2. codes are integrity-protected (tampered/garbage codes are rejected)
 //   3. codes are module-bound (a code minted for module A cannot be redeemed
 //      by a receiver asserting a different aud)
@@ -12,6 +12,7 @@
 // MODULE_SSO_SECRET is captured at import time in module-routes.ts, so it must
 // be set BEFORE the dynamic import below.
 process.env.MODULE_SSO_SECRET = 'exchange-endpoint-test-secret-1234567890';
+process.env.SESSION_SECRET ||= 'exchange-endpoint-session-secret-1234567890';
 process.env.APP_ENV = process.env.APP_ENV ?? 'dev';
 
 import { test, before, after } from 'node:test';
@@ -56,9 +57,10 @@ async function mintHandoff(opts: { consumed?: boolean } = {}) {
   return jti;
 }
 
-async function exchange(payload: unknown, bearer: string | null) {
+async function exchange(payload: unknown, bearer: string | null, clientSlug = moduleSlug) {
   const headers: Record<string, string> = { 'content-type': 'application/json' };
   if (bearer !== null) headers['authorization'] = `Bearer ${bearer}`;
+  if (clientSlug) headers['x-module-slug'] = clientSlug;
   return app.inject({
     method: 'POST',
     url: '/v1/modules/sso/exchange',
@@ -75,6 +77,7 @@ before(async () => {
   const m = await createTestModule(`exch-${Date.now()}`);
   moduleId = m.id;
   moduleSlug = m.slug;
+  process.env[`OPERATOROS_SSO_CLIENT_SECRET_${moduleSlug.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}`] = SECRET;
 
   const Fastify = (await import('fastify')).default;
   const cookie = (await import('@fastify/cookie')).default;
@@ -92,20 +95,20 @@ after(async () => {
   if (userId) await cleanupUser(userId);
 });
 
-test('wrong bearer token is rejected with 401 UNAUTHORIZED', async () => {
+test('wrong bearer token is rejected with 401 CLIENT_INVALID', async () => {
   const jti = await mintHandoff();
   const code = createSsoExchangeCode({ jti, aud: moduleSlug }, SECRET);
   const res = await exchange({ code, env: 'dev' }, 'not-the-real-secret');
   assert.equal(res.statusCode, 401);
-  assert.equal(res.json().code, 'UNAUTHORIZED');
+  assert.equal(res.json().code, 'CLIENT_INVALID');
 });
 
-test('missing bearer token is rejected with 401 UNAUTHORIZED', async () => {
+test('missing bearer token is rejected with 401 CLIENT_INVALID', async () => {
   const jti = await mintHandoff();
   const code = createSsoExchangeCode({ jti, aud: moduleSlug }, SECRET);
   const res = await exchange({ code, env: 'dev' }, null);
   assert.equal(res.statusCode, 401);
-  assert.equal(res.json().code, 'UNAUTHORIZED');
+  assert.equal(res.json().code, 'CLIENT_INVALID');
 });
 
 test('tampered code is rejected with 400 INVALID_CODE', async () => {

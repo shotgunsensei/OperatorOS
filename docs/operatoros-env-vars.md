@@ -10,9 +10,12 @@ meaning in code (e.g. `STRIPE_MODE=live`).
 | ---------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`                           | yes             | Postgres connection string.                                                                                                                       |
 | `SESSION_SECRET`                         | yes             | JWT signing secret.                                                                                                                               |
-| `NEXT_PUBLIC_API_URL`                    | yes (web)       | API base for the Next.js frontend.                                                                                                                |
-| `OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL` | yes (boot once) | Email to promote to `super_admin`.                                                                                                                |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD`         | optional        | Seed admin user (defaults: `john@shotgunninjas.com`).                                                                                             |
+| `INTERNAL_API_URL`                       | yes (web prod)  | Server-only Fastify origin used by Next rewrites; use `http://localhost:5001` in the unified Replit workload.                                      |
+| `NEXT_PUBLIC_API_URL`                    | mobile/split only | Public API origin for Capacitor or an intentionally separate API deployment; unified web clients use same-origin `/api/*`.                      |
+| `OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL` | optional        | Existing user email to re-assert as `super_admin`; does not replace explicit secure seed credentials.                                             |
+| `ADMIN_EMAIL` / `ADMIN_NAME`             | optional        | Seed admin identity; email defaults to the shared root-admin constant and name defaults to `OperatorOS Admin`.                                     |
+| `ADMIN_PASSWORD`                         | conditional     | Required from the secret manager only when production must create a missing seed admin; no embedded fallback. Minimum 12 characters.              |
+| `DEMO_EMAIL` / `DEMO_PASSWORD`           | optional pair   | Optional demo seed. Creation is skipped unless an explicit `DEMO_PASSWORD` is supplied; no embedded fallback.                                      |
 | `OPERATOROS_BASE_URL`                    | recommended     | Public base URL; used by invite accept links. Falls back to `INVITE_ACCEPT_BASE_URL` → `APP_BASE_URL` → `WEB_BASE_URL` → `http://localhost:3000`. |
 
 ## Email (Resend)
@@ -55,7 +58,11 @@ back across known slug aliases:
 All other modules use the canonical `STRIPE_PRICE_ADDON_<SLUG>` form
 only. See `apps/api/src/lib/billing-service.ts:stripeAddonEnvKey`.
 
-## Module base URLs (external SSO targets)
+## Canonical module host URLs
+
+In the shared Replit runtime these are routing and launch targets for the
+attached `*.operatoros.net` subdomains. They are not separate identity or SSO
+authorities.
 
 | Var                    | Module                | Internal fallback                                                                   |
 | ---------------------- | --------------------- | ----------------------------------------------------------------------------------- |

@@ -1,5 +1,5 @@
 import { db } from '../db.js';
-import { ssoHandoffTokens } from '../schema.js';
+import { revokedSessionTokens, ssoHandoffTokens } from '../schema.js';
 import { and, lt, or, isNull } from 'drizzle-orm';
 
 const CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
@@ -32,12 +32,18 @@ export async function cleanupExpiredSsoTokens(): Promise<number> {
   return result?.rowCount ?? 0;
 }
 
+export async function cleanupExpiredSessionRevocations(): Promise<number> {
+  const result: any = await db.delete(revokedSessionTokens)
+    .where(lt(revokedSessionTokens.expiresAt, new Date()));
+  return result?.rowCount ?? 0;
+}
+
 function runOnce(label: string) {
-  cleanupExpiredSsoTokens()
-    .then(n => {
+  Promise.all([cleanupExpiredSsoTokens(), cleanupExpiredSessionRevocations()])
+    .then(([handoffs, sessions]) => {
       lastRunAt = new Date();
-      lastRunPruned = n;
-      console.log(`[sso-cleanup] ${label}: pruned ${n} stale handoff token row(s)`);
+      lastRunPruned = handoffs + sessions;
+      console.log(`[sso-cleanup] ${label}: pruned ${handoffs} stale handoff token row(s) and ${sessions} expired session revocation row(s)`);
     })
     .catch(err => {
       lastRunAt = new Date();

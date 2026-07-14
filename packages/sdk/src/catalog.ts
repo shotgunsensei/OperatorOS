@@ -5,15 +5,19 @@
  * slug list, env-key chain, and plan tiers can never drift between
  * surfaces.
  *
- * `envUrlKeys` and `stripeAddonEnvKeys` are ordered lists — the first
- * non-empty `process.env` value wins. Aliases (e.g. `BF_OS_URL` after
- * the `bf-os → brandforgeos` rename) live at the tail so legacy secrets
- * keep working until ops swaps them in the dashboard.
+ * `canonicalBaseUrl` is the immutable production launch origin for a
+ * first-party catalog module. Legacy `envUrlKeys` remain documented for
+ * deployment compatibility, but they must never override that origin.
+ * `stripeAddonEnvKeys` are ordered lists — the first non-empty
+ * `process.env` value wins. Aliases (e.g. `BF_OS_URL` after the
+ * `bf-os → brandforgeos` rename) live at the tail so legacy secrets keep
+ * working until ops swaps them in the dashboard.
  */
 
 export type ModuleCategory = 'ops' | 'support' | 'ai';
 export type ModulePlanTier = 'starter' | 'pro' | 'elite';
 export type ModuleStatus = 'live' | 'coming_soon' | 'beta';
+export type ModuleCommercialType = 'core' | 'free' | 'addon';
 
 /**
  * Task #114: OperatorOS "platform components" are the top-level grouping
@@ -37,6 +41,11 @@ export interface ModuleCatalogEntry {
   name: string;
   description: string;
   category: ModuleCategory;
+  /** Canonical billing/access classification for this ecosystem module. */
+  commercialType: ModuleCommercialType;
+  /** Exact immutable HTTPS production origin for SSO and module launch. */
+  canonicalBaseUrl: string;
+  /** @deprecated URL env vars cannot override `canonicalBaseUrl`. */
   envUrlKeys: string[];
   stripeAddonEnvKeys: string[];
   planMin: ModulePlanTier;
@@ -65,12 +74,14 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'tradeflowkit',
     name: 'TradeFlowKit',
-    description: 'Job tracker for trade & service businesses',
+    description: 'Quote-to-payment revenue and business operations control',
     category: 'ops',
+    commercialType: 'core',
+    canonicalBaseUrl: 'https://tradeflowkit.operatoros.net',
     planMin: 'starter',
     ord: 1,
     envUrlKeys: ['TRADEFLOWKIT_URL'],
-    stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_TRADEFLOWKIT'],
+    stripeAddonEnvKeys: [],
     internal: false,
     defaultStatus: 'live',
     component: 'operations-deck',
@@ -78,12 +89,14 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'torqueshed',
     name: 'TorqueShed',
-    description: 'Mechanic shop dashboard & invoicing',
+    description: 'Automotive diagnostics, repair workflow, and proof-of-knowledge community',
     category: 'ops',
+    commercialType: 'free',
+    canonicalBaseUrl: 'https://torqueshed.operatoros.net',
     planMin: 'starter',
     ord: 2,
     envUrlKeys: ['TORQUESHED_URL'],
-    stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_TORQUESHED'],
+    stripeAddonEnvKeys: [],
     internal: false,
     defaultStatus: 'live',
     component: 'diagnostic-lab',
@@ -91,12 +104,14 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'techdeck',
     name: 'TechDeck',
-    description: 'Onsite tech command center',
+    description: 'Engineer-first IT and MSP operations console',
     category: 'ops',
+    commercialType: 'core',
+    canonicalBaseUrl: 'https://techdeck.operatoros.net',
     planMin: 'starter',
     ord: 3,
     envUrlKeys: ['TECHDECK_URL'],
-    stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_TECHDECK'],
+    stripeAddonEnvKeys: [],
     internal: false,
     defaultStatus: 'live',
     component: 'diagnostic-lab',
@@ -104,12 +119,14 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'pulsedesk',
     name: 'PulseDesk',
-    description: 'Lightweight ticketing for small teams',
+    description: 'Healthcare operations coordination and department escalation',
     category: 'support',
+    commercialType: 'core',
+    canonicalBaseUrl: 'https://pulsedesk.operatoros.net',
     planMin: 'pro',
     ord: 4,
     envUrlKeys: ['PULSEDESK_URL'],
-    stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_PULSEDESK'],
+    stripeAddonEnvKeys: [],
     internal: false,
     defaultStatus: 'live',
     component: 'operations-deck',
@@ -117,14 +134,16 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'faultlinelab',
     name: 'FaultlineLab',
-    description: 'Diagnostic + RCA workflow',
+    description: 'Cross-discipline diagnostic challenges and proof-of-skill labs',
     category: 'support',
+    commercialType: 'free',
+    canonicalBaseUrl: 'https://faultlinelab.operatoros.net',
     // Task #139: free with any account — lowered from `pro` to `starter`
     // so it is no longer gated behind a higher plan tier.
     planMin: 'starter',
     ord: 5,
     envUrlKeys: ['FAULTLINELAB_URL'],
-    stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_FAULTLINELAB'],
+    stripeAddonEnvKeys: [],
     internal: false,
     defaultStatus: 'live',
     component: 'diagnostic-lab',
@@ -134,15 +153,16 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     name: 'Ninja Pool Hall',
     description: 'Companion engagement experience',
     category: 'support',
+    commercialType: 'free',
+    canonicalBaseUrl: 'https://ninja-pool-hall.operatoros.net',
     planMin: 'starter',
     ord: 6,
     envUrlKeys: ['NINJA_POOL_HALL_URL'],
     stripeAddonEnvKeys: [],
-    // Task #139: flipped live. No external URL is configured yet, so
-    // `internal: true` keeps the seed status `live` (MODULE_SEEDS treats
-    // an internal shell as a launchable surface) and points baseUrl at
-    // /apps/ninja-pool-hall instead of leaving it coming_soon.
-    internal: true,
+    // The canonical deployment now lives on the shared OperatorOS Replit
+    // runtime at ninja-pool-hall.operatoros.net. Do not fall back to the
+    // retired app-path launch target when its URL is missing.
+    internal: false,
     defaultStatus: 'live',
     component: 'operations-deck',
   },
@@ -151,8 +171,10 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     // remain as fallbacks so live secrets keep working pre-cutover.
     slug: 'brandforgeos',
     name: 'BrandForgeOS',
-    description: 'Body shop / collision OS',
+    description: 'Brand assets, campaigns, positioning, and marketing workflow command center',
     category: 'ops',
+    commercialType: 'addon',
+    canonicalBaseUrl: 'https://brandforgeos.operatoros.net',
     planMin: 'pro',
     ord: 7,
     envUrlKeys: ['BRANDFORGEOS_URL', 'BF_OS_URL'],
@@ -166,6 +188,8 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     name: 'SnapProofOS',
     description: 'Photo-based proof of work',
     category: 'ops',
+    commercialType: 'addon',
+    canonicalBaseUrl: 'https://snapproofos.operatoros.net',
     planMin: 'elite',
     ord: 8,
     envUrlKeys: ['SNAPPROOFOS_URL'],
@@ -179,6 +203,8 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     name: 'StudyForge AI',
     description: 'AI study & training partner',
     category: 'ai',
+    commercialType: 'addon',
+    canonicalBaseUrl: 'https://studyforge-ai.operatoros.net',
     planMin: 'elite',
     ord: 9,
     envUrlKeys: ['STUDYFORGE_AI_URL'],
@@ -192,6 +218,8 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     name: 'Ninja Launch Kit',
     description: 'Build & ship internal tools fast',
     category: 'ai',
+    commercialType: 'addon',
+    canonicalBaseUrl: 'https://ninjalaunchkit.operatoros.net',
     planMin: 'elite',
     ord: 10,
     envUrlKeys: ['NINJA_LAUNCH_KIT_URL'],
@@ -205,6 +233,8 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     name: 'CallCommand AI',
     description: 'AI phone agent + call automation',
     category: 'ai',
+    commercialType: 'addon',
+    canonicalBaseUrl: 'https://callcommand-ai.operatoros.net',
     planMin: 'elite',
     ord: 11,
     envUrlKeys: ['CALLCOMMAND_AI_URL'],
@@ -216,8 +246,10 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'ninjamation',
     name: 'Ninjamation',
-    description: 'Cross-app workflow automation',
+    description: 'AI-assisted cross-app workflow automation',
     category: 'ai',
+    commercialType: 'addon',
+    canonicalBaseUrl: 'https://ninjamation.operatoros.net',
     planMin: 'elite',
     ord: 12,
     envUrlKeys: ['NINJAMATION_URL'],
@@ -231,6 +263,8 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     name: 'OutCall',
     description: 'Discreet exit-assistance and personal-safety calling',
     category: 'support',
+    commercialType: 'addon',
+    canonicalBaseUrl: 'https://outcall.operatoros.net',
     planMin: 'starter',
     ord: 13,
     envUrlKeys: ['OUTCALL_URL'],
@@ -244,6 +278,29 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
 export const MODULE_CATALOG_BY_SLUG: Readonly<Record<string, ModuleCatalogEntry>> = Object.freeze(
   Object.fromEntries(MODULE_CATALOG.map((m) => [m.slug, m])),
 );
+
+/** Return the immutable production origin for a first-party catalog slug. */
+export function getCanonicalModuleBaseUrl(slug: string): string | undefined {
+  return MODULE_CATALOG_BY_SLUG[slug]?.canonicalBaseUrl;
+}
+
+/**
+ * Validate an attempted base-URL mutation. Custom/admin-created slugs have no
+ * canonical URL and keep the caller's existing HTTP(S) validation policy.
+ */
+export function getCanonicalModuleBaseUrlMismatch(
+  slug: string,
+  candidate: unknown,
+): { canonicalBaseUrl: string; receivedBaseUrl: unknown } | null {
+  const canonicalBaseUrl = getCanonicalModuleBaseUrl(slug);
+  if (!canonicalBaseUrl || candidate === undefined || candidate === canonicalBaseUrl) return null;
+  return { canonicalBaseUrl, receivedBaseUrl: candidate };
+}
+
+/** Fail-closed commercial boundary used by add-on billing surfaces. */
+export function isAddonModuleSlug(slug: string): boolean {
+  return MODULE_CATALOG_BY_SLUG[slug]?.commercialType === 'addon';
+}
 
 // ---------------------------------------------------------------------------
 // Platform component catalog (Task #114) — the top-level grouping layer

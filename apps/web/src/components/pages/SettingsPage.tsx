@@ -7,7 +7,7 @@ import { colors } from '../SaasLayout';
 import { useToast } from '../Toast';
 
 export default function SettingsPage() {
-  const { user, refresh, logout } = useAuth();
+  const { user, refresh, logout, logoutEverywhere } = useAuth();
   const { toast } = useToast();
   const [name, setName] = useState(user?.name || '');
   const [saving, setSaving] = useState(false);
@@ -28,6 +28,9 @@ export default function SettingsPage() {
   const [deleteMessage, setDeleteMessage] = useState('');
   const [deleteSaving, setDeleteSaving] = useState(false);
 
+  const [globalLogoutMessage, setGlobalLogoutMessage] = useState('');
+  const [globalLogoutSaving, setGlobalLogoutSaving] = useState(false);
+
   const handleSaveProfile = async () => {
     setSaving(true); setMessage('');
     try {
@@ -44,8 +47,7 @@ export default function SettingsPage() {
     if (newPassword.length < 8) { setPwMessage('Password must be at least 8 characters'); return; }
     setPwSaving(true); setPwMessage('');
     try {
-      const data = await authApi.changePassword(currentPassword, newPassword);
-      if (data.token) localStorage.setItem('token', data.token);
+      await authApi.changePassword(currentPassword, newPassword);
       await refresh();
       toast('Password changed successfully');
       setPwMessage('');
@@ -60,8 +62,7 @@ export default function SettingsPage() {
     if (!emailPassword) { setEmailMessage('Password is required'); return; }
     setEmailSaving(true); setEmailMessage('');
     try {
-      const data = await authApi.changeEmail(newEmail.trim(), emailPassword);
-      if (data.token) localStorage.setItem('token', data.token);
+      await authApi.changeEmail(newEmail.trim(), emailPassword);
       await refresh();
       toast('Email updated successfully');
       setEmailMessage('');
@@ -81,6 +82,20 @@ export default function SettingsPage() {
     } catch (err: any) {
       setDeleteMessage(err.error || 'Failed to delete account');
       setDeleteSaving(false);
+    }
+  };
+
+  const handleGlobalLogout = async () => {
+    setGlobalLogoutSaving(true);
+    setGlobalLogoutMessage('');
+    try {
+      await logoutEverywhere();
+      if (typeof window !== 'undefined') {
+        window.location.assign('/signed-out?signed_out=global');
+      }
+    } catch (err: any) {
+      setGlobalLogoutMessage(err?.error || 'Could not revoke every OperatorOS session.');
+      setGlobalLogoutSaving(false);
     }
   };
 
@@ -167,6 +182,26 @@ export default function SettingsPage() {
           <div>Status: <span style={{ color: colors.accentGreen }}>{user?.status}</span></div>
           <div>Member since: {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}</div>
         </div>
+      </div>
+
+      <div style={cardStyle}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>Active Sessions</h3>
+        <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 16px', lineHeight: 1.6 }}>
+          Sign out everywhere invalidates this account&apos;s OperatorOS and module sessions. Other tabs and subdomains will be denied on their next authenticated request.
+        </p>
+        {globalLogoutMessage && (
+          <div role="alert" style={{ fontSize: 13, color: colors.accentRed, marginBottom: 12 }}>
+            {globalLogoutMessage}
+          </div>
+        )}
+        <button
+          data-testid="button-logout-everywhere"
+          onClick={handleGlobalLogout}
+          disabled={globalLogoutSaving}
+          style={{ ...btnStyle, background: colors.accentRed }}
+        >
+          {globalLogoutSaving ? 'Revoking sessions...' : 'Sign out everywhere'}
+        </button>
       </div>
 
       {user?.role !== 'admin' && (

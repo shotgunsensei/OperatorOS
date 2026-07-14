@@ -60,7 +60,7 @@ after(async () => {
   for (const u of [superAdmin, owner]) if (u) await cleanupUser(u.id);
 });
 
-const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` });
+const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` });
 
 async function createModule(slugSuffix: string, body: any = {}) {
   const slug = `mcrud-${slugSuffix}-${uniqueId("m").replace(/_/g,"-")}`;

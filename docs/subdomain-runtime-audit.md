@@ -2,11 +2,15 @@
 
 ## Summary
 
-OperatorOS serves every subdomain (`operatoros.net`, `app`, `auth`, `api`, and
-each module host such as `techdeck`, `pulsedesk`, `tradeflowkit`) from a
-**single Replit deployment** using host-based routing. Internally the web app
-binds to Replit's required port (e.g. `5000`); Replit's proxy terminates TLS and
-forwards the real public host in `x-forwarded-host` / `x-forwarded-proto`.
+OperatorOS serves the four exact registered platform hosts and thirteen exact
+attached module hosts from a **single Replit deployment** using host-based
+routing. Twelve module clients are enabled; OutCall is attached/reserved but
+planned/disabled. Internally the web app binds to Replit's required public port
+(for example `5000`); Replit's proxy terminates TLS and forwards the real
+public host in `x-forwarded-host` / `x-forwarded-proto`.
+
+The default `operator-os.replit.app` alias is deployment transport only. It is
+not a registered callback, CORS origin, or absolute auth return target.
 
 This audit fixed a class of bugs where browser-facing URLs were built from the
 inbound request URL — which behind the proxy still carries the internal `:5000`
@@ -32,8 +36,10 @@ production if the env override was unset.
 the Fastify API and the Next.js edge middleware:
 
 - `normalizeHost(host)` — lowercase, strip scheme/port/trailing-dot.
-- `isProductionHost(host)` — `operatoros.net` or any `*.operatoros.net`.
-- `isLocalHost(host)` / `isSameSiteHost(host)` — dev/preview + same-site checks.
+- `isProductionHost(host)` — exact registered root/app/auth/api or module host;
+  an arbitrary `*.operatoros.net` sibling is rejected.
+- `isLocalHost(host)` / `isSameSiteHost(host)` — loopback plus exact-host
+  checks. Public Replit preview suffixes are not trusted redirect targets.
 - `resolveHostRole(host)` — `root | app | auth | api | module | unknown`.
 - `getPublicOrigin({host, forwardedHost, forwardedProto})` — the core fix:
   recognized production hosts collapse to `https://<host>` (no port); local/dev
@@ -45,9 +51,10 @@ the Fastify API and the Next.js edge middleware:
 `apps/api/src/lib/public-url.ts` re-exports those and adds the Node/env-aware
 pieces: `getRequestPublicOrigin(request)`, `getRequestHostRole(request)`,
 `isProductionEnv()`, `resolvePlatformBaseUrl()` (root domain), and
-`resolveAppBaseUrl()` (console/`app` domain). When an explicit base URL env var
-is set it is honored; otherwise production falls back to the clean HTTPS
-platform domains and dev falls back to localhost.
+`resolveAppBaseUrl()` (console/`app` domain). `OPERATOROS_BASE_URL` is the only
+supported production platform override; legacy `APP_URL` must remain unset.
+Otherwise production falls back to the clean HTTPS platform domains and
+development falls back to loopback.
 
 ## Files changed
 
@@ -66,9 +73,11 @@ platform domains and dev falls back to localhost.
   URLs use `resolveAppBaseUrl()`.
 - `apps/api/src/lib/email-service.ts` — invite-accept URL fallback is
   production-aware.
-- `apps/api/src/index.ts` — CORS restricted to an allowlist (prod: only
-  `*.operatoros.net`; dev: localhost/preview too); the SSE endpoint reflects an
-  allowlisted origin instead of emitting `Access-Control-Allow-Origin: *`.
+- `apps/api/src/index.ts` — production CORS is restricted to exact registered
+  platform/module origins plus explicitly configured exact HTTPS origins;
+  sharing the `operatoros.net` suffix is insufficient. Development permits
+  loopback. The SSE endpoint reflects an allowlisted origin instead of emitting
+  `Access-Control-Allow-Origin: *`.
 - `apps/api/src/routes/diagnostics-routes.ts` — new non-secret diagnostics
   endpoint.
 
@@ -76,25 +85,30 @@ platform domains and dev falls back to localhost.
 
 | Context | Host role known? | Result |
 | --- | --- | --- |
-| Production (`*.operatoros.net`) | yes | `https://<host>` — never a port, never `http://` |
+| Production (exact registered host) | yes | `https://<host>` — never a port, never `http://` |
 | Local dev (`localhost:5000`) | n/a | protocol + port preserved (`http://localhost:5000`) |
-| Replit preview (`*.replit.dev`) | n/a | protocol + port preserved |
+| Unregistered Replit preview | no | protocol + port may be preserved for rendering, but it is not accepted as an auth callback or absolute return target |
 
 ## Cookie / CORS / subdomain rules
 
-- **Session cookie** (`packages/auth/index.ts`, unchanged — verified correct):
-  production is `HttpOnly; Secure; SameSite=Lax; Domain=.operatoros.net; Path=/`
-  so the session is shared across every subdomain; dev omits `Domain` and
-  `Secure` so localhost keeps working.
-- **CORS**: production allows only same-site `*.operatoros.net` origins with
-  credentials (no wildcard); dev additionally allows localhost/preview. A
+- **Session cookie** (`packages/auth/index.ts`): production is
+  `HttpOnly; Secure; SameSite=Lax; Path=/` with no `Domain` attribute. Each
+  host establishes its own session through the bound `/sso` exchange; no
+  subdomain receives ambient access from a parent-domain cookie. Root/app/auth
+  sessions are platform-scoped without tenant/module claims; module sessions
+  bind one exact module and tenant.
+- **CORS/origin**: response CORS recognizes registered OperatorOS origins, but
+  a state-changing browser request also requires its `Origin` host to equal
+  the public request host. Sibling-subdomain mutations fail with
+  `ORIGIN_HOST_MISMATCH` before a handler runs, so modules call their own
+  same-origin `/api/*` proxy. Dev additionally allows loopback; a
   missing `Origin` (same-origin or non-browser callers like Stripe webhooks) is
-  always permitted.
-- **Module hosts**: the registry maps `techdeck` / `pulsedesk` /
-  `tradeflowkit` (and every ecosystem module) to their module by host; `auth`
-  and `app` are classified as platform surfaces, not modules; ports are
-  normalized away; unknown `*.operatoros.net` hosts fall through to the
-  controlled unknown-host page.
+  permitted.
+- **Module hosts**: the registry maps each of the thirteen exact attached hosts
+  to its module; `auth` and `app` are platform surfaces, not modules. OutCall
+  resolves only to a controlled planned/disabled state. Ports are normalized
+  away; an unknown `*.operatoros.net` request that reaches the deployment falls
+  through to the controlled unknown-host page without becoming trusted.
 
 ## Diagnostics endpoint
 
@@ -111,8 +125,8 @@ a non-secret snapshot of how the server interprets the request:
   "isProductionHost": true,
   "isKnownSubdomain": true,
   "publicOrigin": "https://auth.operatoros.net",
-  "cookieDomainMode": "parent-domain",
-  "cookieDomain": ".operatoros.net"
+  "cookieDomainMode": "host-only",
+  "cookieDomain": null
 }
 ```
 
@@ -120,13 +134,13 @@ It returns no secrets, env values, or session data.
 
 ## Remaining risks
 
-- **`OPERATOROS_BASE_URL` consistency.** Child module apps verify the SSO token
-  `iss` against their own configured issuer. If they were previously validating
-  the accidental `http://localhost:5000` value, they must now expect
-  `https://operatoros.net` (or the shared explicit `OPERATOROS_BASE_URL`). Set
-  `OPERATOROS_BASE_URL` identically on the hub and every child module.
-- **DNS / custom-domain records** for each subdomain must exist and point at the
-  deployment (out of scope for code — see `docs/replit-subdomain-checklist.md`).
+- **`OPERATOROS_BASE_URL` consistency.** The unified API validates and emits
+  the canonical issuer. Production must use `https://operatoros.net` (or the
+  explicit equivalent) and must never emit the internal localhost API URL.
+- **Release routing verification.** The custom domains are already attached;
+  remaining work is to deploy this unified release and confirm Replit preserves
+  the exact public host/HTTPS scheme for each route. This is not a DNS migration
+  (see `docs/replit-subdomain-checklist.md`).
 - The `app` vs `root` split for billing return URLs assumes the authenticated
   console lives on `app.operatoros.net`. If billing screens move, revisit
   `resolveAppBaseUrl()` usage.

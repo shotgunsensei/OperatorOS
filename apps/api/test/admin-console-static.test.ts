@@ -50,7 +50,7 @@ test('admin API route surface is server-side protected and delegates entitlement
   assert.match(rootAuth, /user\?\.platformRole === 'super_admin' \|\| isRootSuperAdmin\(user\)/);
 });
 
-test('admin API client uses /api/admin proxy URLs and forwards auth, tenant, credentials, and JSON bodies', async () => {
+test('admin API client uses /api/admin proxy URLs and forwards host session, tenant, and JSON bodies', async () => {
   assert.equal(normalizeAdminPath('/v1/admin/tenants'), '/admin/tenants');
   assert.equal(normalizeAdminPath('/api/admin/tenants'), '/admin/tenants');
   assert.equal(normalizeAdminPath('/admin/tenants'), '/admin/tenants');
@@ -63,7 +63,6 @@ test('admin API client uses /api/admin proxy URLs and forwards auth, tenant, cre
   (globalThis as any).window = {
     localStorage: {
       getItem(key: string) {
-        if (key === 'token') return 'jwt-fixture';
         if (key === 'activeTenantId') return 'tenant-fixture';
         return null;
       },
@@ -87,7 +86,7 @@ test('admin API client uses /api/admin proxy URLs and forwards auth, tenant, cre
     assert.equal(calls[0].init?.body, JSON.stringify({ moduleId: 'techdeck', allowAllMembers: true }));
 
     const headers = calls[0].init?.headers as Headers;
-    assert.equal(headers.get('Authorization'), 'Bearer jwt-fixture');
+    assert.equal(headers.get('Authorization'), null);
     assert.equal(headers.get('X-Tenant-Id'), 'tenant-fixture');
     assert.equal(headers.get('Content-Type'), 'application/json');
   } finally {

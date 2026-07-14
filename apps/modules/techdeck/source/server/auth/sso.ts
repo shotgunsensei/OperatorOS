@@ -98,21 +98,19 @@ function normalizeSlug(raw: string | undefined, name: string): string {
 
 /**
  * Eagerly validate SSO configuration at module load.
- * - If MODULE_SSO_SECRET is set but invalid → throw (server fails to boot, fails closed).
- * - If MODULE_SSO_SECRET is unset in production → throw.
- * - If MODULE_SSO_SECRET is unset outside production → disable /sso with a warning.
+ * - OPERATOROS_SSO_CLIENT_SECRET is a per-client exchange credential.
  * - If MODULE_SSO_DISABLED=true in production → throw.
  * - OPERATOROS_SERVICE_TOKEN is required when SSO is enabled (>= 32 chars).
  *   It authenticates the server-to-server entitlement sync endpoint.
  * - CHILD_APP_MODULE_KEY must be "techdeck".
  */
 function loadConfigAtStartup(): SsoConfig | null {
-  const secret = process.env.MODULE_SSO_SECRET;
+  const secret = process.env.OPERATOROS_SSO_CLIENT_SECRET;
   const disabled = process.env.MODULE_SSO_DISABLED === "true";
   if (!secret) {
     if (isProd()) {
       throw new Error(
-        "[sso] MODULE_SSO_SECRET is required in production. " +
+        "[sso] OPERATOROS_SSO_CLIENT_SECRET is required in production. " +
         "OperatorOS SSO cannot be disabled in production.",
       );
     }
@@ -122,7 +120,7 @@ function loadConfigAtStartup(): SsoConfig | null {
       );
     } else {
       logger.warn(
-        "[sso] MODULE_SSO_SECRET is not set outside production — OperatorOS SSO is disabled. /sso will return 503.",
+        "[sso] OPERATOROS_SSO_CLIENT_SECRET is not set outside production — OperatorOS SSO is disabled. /sso will return 503.",
       );
     }
     return null;
@@ -132,7 +130,7 @@ function loadConfigAtStartup(): SsoConfig | null {
   }
   if (secret.length < MIN_SECRET_LEN) {
     throw new Error(
-      `[sso] MODULE_SSO_SECRET must be at least ${MIN_SECRET_LEN} characters (got ${secret.length}).`,
+      `[sso] OPERATOROS_SSO_CLIENT_SECRET must be at least ${MIN_SECRET_LEN} characters (got ${secret.length}).`,
     );
   }
   const baseUrl = normalizeAbsoluteUrl(process.env.OPERATOROS_BASE_URL, "OPERATOROS_BASE_URL");
@@ -552,29 +550,67 @@ export function registerSsoRoutes(
       return reject(req, res, 503, "sso_not_configured", "OperatorOS SSO is not configured on this instance", cfg);
     }
 
-    const token = typeof req.query.token === "string" ? req.query.token : "";
-    if (!token) {
-      logSsoOutcome(req, "reject", "missing_token");
-      return reject(req, res, 400, "missing_token", "Missing token query parameter", cfg);
+    const code = typeof req.query.code === "string" ? req.query.code : "";
+    if (!code) {
+      logSsoOutcome(req, "reject", "missing_code");
+      return reject(req, res, 400, "missing_code", "Missing authorization code", cfg);
     }
-    if (token.length > 4096) {
+    if (code.length > 4096) {
       logSsoOutcome(req, "reject", "bad_request");
-      return reject(req, res, 400, "bad_request", "Token too large", cfg);
+      return reject(req, res, 400, "bad_request", "Authorization code too large", cfg);
     }
 
-    const verified = verifyToken(token, cfg);
-    if (!verified.ok) {
-      logSsoOutcome(req, "reject", verified.code);
-      return reject(req, res, verified.status, verified.code, verified.message, cfg);
+    let verified: { ok: true; claims: SsoClaims };
+    try {
+      const exchangeUrl = `${cfg.apiUrl}/v1/modules/sso/exchange`;
+      const exchange = await fetch(exchangeUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${cfg.secret}`,
+          "X-Module-Slug": cfg.moduleKey,
+        },
+        body: JSON.stringify({ code, aud: cfg.audience, env: cfg.env }),
+      });
+      const payload = await exchange.json() as any;
+      if (!exchange.ok || !payload?.user?.id || !payload?.user?.email) {
+        const failureCode = payload?.code === "TOKEN_REPLAYED" ? "code_replayed" : "exchange_failed";
+        logSsoOutcome(req, "reject", failureCode);
+        return reject(req, res, exchange.status >= 500 ? 502 : 401, failureCode, "Authorization code exchange failed", cfg);
+      }
+      const target = Array.isArray(payload.modules)
+        ? payload.modules.find((entry: any) => entry?.slug === cfg.moduleKey)
+        : null;
+      const now = Math.floor(Date.now() / 1000);
+      verified = { ok: true, claims: {
+        iss: payload.issuer || cfg.expectedIssuer,
+        aud: cfg.audience,
+        env: payload.env || cfg.env,
+        sub: payload.user.id,
+        user_id: payload.user.id,
+        email: payload.user.email,
+        name: payload.user.name,
+        role: payload.user.role || payload.user.platformRole,
+        module_slug: cfg.moduleKey,
+        plan_slug: payload.planSlug || payload.subscription?.planSlug,
+        organization_id: payload.operatoros_tenant_id || payload.tenant?.id,
+        jti: payload.jti,
+        iat: now,
+        exp: now + 60,
+        target_module_key: cfg.moduleKey,
+        target_module_enabled: target?.enabled !== false,
+        target_module_access_level: target?.accessLevel,
+        target_module_features: target?.features,
+        module_role: target?.moduleRole || target?.accessLevel,
+        tenant_role: payload.tenant?.role,
+        subscription_status: payload.subscription?.status,
+      }};
+    } catch (err) {
+      logSsoOutcome(req, "reject", "sso_exchange_unavailable", { err: errMessage(err) });
+      return reject(req, res, 502, "sso_exchange_unavailable", "OperatorOS exchange is unavailable", cfg);
     }
 
     const claimLang = typeof verified.claims.lang === "string" ? verified.claims.lang : undefined;
-
-    const consumed = await consumeToken(cfg, verified.claims.jti, req.requestId);
-    if (!consumed.ok) {
-      logSsoOutcome(req, "reject", consumed.code, { jti: verified.claims.jti, sub: verified.claims.sub });
-      return reject(req, res, consumed.status, consumed.code, consumed.message, cfg, claimLang);
-    }
 
     const localRole = mapOperatorOsRole(verified.claims.module_role, verified.claims.tenant_role);
     if (!localRole) {

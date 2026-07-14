@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../AuthProvider';
 import { colors } from '../SaasLayout';
 
@@ -19,7 +20,7 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
   const [email, setEmail] = useState('');
   useEffect(() => {
     try {
-      const parked = localStorage.getItem(PENDING_INVITE_EMAIL_KEY);
+      const parked = sessionStorage.getItem(PENDING_INVITE_EMAIL_KEY);
       if (parked) setEmail(parked);
     } catch {}
   }, []);
@@ -71,7 +72,12 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
 
         {submitted ? (
           <div data-testid="register-success" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>✓</div>
+            <CheckCircle2
+              size={40}
+              color={colors.accentGreen}
+              aria-hidden="true"
+              style={{ display: 'block', margin: '0 auto 16px' }}
+            />
             <p style={{ color: colors.text, fontSize: 14, marginBottom: 24 }}>
               If this email is new, your account has been created. Please sign in to continue.
             </p>

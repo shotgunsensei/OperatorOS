@@ -14,16 +14,17 @@
  *                         no per-user grant for the invitee
  *      A third module lives in OTHER tenant; it must never leak.
  *   2. Owner POST /v1/tenants/:id/invites for invitee@... .
- *   3. Brand-new user POST /v1/auth/register with that email.
- *   4. New user POST /v1/invites/:token/accept .
- *   5. New user POST /v1/auth/login (cookie + token round-trip).
+ *   3. Brand-new user POST /v1/auth/register with that email; the endpoint
+ *      returns the same generic 202 response for new and existing accounts.
+ *   4. New user POST /v1/auth/login and receives a host-only session cookie.
+ *   5. New user POST /v1/invites/:token/accept using that cookie.
  *   6. Owner POST .../users/:userId/module-access for grantedMod (level=user).
- *   7. New user GET /v1/me/modules with the cookie from step 5 → asserts
+ *   7. New user GET /v1/me/modules with the cookie from step 4 → asserts
  *      exactly {grantedMod} appears (withheldMod absent, otherTenantMod absent).
  */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
   users, tenants, tenantUsers, tenantInvites,
@@ -65,10 +66,10 @@ before(async () => {
   await db.insert(tenantModules).values([
     // Granted module: enabled, NOT auto-shared. Owner will explicitly grant
     // the invitee access in step 6.
-    { tenantId: tenantA.id, moduleId: grantedMod.id,  status: 'enabled', allowAllMembers: false },
+    { tenantId: tenantA.id, moduleId: grantedMod.id,  status: 'enabled', source: 'admin', allowAllMembers: false },
     // Withheld module: enabled in the tenant but caller has no grant +
     // allowAllMembers=false → must not appear on launchpad.
-    { tenantId: tenantA.id, moduleId: withheldMod.id, status: 'enabled', allowAllMembers: false },
+    { tenantId: tenantA.id, moduleId: withheldMod.id, status: 'enabled', source: 'admin', allowAllMembers: false },
   ]);
 
   // Tenant B — a sibling tenant the invitee never joins. Its enabled
@@ -82,7 +83,7 @@ before(async () => {
   }).returning();
   await db.insert(tenantModules).values({
     tenantId: tenantB.id, moduleId: otherTenantMod.id,
-    status: 'enabled', allowAllMembers: true,
+    status: 'enabled', source: 'admin', allowAllMembers: true,
   });
 
   // Stand up a Fastify app with all the routes the journey touches.
@@ -118,10 +119,10 @@ after(async () => {
 });
 
 const ownerBearer = () => ({
-  authorization: `Bearer ${signToken({ userId: owner.id, email: owner.email, role: owner.role })}`,
+  authorization: `Bearer ${signToken({ userId: owner.id, email: owner.email, role: owner.role, sessionType: 'platform' })}`,
 });
 
-test('owner→invite→register→accept→login→launchpad shows only granted module', async () => {
+test('owner→invite→register→login→accept→launchpad shows only granted module', async () => {
   inviteeEmail = `${uniqueId('e2e-invitee')}@test.local`;
 
   // 1. Owner creates an invite for the future member.
@@ -139,33 +140,39 @@ test('owner→invite→register→accept→login→launchpad shows only granted 
     method: 'POST', url: '/v1/auth/register',
     payload: { email: inviteeEmail, password: 'CorrectHorseBattery9!', name: 'New Member' },
   });
-  assert.equal(registerRes.statusCode, 200, `register: ${registerRes.body}`);
+  assert.equal(registerRes.statusCode, 202, `register: ${registerRes.body}`);
   const registerBody = registerRes.json();
-  inviteeUserId = registerBody.user.id;
-  const registerToken: string = registerBody.token;
-  assert.ok(inviteeUserId && registerToken);
+  assert.deepEqual(registerBody, { ok: true }, 'registration must not disclose whether the account already existed');
+  assert.ok(!('user' in registerBody), 'registration must not disclose the registered user');
+  assert.ok(!('token' in registerBody), 'registration must not issue a browser bearer token');
 
-  // 3. New user accepts the invite using the JWT issued at registration.
-  const acceptRes = await app.inject({
-    method: 'POST', url: `/v1/invites/${inviteToken}/accept`,
-    headers: { authorization: `Bearer ${registerToken}` },
-  });
-  assert.equal(acceptRes.statusCode, 200, `accept: ${acceptRes.body}`);
-  assert.equal(acceptRes.json().tenantId, tenantA.id);
-  // Membership row exists with role=member.
-  const [mem] = await db.select().from(tenantUsers).where(eq(tenantUsers.userId, inviteeUserId));
-  assert.equal(mem.role, 'member');
-
-  // 4. New user logs in via /v1/auth/login. Use the resulting auth cookie
-  //    on the launchpad call so we exercise the full cookie path that the
-  //    web client uses, not just bearer-token shortcuts.
+  // 3. New user logs in via /v1/auth/login. The generic registration response
+  //    intentionally carries neither user identity nor credentials, so login
+  //    is the first authenticated step in the journey.
   const loginRes = await app.inject({
     method: 'POST', url: '/v1/auth/login',
     payload: { email: inviteeEmail, password: 'CorrectHorseBattery9!' },
   });
   assert.equal(loginRes.statusCode, 200, `login: ${loginRes.body}`);
-  const loginCookie = loginRes.cookies.find((c: any) => c.name === 'token');
-  assert.ok(loginCookie, 'login must set a token cookie');
+  const loginBody = loginRes.json();
+  inviteeUserId = loginBody.user.id;
+  assert.ok(inviteeUserId, 'login must return the authenticated user id');
+  const loginCookie = loginRes.cookies.find((c: any) => c.name === 'operatoros_session');
+  assert.ok(loginCookie, 'login must set the host-only OperatorOS session cookie');
+
+  // 4. New user accepts the invite with the host-only session cookie.
+  const acceptRes = await app.inject({
+    method: 'POST', url: `/v1/invites/${inviteToken}/accept`,
+    cookies: { operatoros_session: loginCookie.value },
+  });
+  assert.equal(acceptRes.statusCode, 200, `accept: ${acceptRes.body}`);
+  assert.equal(acceptRes.json().tenantId, tenantA.id);
+  // Membership row exists with role=member.
+  const [mem] = await db.select().from(tenantUsers).where(and(
+    eq(tenantUsers.tenantId, tenantA.id),
+    eq(tenantUsers.userId, inviteeUserId),
+  ));
+  assert.equal(mem.role, 'member');
 
   // 5. Owner explicitly grants the invitee access to grantedMod.
   const grantRes = await app.inject({
@@ -179,7 +186,7 @@ test('owner→invite→register→accept→login→launchpad shows only granted 
   // 6. New user fetches their launchpad with the login cookie.
   const launchRes = await app.inject({
     method: 'GET', url: '/v1/me/modules',
-    cookies: { token: loginCookie.value },
+    cookies: { operatoros_session: loginCookie.value },
   });
   assert.equal(launchRes.statusCode, 200, `launchpad: ${launchRes.body}`);
   const slugs: string[] = launchRes.json().modules.map((m: any) => m.slug);

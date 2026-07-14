@@ -13,20 +13,32 @@ import assert from 'node:assert/strict';
 import {
   normalizeIncomingTenantRole,
   normalizeIncomingModuleAccessLevel,
+  tenantRoleToEffective,
   tenantRoleToPublic,
+  moduleAccessLevelToEffective,
   moduleAccessLevelToPublic,
 } from '../src/lib/role-aliases.js';
 
-test('viewer (tenant role) → member on write', () => {
-  assert.equal(normalizeIncomingTenantRole('viewer'), 'member');
+test('viewer (tenant role) remains a distinct read-only grant on write', () => {
+  assert.equal(normalizeIncomingTenantRole('viewer'), 'viewer');
 });
 
-test('viewer (module access) → "user" on write (NEVER "none")', () => {
-  // Critical: "viewer" must be a read-only grant, not a silent
-  // revocation. Mapping it to "none" would drop the row entirely.
+test('stored tenant aliases normalize to bounded effective roles', () => {
+  assert.equal(tenantRoleToEffective('owner'), 'owner');
+  assert.equal(tenantRoleToEffective('tenant_admin'), 'admin');
+  assert.equal(tenantRoleToEffective('billing_admin'), 'admin');
+  assert.equal(tenantRoleToEffective('user'), 'member');
+  assert.equal(tenantRoleToEffective('viewer'), 'viewer');
+  assert.equal(tenantRoleToEffective('unexpected'), 'viewer');
+});
+
+test('viewer (module access) remains a distinct read-only grant on write', () => {
+  // Critical: collapsing "viewer" to "user" silently grants mutation
+  // authority, while mapping it to "none" silently revokes the grant.
   const v = normalizeIncomingModuleAccessLevel('viewer');
-  assert.equal(v, 'user');
+  assert.equal(v, 'viewer');
   assert.notEqual(v, 'none');
+  assert.notEqual(v, 'user');
 });
 
 test('module_admin → manager on write', () => {
@@ -35,6 +47,13 @@ test('module_admin → manager on write', () => {
 
 test('module_user → user on write', () => {
   assert.equal(normalizeIncomingModuleAccessLevel('module_user'), 'user');
+});
+
+test('stored module aliases normalize without elevating viewer or unknown values', () => {
+  assert.equal(moduleAccessLevelToEffective('module_admin'), 'manager');
+  assert.equal(moduleAccessLevelToEffective('module_user'), 'user');
+  assert.equal(moduleAccessLevelToEffective('viewer'), 'viewer');
+  assert.equal(moduleAccessLevelToEffective('unexpected'), 'none');
 });
 
 test('legacy internal access levels still accepted on write', () => {

@@ -1,14 +1,27 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { db } from '../db.js';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import {
   moduleCallLogs,
   moduleStudySessions,
   moduleAutomations,
   moduleScaffolds,
+  moduleWorkflowItems,
+  techdeckTicketSequences,
+  techdeckTickets,
+  tradeflowkitLeads,
+  tradeflowkitCustomers,
+  tradeflowkitJobs,
+  tradeflowkitQuotes,
+  tradeflowkitInvoices,
   activityFeed,
 } from '../schema.js';
-import { requireTenantAdmin, requireTenantMember, requireTenantModuleAccess } from '../lib/tenant-auth.js';
+import {
+  requireTenantAdmin,
+  requireTenantMember,
+  requireTenantModuleAccess,
+  requireTenantModuleWriteAccess,
+} from '../lib/tenant-auth.js';
 import {
   isTelephonyConfigured,
   getTelephonyInfo,
@@ -20,6 +33,31 @@ import {
 } from '../lib/telephony.js';
 import { getAiProvider } from '../lib/ai-provider.js';
 import { checkRateLimit } from '../lib/rate-limiter.js';
+import {
+  parseTradeFlowKitLeadCreate,
+  parseTradeFlowKitLeadListQuery,
+  parseTradeFlowKitLeadPatch,
+  TradeFlowKitLeadValidationError,
+} from '../lib/tradeflowkit-leads.js';
+import {
+  parseCustomerCreate,
+  parseInvoiceFromQuote,
+  parseJobCreate,
+  parsePayment,
+  parseQuoteCreate,
+  parseTransition,
+  TradeFlowKitRevenueValidationError,
+} from '../lib/tradeflowkit-revenue.js';
+import {
+  parseTechDeckTicketCreate,
+  parseTechDeckTicketListQuery,
+  parseTechDeckTicketPatch,
+  parseTechDeckTicketStatus,
+  TechDeckTicketValidationError,
+} from '../lib/techdeck-tickets.js';
+import { getTenantMembership, resolveTenantModuleAccess } from '../lib/tenant-entitlements.js';
+import { registerPulseDeskRoutes } from './pulsedesk-routes.js';
+import { registerNinjaPoolHallRoutes } from './ninja-pool-hall-routes.js';
 
 // Task #91 — per-tenant + per-user budget for outbound calls. Each placed
 // call burns real Twilio minutes, so we cap dial attempts to a small
@@ -38,20 +76,121 @@ const callcommandGuards = [requireTenantMember, requireTenantModuleAccess('callc
 const studyforgeGuards = [requireTenantMember, requireTenantModuleAccess('studyforge-ai')];
 const ninjamationGuards = [requireTenantMember, requireTenantModuleAccess('ninjamation')];
 const launchkitGuards = [requireTenantMember, requireTenantModuleAccess('ninja-launch-kit')];
+const tradeflowkitGuards = [requireTenantMember, requireTenantModuleAccess('tradeflowkit')];
+const techdeckGuards = [requireTenantMember, requireTenantModuleAccess('techdeck')];
+const callcommandWriteGuards = [...callcommandGuards, requireTenantModuleWriteAccess];
+const studyforgeWriteGuards = [...studyforgeGuards, requireTenantModuleWriteAccess];
+const ninjamationWriteGuards = [...ninjamationGuards, requireTenantModuleWriteAccess];
+const launchkitWriteGuards = [...launchkitGuards, requireTenantModuleWriteAccess];
+const tradeflowkitWriteGuards = [...tradeflowkitGuards, requireTenantModuleWriteAccess];
+const techdeckWriteGuards = [...techdeckGuards, requireTenantModuleWriteAccess];
 
 // ---------------------------------------------------------------------------
-// Task #72 — backend for the four polished module shells.
+// Shared-runtime backends for the polished module shells.
 //
 // Routes live under `/v1/modules/{slug}/*` and are gated by
-// `requireTenantMember` so every read/write is scoped to the active
-// tenant exposed via `request.tenantContext`. Tenant-level entitlement
-// for the module is already enforced by the parent web page via
-// `GET /v1/modules/:slug` before the shell is mounted, so these handlers
-// only need to confirm the caller is a member of the tenant they claim.
+// both tenant membership and the named module entitlement. Every read/write
+// is scoped to the active tenant exposed via `request.tenantContext`.
 // ---------------------------------------------------------------------------
 
 const PERSONAS = new Set(['receptionist', 'qualifier', 'collector']);
 const STACKS = new Set(['next-fastify', 'fastapi-react', 'express-htmx']);
+
+const WORKFLOW_MODULES = {
+  torqueshed: {
+    slug: 'torqueshed', itemType: 'diagnostic_case', initialStatus: 'open',
+    statuses: new Set(['open', 'testing', 'repairing', 'verified', 'closed']),
+  },
+  faultlinelab: {
+    slug: 'faultlinelab', itemType: 'diagnostic_lab', initialStatus: 'open',
+    statuses: new Set(['open', 'investigating', 'hypothesis', 'validated', 'closed']),
+  },
+  brandforgeos: {
+    slug: 'brandforgeos', itemType: 'campaign', initialStatus: 'draft',
+    statuses: new Set(['draft', 'planning', 'producing', 'review', 'published']),
+  },
+  snapproofos: {
+    slug: 'snapproofos', itemType: 'evidence_record', initialStatus: 'draft',
+    statuses: new Set(['draft', 'captured', 'review', 'verified', 'rejected']),
+  },
+} as const;
+
+type WorkflowModuleSpec = (typeof WORKFLOW_MODULES)[keyof typeof WORKFLOW_MODULES];
+
+type WorkflowItemInput = {
+  title?: string;
+  summary?: string | null;
+  status?: string;
+  data?: Record<string, string | number | boolean | null>;
+  expectedVersion?: number;
+};
+
+function parseWorkflowItemInput(
+  raw: unknown,
+  spec: WorkflowModuleSpec,
+  mode: 'create' | 'patch',
+): WorkflowItemInput {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error('WORKFLOW_BODY_INVALID');
+  }
+  const body = raw as Record<string, unknown>;
+  const result: WorkflowItemInput = {};
+
+  if (mode === 'create' || body.title !== undefined) {
+    if (typeof body.title !== 'string' || body.title.trim().length < 2 || body.title.trim().length > 160) {
+      throw new Error('WORKFLOW_TITLE_INVALID');
+    }
+    result.title = body.title.trim();
+  }
+  if (body.summary !== undefined) {
+    if (body.summary !== null && (typeof body.summary !== 'string' || body.summary.trim().length > 2_000)) {
+      throw new Error('WORKFLOW_SUMMARY_INVALID');
+    }
+    result.summary = body.summary === null ? null : (body.summary as string).trim() || null;
+  }
+  if (body.status !== undefined) {
+    if (typeof body.status !== 'string' || !spec.statuses.has(body.status as never)) {
+      throw new Error('WORKFLOW_STATUS_INVALID');
+    }
+    result.status = body.status;
+  } else if (mode === 'create') {
+    result.status = spec.initialStatus;
+  }
+  if (body.data !== undefined) {
+    if (!body.data || typeof body.data !== 'object' || Array.isArray(body.data)) {
+      throw new Error('WORKFLOW_DATA_INVALID');
+    }
+    const entries = Object.entries(body.data as Record<string, unknown>);
+    if (entries.length > 30 || JSON.stringify(body.data).length > 16_384) {
+      throw new Error('WORKFLOW_DATA_INVALID');
+    }
+    const data: Record<string, string | number | boolean | null> = {};
+    for (const [key, value] of entries) {
+      if (!/^[a-z][a-zA-Z0-9_]{0,49}$/.test(key) || !['string', 'number', 'boolean'].includes(typeof value) && value !== null) {
+        throw new Error('WORKFLOW_DATA_INVALID');
+      }
+      data[key] = typeof value === 'string' ? value.trim().slice(0, 2_000) : value as number | boolean | null;
+    }
+    result.data = data;
+  } else if (mode === 'create') {
+    result.data = {};
+  }
+  if (mode === 'patch') {
+    if (!Number.isInteger(body.expectedVersion) || (body.expectedVersion as number) < 1) {
+      throw new Error('WORKFLOW_VERSION_REQUIRED');
+    }
+    result.expectedVersion = body.expectedVersion as number;
+    if (!result.title && result.summary === undefined && !result.status && !result.data) {
+      throw new Error('WORKFLOW_PATCH_EMPTY');
+    }
+  }
+  return result;
+}
+
+function sendWorkflowValidation(reply: FastifyReply, err: unknown) {
+  const code = err instanceof Error ? err.message : 'WORKFLOW_BODY_INVALID';
+  return reply.code(400).send({ error: 'Invalid workflow record', code });
+}
 
 function normalisePhone(raw: string): string | null {
   if (typeof raw !== 'string') return null;
@@ -72,6 +211,67 @@ function personaSummary(persona: string, callerName: string): string {
     default:
       return `Reminded ${callerName} of the outstanding balance and scheduled a follow-up.`;
   }
+}
+
+function handleTechDeckValidation(reply: FastifyReply, err: unknown): boolean {
+  if (!(err instanceof TechDeckTicketValidationError)) return false;
+  reply.code(400).send({ error: err.message, code: err.code, field: err.field });
+  return true;
+}
+
+/**
+ * Assignment is a separate authority decision from ticket write access.
+ * Members may claim an unassigned ticket or release their own assignment;
+ * tenant admins/owners may assign another eligible technician. The generic
+ * INVALID_ASSIGNEE response deliberately hides whether a foreign user exists.
+ */
+async function validateTechDeckAssignee(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  assignedToUserId: string | null,
+  currentAssignedToUserId?: string | null,
+): Promise<boolean> {
+  const user = (request as any).user as { id: string };
+  const ctx = (request as any).tenantContext as {
+    tenantId: string;
+    role: 'owner' | 'admin' | 'member';
+    viaPlatformRole: boolean;
+  };
+  const mayAssignOthers = ctx.viaPlatformRole || ctx.role === 'owner' || ctx.role === 'admin';
+
+  if (!mayAssignOthers) {
+    const assigningAnotherUser = assignedToUserId !== null && assignedToUserId !== user.id;
+    const claimingAnotherUserTicket = currentAssignedToUserId !== undefined
+      && assignedToUserId === user.id
+      && currentAssignedToUserId !== null
+      && currentAssignedToUserId !== user.id;
+    const releasingAnotherUser = currentAssignedToUserId !== undefined
+      && assignedToUserId === null
+      && currentAssignedToUserId !== null
+      && currentAssignedToUserId !== user.id;
+    if (assigningAnotherUser || claimingAnotherUserTicket || releasingAnotherUser) {
+      reply.code(403).send({
+        error: "Tenant admin role is required to change another technician's assignment",
+        code: 'TICKET_ASSIGNMENT_FORBIDDEN',
+      });
+      return false;
+    }
+  }
+
+  if (assignedToUserId === null) return true;
+
+  const membership = await getTenantMembership(assignedToUserId, ctx.tenantId);
+  const access = membership
+    ? await resolveTenantModuleAccess(assignedToUserId, ctx.tenantId, 'techdeck')
+    : null;
+  if (!membership || !access?.hasAccess) {
+    reply.code(400).send({
+      error: 'Assignee must be an active TechDeck user in this tenant',
+      code: 'INVALID_ASSIGNEE',
+    });
+    return false;
+  }
+  return true;
 }
 
 type StudyCard = { id: string; question: string; answer: string };
@@ -273,6 +473,883 @@ async function finalizeTranscript(
 }
 
 export async function registerModuleShellRoutes(app: FastifyInstance) {
+  await registerPulseDeskRoutes(app);
+  await registerNinjaPoolHallRoutes(app);
+
+  // ===== TradeFlowKit: manual lead tracking ===============================
+  //
+  // This is the first real TradeFlowKit workflow migrated into the shared
+  // runtime. It intentionally stops at manual lead CRUD/status tracking:
+  // public intake, messaging providers, lead conversion, customer/job writes,
+  // local login, and local subscriptions remain dormant in the source
+  // snapshot until their own reviewed migration slices.
+  app.get(
+    '/v1/modules/tradeflowkit/leads',
+    { preHandler: [...tradeflowkitGuards] },
+    async (request, reply) => {
+      let query;
+      try {
+        query = parseTradeFlowKitLeadListQuery(request.query);
+      } catch (err) {
+        if (err instanceof TradeFlowKitLeadValidationError) {
+          return reply.code(400).send({ error: err.message, code: err.code, field: err.field });
+        }
+        throw err;
+      }
+
+      const ctx = (request as any).tenantContext;
+      const conditions = [
+        eq(tradeflowkitLeads.tenantId, ctx.tenantId),
+        isNull(tradeflowkitLeads.deletedAt),
+      ];
+      if (query.status) conditions.push(eq(tradeflowkitLeads.status, query.status));
+      if (query.search) {
+        const pattern = `%${query.search}%`;
+        conditions.push(or(
+          ilike(tradeflowkitLeads.name, pattern),
+          ilike(tradeflowkitLeads.phone, pattern),
+          ilike(tradeflowkitLeads.email, pattern),
+          ilike(tradeflowkitLeads.serviceType, pattern),
+        )!);
+      }
+
+      const leads = await db
+        .select()
+        .from(tradeflowkitLeads)
+        .where(and(...conditions))
+        .orderBy(desc(tradeflowkitLeads.createdAt))
+        .limit(100);
+      return { leads };
+    },
+  );
+
+  app.get(
+    '/v1/modules/tradeflowkit/leads/:id',
+    { preHandler: [...tradeflowkitGuards] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const ctx = (request as any).tenantContext;
+      const [lead] = await db
+        .select()
+        .from(tradeflowkitLeads)
+        .where(and(
+          eq(tradeflowkitLeads.id, id),
+          eq(tradeflowkitLeads.tenantId, ctx.tenantId),
+          isNull(tradeflowkitLeads.deletedAt),
+        ))
+        .limit(1);
+      if (!lead) return reply.code(404).send({ error: 'Lead not found', code: 'LEAD_NOT_FOUND' });
+      return lead;
+    },
+  );
+
+  app.post(
+    '/v1/modules/tradeflowkit/leads',
+    { preHandler: [...tradeflowkitWriteGuards] },
+    async (request, reply) => {
+      let input;
+      try {
+        input = parseTradeFlowKitLeadCreate(request.body);
+      } catch (err) {
+        if (err instanceof TradeFlowKitLeadValidationError) {
+          return reply.code(400).send({ error: err.message, code: err.code, field: err.field });
+        }
+        throw err;
+      }
+
+      const user = (request as any).user;
+      const ctx = (request as any).tenantContext;
+      const lead = await db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(tradeflowkitLeads)
+          .values({
+            ...input,
+            tenantId: ctx.tenantId,
+            createdByUserId: user.id,
+            source: 'manual',
+            status: 'new',
+          })
+          .returning();
+        await tx.insert(activityFeed).values({
+          userId: user.id,
+          tenantId: ctx.tenantId,
+          action: 'created',
+          entityType: 'tradeflowkit_lead',
+          entityId: created.id,
+          metadata: { source: created.source, status: created.status },
+        });
+        return created;
+      });
+      return reply.code(201).send(lead);
+    },
+  );
+
+  app.patch(
+    '/v1/modules/tradeflowkit/leads/:id',
+    { preHandler: [...tradeflowkitWriteGuards] },
+    async (request, reply) => {
+      let patch;
+      try {
+        patch = parseTradeFlowKitLeadPatch(request.body);
+      } catch (err) {
+        if (err instanceof TradeFlowKitLeadValidationError) {
+          return reply.code(400).send({ error: err.message, code: err.code, field: err.field });
+        }
+        throw err;
+      }
+
+      const { id } = request.params as { id: string };
+      const user = (request as any).user;
+      const ctx = (request as any).tenantContext;
+      const [before] = await db
+        .select()
+        .from(tradeflowkitLeads)
+        .where(and(
+          eq(tradeflowkitLeads.id, id),
+          eq(tradeflowkitLeads.tenantId, ctx.tenantId),
+          isNull(tradeflowkitLeads.deletedAt),
+        ))
+        .limit(1);
+      if (!before) return reply.code(404).send({ error: 'Lead not found', code: 'LEAD_NOT_FOUND' });
+
+      const statusChanged = patch.status !== undefined && patch.status !== before.status;
+      const contactStarted = patch.status !== undefined
+        && ['contacted', 'qualified', 'follow_up'].includes(patch.status)
+        && !before.lastContactedAt;
+      const changedFields = Object.keys(patch);
+
+      const lead = await db.transaction(async (tx) => {
+        const [updated] = await tx
+          .update(tradeflowkitLeads)
+          .set({
+            ...patch,
+            ...(contactStarted ? { lastContactedAt: new Date() } : {}),
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(tradeflowkitLeads.id, id),
+            eq(tradeflowkitLeads.tenantId, ctx.tenantId),
+            isNull(tradeflowkitLeads.deletedAt),
+          ))
+          .returning();
+        if (!updated) return null;
+        await tx.insert(activityFeed).values({
+          userId: user.id,
+          tenantId: ctx.tenantId,
+          action: statusChanged ? 'status_changed' : 'updated',
+          entityType: 'tradeflowkit_lead',
+          entityId: updated.id,
+          metadata: {
+            changedFields,
+            ...(statusChanged ? { fromStatus: before.status, toStatus: updated.status } : {}),
+          },
+        });
+        return updated;
+      });
+      if (!lead) return reply.code(404).send({ error: 'Lead not found', code: 'LEAD_NOT_FOUND' });
+      return lead;
+    },
+  );
+
+  app.delete(
+    '/v1/modules/tradeflowkit/leads/:id',
+    { preHandler: [...tradeflowkitWriteGuards] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const user = (request as any).user;
+      const ctx = (request as any).tenantContext;
+      const lead = await db.transaction(async (tx) => {
+        const [deleted] = await tx
+          .update(tradeflowkitLeads)
+          .set({ deletedAt: new Date(), updatedAt: new Date() })
+          .where(and(
+            eq(tradeflowkitLeads.id, id),
+            eq(tradeflowkitLeads.tenantId, ctx.tenantId),
+            isNull(tradeflowkitLeads.deletedAt),
+          ))
+          .returning();
+        if (!deleted) return null;
+        await tx.insert(activityFeed).values({
+          userId: user.id,
+          tenantId: ctx.tenantId,
+          action: 'deleted',
+          entityType: 'tradeflowkit_lead',
+          entityId: deleted.id,
+          metadata: { status: deleted.status },
+        });
+        return deleted;
+      });
+      if (!lead) return reply.code(404).send({ error: 'Lead not found', code: 'LEAD_NOT_FOUND' });
+      return { ok: true };
+    },
+  );
+
+  // ===== TradeFlowKit: customer -> job -> quote -> invoice -> payment =====
+  const revenueValidation = (reply: FastifyReply, err: unknown) => {
+    if (!(err instanceof TradeFlowKitRevenueValidationError)) return false;
+    reply.code(400).send({ error: 'Invalid revenue workflow input', code: err.code, field: err.field });
+    return true;
+  };
+
+  app.get('/v1/modules/tradeflowkit/revenue', { preHandler: [...tradeflowkitGuards] }, async (request) => {
+    const ctx = (request as any).tenantContext;
+    const tenant = eq(tradeflowkitCustomers.tenantId, ctx.tenantId);
+    const [customers, jobs, quotes, invoices] = await Promise.all([
+      db.select().from(tradeflowkitCustomers).where(and(tenant, isNull(tradeflowkitCustomers.deletedAt))).orderBy(desc(tradeflowkitCustomers.updatedAt)).limit(100),
+      db.select().from(tradeflowkitJobs).where(and(eq(tradeflowkitJobs.tenantId, ctx.tenantId), isNull(tradeflowkitJobs.deletedAt))).orderBy(desc(tradeflowkitJobs.updatedAt)).limit(100),
+      db.select().from(tradeflowkitQuotes).where(and(eq(tradeflowkitQuotes.tenantId, ctx.tenantId), isNull(tradeflowkitQuotes.deletedAt))).orderBy(desc(tradeflowkitQuotes.updatedAt)).limit(100),
+      db.select().from(tradeflowkitInvoices).where(and(eq(tradeflowkitInvoices.tenantId, ctx.tenantId), isNull(tradeflowkitInvoices.deletedAt))).orderBy(desc(tradeflowkitInvoices.updatedAt)).limit(100),
+    ]);
+    return { customers, jobs, quotes, invoices };
+  });
+
+  app.post('/v1/modules/tradeflowkit/customers', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    let input;
+    try { input = parseCustomerCreate(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const [customer] = await db.insert(tradeflowkitCustomers).values({
+      ...input, tenantId: ctx.tenantId, createdByUserId: user.id,
+    }).returning();
+    await db.insert(activityFeed).values({
+      tenantId: ctx.tenantId, userId: user.id, action: 'created',
+      entityType: 'tradeflowkit_customer', entityId: customer.id, metadata: { name: customer.name },
+    });
+    return reply.code(201).send(customer);
+  });
+
+  app.post('/v1/modules/tradeflowkit/jobs', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    let input;
+    try { input = parseJobCreate(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const [customer] = await db.select({ id: tradeflowkitCustomers.id }).from(tradeflowkitCustomers).where(and(
+      eq(tradeflowkitCustomers.id, input.customerId), eq(tradeflowkitCustomers.tenantId, ctx.tenantId), isNull(tradeflowkitCustomers.deletedAt),
+    )).limit(1);
+    if (!customer) return reply.code(404).send({ error: 'Customer not found', code: 'CUSTOMER_NOT_FOUND' });
+    if (input.scheduledStart && input.scheduledEnd && input.scheduledEnd <= input.scheduledStart) {
+      return reply.code(400).send({ error: 'Scheduled end must follow start', code: 'SCHEDULE_INVALID' });
+    }
+    const [job] = await db.insert(tradeflowkitJobs).values({
+      ...input, tenantId: ctx.tenantId, createdByUserId: user.id,
+    }).returning();
+    await db.insert(activityFeed).values({
+      tenantId: ctx.tenantId, userId: user.id, action: 'created',
+      entityType: 'tradeflowkit_job', entityId: job.id, metadata: { customerId: job.customerId, status: job.status },
+    });
+    return reply.code(201).send(job);
+  });
+
+  app.post('/v1/modules/tradeflowkit/quotes', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    let input;
+    try { input = parseQuoteCreate(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const [customer] = await db.select({ id: tradeflowkitCustomers.id }).from(tradeflowkitCustomers).where(and(
+      eq(tradeflowkitCustomers.id, input.customerId), eq(tradeflowkitCustomers.tenantId, ctx.tenantId), isNull(tradeflowkitCustomers.deletedAt),
+    )).limit(1);
+    if (!customer) return reply.code(404).send({ error: 'Customer not found', code: 'CUSTOMER_NOT_FOUND' });
+    if (input.jobId) {
+      const [job] = await db.select({ id: tradeflowkitJobs.id }).from(tradeflowkitJobs).where(and(
+        eq(tradeflowkitJobs.id, input.jobId), eq(tradeflowkitJobs.tenantId, ctx.tenantId),
+        eq(tradeflowkitJobs.customerId, input.customerId), isNull(tradeflowkitJobs.deletedAt),
+      )).limit(1);
+      if (!job) return reply.code(404).send({ error: 'Job not found for customer', code: 'JOB_NOT_FOUND' });
+    }
+    const [quote] = await db.insert(tradeflowkitQuotes).values({
+      ...input, tenantId: ctx.tenantId, createdByUserId: user.id,
+    }).returning();
+    await db.insert(activityFeed).values({
+      tenantId: ctx.tenantId, userId: user.id, action: 'created',
+      entityType: 'tradeflowkit_quote', entityId: quote.id,
+      metadata: { customerId: quote.customerId, jobId: quote.jobId, totalCents: quote.totalCents },
+    });
+    return reply.code(201).send(quote);
+  });
+
+  app.post('/v1/modules/tradeflowkit/quotes/:id/transition', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    let input;
+    try { input = parseTransition(request.body, ['sent', 'accepted', 'declined']); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const { id } = request.params as { id: string };
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const [current] = await db.select().from(tradeflowkitQuotes).where(and(
+      eq(tradeflowkitQuotes.id, id), eq(tradeflowkitQuotes.tenantId, ctx.tenantId), isNull(tradeflowkitQuotes.deletedAt),
+    )).limit(1);
+    if (!current) return reply.code(404).send({ error: 'Quote not found', code: 'QUOTE_NOT_FOUND' });
+    const allowed = current.status === 'draft' ? ['sent'] : current.status === 'sent' ? ['accepted', 'declined'] : [];
+    if (!allowed.includes(input.status)) return reply.code(409).send({ error: 'Invalid quote transition', code: 'QUOTE_TRANSITION_INVALID' });
+    const [updated] = await db.transaction(async (tx) => {
+      const rows = await tx.update(tradeflowkitQuotes).set({
+        status: input.status,
+        ...(input.status === 'sent' ? { sentAt: new Date() } : {}),
+        ...(input.status === 'accepted' ? { acceptedAt: new Date() } : {}),
+        version: sql`${tradeflowkitQuotes.version} + 1`, updatedAt: new Date(),
+      }).where(and(
+        eq(tradeflowkitQuotes.id, id), eq(tradeflowkitQuotes.tenantId, ctx.tenantId),
+        eq(tradeflowkitQuotes.version, input.expectedVersion), eq(tradeflowkitQuotes.status, current.status), isNull(tradeflowkitQuotes.deletedAt),
+      )).returning();
+      if (!rows[0]) return [];
+      if (input.status === 'accepted' && current.jobId) {
+        await tx.update(tradeflowkitJobs).set({ status: 'quoted', updatedAt: new Date(), version: sql`${tradeflowkitJobs.version} + 1` }).where(and(
+          eq(tradeflowkitJobs.id, current.jobId), eq(tradeflowkitJobs.tenantId, ctx.tenantId), isNull(tradeflowkitJobs.deletedAt),
+        ));
+      }
+      await tx.insert(activityFeed).values({ tenantId: ctx.tenantId, userId: user.id, action: 'status_changed', entityType: 'tradeflowkit_quote', entityId: id, metadata: { fromStatus: current.status, toStatus: input.status } });
+      return rows;
+    });
+    if (!updated) return reply.code(409).send({ error: 'Quote changed; reload and retry', code: 'QUOTE_VERSION_CONFLICT' });
+    return updated;
+  });
+
+  app.post('/v1/modules/tradeflowkit/quotes/:id/invoice', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    let input;
+    try { input = parseInvoiceFromQuote(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const { id } = request.params as { id: string };
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const [quote] = await db.select().from(tradeflowkitQuotes).where(and(
+      eq(tradeflowkitQuotes.id, id), eq(tradeflowkitQuotes.tenantId, ctx.tenantId), isNull(tradeflowkitQuotes.deletedAt),
+    )).limit(1);
+    if (!quote) return reply.code(404).send({ error: 'Quote not found', code: 'QUOTE_NOT_FOUND' });
+    if (quote.status !== 'accepted') return reply.code(409).send({ error: 'Only accepted quotes can become invoices', code: 'QUOTE_NOT_ACCEPTED' });
+    if (quote.version !== input.expectedVersion) return reply.code(409).send({ error: 'Quote changed; reload and retry', code: 'QUOTE_VERSION_CONFLICT' });
+    const [existing] = await db.select().from(tradeflowkitInvoices).where(and(
+      eq(tradeflowkitInvoices.tenantId, ctx.tenantId), eq(tradeflowkitInvoices.sourceQuoteId, id), isNull(tradeflowkitInvoices.deletedAt),
+    )).limit(1);
+    if (existing) return reply.code(200).send(existing);
+    const invoice = await db.transaction(async (tx) => {
+      const [created] = await tx.insert(tradeflowkitInvoices).values({
+        tenantId: ctx.tenantId, customerId: quote.customerId, jobId: quote.jobId,
+        sourceQuoteId: quote.id, createdByUserId: user.id, lineItems: quote.lineItems,
+        subtotalCents: quote.subtotalCents, taxRateBps: quote.taxRateBps,
+        taxCents: quote.taxCents, discountCents: quote.discountCents,
+        totalCents: quote.totalCents, notes: input.notes ?? quote.notes, dueDate: input.dueDate,
+      }).returning();
+      if (quote.jobId) await tx.update(tradeflowkitJobs).set({ status: 'invoiced', updatedAt: new Date(), version: sql`${tradeflowkitJobs.version} + 1` }).where(and(eq(tradeflowkitJobs.id, quote.jobId), eq(tradeflowkitJobs.tenantId, ctx.tenantId)));
+      await tx.insert(activityFeed).values({ tenantId: ctx.tenantId, userId: user.id, action: 'created_from_quote', entityType: 'tradeflowkit_invoice', entityId: created.id, metadata: { quoteId: quote.id, totalCents: created.totalCents } });
+      return created;
+    });
+    return reply.code(201).send(invoice);
+  });
+
+  app.post('/v1/modules/tradeflowkit/invoices/:id/transition', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    let input;
+    try { input = parseTransition(request.body, ['sent', 'processing', 'void']); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const { id } = request.params as { id: string };
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const [current] = await db.select().from(tradeflowkitInvoices).where(and(eq(tradeflowkitInvoices.id, id), eq(tradeflowkitInvoices.tenantId, ctx.tenantId), isNull(tradeflowkitInvoices.deletedAt))).limit(1);
+    if (!current) return reply.code(404).send({ error: 'Invoice not found', code: 'INVOICE_NOT_FOUND' });
+    const allowed = current.status === 'draft' ? ['sent', 'void'] : current.status === 'sent' ? ['processing', 'void'] : current.status === 'processing' ? ['void'] : [];
+    if (!allowed.includes(input.status)) return reply.code(409).send({ error: 'Invalid invoice transition', code: 'INVOICE_TRANSITION_INVALID' });
+    const [updated] = await db.update(tradeflowkitInvoices).set({
+      status: input.status, ...(input.status === 'sent' ? { sentAt: new Date() } : {}),
+      version: sql`${tradeflowkitInvoices.version} + 1`, updatedAt: new Date(),
+    }).where(and(eq(tradeflowkitInvoices.id, id), eq(tradeflowkitInvoices.tenantId, ctx.tenantId), eq(tradeflowkitInvoices.version, input.expectedVersion), eq(tradeflowkitInvoices.status, current.status), isNull(tradeflowkitInvoices.deletedAt))).returning();
+    if (!updated) return reply.code(409).send({ error: 'Invoice changed; reload and retry', code: 'INVOICE_VERSION_CONFLICT' });
+    await db.insert(activityFeed).values({ tenantId: ctx.tenantId, userId: user.id, action: 'status_changed', entityType: 'tradeflowkit_invoice', entityId: id, metadata: { fromStatus: current.status, toStatus: updated.status } });
+    return updated;
+  });
+
+  app.post('/v1/modules/tradeflowkit/invoices/:id/pay', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    let input;
+    try { input = parsePayment(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const { id } = request.params as { id: string };
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const [current] = await db.select().from(tradeflowkitInvoices).where(and(eq(tradeflowkitInvoices.id, id), eq(tradeflowkitInvoices.tenantId, ctx.tenantId), isNull(tradeflowkitInvoices.deletedAt))).limit(1);
+    if (!current) return reply.code(404).send({ error: 'Invoice not found', code: 'INVOICE_NOT_FOUND' });
+    if (!['sent', 'processing'].includes(current.status)) return reply.code(409).send({ error: 'Invoice must be sent before payment', code: 'INVOICE_NOT_PAYABLE' });
+    const [paid] = await db.transaction(async (tx) => {
+      const rows = await tx.update(tradeflowkitInvoices).set({
+        status: 'paid', paidAt: new Date(), paymentMethod: input.paymentMethod,
+        paymentReference: input.paymentReference, paymentNotes: input.paymentNotes,
+        version: sql`${tradeflowkitInvoices.version} + 1`, updatedAt: new Date(),
+      }).where(and(eq(tradeflowkitInvoices.id, id), eq(tradeflowkitInvoices.tenantId, ctx.tenantId), eq(tradeflowkitInvoices.version, input.expectedVersion), eq(tradeflowkitInvoices.status, current.status), isNull(tradeflowkitInvoices.deletedAt))).returning();
+      if (!rows[0]) return [];
+      if (current.jobId) await tx.update(tradeflowkitJobs).set({ status: 'paid', updatedAt: new Date(), version: sql`${tradeflowkitJobs.version} + 1` }).where(and(eq(tradeflowkitJobs.id, current.jobId), eq(tradeflowkitJobs.tenantId, ctx.tenantId)));
+      await tx.insert(activityFeed).values({ tenantId: ctx.tenantId, userId: user.id, action: 'payment_recorded', entityType: 'tradeflowkit_invoice', entityId: id, metadata: { amountCents: current.totalCents, method: input.paymentMethod } });
+      return rows;
+    });
+    if (!paid) return reply.code(409).send({ error: 'Invoice changed; reload and retry', code: 'INVOICE_VERSION_CONFLICT' });
+    return paid;
+  });
+
+  // ===== TechDeck: technician ticket queue ===============================
+  //
+  // This is the first shared-runtime TechDeck workflow. OperatorOS owns
+  // identity, tenant membership, entitlement, and assignment authority.
+  // The imported standalone client/site/asset/comment/SLA subsystems remain
+  // dormant until they can be migrated as separately reviewed verticals.
+  app.get(
+    '/v1/modules/techdeck/tickets',
+    { preHandler: [...techdeckGuards] },
+    async (request, reply) => {
+      let query;
+      try {
+        query = parseTechDeckTicketListQuery(request.query);
+      } catch (err) {
+        if (handleTechDeckValidation(reply, err)) return;
+        throw err;
+      }
+
+      const user = (request as any).user as { id: string };
+      const ctx = (request as any).tenantContext as {
+        tenantId: string;
+        role: 'owner' | 'admin' | 'member';
+        viaPlatformRole: boolean;
+      };
+      const conditions = [
+        eq(techdeckTickets.tenantId, ctx.tenantId),
+        isNull(techdeckTickets.deletedAt),
+      ];
+      if (query.status) conditions.push(eq(techdeckTickets.status, query.status));
+      if (query.priority) conditions.push(eq(techdeckTickets.priority, query.priority));
+      if (query.assignment === 'mine') {
+        conditions.push(eq(techdeckTickets.assignedToUserId, user.id));
+      } else if (query.assignment === 'unassigned') {
+        conditions.push(isNull(techdeckTickets.assignedToUserId));
+      }
+      if (query.search) {
+        const pattern = `%${query.search}%`;
+        conditions.push(or(
+          ilike(techdeckTickets.title, pattern),
+          ilike(techdeckTickets.description, pattern),
+        )!);
+      }
+
+      const tickets = await db
+        .select()
+        .from(techdeckTickets)
+        .where(and(...conditions))
+        .orderBy(desc(techdeckTickets.createdAt))
+        .limit(100);
+      return { tickets };
+    },
+  );
+
+  app.get(
+    '/v1/modules/techdeck/tickets/:id',
+    { preHandler: [...techdeckGuards] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const ctx = (request as any).tenantContext as { tenantId: string };
+      const [ticket] = await db
+        .select()
+        .from(techdeckTickets)
+        .where(and(
+          eq(techdeckTickets.id, id),
+          eq(techdeckTickets.tenantId, ctx.tenantId),
+          isNull(techdeckTickets.deletedAt),
+        ))
+        .limit(1);
+      if (!ticket) {
+        return reply.code(404).send({ error: 'Ticket not found', code: 'TICKET_NOT_FOUND' });
+      }
+      return ticket;
+    },
+  );
+
+  app.post(
+    '/v1/modules/techdeck/tickets',
+    { preHandler: [...techdeckWriteGuards] },
+    async (request, reply) => {
+      let input;
+      try {
+        input = parseTechDeckTicketCreate(request.body);
+      } catch (err) {
+        if (handleTechDeckValidation(reply, err)) return;
+        throw err;
+      }
+
+      if (!await validateTechDeckAssignee(request, reply, input.assignedToUserId)) return;
+
+      const user = (request as any).user as { id: string };
+      const ctx = (request as any).tenantContext as { tenantId: string };
+      const ticket = await db.transaction(async (tx) => {
+        // One row per tenant makes ticket-number allocation atomic without
+        // relying on the standalone app's race-prone MAX(number) + 1 query.
+        const [allocation] = await tx
+          .insert(techdeckTicketSequences)
+          .values({ tenantId: ctx.tenantId, lastNumber: 1 })
+          .onConflictDoUpdate({
+            target: techdeckTicketSequences.tenantId,
+            set: {
+              lastNumber: sql`${techdeckTicketSequences.lastNumber} + 1`,
+              updatedAt: new Date(),
+            },
+          })
+          .returning({ number: techdeckTicketSequences.lastNumber });
+
+        const [created] = await tx
+          .insert(techdeckTickets)
+          .values({
+            ...input,
+            tenantId: ctx.tenantId,
+            number: allocation.number,
+            createdByUserId: user.id,
+            status: 'open',
+          })
+          .returning();
+        await tx.insert(activityFeed).values({
+          userId: user.id,
+          tenantId: ctx.tenantId,
+          action: 'created',
+          entityType: 'techdeck_ticket',
+          entityId: created.id,
+          metadata: {
+            number: created.number,
+            priority: created.priority,
+            status: created.status,
+            assigned: created.assignedToUserId !== null,
+          },
+        });
+        return created;
+      });
+      return reply.code(201).send(ticket);
+    },
+  );
+
+  app.patch(
+    '/v1/modules/techdeck/tickets/:id',
+    { preHandler: [...techdeckWriteGuards] },
+    async (request, reply) => {
+      let patch;
+      try {
+        patch = parseTechDeckTicketPatch(request.body);
+      } catch (err) {
+        if (handleTechDeckValidation(reply, err)) return;
+        throw err;
+      }
+
+      const { id } = request.params as { id: string };
+      const user = (request as any).user as { id: string };
+      const ctx = (request as any).tenantContext as {
+        tenantId: string;
+        role: 'owner' | 'admin' | 'member';
+        viaPlatformRole: boolean;
+      };
+      const [before] = await db
+        .select()
+        .from(techdeckTickets)
+        .where(and(
+          eq(techdeckTickets.id, id),
+          eq(techdeckTickets.tenantId, ctx.tenantId),
+          isNull(techdeckTickets.deletedAt),
+        ))
+        .limit(1);
+      if (!before) {
+        return reply.code(404).send({ error: 'Ticket not found', code: 'TICKET_NOT_FOUND' });
+      }
+
+      if ('assignedToUserId' in patch && !await validateTechDeckAssignee(
+        request,
+        reply,
+        patch.assignedToUserId!,
+        before.assignedToUserId,
+      )) return;
+
+      const changedFields = Object.keys(patch);
+      const requireAssignmentSnapshot = 'assignedToUserId' in patch
+        && ctx.role === 'member'
+        && !ctx.viaPlatformRole;
+      const updateConditions = [
+        eq(techdeckTickets.id, id),
+        eq(techdeckTickets.tenantId, ctx.tenantId),
+        isNull(techdeckTickets.deletedAt),
+      ];
+      if (requireAssignmentSnapshot) {
+        updateConditions.push(before.assignedToUserId
+          ? eq(techdeckTickets.assignedToUserId, before.assignedToUserId)
+          : isNull(techdeckTickets.assignedToUserId));
+      }
+      const ticket = await db.transaction(async (tx) => {
+        const [updated] = await tx
+          .update(techdeckTickets)
+          .set({ ...patch, updatedAt: new Date() })
+          .where(and(...updateConditions))
+          .returning();
+        if (!updated) return null;
+        await tx.insert(activityFeed).values({
+          userId: user.id,
+          tenantId: ctx.tenantId,
+          action: 'updated',
+          entityType: 'techdeck_ticket',
+          entityId: updated.id,
+          metadata: { number: updated.number, changedFields },
+        });
+        return updated;
+      });
+      if (!ticket) {
+        if (requireAssignmentSnapshot) {
+          return reply.code(409).send({
+            error: 'Ticket assignment changed; refresh before trying again',
+            code: 'TICKET_ASSIGNMENT_CHANGED',
+          });
+        }
+        return reply.code(404).send({ error: 'Ticket not found', code: 'TICKET_NOT_FOUND' });
+      }
+      return ticket;
+    },
+  );
+
+  app.patch(
+    '/v1/modules/techdeck/tickets/:id/status',
+    { preHandler: [...techdeckWriteGuards] },
+    async (request, reply) => {
+      let status;
+      try {
+        status = parseTechDeckTicketStatus(request.body);
+      } catch (err) {
+        if (handleTechDeckValidation(reply, err)) return;
+        throw err;
+      }
+
+      const { id } = request.params as { id: string };
+      const user = (request as any).user as { id: string };
+      const ctx = (request as any).tenantContext as { tenantId: string };
+      const [before] = await db
+        .select()
+        .from(techdeckTickets)
+        .where(and(
+          eq(techdeckTickets.id, id),
+          eq(techdeckTickets.tenantId, ctx.tenantId),
+          isNull(techdeckTickets.deletedAt),
+        ))
+        .limit(1);
+      if (!before) {
+        return reply.code(404).send({ error: 'Ticket not found', code: 'TICKET_NOT_FOUND' });
+      }
+      if (status === before.status) return before;
+
+      const now = new Date();
+      const lifecyclePatch: {
+        respondedAt?: Date;
+        resolvedAt?: Date | null;
+        closedAt?: Date | null;
+      } = {};
+      if (status === 'open') {
+        lifecyclePatch.resolvedAt = null;
+        lifecyclePatch.closedAt = null;
+      } else if (status === 'in_progress') {
+        lifecyclePatch.respondedAt = before.respondedAt ?? now;
+        lifecyclePatch.resolvedAt = null;
+        lifecyclePatch.closedAt = null;
+      } else if (status === 'waiting_on_client') {
+        lifecyclePatch.resolvedAt = null;
+        lifecyclePatch.closedAt = null;
+      } else if (status === 'resolved') {
+        lifecyclePatch.respondedAt = before.respondedAt ?? now;
+        lifecyclePatch.resolvedAt = now;
+        lifecyclePatch.closedAt = null;
+      } else if (status === 'closed') {
+        lifecyclePatch.respondedAt = before.respondedAt ?? now;
+        lifecyclePatch.resolvedAt = before.resolvedAt ?? now;
+        lifecyclePatch.closedAt = now;
+      }
+
+      const ticket = await db.transaction(async (tx) => {
+        const [updated] = await tx
+          .update(techdeckTickets)
+          .set({ status, ...lifecyclePatch, updatedAt: now })
+          .where(and(
+            eq(techdeckTickets.id, id),
+            eq(techdeckTickets.tenantId, ctx.tenantId),
+            isNull(techdeckTickets.deletedAt),
+          ))
+          .returning();
+        if (!updated) return null;
+        await tx.insert(activityFeed).values({
+          userId: user.id,
+          tenantId: ctx.tenantId,
+          action: 'status_changed',
+          entityType: 'techdeck_ticket',
+          entityId: updated.id,
+          metadata: {
+            number: updated.number,
+            fromStatus: before.status,
+            toStatus: updated.status,
+          },
+        });
+        return updated;
+      });
+      if (!ticket) {
+        return reply.code(404).send({ error: 'Ticket not found', code: 'TICKET_NOT_FOUND' });
+      }
+      return ticket;
+    },
+  );
+
+  app.delete(
+    '/v1/modules/techdeck/tickets/:id',
+    { preHandler: [...techdeckWriteGuards, requireTenantAdmin] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const user = (request as any).user as { id: string };
+      const ctx = (request as any).tenantContext as { tenantId: string };
+      const ticket = await db.transaction(async (tx) => {
+        const [deleted] = await tx
+          .update(techdeckTickets)
+          .set({ deletedAt: new Date(), updatedAt: new Date() })
+          .where(and(
+            eq(techdeckTickets.id, id),
+            eq(techdeckTickets.tenantId, ctx.tenantId),
+            isNull(techdeckTickets.deletedAt),
+          ))
+          .returning();
+        if (!deleted) return null;
+        await tx.insert(activityFeed).values({
+          userId: user.id,
+          tenantId: ctx.tenantId,
+          action: 'deleted',
+          entityType: 'techdeck_ticket',
+          entityId: deleted.id,
+          metadata: { number: deleted.number, status: deleted.status },
+        });
+        return deleted;
+      });
+      if (!ticket) {
+        return reply.code(404).send({ error: 'Ticket not found', code: 'TICKET_NOT_FOUND' });
+      }
+      return { ok: true };
+    },
+  );
+
+  // ===== TorqueShed / FaultlineLab / BrandForgeOS / SnapProofOS ==========
+  // Product-specific records share storage, never authority. Each route is
+  // concretely registered with its own module entitlement and status model.
+  for (const spec of Object.values(WORKFLOW_MODULES)) {
+    const readGuards = [requireTenantMember, requireTenantModuleAccess(spec.slug)];
+    const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
+    const basePath = `/v1/modules/${spec.slug}/work-items`;
+
+    app.get(basePath, { preHandler: readGuards }, async (request, reply) => {
+      const ctx = (request as any).tenantContext;
+      const query = request.query as { status?: string };
+      if (query.status && !spec.statuses.has(query.status as never)) {
+        return reply.code(400).send({ error: 'Invalid workflow status', code: 'WORKFLOW_STATUS_INVALID' });
+      }
+      const conditions = [
+        eq(moduleWorkflowItems.tenantId, ctx.tenantId),
+        eq(moduleWorkflowItems.moduleSlug, spec.slug),
+        isNull(moduleWorkflowItems.deletedAt),
+      ];
+      if (query.status) conditions.push(eq(moduleWorkflowItems.status, query.status));
+      const items = await db.select().from(moduleWorkflowItems)
+        .where(and(...conditions))
+        .orderBy(desc(moduleWorkflowItems.updatedAt))
+        .limit(100);
+      return { items, itemType: spec.itemType, statuses: [...spec.statuses] };
+    });
+
+    app.post(basePath, { preHandler: writeGuards }, async (request, reply) => {
+      let input: WorkflowItemInput;
+      try {
+        input = parseWorkflowItemInput(request.body, spec, 'create');
+      } catch (err) {
+        return sendWorkflowValidation(reply, err);
+      }
+      const ctx = (request as any).tenantContext;
+      const user = (request as any).user;
+      const created = await db.transaction(async (tx) => {
+        const [row] = await tx.insert(moduleWorkflowItems).values({
+          tenantId: ctx.tenantId,
+          createdByUserId: user.id,
+          moduleSlug: spec.slug,
+          itemType: spec.itemType,
+          title: input.title!,
+          summary: input.summary ?? null,
+          status: input.status!,
+          data: input.data!,
+        }).returning();
+        await tx.insert(activityFeed).values({
+          tenantId: ctx.tenantId,
+          userId: user.id,
+          action: `${spec.slug}_workflow_created`,
+          entityType: spec.itemType,
+          entityId: row.id,
+          metadata: { moduleSlug: spec.slug, title: row.title, status: row.status },
+        });
+        return row;
+      });
+      return reply.code(201).send(created);
+    });
+
+    app.patch(`${basePath}/:id`, { preHandler: writeGuards }, async (request, reply) => {
+      let input: WorkflowItemInput;
+      try {
+        input = parseWorkflowItemInput(request.body, spec, 'patch');
+      } catch (err) {
+        return sendWorkflowValidation(reply, err);
+      }
+      const { id } = request.params as { id: string };
+      const ctx = (request as any).tenantContext;
+      const user = (request as any).user;
+      const { expectedVersion, ...changes } = input;
+      const [updated] = await db.update(moduleWorkflowItems).set({
+        ...changes,
+        version: sql`${moduleWorkflowItems.version} + 1`,
+        updatedAt: new Date(),
+      }).where(and(
+        eq(moduleWorkflowItems.id, id),
+        eq(moduleWorkflowItems.tenantId, ctx.tenantId),
+        eq(moduleWorkflowItems.moduleSlug, spec.slug),
+        eq(moduleWorkflowItems.version, expectedVersion!),
+        isNull(moduleWorkflowItems.deletedAt),
+      )).returning();
+
+      if (!updated) {
+        const [existing] = await db.select({ id: moduleWorkflowItems.id })
+          .from(moduleWorkflowItems)
+          .where(and(
+            eq(moduleWorkflowItems.id, id),
+            eq(moduleWorkflowItems.tenantId, ctx.tenantId),
+            eq(moduleWorkflowItems.moduleSlug, spec.slug),
+            isNull(moduleWorkflowItems.deletedAt),
+          )).limit(1);
+        return existing
+          ? reply.code(409).send({ error: 'Workflow record changed; reload and retry', code: 'WORKFLOW_VERSION_CONFLICT' })
+          : reply.code(404).send({ error: 'Workflow record not found', code: 'WORKFLOW_NOT_FOUND' });
+      }
+      await db.insert(activityFeed).values({
+        tenantId: ctx.tenantId,
+        userId: user.id,
+        action: `${spec.slug}_workflow_updated`,
+        entityType: spec.itemType,
+        entityId: updated.id,
+        metadata: { moduleSlug: spec.slug, status: updated.status, version: updated.version },
+      });
+      return updated;
+    });
+
+    app.delete(`${basePath}/:id`, { preHandler: writeGuards }, async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const ctx = (request as any).tenantContext;
+      const user = (request as any).user;
+      const [deleted] = await db.update(moduleWorkflowItems).set({
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+        version: sql`${moduleWorkflowItems.version} + 1`,
+      }).where(and(
+        eq(moduleWorkflowItems.id, id),
+        eq(moduleWorkflowItems.tenantId, ctx.tenantId),
+        eq(moduleWorkflowItems.moduleSlug, spec.slug),
+        isNull(moduleWorkflowItems.deletedAt),
+      )).returning({ id: moduleWorkflowItems.id });
+      if (!deleted) return reply.code(404).send({ error: 'Workflow record not found', code: 'WORKFLOW_NOT_FOUND' });
+      await db.insert(activityFeed).values({
+        tenantId: ctx.tenantId,
+        userId: user.id,
+        action: `${spec.slug}_workflow_deleted`,
+        entityType: spec.itemType,
+        entityId: id,
+        metadata: { moduleSlug: spec.slug },
+      });
+      return { ok: true };
+    });
+  }
+
   // ===== CallCommand AI ===================================================
   // Task #89 — surface the telephony config source so the shell can show
   // either "connected via Replit", "using env vars", or a one-click
@@ -304,8 +1381,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   // module-access checks so tenant `member` users cannot kick off the
   // flow even if they have CallCommand access.
   const callcommandAdminGuards = [
-    requireTenantMember,
-    requireTenantModuleAccess('callcommand-ai'),
+    ...callcommandWriteGuards,
     requireTenantAdmin,
   ];
 
@@ -378,7 +1454,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
 
   app.post(
     '/v1/modules/callcommand-ai/calls',
-    { preHandler: [...callcommandGuards] },
+    { preHandler: [...callcommandWriteGuards] },
     async (request, reply) => {
       const user = (request as any).user;
       const ctx = (request as any).tenantContext;
@@ -662,7 +1738,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
 
   app.post(
     '/v1/modules/studyforge-ai/sessions',
-    { preHandler: [...studyforgeGuards] },
+    { preHandler: [...studyforgeWriteGuards] },
     async (request, reply) => {
       const user = (request as any).user;
       const ctx = (request as any).tenantContext;
@@ -699,7 +1775,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
 
   app.delete(
     '/v1/modules/studyforge-ai/sessions/:id',
-    { preHandler: [...studyforgeGuards] },
+    { preHandler: [...studyforgeWriteGuards] },
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const user = (request as any).user;
@@ -734,7 +1810,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
 
   app.post(
     '/v1/modules/ninjamation/automations',
-    { preHandler: [...ninjamationGuards] },
+    { preHandler: [...ninjamationWriteGuards] },
     async (request, reply) => {
       const user = (request as any).user;
       const ctx = (request as any).tenantContext;
@@ -802,7 +1878,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
 
   app.delete(
     '/v1/modules/ninjamation/automations/:id',
-    { preHandler: [...ninjamationGuards] },
+    { preHandler: [...ninjamationWriteGuards] },
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const user = (request as any).user;
@@ -852,7 +1928,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
 
   app.post(
     '/v1/modules/ninja-launch-kit/scaffolds',
-    { preHandler: [...launchkitGuards] },
+    { preHandler: [...launchkitWriteGuards] },
     async (request, reply) => {
       const user = (request as any).user;
       const ctx = (request as any).tenantContext;

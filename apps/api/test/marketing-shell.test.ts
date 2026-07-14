@@ -211,11 +211,12 @@ test('marketing shell · console-internal links point at /app, not /', () => {
   }
 });
 
-test('marketing shell · root layout loads Space Grotesk + brand tokens', () => {
+test('marketing shell · root layout loads Space Grotesk, brand tokens, and canonical metadata', () => {
   const layout = read('src/app/layout.tsx');
   assert.match(layout, /Space_Grotesk/, 'layout.tsx should load Space Grotesk through next/font');
   assert.match(layout, /brandCssVariables/, 'layout.tsx should inject brand CSS variables');
   assert.match(layout, /brand\.bgPrimary/, 'layout.tsx should use the brand background token');
+  assert.match(layout, /metadataBase:\s*new URL\(['"]https:\/\/operatoros\.net['"]\)/);
 });
 
 // ─────────────────────────────────────────────────────────────────────
@@ -306,10 +307,26 @@ test('marketing shell · HTTP — /app/invites/:token bypasses middleware for th
     return;
   }
   // The invite page handles its own auth state: it reads the token,
-  // stashes it in localStorage, and redirects to /app to sign in.
+  // keeps it in this tab's sessionStorage, and redirects to /app to sign in.
   // Middleware must NOT pre-empt that flow or invitation emails break.
   const r = await probe('/app/invites/example-token', { redirect: 'manual' });
   assert.equal(r.status, 200, 'GET /app/invites/:token should reach the page logic without a cookie');
+});
+
+test('marketing shell · invite capability handoff is tab-scoped', () => {
+  const invitePage = read('src/app/invites/[token]/page.tsx');
+  const consolePage = read('src/app/app/page.tsx');
+  const loginPage = read('src/components/pages/LoginPage.tsx');
+  const registerPage = read('src/components/pages/RegisterPage.tsx');
+  const handoffSources = [invitePage, consolePage, loginPage, registerPage].join('\n');
+
+  assert.match(handoffSources, /sessionStorage\.setItem\(PENDING_INVITE_KEY, token\)/);
+  assert.match(consolePage, /sessionStorage\.getItem\(['"]operatoros\.pendingInviteToken['"]\)/);
+  assert.doesNotMatch(
+    handoffSources,
+    /localStorage\.(?:getItem|setItem)\([^\n]*operatoros\.pendingInvite/,
+    'invite capability tokens and prefill data must not persist beyond the browser tab',
+  );
 });
 
 test('marketing shell · /app/* server-side auth gate (middleware)', () => {
@@ -318,7 +335,7 @@ test('marketing shell · /app/* server-side auth gate (middleware)', () => {
   // and 307-redirecting cookie-less requests to `/`. Critical
   // exemptions: `/app` itself (login surface — gating it would loop
   // the "Launch console" CTA) and `/app/invites/:token` (the invite
-  // page runs its own pre-auth localStorage handoff).
+  // page runs its own pre-auth sessionStorage handoff).
   const src = read('src/middleware.ts');
   assert.match(src, /matcher:[\s\S]*['"]\/app\/:path\*['"]/);
   assert.match(src, /token/, 'middleware should check the auth cookie issued by /v1/auth/login');

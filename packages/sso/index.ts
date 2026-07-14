@@ -2,9 +2,10 @@ import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import type { OperatorOSModuleRegistryEntry } from '../modules/registry.js';
 
-export const SSO_TOKEN_TTL_SECONDS = 90;
+export const SSO_TOKEN_TTL_SECONDS = 60;
 export const SSO_JWT_ALGORITHM = 'HS256' as const;
 export const MIN_SSO_SECRET_LENGTH = 16;
+export const MIN_SSO_CODE_SECRET_LENGTH = 32;
 export const DEFAULT_SSO_ISSUER = 'http://localhost:5000';
 /**
  * Maximum clock drift tolerated between the hub (issuer) and a module
@@ -106,6 +107,24 @@ export function resolveSsoSecret(raw?: string | null): string | null {
   return value;
 }
 
+/**
+ * Hub-only browser authorization-code key.
+ *
+ * Production never falls back to the legacy module-shared secret. A dev-only
+ * fallback remains available for the bounded rollback/test lane.
+ */
+export function resolveSsoCodeSecret(raw?: string | null): string | null {
+  const explicit = raw ?? (typeof process !== 'undefined'
+    ? process.env.SSO_CODE_ENCRYPTION_SECRET
+    : undefined);
+  if (explicit) {
+    return explicit.length >= MIN_SSO_CODE_SECRET_LENGTH ? explicit : null;
+  }
+  if (isProductionRuntime()) return null;
+  const legacy = typeof process !== 'undefined' ? process.env.MODULE_SSO_SECRET : undefined;
+  return legacy && legacy.length >= MIN_SSO_CODE_SECRET_LENGTH ? legacy : null;
+}
+
 export function createSsoJti(): string {
   return crypto.randomBytes(24).toString('hex');
 }
@@ -183,11 +202,6 @@ export function verifySsoHandoffToken(token: string, input: VerifySsoTokenInput)
   return decoded as OperatorOSSsoClaims;
 }
 
-export function buildSsoLaunchUrl(baseUrl: string, token: string): string {
-  const trimmed = baseUrl.replace(/\/+$/, '');
-  return `${trimmed}/sso?token=${encodeURIComponent(token)}`;
-}
-
 // ---------------------------------------------------------------------------
 // Opaque exchange codes (browser-facing handoff without a JWT in the URL)
 //
@@ -232,6 +246,12 @@ const EXCHANGE_CODE_TAG_BYTES = 16;
 export interface SsoExchangeCodeBinding {
   jti: string;
   aud: string;
+  clientId?: string;
+  redirectUri?: string;
+  returnTo?: string;
+  state?: string;
+  nonce?: string;
+  codeChallenge?: string;
 }
 
 /** Derive a stable 32-byte AES key from the shared secret (domain-separated). */
@@ -251,7 +271,16 @@ function exchangeCodeKey(secret: string): Buffer {
 export function createSsoExchangeCode(binding: SsoExchangeCodeBinding, secret: string): string {
   const iv = crypto.randomBytes(EXCHANGE_CODE_IV_BYTES);
   const cipher = crypto.createCipheriv('aes-256-gcm', exchangeCodeKey(secret), iv);
-  const plaintext = JSON.stringify({ j: binding.jti, a: binding.aud });
+  const plaintext = JSON.stringify({
+    j: binding.jti,
+    a: binding.aud,
+    c: binding.clientId,
+    r: binding.redirectUri,
+    t: binding.returnTo,
+    s: binding.state,
+    n: binding.nonce,
+    p: binding.codeChallenge,
+  });
   const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
   return Buffer.concat([iv, ciphertext, tag]).toString('base64url');
@@ -283,10 +312,31 @@ export function parseSsoExchangeCode(
     const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString(
       'utf8',
     );
-    const parsed = JSON.parse(plaintext) as { j?: unknown; a?: unknown };
+    const parsed = JSON.parse(plaintext) as {
+      j?: unknown;
+      a?: unknown;
+      c?: unknown;
+      r?: unknown;
+      t?: unknown;
+      s?: unknown;
+      n?: unknown;
+      p?: unknown;
+    };
     if (typeof parsed.j !== 'string' || parsed.j.length === 0) return null;
     if (typeof parsed.a !== 'string' || parsed.a.length === 0) return null;
-    return { jti: parsed.j, aud: parsed.a };
+    for (const value of [parsed.c, parsed.r, parsed.t, parsed.s, parsed.n, parsed.p]) {
+      if (value !== undefined && typeof value !== 'string') return null;
+    }
+    return {
+      jti: parsed.j,
+      aud: parsed.a,
+      ...(typeof parsed.c === 'string' && parsed.c ? { clientId: parsed.c } : {}),
+      ...(typeof parsed.r === 'string' && parsed.r ? { redirectUri: parsed.r } : {}),
+      ...(typeof parsed.t === 'string' && parsed.t ? { returnTo: parsed.t } : {}),
+      ...(typeof parsed.s === 'string' && parsed.s ? { state: parsed.s } : {}),
+      ...(typeof parsed.n === 'string' && parsed.n ? { nonce: parsed.n } : {}),
+      ...(typeof parsed.p === 'string' && parsed.p ? { codeChallenge: parsed.p } : {}),
+    };
   } catch {
     return null;
   }

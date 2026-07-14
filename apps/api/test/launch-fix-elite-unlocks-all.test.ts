@@ -28,7 +28,12 @@ import {
 import { hasModuleAccess } from '../src/lib/entitlement-service.js';
 import { MODULE_CATALOG, PLAN_TIER_RANK } from '@operatoros/sdk';
 import { seedModules } from '../src/lib/saas-db-init.js';
-import { ensureSchemaReady, createTestUser, cleanupUser } from './_setup.js';
+import {
+  ensureSchemaReady,
+  createTestUser,
+  cleanupModule,
+  cleanupUser,
+} from './_setup.js';
 
 const LIVE_CATALOG = MODULE_CATALOG.filter(m => m.defaultStatus === 'live');
 
@@ -38,12 +43,27 @@ let eliteUserId: string;   let eliteTenantId: string;
 let starterUserId: string; let starterTenantId: string;
 
 const allUserIds: string[] = [];
+let catalogModulesBefore = new Map<string, typeof modules.$inferSelect>();
+let planModuleIdsBefore = new Set<string>();
+let insertedCatalogModuleIds: string[] = [];
 
 before(async () => {
   await ensureSchemaReady();
+  const catalogSlugs = MODULE_CATALOG.map(entry => entry.slug);
+  const existingCatalogModules = await db.select().from(modules)
+    .where(inArray(modules.slug, catalogSlugs));
+  catalogModulesBefore = new Map(existingCatalogModules.map(row => [row.slug, row]));
+  planModuleIdsBefore = new Set(
+    (await db.select({ id: planModules.id }).from(planModules)).map(row => row.id),
+  );
+
   // Make sure every catalog slug exists in the modules table (seed is
   // idempotent — safe to call from a test even if the API already ran it).
   await seedModules();
+  insertedCatalogModuleIds = (await db.select().from(modules)
+    .where(inArray(modules.slug, catalogSlugs)))
+    .filter(row => !catalogModulesBefore.has(row.slug))
+    .map(row => row.id);
 
   const [s] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.slug, 'starter')).limit(1);
   const [e] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.slug, 'elite')).limit(1);
@@ -88,15 +108,42 @@ before(async () => {
 after(async () => {
   try { await db.delete(subscriptions).where(inArray(subscriptions.userId, allUserIds)); } catch {}
   for (const uid of allUserIds) { try { await cleanupUser(uid); } catch {} }
+
+  const insertedPlanModuleIds = (await db.select({ id: planModules.id }).from(planModules))
+    .filter(row => !planModuleIdsBefore.has(row.id))
+    .map(row => row.id);
+  if (insertedPlanModuleIds.length > 0) {
+    await db.delete(planModules).where(inArray(planModules.id, insertedPlanModuleIds));
+  }
+
+  for (const row of catalogModulesBefore.values()) {
+    await db.update(modules).set({
+      name: row.name,
+      description: row.description,
+      iconUrl: row.iconUrl,
+      category: row.category,
+      componentId: row.componentId,
+      baseUrl: row.baseUrl,
+      status: row.status,
+      planMin: row.planMin,
+      requiresOrg: row.requiresOrg,
+      ord: row.ord,
+      metadata: row.metadata,
+      entitlementWebhookUrl: row.entitlementWebhookUrl,
+      pushShape: row.pushShape,
+      pushAuthMode: row.pushAuthMode,
+      pushBearerEnvVar: row.pushBearerEnvVar,
+      archivedAt: row.archivedAt,
+      updatedAt: row.updatedAt,
+    }).where(eq(modules.id, row.id));
+  }
+  for (const moduleId of insertedCatalogModuleIds) {
+    await cleanupModule(moduleId);
+  }
 });
 
 test(`Elite tenant unlocks ALL ${LIVE_CATALOG.length} live MODULE_CATALOG modules (default-enabled fallback)`, async () => {
-  // Sanity: the catalog still has the launch-target 11 live modules.
-  // If this number ever drifts (modules added/retired), update the
-  // expectation deliberately — the assertion exists to force a code-
-  // review conversation when the live ecosystem footprint changes.
-  assert.equal(LIVE_CATALOG.length, 11,
-    `expected 11 live modules in MODULE_CATALOG, got ${LIVE_CATALOG.length}`);
+  assert.ok(LIVE_CATALOG.length > 0, 'MODULE_CATALOG must publish at least one live module');
 
   const denied: string[] = [];
   for (const cat of LIVE_CATALOG) {

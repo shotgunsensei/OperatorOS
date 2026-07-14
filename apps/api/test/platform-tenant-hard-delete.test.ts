@@ -16,17 +16,20 @@ import { eq, and } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
   users, tenants, tenantUsers, tenantModules, modules, addonSubscriptions,
-  adminAuditLogs,
+  adminAuditLogs, ninjaPoolPracticeSessions,
 } from '../src/schema.js';
-import { signToken } from '../src/lib/auth.js';
 import { ensureSchemaReady, createTestUser, createTestModule, cleanupUser, cleanupModule, uniqueId } from './_setup.js';
 
 let app: any;
 let admin: any;
 let otherUser: any;
+let signToken: typeof import('../src/lib/auth.js').signToken;
 
 before(async () => {
   await ensureSchemaReady();
+  const { ensureModuleShellTables } = await import('../src/lib/saas-db-init.js');
+  await ensureModuleShellTables();
+  ({ signToken } = await import('../src/lib/auth.js'));
   admin = await createTestUser();
   await db.update(users).set({ platformRole: 'super_admin' }).where(eq(users.id, admin.id));
   otherUser = await createTestUser();
@@ -45,7 +48,7 @@ after(async () => {
   for (const u of [admin, otherUser]) if (u) await cleanupUser(u.id);
 });
 
-const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` });
+const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` });
 
 async function makeTenant(slug?: string) {
   const s = slug ?? `del-${uniqueId('t').replace(/_/g, '-')}`;
@@ -157,6 +160,12 @@ test('hard-delete: 409 TENANT_HAS_DEPENDENTS — active addon subscription', asy
 
 test('hard-delete: 200 deletes tenant + writes audit before delete', async () => {
   const t = await makeTenant();
+  const [practice] = await db.insert(ninjaPoolPracticeSessions).values({
+    tenantId: t.id,
+    userId: admin.id,
+    shots: 2,
+    objectBallsPocketed: 1,
+  }).returning();
   // Deliberately leave only the calling super_admin as a member.
   const res = await app.inject({
     method: 'DELETE', url: `/v1/platform/tenants/${t.id}?confirm=${t.slug}`,
@@ -171,6 +180,9 @@ test('hard-delete: 200 deletes tenant + writes audit before delete', async () =>
   assert.equal(remaining.length, 0, 'tenant row removed');
   const remainingMembers = await db.select().from(tenantUsers).where(eq(tenantUsers.tenantId, t.id));
   assert.equal(remainingMembers.length, 0, 'tenant_users rows removed');
+  const remainingPractice = await db.select().from(ninjaPoolPracticeSessions)
+    .where(eq(ninjaPoolPracticeSessions.id, practice.id));
+  assert.equal(remainingPractice.length, 0, 'Ninja Pool practice rows removed');
 
   const auditRows = await db.select().from(adminAuditLogs).where(and(
     eq(adminAuditLogs.tenantId, t.id),

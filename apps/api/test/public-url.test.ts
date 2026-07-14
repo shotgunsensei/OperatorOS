@@ -10,7 +10,11 @@ import {
   resolveHostRole,
   sanitizeReturnTo,
 } from '../../../packages/modules/public-url.js';
-import { getModuleByHost } from '../../../packages/modules/registry.js';
+import {
+  getModuleByHost,
+  OPERATOROS_MODULE_REGISTRY,
+} from '../../../packages/modules/registry.js';
+import { PLATFORM_DOMAINS } from '../../../packages/sdk/src/ecosystem.js';
 
 test('normalizeHost strips ports, scheme, trailing dot, and case', () => {
   assert.equal(normalizeHost('Auth.OperatorOS.net:5000'), 'auth.operatoros.net');
@@ -20,20 +24,23 @@ test('normalizeHost strips ports, scheme, trailing dot, and case', () => {
   assert.equal(normalizeHost(undefined), '');
 });
 
-test('isProductionHost recognizes the root domain and its subdomains only', () => {
+test('isProductionHost recognizes exact registered platform and module hosts only', () => {
   assert.equal(isProductionHost('operatoros.net'), true);
   assert.equal(isProductionHost('auth.operatoros.net'), true);
   assert.equal(isProductionHost('techdeck.operatoros.net:5000'), true);
+  assert.equal(isProductionHost('unregistered.operatoros.net'), false);
   assert.equal(isProductionHost('operatoros.net.evil.com'), false);
   assert.equal(isProductionHost('localhost:5000'), false);
 });
 
-test('isLocalHost / isSameSiteHost classify dev + preview hosts', () => {
+test('isLocalHost / isSameSiteHost allow loopback and exact registered hosts only', () => {
   assert.equal(isLocalHost('localhost:5000'), true);
-  assert.equal(isLocalHost('foo.replit.dev'), true);
+  assert.equal(isLocalHost('foo.replit.dev'), false);
   assert.equal(isLocalHost('operatoros.net'), false);
   assert.equal(isSameSiteHost('app.operatoros.net'), true);
   assert.equal(isSameSiteHost('localhost'), true);
+  assert.equal(isSameSiteHost('unregistered.operatoros.net'), false);
+  assert.equal(isSameSiteHost('attacker.replit.app'), false);
   assert.equal(isSameSiteHost('evil.com'), false);
 });
 
@@ -81,7 +88,14 @@ test('resolveHostRole classifies platform + module hosts', () => {
 test('sanitizeReturnTo blocks open redirects but keeps same-site destinations', () => {
   assert.equal(sanitizeReturnTo('/app/platform/tenants'), '/app/platform/tenants');
   assert.equal(sanitizeReturnTo('//evil.com'), '/app');
+  assert.equal(sanitizeReturnTo('/\\evil.com'), '/app');
+  assert.equal(sanitizeReturnTo('/%5cevil.com'), '/app');
+  assert.equal(sanitizeReturnTo('/%2fevil.com'), '/app');
+  assert.equal(sanitizeReturnTo('/%0aevil.com'), '/app');
   assert.equal(sanitizeReturnTo('https://evil.com/app'), '/app');
+  assert.equal(sanitizeReturnTo('https://unregistered.operatoros.net/app'), '/app');
+  assert.equal(sanitizeReturnTo('https://attacker.replit.app/app'), '/app');
+  assert.equal(sanitizeReturnTo('https://user@techdeck.operatoros.net/app'), '/app');
   assert.equal(sanitizeReturnTo('javascript:alert(1)'), '/app');
   assert.equal(sanitizeReturnTo(null), '/app');
   assert.equal(sanitizeReturnTo(undefined, '/home'), '/home');
@@ -89,6 +103,56 @@ test('sanitizeReturnTo blocks open redirects but keeps same-site destinations', 
     sanitizeReturnTo('https://techdeck.operatoros.net/dashboard'),
     'https://techdeck.operatoros.net/dashboard',
   );
+});
+
+test('sanitizeReturnTo requires HTTPS for every canonical production host', () => {
+  const moduleOrigins = OPERATOROS_MODULE_REGISTRY
+    .filter(module => module.id !== 'operatoros')
+    .map(module => module.productionBaseUrl);
+  assert.equal(moduleOrigins.length, 13, 'the HTTPS policy must cover all 13 modules');
+
+  const canonicalOrigins = new Set([
+    ...Object.values(PLATFORM_DOMAINS),
+    ...moduleOrigins,
+    'https://www.operatoros.net',
+  ]);
+
+  for (const origin of canonicalOrigins) {
+    const secureTarget = `${origin}/return/path?from=login#section`;
+    assert.equal(
+      sanitizeReturnTo(secureTarget),
+      secureTarget,
+      `expected HTTPS return target to remain allowed: ${origin}`,
+    );
+
+    const downgradedTarget = secureTarget.replace(/^https:/, 'http:');
+    assert.equal(
+      sanitizeReturnTo(downgradedTarget),
+      '/app',
+      `expected HTTP downgrade to be rejected: ${origin}`,
+    );
+  }
+
+  assert.equal(sanitizeReturnTo('http://techdeck.operatoros.net/dashboard'), '/app');
+  assert.equal(sanitizeReturnTo('http://operatoros.net/app'), '/app');
+  assert.equal(sanitizeReturnTo('http://auth.operatoros.net/login'), '/app');
+});
+
+test('sanitizeReturnTo permits HTTP only for loopback development origins', () => {
+  for (const target of [
+    'http://localhost:3001/modules/techdeck',
+    'http://127.0.0.1:3001/app',
+    'http://0.0.0.0:3001/app',
+    'http://[::1]:3001/app',
+    'http://module.localhost:3001/sso',
+    'https://localhost:3001/app',
+  ]) {
+    assert.equal(sanitizeReturnTo(target), target);
+  }
+
+  assert.equal(sanitizeReturnTo('http://unregistered.operatoros.net/app'), '/app');
+  assert.equal(sanitizeReturnTo('http://attacker.replit.app/app'), '/app');
+  assert.equal(sanitizeReturnTo('http://example.com/app'), '/app');
 });
 
 test('sanitizeReturnTo collapses hostile targets to a canonical, non-host-derived fallback', () => {
@@ -99,6 +163,7 @@ test('sanitizeReturnTo collapses hostile targets to a canonical, non-host-derive
   assert.equal(CANON, 'https://operatoros.net/app');
   assert.equal(sanitizeReturnTo('https://evil.com/app', CANON), CANON);
   assert.equal(sanitizeReturnTo('//evil.com', CANON), CANON);
+  assert.equal(sanitizeReturnTo('/\\evil.com', CANON), CANON);
   assert.equal(sanitizeReturnTo('http://evil.com:5000/app/x', CANON), CANON);
   assert.equal(sanitizeReturnTo('https://operatoros.net.evil.com/app', CANON), CANON);
   // Legit same-site destinations still pass through untouched.

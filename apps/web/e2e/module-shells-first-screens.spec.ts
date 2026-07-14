@@ -19,7 +19,7 @@
  * first meaningful interaction, and surfaces the back-link/denied-card
  * states the product owner depends on.
  */
-import { test, expect, request as pwRequest, type APIRequestContext, type Page } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 const API = process.env.E2E_API_URL ?? 'http://localhost:5001';
@@ -32,13 +32,13 @@ type Slug = typeof SHELL_SLUGS[number];
 interface SeedResult {
   userId: string;
   tenantId: string;
-  token: string;
   email: string;
 }
 
-/** Register a fresh user via the public API and return their session +
- *  auto-provisioned personal tenant. The user is born as the `owner` of
- *  their personal tenant — exactly the role we need to launch modules. */
+/** Register and sign in a fresh user via the public API, establishing the
+ *  real host-only HttpOnly session in the browser context and returning the
+ *  auto-provisioned personal tenant. The user is born as the `owner` of their
+ *  personal tenant — exactly the role we need to launch modules. */
 async function registerUser(api: APIRequestContext, tag: string): Promise<SeedResult> {
   const ts = Date.now();
   const rand = Math.random().toString(36).slice(2, 8);
@@ -49,11 +49,39 @@ async function registerUser(api: APIRequestContext, tag: string): Promise<SeedRe
     data: { email, password, name: `Task73 ${tag}` },
   });
   expect(reg.ok(), `register ${tag}: ${reg.status()} ${await reg.text()}`).toBeTruthy();
-  const { token, user } = await reg.json();
 
-  const tenantsRes = await api.get(`${API}/v1/me/tenants`, {
-    headers: { Authorization: `Bearer ${token}` },
+  // Registration is deliberately non-enumerating and does not establish a
+  // browser session. Authenticate through the production login contract so
+  // this spec receives the same signed HttpOnly cookie as a real browser.
+  const login = await api.post(`${API}/v1/auth/login`, {
+    data: { email, password },
   });
+  expect(login.ok(), `login ${tag}: ${login.status()} ${await login.text()}`).toBeTruthy();
+  const { user } = await login.json();
+
+  const setCookie = login.headersArray()
+    .find(({ name, value }) => name.toLowerCase() === 'set-cookie' && value.startsWith('operatoros_session='))
+    ?.value;
+  expect(setCookie, `login ${tag} must issue operatoros_session`).toBeTruthy();
+  expect(setCookie, 'operatoros_session must remain HttpOnly').toMatch(/;\s*HttpOnly(?:;|$)/i);
+  expect(setCookie, 'operatoros_session must remain host-only').not.toMatch(/;\s*Domain=/i);
+
+  // BrowserContext.request and the page share one private cookie jar. The
+  // local API and web servers intentionally use different ports on the same
+  // loopback host, so the server-issued host-only cookie reaches the page
+  // without copying its value into JavaScript-visible storage.
+  const apiHost = new URL(API).hostname;
+  const webHost = new URL(WEB).hostname;
+  expect(webHost, 'Task #73 E2E requires API and web to share a loopback cookie host').toBe(apiHost);
+  const state = await api.storageState();
+  const sessionCookie = state.cookies.find(({ name }) => name === 'operatoros_session');
+  expect(sessionCookie, `login ${tag} cookie must enter the browser context`).toBeTruthy();
+  expect(sessionCookie?.httpOnly).toBe(true);
+  expect(sessionCookie?.domain).toBe(apiHost);
+
+  // The context keeps the Set-Cookie response in its browser-owned cookie jar,
+  // so these calls exercise cookie authentication without exposing a bearer.
+  const tenantsRes = await api.get(`${API}/v1/me/tenants`);
   expect(tenantsRes.ok(), `list tenants ${tag}: ${tenantsRes.status()}`).toBeTruthy();
   const meTenants = await tenantsRes.json();
   const tenantId: string = meTenants.current ?? meTenants.tenants?.[0]?.id;
@@ -61,11 +89,10 @@ async function registerUser(api: APIRequestContext, tag: string): Promise<SeedRe
 
   // Pin server-side so X-Tenant-Id-less code paths resolve the same tenant
   // the UI uses.
-  await api.post(`${API}/v1/tenants/${tenantId}/switch`, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).catch(() => undefined);
+  const switched = await api.post(`${API}/v1/tenants/${tenantId}/switch`);
+  expect(switched.ok(), `switch tenant ${tag}: ${switched.status()} ${await switched.text()}`).toBeTruthy();
 
-  return { userId: user.id, tenantId, token, email };
+  return { userId: user.id, tenantId, email };
 }
 
 /** Plant an Elite subscription + tenant_modules rows for the four shell
@@ -138,16 +165,6 @@ async function cleanupUser(pg: Client, userId: string) {
     }
   } catch {}
   try { await pg.query(`delete from users where id = $1`, [userId]); } catch {}
-}
-
-/** Seed the browser session so AuthProvider boots straight into the
- *  authenticated app. Mirrors the localStorage shape used by the existing
- *  invite-resend spec. */
-async function attachSession(page: Page, token: string, tenantId: string) {
-  await page.addInitScript(({ token, tenantId }) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('activeTenantId', tenantId);
-  }, { token, tenantId });
 }
 
 /** Per-shell: navigate to /app/apps/<slug>, confirm the shell mounted,
@@ -273,49 +290,37 @@ test.describe('Module first-screens (Task #73)', () => {
   });
 
   test('Elite-plan tenant member can use all four module first-screens', async ({ page }) => {
-    const api = await pwRequest.newContext();
-    try {
-      const elite = await registerUser(api, 'elite');
-      seededUserIds.push(elite.userId);
-      await seedEliteAccess(pg, elite.userId, elite.tenantId);
+    const elite = await registerUser(page.context().request, 'elite');
+    seededUserIds.push(elite.userId);
+    await seedEliteAccess(pg, elite.userId, elite.tenantId);
 
-      await attachSession(page, elite.token, elite.tenantId);
-
-      for (const slug of SHELL_SLUGS) {
-        await exerciseShell(page, slug);
-      }
-    } finally {
-      await api.dispose().catch(() => undefined);
+    // AuthProvider now boots from the HttpOnly cookie, calls /auth/me, and
+    // derives activeTenantId from the server-owned current tenant.
+    for (const slug of SHELL_SLUGS) {
+      await exerciseShell(page, slug);
     }
   });
 
   test('Non-entitled tenant member sees the app-shell-not-accessible card', async ({ page }) => {
-    const api = await pwRequest.newContext();
-    try {
-      // No Elite subscription, no tenant_modules rows — the personal tenant
-      // is a "blank" tenant with zero module entitlements. requireTenantMember
-      // will pass (the user owns the tenant), but GET /v1/modules/:slug will
-      // return `unlocked: false`, which the page renders as the friendly
-      // not-accessible card.
-      const denied = await registerUser(api, 'denied');
-      seededUserIds.push(denied.userId);
+    // No Elite subscription, no tenant_modules rows — the personal tenant
+    // is a "blank" tenant with zero module entitlements. requireTenantMember
+    // will pass (the user owns the tenant), but GET /v1/modules/:slug will
+    // return `unlocked: false`, which the page renders as the friendly
+    // not-accessible card.
+    const denied = await registerUser(page.context().request, 'denied');
+    seededUserIds.push(denied.userId);
 
-      await attachSession(page, denied.token, denied.tenantId);
-
-      // Probe every shell slug — the denied card must render for each, not
-      // the shell.
-      for (const slug of SHELL_SLUGS) {
-        await page.goto(`${WEB}/app/apps/${slug}`);
-        await expect(page.getByTestId('app-shell-not-accessible'))
-          .toBeVisible({ timeout: 15_000 });
-        // Back-link is the only navigation off the denied card — must be
-        // present so users can return to /app and pick another module.
-        await expect(page.getByTestId('link-back-to-apps')).toBeVisible();
-        // And the shell itself must NOT have mounted.
-        await expect(page.getByTestId(`shell-${slug}`)).toHaveCount(0);
-      }
-    } finally {
-      await api.dispose().catch(() => undefined);
+    // Probe every shell slug — the denied card must render for each, not
+    // the shell.
+    for (const slug of SHELL_SLUGS) {
+      await page.goto(`${WEB}/app/apps/${slug}`);
+      await expect(page.getByTestId('app-shell-not-accessible'))
+        .toBeVisible({ timeout: 15_000 });
+      // Back-link is the only navigation off the denied card — must be
+      // present so users can return to /app and pick another module.
+      await expect(page.getByTestId('link-back-to-apps')).toBeVisible();
+      // And the shell itself must NOT have mounted.
+      await expect(page.getByTestId(`shell-${slug}`)).toHaveCount(0);
     }
   });
 });

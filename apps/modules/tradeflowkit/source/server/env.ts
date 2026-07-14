@@ -5,7 +5,7 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().optional(),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.string().optional(),
-  MODULE_SSO_SECRET: z.string().optional(),
+  OPERATOROS_SSO_CLIENT_SECRET: z.string().optional(),
   OPERATOROS_BASE_URL: z.string().url().optional(),
   OPERATOROS_API_URL: z.string().url().optional(),
   OPERATOROS_SSO_AUDIENCE: z.string().optional(),
@@ -80,7 +80,7 @@ function translateLegacyAppEnv(value: string | undefined): "prod" | "staging" | 
  */
 export function getSsoConfig(): SsoConfig | null {
   const env = getEnv();
-  if (!env.MODULE_SSO_SECRET || !env.OPERATOROS_BASE_URL) {
+  if (!env.OPERATOROS_SSO_CLIENT_SECRET || !env.OPERATOROS_BASE_URL) {
     return null;
   }
 
@@ -96,7 +96,7 @@ export function getSsoConfig(): SsoConfig | null {
   const apiUrl = (env.OPERATOROS_API_URL || env.OPERATOROS_BASE_URL).replace(/\/+$/, "");
 
   return {
-    secret: env.MODULE_SSO_SECRET,
+    secret: env.OPERATOROS_SSO_CLIENT_SECRET,
     operatorosBaseUrl: baseUrl,
     ssoEnv,
     audience: audience.toLowerCase(),
@@ -120,7 +120,7 @@ export function assertSsoConfigForProduction(): void {
   // operator should set. Legacy aliases (MODULE_SLUG, APP_ENV) still satisfy
   // the presence requirement.
   const missing: string[] = [];
-  if (!env.MODULE_SSO_SECRET) missing.push("MODULE_SSO_SECRET");
+  if (!env.OPERATOROS_SSO_CLIENT_SECRET) missing.push("OPERATOROS_SSO_CLIENT_SECRET");
   if (!env.OPERATOROS_BASE_URL) missing.push("OPERATOROS_BASE_URL");
   if (!env.OPERATOROS_SSO_AUDIENCE && !env.MODULE_SLUG) {
     missing.push("OPERATOROS_SSO_AUDIENCE");
@@ -134,9 +134,9 @@ export function assertSsoConfigForProduction(): void {
     );
   }
 
-  if (env.MODULE_SSO_SECRET!.length < MODULE_SSO_SECRET_MIN_LENGTH) {
+  if (env.OPERATOROS_SSO_CLIENT_SECRET!.length < MODULE_SSO_SECRET_MIN_LENGTH) {
     throw new Error(
-      `MODULE_SSO_SECRET must be at least ${MODULE_SSO_SECRET_MIN_LENGTH} characters (OperatorOS SSO contract)`
+      `OPERATOROS_SSO_CLIENT_SECRET must be at least ${MODULE_SSO_SECRET_MIN_LENGTH} characters (OperatorOS SSO contract)`
     );
   }
 

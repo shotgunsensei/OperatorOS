@@ -47,7 +47,7 @@ after(async () => {
   for (const u of [owner, member, outsider, invitee]) if (u) await cleanupUser(u.id);
 });
 
-const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` });
+const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` });
 
 test('member cannot create invites (TENANT_ROLE_INSUFFICIENT)', async () => {
   const r = await app.inject({
@@ -141,6 +141,32 @@ test('happy path: invitee accepts, joins as member, second accept is 409', async
   });
   assert.equal(replay.statusCode, 409);
   assert.equal(replay.json().code, 'INVITE_ALREADY_ACCEPTED');
+});
+
+test('viewer invite persists a distinct read-only tenant membership', async () => {
+  const viewer = await createTestUser();
+  try {
+    const create = await app.inject({
+      method: 'POST', url: `/v1/tenants/${tenantA.id}/invites`,
+      headers: bearer(owner),
+      payload: { email: viewer.email, role: 'viewer' },
+    });
+    assert.equal(create.statusCode, 200, create.body);
+    assert.equal(create.json().invite.role, 'viewer');
+
+    const accept = await app.inject({
+      method: 'POST', url: `/v1/invites/${create.json().invite.token}/accept`,
+      headers: bearer(viewer),
+    });
+    assert.equal(accept.statusCode, 200, accept.body);
+    const [membership] = await db.select().from(tenantUsers).where(and(
+      eq(tenantUsers.userId, viewer.id),
+      eq(tenantUsers.tenantId, tenantA.id),
+    ));
+    assert.equal(membership.role, 'viewer');
+  } finally {
+    await cleanupUser(viewer.id);
+  }
 });
 
 test('expired invite → 410 INVITE_EXPIRED on accept', async () => {

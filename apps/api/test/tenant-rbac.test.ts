@@ -25,6 +25,7 @@ let app: any;
 let alice: any;          // owner of tenant A
 let bob: any;            // owner of tenant B (used to test cross-tenant 404)
 let memberOnly: any;     // member-role user inside tenant A
+let viewerOnly: any;     // read-only user inside tenant A
 let superAdmin: any;     // platform super_admin
 let tenantA: any;
 let tenantB: any;
@@ -35,6 +36,7 @@ before(async () => {
   alice = await createTestUser();
   bob = await createTestUser();
   memberOnly = await createTestUser();
+  viewerOnly = await createTestUser();
   superAdmin = await createTestUser();
   await db.update(users).set({ platformRole: 'super_admin' }).where(eq(users.id, superAdmin.id));
 
@@ -48,6 +50,7 @@ before(async () => {
   await db.insert(tenantUsers).values([
     { tenantId: tenantA.id, userId: alice.id, role: 'owner' },
     { tenantId: tenantA.id, userId: memberOnly.id, role: 'member' },
+    { tenantId: tenantA.id, userId: viewerOnly.id, role: 'viewer' },
     { tenantId: tenantB.id, userId: bob.id, role: 'owner' },
   ]);
 
@@ -74,6 +77,8 @@ before(async () => {
     reply.send({ ok: true }));
   app.get('/test/tenants/:tenantId/peek', { preHandler: [requireTenantMember] }, async (req: any, reply: any) =>
     reply.send({ ctx: (req as any).tenantContext }));
+  app.post('/test/tenants/:tenantId/mutate', { preHandler: [requireTenantMember] }, async (_req: any, reply: any) =>
+    reply.send({ ok: true }));
   app.get('/test/tenants/:tenantId/admin-only', { preHandler: [requireTenantAdmin] }, async (req: any, reply: any) =>
     reply.send({ ctx: (req as any).tenantContext }));
   // Resolve via header / current_tenant_id (no path param).
@@ -93,13 +98,13 @@ after(async () => {
     try { await db.delete(tenantUsers).where(eq(tenantUsers.tenantId, t.id)); } catch {}
     try { await db.delete(tenants).where(eq(tenants.id, t.id)); } catch {}
   }
-  for (const u of [alice, bob, memberOnly, superAdmin]) {
+  for (const u of [alice, bob, memberOnly, viewerOnly, superAdmin]) {
     if (u) await cleanupUser(u.id);
   }
 });
 
 function bearer(u: any) {
-  return { authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` };
+  return { authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` };
 }
 
 test('requireSuperAdmin: 401 when unauthenticated', async () => {
@@ -168,6 +173,34 @@ test('requireTenantAdmin: 403 TENANT_ROLE_INSUFFICIENT for member role', async (
   });
   assert.equal(res.statusCode, 403);
   assert.equal(res.json().code, 'TENANT_ROLE_INSUFFICIENT');
+});
+
+test('tenant viewer can read member routes but cannot mutate tenant data', async () => {
+  const read = await app.inject({
+    method: 'GET',
+    url: `/test/tenants/${tenantA.id}/peek`,
+    headers: bearer(viewerOnly),
+  });
+  assert.equal(read.statusCode, 200);
+  assert.equal(read.json().ctx.role, 'viewer');
+
+  const write = await app.inject({
+    method: 'POST',
+    url: `/test/tenants/${tenantA.id}/mutate`,
+    headers: bearer(viewerOnly),
+  });
+  assert.equal(write.statusCode, 403);
+  assert.equal(write.json().code, 'TENANT_WRITE_ACCESS_REQUIRED');
+});
+
+test('tenant viewer cannot satisfy tenant-admin authority on a read request', async () => {
+  const response = await app.inject({
+    method: 'GET',
+    url: `/test/tenants/${tenantA.id}/admin-only`,
+    headers: bearer(viewerOnly),
+  });
+  assert.equal(response.statusCode, 403);
+  assert.equal(response.json().code, 'TENANT_ROLE_INSUFFICIENT');
 });
 
 test('super_admin bypass: synthetic owner role on cross-tenant access', async () => {

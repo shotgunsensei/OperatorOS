@@ -100,7 +100,7 @@ afterEach(() => {
 });
 
 const bearer = (u: any) => ({
-  authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}`,
+  authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}`,
 });
 
 async function setDeclaredCents(value: number | null) {

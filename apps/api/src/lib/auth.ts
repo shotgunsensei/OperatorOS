@@ -1,11 +1,13 @@
 import bcrypt from 'bcryptjs';
+import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { db } from '../db.js';
-import { users, subscriptions, adminAuditLogs, activityFeed } from '../schema.js';
+import { users, subscriptions, adminAuditLogs, activityFeed, revokedSessionTokens } from '../schema.js';
 import { eq, and } from 'drizzle-orm';
 import { getUserPlanConfig, checkResourceLimit, checkFeatureAccess, type PlanFeatures, type PlanLimits } from './plans.js';
 import { requireSessionSecret } from './session-secret.js';
+import { SESSION_COOKIE_NAME } from '../../../../packages/auth/index.js';
 
 const JWT_SECRET = requireSessionSecret();
 const JWT_EXPIRY = '7d';
@@ -18,6 +20,35 @@ export interface JWTPayload {
   email: string;
   role: string;
   tokenVersion?: number;
+  sessionVersion?: number;
+  sessionType: 'platform' | 'module';
+  tenantId?: string;
+  moduleId?: string;
+  exp?: number;
+  iat?: number;
+}
+
+export const SESSION_CONTRACT_VERSION = 1;
+
+export function isModuleSessionPathAllowed(moduleId: string, rawUrl: string): boolean {
+  const path = rawUrl.split('?')[0] || '/';
+  const fixed = new Set([
+    '/v1/auth/me',
+    '/api/auth/me',
+    '/v1/auth/logout',
+    '/api/auth/logout',
+    '/v1/auth/logout-all',
+    '/api/auth/logout-all',
+    '/v1/me/tenants',
+    '/api/me/tenants',
+  ]);
+  if (fixed.has(path)) return true;
+
+  const encodedModule = encodeURIComponent(moduleId);
+  return [
+    `/v1/modules/${encodedModule}`,
+    `/api/modules/${encodedModule}`,
+  ].some(prefix => path === prefix || path.startsWith(`${prefix}/`));
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -29,7 +60,15 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function signToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRY, algorithm: JWT_ALGORITHM });
+  const claims = { ...payload, sessionVersion: SESSION_CONTRACT_VERSION };
+  if (!isJwtPayload(claims)) {
+    throw new Error('Invalid OperatorOS session payload');
+  }
+  return jwt.sign(
+    claims,
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRY, algorithm: JWT_ALGORITHM },
+  );
 }
 
 export function verifyToken(token: string): JWTPayload | null {
@@ -40,6 +79,10 @@ export function verifyToken(token: string): JWTPayload | null {
   } catch {
     return null;
   }
+}
+
+export function sessionTokenFingerprint(token: string): string {
+  return crypto.createHash('sha256').update(token, 'utf8').digest('hex');
 }
 
 function isJwtPayload(decoded: unknown): decoded is JWTPayload {
@@ -53,56 +96,77 @@ function isJwtPayload(decoded: unknown): decoded is JWTPayload {
     typeof payload.role === 'string' &&
     payload.role.length > 0;
   if (!hasIdentity) return false;
+  if (payload.sessionVersion !== SESSION_CONTRACT_VERSION) return false;
   if (payload.tokenVersion !== undefined && typeof payload.tokenVersion !== 'number') return false;
+  if (payload.exp !== undefined && typeof payload.exp !== 'number') return false;
+  if (payload.iat !== undefined && typeof payload.iat !== 'number') return false;
+  if (payload.sessionType !== 'platform' && payload.sessionType !== 'module') return false;
+  if (payload.tenantId !== undefined && (typeof payload.tenantId !== 'string' || !payload.tenantId)) return false;
+  if (payload.moduleId !== undefined && (typeof payload.moduleId !== 'string' || !payload.moduleId)) return false;
+  if (payload.sessionType === 'module' && (!payload.tenantId || !payload.moduleId)) return false;
+  if (payload.sessionType === 'platform' && (payload.tenantId !== undefined || payload.moduleId !== undefined)) return false;
   return true;
 }
 
 export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
   const authHeader = request.headers.authorization;
-  const cookieToken = (request as any).cookies?.token;
+  const cookieToken = (request as any).cookies?.[SESSION_COOKIE_NAME];
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : cookieToken;
 
   if (!token) {
-    reply.code(401).send({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
-    return;
+    return reply.code(401).send({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
   }
 
   const payload = verifyToken(token);
   if (!payload) {
-    reply.code(401).send({ error: 'Invalid or expired token', code: 'TOKEN_INVALID' });
-    return;
+    return reply.code(401).send({ error: 'Invalid or expired token', code: 'TOKEN_INVALID' });
+  }
+
+  const tokenHash = sessionTokenFingerprint(token);
+  const [revoked] = await db.select({ tokenHash: revokedSessionTokens.tokenHash })
+    .from(revokedSessionTokens)
+    .where(eq(revokedSessionTokens.tokenHash, tokenHash))
+    .limit(1);
+  if (revoked) {
+    return reply.code(401).send({ error: 'Session has been logged out', code: 'SESSION_REVOKED' });
   }
 
   const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
   if (!user) {
-    reply.code(401).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
-    return;
+    return reply.code(401).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
   }
 
   const tokenVer = payload.tokenVersion ?? 0;
   if (tokenVer !== user.tokenVersion) {
-    reply.code(401).send({ error: 'Session has been invalidated. Please log in again.', code: 'TOKEN_REVOKED' });
-    return;
+    return reply.code(401).send({ error: 'Session has been invalidated. Please log in again.', code: 'TOKEN_REVOKED' });
+  }
+
+  if (
+    payload.sessionType === 'module' &&
+    !isModuleSessionPathAllowed(payload.moduleId!, request.url)
+  ) {
+    return reply.code(403).send({
+      error: 'This module session is not authorized for the requested API surface',
+      code: 'SESSION_SCOPE_DENIED',
+    });
   }
 
   switch (user.status) {
     case 'suspended':
-      reply.code(403).send({ error: 'Account suspended. Contact support for assistance.', code: 'ACCOUNT_SUSPENDED', suspended: true });
-      return;
+      return reply.code(403).send({ error: 'Account suspended. Contact support for assistance.', code: 'ACCOUNT_SUSPENDED', suspended: true });
     case 'deleted':
-      reply.code(401).send({ error: 'Account has been deleted', code: 'ACCOUNT_DELETED' });
-      return;
+      return reply.code(401).send({ error: 'Account has been deleted', code: 'ACCOUNT_DELETED' });
     case 'pending':
-      reply.code(403).send({ error: 'Account is pending activation', code: 'ACCOUNT_PENDING' });
-      return;
+      return reply.code(403).send({ error: 'Account is pending activation', code: 'ACCOUNT_PENDING' });
   }
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
-    reply.code(403).send({ error: 'Account temporarily locked due to too many failed login attempts', code: 'ACCOUNT_LOCKED' });
-    return;
+    return reply.code(403).send({ error: 'Account temporarily locked due to too many failed login attempts', code: 'ACCOUNT_LOCKED' });
   }
 
   (request as any).user = user;
+  (request as any).authSession = payload;
+  (request as any).authTokenFingerprint = tokenHash;
 }
 
 export async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {

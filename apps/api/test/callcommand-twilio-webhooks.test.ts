@@ -37,7 +37,7 @@ import {
   modules, moduleCallLogs, tenants, tenantUsers, tenantModules,
 } from '../src/schema.js';
 import {
-  ensureSchemaReady, createTestUser, cleanupUser, uniqueId,
+  ensureSchemaReady, createTestUser, cleanupModule, cleanupUser, uniqueId,
 } from './_setup.js';
 
 const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN!;
@@ -47,6 +47,7 @@ let app: any;
 let user: any;
 let tenant: any;
 let moduleRow: any;
+let insertedModule = false;
 let callRow: any;
 const PROVIDER_SID = 'CA' + 'a'.repeat(30);
 
@@ -86,8 +87,9 @@ before(async () => {
   } else {
     [moduleRow] = await db.insert(modules).values({
       slug: 'callcommand-ai', name: 'CallCommand AI', description: 'fixture',
-      baseUrl: 'https://example.test', status: 'live', planMin: 'starter', ord: 0,
+      baseUrl: 'https://callcommand-ai.operatoros.net', status: 'live', planMin: 'elite', ord: 0,
     }).returning();
+    insertedModule = true;
   }
 
   // Enable the module for this tenant with allowAllMembers so the caller
@@ -120,6 +122,7 @@ after(async () => {
   try { await db.delete(tenantUsers).where(eq(tenantUsers.tenantId, tenant.id)); } catch {}
   try { await db.delete(tenants).where(eq(tenants.id, tenant.id)); } catch {}
   if (user) await cleanupUser(user.id);
+  if (insertedModule && moduleRow?.id) await cleanupModule(moduleRow.id);
 });
 
 async function reloadCall() {

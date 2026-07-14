@@ -1,26 +1,19 @@
 /**
  * Ecosystem registry — the single source of truth for OperatorOS as the
- * central control plane for all related apps (e.g. `techdeck.app` →
- * `techdeck.operatoros.net`), while Replit remains the host.
+ * central control plane for all related apps on canonical
+ * `*.operatoros.net` hosts, while Replit remains the host.
  *
  * This registry is strictly *derived from* `MODULE_CATALOG` (the existing
  * single source of truth keyed by slug). Module identity — slug, name,
  * description, category — always comes from the catalog so the two can
  * never drift. The ecosystem-only fields (the ecosystem subdomain URL,
- * legacy URL, launch/auth/billing modes, status, icon key, ordering) are
+ * launch/auth/billing modes, status, icon key, and ordering) are
  * layered on top here.
  *
- * Slug reconciliation (catalog slug ← requested ecosystem name):
- *   brandforgeos       ← "brandforge"   → brandforge.operatoros.net
- *   studyforge-ai      ← "studyforge"   → studyforge.operatoros.net
- *   ninja-launch-kit   ← "launchkit"    → launchkit.operatoros.net
- *   callcommand-ai     ← "callcommand"  → callcommand.operatoros.net
- *   techdeck, tradeflowkit, pulsedesk, snapproofos, faultlinelab,
- *   ninjamation, torqueshed                     map 1:1
- *
- * The ecosystem subdomain *label* can differ from the internal slug, so
- * every module carries an explicit `ecosystemUrl` rather than blindly
- * deriving it from the slug.
+ * The catalog's immutable `canonicalBaseUrl` owns slug-to-host
+ * reconciliation (including ninja-launch-kit → ninjalaunchkit.operatoros.net).
+ * This overlay consumes that value directly so SSO registration, seeding, and
+ * launch metadata cannot drift onto different origins.
  *
  * This module performs no I/O and forces no redirects — it is pure data
  * plus pure helper functions, safe to import from both the API and the
@@ -58,8 +51,6 @@ export interface EcosystemModule {
   description: string;
   /** Canonical ecosystem URL, e.g. `https://techdeck.operatoros.net`. */
   ecosystemUrl: string;
-  /** Pre-migration URL, e.g. `https://techdeck.app`. Present only when one exists. */
-  legacyUrl?: string;
   status: EcosystemModuleStatus;
   launchMode: EcosystemLaunchMode;
   authMode: EcosystemAuthMode;
@@ -74,10 +65,7 @@ export interface PlatformDomains {
   root: string;
   app: string;
   api: string;
-  admin: string;
   auth: string;
-  docs: string;
-  status: string;
 }
 
 export interface EcosystemRegistry {
@@ -93,7 +81,7 @@ export interface OperatorOSHostInfo {
   isRootDomain: boolean;
   isAppDomain: boolean;
   isApiDomain: boolean;
-  isAdminDomain: boolean;
+  isAuthDomain: boolean;
   /** Matched module slug when the subdomain maps to an ecosystem module. */
   matchedModuleSlug: string | null;
 }
@@ -109,10 +97,7 @@ export const PLATFORM_DOMAINS: PlatformDomains = {
   root: `https://${ECOSYSTEM_ROOT_DOMAIN}`,
   app: `https://app.${ECOSYSTEM_ROOT_DOMAIN}`,
   api: `https://api.${ECOSYSTEM_ROOT_DOMAIN}`,
-  admin: `https://admin.${ECOSYSTEM_ROOT_DOMAIN}`,
   auth: `https://auth.${ECOSYSTEM_ROOT_DOMAIN}`,
-  docs: `https://docs.${ECOSYSTEM_ROOT_DOMAIN}`,
-  status: `https://status.${ECOSYSTEM_ROOT_DOMAIN}`,
 };
 
 // ---------------------------------------------------------------------------
@@ -125,9 +110,6 @@ export const PLATFORM_DOMAINS: PlatformDomains = {
 // ---------------------------------------------------------------------------
 
 interface EcosystemOverride {
-  /** Ecosystem subdomain label when it differs from the slug. */
-  subdomain?: string;
-  legacyUrl?: string;
   status?: EcosystemModuleStatus;
   launchMode?: EcosystemLaunchMode;
   authMode?: EcosystemAuthMode;
@@ -138,15 +120,16 @@ interface EcosystemOverride {
 }
 
 const ECOSYSTEM_OVERRIDES: Readonly<Record<string, EcosystemOverride>> = {
-  techdeck: { legacyUrl: 'https://techdeck.app', first: true },
-  brandforgeos: { subdomain: 'brandforge' },
-  'studyforge-ai': { subdomain: 'studyforge' },
-  'ninja-launch-kit': { subdomain: 'launchkit' },
-  'callcommand-ai': { subdomain: 'callcommand' },
+  techdeck: { first: true },
 };
 
-function ecosystemSubdomain(slug: string): string {
-  return ECOSYSTEM_OVERRIDES[slug]?.subdomain ?? slug;
+function ecosystemSubdomain(entry: ModuleCatalogEntry): string {
+  const hostname = new URL(entry.canonicalBaseUrl).hostname.toLowerCase();
+  const suffix = `.${ECOSYSTEM_ROOT_DOMAIN}`;
+  if (!hostname.endsWith(suffix)) {
+    throw new Error(`Catalog module '${entry.slug}' must use a *.${ECOSYSTEM_ROOT_DOMAIN} canonicalBaseUrl`);
+  }
+  return hostname.slice(0, -suffix.length);
 }
 
 function catalogStatusToEcosystem(s: ModuleStatus): EcosystemModuleStatus {
@@ -157,13 +140,12 @@ function catalogStatusToEcosystem(s: ModuleStatus): EcosystemModuleStatus {
 
 function buildEcosystemModule(entry: ModuleCatalogEntry, ord: number): EcosystemModule {
   const o = ECOSYSTEM_OVERRIDES[entry.slug] ?? {};
-  const subdomain = ecosystemSubdomain(entry.slug);
   const module: EcosystemModule = {
     slug: entry.slug,
     name: entry.name,
     category: entry.category,
     description: entry.description,
-    ecosystemUrl: `https://${subdomain}.${ECOSYSTEM_ROOT_DOMAIN}`,
+    ecosystemUrl: entry.canonicalBaseUrl,
     status: o.status ?? catalogStatusToEcosystem(entry.defaultStatus),
     launchMode: o.launchMode ?? 'subdomain',
     authMode: o.authMode ?? 'sso',
@@ -171,7 +153,6 @@ function buildEcosystemModule(entry: ModuleCatalogEntry, ord: number): Ecosystem
     iconKey: o.iconKey ?? entry.slug,
     ord,
   };
-  if (o.legacyUrl) module.legacyUrl = o.legacyUrl;
   return module;
 }
 
@@ -194,7 +175,7 @@ export const ECOSYSTEM_MODULES_BY_SLUG: Readonly<Record<string, EcosystemModule>
 
 /** Reverse lookup: ecosystem subdomain label → catalog slug. */
 const SLUG_BY_SUBDOMAIN: Readonly<Record<string, string>> = Object.freeze(
-  Object.fromEntries(MODULE_CATALOG.map(m => [ecosystemSubdomain(m.slug), m.slug])),
+  Object.fromEntries(MODULE_CATALOG.map(m => [ecosystemSubdomain(m), m.slug])),
 );
 
 // ---------------------------------------------------------------------------
@@ -211,10 +192,6 @@ export function getEcosystemModule(slug: string): EcosystemModule | undefined {
 
 export function getModuleUrl(slug: string): string | undefined {
   return getEcosystemModule(slug)?.ecosystemUrl;
-}
-
-export function getLegacyUrl(slug: string): string | undefined {
-  return getEcosystemModule(slug)?.legacyUrl;
 }
 
 export function getActiveModules(): EcosystemModule[] {
@@ -250,7 +227,7 @@ export function detectOperatorOSHost(hostname: string): OperatorOSHostInfo {
     isRootDomain: false,
     isAppDomain: false,
     isApiDomain: false,
-    isAdminDomain: false,
+    isAuthDomain: false,
     matchedModuleSlug: null,
   };
 
@@ -276,7 +253,7 @@ export function detectOperatorOSHost(hostname: string): OperatorOSHostInfo {
     subdomain: label,
     isAppDomain: primary === 'app',
     isApiDomain: primary === 'api',
-    isAdminDomain: primary === 'admin',
+    isAuthDomain: primary === 'auth',
     matchedModuleSlug: SLUG_BY_SUBDOMAIN[primary] ?? null,
   };
 }

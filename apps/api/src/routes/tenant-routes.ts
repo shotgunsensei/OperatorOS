@@ -45,7 +45,11 @@ export async function registerTenantRoutes(app: FastifyInstance) {
       if (!tenant) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
       return reply.send({
         tenant,
-        membership: { role: ctx.role, viaPlatformRole: ctx.viaPlatformRole },
+        membership: {
+          role: ctx.role,
+          membershipRole: ctx.membershipRole,
+          viaPlatformRole: ctx.viaPlatformRole,
+        },
       });
     },
   );
@@ -55,6 +59,21 @@ export async function registerTenantRoutes(app: FastifyInstance) {
   // ──────────────────────────────────────────────────────────────────────
   app.get('/v1/me/tenants', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
+    const session = (request as any).authSession;
+    if (session?.sessionType === 'module' && session.tenantId) {
+      const [tenant] = await db.select().from(tenants).where(eq(tenants.id, session.tenantId)).limit(1);
+      if (!tenant) return reply.send({ tenants: [], current: null, sessionBound: true });
+      const [membership] = await db.select().from(tenantUsers)
+        .where(and(eq(tenantUsers.tenantId, session.tenantId), eq(tenantUsers.userId, user.id)))
+        .limit(1);
+      const role = membership?.role ?? (hasPlatformAdminAuthority(user) ? 'owner' : null);
+      if (!role) return reply.send({ tenants: [], current: null, sessionBound: true });
+      return reply.send({
+        tenants: [{ ...tenant, role }],
+        current: session.tenantId,
+        sessionBound: true,
+      });
+    }
     const memberships = await db.select().from(tenantUsers).where(eq(tenantUsers.userId, user.id));
     if (memberships.length === 0) {
       return reply.send({ tenants: [], current: null });

@@ -24,6 +24,10 @@ export interface SsoConsumePayload {
   jti: string;
   issuer: string;
   accessSource: "plan" | "addon" | "override";
+  operatoros_tenant_id?: string | null;
+  tenant?: { id?: string; role?: string | null } | null;
+  subscription?: { planSlug?: string | null; status?: string | null } | null;
+  modules?: Array<{ slug?: string; enabled?: boolean; accessLevel?: string; moduleRole?: string }>;
 }
 
 /**
@@ -118,4 +122,42 @@ export async function consumeSsoToken(
   // 4xx → forward the upstream `code` string.
   const apiCode = await safeReadJsonCode(response);
   return { ok: false, unavailable: false, apiCode, httpStatus: response.status };
+}
+
+export async function exchangeSsoCode(
+  code: string,
+  config: SsoConfig,
+): Promise<SsoConsumeOutcome> {
+  const url = `${config.apiUrl}/modules/sso/exchange`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CONSUME_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${config.secret}`,
+        "x-module-slug": config.audience,
+      },
+      body: JSON.stringify({ code, aud: config.audience, env: config.ssoEnv }),
+      signal: controller.signal,
+    });
+    if (response.status === 200) {
+      const body = await response.json();
+      return isConsumePayload(body)
+        ? { ok: true, payload: body }
+        : { ok: false, unavailable: true, httpStatus: 200 };
+    }
+    if (response.status >= 500) return { ok: false, unavailable: true, httpStatus: response.status };
+    return {
+      ok: false,
+      unavailable: false,
+      apiCode: await safeReadJsonCode(response),
+      httpStatus: response.status,
+    };
+  } catch {
+    return { ok: false, unavailable: true };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

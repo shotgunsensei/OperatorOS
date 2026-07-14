@@ -1,137 +1,55 @@
-# OperatorOS Child-App SSO Integration Prompt
+# OperatorOS SSO v1 Module Integration Prompt
 
-> Drop this prompt into a child app (TradeFlowKit, TorqueShed, TechDeck,
-> PulseDesk, FaultlineLab, BrandForgeOS, SnapProofOS, StudyForge AI,
-> Ninja Launch Kit, CallCommand AI, Ninjamation) to wire it up to
-> OperatorOS as the identity provider. Verbatim — do not paraphrase.
+Use this prompt only when migrating a module into OperatorOS. The default
+topology is the unified Next/Fastify runtime behind the module's canonical
+`*.operatoros.net` subdomain. Do not create another identity, billing, tenant,
+or entitlement authority.
 
----
+## Required protocol
 
-You are working on a Shotgun Ninjas child application. Your job is to
-accept single sign-on handoffs from OperatorOS (the parent platform)
-and treat the resulting session as the authenticated user for this
-child app. Implement exactly what is described below — no more, no
-less.
+1. Register one exact `clientId`, production origin, `/sso` callback, and
+   `/logout` URI in the central OperatorOS registry.
+2. On an unauthenticated module request, create high-entropy state, nonce, and
+   PKCE verifier values on the target module host. Store them only in
+   short-lived Secure, HttpOnly, SameSite=Lax, host-only cookies.
+3. Redirect to `https://auth.operatoros.net/login` with the exact client ID,
+   redirect URI, state, nonce, S256 challenge, and sanitized same-origin return
+   path.
+4. OperatorOS confirms the authenticated account, tenant status/membership,
+   module status, and current entitlement before issuing a 60-second encrypted,
+   single-use authorization code.
+5. The browser returns only to the exact registered
+   `{MODULE_BASE_URL}/sso?code=<opaque>&state=<state>` callback.
+6. The same-origin server exchange validates the request host, state, nonce,
+   PKCE verifier, code binding, expiry, replay state, user status, tenant, and
+   entitlement. It atomically consumes the code and creates a host-only module
+   session bound to that tenant and module.
+7. Remove the code from browser history, then navigate to the sanitized local
+   path.
 
-## Contract
+## Hard prohibitions
 
-OperatorOS issues HS256-signed JWTs and redirects the browser to:
+- No identity JWT, access token, refresh token, or session token in a URL,
+  browser storage, analytics, logs, or user-facing errors.
+- No arbitrary `next`/return target and no wildcard callback.
+- No shared module signing secret for browser code sealing.
+- No local login/register or child Stripe subscription authority.
+- No frontend-supplied user, tenant, role, or entitlement decision.
+- No automatic retry loop after a failed authorization transaction.
 
-```
-{MODULE_BASE_URL}/sso?token={jwt}
-```
+## Shared-runtime implementation points
 
-`MODULE_BASE_URL` is **the root of this child app** (no trailing
-slash). The child app must serve a route at exactly `/sso` that
-accepts the token via the `token` query string parameter.
+- Registry: `packages/modules/registry.ts` and
+  `config/operatoros-module-registry.json`
+- Target-host transaction: `apps/web/src/middleware.ts`
+- Callback: `apps/web/src/app/sso/page.tsx`
+- Issue/exchange: `apps/api/src/routes/sso-routes.ts`
+- Session policy: `packages/auth/index.ts` and `apps/api/src/lib/auth.ts`
+- Tenant/module gates: `apps/api/src/lib/tenant-auth.ts`
+- Contract: `docs/auth/OPERATOROS_SSO_CONTRACT_V1.md`
+- Onboarding and verification: `docs/auth/MODULE_ONBOARDING.md` and
+  `docs/auth/VALIDATION_MATRIX.md`
 
-## Token shape (HS256)
-
-Header: `{ "alg": "HS256", "typ": "JWT" }`
-
-Claims (exact field names):
-
-| claim             | type             | meaning                                                |
-| ----------------- | ---------------- | ------------------------------------------------------ |
-| `iss`             | string           | OperatorOS base URL (e.g. `https://app.operatoros.com`) |
-| `aud`             | string           | This child app's lowercase module slug                 |
-| `env`             | `prod`\|`staging`\|`dev` | Environment the token was issued in            |
-| `sub`             | string (uuid)    | User id (standard JWT subject)                         |
-| `user_id`         | string (uuid)    | Same as `sub`, duplicated for receiver convenience     |
-| `email`           | string           | User email                                             |
-| `role`            | string           | Platform role (`user` / `super_admin`)                 |
-| `module_slug`     | string           | Lowercase module slug — must equal `aud`               |
-| `plan_slug`       | string \| null   | `starter` \| `pro` \| `elite` \| null                  |
-| `organization_id` | string \| null   | Active tenant id, or null for personal tenant          |
-| `jti`             | string (hex)     | Single-use token id                                    |
-| `iat`             | number (seconds) | Issued-at                                              |
-| `exp`             | number (seconds) | `iat + 90`                                             |
-
-TTL is **90 seconds**. Reject anything older.
-
-## Required environment variables
-
-| name                 | purpose                                                  |
-| -------------------- | -------------------------------------------------------- |
-| `MODULE_SSO_SECRET`  | Shared HS256 signing secret. ≥16 characters. Same value as on OperatorOS. |
-| `OPERATOROS_BASE_URL`   | Expected `iss` value. Reject tokens with any other issuer. |
-| `OPERATOROS_SSO_AUDIENCE` | This child app's lowercase slug. Must match `aud` and `module_slug`. |
-| `OPERATOROS_SSO_ENV`    | `prod` / `staging` / `dev`. Reject tokens whose `env` differs. |
-| `OPERATOROS_API_URL` | Where to POST `/v1/modules/sso/consume` (typically same host as `iss`). |
-
-## /sso route — server-side flow
-
-1. Read `token` from the query string. If missing → `400 missing_token`.
-2. Verify the JWT with `MODULE_SSO_SECRET`, algorithm `HS256` ONLY.
-   Reject `alg=none` and any RS256 token.
-3. Verify `iss === OPERATOROS_BASE_URL` (exact string match).
-4. Verify `aud === OPERATOROS_SSO_AUDIENCE` and `module_slug === OPERATOROS_SSO_AUDIENCE`.
-5. Verify `env === OPERATOROS_SSO_ENV`.
-6. Verify `exp` is in the future and `iat` is not in the future (allow
-   ±5s clock skew). Token age (`now - iat`) must be ≤ 90 seconds.
-7. **Mandatory**: `POST {OPERATOROS_API_URL}/v1/modules/sso/consume`
-   with body `{ "jti": "...", "aud": "...", "env": "..." }`.
-   - `200 ok` → continue.
-   - `404 TOKEN_UNKNOWN` / `409 TOKEN_REPLAYED` / `410 TOKEN_EXPIRED` /
-     `400 AUDIENCE_MISMATCH` / `400 ENV_MISMATCH` → reject the launch
-     (do NOT proceed; do NOT trust the token even if local verification
-     passed). These are the exact `code` strings the API returns in the
-     JSON body of `/v1/modules/sso/consume` — match them verbatim.
-   - 5xx → fail closed; reject with `502 sso_consume_unavailable`.
-8. On success, look up or create a local user keyed on `sub`/`user_id`.
-   Store `email`, `role`, `plan_slug`, `organization_id` on the local
-   record. **Do not** copy the JWT into your own session cookie.
-9. Issue your child app's own session (cookie / signed token) and
-   redirect to your post-login landing page.
-
-## Hard rules
-
-- Never accept a token without calling `/v1/modules/sso/consume`. The
-  consume endpoint is the only place where single-use enforcement
-  happens.
-- Never echo `MODULE_SSO_SECRET` in logs, error responses, or audit
-  rows. Log the `jti` instead.
-- Never trust `Authorization: Bearer <jwt>` headers from arbitrary
-  clients — the JWT is only legitimate when it arrived via the `/sso`
-  redirect.
-- Lowercase the slug everywhere. `TradeFlowKit` is the display name;
-  `tradeflowkit` is the slug.
-- If `MODULE_SSO_SECRET` is missing, fail startup loudly. Do not fall
-  back to unsigned launches in production.
-
-## Reference reject codes (return JSON)
-
-| HTTP | code                      | when                                              |
-| ---- | ------------------------- | ------------------------------------------------- |
-| 400  | `missing_token`           | `?token=` absent                                  |
-| 400  | `bad_request`             | malformed JWT                                     |
-| 401  | `signature_invalid`       | HS256 verify failed                               |
-| 401  | `issuer_mismatch`         | `iss` is not `OPERATOROS_BASE_URL`                |
-| 401  | `audience_mismatch`       | `aud` ≠ `OPERATOROS_SSO_AUDIENCE`                 |
-| 401  | `env_mismatch`            | `env` ≠ `OPERATOROS_SSO_ENV`                      |
-| 401  | `expired`                 | `exp` in the past, or `iat` older than 90s        |
-| 401  | `clock_skew`              | `iat` more than 5s in the future                  |
-| 401  | `consume_failed`          | `/v1/modules/sso/consume` returned 4xx            |
-| 502  | `sso_consume_unavailable` | `/v1/modules/sso/consume` returned 5xx / network  |
-
-### Mapping from OperatorOS API codes → child reject codes
-
-The API's `/v1/modules/sso/consume` returns these `code` values (exact
-strings, in the JSON body). Map them 1:1 to your child reject:
-
-| API HTTP | API `code`           | Child reject code     |
-| -------- | -------------------- | --------------------- |
-| 404      | `TOKEN_UNKNOWN`      | `consume_failed`      |
-| 409      | `TOKEN_REPLAYED`     | `consume_failed`      |
-| 410      | `TOKEN_EXPIRED`      | `expired`             |
-| 400      | `AUDIENCE_MISMATCH`  | `audience_mismatch`   |
-| 400      | `ENV_MISMATCH`       | `env_mismatch`        |
-
-## Out of scope (intentionally not supported)
-
-- JWKS / RS256. OperatorOS uses a single shared HS256 secret; key
-  rotation is operator-driven (rotate `MODULE_SSO_SECRET` everywhere
-  at once).
-- Refresh tokens. Re-launch from OperatorOS to get a new session.
-- SCIM / directory sync. User records are lazily provisioned on first
-  successful `/sso` call.
+If a module must later become a separate workload, keep this exact protocol
+and use an independent per-client server credential for exchange. Never
+restore the retired HS256 browser handoff.

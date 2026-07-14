@@ -1,5 +1,9 @@
 # OperatorOS Auth Hardening Notes
 
+> Historical Phase 3 record. Its bearer/local-storage and parent-domain cookie
+> descriptions are superseded by `docs/auth/OPERATOROS_SSO_CONTRACT_V1.md` and
+> must not be used for current implementation or deployment.
+
 Phase: 3 - shared auth, session, and root admin enforcement audit.
 
 Status: implemented central helpers and low-risk server-side hardening. No external modules were imported. Stripe billing behavior was not changed.

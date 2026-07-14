@@ -45,6 +45,16 @@ export interface OperatorOSModuleRegistryEntry {
   iconName: string;
   requiresSubscription: boolean;
   requiresTenant: boolean;
+  clientId: string;
+  productionBaseUrl: string;
+  exactRedirectUris: readonly string[];
+  exactLogoutUris: readonly string[];
+  exactAllowedOrigins: readonly string[];
+  callbackPath: string;
+  launchPath: string;
+  healthCheckPath: string;
+  contractVersion: 'v1';
+  minimumAuthAdapterVersion: string;
 }
 
 export interface ModuleEntitlementEntry {
@@ -148,6 +158,16 @@ function toRegistryEntry(module: EcosystemModule): OperatorOSModuleRegistryEntry
     iconName: module.iconKey,
     requiresSubscription: true,
     requiresTenant: true,
+    clientId: `operatoros:${module.slug}`,
+    productionBaseUrl: module.ecosystemUrl,
+    exactRedirectUris: [`${module.ecosystemUrl.replace(/\/+$/, '')}/sso`],
+    exactLogoutUris: [`${module.ecosystemUrl.replace(/\/+$/, '')}/logout`],
+    exactAllowedOrigins: [module.ecosystemUrl.replace(/\/+$/, '')],
+    callbackPath: '/sso',
+    launchPath: module.slug === 'pulsedesk' || module.slug === 'tradeflowkit' ? '/dashboard' : '/',
+    healthCheckPath: '/healthz',
+    contractVersion: 'v1',
+    minimumAuthAdapterVersion: '1.0.0',
     ...(catalog
       ? {
           category: catalog.category,
@@ -161,12 +181,12 @@ const OPERATOROS_MODULE: OperatorOSModuleRegistryEntry = Object.freeze({
   id: 'operatoros',
   name: 'OperatorOS',
   slug: 'operatoros',
-  hostname: hostnameFromUrl(PLATFORM_DOMAINS.app),
+  hostname: hostnameFromUrl(PLATFORM_DOMAINS.root),
   localDevHost: null,
   localPathFallback: '/app',
   routePath: '/app',
   defaultRoute: '/app',
-  launchUrl: PLATFORM_DOMAINS.app,
+  launchUrl: PLATFORM_DOMAINS.root,
   description: 'Parent command center, identity, tenant, billing, entitlement, and module launch control plane.',
   category: 'platform',
   entitlementKey: 'operatoros',
@@ -174,6 +194,16 @@ const OPERATOROS_MODULE: OperatorOSModuleRegistryEntry = Object.freeze({
   iconName: 'operatoros',
   requiresSubscription: false,
   requiresTenant: false,
+  clientId: 'operatoros:web',
+  productionBaseUrl: PLATFORM_DOMAINS.root,
+  exactRedirectUris: [`${PLATFORM_DOMAINS.root}/sso`, `${PLATFORM_DOMAINS.app}/sso`],
+  exactLogoutUris: [`${PLATFORM_DOMAINS.root}/logout`, `${PLATFORM_DOMAINS.app}/logout`],
+  exactAllowedOrigins: [PLATFORM_DOMAINS.root, PLATFORM_DOMAINS.app, PLATFORM_DOMAINS.auth],
+  callbackPath: '/sso',
+  launchPath: '/app',
+  healthCheckPath: '/healthz',
+  contractVersion: 'v1',
+  minimumAuthAdapterVersion: '1.0.0',
 });
 
 export const OPERATOROS_MODULE_REGISTRY: readonly OperatorOSModuleRegistryEntry[] = Object.freeze([
@@ -189,9 +219,9 @@ const MODULES_BY_HOST: ReadonlyMap<string, OperatorOSModuleRegistryEntry> = new 
   ...OPERATOROS_MODULE_REGISTRY.map(module => [module.hostname, module] as const),
   [ECOSYSTEM_ROOT_DOMAIN, OPERATOROS_MODULE] as const,
   [`www.${ECOSYSTEM_ROOT_DOMAIN}`, OPERATOROS_MODULE] as const,
+  [hostnameFromUrl(PLATFORM_DOMAINS.app), OPERATOROS_MODULE] as const,
   [hostnameFromUrl(PLATFORM_DOMAINS.auth), OPERATOROS_MODULE] as const,
   [hostnameFromUrl(PLATFORM_DOMAINS.api), OPERATOROS_MODULE] as const,
-  [hostnameFromUrl(PLATFORM_DOMAINS.admin), OPERATOROS_MODULE] as const,
 ]);
 
 export function normalizeHost(input: string | null | undefined): string {
@@ -280,6 +310,16 @@ function localModuleSlugFromPath(pathname: string): string | undefined {
   } catch {
     return match[1];
   }
+}
+
+function supportsLocalModuleFallback(host: string): boolean {
+  return host === 'localhost'
+    || host === '127.0.0.1'
+    || host === '0.0.0.0'
+    || host === '::1'
+    || host.endsWith('.localhost')
+    || host.endsWith('.replit.dev')
+    || host.endsWith('.repl.co');
 }
 
 export function getHostSurface(host: string | null | undefined): OperatorOSHostSurface {
@@ -412,7 +452,10 @@ export function resolveModuleContext(
 ): ResolvedOperatorOSModuleContext {
   const host = getRequestHost(request);
   const pathname = getRequestPathname(request);
-  const localSlug = localModuleSlugFromPath(pathname);
+  const requestedLocalSlug = localModuleSlugFromPath(pathname);
+  const localSlug = requestedLocalSlug && supportsLocalModuleFallback(host)
+    ? requestedLocalSlug
+    : undefined;
   const localModule = localSlug ? getModuleBySlug(localSlug) : undefined;
   const isLocalFallback = !!localSlug;
   const surface = isLocalFallback ? 'local-module' : getHostSurface(host);

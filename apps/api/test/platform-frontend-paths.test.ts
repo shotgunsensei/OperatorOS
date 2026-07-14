@@ -140,7 +140,6 @@ test('platformApiCall sends normalized proxy URL with auth, tenant, credentials,
   (globalThis as any).window = {
     localStorage: {
       getItem(key: string) {
-        if (key === 'token') return 'jwt-fixture';
         if (key === 'activeTenantId') return 'tenant-fixture';
         return null;
       },
@@ -164,7 +163,7 @@ test('platformApiCall sends normalized proxy URL with auth, tenant, credentials,
     assert.equal(calls[0].init?.body, JSON.stringify({ probe: true }));
 
     const headers = calls[0].init?.headers as Headers;
-    assert.equal(headers.get('Authorization'), 'Bearer jwt-fixture');
+    assert.equal(headers.get('Authorization'), null);
     assert.equal(headers.get('X-Tenant-Id'), 'tenant-fixture');
     assert.equal(headers.get('Content-Type'), 'application/json');
   } finally {
@@ -260,7 +259,8 @@ test('canonical Platform route, legacy redirects, and middleware auth gate stay 
   assert.match(platformRoute, /platformViewToPath/);
   assert.match(canonicalRoute, /export \{ default \} from '..\/..\/..\/platform\/\[\[\.\.\.slug\]\]\/page'/);
   assert.match(middleware, /url\.pathname = '\/login'/);
-  assert.match(middleware, /next=\$\{encodeURIComponent\(target\)\}/);
+  assert.match(middleware, /url\.searchParams\.set\('next', target\)/);
+  assert.match(middleware, /url\.searchParams\.set\('code_challenge_method', SSO_PKCE_METHOD\)/);
   assert.match(middleware, /matcher:\s*\[[\s\S]*'\/app\/:path\*'/);
 });
 
@@ -310,18 +310,18 @@ test('Platform Command auth, last-admin, and failure-logging invariants stay wir
   assert.match(tenantAuth, /await authenticate\(request, reply\);[\s\S]*hasPlatformAdminAuthority\(user\)/);
   assert.match(tenantAuth, /code: 'PLATFORM_ROLE_REQUIRED'/);
   assert.match(auth, /const authHeader = request\.headers\.authorization/);
-  assert.match(auth, /const cookieToken = \(request as any\)\.cookies\?\.token/);
+  assert.match(auth, /cookies\?\.\[SESSION_COOKIE_NAME\]/);
   assert.match(auth, /authHeader\?\.startsWith\('Bearer '\) \? authHeader\.slice\(7\) : cookieToken/);
   assert.match(auth, /case 'suspended':[\s\S]*code: 'ACCOUNT_SUSPENDED'/);
   assert.match(auth, /case 'deleted':[\s\S]*code: 'ACCOUNT_DELETED'/);
   assert.match(auth, /case 'pending':[\s\S]*code: 'ACCOUNT_PENDING'/);
-  assert.match(webAuth, /localStorage\.getItem\('token'\)/);
-  assert.match(webAuth, /headers\['Authorization'\] = `Bearer \$\{token\}`/);
+  assert.doesNotMatch(webAuth, /localStorage\.getItem\('token'\)/);
+  assert.doesNotMatch(webAuth, /Authorization.*Bearer/);
   assert.match(webAuth, /credentials: 'include'/);
   assert.match(webAuth, /me: \(\) => apiFetch\('\/auth\/me'\)/);
   assert.match(authProvider, /const \{ user \} = await authApi\.me\(\)/);
+  assert.doesNotMatch(authProvider, /localStorage\.setItem\('token'/);
   assert.match(authProvider, /localStorage\.removeItem\('token'\)/);
-  assert.match(authProvider, /localStorage\.setItem\('token', data\.token\)/);
   assert.match(authProvider, /setActiveTenantId\(data\.user\?\.currentTenantId \?\? null\)/);
 
   assert.match(platformRoutes, /registerPlatformFailureLogging\(app, \{ prefixes: \['\/v1\/platform\/'\] \}\)/);

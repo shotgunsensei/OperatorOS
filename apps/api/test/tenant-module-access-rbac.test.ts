@@ -42,8 +42,8 @@ before(async () => {
   archivedMod = await createTestModule();
   // Wire tenant_modules: one enabled, one archived.
   await db.insert(tenantModules).values([
-    { tenantId: tenantA.id, moduleId: mod.id, status: 'enabled', source: 'included', allowAllMembers: false },
-    { tenantId: tenantA.id, moduleId: archivedMod.id, status: 'archived', source: 'included', allowAllMembers: false },
+    { tenantId: tenantA.id, moduleId: mod.id, status: 'enabled', source: 'admin', allowAllMembers: false },
+    { tenantId: tenantA.id, moduleId: archivedMod.id, status: 'archived', source: 'admin', allowAllMembers: false },
   ]);
 
   const Fastify = (await import('fastify')).default;
@@ -65,7 +65,7 @@ after(async () => {
   for (const m of [mod, archivedMod]) if (m) await cleanupModule(m.id);
 });
 
-const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` });
+const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` });
 
 test('member cannot grant module access (TENANT_ROLE_INSUFFICIENT)', async () => {
   const r = await app.inject({
@@ -111,7 +111,7 @@ test('owner grants user access; grid reflects it; second call updates same row',
     headers: bearer(owner),
     payload: { moduleSlug: mod.slug, accessLevel: 'manager' },
   });
-  assert.equal(upgrade.statusCode, 200);
+  assert.equal(upgrade.statusCode, 200, upgrade.body);
   assert.equal(upgrade.json().access.id, firstId, 'upsert must reuse the row');
   assert.equal(upgrade.json().access.accessLevel, 'manager');
 
@@ -129,7 +129,7 @@ test('module-access grant writes an admin audit row with before/after diff', asy
   const auditMod = await createTestModule();
   await db.insert(tenantModules).values({
     tenantId: tenantA.id, moduleId: auditMod.id, status: 'enabled',
-    source: 'included', allowAllMembers: false,
+    source: 'admin', allowAllMembers: false,
   });
   try {
     const before = Date.now();

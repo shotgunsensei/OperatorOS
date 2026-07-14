@@ -93,7 +93,7 @@ after(async () => {
   for (const m of [lockedMod, unlockedMod, betaMod, otherTenantMod]) if (m) await cleanupModule(m.id);
 });
 
-const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` });
+const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` });
 
 test('401 when unauthenticated', async () => {
   const r = await app.inject({ method: 'GET', url: '/v1/me/modules' });

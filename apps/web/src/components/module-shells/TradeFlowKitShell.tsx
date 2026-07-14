@@ -27,6 +27,8 @@ import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createTradeFlowKitAdapterContext } from '../../../../../apps/modules/tradeflowkit/adapter.js';
+import TradeFlowKitLeadCenter from './TradeFlowKitLeadCenter';
+import TradeFlowKitRevenueFlow from './TradeFlowKitRevenueFlow';
 
 interface TradeFlowKitShellProps {
   baseUrl?: string;
@@ -111,9 +113,9 @@ const readinessRows = [
   ['SSO', 'OperatorOS handoff', colors.green],
   ['Tenant', 'Org-linked', colors.blue],
   ['Billing', 'OperatorOS boundary', colors.gold],
-  ['Mobile', 'Responsive PWA', colors.violet],
-  ['Standalone login', 'Not launched', colors.blue],
-  ['Stripe local', 'Phase 15 cleanup', colors.gold],
+  ['Manual leads', 'Live workflow', colors.green],
+  ['Standalone login', 'Disabled', colors.blue],
+  ['Provider actions', 'Not migrated', colors.gold],
 ];
 
 const shellCss = `
@@ -270,7 +272,12 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
     <main className="tfk-shell" data-testid="tradeflowkit-module-shell">
       <style>{shellCss}</style>
       <section className="tfk-wrap">
-        <header className="tfk-header" data-testid="tradeflowkit-module-header">
+        <header
+          id="tradeflowkit-overview"
+          className="tfk-header"
+          data-testid="tradeflowkit-module-header"
+          tabIndex={-1}
+        >
           <div className="tfk-header-top">
             <div style={{ minWidth: 0 }}>
               <div style={eyebrowStyle}>Field-service revenue command layer</div>
@@ -322,7 +329,12 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
         <div className="tfk-body">
           <nav className="tfk-rail" aria-label="TradeFlowKit sections" data-testid="tradeflowkit-module-sidebar">
             {workflowShortcuts.map(({ id, label, Icon, tone }) => (
-              <a key={id} href={`#tradeflowkit-${id}`} style={railLinkStyle} data-testid={`tradeflowkit-sidebar-${id}`}>
+              <a
+                key={id}
+                href={id === 'leads' ? '#tradeflowkit-lead-center' : `#tradeflowkit-${id}`}
+                style={railLinkStyle}
+                data-testid={`tradeflowkit-sidebar-${id}`}
+              >
                 <Icon size={15} color={tone} />
                 <span>{label}</span>
               </a>
@@ -339,6 +351,20 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
                 <MetricTile key={label} label={label} value={value} tone={tone} />
               ))}
             </section>
+
+            <section
+              id="tradeflowkit-lead-center"
+              data-testid="tradeflowkit-lead-center-panel"
+              tabIndex={-1}
+            >
+              {hasTenantContext && adapter.tenantId && (
+                <TradeFlowKitLeadCenter key={adapter.tenantId} tenantKey={adapter.tenantId} />
+              )}
+            </section>
+
+            {hasTenantContext && adapter.tenantId && (
+              <TradeFlowKitRevenueFlow key={`revenue-${adapter.tenantId}`} tenantKey={adapter.tenantId} />
+            )}
 
             <section className="tfk-panel" style={{ padding: 18 }} data-testid="tradeflowkit-workflows-panel">
               <SectionHeading
@@ -362,15 +388,21 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               <div style={emptyStateStyle} data-testid="tradeflowkit-empty-state">
                 <DollarSign size={18} color={colors.green} />
                 <div>
-                  <div style={{ fontWeight: 800 }}>Ready for a controlled import smoke pass</div>
+                  <div style={{ fontWeight: 800 }}>Lead and quote-to-payment workflows are running in the shared tenant runtime</div>
                   <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                    The shell is tenant-aware and keeps subscription ownership centralized while preserving the imported workflow map.
+                    Customers, jobs, quotes, invoice conversion, and manual payment recording now preserve tenant scope and audit history. Provider messaging and customer-facing payment integrations remain gated for separate review.
                   </div>
                 </div>
               </div>
             </section>
 
-            <section id="tradeflowkit-settings" className="tfk-panel" style={{ padding: 18 }} data-testid="tradeflowkit-settings-panel">
+            <section
+              id="tradeflowkit-settings"
+              className="tfk-panel"
+              style={{ padding: 18 }}
+              data-testid="tradeflowkit-settings-panel"
+              tabIndex={-1}
+            >
               <SectionHeading
                 Icon={ShieldCheck}
                 title="Settings and Admin"

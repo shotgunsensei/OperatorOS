@@ -149,7 +149,8 @@ at runtime.
 
 - PulseDesk source exists at `apps/modules/pulsedesk/source`.
 - PulseDesk loads from `/app/apps/pulsedesk` for an entitled tenant.
-- PulseDesk resolves through local fallback `/modules/pulsedesk`.
+- Loopback/preview development may use `/modules/pulsedesk`; production
+  root/app path requests redirect to `https://pulsedesk.operatoros.net`.
 - `pulsedesk.operatoros.net` resolves to the PulseDesk shell when host routing
   is enabled.
 - Logged-out direct module visits redirect to OperatorOS login.
@@ -163,9 +164,49 @@ at runtime.
   managed-by-OperatorOS behavior.
 - `/api/billing/checkout` returns managed-by-OperatorOS behavior if mounted.
 
+## First Shared-Runtime Workflow
+
+The department escalation queue is the first PulseDesk workflow promoted from
+the retained source snapshot into the active shared runtime.
+
+### Active API
+
+- `GET/POST /v1/modules/pulsedesk/departments`
+- `PATCH /v1/modules/pulsedesk/departments/:id`
+- `GET /v1/modules/pulsedesk/assignees`
+- `GET/POST /v1/modules/pulsedesk/requests`
+- `GET/PATCH /v1/modules/pulsedesk/requests/:id`
+- `POST /v1/modules/pulsedesk/requests/:id/transitions`
+
+All routes require active tenant membership and PulseDesk module access. Read
+responses expose only the server-derived
+`capabilities.canManageWorkflow` flag needed by the shell. Write routes never
+trust a client-supplied tenant, actor, role, status, number, version, or due
+time.
+
+### Additive Persistence
+
+- `pulsedesk_departments`
+- `pulsedesk_request_sequences`
+- `pulsedesk_requests`
+- `pulsedesk_request_events`
+
+Startup DDL is idempotent. Department names are unique per tenant without case
+sensitivity, request numbers use an atomic per-tenant sequence, updates use a
+SQL version predicate, and the request-to-event foreign key restricts request
+deletion so history cannot cascade away.
+
+### Deliberate Boundary
+
+This slice contains only bounded operational summary/location fields,
+department routing, assignment, SLA state, and structured events. It adds no
+notes, narrative descriptions, attachments, patient fields, email ingestion,
+vendor workflows, local auth, billing, or new environment variables. The
+standalone source remains retained for later reviewed slices.
+
 ## Exact Next-Step Recommendation
 
-Proceed to Phase 14: import TradeFlowKit as the next OperatorOS module while
-preserving Phase 13 PulseDesk boundaries. In parallel, keep any live PulseDesk
-SSO token verification that requires deployed infrastructure on the regression
-checklist.
+Run the staging database and browser checklist in
+`docs/pulsedesk-manual-qa.md`, then review the next PulseDesk workflow as its
+own tenant/security migration. Keep live subdomain SSO verification on the
+release regression checklist.

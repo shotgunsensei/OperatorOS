@@ -38,6 +38,6 @@ export function withReturnTo(url: string, returnTo: string): string {
 }
 
 export function getCurrentReturnUrl(): string {
-  if (typeof window === "undefined") return "https://techdeck.app";
+  if (typeof window === "undefined") return "https://techdeck.operatoros.net";
   return window.location.href;
 }

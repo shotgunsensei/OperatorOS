@@ -146,21 +146,23 @@ function SsoSettings() {
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
-  const moduleEnvBlock = (m: any): string => [
-    `# OperatorOS SSO env for ${m.displayName} (${m.slug})`,
-    `OPERATOROS_BASE_URL=${data.issuer || 'https://app.operatoros.com'}`,
-    `OPERATOROS_SSO_AUDIENCE=${m.slug}`,
-    `OPERATOROS_SSO_ENV=${data.env}`,
-    'MODULE_SSO_SECRET=<rotate-this-must-match-operatoros>',
+  const moduleRegistrationBlock = (m: any): string => [
+    `# OperatorOS SSO v1 registration for ${m.displayName} (${m.slug})`,
+    `CLIENT_ID=${m.clientId}`,
+    `REDIRECT_URI=${m.redirectUri}`,
+    `LOGOUT_URI=${m.logoutUri}`,
+    `ALLOWED_ORIGIN=${m.allowedOrigin}`,
+    'CODE_CHALLENGE_METHOD=S256',
   ].join('\n');
   const copyModule = async (m: any) => {
-    await copyText(moduleEnvBlock(m));
+    await copyText(moduleRegistrationBlock(m));
     setCopiedSlug(m.slug);
     setTimeout(() => setCopiedSlug(s => s === m.slug ? null : s), 1500);
   };
   if (err) return <ErrorBlock err={err} onRetry={load} />;
   if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
-  const secretOk = data.secretStatus === 'configured';
+  const codeSecretOk = data.codeSecretStatus === 'configured';
+  const sessionSecretOk = data.sessionSecretStatus === 'configured';
   return (
     <div data-testid="sso-settings">
       <Card style={{ marginBottom: 12 }}>
@@ -175,13 +177,19 @@ function SsoSettings() {
             <div data-testid="sso-env"><Pill tone={data.env === 'prod' ? 'green' : data.env === 'staging' ? 'yellow' : 'muted'}>{data.env}</Pill></div>
           </div>
           <div>
-            <div style={{ color: colors.textMuted, fontSize: 11 }}>Token TTL</div>
+            <div style={{ color: colors.textMuted, fontSize: 11 }}>One-time code TTL</div>
             <div data-testid="sso-ttl">{data.ttlSeconds}s</div>
           </div>
           <div>
-            <div style={{ color: colors.textMuted, fontSize: 11 }}>MODULE_SSO_SECRET</div>
-            <div data-testid="sso-secret-status">
-              <Pill tone={secretOk ? 'green' : 'red'}>{secretOk ? 'configured' : 'missing'}</Pill>
+            <div style={{ color: colors.textMuted, fontSize: 11 }}>SSO_CODE_ENCRYPTION_SECRET</div>
+            <div data-testid="sso-code-secret-status">
+              <Pill tone={codeSecretOk ? 'green' : 'red'}>{codeSecretOk ? 'configured' : 'missing'}</Pill>
+            </div>
+          </div>
+          <div>
+            <div style={{ color: colors.textMuted, fontSize: 11 }}>SESSION_SECRET</div>
+            <div data-testid="sso-session-secret-status">
+              <Pill tone={sessionSecretOk ? 'green' : 'red'}>{sessionSecretOk ? 'configured' : 'missing'}</Pill>
             </div>
           </div>
         </div>
@@ -189,7 +197,7 @@ function SsoSettings() {
 
       <Card style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <h3 style={{ margin: 0, fontSize: 14 }}>Child app .env block</h3>
+          <h3 style={{ margin: 0, fontSize: 14 }}>Unified runtime secret names</h3>
           <Btn data-testid="button-copy-env-block" variant="primary" onClick={copyEnvBlock}>{copied ? 'Copied!' : 'Copy'}</Btn>
         </div>
         <pre data-testid="sso-env-block" style={{
@@ -200,17 +208,17 @@ function SsoSettings() {
 
       <Card style={{ padding: 0 }}>
         <div style={{ padding: '12px 16px', borderBottom: `1px solid ${colors.border}` }}>
-          <h3 style={{ margin: 0, fontSize: 14 }}>Per-module launch URLs</h3>
+          <h3 style={{ margin: 0, fontSize: 14 }}>Exact module client registrations</h3>
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead><tr style={{ background: colors.bgHover, color: colors.textMuted }}>
-            <Th>Module</Th><Th>Slug</Th><Th>Base URL</Th><Th>Launch URL pattern</Th><Th>Env</Th>
+            <Th>Module</Th><Th>Client ID</Th><Th>Base URL</Th><Th>Callback pattern</Th><Th>Registration</Th>
           </tr></thead>
           <tbody>
             {data.modules.map((m: any) => (
               <tr key={m.slug} data-testid={`sso-module-row-${m.slug}`} style={{ borderTop: `1px solid ${colors.border}` }}>
                 <Td>{m.displayName}</Td>
-                <Td><code>{m.slug}</code></Td>
+                <Td><code>{m.clientId}</code></Td>
                 <Td>
                   {m.baseUrlConfigured
                     ? <code style={{ fontSize: 11 }}>{m.baseUrl}</code>
@@ -221,7 +229,7 @@ function SsoSettings() {
                   <Btn
                     data-testid={`button-copy-module-env-${m.slug}`}
                     onClick={() => copyModule(m)}
-                  >{copiedSlug === m.slug ? 'Copied!' : 'Copy child env vars'}</Btn>
+                  >{copiedSlug === m.slug ? 'Copied!' : 'Copy registration'}</Btn>
                 </Td>
               </tr>
             ))}

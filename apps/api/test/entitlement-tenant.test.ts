@@ -18,10 +18,9 @@
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import { users, tenants, tenantUsers, tenantModules, tenantUserModuleAccess } from '../src/schema.js';
-import { signToken } from '../src/lib/auth.js';
 import {
   ensureSchemaReady,
   createTestUser,
@@ -29,6 +28,9 @@ import {
   cleanupUser,
   cleanupModule,
 } from './_setup.js';
+
+process.env.SESSION_SECRET ||= 'entitlement-tenant-test-secret-32-plus';
+const { signToken } = await import('../src/lib/auth.js');
 
 let app: any;
 let owner: any;
@@ -57,11 +59,18 @@ before(async () => {
 
   const Fastify = (await import('fastify')).default;
   const cookie = (await import('@fastify/cookie')).default;
-  const { requireTenantModuleAccess } = await import('../src/lib/tenant-auth.js');
+  const {
+    requireTenantModuleAccess,
+    requireTenantModuleWriteAccess,
+  } = await import('../src/lib/tenant-auth.js');
   app = Fastify();
   await app.register(cookie, { secret: 'test-secret' });
   app.get(`/test/tenants/:tenantId/use-${mod.slug}`,
     { preHandler: [requireTenantModuleAccess(mod.slug)] },
+    async (req: any, reply: any) => reply.send({ ok: true, level: (req as any).tenantModuleAccessLevel }),
+  );
+  app.post(`/test/tenants/:tenantId/use-${mod.slug}`,
+    { preHandler: [requireTenantModuleAccess(mod.slug), requireTenantModuleWriteAccess] },
     async (req: any, reply: any) => reply.send({ ok: true, level: (req as any).tenantModuleAccessLevel }),
   );
   await app.ready();
@@ -80,7 +89,7 @@ after(async () => {
 });
 
 function bearer(u: any) {
-  return { authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` };
+  return { authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` };
 }
 
 async function setTenantModule(opts: { allowAllMembers: boolean; status?: string }) {
@@ -95,7 +104,7 @@ async function setTenantModule(opts: { allowAllMembers: boolean; status?: string
   });
 }
 
-async function setUserAccess(userId: string, level: 'none' | 'user' | 'manager' | null) {
+async function setUserAccess(userId: string, level: 'none' | 'viewer' | 'user' | 'manager' | null) {
   await db.delete(tenantUserModuleAccess)
     .where(eq(tenantUserModuleAccess.userId, userId));
   if (level !== null) {
@@ -155,6 +164,49 @@ test('explicit user grant works when allowAllMembers=false', async () => {
   });
   assert.equal(res.statusCode, 200);
   assert.equal(res.json().level, 'user');
+});
+
+test('explicit viewer grant remains launchable and read-only-identifiable', async () => {
+  await setTenantModule({ allowAllMembers: false });
+  await setUserAccess(memberB.id, 'viewer');
+  const res = await app.inject({
+    method: 'GET',
+    url: `/test/tenants/${tenant.id}/use-${mod.slug}`,
+    headers: bearer(memberB),
+  });
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.json().level, 'viewer');
+
+  const mutation = await app.inject({
+    method: 'POST',
+    url: `/test/tenants/${tenant.id}/use-${mod.slug}`,
+    headers: bearer(memberB),
+  });
+  assert.equal(mutation.statusCode, 403);
+  assert.equal(mutation.json().code, 'TENANT_MODULE_WRITE_ACCESS_REQUIRED');
+});
+
+test('tenant viewer caps an explicit module-manager grant to read-only', async () => {
+  await setTenantModule({ allowAllMembers: false });
+  await db.update(tenantUsers).set({ role: 'viewer' }).where(and(
+    eq(tenantUsers.tenantId, tenant.id),
+    eq(tenantUsers.userId, memberB.id),
+  ));
+  try {
+    await setUserAccess(memberB.id, 'manager');
+    const res = await app.inject({
+      method: 'GET',
+      url: `/test/tenants/${tenant.id}/use-${mod.slug}`,
+      headers: bearer(memberB),
+    });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json().level, 'viewer');
+  } finally {
+    await db.update(tenantUsers).set({ role: 'member' }).where(and(
+      eq(tenantUsers.tenantId, tenant.id),
+      eq(tenantUsers.userId, memberB.id),
+    ));
+  }
 });
 
 test('member with no row + allowAllMembers=false -> 403', async () => {

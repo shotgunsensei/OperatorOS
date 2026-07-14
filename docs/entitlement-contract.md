@@ -23,9 +23,10 @@ Current central registry ids include:
 - `ninja-launch-kit`
 - `callcommand-ai`
 - `ninjamation`
+- `outcall` (planned)
 
-Subdomain labels may differ from slugs. For example, `brandforge.operatoros.net`
-maps to the `brandforgeos` module slug. Slugs remain the entitlement authority.
+Subdomain labels may differ from slugs. For example, `ninjalaunchkit.operatoros.net`
+maps to the `ninja-launch-kit` module slug. Slugs remain the entitlement authority.
 
 ## Tenant Access Checks
 

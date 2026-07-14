@@ -74,7 +74,7 @@ function AppContent() {
   useEffect(() => {
     if (loading || !user) return;
     let pending: string | null = null;
-    try { pending = localStorage.getItem('operatoros.pendingInviteToken'); } catch {}
+    try { pending = sessionStorage.getItem('operatoros.pendingInviteToken'); } catch {}
     if (pending) {
       // Canonical invite URL post-split lives under /app/*.
       window.location.replace(`/app/invites/${encodeURIComponent(pending)}`);

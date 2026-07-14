@@ -60,7 +60,7 @@ after(async () => {
   for (const u of [admin, regular]) if (u) await cleanupUser(u.id);
 });
 
-const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` });
+const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` });
 
 test('restore: 404 unknown tenant', async () => {
   const res = await app.inject({

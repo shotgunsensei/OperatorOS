@@ -51,7 +51,6 @@ test('TradeFlowKit source snapshot is staged without runtime artifacts', () => {
     'apps/modules/tradeflowkit/source/.agents',
     'apps/modules/tradeflowkit/source/.codex',
     'apps/modules/tradeflowkit/source/.github',
-    'apps/modules/tradeflowkit/source/node_modules',
     'apps/modules/tradeflowkit/source/dist',
     'apps/modules/tradeflowkit/source/data',
     'apps/modules/tradeflowkit/source/package-lock.json',
@@ -60,6 +59,11 @@ test('TradeFlowKit source snapshot is staged without runtime artifacts', () => {
   ]) {
     assert.equal(existsSync(repoPath(excluded)), false, `${excluded} should not be imported`);
   }
+  assert.match(
+    readRepoFile('apps/modules/tradeflowkit/source/.gitignore'),
+    /^node_modules$/m,
+    'local snapshot dependencies must remain ignored',
+  );
 });
 
 test('TradeFlowKit source audit identifies web, API, SSO, auth, billing, tenant, and workflow surfaces', () => {
@@ -142,11 +146,10 @@ test('TradeFlowKit source audit identifies web, API, SSO, auth, billing, tenant,
   }
 
   assert.match(sso, /router\.get\("\/sso"/);
-  assert.match(sso, /verifySsoToken/);
-  assert.match(sso, /consumeSsoToken/);
+  assert.match(sso, /exchangeSsoCode/);
   assert.match(sso, /operatoros_sso/);
   assert.match(sso, /isSuperAdmin/);
-  assert.match(env, /MODULE_SSO_SECRET/);
+  assert.match(env, /OPERATOROS_SSO_CLIENT_SECRET/);
   assert.match(env, /OPERATOROS_BASE_URL/);
   assert.match(env, /OPERATOROS_API_URL/);
   assert.match(env, /OPERATOROS_SERVICE_TOKEN/);
@@ -263,7 +266,7 @@ test('OperatorOS module route shell wires TradeFlowKit host/local fallback to th
   assert.match(shell, /adapter\.hostnames\.production/);
 
   assert.equal(getModuleById('tradeflowkit')?.hostname, 'tradeflowkit.operatoros.net');
-  assert.equal(getModuleByHost('https://tradeflowkit.operatoros.net/sso?token=x')?.id, 'tradeflowkit');
+  assert.equal(getModuleByHost('https://tradeflowkit.operatoros.net/sso?code=probe')?.id, 'tradeflowkit');
 });
 
 test('TradeFlowKit Phase 14 docs cover import notes, auth mapping, risks, and smoke checks', () => {
@@ -309,6 +312,7 @@ test('TradeFlowKit Phase 14 docs cover import notes, auth mapping, risks, and sm
     assert.ok(risks.includes(needle), `missing risk note: ${needle}`);
   }
 
-  assert.match(readme, /Phase 14 Status/);
-  assert.match(moduleReadme, /tradeflowkit` - imported as a source snapshot/);
+  assert.match(readme, /Consolidated Runtime Status/);
+  assert.match(readme, /standalone server is not executed/);
+  assert.match(moduleReadme, /tradeflowkit` - active shared-runtime shell plus imported source snapshot/);
 });

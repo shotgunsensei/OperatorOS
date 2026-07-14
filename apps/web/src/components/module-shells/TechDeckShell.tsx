@@ -29,6 +29,7 @@ import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createTechDeckAdapterContext } from '../../../../../apps/modules/techdeck/adapter.js';
+import TechDeckTicketQueue from './TechDeckTicketQueue';
 
 interface TechDeckShellProps {
   baseUrl?: string;
@@ -95,6 +96,8 @@ const workflowShortcuts = [
     tone: colors.green,
   },
 ];
+
+const pendingWorkflowShortcuts = workflowShortcuts.filter(({ id }) => id !== 'tickets');
 
 const readinessRows = [
   ['SSO', 'OperatorOS managed', colors.green],
@@ -222,7 +225,7 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
   }), [adapterRole, platformAdmin, tenantId, user]);
 
   const isLoading = authLoading || tenantLoading;
-  const hasTenantContext = !!adapter.tenantId || platformAdmin;
+  const hasTenantContext = !!adapter.tenantId;
   const roleLabel = platformAdmin
     ? 'Platform super admin'
     : activeRole
@@ -255,7 +258,12 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
     <main className="techdeck-shell" data-testid="techdeck-module-shell">
       <style>{shellCss}</style>
       <section className="techdeck-wrap">
-        <header className="techdeck-header" data-testid="techdeck-module-header">
+        <header
+          id="techdeck-overview"
+          className="techdeck-header"
+          data-testid="techdeck-module-header"
+          tabIndex={-1}
+        >
           <div className="techdeck-header-top">
             <div style={{ minWidth: 0 }}>
               <div style={eyebrowStyle}>MSP operations command layer</div>
@@ -307,7 +315,12 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
         <div className="techdeck-body">
           <nav className="techdeck-rail" aria-label="TechDeck sections" data-testid="techdeck-module-sidebar">
             {workflowShortcuts.map(({ id, label, Icon, tone }) => (
-              <a key={id} href={`#techdeck-${id}`} style={railLinkStyle} data-testid={`techdeck-sidebar-${id}`}>
+              <a
+                key={id}
+                href={id === 'tickets' ? '#techdeck-ticket-queue' : `#techdeck-${id}`}
+                style={railLinkStyle}
+                data-testid={`techdeck-sidebar-${id}`}
+              >
                 <Icon size={15} color={tone} />
                 <span>{label}</span>
               </a>
@@ -325,14 +338,29 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
               ))}
             </section>
 
+            <section
+              id="techdeck-ticket-queue"
+              data-testid="techdeck-ticket-queue-panel"
+              tabIndex={-1}
+            >
+              {hasTenantContext && adapter.tenantId && user && (
+                <TechDeckTicketQueue
+                  key={adapter.tenantId}
+                  currentUserId={user.id}
+                  canManageTickets={canManageModule}
+                  tenantKey={adapter.tenantId}
+                />
+              )}
+            </section>
+
             <section className="techdeck-panel" style={{ padding: 18 }} data-testid="techdeck-operations-panel">
               <SectionHeading
                 Icon={Activity}
-                title="Operations Queue"
-                subtitle="Primary TechDeck workflows stay grouped by technician intent."
+                title="Additional Operations"
+                subtitle="The live ticket queue is active above; remaining TechDeck workflows stay grouped by technician intent."
               />
               <div className="techdeck-workflow-grid" style={{ marginTop: 14 }}>
-                {workflowShortcuts.map(({ id, label, summary, Icon, tone }) => (
+                {pendingWorkflowShortcuts.map(({ id, label, summary, Icon, tone }) => (
                   <WorkflowPanel key={id} id={id} label={label} summary={summary} Icon={Icon} tone={tone} />
                 ))}
               </div>
@@ -355,7 +383,13 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
               </div>
             </section>
 
-            <section id="techdeck-settings" className="techdeck-panel" style={{ padding: 18 }} data-testid="techdeck-settings-panel">
+            <section
+              id="techdeck-settings"
+              className="techdeck-panel"
+              style={{ padding: 18 }}
+              data-testid="techdeck-settings-panel"
+              tabIndex={-1}
+            >
               <SectionHeading
                 Icon={LockKeyhole}
                 title="Settings and Admin"

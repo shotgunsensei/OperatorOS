@@ -2,8 +2,8 @@
  * Task #108 — Centralized role-taxonomy aliases.
  *
  * OperatorOS has two parallel role vocabularies:
- *   - INTERNAL (stored): tenant_users.role = owner|admin|member,
- *     tenant_user_module_access.access_level = none|user|manager.
+ *   - CANONICAL (stored): tenant_users.role = owner|admin|member|viewer,
+ *     tenant_user_module_access.access_level = none|viewer|user|manager.
  *   - PUBLIC (spec): tenant_role = owner|tenant_admin|billing_admin|user|viewer,
  *     module_role = module_admin|module_user|viewer|none.
  *
@@ -17,6 +17,7 @@
  */
 
 export type InternalTenantRole = 'owner' | 'admin' | 'member';
+export type EffectiveTenantRole = InternalTenantRole | 'viewer';
 export type PublicTenantRole =
   | 'owner'
   | 'tenant_admin'
@@ -33,15 +34,14 @@ const TENANT_ROLE_TO_PUBLIC: Record<InternalTenantRole, PublicTenantRole> = {
   member: 'user',
 };
 
-/** Public → internal. `billing_admin` and `viewer` collapse to the
- * closest internal write-permission level because the underlying column
- * has not been extended yet. */
-const TENANT_ROLE_TO_INTERNAL: Record<PublicTenantRole, InternalTenantRole> = {
+/** Public → legacy internal tenant roles. Use `tenantRoleToEffective`
+ * for authorization because it preserves the read-only `viewer` rank. */
+const TENANT_ROLE_TO_INTERNAL: Record<PublicTenantRole, EffectiveTenantRole> = {
   owner: 'owner',
   tenant_admin: 'admin',
   billing_admin: 'admin',
   user: 'member',
-  viewer: 'member',
+  viewer: 'viewer',
 };
 
 const MODULE_LEVEL_TO_PUBLIC: Record<InternalModuleAccessLevel, PublicModuleRole> = {
@@ -61,21 +61,33 @@ const PUBLIC_TENANT_ROLES: ReadonlySet<PublicTenantRole> = new Set(
 );
 
 export function tenantRoleToPublic(role: InternalTenantRole | PublicTenantRole | string | null | undefined): PublicTenantRole {
-  if (!role) return 'user';
+  if (!role) return 'viewer';
   const v = String(role).trim().toLowerCase();
   // Stored value is already a public-taxonomy value — pass through.
   if (PUBLIC_TENANT_ROLES.has(v as PublicTenantRole)) return v as PublicTenantRole;
   // Stored value is in the legacy internal taxonomy — map deterministically.
   if (v in TENANT_ROLE_TO_PUBLIC) return TENANT_ROLE_TO_PUBLIC[v as InternalTenantRole];
-  return 'user';
+  return 'viewer';
 }
 
-export function tenantRoleToInternal(role: PublicTenantRole | string | null | undefined): InternalTenantRole {
-  if (!role) return 'member';
+export function tenantRoleToInternal(role: PublicTenantRole | string | null | undefined): EffectiveTenantRole {
+  if (!role) return 'viewer';
   const v = String(role).trim().toLowerCase();
   if (v === 'owner' || v === 'admin' || v === 'member') return v as InternalTenantRole;
   if (v in TENANT_ROLE_TO_INTERNAL) return TENANT_ROLE_TO_INTERNAL[v as PublicTenantRole];
-  return 'member';
+  return 'viewer';
+}
+
+/** Normalize any database-accepted tenant-role vocabulary to the small set
+ * used by authorization. Unknown values fail closed as read-only. */
+export function tenantRoleToEffective(
+  role: InternalTenantRole | PublicTenantRole | string | null | undefined,
+): EffectiveTenantRole {
+  const v = String(role ?? '').trim().toLowerCase();
+  if (v === 'owner') return 'owner';
+  if (v === 'admin' || v === 'tenant_admin' || v === 'billing_admin') return 'admin';
+  if (v === 'member' || v === 'user') return 'member';
+  return 'viewer';
 }
 
 const PUBLIC_MODULE_ROLES: ReadonlySet<PublicModuleRole> = new Set(
@@ -95,10 +107,11 @@ export function moduleAccessLevelToPublic(level: InternalModuleAccessLevel | Pub
 /** Accepts either vocabulary on the wire — used when a caller PATCHes a
  * tenant_users.role and may speak either dialect. Returns the canonical
  * internal value or null when neither matches. */
-export function normalizeIncomingTenantRole(value: unknown): InternalTenantRole | null {
+export function normalizeIncomingTenantRole(value: unknown): EffectiveTenantRole | null {
   if (typeof value !== 'string') return null;
   const v = value.trim().toLowerCase();
   if (v === 'owner' || v === 'admin' || v === 'member') return v as InternalTenantRole;
+  if (v === 'viewer') return 'viewer';
   if (v in TENANT_ROLE_TO_INTERNAL) return TENANT_ROLE_TO_INTERNAL[v as PublicTenantRole];
   return null;
 }
@@ -110,14 +123,31 @@ export function normalizeIncomingTenantRole(value: unknown): InternalTenantRole 
 const MODULE_LEVEL_TO_INTERNAL: Record<PublicModuleRole, InternalModuleAccessLevel> = {
   module_admin: 'manager',
   module_user: 'user',
+  // `viewer` is deliberately handled as a distinct stored value below.
+  // Collapsing it to `user` silently grants module write authority.
   viewer: 'user',
   none: 'none',
 };
 
-export function normalizeIncomingModuleAccessLevel(value: unknown): InternalModuleAccessLevel | null {
+export type StoredModuleAccessLevel = InternalModuleAccessLevel | 'viewer';
+
+/** Normalize either stored vocabulary to the effective authorization rank.
+ * Unknown values fail closed as `none`. */
+export function moduleAccessLevelToEffective(
+  level: InternalModuleAccessLevel | PublicModuleRole | string | null | undefined,
+): StoredModuleAccessLevel {
+  const v = String(level ?? '').trim().toLowerCase();
+  if (v === 'manager' || v === 'module_admin') return 'manager';
+  if (v === 'user' || v === 'module_user') return 'user';
+  if (v === 'viewer') return 'viewer';
+  return 'none';
+}
+
+export function normalizeIncomingModuleAccessLevel(value: unknown): StoredModuleAccessLevel | null {
   if (typeof value !== 'string') return null;
   const v = value.trim().toLowerCase();
   if (v === 'none' || v === 'user' || v === 'manager') return v as InternalModuleAccessLevel;
+  if (v === 'viewer') return 'viewer';
   if (v in MODULE_LEVEL_TO_INTERNAL) return MODULE_LEVEL_TO_INTERNAL[v as PublicModuleRole];
   return null;
 }

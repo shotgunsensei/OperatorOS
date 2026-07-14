@@ -11,9 +11,10 @@ function readRepoFile(path: string): string {
   return readFileSync(resolve(repoRoot, path), 'utf8');
 }
 
-test('Command Center launchpad is registry-driven and uses shared SSO issue flow', () => {
+test('Command Center launchpad is registry-driven and starts authorization on the target host', () => {
   const page = readRepoFile('apps/web/src/components/pages/MyAppsPage.tsx');
   const launchHelper = readRepoFile('apps/web/src/lib/module-launch.ts');
+  const login = readRepoFile('apps/web/src/app/login/page.tsx');
   const registry = readRepoFile('apps/web/src/lib/operatoros-registry.ts');
 
   assert.match(registry, /OPERATOROS_MODULE_REGISTRY/);
@@ -26,10 +27,14 @@ test('Command Center launchpad is registry-driven and uses shared SSO issue flow
   assert.match(page, /Locked modules/);
   assert.match(page, /Planned modules/);
 
-  assert.match(launchHelper, /fetch\('\/api\/sso\/issue'/);
+  assert.match(launchHelper, /openExternal\(module\.productionBaseUrl\)/);
+  assert.match(login, /issueModuleLaunch\(module\.id/);
+  assert.match(login, /codeChallengeMethod:\s*'S256'/);
+  assert.match(login, /sanitizeReturnTo\(destination, ''\)/);
+  assert.match(login, /window\.location\.replace\(safeDestination\)/);
+  assert.doesNotMatch(login, /window\.location\.replace\(destination\)/);
   assert.match(launchHelper, /credentials:\s*'include'/);
-  assert.match(launchHelper, /headers\['X-Tenant-Id'\]/);
-  assert.match(launchHelper, /body:\s*JSON\.stringify\(\{\s*moduleId,\s*tenantId\s*\}\)/);
+  assert.match(launchHelper, /body:\s*JSON\.stringify\(\{\s*moduleId,\s*tenantId,\s*\.\.\.authorization\s*\}\)/);
   assert.doesNotMatch(launchHelper, /\/v1\/sso\/issue/);
   assert.doesNotMatch(page, /modulesApi\.handoff/);
   assert.doesNotMatch(page, /meApi\.modules/);

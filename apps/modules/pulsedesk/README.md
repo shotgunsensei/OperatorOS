@@ -1,8 +1,9 @@
 # PulseDesk Module
 
-Phase 12 imports PulseDesk as a source snapshot under `source/` and adds a
-thin OperatorOS adapter in `adapter.ts`. The imported source is intentionally
-left intact so the first consolidation step is auditable and reversible.
+PulseDesk is an active module in the unified OperatorOS deployment. The
+`source/` tree is an imported snapshot retained for route-by-route workflow
+migration, audit, and rollback; its standalone server is not a production
+runtime.
 
 ## Imported Source
 
@@ -23,9 +24,15 @@ PulseDesk must not own login, registration, Stripe checkout, subscription
 state, tenant membership, entitlement decisions, or root platform super-admin
 policy inside OperatorOS.
 
-## Phase 13 Status
+## Phase 13 Status — Consolidated Runtime
 
-The PulseDesk source is now converted toward OperatorOS-managed SSO:
+The active `pulsedesk.operatoros.net` surface is served by the shared Next
+module shell and Fastify API. OperatorOS owns login, the `/sso` browser
+callback, host-only sessions, tenant/role resolution, entitlement checks,
+billing, and audit. The imported source's hardened SSO/billing code is retained
+as rollback evidence only and is not deployed as a second authority.
+
+Within the imported snapshot:
 
 - `/login` renders an OperatorOS launch/relaunch page, not a local credential
   form.
@@ -37,3 +44,31 @@ The PulseDesk source is now converted toward OperatorOS-managed SSO:
 
 Some legacy billing/service files remain in the imported snapshot for audit and
 rollback context, but they are not the active production authority.
+
+## First Shared Workflow — Department Escalation Queue
+
+The active shell now includes the first PulseDesk-owned workflow implemented
+directly in the shared OperatorOS runtime. It provides tenant-scoped department
+routing and PHI-minimized operational requests under
+`/v1/modules/pulsedesk/*`.
+
+- Any entitled tenant user may read the queue and create intake.
+- PulseDesk module managers, tenant admins/owners, and platform admins may
+  manage departments, routing, assignment, request fields, and controlled
+  status transitions.
+- The API derives tenant, actor, request number, initial status, version, and
+  SLA due time. `dueAt` is recalculated from the immutable creation time when
+  priority or patient-impact state changes.
+- Assignees must be active users in the same tenant with current PulseDesk
+  access. Missing and cross-tenant resources use the same not-found response.
+- Structured request events are append-only. There are no notes, descriptions,
+  attachments, patient fields, email, vendor, delete, local auth, or local
+  billing endpoints in this slice.
+
+The intake UI requires an explicit acknowledgement of this exact boundary:
+
+> Operational information only. Do not enter patient names, MRNs, dates of birth, diagnoses, or clinical notes.
+
+No new environment variables are required. The existing OperatorOS database,
+session, tenant, module entitlement, and billing configuration remains the
+authority.

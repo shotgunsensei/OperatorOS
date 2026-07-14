@@ -33,13 +33,12 @@ test('shared auth helpers reject anonymous and non-admin users', () => {
   );
 });
 
-test('session cookie options use parent-domain secure cookies in production only', () => {
+test('session cookie options are secure and host-only in production', () => {
   assert.deepEqual(getSessionCookieOptions({ nodeEnv: 'production' }), {
     path: '/',
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
-    domain: '.operatoros.net',
     maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
   });
 
@@ -56,7 +55,6 @@ test('session cookie options use parent-domain secure cookies in production only
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
-    domain: '.operatoros.net',
   });
 });
 

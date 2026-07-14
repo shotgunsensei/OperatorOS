@@ -4,8 +4,8 @@ import type { InsertUser, User } from "@shared/schema";
 import { storage } from "../storage";
 import { hashPassword } from "../middleware";
 import { getSsoConfig, type SsoConfig } from "../env";
-import { verifySsoToken, type SsoTokenClaims } from "../sso/verifier";
-import { consumeSsoToken, type SsoConsumePayload } from "../sso/consume";
+import type { SsoTokenClaims } from "../sso/verifier";
+import { exchangeSsoCode, type SsoConsumePayload } from "../sso/consume";
 import { renderSsoErrorPage } from "../sso/errorPage";
 import { logger } from "../logger";
 import {
@@ -134,24 +134,15 @@ router.get("/sso", async (req: Request, res: Response) => {
     return sendLocalError(res, "not_configured");
   }
 
-  const tokenRaw = req.query.token;
-  const token = typeof tokenRaw === "string" ? tokenRaw : undefined;
+  const codeRaw = req.query.code;
+  const code = typeof codeRaw === "string" ? codeRaw : undefined;
+  if (!code) return failToHub(res, config, "missing_code");
 
-  const verify = verifySsoToken(token, config);
-  if (!verify.ok) {
-    reqLog.warn(
-      { outcome: "verify_failed", reason: verify.reason },
-      "SSO token verification failed"
-    );
-    return failToHub(res, config, verify.reason);
-  }
-
-  const { claims } = verify;
-  const consume = await consumeSsoToken(claims.jti, claims.aud, claims.env as "prod" | "staging" | "dev", config);
+  const consume = await exchangeSsoCode(code, config);
   if (!consume.ok) {
     if (consume.unavailable) {
       reqLog.warn(
-        { outcome: "consume_unavailable", httpStatus: consume.httpStatus, jti: claims.jti },
+        { outcome: "consume_unavailable", httpStatus: consume.httpStatus },
         "SSO consume unavailable"
       );
       return res.status(502).type("text/plain").send("sso_consume_unavailable");
@@ -161,7 +152,6 @@ router.get("/sso", async (req: Request, res: Response) => {
         outcome: "consume_failed",
         apiCode: consume.apiCode,
         httpStatus: consume.httpStatus,
-        jti: claims.jti,
       },
       "SSO consume rejected"
     );
@@ -169,6 +159,17 @@ router.get("/sso", async (req: Request, res: Response) => {
   }
 
   const { payload } = consume;
+  const now = Math.floor(Date.now() / 1000);
+  const claims: SsoTokenClaims = {
+    iss: payload.issuer,
+    aud: config.audience,
+    module_slug: config.audience,
+    env: payload.env,
+    jti: payload.jti,
+    iat: now,
+    exp: now + 60,
+    sub: payload.user.id,
+  };
 
   try {
     const emailNormalized = payload.user.email.trim().toLowerCase();
@@ -491,6 +492,12 @@ router.get("/sso", async (req: Request, res: Response) => {
         "SSO per-user entitlement snapshot write failed (continuing)"
       );
     }
+
+    // Rotate before establishing the OperatorOS-authenticated session to
+    // prevent fixation across the anonymous callback boundary.
+    await new Promise<void>((resolve, rejectPromise) => {
+      req.session.regenerate((err) => err ? rejectPromise(err) : resolve());
+    });
 
     // All DB work has completed without throwing. Now (and only now) mutate
     // the session, then explicitly persist it.

@@ -26,8 +26,8 @@ PORT = "5000"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["bash", "-c", "PORT=5001 tsx apps/api/src/index.ts & sleep 2 && cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:5001 npx next start -p ${PORT:-5000}"]
-build = ["bash", "-c", "export NEXT_PUBLIC_API_URL=http://localhost:5001 && cd apps/web && NODE_OPTIONS='--max-old-space-size=4096' npx next build"]
+run = ["bash", "-c", "PORT=5001 tsx apps/api/src/index.ts & sleep 2 && cd apps/web && INTERNAL_API_URL=http://localhost:5001 npx next start -p ${PORT:-5000}"]
+build = ["bash", "-c", "export INTERNAL_API_URL=http://localhost:5001 && cd apps/web && NODE_OPTIONS='--max-old-space-size=4096' npx next build"]
 
 [workflows]
 runButton = "Project"
@@ -50,19 +50,31 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=5001 tsx apps/api/src/index.ts & PORT=5002 tsx apps/runner-gateway/src/index.ts & sleep 2 && cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:5001 npx next dev -p 5000"
+args = "PORT=5001 tsx apps/api/src/index.ts & PORT=5002 tsx apps/runner-gateway/src/index.ts & sleep 2 && cd apps/web && INTERNAL_API_URL=http://localhost:5001 npx next dev -p 5000"
 waitForPort = 5000
 
 [userenv]
-
-[userenv.shared]
-ADMIN_EMAIL = "john@shotgunninjas.com"
-ADMIN_PASSWORD = "Dr0p$0fJup1t3r"
 
 [userenv.production]
 OPERATOROS_BASE_URL = "https://operatoros.net"
 STRIPE_MODE = "live"
 APP_ENV = "production"
+TRUST_PROXY = "true"
+TRADEFLOWKIT_URL = "https://tradeflowkit.operatoros.net"
+TORQUESHED_URL = "https://torqueshed.operatoros.net"
+TECHDECK_URL = "https://techdeck.operatoros.net"
+PULSEDESK_URL = "https://pulsedesk.operatoros.net"
+FAULTLINELAB_URL = "https://faultlinelab.operatoros.net"
+NINJA_POOL_HALL_URL = "https://ninja-pool-hall.operatoros.net"
+BRANDFORGEOS_URL = "https://brandforgeos.operatoros.net"
+SNAPPROOFOS_URL = "https://snapproofos.operatoros.net"
+STUDYFORGE_AI_URL = "https://studyforge-ai.operatoros.net"
+NINJA_LAUNCH_KIT_URL = "https://ninjalaunchkit.operatoros.net"
+CALLCOMMAND_AI_URL = "https://callcommand-ai.operatoros.net"
+NINJAMATION_URL = "https://ninjamation.operatoros.net"
+OUTCALL_URL = "https://outcall.operatoros.net"
+# Host attachment only. OutCall remains catalog `coming_soon` / registry
+# `planned` and cannot launch or be purchased until explicitly activated.
 
 [userenv.development]
 OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL = "john@shotgunninjas.com"

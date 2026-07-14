@@ -41,7 +41,6 @@ export interface TechDeckAdapterContext {
   localFallbackPath: '/modules/techdeck';
   hostnames: {
     production: 'techdeck.operatoros.net';
-    legacy: 'techdeck.app';
   };
 }
 
@@ -90,7 +89,6 @@ export function createTechDeckAdapterContext(input: TechDeckAdapterInput): TechD
     localFallbackPath: '/modules/techdeck',
     hostnames: {
       production: 'techdeck.operatoros.net',
-      legacy: 'techdeck.app',
     },
   };
 }

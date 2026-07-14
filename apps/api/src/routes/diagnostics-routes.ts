@@ -6,7 +6,6 @@ import {
   isProductionHost,
   normalizeHost,
 } from '../lib/public-url.js';
-import { PRODUCTION_SESSION_COOKIE_DOMAIN } from '../../../../packages/auth/index.js';
 
 /**
  * Non-secret runtime diagnostics for subdomain / public-URL resolution.
@@ -43,8 +42,8 @@ function buildPublicUrlDiagnostics(request: FastifyRequest) {
     isProductionHost: isProductionHost(normalized),
     isKnownSubdomain: isProductionHost(normalized),
     publicOrigin: getRequestPublicOrigin(request),
-    cookieDomainMode: production ? 'parent-domain' : 'host-only',
-    cookieDomain: production ? PRODUCTION_SESSION_COOKIE_DOMAIN : null,
+    cookieDomainMode: 'host-only',
+    cookieDomain: null,
   };
 }
 

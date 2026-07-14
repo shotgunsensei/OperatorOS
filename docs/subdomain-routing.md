@@ -1,19 +1,24 @@
 # OperatorOS Subdomain Routing Contract
 
-Status: Phase 5 implementation baseline. OperatorOS now has a central
-host resolver in `packages/modules/registry.ts` and a Next.js middleware layer
-in `apps/web/src/middleware.ts`. Real module source is still not imported.
+> The exact-host, host-only-session, and one-time-code contract is
+> `docs/auth/OPERATOROS_SSO_CONTRACT_V1.md`; deployment routing is tracked in
+> `docs/subdomain-runtime-audit.md`.
+
+Status: current unified Replit runtime. OperatorOS has a central host resolver
+in `packages/modules/registry.ts` and a Next.js middleware layer in
+`apps/web/src/middleware.ts`. Module sources are imported where available;
+functional parity remains tracked per product in
+`docs/MODULE_CONSOLIDATION_STATUS.md`.
 
 ## Target Host Model
 
 | Host | Target behavior |
 | --- | --- |
 | `operatoros.net` | Public/root brand surface. |
-| `www.operatoros.net` | Same as root. |
 | `app.operatoros.net` | Authenticated OperatorOS Command Center. |
 | `auth.operatoros.net` | Shared auth, recovery, and SSO entry surface. |
 | `api.operatoros.net` | Fastify API under `/v1/*`. |
-| `<module>.operatoros.net` | Module surface resolved through the OperatorOS registry. |
+| Each exact registered module host | Module surface resolved through the OperatorOS registry. |
 
 ## Host-Based Routing
 
@@ -34,13 +39,15 @@ Implemented helpers:
 
 Implemented routing:
 
-- `operatoros.net` and `www.operatoros.net` remain public/root surfaces.
+- `operatoros.net` remains the public/root surface.
 - `app.operatoros.net/` rewrites to `/app` and requires the session cookie.
 - `auth.operatoros.net/` rewrites to `/login`.
 - `api.operatoros.net` is classified as the platform API host. API routing
   remains owned by deployment and the existing Next rewrite.
-- `<module>.operatoros.net/*` rewrites to `/modules/<slug>`.
-- `/modules/<slug>` is the local development fallback for module shell access.
+- Each exact registered module host rewrites to `/modules/<slug>`.
+- `/modules/<slug>` is a loopback/preview development fallback only.
+- A root/app production request for `/modules/<slug>` redirects to that
+  module's exact registered `https://<module>.operatoros.net` host.
 - Active module fallback pages render the existing `/app/apps/<slug>` module
   shell, which still calls `GET /api/modules/:slug` for the authoritative
   tenant-scoped entitlement check.
@@ -49,10 +56,14 @@ Implemented routing:
 
 Fallbacks must be safe:
 
-- Foreign hosts remain inert and keep normal path-based behavior.
-- Localhost and Replit preview hosts keep path-based behavior.
-- Unknown `*.operatoros.net` hosts rewrite to `/modules/unknown-host` and show
-  a controlled unknown-module state.
+- Foreign and unregistered hosts receive no trusted production classification
+  and cannot be SSO callbacks or absolute auth return targets.
+- Localhost and Replit preview hosts keep path-based development behavior;
+  they are not accepted as SSO callbacks or absolute auth return targets
+  unless explicitly registered in a future environment-specific registry.
+- An unknown `*.operatoros.net` request that reaches the deployment rewrites to
+  `/modules/unknown-host` and shows a controlled unknown-module state. It is
+  not a canonical or trusted SSO surface.
 - Unknown local module slugs show the same controlled unknown-module state.
 - Modules with a registry status other than `active` render a controlled
   unavailable state.
@@ -78,25 +89,28 @@ Local development must not require setting `.operatoros.net` cookies.
 Production behavior should require:
 
 - HTTPS for every OperatorOS platform and module host.
-- Explicit cookie-domain configuration before shared parent-domain sessions are
-  enabled.
+- Host-only Secure/HttpOnly session cookies; parent-domain sessions remain
+  prohibited.
 - Explicit CORS allowlist for credentialed API calls.
-- No early redirects from legacy domains until DNS, HTTPS, and app readiness
-  are verified.
+- Root/app path aliases redirect only to exact registered module subdomains.
 - Module host access must still pass OperatorOS auth and entitlements.
 
 ## Auth and Entitlement Gates
 
-The Phase 5 middleware performs a presence-only session-cookie check. Full JWT,
-tenant membership, module entitlement, role, suspended-tenant, and user-status
-validation remains in the Fastify API.
+The middleware performs routing and a presence-only session-cookie check. The
+Fastify API validates the signed session, token version, user status, tenant
+membership/status, global module status, role, and entitlement.
 
 Guard behavior:
 
-- Anonymous `/app/*` traffic redirects to `/login?next=...`.
-- Anonymous local `/modules/<slug>` traffic redirects to local `/login?next=...`.
-- Anonymous production module subdomain traffic redirects to
-  `auth.operatoros.net/login?next=...`.
+- Anonymous `/app/*` traffic redirects to the canonical login surface with a
+  sanitized `next`, registered `client_id`, exact `redirect_uri`, state, nonce,
+  and S256 challenge.
+- Anonymous local `/modules/<slug>` traffic uses the loopback development login
+  flow; loopback is never a production callback.
+- Anonymous exact module-host traffic redirects to `auth.operatoros.net/login`
+  with the same registered transaction bindings. `/sso` callbacks are exempt
+  from this login bounce so a successful handoff cannot re-enter the old loop.
 - Root platform super-admin resolution is server-side through the shared auth
   helper; `john@shotgunninjas.com` is treated as platform admin by
   `hasPlatformAdminAuthority`.
