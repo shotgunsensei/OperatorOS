@@ -1,7 +1,8 @@
 # OperatorOS SSO contract v1
 
-Status: source implementation baseline complete; the production enablement gate
-remains closed pending DB-backed and live authenticated-browser validation.
+Status: source implementation and isolated DB/browser validation complete; the
+production enablement gate remains closed pending deployment and live
+authenticated-browser validation.
 OperatorOS/auth is the sole identity, session-validity, tenant, role,
 account-status, module-status, and entitlement authority.
 
@@ -88,7 +89,14 @@ Errors are bounded. A callback failure redirects once to a safe local or Operato
 
 ## Audit fields
 
-Log request/correlation/launch IDs, contract version, environment, client/module IDs, user and tenant IDs, roles, entitlement key, session presence/validity, authorization-code ID, redirect host, decision, normalized reason, and duration. Never log raw cookies, codes, tokens, passwords, or signing keys.
+Every SSO response carries a server-generated `X-Correlation-ID`; bounded JSON
+errors also return that ID in the response body. Route-scoped decision logs
+record request/correlation/launch IDs, contract version, environment,
+client/module IDs, available user and tenant context, roles, entitlement key,
+session presence/validity, redirect host, decision, normalized reason, status,
+and duration. Authorization-code database identifiers are recorded by the
+specific issue/exchange audit events rather than extracted from raw browser
+codes. Never log raw cookies, codes, tokens, passwords, or signing keys.
 
 ## Versioning
 

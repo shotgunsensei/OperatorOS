@@ -111,7 +111,7 @@ test('OperatorOS module route shell wires TechDeck host/local fallback to the ad
 
   assert.match(appSlugPage, /TechDeckShell/);
   assert.match(appSlugPage, /'techdeck':\s*TechDeckShell/);
-  assert.match(moduleFallback, /return <InternalAppPage \/>/);
+  assert.ok(moduleFallback.includes('return <ModuleHost slug={params.slug} requestedHost={searchParams?.host} />'));
   assert.match(shell, /createTechDeckAdapterContext/);
   assert.match(shell, /hasPlatformAdminAuthority/);
   assert.match(shell, /techdeck-platform-manage-link/);

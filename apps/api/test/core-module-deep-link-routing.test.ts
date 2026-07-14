@@ -31,6 +31,9 @@ test('core module deep links resolve only to live native shell sections', () => 
     sectionId: 'techdeck-ticket-queue',
     label: 'Ticket Queue',
   });
+  for (const path of ['assets', 'alerts', 'scripts', 'network']) {
+    assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-ops');
+  }
   assert.deepEqual(resolveCoreModuleDeepLink('pulsedesk', ['tickets']), {
     sectionId: 'pulsedesk-operations',
     label: 'Request Queue',
@@ -61,6 +64,7 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
   const tradeFlowKitShell = readRepoFile('apps/web/src/components/module-shells/TradeFlowKitShell.tsx');
   const tradeFlowKitRevenue = readRepoFile('apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx');
   const techDeckShell = readRepoFile('apps/web/src/components/module-shells/TechDeckShell.tsx');
+  const techDeckOps = readRepoFile('apps/web/src/components/module-shells/TechDeckOperations.tsx');
   const pulseDeskShell = readRepoFile('apps/web/src/components/module-shells/PulseDeskShell.tsx');
 
   assert.match(catchAllPage, /resolveCoreModuleDeepLink/);
@@ -81,6 +85,7 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
     [tradeFlowKitShell, 'tradeflowkit-settings'],
     [techDeckShell, 'techdeck-overview'],
     [techDeckShell, 'techdeck-ticket-queue'],
+    [techDeckOps, 'techdeck-ops'],
     [techDeckShell, 'techdeck-settings'],
     [pulseDeskShell, 'pulsedesk-overview'],
     [pulseDeskShell, 'pulsedesk-operations'],

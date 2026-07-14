@@ -8,6 +8,7 @@ import {
   usageTracking, aiActionsLog, aiPromptTemplates,
   ninjaPoolPracticeSessions,
   moduleWorkflowItems,
+  techdeckTickets, techdeckTicketSequences, techdeckAssets, techdeckRunbooks,
   tradeflowkitInvoices, tradeflowkitQuotes, tradeflowkitJobs, tradeflowkitCustomers,
 } from '../src/schema.js';
 import { eq, inArray } from 'drizzle-orm';
@@ -128,6 +129,7 @@ export async function cleanupUser(userId: string) {
   try { await db.delete(revokedSessionTokens).where(eq(revokedSessionTokens.userId, userId)); } catch {}
   try { await db.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.userId, userId)); } catch {}
   try { await db.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.createdByUserId, userId)); } catch {}
+  try { await db.delete(techdeckTickets).where(eq(techdeckTickets.createdByUserId, userId)); } catch {}
   try { await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.userId, userId)); } catch {}
   try { await db.delete(tenantUsers).where(eq(tenantUsers.userId, userId)); } catch {}
   try {
@@ -137,6 +139,10 @@ export async function cleanupUser(userId: string) {
     for (const t of owned) {
       try { await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, t.id)); } catch {}
       try { await db.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.tenantId, t.id)); } catch {}
+      try { await db.delete(techdeckTickets).where(eq(techdeckTickets.tenantId, t.id)); } catch {}
+      try { await db.delete(techdeckTicketSequences).where(eq(techdeckTicketSequences.tenantId, t.id)); } catch {}
+      try { await db.delete(techdeckAssets).where(eq(techdeckAssets.tenantId, t.id)); } catch {}
+      try { await db.delete(techdeckRunbooks).where(eq(techdeckRunbooks.tenantId, t.id)); } catch {}
       try { await db.delete(tradeflowkitInvoices).where(eq(tradeflowkitInvoices.tenantId, t.id)); } catch {}
       try { await db.delete(tradeflowkitQuotes).where(eq(tradeflowkitQuotes.tenantId, t.id)); } catch {}
       try { await db.delete(tradeflowkitJobs).where(eq(tradeflowkitJobs.tenantId, t.id)); } catch {}

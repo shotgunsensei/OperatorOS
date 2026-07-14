@@ -26,6 +26,9 @@ function assertAuthorizationRedirect(
   expectedReturnTo: string,
 ) {
   assert.equal(response.status, 307);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal(response.headers.get('pragma'), 'no-cache');
+  assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
   const location = response.headers.get('location');
   assert.ok(location, 'authorization redirect must include Location');
   const destination = new URL(location);

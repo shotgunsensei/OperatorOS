@@ -39,10 +39,11 @@ and therefore establishes both the independent auth-host session and the
 requested platform-host session before any module launch.
 
 A local production-host Playwright gate now verifies this topology over HTTPS:
-one credential entry, root callback, silent TradeFlowKit/TechDeck/PulseDesk
-launches, independent Secure/HttpOnly/SameSite=Lax host-only cookies, no bearer
-in URLs or browser storage, clean reloads, and global logout revocation. The
-final 2026-07-14 run passed 1/1 in 15.0 seconds with no API error lines. This is
+one credential entry, root callback, silent launches for all twelve enabled
+modules, independent Secure/HttpOnly/SameSite=Lax host-only cookies, no bearer
+in URLs or browser storage, clean reloads, direct deep-link return, browser Back
+without a central-auth loop, sibling-tab SSO, host-only local logout, and global
+logout revocation. The final 2026-07-14 run passed 2/2 in 29.6 seconds. This is
 source/runtime evidence, not a claim that the older public Replit release has
 been replaced.
 

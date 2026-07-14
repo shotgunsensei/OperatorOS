@@ -969,6 +969,48 @@ export const techdeckTickets = pgTable('techdeck_tickets', {
   uniqueIndex('idx_techdeck_tickets_number').on(t.tenantId, t.number),
 ]);
 
+export const techdeckAssets = pgTable('techdeck_assets', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  type: text('type').notNull().default('endpoint'),
+  hostname: text('hostname'),
+  ipAddress: text('ip_address'),
+  operatingSystem: text('operating_system'),
+  health: text('health').notNull().default('unknown'),
+  lastSeenAt: timestamp('last_seen_at'),
+  notes: text('notes'),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [
+  index('idx_techdeck_assets_tenant_health').on(t.tenantId, t.health),
+  index('idx_techdeck_assets_tenant_created').on(t.tenantId, t.createdAt),
+]);
+
+export const techdeckRunbooks = pgTable('techdeck_runbooks', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  approvedByUserId: varchar('approved_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  platform: text('platform').notNull(),
+  purpose: text('purpose').notNull(),
+  scriptText: text('script_text').notNull(),
+  riskLevel: text('risk_level').notNull().default('medium'),
+  status: text('status').notNull().default('draft'),
+  approvedAt: timestamp('approved_at'),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [
+  index('idx_techdeck_runbooks_tenant_status').on(t.tenantId, t.status),
+  index('idx_techdeck_runbooks_tenant_created').on(t.tenantId, t.createdAt),
+]);
+
 /**
  * First shared-runtime PulseDesk workflow.
  *
@@ -1251,6 +1293,8 @@ export type ModuleStudySessionRow = typeof moduleStudySessions.$inferSelect;
 export type ModuleAutomationRow = typeof moduleAutomations.$inferSelect;
 export type ModuleScaffoldRow = typeof moduleScaffolds.$inferSelect;
 export type TechDeckTicketRow = typeof techdeckTickets.$inferSelect;
+export type TechDeckAssetRow = typeof techdeckAssets.$inferSelect;
+export type TechDeckRunbookRow = typeof techdeckRunbooks.$inferSelect;
 export type PulseDeskDepartmentRow = typeof pulsedeskDepartments.$inferSelect;
 export type PulseDeskRequestRow = typeof pulsedeskRequests.$inferSelect;
 export type PulseDeskRequestEventRow = typeof pulsedeskRequestEvents.$inferSelect;

@@ -4,6 +4,8 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
+    "preflight:production": "node scripts/production-env-preflight.mjs",
+    "verify:production": "node scripts/verify-production-runtime.mjs",
     "dev": "pnpm -r --parallel --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web dev",
     "dev:api": "pnpm --dir apps/api dev",
     "dev:runner": "pnpm --dir apps/runner-gateway dev",

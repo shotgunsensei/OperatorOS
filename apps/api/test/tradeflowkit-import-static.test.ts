@@ -249,7 +249,7 @@ test('OperatorOS module route shell wires TradeFlowKit host/local fallback to th
   assert.match(appSlugPage, /TradeFlowKitShell/);
   assert.match(appSlugPage, /'tradeflowkit':\s*TradeFlowKitShell/);
   assert.match(appSlugPage, /TenantProvider/);
-  assert.match(moduleFallback, /return <InternalAppPage \/>/);
+  assert.ok(moduleFallback.includes('return <ModuleHost slug={params.slug} requestedHost={searchParams?.host} />'));
   assert.match(webTsconfig, /tradeflowkit\/adapter\.ts/);
 
   assert.match(shell, /createTradeFlowKitAdapterContext/);

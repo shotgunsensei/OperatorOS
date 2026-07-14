@@ -91,7 +91,9 @@ test('module host rewrites preserve deep paths and reserve auth/ops endpoints', 
   for (const reserved of ['/sso', '/logout', '/healthz', '/readyz']) {
     assert.match(middleware, new RegExp(`pathname === '${reserved.replace('/', '\\/')}'`));
   }
-  assert.match(catchAll, /export \{ default \} from '\.\.\/page'/);
+  assert.match(catchAll, /resolveCoreModuleDeepLink/);
+  assert.match(catchAll, /initialSectionId=\{target\.sectionId\}/);
+  assert.match(catchAll, /module-deep-link-not-found/);
 });
 
 test('production CORS is registered and browser requests must also match the target host', () => {

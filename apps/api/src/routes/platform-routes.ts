@@ -29,6 +29,7 @@ import { db } from '../db.js';
 import {
   tenants, tenantUsers, users, modules, tenantModules, tenantUserModuleAccess,
   moduleCallLogs, moduleStudySessions, moduleAutomations, moduleScaffolds, moduleWorkflowItems,
+  techdeckTickets, techdeckTicketSequences, techdeckAssets, techdeckRunbooks,
   addonSubscriptions, entitlementOverrides, billingEvents, adminAuditLogs,
   subscriptions, subscriptionPlans, planModules, platformComponents,
   saasWorkspaces, saasProjects, saasTasks, notes, workspaceMemberships,
@@ -519,6 +520,10 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           await tx.delete(moduleAutomations).where(eq(moduleAutomations.tenantId, id));
           await tx.delete(moduleScaffolds).where(eq(moduleScaffolds.tenantId, id));
           await tx.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.tenantId, id));
+          await tx.delete(techdeckTickets).where(eq(techdeckTickets.tenantId, id));
+          await tx.delete(techdeckTicketSequences).where(eq(techdeckTicketSequences.tenantId, id));
+          await tx.delete(techdeckAssets).where(eq(techdeckAssets.tenantId, id));
+          await tx.delete(techdeckRunbooks).where(eq(techdeckRunbooks.tenantId, id));
           await tx.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.tenantId, id));
           await tx.delete(tradeflowkitInvoices).where(eq(tradeflowkitInvoices.tenantId, id));
           await tx.delete(tradeflowkitQuotes).where(eq(tradeflowkitQuotes.tenantId, id));
@@ -2048,6 +2053,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           await tx.delete(moduleAutomations).where(eq(moduleAutomations.userId, id));
           await tx.delete(moduleScaffolds).where(eq(moduleScaffolds.userId, id));
           await tx.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.createdByUserId, id));
+          await tx.delete(techdeckTickets).where(eq(techdeckTickets.createdByUserId, id));
           await tx.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.userId, id));
           await tx.delete(activityFeed).where(eq(activityFeed.userId, id));
           await tx.delete(saasTasks).where(eq(saasTasks.userId, id));

@@ -269,6 +269,58 @@ export interface TechDeckTicketUpdateInput {
   resolutionDeadline?: string | null;
 }
 
+export type TechDeckAssetType = 'endpoint' | 'server' | 'network' | 'printer' | 'mobile' | 'other';
+export type TechDeckAssetHealth = 'unknown' | 'healthy' | 'warning' | 'critical' | 'offline';
+export type TechDeckRunbookPlatform = 'powershell' | 'bash' | 'network' | 'generic';
+export type TechDeckRunbookRisk = 'low' | 'medium' | 'high';
+export type TechDeckRunbookStatus = 'draft' | 'approved' | 'retired';
+
+export interface TechDeckAsset {
+  id: string;
+  tenantId: string;
+  name: string;
+  type: TechDeckAssetType;
+  hostname: string | null;
+  ipAddress: string | null;
+  operatingSystem: string | null;
+  health: TechDeckAssetHealth;
+  lastSeenAt: string | null;
+  notes: string | null;
+  version: number;
+  updatedAt: string;
+}
+
+export interface TechDeckRunbook {
+  id: string;
+  tenantId: string;
+  name: string;
+  platform: TechDeckRunbookPlatform;
+  purpose: string;
+  scriptText: string;
+  riskLevel: TechDeckRunbookRisk;
+  status: TechDeckRunbookStatus;
+  approvedByUserId: string | null;
+  approvedAt: string | null;
+  version: number;
+  updatedAt: string;
+}
+
+export interface TechDeckHealthAlert {
+  id: string;
+  assetId: string;
+  assetName: string;
+  severity: 'warning' | 'critical' | 'offline';
+  message: string;
+  observedAt: string;
+}
+
+export interface TechDeckOpsResponse {
+  assets: TechDeckAsset[];
+  runbooks: TechDeckRunbook[];
+  alerts: TechDeckHealthAlert[];
+  executionEnabled: false;
+}
+
 export type PulseDeskRequestPriority = 'critical' | 'high' | 'normal' | 'low';
 export type PulseDeskRequestStatus =
   | 'new'
@@ -576,6 +628,42 @@ export const moduleShellApi = {
       }) as Promise<PulseDeskRequest>,
   },
   techdeck: {
+    getOps: (): Promise<TechDeckOpsResponse> =>
+      apiFetch('/modules/techdeck/ops') as Promise<TechDeckOpsResponse>,
+    createAsset: (input: {
+      name: string;
+      type?: TechDeckAssetType;
+      hostname?: string;
+      ipAddress?: string;
+      operatingSystem?: string;
+      health?: TechDeckAssetHealth;
+      notes?: string;
+    }): Promise<TechDeckAsset> => apiFetch('/modules/techdeck/assets', {
+      method: 'POST', body: JSON.stringify(input),
+    }) as Promise<TechDeckAsset>,
+    updateAsset: (
+      id: string,
+      input: { expectedVersion: number; health?: TechDeckAssetHealth; lastSeenAt?: string | null; notes?: string | null },
+    ): Promise<TechDeckAsset> => apiFetch(`/modules/techdeck/assets/${encodeURIComponent(id)}`, {
+      method: 'PATCH', body: JSON.stringify(input),
+    }) as Promise<TechDeckAsset>,
+    createRunbook: (input: {
+      name: string;
+      platform: TechDeckRunbookPlatform;
+      purpose: string;
+      scriptText: string;
+      riskLevel?: TechDeckRunbookRisk;
+    }): Promise<TechDeckRunbook> => apiFetch('/modules/techdeck/runbooks', {
+      method: 'POST', body: JSON.stringify(input),
+    }) as Promise<TechDeckRunbook>,
+    approveRunbook: (id: string, expectedVersion: number): Promise<TechDeckRunbook> =>
+      apiFetch(`/modules/techdeck/runbooks/${encodeURIComponent(id)}/approve`, {
+        method: 'POST', body: JSON.stringify({ expectedVersion }),
+      }) as Promise<TechDeckRunbook>,
+    retireRunbook: (id: string, expectedVersion: number): Promise<TechDeckRunbook> =>
+      apiFetch(`/modules/techdeck/runbooks/${encodeURIComponent(id)}/retire`, {
+        method: 'POST', body: JSON.stringify({ expectedVersion }),
+      }) as Promise<TechDeckRunbook>,
     list: (filters?: {
       status?: TechDeckTicketStatus;
       priority?: TechDeckTicketPriority;

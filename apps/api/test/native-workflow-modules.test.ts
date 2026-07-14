@@ -6,6 +6,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
   activityFeed,
+  modules,
   moduleWorkflowItems,
   tenantModules,
   tenantUserModuleAccess,
@@ -32,6 +33,7 @@ let ownerB: any;
 let viewer: any;
 let signToken: typeof import('../src/lib/auth.js').signToken;
 const createdModules: any[] = [];
+const modulesUnderTest: any[] = [];
 
 function headers(user: any, tenantId: string) {
   return {
@@ -60,8 +62,10 @@ before(async () => {
   });
 
   for (const spec of SPECS) {
-    const module = await createTestModule(spec.slug);
-    createdModules.push(module);
+    const [existing] = await db.select().from(modules).where(eq(modules.slug, spec.slug)).limit(1);
+    const module = existing ?? await createTestModule(spec.slug);
+    modulesUnderTest.push(module);
+    if (!existing) createdModules.push(module);
     await db.insert(tenantModules).values([
       { tenantId: ownerA.currentTenantId, moduleId: module.id, status: 'enabled', source: 'admin', allowAllMembers: true },
       { tenantId: ownerB.currentTenantId, moduleId: module.id, status: 'enabled', source: 'admin', allowAllMembers: true },
@@ -85,7 +89,7 @@ before(async () => {
 
 after(async () => {
   if (app) await app.close();
-  const ids = createdModules.map((module) => module.id);
+  const ids = modulesUnderTest.map((module) => module.id);
   if (ids.length) {
     try { await db.delete(tenantUserModuleAccess).where(inArray(tenantUserModuleAccess.moduleId, ids)); } catch {}
     try { await db.delete(tenantModules).where(inArray(tenantModules.moduleId, ids)); } catch {}

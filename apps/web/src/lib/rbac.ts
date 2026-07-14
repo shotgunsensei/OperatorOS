@@ -1,4 +1,4 @@
-export type TenantRole = 'owner' | 'admin' | 'member' | null | undefined;
+export type TenantRole = 'owner' | 'admin' | 'member' | 'viewer' | null | undefined;
 export type PlatformRole = 'super_admin' | 'user' | string | null | undefined;
 
 export function isSuperAdmin(platformRole: PlatformRole): boolean {

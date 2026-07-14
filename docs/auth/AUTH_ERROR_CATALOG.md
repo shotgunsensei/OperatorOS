@@ -18,4 +18,7 @@
 | `AUTH_SERVICE_UNAVAILABLE` | 503 | A required auth dependency is unavailable; do not retry recursively. |
 | `REDIRECT_LOOP_BLOCKED` | 409 | Transaction exceeded its redirect/attempt bound. |
 
-Every user-facing error includes a correlation ID. Error bodies never echo credentials or raw upstream bodies containing them.
+Every SSO JSON error includes a server-generated correlation ID in both the
+`X-Correlation-ID` response header and bounded response body. Error bodies and
+structured decision logs never echo credentials, cookies, authorization codes,
+or raw upstream bodies containing them.

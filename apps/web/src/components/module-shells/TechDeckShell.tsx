@@ -30,6 +30,7 @@ import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createTechDeckAdapterContext } from '../../../../../apps/modules/techdeck/adapter.js';
 import TechDeckTicketQueue from './TechDeckTicketQueue';
+import TechDeckOperations from './TechDeckOperations';
 
 interface TechDeckShellProps {
   baseUrl?: string;
@@ -97,7 +98,7 @@ const workflowShortcuts = [
   },
 ];
 
-const pendingWorkflowShortcuts = workflowShortcuts.filter(({ id }) => id !== 'tickets');
+const pendingWorkflowShortcuts = workflowShortcuts.filter(({ id }) => !['tickets', 'assets', 'itops'].includes(id));
 
 const readinessRows = [
   ['SSO', 'OperatorOS managed', colors.green],
@@ -233,6 +234,7 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
       : adapter.localRole;
   const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No active tenant';
   const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
+  const canWriteModule = platformAdmin || activeRole !== 'viewer';
   const externalLaunchUrl = baseUrl && /^https?:\/\//i.test(baseUrl) ? baseUrl.replace(/\/+$/, '') : null;
 
   if (isLoading) {
@@ -317,7 +319,11 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
             {workflowShortcuts.map(({ id, label, Icon, tone }) => (
               <a
                 key={id}
-                href={id === 'tickets' ? '#techdeck-ticket-queue' : `#techdeck-${id}`}
+                href={id === 'tickets'
+                  ? '#techdeck-ticket-queue'
+                  : ['assets', 'itops'].includes(id)
+                    ? '#techdeck-ops'
+                    : `#techdeck-${id}`}
                 style={railLinkStyle}
                 data-testid={`techdeck-sidebar-${id}`}
               >
@@ -353,11 +359,20 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
               )}
             </section>
 
+            {hasTenantContext && adapter.tenantId && (
+              <TechDeckOperations
+                key={`ops-${adapter.tenantId}`}
+                tenantKey={adapter.tenantId}
+                canWrite={canWriteModule}
+                canApprove={canManageModule}
+              />
+            )}
+
             <section className="techdeck-panel" style={{ padding: 18 }} data-testid="techdeck-operations-panel">
               <SectionHeading
                 Icon={Activity}
                 title="Additional Operations"
-                subtitle="The live ticket queue is active above; remaining TechDeck workflows stay grouped by technician intent."
+                subtitle="Tickets, asset posture, alerts, and approval-only runbooks are live; remaining workflows stay grouped by technician intent."
               />
               <div className="techdeck-workflow-grid" style={{ marginTop: 14 }}>
                 {pendingWorkflowShortcuts.map(({ id, label, summary, Icon, tone }) => (

@@ -5,7 +5,8 @@ secret values into the repository, logs, screenshots, or Codex messages.
 
 ## Unified runtime baseline
 
-Configure these in the single Replit deployment secret/config manager:
+Configure these in the single Replit published app's **Publishing → Edit
+Commands and Secrets** environment:
 
 | Name | Requirement |
 | --- | --- |
@@ -17,10 +18,22 @@ Configure these in the single Replit deployment secret/config manager:
 | `INTERNAL_API_URL` | Internal Fastify URL used by the Next proxy |
 | `TRUST_PROXY` | `true` only behind Replit's managed proxy |
 | `ALLOW_LEGACY_SSO_ROLLBACK` | absent or `false` |
+| Thirteen canonical module URL variables | Exact `*.operatoros.net` values from `docs/operatoros-env-vars.md`, including disabled OutCall's controlled host |
 
 Stripe platform price IDs and webhook secrets remain OperatorOS-owned. Use the
 existing `STRIPE_PRICE_ADDON_<MODULE>` convention only for purchasable add-ons;
 the three free modules and core bundle modules are not sold as add-ons.
+
+Before release, run the names-only preflight inside the production Replit
+environment. It never prints configured values:
+
+```powershell
+corepack pnpm preflight:production --all
+```
+
+Use individual readiness flags while configuring providers:
+`--revenue-ready`, `--email-ready`, `--callcommand-ready`, and `--ai-ready`.
+With no flag, the command validates only the core runtime/security authority.
 
 ## Do not copy from child projects
 
@@ -42,28 +55,38 @@ The snapshot importer excludes these files. Imported source code may still
 mention retired variable names for audit; that does not make them deployment
 requirements.
 
-## Feature-provider secrets
+## Active shared-runtime providers
 
-Copy a provider secret only after its corresponding workflow is ported behind
-OperatorOS tenant/module gates and the active shared-runtime code explicitly
-reads that name. Current source inventories indicate these future integration
-families:
+These integrations are already read by active OperatorOS-owned code. Configure
+one shared runtime value per row; do not copy each child project's old secret.
 
-| Module | Provider families to reconcile when ported |
+| Capability | Production configuration | Release behavior when absent |
 | --- | --- |
-| TradeFlowKit | OpenAI, SendGrid, Twilio, and reviewed Stripe Connect/invoice-payment behavior |
-| TechDeck | OpenAI-compatible AI, SMTP, and bounded upload configuration |
-| PulseDesk | Microsoft/Google inbox OAuth, SendGrid/Mailgun, and Twilio notifications; keep PHI out of unsafe channels/logs |
-| TorqueShed | Mobile public URLs/association metadata; calculate browser origins from the central registry |
-| FaultlineLab | Resend and object storage; remove Clerk, guest bypass, and child Stripe first |
-| Ninja Pool Hall | No provider secret needed for offline/local play; online rooms require authenticated WebSocket infrastructure |
-| BrandForgeOS | OpenAI-compatible generation after tenant/usage gates exist |
-| SnapProofOS | Storage/export providers only after organization-to-tenant isolation is proven |
-| StudyForge AI | AI generation after tenant-scoped sets/progress are ported; child Stripe is retired |
-| Ninja Launch Kit | Anthropic-compatible generation after launch-kit product alignment; child Stripe is retired |
-| CallCommand AI | Twilio, OpenAI, and object storage after tenant-aware telephony, signature, retention, and usage controls exist |
-| Ninjamation | No additional canonical source/config observed yet |
-| OutCall | Planned; do not provision Twilio or worker secrets until the workload is approved |
+| OperatorOS billing | `STRIPE_MODE=live`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and the five shared stack Price IDs documented in `docs/stripe-setup.md` | Checkout fails closed; no fake subscription or entitlement is granted |
+| Transactional invites | `RESEND_API_KEY` plus `EMAIL_FROM` (or `INVITE_FROM_EMAIL`) | Messages use the log provider; that is not production delivery |
+| Shared AI features | `OPENAI_API_KEY` | Supported surfaces use their explicit mock/fallback behavior; do not market live AI until configured |
+| CallCommand outbound calling | A bound Replit Twilio connector or `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER`; always set `TWILIO_PUBLIC_BASE_URL=https://callcommand-ai.operatoros.net` | Calls stay unavailable/log-only; no call is represented as placed |
+
+Stripe add-on price variables are needed only for a module sold through the
+legacy individual add-on checkout. The current stack configurator uses
+`STRIPE_PRICE_COMPANION_MODULE_MONTHLY` for paid companion quantity; do not
+invent one Price per module unless the catalog intentionally exposes that
+purchase path.
+
+## Provider families not yet ported
+
+The imported snapshots still mention providers that the executable shared
+runtime does not use. Do **not** migrate these solely because a child repository
+had them: TradeFlowKit SendGrid/Stripe Connect, TechDeck SMTP/uploads, PulseDesk
+inbox OAuth or SendGrid/Mailgun, FaultlineLab storage, SnapProofOS export
+storage, Ninja Launch Kit Anthropic, and standalone CallCommand object storage.
+Each requires a tenant-scoped vertical slice, retention rules, audit coverage,
+and an explicit active-runtime environment contract first.
+
+Ninja Pool Hall currently needs no external provider for its local Free Shoot
+workflow. Ninjamation has no additional canonical provider contract. OutCall
+remains planned/disabled; do not provision its Twilio, worker, or billing
+secrets until activation is approved and tested.
 
 Provider values must be module-scoped where active code defines scoped names;
 never invent a new production variable or silently reuse another module's key.
@@ -84,4 +107,3 @@ never invent a new production variable or silently reuse another module's key.
    namespaced DDL may run against the shared database.
 4. Complete the DB-backed and authenticated browser gates in
    `docs/auth/VALIDATION_MATRIX.md` before enabling the release.
-

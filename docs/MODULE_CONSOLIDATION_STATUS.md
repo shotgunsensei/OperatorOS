@@ -32,7 +32,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 | --- | --- | --- | --- | --- | --- |
 | TradeFlowKit | `tradeflowkit` | `tradeflowkit.operatoros.net` | core | `C:\Dev\TradeFlowKit` | Source snapshot + OperatorOS adapter shell + tenant-scoped Lead Center and native customer → job → quote → invoice → payment workflow. Totals, controlled transitions, idempotent invoice conversion, manual payment audit, optimistic concurrency, deep links, tenant isolation, and viewer denial are verified; provider messaging/public payment/remaining analytics parity pending |
 | TorqueShed | `torqueshed` | `torqueshed.operatoros.net` | free | `C:\Dev\TorqueShed-Codex` exists, but is not currently saved in the Codex project list | Commit-pinned source snapshot + native tenant-scoped diagnostic case board (symptoms/context, testing/repair/proof states, audit, optimistic concurrency); deeper standalone parity pending |
-| TechDeck | `techdeck` | `techdeck.operatoros.net` | core | `C:\Dev\Tech-Deck` | Source snapshot + OperatorOS adapter shell + first functional tenant-scoped technician Ticket Queue source slice; remaining product workflows pending |
+| TechDeck | `techdeck` | `techdeck.operatoros.net` | core | `C:\Dev\Tech-Deck` | Source snapshot + OperatorOS adapter shell + tenant-scoped Ticket Queue, asset-health inventory, derived alerts, and approval-only runbooks. Optimistic concurrency, tenant isolation, viewer/member/admin boundaries, audit redaction, and `/assets`, `/alerts`, `/scripts`, `/network` deep links are verified; signed endpoint-agent execution and remaining MSP parity are pending |
 | PulseDesk | `pulsedesk` | `pulsedesk.operatoros.net` | core | `C:\Dev\PulseDesk` | Source snapshot + OperatorOS adapter shell + first functional PHI-minimized tenant-scoped Department Escalation Queue source slice; remaining product workflows pending |
 | FaultlineLab | `faultlinelab` | `faultlinelab.operatoros.net` | free | `C:\Dev\Faultline-Lab` | Commit-pinned source snapshot + native tenant-scoped diagnostic lab/evidence workflow with validated state transitions, audit, and optimistic concurrency; deeper challenge parity pending |
 | Ninja Pool Hall | `ninja-pool-hall` | `ninja-pool-hall.operatoros.net` | free | `C:\Dev\Shotgun-ninja-pool-hall` | Commit-pinned source snapshot + native tenant/user-scoped Free Shoot slice. Physics remains browser-local; the API stores bounded client-reported summaries with one-active, rate-limit, retention, idempotency, recovery, viewer, and lifecycle controls. Full game parity remains pending |
@@ -48,7 +48,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 
 The shared source passes the workspace typecheck and production build with
 `INTERNAL_API_URL=http://localhost:5001`. The complete API regression suite ran
-against a clean PostgreSQL database with 619 tests: 613 passed, 0 failed, and 6
+against a clean PostgreSQL database with 653 tests: 647 passed, 0 failed, and 6
 live-HTTP checks were explicitly skipped because no Next development server was
 running. Focused evidence also includes 15/15 HTTPS redirect-policy tests,
 38/38 SSO tests, 14/14 viewer tests, and 12/12 tenant-RBAC tests. These are
@@ -56,13 +56,15 @@ source and isolated-database results, not a production deployment claim.
 
 The production-host Playwright gate also passes locally against a disposable
 PostgreSQL database and HTTPS host-preserving proxy: one central credential
-entry establishes the apex session, then TradeFlowKit, TechDeck, and PulseDesk
-launch silently with independent host-only sessions, survive reload, keep
-credentials out of URLs/storage, and honor global revocation. Core deep-link
-dispatch is explicit for the currently migrated workflows and returns a
-module-scoped recovery state for unsupported paths. This raises confidence in
-the shared runtime but does not change the honest workflow-parity labels in the
-inventory above.
+entry establishes the apex session, then all twelve enabled modules launch
+silently with independent host-only sessions, survive reload, keep credentials
+out of URLs/storage, and honor global revocation. The 2/2 run completed in
+29.6 seconds and also passed direct TechDeck deep-link return, browser Back
+without a central-auth loop, sibling-tab PulseDesk SSO, and host-only local
+logout. Core deep-link dispatch is explicit for the currently migrated
+workflows and returns a module-scoped recovery state for unsupported paths.
+This raises confidence in the shared runtime but does not change the honest
+workflow-parity labels in the inventory above.
 
 The four formerly generic enabled modules now execute native shared-runtime
 workflows as well. A 5/5 isolated-PostgreSQL contract proves TorqueShed,
@@ -80,6 +82,16 @@ linked job status, cross-tenant denial, and viewer write denial. The native web
 shell exposes this sequence and `/customers`, `/jobs`, `/quotes`, and
 `/invoices` deep links resolve to it. Customer payments remain explicitly
 separate from OperatorOS subscription/add-on billing authority.
+
+TechDeck now extends beyond its ticket queue with a tenant-scoped operations
+workspace. A focused 2/2 PostgreSQL flow proves asset health/version handling,
+derived critical/offline/warning alerts, cross-tenant isolation, viewer write
+denial, member runbook drafting, and tenant-admin approval. Runbook activity
+records exclude script bodies. OperatorOS deliberately exposes no execution
+route; any future command execution requires a separately reviewed, signed
+endpoint-agent trust boundary. The native shell includes loading, empty,
+error, responsive, and admin-only approval states, and the four imported
+asset/alert/script/network paths resolve to the live workspace.
 
 Local logout is also server-revocable now: OperatorOS deny-lists only the
 SHA-256 fingerprint of the current host token, rejects copied-token replay,

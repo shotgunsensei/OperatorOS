@@ -178,7 +178,7 @@ test('OperatorOS module route shell wires PulseDesk host/local fallback to the a
   assert.match(appSlugPage, /PulseDeskShell/);
   assert.match(appSlugPage, /'pulsedesk':\s*PulseDeskShell/);
   assert.match(appSlugPage, /TenantProvider/);
-  assert.match(moduleFallback, /return <InternalAppPage \/>/);
+  assert.ok(moduleFallback.includes('return <ModuleHost slug={params.slug} requestedHost={searchParams?.host} />'));
   assert.match(shell, /createPulseDeskAdapterContext/);
   assert.match(shell, /hasPlatformAdminAuthority/);
   assert.match(shell, /pulsedesk-platform-manage-link/);

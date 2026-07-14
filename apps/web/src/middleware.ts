@@ -222,7 +222,7 @@ async function redirectToLogin(req: NextRequest, context: ResolvedOperatorOSModu
     stop.hostname = AUTH_HOST;
     stop.pathname = '/login';
     stop.search = '?launch_error=too_many_redirects';
-    return clearLoopCounter(NextResponse.redirect(stop, 307));
+    return withAuthSecurityHeaders(clearLoopCounter(NextResponse.redirect(stop, 307)));
   }
 
   const url = req.nextUrl.clone();
@@ -318,7 +318,7 @@ async function redirectToLogin(req: NextRequest, context: ResolvedOperatorOSModu
       secure: true,
     });
   }
-  return res;
+  return withAuthSecurityHeaders(res);
 }
 
 function rewriteTo(pathname: string, req: NextRequest) {

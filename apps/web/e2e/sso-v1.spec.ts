@@ -1,27 +1,59 @@
 import { test, expect, type APIRequestContext, type BrowserContext, type Page, type Request } from '@playwright/test';
 import { Client } from 'pg';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = process.env.E2E_ROOT_URL || 'https://operatoros.net';
 const API = process.env.E2E_API_URL || 'http://127.0.0.1:5001';
 const PASSWORD = 'OperatorOS-E2E-Only-94!';
 
-const CORE_MODULES = [
-  {
-    slug: 'tradeflowkit',
-    host: 'tradeflowkit.operatoros.net',
-    shellTestId: 'tradeflowkit-module-shell',
-  },
-  {
-    slug: 'techdeck',
-    host: 'techdeck.operatoros.net',
-    shellTestId: 'techdeck-module-shell',
-  },
-  {
-    slug: 'pulsedesk',
-    host: 'pulsedesk.operatoros.net',
-    shellTestId: 'pulsedesk-module-shell',
-  },
-] as const;
+const SHELL_TEST_IDS: Record<string, string> = {
+  tradeflowkit: 'tradeflowkit-module-shell',
+  torqueshed: 'torqueshed-module-shell',
+  techdeck: 'techdeck-module-shell',
+  pulsedesk: 'pulsedesk-module-shell',
+  faultlinelab: 'faultlinelab-module-shell',
+  'ninja-pool-hall': 'ninja-pool-hall-shell',
+  brandforgeos: 'brandforgeos-module-shell',
+  snapproofos: 'snapproofos-module-shell',
+  'studyforge-ai': 'shell-studyforge-ai',
+  'ninja-launch-kit': 'shell-ninja-launch-kit',
+  'callcommand-ai': 'shell-callcommand-ai',
+  ninjamation: 'shell-ninjamation',
+};
+
+type BrowserModule = {
+  slug: string;
+  host: string;
+  shellTestId: string;
+};
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+const deploymentRegistry = JSON.parse(
+  readFileSync(resolve(repoRoot, 'config/operatoros-module-registry.json'), 'utf8'),
+) as Array<{
+  moduleId: string;
+  slug: string;
+  productionBaseUrl: string;
+  enabled: boolean;
+}>;
+
+const ENABLED_MODULES: BrowserModule[] = deploymentRegistry
+  .filter((entry) => entry.moduleId !== 'operatoros' && entry.enabled)
+  .map((entry) => {
+    const shellTestId = SHELL_TEST_IDS[entry.slug];
+    if (!shellTestId) throw new Error(`Missing browser shell selector for ${entry.slug}`);
+    return {
+      slug: entry.slug,
+      host: new URL(entry.productionBaseUrl).hostname,
+      shellTestId,
+    };
+  });
+
+if (ENABLED_MODULES.length !== 12) {
+  throw new Error(`Expected 12 enabled OperatorOS modules, found ${ENABLED_MODULES.length}`);
+}
 
 const PUBLIC_AUTH_HEADERS = {
   host: 'auth.operatoros.net',
@@ -89,7 +121,7 @@ async function registerAndSeed(
     [userId, elite.rows[0].id, tenantId],
   );
 
-  for (const module of CORE_MODULES) {
+  for (const module of ENABLED_MODULES) {
     const moduleRow = await pg.query<{ id: string }>(
       `select id from modules where slug = $1 limit 1`,
       [module.slug],
@@ -111,13 +143,20 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
   if (!identity) return;
   const { userId, tenantId } = identity;
   const tenantTables = [
+    'tradeflowkit_invoices',
+    'tradeflowkit_quotes',
+    'tradeflowkit_jobs',
+    'tradeflowkit_customers',
+    'tradeflowkit_leads',
     'pulsedesk_request_events',
     'pulsedesk_requests',
     'pulsedesk_departments',
     'pulsedesk_request_sequences',
+    'techdeck_runbooks',
+    'techdeck_assets',
     'techdeck_tickets',
     'techdeck_ticket_sequences',
-    'tradeflowkit_leads',
+    'module_workflow_items',
     'ninja_pool_practice_sessions',
     'module_call_logs',
     'module_study_sessions',
@@ -186,7 +225,7 @@ function navigationCollector(context: BrowserContext) {
 
 test.describe('OperatorOS SSO contract v1 — production hosts', () => {
   let pg: Client | null = null;
-  let identity: SeededIdentity | null = null;
+  const identities: SeededIdentity[] = [];
 
   test.beforeAll(async () => {
     const databaseUrl = process.env.DATABASE_URL;
@@ -197,13 +236,16 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
   test.afterAll(async () => {
     if (!pg) return;
-    await cleanupIdentity(pg, identity).catch(() => undefined);
+    for (const identity of identities) {
+      await cleanupIdentity(pg, identity).catch(() => undefined);
+    }
     await pg.end().catch(() => undefined);
   });
 
-  test('one credential entry establishes root then silently launches every core module', async ({ page, request }) => {
+  test('one credential entry establishes root then silently launches all twelve enabled modules', async ({ page, request }) => {
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
-    identity = await registerAndSeed(request, pg);
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
     const context = page.context();
     let loginPosts = 0;
     context.on('request', req => {
@@ -238,7 +280,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
 
     let lastModulePage: Page | null = null;
-    for (const [index, module] of CORE_MODULES.entries()) {
+    for (const [index, module] of ENABLED_MODULES.entries()) {
       const collection = navigationCollector(context);
       const popupPromise = page.waitForEvent('popup');
       await page.getByTestId(`button-launch-${module.slug}`).click();
@@ -272,7 +314,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       expect(new URL(modulePage.url()).hostname).toBe(module.host);
       assertNoCredentialQuery(modulePage.url());
 
-      if (index < CORE_MODULES.length - 1) {
+      if (index < ENABLED_MODULES.length - 1) {
         await modulePage.close();
       } else {
         lastModulePage = modulePage;
@@ -282,7 +324,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const expectedSessionHosts = new Set([
       'auth.operatoros.net',
       'operatoros.net',
-      ...CORE_MODULES.map(module => module.host),
+      ...ENABLED_MODULES.map(module => module.host),
     ]);
     const cookies = await sessionCookies(context);
     expect(new Set(cookies.map(cookie => cookie.domain))).toEqual(expectedSessionHosts);
@@ -304,5 +346,69 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await lastModulePage!.waitForURL(/^https:\/\/auth\.operatoros\.net\/login\?/, { timeout: 30_000 });
     expect(loginPosts).toBe(1);
     assertNoCredentialQuery(lastModulePage!.url());
+  });
+
+  test('direct deep link survives login, a sibling tab uses silent SSO, back does not loop, and local logout is host-only', async ({ page, request }) => {
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+    const context = page.context();
+    let loginPosts = 0;
+    context.on('request', req => {
+      if (req.method() === 'POST' && new URL(req.url()).pathname === '/api/auth/login') loginPosts += 1;
+    });
+    const collection = navigationCollector(context);
+
+    await page.goto('https://techdeck.operatoros.net/assets');
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/techdeck\.operatoros\.net\/assets(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await expect(page.getByTestId('techdeck-module-shell')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#techdeck-ops')).toBeVisible();
+    expect(loginPosts).toBe(1);
+    assertNoCredentialQuery(page.url());
+    await assertHostOnlySession(context, 'techdeck.operatoros.net');
+
+    const authVisitsBeforeBack = collection.urls.filter(url => {
+      const parsed = new URL(url);
+      return parsed.hostname === 'auth.operatoros.net' && parsed.pathname === '/login';
+    }).length;
+    await page.goBack({ waitUntil: 'domcontentloaded' });
+    expect(page.url(), 'browser back must not return to central authentication').not.toMatch(
+      /^https:\/\/auth\.operatoros\.net\/login\?/,
+    );
+    const authVisitsAfterBack = collection.urls.filter(url => {
+      const parsed = new URL(url);
+      return parsed.hostname === 'auth.operatoros.net' && parsed.pathname === '/login';
+    }).length;
+    expect(authVisitsAfterBack, 'browser back must not restart central authentication').toBe(authVisitsBeforeBack);
+    expect(loginPosts).toBe(1);
+
+    await page.goto('https://techdeck.operatoros.net/assets');
+    await expect(page.getByTestId('techdeck-module-shell')).toBeVisible({ timeout: 20_000 });
+    expect(loginPosts, 'returning to the deep link must reuse the TechDeck host session').toBe(1);
+
+    const sibling = await context.newPage();
+    await sibling.goto('https://pulsedesk.operatoros.net/dashboard');
+    await expect(sibling.getByTestId('pulsedesk-module-shell')).toBeVisible({ timeout: 30_000 });
+    expect(loginPosts, 'a sibling module tab must reuse the auth-host session').toBe(1);
+    await assertHostOnlySession(context, 'pulsedesk.operatoros.net');
+    assertNoCredentialQuery(sibling.url());
+
+    await page.goto('https://techdeck.operatoros.net/logout');
+    await expect(page).toHaveURL(/^https:\/\/operatoros\.net\/signed-out\?signed_out=local$/);
+    const cookiesAfterLocalLogout = await sessionCookies(context);
+    expect(cookiesAfterLocalLogout.some(cookie => cookie.domain === 'techdeck.operatoros.net')).toBe(false);
+    expect(cookiesAfterLocalLogout.some(cookie => cookie.domain === 'auth.operatoros.net')).toBe(true);
+    expect(cookiesAfterLocalLogout.some(cookie => cookie.domain === 'pulsedesk.operatoros.net')).toBe(true);
+    await sibling.reload();
+    await expect(sibling.getByTestId('pulsedesk-module-shell')).toBeVisible({ timeout: 20_000 });
+
+    collection.stop();
+    await sibling.close();
   });
 });

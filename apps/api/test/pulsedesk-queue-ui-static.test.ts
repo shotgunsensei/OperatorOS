@@ -49,7 +49,7 @@ test('PulseDesk client uses guarded nested capabilities and server-owned SLA dat
   const auth = readRepoFile('apps/web/src/lib/auth.ts');
   const updateInput = auth.slice(
     auth.indexOf('export interface PulseDeskRequestUpdateInput'),
-    auth.indexOf('// Task #72'),
+    auth.indexOf('export type NinjaPoolPracticeStatus'),
   );
   assert.match(auth, /capabilities: PulseDeskCapabilities/);
   assert.match(auth, /canManageWorkflow: boolean/);

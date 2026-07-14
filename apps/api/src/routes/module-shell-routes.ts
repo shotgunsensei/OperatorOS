@@ -9,6 +9,8 @@ import {
   moduleWorkflowItems,
   techdeckTicketSequences,
   techdeckTickets,
+  techdeckAssets,
+  techdeckRunbooks,
   tradeflowkitLeads,
   tradeflowkitCustomers,
   tradeflowkitJobs,
@@ -55,6 +57,13 @@ import {
   parseTechDeckTicketStatus,
   TechDeckTicketValidationError,
 } from '../lib/techdeck-tickets.js';
+import {
+  parseTechDeckAssetCreate,
+  parseTechDeckAssetPatch,
+  parseTechDeckRunbookCreate,
+  parseTechDeckVersion,
+  TechDeckOpsValidationError,
+} from '../lib/techdeck-ops.js';
 import { getTenantMembership, resolveTenantModuleAccess } from '../lib/tenant-entitlements.js';
 import { registerPulseDeskRoutes } from './pulsedesk-routes.js';
 import { registerNinjaPoolHallRoutes } from './ninja-pool-hall-routes.js';
@@ -215,6 +224,12 @@ function personaSummary(persona: string, callerName: string): string {
 
 function handleTechDeckValidation(reply: FastifyReply, err: unknown): boolean {
   if (!(err instanceof TechDeckTicketValidationError)) return false;
+  reply.code(400).send({ error: err.message, code: err.code, field: err.field });
+  return true;
+}
+
+function handleTechDeckOpsValidation(reply: FastifyReply, err: unknown): boolean {
+  if (!(err instanceof TechDeckOpsValidationError)) return false;
   reply.code(400).send({ error: err.message, code: err.code, field: err.field });
   return true;
 }
@@ -875,6 +890,273 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     if (!paid) return reply.code(409).send({ error: 'Invoice changed; reload and retry', code: 'INVOICE_VERSION_CONFLICT' });
     return paid;
   });
+
+  // ===== TechDeck: asset posture and approval-only runbooks ===============
+  //
+  // Runbooks are intentionally stored and approved here, never executed.
+  // Future endpoint execution must use a separately reviewed, signed agent
+  // protocol; OperatorOS must not become an arbitrary command runner.
+  app.get(
+    '/v1/modules/techdeck/ops',
+    { preHandler: [...techdeckGuards] },
+    async (request) => {
+      const ctx = (request as any).tenantContext as { tenantId: string };
+      const [assets, runbooks] = await Promise.all([
+        db.select().from(techdeckAssets).where(and(
+          eq(techdeckAssets.tenantId, ctx.tenantId),
+          isNull(techdeckAssets.deletedAt),
+        )).orderBy(desc(techdeckAssets.updatedAt)).limit(250),
+        db.select().from(techdeckRunbooks).where(and(
+          eq(techdeckRunbooks.tenantId, ctx.tenantId),
+          isNull(techdeckRunbooks.deletedAt),
+        )).orderBy(desc(techdeckRunbooks.updatedAt)).limit(100),
+      ]);
+      const alerts = assets
+        .filter((asset) => ['warning', 'critical', 'offline'].includes(asset.health))
+        .map((asset) => ({
+          id: `asset-health:${asset.id}`,
+          assetId: asset.id,
+          assetName: asset.name,
+          severity: asset.health,
+          message: asset.health === 'offline'
+            ? `${asset.name} is offline`
+            : `${asset.name} reports ${asset.health} health`,
+          observedAt: asset.updatedAt,
+        }));
+      return { assets, runbooks, alerts, executionEnabled: false };
+    },
+  );
+
+  app.post(
+    '/v1/modules/techdeck/assets',
+    { preHandler: [...techdeckWriteGuards] },
+    async (request, reply) => {
+      let input;
+      try {
+        input = parseTechDeckAssetCreate(request.body);
+      } catch (err) {
+        if (handleTechDeckOpsValidation(reply, err)) return;
+        throw err;
+      }
+      const user = (request as any).user as { id: string };
+      const ctx = (request as any).tenantContext as { tenantId: string };
+      return db.transaction(async (tx) => {
+        const [asset] = await tx.insert(techdeckAssets).values({
+          tenantId: ctx.tenantId,
+          createdByUserId: user.id,
+          ...input,
+        }).returning();
+        await tx.insert(activityFeed).values({
+          userId: user.id,
+          tenantId: ctx.tenantId,
+          action: 'created',
+          entityType: 'techdeck_asset',
+          entityId: asset.id,
+          metadata: { name: asset.name, type: asset.type, health: asset.health },
+        });
+        reply.code(201);
+        return asset;
+      });
+    },
+  );
+
+  app.patch(
+    '/v1/modules/techdeck/assets/:id',
+    { preHandler: [...techdeckWriteGuards] },
+    async (request, reply) => {
+      let input;
+      try {
+        input = parseTechDeckAssetPatch(request.body);
+      } catch (err) {
+        if (handleTechDeckOpsValidation(reply, err)) return;
+        throw err;
+      }
+      const { id } = request.params as { id: string };
+      const user = (request as any).user as { id: string };
+      const ctx = (request as any).tenantContext as { tenantId: string };
+      const [asset] = await db.transaction(async (tx) => {
+        const rows = await tx.update(techdeckAssets).set({
+          ...input.patch,
+          version: sql`${techdeckAssets.version} + 1`,
+          updatedAt: new Date(),
+        }).where(and(
+          eq(techdeckAssets.id, id),
+          eq(techdeckAssets.tenantId, ctx.tenantId),
+          eq(techdeckAssets.version, input.expectedVersion),
+          isNull(techdeckAssets.deletedAt),
+        )).returning();
+        if (!rows[0]) return [];
+        await tx.insert(activityFeed).values({
+          userId: user.id,
+          tenantId: ctx.tenantId,
+          action: 'updated',
+          entityType: 'techdeck_asset',
+          entityId: id,
+          metadata: { changedFields: Object.keys(input.patch) },
+        });
+        return rows;
+      });
+      if (!asset) {
+        const [existing] = await db.select({ id: techdeckAssets.id })
+          .from(techdeckAssets)
+          .where(and(
+            eq(techdeckAssets.id, id),
+            eq(techdeckAssets.tenantId, ctx.tenantId),
+            isNull(techdeckAssets.deletedAt),
+          )).limit(1);
+        return reply.code(existing ? 409 : 404).send({
+          error: existing ? 'Asset changed; reload and retry' : 'Asset not found',
+          code: existing ? 'ASSET_VERSION_CONFLICT' : 'ASSET_NOT_FOUND',
+        });
+      }
+      return asset;
+    },
+  );
+
+  app.post(
+    '/v1/modules/techdeck/runbooks',
+    { preHandler: [...techdeckWriteGuards] },
+    async (request, reply) => {
+      let input;
+      try {
+        input = parseTechDeckRunbookCreate(request.body);
+      } catch (err) {
+        if (handleTechDeckOpsValidation(reply, err)) return;
+        throw err;
+      }
+      const user = (request as any).user as { id: string };
+      const ctx = (request as any).tenantContext as { tenantId: string };
+      return db.transaction(async (tx) => {
+        const [runbook] = await tx.insert(techdeckRunbooks).values({
+          tenantId: ctx.tenantId,
+          createdByUserId: user.id,
+          ...input,
+        }).returning();
+        await tx.insert(activityFeed).values({
+          userId: user.id,
+          tenantId: ctx.tenantId,
+          action: 'created',
+          entityType: 'techdeck_runbook',
+          entityId: runbook.id,
+          // Never copy script content into the cross-product activity feed.
+          metadata: { name: runbook.name, platform: runbook.platform, riskLevel: runbook.riskLevel },
+        });
+        reply.code(201);
+        return runbook;
+      });
+    },
+  );
+
+  app.post(
+    '/v1/modules/techdeck/runbooks/:id/approve',
+    { preHandler: [...techdeckWriteGuards, requireTenantAdmin] },
+    async (request, reply) => {
+      let input;
+      try {
+        input = parseTechDeckVersion(request.body);
+      } catch (err) {
+        if (handleTechDeckOpsValidation(reply, err)) return;
+        throw err;
+      }
+      const { id } = request.params as { id: string };
+      const user = (request as any).user as { id: string };
+      const ctx = (request as any).tenantContext as { tenantId: string };
+      const now = new Date();
+      const [runbook] = await db.transaction(async (tx) => {
+        const rows = await tx.update(techdeckRunbooks).set({
+          status: 'approved',
+          approvedByUserId: user.id,
+          approvedAt: now,
+          version: sql`${techdeckRunbooks.version} + 1`,
+          updatedAt: now,
+        }).where(and(
+          eq(techdeckRunbooks.id, id),
+          eq(techdeckRunbooks.tenantId, ctx.tenantId),
+          eq(techdeckRunbooks.status, 'draft'),
+          eq(techdeckRunbooks.version, input.expectedVersion),
+          isNull(techdeckRunbooks.deletedAt),
+        )).returning();
+        if (!rows[0]) return [];
+        await tx.insert(activityFeed).values({
+          userId: user.id,
+          tenantId: ctx.tenantId,
+          action: 'approved',
+          entityType: 'techdeck_runbook',
+          entityId: id,
+          metadata: { name: rows[0].name, platform: rows[0].platform, riskLevel: rows[0].riskLevel },
+        });
+        return rows;
+      });
+      if (!runbook) {
+        const [existing] = await db.select({ status: techdeckRunbooks.status })
+          .from(techdeckRunbooks)
+          .where(and(
+            eq(techdeckRunbooks.id, id),
+            eq(techdeckRunbooks.tenantId, ctx.tenantId),
+            isNull(techdeckRunbooks.deletedAt),
+          )).limit(1);
+        return reply.code(existing ? 409 : 404).send({
+          error: existing ? 'Runbook is no longer an approvable draft' : 'Runbook not found',
+          code: existing ? 'RUNBOOK_APPROVAL_CONFLICT' : 'RUNBOOK_NOT_FOUND',
+        });
+      }
+      return runbook;
+    },
+  );
+
+  app.post(
+    '/v1/modules/techdeck/runbooks/:id/retire',
+    { preHandler: [...techdeckWriteGuards, requireTenantAdmin] },
+    async (request, reply) => {
+      let input;
+      try {
+        input = parseTechDeckVersion(request.body);
+      } catch (err) {
+        if (handleTechDeckOpsValidation(reply, err)) return;
+        throw err;
+      }
+      const { id } = request.params as { id: string };
+      const user = (request as any).user as { id: string };
+      const ctx = (request as any).tenantContext as { tenantId: string };
+      const [runbook] = await db.transaction(async (tx) => {
+        const rows = await tx.update(techdeckRunbooks).set({
+          status: 'retired',
+          version: sql`${techdeckRunbooks.version} + 1`,
+          updatedAt: new Date(),
+        }).where(and(
+          eq(techdeckRunbooks.id, id),
+          eq(techdeckRunbooks.tenantId, ctx.tenantId),
+          eq(techdeckRunbooks.status, 'approved'),
+          eq(techdeckRunbooks.version, input.expectedVersion),
+          isNull(techdeckRunbooks.deletedAt),
+        )).returning();
+        if (!rows[0]) return [];
+        await tx.insert(activityFeed).values({
+          userId: user.id,
+          tenantId: ctx.tenantId,
+          action: 'retired',
+          entityType: 'techdeck_runbook',
+          entityId: id,
+          metadata: { name: rows[0].name },
+        });
+        return rows;
+      });
+      if (!runbook) {
+        const [existing] = await db.select({ status: techdeckRunbooks.status })
+          .from(techdeckRunbooks)
+          .where(and(
+            eq(techdeckRunbooks.id, id),
+            eq(techdeckRunbooks.tenantId, ctx.tenantId),
+            isNull(techdeckRunbooks.deletedAt),
+          )).limit(1);
+        return reply.code(existing ? 409 : 404).send({
+          error: existing ? 'Only an approved runbook can be retired' : 'Runbook not found',
+          code: existing ? 'RUNBOOK_RETIRE_CONFLICT' : 'RUNBOOK_NOT_FOUND',
+        });
+      }
+      return runbook;
+    },
+  );
 
   // ===== TechDeck: technician ticket queue ===============================
   //

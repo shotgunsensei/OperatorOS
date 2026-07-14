@@ -1249,9 +1249,9 @@ export async function ensureModuleShellTables() {
     CREATE INDEX IF NOT EXISTS idx_module_workflow_tenant_status
       ON module_workflow_items(tenant_id, module_slug, status);
 
-    -- TechDeck shared-runtime slice: tenant-scoped technician ticket queue.
-    -- Standalone clients, sites, assets, comments, SLA profiles, local auth,
-    -- and billing intentionally remain outside this table.
+    -- TechDeck shared-runtime slices: ticket queue, asset posture, and
+    -- approval-only runbooks. Local auth, billing, and command execution stay
+    -- outside these tables.
     CREATE TABLE IF NOT EXISTS techdeck_ticket_sequences (
       tenant_id VARCHAR(36) PRIMARY KEY REFERENCES tenants(id),
       last_number INTEGER NOT NULL DEFAULT 0,
@@ -1306,6 +1306,44 @@ export async function ensureModuleShellTables() {
     DO $$ BEGIN
       ALTER TABLE techdeck_tickets ADD CONSTRAINT techdeck_tickets_status_check
         CHECK (status IN ('open','in_progress','waiting_on_client','resolved','closed'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    CREATE TABLE IF NOT EXISTS techdeck_assets (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      created_by_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+      name TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'endpoint', hostname TEXT,
+      ip_address TEXT, operating_system TEXT, health TEXT NOT NULL DEFAULT 'unknown',
+      last_seen_at TIMESTAMP, notes TEXT, version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL, deleted_at TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_techdeck_assets_tenant_health ON techdeck_assets(tenant_id, health);
+    CREATE INDEX IF NOT EXISTS idx_techdeck_assets_tenant_created ON techdeck_assets(tenant_id, created_at DESC);
+    DO $$ BEGIN ALTER TABLE techdeck_assets ADD CONSTRAINT techdeck_assets_health_check CHECK (health IN ('unknown','healthy','warning','critical','offline'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN ALTER TABLE techdeck_assets ADD CONSTRAINT techdeck_assets_type_check CHECK (type IN ('endpoint','server','network','printer','mobile','other'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    CREATE TABLE IF NOT EXISTS techdeck_runbooks (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      created_by_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+      approved_by_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+      name TEXT NOT NULL, platform TEXT NOT NULL, purpose TEXT NOT NULL,
+      script_text TEXT NOT NULL, risk_level TEXT NOT NULL DEFAULT 'medium',
+      status TEXT NOT NULL DEFAULT 'draft', approved_at TIMESTAMP,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL, deleted_at TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_techdeck_runbooks_tenant_status ON techdeck_runbooks(tenant_id, status);
+    CREATE INDEX IF NOT EXISTS idx_techdeck_runbooks_tenant_created ON techdeck_runbooks(tenant_id, created_at DESC);
+    DO $$ BEGIN ALTER TABLE techdeck_runbooks ADD CONSTRAINT techdeck_runbooks_platform_check CHECK (platform IN ('powershell','bash','network','generic'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN ALTER TABLE techdeck_runbooks ADD CONSTRAINT techdeck_runbooks_risk_check CHECK (risk_level IN ('low','medium','high'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN ALTER TABLE techdeck_runbooks ADD CONSTRAINT techdeck_runbooks_status_check CHECK (status IN ('draft','approved','retired'));
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
     -- PulseDesk shared-runtime slice: PHI-minimized department escalation

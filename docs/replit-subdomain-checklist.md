@@ -7,9 +7,19 @@ configuration and live behavior. No DNS migration is pending.
 
 ## 1. Deployment & environment
 
+Configure the values below in the published app's **Publishing → Edit Commands
+and Secrets** pane. The checked-in `.replit` production block documents the
+expected non-secret values, but it is not evidence that the published snapshot
+received them. Replit editor secrets and development environment values must not
+be assumed to carry into the deployment.
+
 - [ ] The app is published as a single deployment (Next on the public port and
       Fastify on the private `5001` port). The shared API owns the authenticated
       runner routes; do not expose the legacy standalone runner-gateway port.
+- [ ] Deployment logs show `Fastify ready; starting Next`; the supervised
+      launcher must receive `ready: true` from private `/readyz` before opening
+      the public Next process. If either child exits, the deployment must exit
+      and let Replit restart the complete unit.
 - [ ] `APP_ENV=production` and `NODE_ENV=production` in the deployment
       environment.
 - [ ] `DATABASE_URL` points to the production PostgreSQL authority.
@@ -19,12 +29,33 @@ configuration and live behavior. No DNS migration is pending.
       still enabled; it is not distributed to a child deployment.
 - [ ] `OPERATOROS_BASE_URL=https://operatoros.net` is set on the unified
       deployment.
+- [ ] All thirteen canonical module URL variables in
+      `docs/operatoros-env-vars.md` are present in the Publishing environment
+      and exactly match their `*.operatoros.net` origins. This includes
+      `OUTCALL_URL` even though OutCall remains disabled.
 - [ ] `INTERNAL_API_URL=http://localhost:5001` is server-only and never appears
       in a public redirect.
 - [ ] `TRUST_PROXY=true` is set only because the deployment is behind Replit's
       trusted proxy boundary.
 - [ ] Legacy `APP_URL` is unset; `OPERATOROS_BASE_URL` is the only supported
       production platform override.
+- [ ] Run `corepack pnpm preflight:production --all` in the production
+      environment. It reports `PASS` for `core`, `revenue`, `email`,
+      `callcommand`, and `ai` without printing secret values. If a deliberately
+      degraded provider is not part of the launch claim, run only its applicable
+      readiness flags and record the excluded capability.
+- [ ] Revenue-ready: `STRIPE_MODE=live`, the live Stripe secret and webhook
+      signing secret, and all five shared stack Price IDs pass the preflight.
+- [ ] Invite-ready: Resend and a verified OperatorOS sender pass the email
+      profile; send and accept one non-production-recipient invite.
+- [ ] CallCommand-ready: a bound Replit Twilio connector or the three canonical
+      Twilio credential variables are present, and
+      `TWILIO_PUBLIC_BASE_URL=https://callcommand-ai.operatoros.net`.
+- [ ] AI-ready: `OPENAI_API_KEY` is present before any shared-runtime feature is
+      marketed as live AI rather than fallback/mock behavior.
+- [ ] Do not paste secret values into this checklist, deployment logs,
+      screenshots, Git, or Codex. Record only PASS/FAIL and provider IDs safe
+      for operational documentation.
 
 ## 2. Attached custom domains and TLS
 
@@ -55,6 +86,20 @@ attachment; attachment alone does not prove the current source is deployed.
       accepted as an SSO callback, CORS origin, or absolute auth return target.
 
 ## 3. Per-host behavior
+
+After deployment, run the read-only public verifier first:
+
+```powershell
+corepack pnpm verify:production
+```
+
+It derives the host matrix from `config/operatoros-module-registry.json` and
+checks 17-host diagnostics, platform health/readiness, all enabled anonymous
+PKCE authorization requests, all enabled callback routes, security headers,
+host-only transaction-cookie attributes, forbidden credential query names,
+and OutCall's fail-closed callback. It does not authenticate, mutate data, or
+print authorization values. Continue with the authenticated browser checks
+below after it passes.
 
 Open each host in a fresh (logged-out) browser and confirm:
 

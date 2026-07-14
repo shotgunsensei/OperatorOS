@@ -90,13 +90,28 @@ type ResolvedSsoTenant = {
   viaPlatformRole: boolean;
 };
 
-const ISSUE_RATE_LIMIT = 10;
+// A single entitled user can launch every enabled ecosystem module from My Apps.
+// Keep abuse bounded without rate-limiting the canonical twelve-module launch path.
+const ISSUE_RATE_LIMIT = 20;
 const CONSUME_RATE_LIMIT = 20;
 const BROWSER_EXCHANGE_RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 60_000;
 const issueRate = new Map<string, { count: number; resetAt: number }>();
 const consumeRate = new Map<string, { count: number; resetAt: number }>();
 const browserExchangeRate = new Map<string, { count: number; resetAt: number }>();
+
+type SsoObservation = {
+  correlationId: string;
+  launchId: string;
+  startedAt: number;
+  normalizedFailureReason: string | null;
+};
+
+const ssoObservations = new WeakMap<FastifyRequest, SsoObservation>();
+
+function getSsoObservation(request: FastifyRequest): SsoObservation | null {
+  return ssoObservations.get(request) ?? null;
+}
 
 function checkRate(map: Map<string, { count: number; resetAt: number }>, key: string, limit: number): boolean {
   const now = Date.now();
@@ -254,7 +269,14 @@ function validateAuthorizationRequest(
 }
 
 function sanitizeAuditDetails(details: Record<string, unknown>): Record<string, unknown> {
-  const { token: _token, authorization: _authorization, ...safe } = details;
+  const safe: Record<string, unknown> = {};
+  const sensitiveNames = new Set([
+    'token', 'authorization', 'cookie', 'cookies', 'code', 'accessToken',
+    'refreshToken', 'idToken', 'sessionToken', 'password', 'secret',
+  ]);
+  for (const [key, value] of Object.entries(details)) {
+    if (!sensitiveNames.has(key)) safe[key] = value;
+  }
   return safe;
 }
 
@@ -270,9 +292,15 @@ async function auditSso(
   },
 ) {
   const details = sanitizeAuditDetails(opts.details);
+  const observation = getSsoObservation(request);
   const line = '[AUDIT sso] ' + JSON.stringify({
     ...details,
     ts: new Date().toISOString(),
+    requestId: request.id,
+    correlationId: observation?.correlationId ?? null,
+    launchId: observation?.launchId ?? null,
+    authContractVersion: 'v1',
+    environment: normalizeSsoEnv(process.env.APP_ENV || process.env.NODE_ENV),
     action: opts.action,
     userId: opts.actorUserId,
     tenantId: opts.tenantId ?? null,
@@ -347,6 +375,86 @@ async function resolveTenantForSso(
         : null,
     viaPlatformRole: isPlatformAdmin,
   };
+}
+
+function requestBodyString(request: FastifyRequest, name: string): string | null {
+  const body = request.body;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return null;
+  return readString((body as Record<string, unknown>)[name]);
+}
+
+function safeRedirectHost(request: FastifyRequest): string | null {
+  const redirectUri = requestBodyString(request, 'redirectUri');
+  if (!redirectUri) return null;
+  try { return normalizeHost(new URL(redirectUri).hostname); } catch { return null; }
+}
+
+function structuredSsoContext(request: FastifyRequest, reply: FastifyReply) {
+  const observation = getSsoObservation(request);
+  const user = (request as FastifyRequest & { user?: Partial<AuthenticatedUser> }).user;
+  const moduleId = requestBodyString(request, 'moduleId') || requestBodyString(request, 'moduleSlug');
+  const module = moduleId ? getModuleById(moduleId) : null;
+  const tenantId = requestBodyString(request, 'tenantId') || user?.currentTenantId || null;
+  const cookies = (request as FastifyRequest & { cookies?: Record<string, string | undefined> }).cookies;
+  return {
+    requestId: request.id,
+    correlationId: observation?.correlationId ?? null,
+    launchId: observation?.launchId ?? null,
+    authContractVersion: 'v1',
+    environment: normalizeSsoEnv(process.env.APP_ENV || process.env.NODE_ENV),
+    clientId: requestBodyString(request, 'clientId'),
+    moduleId: module?.id ?? moduleId,
+    moduleSlug: module?.slug ?? null,
+    userId: user?.id ?? null,
+    tenantId,
+    platformRole: user?.platformRole ?? null,
+    tenantRole: null,
+    entitlementKey: module?.entitlementKey ?? null,
+    sessionPresent: !!cookies?.[SESSION_COOKIE_NAME],
+    sessionValid: user?.id ? true : null,
+    authorizationCodeId: null,
+    redirectTargetHost: safeRedirectHost(request),
+    decision: reply.statusCode < 400 ? 'allowed' : 'denied',
+    normalizedFailureReason: observation?.normalizedFailureReason ?? null,
+    durationMs: observation ? Math.max(0, Date.now() - observation.startedAt) : null,
+    statusCode: reply.statusCode,
+  };
+}
+
+async function registerSsoObservability(app: FastifyInstance) {
+  app.addHook('onRequest', async (request, reply) => {
+    const correlationId = crypto.randomUUID();
+    ssoObservations.set(request, {
+      correlationId,
+      launchId: correlationId,
+      startedAt: Date.now(),
+      normalizedFailureReason: null,
+    });
+    reply.header('X-Correlation-ID', correlationId);
+  });
+
+  app.addHook('onSend', async (request, reply, payload) => {
+    if (reply.statusCode < 400 || typeof payload !== 'string') return payload;
+    try {
+      const body = JSON.parse(payload) as Record<string, unknown>;
+      if (!body || Array.isArray(body) || typeof body !== 'object') return payload;
+      const observation = getSsoObservation(request);
+      if (observation && typeof body.code === 'string') {
+        observation.normalizedFailureReason = body.code.slice(0, 80);
+      }
+      if (observation && typeof body.error === 'string') {
+        body.correlationId = observation.correlationId;
+        return JSON.stringify(body);
+      }
+    } catch {
+      // Non-JSON payloads are returned untouched and never logged verbatim.
+    }
+    return payload;
+  });
+
+  app.addHook('onResponse', async (request, reply) => {
+    request.log.info(structuredSsoContext(request, reply), 'sso_request_decision');
+  });
 }
 
 function moduleUnavailable(module: OperatorOSModuleRegistryEntry): { statusCode: number; code: string; error: string } | null {
@@ -1136,12 +1244,15 @@ async function consumeSsoHandler(request: FastifyRequest, reply: FastifyReply) {
 }
 
 export async function registerSsoRoutes(app: FastifyInstance) {
-  app.post('/v1/sso/issue', { preHandler: [authenticate] }, issueSsoHandler);
-  app.post('/api/sso/issue', { preHandler: [authenticate] }, issueSsoHandler);
-  app.post('/v1/sso/browser-exchange', browserExchangeSsoHandler);
-  app.post('/api/sso/browser-exchange', browserExchangeSsoHandler);
-  if (legacySsoRollbackEnabled()) {
-    app.post('/v1/sso/consume', consumeSsoHandler);
-    app.post('/api/sso/consume', consumeSsoHandler);
-  }
+  await app.register(async (ssoApp) => {
+    await registerSsoObservability(ssoApp);
+    ssoApp.post('/v1/sso/issue', { preHandler: [authenticate] }, issueSsoHandler);
+    ssoApp.post('/api/sso/issue', { preHandler: [authenticate] }, issueSsoHandler);
+    ssoApp.post('/v1/sso/browser-exchange', browserExchangeSsoHandler);
+    ssoApp.post('/api/sso/browser-exchange', browserExchangeSsoHandler);
+    if (legacySsoRollbackEnabled()) {
+      ssoApp.post('/v1/sso/consume', consumeSsoHandler);
+      ssoApp.post('/api/sso/consume', consumeSsoHandler);
+    }
+  });
 }

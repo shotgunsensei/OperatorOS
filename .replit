@@ -26,8 +26,8 @@ PORT = "5000"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["bash", "-c", "PORT=5001 tsx apps/api/src/index.ts & sleep 2 && cd apps/web && INTERNAL_API_URL=http://localhost:5001 npx next start -p ${PORT:-5000}"]
-build = ["bash", "-c", "export INTERNAL_API_URL=http://localhost:5001 && cd apps/web && NODE_OPTIONS='--max-old-space-size=4096' npx next build"]
+run = ["node", "scripts/start-unified-runtime.mjs"]
+build = ["bash", "-c", "export INTERNAL_API_URL=http://localhost:5001 && export NODE_OPTIONS='--max-old-space-size=4096' && corepack pnpm --dir apps/web build"]
 
 [workflows]
 runButton = "Project"
@@ -56,6 +56,7 @@ waitForPort = 5000
 [userenv]
 
 [userenv.production]
+NODE_ENV = "production"
 OPERATOROS_BASE_URL = "https://operatoros.net"
 STRIPE_MODE = "live"
 APP_ENV = "production"
@@ -71,6 +72,7 @@ SNAPPROOFOS_URL = "https://snapproofos.operatoros.net"
 STUDYFORGE_AI_URL = "https://studyforge-ai.operatoros.net"
 NINJA_LAUNCH_KIT_URL = "https://ninjalaunchkit.operatoros.net"
 CALLCOMMAND_AI_URL = "https://callcommand-ai.operatoros.net"
+TWILIO_PUBLIC_BASE_URL = "https://callcommand-ai.operatoros.net"
 NINJAMATION_URL = "https://ninjamation.operatoros.net"
 OUTCALL_URL = "https://outcall.operatoros.net"
 # Host attachment only. OutCall remains catalog `coming_soon` / registry

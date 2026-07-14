@@ -115,8 +115,8 @@ test('shared-runtime module mutations use write guards while GET routes remain r
   const firstPartyRoutes = routes.filter((route) => !route.path.includes('/webhooks/twilio/'));
   const mutations = firstPartyRoutes.filter((route) => route.method !== 'get');
   const reads = firstPartyRoutes.filter((route) => route.method === 'get');
-  assert.equal(mutations.length, 19, 'all active first-party module mutations should be inventoried');
-  assert.equal(reads.length, 14, 'all active first-party module reads should be inventoried');
+  assert.equal(mutations.length, 31, 'all active first-party module mutations should be inventoried');
+  assert.equal(reads.length, 16, 'all active first-party module reads should be inventoried');
 
   for (const route of mutations) {
     assert.ok(

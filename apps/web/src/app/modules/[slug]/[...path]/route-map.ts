@@ -30,6 +30,10 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
   techdeck: {
     '/dashboard': { sectionId: 'techdeck-overview', label: 'Overview' },
     '/tickets': { sectionId: 'techdeck-ticket-queue', label: 'Ticket Queue' },
+    '/assets': { sectionId: 'techdeck-ops', label: 'Asset Posture' },
+    '/alerts': { sectionId: 'techdeck-ops', label: 'Health Alerts' },
+    '/scripts': { sectionId: 'techdeck-ops', label: 'Runbooks' },
+    '/network': { sectionId: 'techdeck-ops', label: 'Network Assets' },
     '/settings': { sectionId: 'techdeck-settings', label: 'Settings' },
   },
   pulsedesk: {

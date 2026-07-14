@@ -35,7 +35,7 @@ export function recordAndCheckFailure(key: string, maxFailures: number, windowMs
   return increment(failureStore, key, maxFailures, windowMs);
 }
 
-setInterval(() => {
+const cleanupTimer = setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of requestStore.entries()) {
     if (now > entry.resetAt) requestStore.delete(key);
@@ -44,3 +44,8 @@ setInterval(() => {
     if (now > entry.resetAt) failureStore.delete(key);
   }
 }, 60_000);
+
+// The API listener keeps production alive. This maintenance timer must not
+// prevent tests, migrations, credential-rotation commands, or other one-shot
+// processes from exiting after their actual work is complete.
+cleanupTimer.unref?.();

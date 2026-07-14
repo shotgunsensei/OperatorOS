@@ -112,7 +112,7 @@ test('manual lead list filters are bounded', () => {
 test('TradeFlowKit lead routes enforce module access and tenant predicates on every resource operation', () => {
   const routes = readRepoFile('apps/api/src/routes/module-shell-routes.ts');
   const start = routes.indexOf('// ===== TradeFlowKit: manual lead tracking');
-  const end = routes.indexOf('// ===== CallCommand AI', start);
+  const end = routes.indexOf('// ===== TradeFlowKit: customer -> job -> quote -> invoice -> payment', start);
   assert.ok(start >= 0 && end > start, 'TradeFlowKit route block should be present');
   const block = routes.slice(start, end);
 
