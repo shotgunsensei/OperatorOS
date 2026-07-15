@@ -20,6 +20,11 @@ be assumed to carry into the deployment.
       launcher must receive `ready: true` from private `/readyz` before opening
       the public Next process. If either child exits, the deployment must exit
       and let Replit restart the complete unit.
+- [ ] The build log uses the checked-in pnpm `10.34.5` pin through
+      `npm exec`, then invokes Next directly from `apps/web`. It must not enter
+      Replit's Corepack cache. This avoids the Node 20.20
+      `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING` failure before application code
+      starts.
 - [ ] `APP_ENV=production` and `NODE_ENV=production` in the deployment
       environment.
 - [ ] `DATABASE_URL` points to the production PostgreSQL authority.
@@ -39,7 +44,7 @@ be assumed to carry into the deployment.
       trusted proxy boundary.
 - [ ] Legacy `APP_URL` is unset; `OPERATOROS_BASE_URL` is the only supported
       production platform override.
-- [ ] Run `corepack pnpm preflight:production --all` in the production
+- [ ] Run `npm run preflight:production -- --all` in the production
       environment. It reports `PASS` for `core`, `revenue`, `email`,
       `callcommand`, and `ai` without printing secret values. If a deliberately
       degraded provider is not part of the launch claim, run only its applicable
@@ -90,7 +95,7 @@ attachment; attachment alone does not prove the current source is deployed.
 After deployment, run the read-only public verifier first:
 
 ```powershell
-corepack pnpm verify:production
+npm run verify:production
 ```
 
 It derives the host matrix from `config/operatoros-module-registry.json` and
@@ -153,6 +158,13 @@ Open each host in a fresh (logged-out) browser and confirm:
 
 ## Troubleshooting
 
+- **Build stops in `.cache/node/corepack/.../pnpm.cjs` with
+  `ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING`** — confirm the deployed `.replit`
+  build command matches source: it must install with
+  `npm exec --yes --package=pnpm@10.34.5 -- pnpm install --frozen-lockfile`
+  and build Next directly from `apps/web`. Do not add a bare `pnpm` or
+  `corepack pnpm` command back to deployment build or runtime startup. A
+  `COREPACK_ENABLE_STRICT=0` secret is not required by the checked-in fix.
 - **Redirect still shows `:5000`** — a code path is building a URL from the
   inbound host:port. Use `getPublicOrigin` / `resolvePlatformBaseUrl` instead.
 - **SSO callback rejected with host mismatch** — verify the request reaches the

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "packageManager": "pnpm@10.34.5",
   "scripts": {
     "preflight:production": "node scripts/production-env-preflight.mjs",
     "verify:production": "node scripts/verify-production-runtime.mjs",
@@ -131,6 +132,12 @@
     "drizzle-kit": {
       "@esbuild-kit/esm-loader": "npm:tsx@^4.20.4"
     }
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "bufferutil",
+      "esbuild"
+    ]
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

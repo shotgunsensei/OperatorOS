@@ -54,6 +54,15 @@ running. Focused evidence also includes 15/15 HTTPS redirect-policy tests,
 38/38 SSO tests, 14/14 viewer tests, and 12/12 tenant-RBAC tests. These are
 source and isolated-database results, not a production deployment claim.
 
+The Replit deployment path is also Corepack-free. The checked-in build uses
+`npm exec` to install the exact pnpm `10.34.5` lockfile, then invokes Next
+directly from `apps/web`; the runtime supervisor starts the installed `tsx` and
+Next entrypoints with Node. This exact install/build path and a disposable-
+PostgreSQL two-process rehearsal pass locally, closing the Node 20.20
+`ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING` blocker without relying on a
+production secret. The public deployment remains unverified until this source
+revision is published.
+
 The production-host Playwright gate also passes locally against a disposable
 PostgreSQL database and HTTPS host-preserving proxy: one central credential
 entry establishes the apex session, then all twelve enabled modules launch

@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { dirname, join } from 'node:path';
+import { resolve } from 'node:path';
 import { evaluateProductionEnvironment } from './production-env-preflight.mjs';
 
 const DEFAULT_API_PORT = 5001;
@@ -43,14 +43,16 @@ export function validateDeploymentEnvironment(env = process.env) {
   }
 }
 
-function spawnPnpm(args, env) {
-  const windowsCorepack = join(dirname(process.execPath), 'node_modules', 'corepack', 'dist', 'corepack.js');
-  const command = process.platform === 'win32' ? process.execPath : 'corepack';
-  const commandArgs = process.platform === 'win32'
-    ? [windowsCorepack, 'pnpm', ...args]
-    : ['pnpm', ...args];
-  return spawn(command, commandArgs, {
-    cwd: process.cwd(),
+export function resolveRuntimeEntrypoints(cwd = process.cwd()) {
+  return {
+    tsxCli: resolve(cwd, 'node_modules/tsx/dist/cli.mjs'),
+    nextCli: resolve(cwd, 'apps/web/node_modules/next/dist/bin/next'),
+  };
+}
+
+function spawnNode(entrypoint, args, env, cwd = process.cwd()) {
+  return spawn(process.execPath, [entrypoint, ...args], {
+    cwd,
     env,
     shell: false,
     stdio: 'inherit',
@@ -87,6 +89,7 @@ async function waitForApiReady(child, readyUrl, timeoutMs) {
 export async function startUnifiedRuntime(env = process.env) {
   validateDeploymentEnvironment(env);
   const config = resolveRuntimeConfig(env);
+  const entrypoints = resolveRuntimeEntrypoints();
   const children = new Set();
   let shuttingDown = false;
 
@@ -110,8 +113,9 @@ export async function startUnifiedRuntime(env = process.env) {
     process.once(signal, () => shutdown(0, `received ${signal}`));
   }
 
-  const api = spawnPnpm(
-    ['--dir', 'apps/api', 'exec', 'tsx', 'src/index.ts'],
+  const api = spawnNode(
+    entrypoints.tsxCli,
+    ['apps/api/src/index.ts'],
     { ...env, PORT: String(config.apiPort) },
   );
   children.add(api);
@@ -131,9 +135,11 @@ export async function startUnifiedRuntime(env = process.env) {
 
   if (shuttingDown) return;
   console.info(`[runtime] Fastify ready; starting Next on public port ${config.publicPort}`);
-  const web = spawnPnpm(
-    ['--dir', 'apps/web', 'exec', 'next', 'start', '-p', String(config.publicPort)],
+  const web = spawnNode(
+    entrypoints.nextCli,
+    ['start', '-p', String(config.publicPort)],
     { ...env, PORT: String(config.publicPort), INTERNAL_API_URL: config.internalApiUrl },
+    resolve(process.cwd(), 'apps/web'),
   );
   children.add(web);
   web.once('error', (error) => shutdown(1, `Next spawn failed: ${error.message}`));

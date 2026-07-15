@@ -27,7 +27,7 @@ PORT = "5000"
 [deployment]
 deploymentTarget = "autoscale"
 run = ["node", "scripts/start-unified-runtime.mjs"]
-build = ["bash", "-c", "export INTERNAL_API_URL=http://localhost:5001 && export NODE_OPTIONS='--max-old-space-size=4096' && corepack pnpm --dir apps/web build"]
+build = ["bash", "-c", "export CI=true && npm exec --yes --package=pnpm@10.34.5 -- pnpm install --frozen-lockfile && export INTERNAL_API_URL=http://localhost:5001 && export NODE_OPTIONS='--max-old-space-size=4096' && cd apps/web && node node_modules/next/dist/bin/next build"]
 
 [workflows]
 runButton = "Project"

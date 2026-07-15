@@ -33,14 +33,22 @@ test('unified Replit launcher validates production authority and port separation
     apiReadyUrl: 'http://127.0.0.1:5001/readyz',
     internalApiUrl: 'http://localhost:5001',
   });
+  assert.deepEqual(launcher.resolveRuntimeEntrypoints('C:\\workspace'), {
+    tsxCli: resolve('C:\\workspace', 'node_modules/tsx/dist/cli.mjs'),
+    nextCli: resolve('C:\\workspace', 'apps/web/node_modules/next/dist/bin/next'),
+  });
 });
 
 test('Replit deployment uses the supervised readiness-gated runtime', () => {
   const replit = readFileSync(resolve(repoRoot, '.replit'), 'utf8');
   const deployment = replit.slice(replit.indexOf('[deployment]'), replit.indexOf('[workflows]'));
   const source = readFileSync(launcherPath, 'utf8');
+  const packageJson = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8'));
   assert.match(deployment, /run = \["node", "scripts\/start-unified-runtime\.mjs"\]/);
-  assert.match(deployment, /corepack pnpm --dir apps\/web build/);
+  assert.match(deployment, /export CI=true/);
+  assert.match(deployment, /npm exec --yes --package=pnpm@10\.34\.5 -- pnpm install --frozen-lockfile/);
+  assert.match(deployment, /cd apps\/web && node node_modules\/next\/dist\/bin\/next build/);
+  assert.doesNotMatch(deployment, /corepack|\bnpx\b|node node_modules\/pnpm|\bpnpm -r\b/);
   assert.doesNotMatch(deployment, /sleep 2 && cd apps\/web/);
   assert.match(source, /\/readyz/);
   assert.match(source, /evaluateProductionEnvironment/);
@@ -48,6 +56,13 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.match(source, /Next exited/);
   assert.match(source, /SIGTERM/);
   assert.match(source, /shell: false/);
+  assert.match(source, /node_modules\/tsx\/dist\/cli\.mjs/);
+  assert.match(source, /apps\/web\/node_modules\/next\/dist\/bin\/next/);
+  assert.match(source, /resolve\(process\.cwd\(\), 'apps\/web'\)/);
+  assert.doesNotMatch(source, /corepack|spawnPnpm/);
+  assert.equal(packageJson.packageManager, 'pnpm@10.34.5');
+  assert.equal(packageJson.dependencies.pnpm, undefined);
+  assert.deepEqual(packageJson.pnpm.onlyBuiltDependencies, ['bufferutil', 'esbuild']);
   for (const [name, url] of Object.entries(preflight.CANONICAL_MODULE_URLS)) {
     assert.match(replit, new RegExp(`^${name} = "${String(url).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"$`, 'm'));
   }
