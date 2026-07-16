@@ -1,5 +1,12 @@
 # OperatorOS Consolidation Baseline Audit
 
+> **Historical record (2026-07-01).** This document predates SSO v1 and
+> contains a retired parent-domain-cookie/JWT-handoff target. It is retained as
+> evidence only. Do not use it for implementation or deployment. Current
+> authority is `docs/auth/OPERATOROS_SSO_CONTRACT_V1.md`,
+> `docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md`, `AGENTS.md`, and
+> `docs/IMPLEMENTATION_STATUS.md`.
+
 Date: 2026-07-01
 
 Phase: 0 - repository safety, baseline audit, and migration readiness.

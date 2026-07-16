@@ -68,7 +68,7 @@ retests, and the final matrix.
   runner gateway, and the Next production build. The API production entrypoint
   also started from compiled output; an unconfigured web build failed safely
   on the missing API URL as designed.
-- Full isolated-PostgreSQL API suite: 670 tests, 664 passed, 0 failed, 6
+- Full isolated-PostgreSQL API suite: 671 tests, 665 passed, 0 failed, 6
   explicit live-HTTP skips. The aggregate covers auth/SSO, server-side RBAC,
   tenant masking and cross-tenant denial, module persistence, entitlement,
   audit, and API contracts for all five assessed products.

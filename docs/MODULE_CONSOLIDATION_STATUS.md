@@ -1,6 +1,6 @@
 # OperatorOS module consolidation status
 
-Date: 2026-07-14
+Baseline refreshed: 2026-07-16
 
 This file is the honest source-of-truth for **source ownership and functional
 migration**. A module being registered, entitled, or reachable on an
@@ -48,11 +48,11 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 
 The shared source passes the workspace typecheck and production build with
 `INTERNAL_API_URL=http://localhost:5001`. The complete API regression suite ran
-against a clean PostgreSQL database with 653 tests: 647 passed, 0 failed, and 6
+against a clean PostgreSQL database with 671 tests: 665 passed, 0 failed, and 6
 live-HTTP checks were explicitly skipped because no Next development server was
-running. Focused evidence also includes 15/15 HTTPS redirect-policy tests,
-38/38 SSO tests, 14/14 viewer tests, and 12/12 tenant-RBAC tests. These are
-source and isolated-database results, not a production deployment claim.
+running. A fresh focused Phase 0 security gate passed 73/73 auth, SSO, tenant,
+entitlement, and viewer-write tests. These are source and isolated-database
+results, not a production deployment claim.
 
 The Replit deployment path is also Corepack-free. The checked-in build uses
 `npm exec` to install the exact pnpm `10.34.5` lockfile, then invokes Next
@@ -67,8 +67,9 @@ The production-host Playwright gate also passes locally against a disposable
 PostgreSQL database and HTTPS host-preserving proxy: one central credential
 entry establishes the apex session, then all twelve enabled modules launch
 silently with independent host-only sessions, survive reload, keep credentials
-out of URLs/storage, and honor global revocation. The 2/2 run completed in
-29.6 seconds and also passed direct TechDeck deep-link return, browser Back
+out of URLs/storage, and honor global revocation. The fresh Phase 0 2/2 run
+completed in 32.6 seconds and also passed direct TechDeck deep-link return,
+browser Back
 without a central-auth loop, sibling-tab PulseDesk SSO, and host-only local
 logout. Core deep-link dispatch is explicit for the currently migrated
 workflows and returns a module-scoped recovery state for unsupported paths.

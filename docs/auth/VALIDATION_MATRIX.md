@@ -1,6 +1,6 @@
 # OperatorOS SSO v1 validation matrix
 
-Date: 2026-07-14. Overall gate: **FAIL — do not enable production v1 clients yet.**
+Baseline refreshed: 2026-07-16. Overall gate: **FAIL — do not enable production v1 clients yet.**
 
 All 13 module destinations are the attached `*.operatoros.net` subdomains.
 Standalone branded domains are legacy references only; they are not SSO
@@ -11,7 +11,7 @@ callbacks, canonical application hosts, or pending DNS migration targets.
 | Workspace typecheck | PASS IN SOURCE | Root workspace, API, runner gateway, and web TypeScript checks completed |
 | API/runner build | PASS IN SOURCE | Fastify API and runner-gateway production compilation completed as part of the root workspace build |
 | Next production build | PASS IN SOURCE | The exact Replit build path completed on the pinned pnpm 10.34.5 install without Corepack, then Next 14 compiled directly from `apps/web` with `INTERNAL_API_URL=http://localhost:5001`; `/logout` and `/modules/[slug]/[...path]` are present in the route manifest |
-| Production-host browser SSO gate | PASS LOCALLY FOR ALL 12 ENABLED MODULES | Playwright 1.61.1 drove HTTPS `operatoros.net`, `auth.operatoros.net`, and every enabled module subdomain through a TLS/host-preserving proxy: 2/2 passed in 29.6s. The registry-derived gate covers one credential entry, exact callbacks, independent host-only cookies, reload persistence, clean URLs/storage, global revocation, a direct TechDeck deep link, browser Back without reauth looping, silent sibling-tab PulseDesk launch, and host-only local logout. The run also exposed and verified the fix for the former ten-launch SSO ceiling, which was below the twelve-module ecosystem size. |
+| Production-host browser SSO gate | PASS LOCALLY FOR ALL 12 ENABLED MODULES | Playwright 1.61.1 drove HTTPS `operatoros.net`, `auth.operatoros.net`, and every enabled module subdomain through a TLS/host-preserving proxy: the fresh Phase 0 gate passed 2/2 in 32.6s. The registry-derived gate covers one credential entry, exact callbacks, independent host-only cookies, reload persistence, clean URLs/storage, global revocation, a direct TechDeck deep link, browser Back without reauth looping, silent sibling-tab PulseDesk launch, and host-only local logout. |
 | Canonical `/login` executable contract | PASS IN SOURCE | 4/4 middleware executions passed for apex/app callbacks, same-host fallback, safe `next`, registration mode, PKCE transaction cookies, and cross-host/recursive return rejection |
 | Core module deep-link dispatch | PASS IN SOURCE | 3/3 focused tests passed. Supported TradeFlowKit, TechDeck, and PulseDesk routes focus their live native workflow; malformed, nested, pending, non-core, and unsupported paths fail closed with module-scoped recovery UI |
 | TradeFlowKit revenue workflow | PASS IN ISOLATED POSTGRESQL | 2/2 focused tests passed for customer → job → quote → accepted quote → idempotent invoice → manual payment, including exact integer-cent totals, linked-job state, tenant isolation, viewer write denial, and customer-payment separation from platform billing. `/customers`, `/jobs`, `/quotes`, and `/invoices` now deep-link to the native shell. |
@@ -25,7 +25,7 @@ callbacks, canonical application hosts, or pending DNS migration targets.
 | Authentication denial short-circuit | PASS IN SOURCE | Denied pre-handler regression passed; a 401 now returns the sent Fastify reply and never executes `/auth/me` handlers with an undefined user |
 | SSO correlation and decision observability | PASS IN SOURCE | Route-scoped hooks generate correlation/launch IDs, add `X-Correlation-ID` to every SSO response, add it to bounded JSON errors, record normalized decisions and duration with safe identity/tenant/module context, and never log or echo raw browser codes/cookies. Both `/v1` and same-origin `/api` exchange aliases share the contract. |
 | Per-host local logout revocation | PASS IN ISOLATED POSTGRESQL | Focused replay test passed: the presented JWT is denied with `SESSION_REVOKED`, a distinct sibling module session remains valid, and only a 64-character SHA-256 fingerprint is stored. API typecheck and the related auth/security, cleanup, and shared SSO route tests passed. |
-| Complete API regression suite | PASS IN ISOLATED POSTGRESQL | 653 tests executed from a clean PostgreSQL database: 647 passed, 0 failed, and 6 live-HTTP checks were explicitly skipped because no Next development server was running. The suite covers auth, SSO correlation/decision observability, exact 13-module hosts, tenant isolation, entitlements, billing boundaries, module workflows, lifecycle cleanup, production verification contracts, and source/runtime behavior. Database-pool and rate-limit maintenance handles are non-blocking, so the aggregate exits deterministically. |
+| Complete API regression suite | PASS IN ISOLATED POSTGRESQL | The fresh Phase 0 run executed 671 tests from a clean PostgreSQL database: 665 passed, 0 failed, and 6 live-HTTP checks were explicitly skipped because no Next development server was running. The suite covers auth, SSO correlation/decision observability, exact 13-module hosts, tenant isolation, entitlements, billing boundaries, module workflows, lifecycle cleanup, production verification contracts, and source/runtime behavior. Database-pool and rate-limit maintenance handles are non-blocking, so the aggregate exits deterministically. |
 | Canonical redirect scheme policy | PASS IN SOURCE | 15/15 focused public-URL and launch-flow tests passed. Every registered platform and 13-module production origin requires HTTPS; HTTP is accepted only for loopback development origins, and login revalidates API-returned callback URLs before navigation |
 | API DB-backed SSO exchange tests | PASS IN ISOLATED POSTGRESQL | 38/38 passed across auth security, shared SSO routes, consume rejection, diagnosis, exchange endpoint, and cleanup coverage. This verifies atomic consume, replay/expiry rejection, persisted exchange state, and the shared database initialization path |
 | Tenant/module viewer authority | PASS IN SOURCE AND DATABASE | 14/14 focused viewer normalization/write-gate tests passed; tenant RBAC passed 12/12; and the complete clean-database suite passed the Ninja Pool tenant-viewer, entitlement, isolation, invite, and lifecycle assertions |
@@ -65,8 +65,8 @@ callbacks, canonical application hosts, or pending DNS migration targets.
 3. Verify every enabled exact callback reaches the shared `/sso` page and
    same-origin `/api/sso/browser-exchange` route; verify OutCall returns the
    controlled planned/disabled state without creating a session.
-4. Keep the clean-database 647-pass/0-fail complete API result, focused 38/38
-   SSO result, 12/12 tenant-RBAC result, and the production-host browser gate
+4. Keep the clean-database 665-pass/0-fail complete API result, focused 73/73
+   auth/SSO/tenant/entitlement result, and the production-host browser gate
    green for the deployment commit.
 5. Re-run the authenticated production-host browser gate against the deployed
    public hosts, then complete the remaining negative cases for revoked
