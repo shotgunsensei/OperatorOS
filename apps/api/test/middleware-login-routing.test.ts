@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { middleware } from '../../web/src/middleware.js';
 
 // The API package intentionally does not depend on Next. Resolve NextRequest
 // from the web workspace so this executable contract test respects pnpm's
 // strict package boundaries without widening the production API dependency.
-const requireFromWeb = createRequire(resolve(process.cwd(), 'apps/web/package.json'));
+const requireFromWeb = createRequire(resolve(dirname(fileURLToPath(import.meta.url)), '../../web/package.json'));
 const { NextRequest } = requireFromWeb('next/server') as { NextRequest: new (...args: any[]) => any };
 
 function loginRequest(host: 'operatoros.net' | 'app.operatoros.net', query = ''): any {

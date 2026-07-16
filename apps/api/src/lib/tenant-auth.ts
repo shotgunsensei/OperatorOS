@@ -235,10 +235,10 @@ export async function resolveTenantContext(request: FastifyRequest): Promise<Ten
  */
 export async function requireSuperAdmin(request: FastifyRequest, reply: FastifyReply) {
   await authenticate(request, reply);
-  if (reply.sent) return;
+  if (reply.sent) return reply;
   const user = (request as any).user;
   if (!hasPlatformAdminAuthority(user)) {
-    reply.code(403).send({
+    return reply.code(403).send({
       error: 'Platform super-admin role required',
       code: 'PLATFORM_ROLE_REQUIRED',
     });
@@ -248,7 +248,7 @@ export async function requireSuperAdmin(request: FastifyRequest, reply: FastifyR
 function denyTenantNotFound(reply: FastifyReply) {
   // Cross-tenant + missing tenant collapse to 404 to avoid leaking
   // existence of tenants the caller cannot see.
-  reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+  return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
 }
 
 function denySessionTenantMismatch(request: FastifyRequest, reply: FastifyReply): boolean {
@@ -268,43 +268,40 @@ function denySessionTenantMismatch(request: FastifyRequest, reply: FastifyReply)
 export function requireTenantRole(min: 'owner' | 'admin' | 'member') {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     await authenticate(request, reply);
-    if (reply.sent) return;
+    if (reply.sent) return reply;
 
     const ctx = await resolveTenantContext(request);
     if (!ctx) {
-      if (denySessionTenantMismatch(request, reply)) return;
+      if (denySessionTenantMismatch(request, reply)) return reply;
       return denyTenantNotFound(reply);
     }
     // Gate 2: a suspended tenant blocks all member operations (super_admin
     // bypasses via viaPlatformRole and never gets `suspended:true` set).
     if (ctx.suspended) {
-      reply.code(403).send({
+      return reply.code(403).send({
         error: 'Tenant is suspended. Contact platform administrator.',
         code: 'TENANT_SUSPENDED',
       });
-      return;
     }
     const viewerReadAllowed = ctx.role === 'viewer'
       && min === 'member'
       && (request.method === 'GET' || request.method === 'HEAD');
     if (ctx.role === 'viewer' && min === 'member' && !viewerReadAllowed) {
-      reply.code(403).send({
+      return reply.code(403).send({
         error: 'Read-only tenant access cannot modify tenant data',
         code: 'TENANT_WRITE_ACCESS_REQUIRED',
         currentRole: ctx.role,
       });
-      return;
     }
     if (!viewerReadAllowed && TENANT_ROLE_RANK[ctx.role] < TENANT_ROLE_RANK[min]) {
       // The user IS a member, just not high enough. 403 is correct here:
       // existence is already known from the membership.
-      reply.code(403).send({
+      return reply.code(403).send({
         error: `Tenant role '${min}' or higher required`,
         code: 'TENANT_ROLE_INSUFFICIENT',
         currentRole: ctx.role,
         requiredRole: min,
       });
-      return;
     }
     (request as any).tenantContext = ctx;
   };
@@ -324,32 +321,30 @@ export const requireTenantMember = requireTenantRole('member');
 export function requireTenantModuleAccess(moduleSlug: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     await authenticate(request, reply);
-    if (reply.sent) return;
+    if (reply.sent) return reply;
     const user = (request as any).user;
     const sessionModuleId = (request as any).authSession?.sessionType === 'module'
       ? (request as any).authSession.moduleId as string
       : null;
     if (sessionModuleId && sessionModuleId !== moduleSlug) {
-      reply.code(403).send({
+      return reply.code(403).send({
         error: 'This module session is bound to a different module',
         code: 'SESSION_MODULE_MISMATCH',
       });
-      return;
     }
     const ctx = await resolveTenantContext(request);
     if (!ctx) {
-      if (denySessionTenantMismatch(request, reply)) return;
+      if (denySessionTenantMismatch(request, reply)) return reply;
       return denyTenantNotFound(reply);
     }
 
     // Gate 2: launching ANY module inside a suspended tenant is blocked
     // for non-super-admins (matches read/write block in requireTenantRole).
     if (ctx.suspended && !hasPlatformAdminAuthority(user)) {
-      reply.code(403).send({
+      return reply.code(403).send({
         error: 'Tenant is suspended. Contact platform administrator.',
         code: 'TENANT_SUSPENDED',
       });
-      return;
     }
 
     try {
@@ -359,13 +354,12 @@ export function requireTenantModuleAccess(moduleSlug: string) {
       return;
     } catch (err) {
       if (err instanceof TenantEntitlementError) {
-        reply.code(err.statusCode).send({
+        return reply.code(err.statusCode).send({
           error: err.message,
           code: err.code,
           moduleSlug,
           ...err.payload,
         });
-        return;
       }
       throw err;
     }
@@ -385,24 +379,22 @@ export async function requireTenantModuleWriteAccess(
 ) {
   const ctx = (request as any).tenantContext as TenantContext | undefined;
   if (ctx?.membershipRole === 'viewer' && !ctx.viaPlatformRole) {
-    reply.code(403).send({
+    return reply.code(403).send({
       error: 'Read-only tenant access cannot modify module data',
       code: 'TENANT_WRITE_ACCESS_REQUIRED',
       currentRole: 'viewer',
     });
-    return;
   }
   const accessLevel = (request as any).tenantModuleAccessLevel as string | undefined;
   if (accessLevel === 'viewer') {
-    reply.code(403).send({
+    return reply.code(403).send({
       error: 'Read-only module access cannot modify module data',
       code: 'TENANT_MODULE_WRITE_ACCESS_REQUIRED',
       currentAccessLevel: accessLevel,
     });
-    return;
   }
   if (!accessLevel || accessLevel === 'none') {
-    reply.code(403).send({
+    return reply.code(403).send({
       error: 'Write-capable module access is required',
       code: 'TENANT_MODULE_WRITE_ACCESS_REQUIRED',
       currentAccessLevel: accessLevel ?? 'none',

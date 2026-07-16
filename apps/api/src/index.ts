@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
-import { eq, desc, inArray, and, isNull } from 'drizzle-orm';
+import { eq, desc, inArray, and, isNull, sql } from 'drizzle-orm';
 import type {
   HealthResponse,
   CreateWorkspaceRequest,
@@ -100,18 +100,57 @@ function isAllowedCorsOrigin(origin: string | undefined): boolean {
 const startTime = Date.now();
 const sessionSecret = requireSessionSecret();
 const trustProxy = runtimeTrustsProxy();
+const prettyLogs = !isProductionEnv() && process.env.LOG_PRETTY !== 'false';
 
 const app = Fastify({
   // Fastify derives request.ip from X-Forwarded-For only when this explicit
   // deployment switch is enabled. Audit events and auth/SSO rate-limit keys
   // already use request.ip, so they inherit the same fail-closed boundary.
   trustProxy,
+  // Default request logs include the raw URL. Keep them disabled so an
+  // accidentally supplied code/token query cannot enter log storage; the
+  // sanitized onResponse record below logs only the route template.
+  disableRequestLogging: true,
   logger: {
-    transport: {
-      target: 'pino-pretty',
-      options: { colorize: true },
+    level: process.env.LOG_LEVEL || 'info',
+    redact: {
+      paths: [
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'res.headers.set-cookie',
+        'password',
+        'token',
+        '*.password',
+        '*.token',
+        '*.secret',
+      ],
+      censor: '[REDACTED]',
     },
+    ...(prettyLogs
+      ? { transport: { target: 'pino-pretty', options: { colorize: true } } }
+      : {}),
   },
+});
+
+app.addHook('onRequest', async (request, reply) => {
+  reply.header('X-Request-Id', request.id);
+});
+
+app.addHook('onResponse', async (request, reply) => {
+  const route = request.routeOptions?.url || String(request.url || '').split('?')[0] || 'unknown';
+  const moduleMatch = /^\/(?:v1|api)\/modules\/([^/]+)/.exec(route);
+  const user = (request as any).user;
+  const tenant = (request as any).tenantContext;
+  request.log.info({
+    requestId: request.id,
+    method: request.method,
+    route,
+    statusCode: reply.statusCode,
+    responseTimeMs: Math.round(reply.elapsedTime),
+    userId: user?.id ?? null,
+    tenantId: tenant?.tenantId ?? (request as any).authSession?.tenantId ?? null,
+    moduleId: moduleMatch?.[1] ?? (request as any).authSession?.moduleId ?? null,
+  }, 'request_completed');
 });
 
 await app.register(cors, {
@@ -383,15 +422,36 @@ app.get('/api/health', async (_req, reply) => reply.send(healthSnapshot()));
 
 app.get('/readyz', async (_req, reply) => {
   const ssoCodeEncryptionConfigured = !!resolveSsoCodeSecret();
-  if (isProductionEnv() && !ssoCodeEncryptionConfigured) {
-    return reply.code(503).send({
-      ready: false,
-      checks: { ssoCodeEncryption: 'missing' },
-    });
+  let database: 'healthy' | 'unavailable' = 'healthy';
+  try {
+    await db.execute(sql`select 1 as operatoros_readiness`);
+  } catch {
+    database = 'unavailable';
+    // Do not serialize driver errors here: connection strings and credentials
+    // can be embedded in nested database error metadata.
+    app.log.error({ check: 'database' }, 'readiness_database_failed');
   }
-  return reply.send({
-    ready: true,
-    checks: { ssoCodeEncryption: ssoCodeEncryptionConfigured ? 'configured' : 'development_fallback_unset' },
+
+  const checks = {
+    database,
+    auth: 'configured' as const,
+    ssoCodeEncryption: ssoCodeEncryptionConfigured ? 'configured' : 'missing',
+    moduleRegistry: OPERATOROS_MODULE_REGISTRY.filter(module => module.status === 'active').length > 0
+      ? 'configured'
+      : 'missing',
+  };
+  const externalDependencies = {
+    stripe: process.env.STRIPE_SECRET_KEY && process.env.STRIPE_MODE === 'live' ? 'configured' : 'disabled',
+    email: process.env.RESEND_API_KEY ? 'configured' : 'disabled',
+    twilio: process.env.TWILIO_ACCOUNT_SID || process.env.REPLIT_CONNECTORS_HOSTNAME ? 'configured' : 'disabled',
+    openai: process.env.OPENAI_API_KEY ? 'configured' : 'disabled',
+  };
+  const ready = database === 'healthy' && (!isProductionEnv() || ssoCodeEncryptionConfigured);
+  return reply.code(ready ? 200 : 503).send({
+    ready,
+    checks,
+    externalDependencies,
+    requestId: _req.id,
   });
 });
 
@@ -1478,7 +1538,17 @@ try {
 try {
   await app.listen({ port, host });
   console.info(`OperatorOS API listening on http://${host}:${port} [runner=${getRunnerMode()}]`);
-} catch (err) {
-  app.log.error(err);
+} catch (error) {
+  // Startup failures are intentionally detail-free in process output because
+  // dependency error messages can contain credentials. Preserve only the
+  // safe socket metadata operators need to diagnose a failed bind.
+  const socketError = error as NodeJS.ErrnoException & { address?: string; port?: number };
+  app.log.error({
+    phase: 'listen',
+    code: socketError.code ?? 'UNKNOWN',
+    syscall: socketError.syscall ?? null,
+    address: socketError.address ?? host,
+    port: socketError.port ?? port,
+  }, 'operatoros_api_start_failed');
   process.exit(1);
 }

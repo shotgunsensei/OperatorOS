@@ -13,6 +13,7 @@ import {
   logUserActivity,
   recordFailedLogin,
   resetFailedLogins,
+  sessionNeedsRefresh,
 } from '../lib/auth.js';
 import { checkRateLimit } from '../lib/rate-limiter.js';
 import { ensurePersonalTenant, ensureFreeAccountApps } from '../lib/saas-db-init.js';
@@ -238,6 +239,52 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   };
   app.get('/v1/auth/me', { preHandler: [authenticate] }, meHandler);
   app.get('/api/auth/me', { preHandler: [authenticate] }, meHandler);
+
+  const refreshHandler = async (request: any, reply: any) => {
+    setAuthResponseHeaders(reply);
+    const user = request.user;
+    const session = request.authSession;
+    if (!session || typeof session.exp !== 'number' || !request.authTokenFingerprint) {
+      return reply.code(500).send({ error: 'Session metadata unavailable', code: 'SESSION_METADATA_MISSING' });
+    }
+
+    if (!sessionNeedsRefresh(session)) {
+      return {
+        ok: true,
+        refreshed: false,
+        expiresAt: new Date(session.exp * 1000).toISOString(),
+      };
+    }
+
+    const token = signToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      tokenVersion: user.tokenVersion,
+      sessionType: session.sessionType,
+      ...(session.sessionType === 'module'
+        ? { tenantId: session.tenantId, moduleId: session.moduleId }
+        : {}),
+    });
+
+    await db.insert(revokedSessionTokens).values({
+      tokenHash: request.authTokenFingerprint,
+      userId: user.id,
+      sessionType: session.sessionType,
+      tenantId: session.tenantId ?? null,
+      moduleId: session.moduleId ?? null,
+      expiresAt: new Date(session.exp * 1000),
+      reason: 'session_refresh',
+    }).onConflictDoNothing();
+    reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
+    await logAudit(user.id, 'session_refreshed', user.id, {
+      scope: session.sessionType,
+      moduleId: session.moduleId ?? null,
+    }, request.ip);
+    return { ok: true, refreshed: true };
+  };
+  app.post('/v1/auth/refresh', { preHandler: [authenticate] }, refreshHandler);
+  app.post('/api/auth/refresh', { preHandler: [authenticate] }, refreshHandler);
 
   app.post('/v1/auth/forgot-password', async (request, reply) => {
     if (!enforcePlatformPublicAuthHost(request, reply)) return;

@@ -60,8 +60,9 @@ test('shared Next deployment proxies the API host and public readiness paths to 
   assert.match(middleware, /pathname === '\/healthz'/);
   assert.match(middleware, /pathname === '\/readyz'/);
   assert.match(middleware, /context\.host === API_HOST\) return NextResponse\.next\(\)/);
-  assert.match(api, /checks: \{ ssoCodeEncryption: 'missing' \}/);
-  assert.match(api, /reply\.code\(503\)/);
+  assert.match(api, /ssoCodeEncryption: ssoCodeEncryptionConfigured \? 'configured' : 'missing'/);
+  assert.match(api, /database === 'healthy'/);
+  assert.match(api, /reply\.code\(ready \? 200 : 503\)/);
 });
 
 test('every host has an idempotent local logout route that clears only its host session', () => {
@@ -136,7 +137,7 @@ test('production marketing login starts a complete auth-host SSO transaction', (
   assert.match(middleware, /req\.nextUrl\.searchParams\.get\('next'\)/);
   assert.match(middleware, /targetUrl\.origin !== origin/);
   assert.match(middleware, /targetUrl\.pathname === '\/login'/);
-  assert.match(middleware, /buildPublicUrl\('\/app', 'app'\)/);
+  assert.match(middleware, /context\.surface === 'app'[\s\S]*CANONICAL_APP_URL[\s\S]*buildPublicUrl\('\/app', 'root'\)/);
   assert.match(middleware, /target = loginEntryFallback/);
   assert.match(middleware, /AUTH_ENTRY_MODES/);
   assert.match(middleware, /url\.searchParams\.set\('mode', requestedMode\)/);

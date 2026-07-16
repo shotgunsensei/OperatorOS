@@ -119,6 +119,8 @@ const readinessRows = [
   ['Provider actions', 'Not migrated', colors.gold],
 ];
 
+const liveWorkflowIds = new Set(['leads', 'customers', 'jobs', 'quotes', 'invoices', 'payments']);
+
 const shellCss = `
   .tfk-shell {
     min-height: 100vh;
@@ -375,7 +377,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               />
               <div className="tfk-workflow-grid" style={{ marginTop: 14 }}>
                 {workflowShortcuts.map(({ id, label, summary, Icon, tone }) => (
-                  <WorkflowPanel key={id} id={id} label={label} summary={summary} Icon={Icon} tone={tone} />
+                  <WorkflowPanel key={id} id={id} label={label} summary={summary} Icon={Icon} tone={tone} live={liveWorkflowIds.has(id)} />
                 ))}
               </div>
             </section>
@@ -518,12 +520,14 @@ function WorkflowPanel({
   summary,
   Icon,
   tone,
+  live,
 }: {
   id: string;
   label: string;
   summary: string;
   Icon: LucideIcon;
   tone: string;
+  live: boolean;
 }) {
   return (
     <article id={`tradeflowkit-${id}`} style={workflowPanelStyle} data-testid={`tradeflowkit-workflow-${id}`}>
@@ -534,7 +538,9 @@ function WorkflowPanel({
         <h3 style={{ margin: 0, fontSize: 15 }}>{label}</h3>
       </div>
       <p style={{ color: colors.muted, fontSize: 13, lineHeight: 1.45, margin: '10px 0 0' }}>{summary}</p>
-      <div style={{ marginTop: 12, color: tone, fontSize: 12, fontWeight: 800 }}>OperatorOS gated</div>
+      <div style={{ marginTop: 12, color: live ? colors.green : colors.gold, fontSize: 12, fontWeight: 800 }}>
+        {live ? 'Live in shared runtime' : 'Migration pending — disabled'}
+      </div>
     </article>
   );
 }

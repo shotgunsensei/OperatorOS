@@ -40,6 +40,8 @@ export const authApi = {
 
   logoutAll: () => apiFetch('/auth/logout-all', { method: 'POST' }),
 
+  refresh: () => apiFetch('/auth/refresh', { method: 'POST' }),
+
   me: () => apiFetch('/auth/me'),
 
   forgotPassword: (email: string) =>

@@ -242,7 +242,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await pg.end().catch(() => undefined);
   });
 
-  test('one credential entry establishes root then silently launches all twelve enabled modules', async ({ page, request }) => {
+  test('one credential entry establishes the canonical app host then silently launches all twelve enabled modules', async ({ page, request }) => {
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
     identities.push(identity);
@@ -256,8 +256,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
     const authorizationUrl = new URL(page.url());
     expect(authorizationUrl.searchParams.get('client_id')).toBe('operatoros:web');
-    expect(authorizationUrl.searchParams.get('redirect_uri')).toBe('https://operatoros.net/sso');
-    expect(authorizationUrl.searchParams.get('next')).toBe('https://operatoros.net/app');
+    expect(authorizationUrl.searchParams.get('redirect_uri')).toBe('https://app.operatoros.net/sso');
+    expect(authorizationUrl.searchParams.get('next')).toBe('https://app.operatoros.net/');
     expect(authorizationUrl.searchParams.get('code_challenge_method')).toBe('S256');
     expect(authorizationUrl.searchParams.get('state')).toMatch(/^[A-Za-z0-9_-]{40,}$/);
     expect(authorizationUrl.searchParams.get('nonce')).toMatch(/^[A-Za-z0-9_-]{40,}$/);
@@ -267,13 +267,13 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('input-email').fill(identity.email);
     await page.getByTestId('input-password').fill(PASSWORD);
     await Promise.all([
-      page.waitForURL(/^https:\/\/operatoros\.net\/app(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
       page.getByTestId('button-login').click(),
     ]);
     expect(loginPosts).toBe(1);
     assertNoCredentialQuery(page.url());
     await assertHostOnlySession(context, 'auth.operatoros.net');
-    await assertHostOnlySession(context, 'operatoros.net');
+    await assertHostOnlySession(context, 'app.operatoros.net');
     await assertNoBrowserCredentialStorage(page);
 
     await page.getByTestId('nav-my-apps').click();
@@ -323,7 +323,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     const expectedSessionHosts = new Set([
       'auth.operatoros.net',
-      'operatoros.net',
+      'app.operatoros.net',
       ...ENABLED_MODULES.map(module => module.host),
     ]);
     const cookies = await sessionCookies(context);

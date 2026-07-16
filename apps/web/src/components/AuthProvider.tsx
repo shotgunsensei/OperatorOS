@@ -98,6 +98,22 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    if (!user) return;
+    const renew = () => {
+      if (document.visibilityState !== 'visible') return;
+      void authApi.refresh().catch((err: any) => {
+        if (err?.status === 401) void refresh();
+      });
+    };
+    const interval = window.setInterval(renew, 30 * 60 * 1000);
+    document.addEventListener('visibilitychange', renew);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', renew);
+    };
+  }, [refresh, user]);
+
   const login = async (email: string, password: string) => {
     setAuthError(null);
     const data = await authApi.login(email, password);

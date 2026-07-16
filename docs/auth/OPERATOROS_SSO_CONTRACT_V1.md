@@ -6,6 +6,11 @@ authenticated-browser validation.
 OperatorOS/auth is the sole identity, session-validity, tenant, role,
 account-status, module-status, and entitlement authority.
 
+Session renewal uses `POST /api/auth/refresh`. Rotation occurs only inside the
+final 24 hours, preserves platform or tenant/module scope, revokes the replaced
+token fingerprint, and never places the new session value in a response body
+or URL.
+
 ## Protocol
 
 ```mermaid

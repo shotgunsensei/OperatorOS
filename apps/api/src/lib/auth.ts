@@ -39,6 +39,8 @@ export function isModuleSessionPathAllowed(moduleId: string, rawUrl: string): bo
     '/api/auth/logout',
     '/v1/auth/logout-all',
     '/api/auth/logout-all',
+    '/v1/auth/refresh',
+    '/api/auth/refresh',
     '/v1/me/tenants',
     '/api/me/tenants',
   ]);
@@ -83,6 +85,15 @@ export function verifyToken(token: string): JWTPayload | null {
 
 export function sessionTokenFingerprint(token: string): string {
   return crypto.createHash('sha256').update(token, 'utf8').digest('hex');
+}
+
+export const SESSION_REFRESH_WINDOW_SECONDS = 24 * 60 * 60;
+
+export function sessionNeedsRefresh(
+  session: Pick<JWTPayload, 'exp'>,
+  nowSeconds = Math.floor(Date.now() / 1000),
+): boolean {
+  return typeof session.exp === 'number' && session.exp - nowSeconds <= SESSION_REFRESH_WINDOW_SECONDS;
 }
 
 function isJwtPayload(decoded: unknown): decoded is JWTPayload {

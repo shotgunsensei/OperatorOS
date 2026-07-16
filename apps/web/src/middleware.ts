@@ -177,7 +177,7 @@ function canonicalizeLegacyAppPath(
   // is the validated configuration value, which prevents open redirects.
   const destination = resolveOperatorOSAppsUrl(
     process.env.OPERATOROS_APPS_URL,
-    process.env.NODE_ENV ?? 'production',
+    isLocalHost(context.host) ? (process.env.NODE_ENV ?? 'development') : 'production',
   );
   return withAuthSecurityHeaders(NextResponse.redirect(new URL(destination), 308));
 }

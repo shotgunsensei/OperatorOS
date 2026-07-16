@@ -21,6 +21,7 @@ import PulseDeskShell from '@/components/module-shells/PulseDeskShell';
 import TradeFlowKitShell from '@/components/module-shells/TradeFlowKitShell';
 import NinjaPoolHallShell from '@/components/module-shells/NinjaPoolHallShell';
 import WorkflowModuleShell from '@/components/module-shells/WorkflowModuleShell';
+import OperatorOSEcosystemHeader from '@/components/module-shells/OperatorOSEcosystemHeader';
 import { useModuleDeepLinkTarget } from './ModuleDeepLinkTarget';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
 
@@ -187,6 +188,7 @@ function InternalAppContent() {
   if (Shell) {
     return (
       <div>
+        <OperatorOSEcosystemHeader moduleName={mod.name} moduleSlug={mod.slug} />
         <div style={{ padding: `${space.lg}px ${space.xxl}px 0` }}>
           <BackLink />
         </div>

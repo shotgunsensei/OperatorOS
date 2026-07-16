@@ -536,7 +536,9 @@ function WorkflowPanel({
         <h3 style={{ margin: 0, fontSize: 15 }}>{label}</h3>
       </div>
       <p style={{ color: colors.muted, fontSize: 13, lineHeight: 1.45, margin: '10px 0 0' }}>{summary}</p>
-      <div style={{ marginTop: 12, color: tone, fontSize: 12, fontWeight: 800 }}>OperatorOS gated</div>
+      <div style={{ marginTop: 12, color: colors.amber, fontSize: 12, fontWeight: 800 }}>
+        Migration pending — disabled
+      </div>
     </article>
   );
 }

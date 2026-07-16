@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { middleware } from '../../web/src/middleware.js';
 import {
   buildOperatorOSNavigationUrls,
@@ -15,7 +16,7 @@ import {
   resolveModuleRouteAccess,
 } from '../../../packages/modules/registry.js';
 
-const requireFromWeb = createRequire(resolve(process.cwd(), 'apps/web/package.json'));
+const requireFromWeb = createRequire(resolve(dirname(fileURLToPath(import.meta.url)), '../../web/package.json'));
 const { NextRequest } = requireFromWeb('next/server') as { NextRequest: new (...args: any[]) => any };
 
 function request(url: string, authenticated = true): any {

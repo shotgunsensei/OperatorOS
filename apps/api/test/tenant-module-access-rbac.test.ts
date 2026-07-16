@@ -147,8 +147,13 @@ test('module-access grant writes an admin audit row with before/after diff', asy
       .where(and(
         eq(adminAuditLogs.action, 'tenant_user_module_access_set'),
         eq(adminAuditLogs.adminId, owner.id),
+        eq(adminAuditLogs.tenantId, tenantA.id),
       ));
-    const recent = rows.filter(x => new Date(x.createdAt as any).getTime() >= before - 1000);
+    const recent = rows.filter(x =>
+      new Date(x.createdAt as any).getTime() >= before - 1000
+      && (x.details as any)?.moduleSlug === auditMod.slug
+      && (x.details as any)?.targetUserId === member.id
+    );
     assert.ok(recent.length >= 1, 'audit row for module-access grant must exist');
     const row = recent[recent.length - 1] as any;
     assert.equal(row.tenantId, tenantA.id);

@@ -65,29 +65,13 @@ function AppContent() {
   const { activeRole: tenantRole } = useTenant();
   const [authPage, setAuthPage] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>('login');
   const [activePage, setActivePage] = useState<string>(initialConsolePage);
-  const [didInitialLand, setDidInitialLand] = useState(() => initialConsolePage() !== 'my-apps');
 
   useEffect(() => {
     if (!user) {
-      setDidInitialLand(false);
       setActivePage('my-apps');
       setAuthPage('login');
     }
   }, [user?.id]);
-
-  useEffect(() => {
-    if (!user || didInitialLand) return;
-    if (activePage !== 'my-apps') { setDidInitialLand(true); return; }
-    if (isSuperAdmin((user as any).platformRole)) {
-      setActivePage('platform');
-      setDidInitialLand(true);
-    } else if (isTenantAdmin(tenantRole, (user as any).platformRole)) {
-      setActivePage('command-center');
-      setDidInitialLand(true);
-    } else if (tenantRole === 'member') {
-      setDidInitialLand(true);
-    }
-  }, [user?.id, tenantRole]);
 
   useEffect(() => {
     if (loading || !user) return;
