@@ -16,6 +16,10 @@ import {
   hasPlatformAdminAuthority,
   type OperatorOSUserLike,
 } from '../auth/index.js';
+import {
+  DEFAULT_OPERATOROS_APPS_URL,
+  DEFAULT_OPERATOROS_NAVIGATION_URLS,
+} from './navigation.js';
 
 export type OperatorOSModuleStatus = 'active' | 'planned' | 'hidden' | 'disabled';
 export type OperatorOSModuleCategory = 'platform' | ModuleCategory;
@@ -37,12 +41,16 @@ export interface OperatorOSModuleRegistryEntry {
   localPathFallback: string;
   routePath: string;
   defaultRoute: string;
+  subdomainUrl: string;
   launchUrl: string;
+  returnUrl: string;
   description: string;
   category: OperatorOSModuleCategory;
   entitlementKey: string;
   status: OperatorOSModuleStatus;
   iconName: string;
+  icon: string;
+  enabled: boolean;
   requiresSubscription: boolean;
   requiresTenant: boolean;
   clientId: string;
@@ -53,6 +61,9 @@ export interface OperatorOSModuleRegistryEntry {
   callbackPath: string;
   launchPath: string;
   healthCheckPath: string;
+  healthCheckUrl: string;
+  ssoCallbackUrl: string;
+  logoutUrl: string;
   contractVersion: 'v1';
   minimumAuthAdapterVersion: string;
 }
@@ -141,6 +152,8 @@ function localFallbackFor(slug: string): string {
 
 function toRegistryEntry(module: EcosystemModule): OperatorOSModuleRegistryEntry {
   const catalog = MODULE_CATALOG_BY_SLUG[module.slug] as ModuleCatalogEntry | undefined;
+  const baseUrl = module.ecosystemUrl.replace(/\/+$/, '');
+  const launchPath = module.slug === 'pulsedesk' || module.slug === 'tradeflowkit' ? '/dashboard' : '/';
   return {
     id: module.slug,
     name: module.name,
@@ -150,22 +163,29 @@ function toRegistryEntry(module: EcosystemModule): OperatorOSModuleRegistryEntry
     localPathFallback: localFallbackFor(module.slug),
     routePath: routeFor(module.slug),
     defaultRoute: routeFor(module.slug),
-    launchUrl: module.ecosystemUrl,
+    subdomainUrl: baseUrl,
+    launchUrl: new URL(launchPath, `${baseUrl}/`).toString(),
+    returnUrl: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl,
     description: module.description,
     category: module.category,
     entitlementKey: module.slug,
     status: statusFromEcosystem(module.status),
     iconName: module.iconKey,
+    icon: module.iconKey,
+    enabled: module.status !== 'planned',
     requiresSubscription: true,
     requiresTenant: true,
     clientId: `operatoros:${module.slug}`,
-    productionBaseUrl: module.ecosystemUrl,
-    exactRedirectUris: [`${module.ecosystemUrl.replace(/\/+$/, '')}/sso`],
-    exactLogoutUris: [`${module.ecosystemUrl.replace(/\/+$/, '')}/logout`],
-    exactAllowedOrigins: [module.ecosystemUrl.replace(/\/+$/, '')],
+    productionBaseUrl: baseUrl,
+    exactRedirectUris: [`${baseUrl}/sso`],
+    exactLogoutUris: [`${baseUrl}/logout`],
+    exactAllowedOrigins: [baseUrl],
     callbackPath: '/sso',
-    launchPath: module.slug === 'pulsedesk' || module.slug === 'tradeflowkit' ? '/dashboard' : '/',
+    launchPath,
     healthCheckPath: '/healthz',
+    healthCheckUrl: `${baseUrl}/healthz`,
+    ssoCallbackUrl: `${baseUrl}/sso`,
+    logoutUrl: `${baseUrl}/logout`,
     contractVersion: 'v1',
     minimumAuthAdapterVersion: '1.0.0',
     ...(catalog
@@ -186,12 +206,16 @@ const OPERATOROS_MODULE: OperatorOSModuleRegistryEntry = Object.freeze({
   localPathFallback: '/app',
   routePath: '/app',
   defaultRoute: '/app',
-  launchUrl: PLATFORM_DOMAINS.root,
+  subdomainUrl: PLATFORM_DOMAINS.app,
+  launchUrl: DEFAULT_OPERATOROS_APPS_URL,
+  returnUrl: DEFAULT_OPERATOROS_APPS_URL,
   description: 'Parent command center, identity, tenant, billing, entitlement, and module launch control plane.',
   category: 'platform',
   entitlementKey: 'operatoros',
   status: 'active',
   iconName: 'operatoros',
+  icon: 'operatoros',
+  enabled: true,
   requiresSubscription: false,
   requiresTenant: false,
   clientId: 'operatoros:web',
@@ -202,6 +226,9 @@ const OPERATOROS_MODULE: OperatorOSModuleRegistryEntry = Object.freeze({
   callbackPath: '/sso',
   launchPath: '/app',
   healthCheckPath: '/healthz',
+  healthCheckUrl: `${PLATFORM_DOMAINS.app}/healthz`,
+  ssoCallbackUrl: `${PLATFORM_DOMAINS.app}/sso`,
+  logoutUrl: `${PLATFORM_DOMAINS.app}/logout`,
   contractVersion: 'v1',
   minimumAuthAdapterVersion: '1.0.0',
 });

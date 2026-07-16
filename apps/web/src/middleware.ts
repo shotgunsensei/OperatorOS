@@ -11,6 +11,10 @@ import {
   sanitizeReturnTo,
 } from '../../../packages/modules/public-url.js';
 import {
+  DEFAULT_OPERATOROS_APPS_URL,
+  resolveOperatorOSAppsUrl,
+} from '../../../packages/modules/navigation.js';
+import {
   SSO_NONCE_COOKIE_NAME,
   SSO_PKCE_METHOD,
   SSO_STATE_COOKIE_NAME,
@@ -72,9 +76,9 @@ const MAX_LOGIN_REDIRECTS = 3;
 // be a canonical, allowlisted OperatorOS URL that is NOT derived from the
 // inbound Host / X-Forwarded-Host header. Deriving it from the request host
 // (e.g. `${origin}/app`) let a spoofed Host header leak straight back into the
-// redirect target. `buildPublicUrl` resolves from the hard-coded ecosystem
-// root domain, so this constant is always `https://operatoros.net/app`.
-const CANONICAL_APP_URL = buildPublicUrl('/app', 'root');
+// redirect target. The navigation contract resolves from the registered app
+// host, so this constant is always `https://app.operatoros.net/`.
+const CANONICAL_APP_URL = DEFAULT_OPERATOROS_APPS_URL;
 const AUTH_ENTRY_MODES = new Set(['register', 'forgot-password', 'reset-password']);
 
 function withAuthSecurityHeaders(res: NextResponse): NextResponse {
@@ -159,6 +163,23 @@ function canonicalizeProductionModulePath(
   destination.pathname = match[2] || module.launchPath || '/';
   destination.search = req.nextUrl.search;
   return withAuthSecurityHeaders(NextResponse.redirect(destination, 308));
+}
+
+function canonicalizeLegacyAppPath(
+  req: NextRequest,
+  context: ResolvedOperatorOSModuleContext,
+): NextResponse | null {
+  if (req.nextUrl.pathname !== '/app') return null;
+  if (!context.isOperatorOSHost || context.surface === 'auth' || context.surface === 'api') return null;
+
+  // Local development still mounts the console at /app. Production aliases
+  // never inspect or forward next/return/redirect parameters: the only target
+  // is the validated configuration value, which prevents open redirects.
+  const destination = resolveOperatorOSAppsUrl(
+    process.env.OPERATOROS_APPS_URL,
+    process.env.NODE_ENV ?? 'production',
+  );
+  return withAuthSecurityHeaders(NextResponse.redirect(new URL(destination), 308));
 }
 
 function clearLoopCounter(res: NextResponse): NextResponse {
@@ -247,8 +268,8 @@ async function redirectToLogin(req: NextRequest, context: ResolvedOperatorOSModu
     (context.surface === 'root' || context.surface === 'app') &&
     req.nextUrl.pathname === '/login';
   const loginEntryFallback = context.surface === 'app'
-    ? buildPublicUrl('/app', 'app')
-    : CANONICAL_APP_URL;
+    ? CANONICAL_APP_URL
+    : buildPublicUrl('/app', 'root');
   const rawTarget = isCanonicalLoginEntry
     ? req.nextUrl.searchParams.get('next') ?? loginEntryFallback
     : `${origin}${req.nextUrl.pathname}${req.nextUrl.search || ''}`;
@@ -338,6 +359,9 @@ export async function middleware(req: NextRequest) {
 
   const canonicalRedirect = canonicalizeNoncanonicalHost(req, context);
   if (canonicalRedirect) return canonicalRedirect;
+
+  const legacyAppRedirect = canonicalizeLegacyAppPath(req, context);
+  if (legacyAppRedirect) return legacyAppRedirect;
 
   // `/modules/<slug>` is a loopback/preview development convenience only.
   // Production root/app requests move to the module's canonical subdomain.

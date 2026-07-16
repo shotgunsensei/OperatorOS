@@ -25,6 +25,24 @@ import TenantBillingPage from '@/components/pages/TenantBillingPage';
 import OperatorLoader from '@/components/brand/OperatorLoader';
 import { isSuperAdmin, isTenantAdmin } from '@/lib/rbac';
 
+const LINKABLE_CONSOLE_PAGES = new Set([
+  'my-apps',
+  'apps',
+  'billing',
+  'settings',
+  'command-center',
+  'tenant-users',
+  'tenant-modules',
+  'tenant-billing',
+  'tenant-settings',
+]);
+
+function initialConsolePage(): string {
+  if (typeof window === 'undefined') return 'my-apps';
+  const requested = new URLSearchParams(window.location.search).get('page');
+  return requested && LINKABLE_CONSOLE_PAGES.has(requested) ? requested : 'my-apps';
+}
+
 /**
  * Console route — /app
  *
@@ -46,8 +64,8 @@ function AppContent() {
   const { user, loading, authError, logout, clearAuthError } = useAuth();
   const { activeRole: tenantRole } = useTenant();
   const [authPage, setAuthPage] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>('login');
-  const [activePage, setActivePage] = useState<string>('my-apps');
-  const [didInitialLand, setDidInitialLand] = useState(false);
+  const [activePage, setActivePage] = useState<string>(initialConsolePage);
+  const [didInitialLand, setDidInitialLand] = useState(() => initialConsolePage() !== 'my-apps');
 
   useEffect(() => {
     if (!user) {
@@ -105,6 +123,12 @@ function AppContent() {
       // Canonical Platform URL post-split lives under /app/*.
       window.location.href = '/app/platform';
       return;
+    }
+    if (LINKABLE_CONSOLE_PAGES.has(page)) {
+      const url = new URL(window.location.href);
+      if (page === 'my-apps') url.searchParams.delete('page');
+      else url.searchParams.set('page', page);
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
     }
     setActivePage(page);
   };

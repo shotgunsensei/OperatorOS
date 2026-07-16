@@ -58,6 +58,7 @@ waitForPort = 5000
 [userenv.production]
 NODE_ENV = "production"
 OPERATOROS_BASE_URL = "https://operatoros.net"
+OPERATOROS_APPS_URL = "https://app.operatoros.net/"
 STRIPE_MODE = "live"
 APP_ENV = "production"
 TRUST_PROXY = "true"

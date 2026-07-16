@@ -29,6 +29,7 @@ import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js
 import { createTradeFlowKitAdapterContext } from '../../../../../apps/modules/tradeflowkit/adapter.js';
 import TradeFlowKitLeadCenter from './TradeFlowKitLeadCenter';
 import TradeFlowKitRevenueFlow from './TradeFlowKitRevenueFlow';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 interface TradeFlowKitShellProps {
   baseUrl?: string;
@@ -287,7 +288,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               </p>
             </div>
             <div className="tfk-actions">
-              <HeaderLink href="/app" testId="tradeflowkit-return-command-center" Icon={ArrowLeft}>
+              <HeaderLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} testId="tradeflowkit-return-command-center" Icon={ArrowLeft}>
                 Command Center
               </HeaderLink>
               {canManageModule && (
@@ -296,7 +297,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
                 </HeaderLink>
               )}
               {platformAdmin && (
-                <HeaderLink href="/app/platform/modules/tradeflowkit" testId="tradeflowkit-platform-manage-link" Icon={ShieldCheck}>
+                <HeaderLink href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}app/platform/modules/tradeflowkit`} testId="tradeflowkit-platform-manage-link" Icon={ShieldCheck}>
                   Platform Command
                 </HeaderLink>
               )}

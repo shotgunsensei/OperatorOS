@@ -1,7 +1,7 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, FileCheck2, FlaskConical, Megaphone, Plus, Trash2, Wrench, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, FileCheck2, FlaskConical, Megaphone, Plus, Trash2, Wrench, type LucideIcon } from 'lucide-react';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import {
   moduleShellApi,
@@ -9,6 +9,7 @@ import {
   type NativeWorkflowModuleSlug,
 } from '@/lib/auth';
 import { ShellLiveBadge } from './ShellChrome';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 const CONFIG: Record<NativeWorkflowModuleSlug, {
   name: string;
@@ -156,6 +157,13 @@ export default function WorkflowModuleShell({ moduleSlug }: { moduleSlug: Native
             <p style={{ color: semantic.textMuted, margin: '7px 0 0', maxWidth: 680 }}>{config.description}</p>
           </div>
         </div>
+        <a
+          href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}
+          data-testid={`${moduleSlug}-return-command-center`}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: config.accent, textDecoration: 'none', fontWeight: 700 }}
+        >
+          <ArrowLeft size={16} /> My Apps
+        </a>
       </header>
 
       {error && <div role="alert" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger, marginBottom: space.lg, display: 'flex', gap: 8 }}><AlertTriangle size={18} />{error}</div>}

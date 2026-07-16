@@ -31,6 +31,7 @@ import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js
 import { createTechDeckAdapterContext } from '../../../../../apps/modules/techdeck/adapter.js';
 import TechDeckTicketQueue from './TechDeckTicketQueue';
 import TechDeckOperations from './TechDeckOperations';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 interface TechDeckShellProps {
   baseUrl?: string;
@@ -275,7 +276,7 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
               </p>
             </div>
             <div className="techdeck-actions">
-              <HeaderLink href="/app" testId="techdeck-return-command-center" Icon={ArrowLeft}>
+              <HeaderLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} testId="techdeck-return-command-center" Icon={ArrowLeft}>
                 Command Center
               </HeaderLink>
               {canManageModule && (
@@ -284,7 +285,7 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
                 </HeaderLink>
               )}
               {platformAdmin && (
-                <HeaderLink href="/app/platform/modules/techdeck" testId="techdeck-platform-manage-link" Icon={ShieldCheck}>
+                <HeaderLink href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}app/platform/modules/techdeck`} testId="techdeck-platform-manage-link" Icon={ShieldCheck}>
                   Platform Command
                 </HeaderLink>
               )}

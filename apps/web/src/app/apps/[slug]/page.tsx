@@ -22,6 +22,7 @@ import TradeFlowKitShell from '@/components/module-shells/TradeFlowKitShell';
 import NinjaPoolHallShell from '@/components/module-shells/NinjaPoolHallShell';
 import WorkflowModuleShell from '@/components/module-shells/WorkflowModuleShell';
 import { useModuleDeepLinkTarget } from './ModuleDeepLinkTarget';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
 
 // Mirrors the server's UserModuleSummary shape returned by
 // GET /v1/modules/:slug. Defined inline (rather than imported from the
@@ -293,7 +294,7 @@ export default function InternalAppPage() {
 function BackLink() {
   return (
     <Link
-      href="/app"
+      href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}
       data-testid="link-back-to-apps"
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,

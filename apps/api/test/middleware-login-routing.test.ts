@@ -63,7 +63,7 @@ test('root /login begins the full auth-host PKCE transaction', async () => {
 
 test('app /login uses its own registered callback and same-origin fallback', async () => {
   const response = await middleware(loginRequest('app.operatoros.net'));
-  assertAuthorizationRedirect(response, 'app.operatoros.net', 'https://app.operatoros.net/app');
+  assertAuthorizationRedirect(response, 'app.operatoros.net', 'https://app.operatoros.net/');
 });
 
 test('root registration mode and safe same-host next survive canonicalization', async () => {
@@ -81,7 +81,7 @@ test('cross-host and recursive login destinations collapse to the host fallback'
     'app.operatoros.net',
     '?next=https%3A%2F%2Ftechdeck.operatoros.net%2F',
   ));
-  assertAuthorizationRedirect(crossHost, 'app.operatoros.net', 'https://app.operatoros.net/app');
+  assertAuthorizationRedirect(crossHost, 'app.operatoros.net', 'https://app.operatoros.net/');
 
   const recursive = await middleware(loginRequest('operatoros.net', '?next=%2Flogin'));
   assertAuthorizationRedirect(recursive, 'operatoros.net', 'https://operatoros.net/app');

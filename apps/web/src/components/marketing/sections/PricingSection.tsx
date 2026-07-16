@@ -16,6 +16,7 @@ import {
 import { brand } from '@/lib/brand';
 import { billingApi } from '@/lib/auth';
 import { useAuth } from '../../AuthProvider';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
 
 const money = (cents: number) => `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
@@ -285,7 +286,7 @@ export default function PricingSection() {
               <button data-testid="stack-checkout-cta" type="button" onClick={continueToCheckout} disabled={busy} className="pricing-control" style={{ ...primaryButtonStyle, border: 0, width: '100%', cursor: busy ? 'wait' : 'pointer' }}>
                 {busy ? 'Preparing Checkout…' : user ? 'Continue to Checkout' : 'Sign In to Continue'}
               </button>
-              {user ? <Link href="/app" style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>Return to OperatorOS</Link> : <Link href="/login" style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>Sign In Instead</Link>}
+              {user ? <Link href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>Return to OperatorOS</Link> : <Link href="/login" style={{ color: brand.textSecondary, textAlign: 'center', fontSize: 13 }}>Sign In Instead</Link>}
               <p style={{ color: brand.textMuted, fontSize: 11, textAlign: 'center', margin: 0 }}>Final price confirmed in Stripe Checkout.</p>
             </aside>
           </div>

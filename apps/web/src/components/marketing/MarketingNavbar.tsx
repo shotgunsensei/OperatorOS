@@ -7,6 +7,7 @@ import { Menu, X, ArrowRight } from 'lucide-react';
 import { useAuth } from '../AuthProvider';
 import OperatorLogo from '../brand/OperatorLogo';
 import { brand } from '@/lib/design-tokens';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 interface NavLink {
   href: string;
@@ -183,7 +184,7 @@ export default function MarketingNavbar() {
             {!loading && (
               user ? (
                 <Link
-                  href="/app"
+                  href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}
                   className="operatoros-cta-primary"
                   data-testid="cta-go-to-console"
                 >
@@ -274,7 +275,7 @@ export default function MarketingNavbar() {
               {!loading && (
                 user ? (
                   <Link
-                    href="/app"
+                    href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}
                     className="operatoros-cta-primary"
                     style={{ flex: 1, justifyContent: 'center' }}
                     data-testid="cta-mobile-go-to-console"

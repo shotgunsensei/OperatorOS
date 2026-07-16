@@ -17,7 +17,9 @@ test('unified Replit launcher validates production authority and port separation
     SESSION_SECRET: 'test-only-session-secret-long-enough',
     SSO_CODE_ENCRYPTION_SECRET: 'test-only-code-secret-long-enough-v1',
     APP_ENV: 'production', NODE_ENV: 'production',
-    OPERATOROS_BASE_URL: 'https://operatoros.net', TRUST_PROXY: 'true',
+    OPERATOROS_BASE_URL: 'https://operatoros.net',
+    OPERATOROS_APPS_URL: 'https://app.operatoros.net/',
+    TRUST_PROXY: 'true',
   };
   assert.doesNotThrow(() => launcher.validateDeploymentEnvironment(valid));
   assert.throws(() => launcher.validateDeploymentEnvironment({ ...valid, DATABASE_URL: '' }), /DATABASE_URL/);
@@ -67,4 +69,5 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
     assert.match(replit, new RegExp(`^${name} = "${String(url).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"$`, 'm'));
   }
   assert.match(replit, /TWILIO_PUBLIC_BASE_URL = "https:\/\/callcommand-ai\.operatoros\.net"/);
+  assert.match(replit, /OPERATOROS_APPS_URL = "https:\/\/app\.operatoros\.net\/"/);
 });

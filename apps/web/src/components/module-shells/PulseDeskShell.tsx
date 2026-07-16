@@ -27,6 +27,7 @@ import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createPulseDeskAdapterContext } from '../../../../../apps/modules/pulsedesk/adapter.js';
 import PulseDeskDepartmentEscalationQueue from './PulseDeskDepartmentEscalationQueue';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 interface PulseDeskShellProps {
   baseUrl?: string;
@@ -284,7 +285,7 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
               </p>
             </div>
             <div className="pulsedesk-actions">
-              <HeaderLink href="/app" testId="pulsedesk-return-command-center" Icon={ArrowLeft}>
+              <HeaderLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} testId="pulsedesk-return-command-center" Icon={ArrowLeft}>
                 Command Center
               </HeaderLink>
               {canManageModule && (
@@ -293,7 +294,7 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
                 </HeaderLink>
               )}
               {platformAdmin && (
-                <HeaderLink href="/app/platform/modules/pulsedesk" testId="pulsedesk-platform-manage-link" Icon={ShieldCheck}>
+                <HeaderLink href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}app/platform/modules/pulsedesk`} testId="pulsedesk-platform-manage-link" Icon={ShieldCheck}>
                   Platform Command
                 </HeaderLink>
               )}

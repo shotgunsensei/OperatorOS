@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import ContactLink from '@/components/ContactLink';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
 
 interface ModuleStateProps {
   testId: string;
@@ -15,7 +16,7 @@ export default function ModuleState({
   eyebrow,
   title,
   body,
-  actionHref = '/app',
+  actionHref = DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl,
   actionLabel = 'Return to Command Center',
 }: ModuleStateProps) {
   return (

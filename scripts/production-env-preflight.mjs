@@ -74,6 +74,9 @@ function checkCore(env, issues, warnings) {
   if (env.OPERATOROS_BASE_URL !== 'https://operatoros.net') {
     addIssue(issues, 'core', 'OPERATOROS_BASE_URL', 'must equal https://operatoros.net');
   }
+  if (env.OPERATOROS_APPS_URL !== 'https://app.operatoros.net/') {
+    addIssue(issues, 'core', 'OPERATOROS_APPS_URL', 'must equal https://app.operatoros.net/');
+  }
   for (const [name, expected] of Object.entries(CANONICAL_MODULE_URLS)) {
     if (!isPresent(env, name)) {
       addIssue(issues, 'core', name, `is required and must equal ${expected}`);

@@ -14,6 +14,7 @@ const coreEnv = {
   APP_ENV: 'production',
   NODE_ENV: 'production',
   OPERATOROS_BASE_URL: 'https://operatoros.net',
+  OPERATOROS_APPS_URL: 'https://app.operatoros.net/',
   TRUST_PROXY: 'true',
 };
 

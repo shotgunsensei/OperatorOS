@@ -65,6 +65,12 @@ test('central module registry entries include the required routing and entitleme
     );
     assert.ok(['active', 'planned', 'hidden', 'disabled'].includes(module.status));
     assert.equal(module.iconName.length > 0, true, `iconName present for ${module.slug}`);
+    assert.equal(module.returnUrl, 'https://app.operatoros.net/');
+    assert.equal(module.subdomainUrl.startsWith('https://'), true);
+    assert.equal(module.healthCheckUrl.startsWith(module.subdomainUrl), true);
+    assert.equal(module.ssoCallbackUrl.startsWith(module.subdomainUrl), true);
+    assert.equal(module.logoutUrl.startsWith(module.subdomainUrl), true);
+    assert.equal(typeof module.enabled, 'boolean');
     assert.equal(typeof module.requiresSubscription, 'boolean');
     assert.equal(typeof module.requiresTenant, 'boolean');
   }

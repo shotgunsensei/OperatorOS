@@ -11,7 +11,11 @@ import { authenticate, logAudit } from '../lib/auth.js';
 import { resolveTenantContext, requireTenantMember, requireSuperAdmin } from '../lib/tenant-auth.js';
 import { hasPlatformAdminAuthority } from '../lib/rbac.js';
 import { recordModuleUsage } from '../lib/plans.js';
-import { resolvePlatformBaseUrl } from '../lib/public-url.js';
+import { resolveAppBaseUrl, resolvePlatformBaseUrl } from '../lib/public-url.js';
+import {
+  buildOperatorOSNavigationUrls,
+  OPERATOROS_NAVIGATION_CONTRACT_VERSION,
+} from '../../../../packages/modules/navigation.js';
 import {
   hasModuleAccess, getUserModules, getModuleForUser,
   getAccessBreakdown, getModuleAccessTrace, evaluateUserEntitlement,
@@ -340,6 +344,62 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const summary = await getModuleForUser(user.id, ctx.tenantId, slug);
     if (!summary) return reply.code(404).send({ error: 'Module not found' });
     return summary;
+  });
+
+  // Shared, authenticated navigation contract consumed by each module host.
+  // It is deliberately module-scoped so an SSO module session remains within
+  // the allowlisted /v1/modules/:moduleId API boundary.
+  app.get('/v1/modules/:slug/navigation', { preHandler: [requireTenantMember] }, async (request, reply) => {
+    const user = (request as any).user;
+    const ctx = (request as any).tenantContext;
+    const { slug } = request.params as { slug: string };
+    const moduleSummary = await getModuleForUser(user.id, ctx.tenantId, slug);
+    if (!moduleSummary) {
+      return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
+    }
+    if (moduleSummary.module.status === 'disabled' || moduleSummary.module.status === 'coming_soon') {
+      return reply.code(409).send({ error: 'Module is not enabled', code: 'MODULE_DISABLED' });
+    }
+    if (!moduleSummary.unlocked) {
+      return reply.code(403).send({ error: 'Module entitlement required', code: 'MODULE_ACCESS_DENIED' });
+    }
+
+    const allModules = await getUserModules(user.id, ctx.tenantId);
+    return {
+      version: OPERATOROS_NAVIGATION_CONTRACT_VERSION,
+      module: {
+        id: moduleSummary.module.id,
+        slug: moduleSummary.module.slug,
+        name: moduleSummary.module.name,
+      },
+      ...buildOperatorOSNavigationUrls(resolveAppBaseUrl()),
+      currentUser: {
+        id: user.id,
+        email: user.email,
+        name: user.name ?? null,
+      },
+      tenant: {
+        id: ctx.tenantId,
+        slug: ctx.tenantSlug,
+        type: ctx.tenantType,
+        status: ctx.status,
+      },
+      role: {
+        tenant: ctx.role,
+        platform: user.platformRole ?? 'user',
+      },
+      entitlements: allModules.map(entry => ({
+        key: entry.module.slug,
+        enabled: entry.unlocked,
+        source: entry.access_source,
+      })),
+      theme: {
+        brand: 'OperatorOS',
+        mode: 'dark',
+        accent: '#ef4444',
+        logoUrl: `${resolvePlatformBaseUrl()}/favicon.ico`,
+      },
+    };
   });
 
   // GET /v1/modules/debug/:slug — single-module verbose breakdown.

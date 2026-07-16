@@ -2,12 +2,17 @@
 
 Shared OperatorOS module registry boundary.
 
+See [`../../docs/module-navigation-contract.md`](../../docs/module-navigation-contract.md)
+for the canonical My Apps URL and the authenticated navigation contract that
+module shells consume.
+
 The Phase 2 registry is intentionally metadata-only. It does not import module
 source code and does not mount module routes.
 
 ## Registry
 
 - `registry.ts`: central normalized module registry and lookup helpers.
+- `navigation.ts`: validated launcher URL and shared module navigation contract.
 
 ## Current Design
 

@@ -19,6 +19,7 @@
  */
 
 import type { MarketingStatus } from './marketing-catalog';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../packages/modules/navigation.js';
 
 export interface CtaTarget {
   href: string;
@@ -27,7 +28,7 @@ export interface CtaTarget {
 
 export function primaryCtaTarget(signedIn: boolean): CtaTarget {
   return signedIn
-    ? { href: '/app',   label: 'Launch OperatorOS' }
+    ? { href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, label: 'Launch OperatorOS' }
     : { href: '/login', label: 'Launch OperatorOS' };
 }
 
@@ -47,7 +48,7 @@ export function primaryCtaTarget(signedIn: boolean): CtaTarget {
  */
 export function billingCtaTarget(signedIn: boolean): CtaTarget {
   return signedIn
-    ? { href: '/app',   label: 'Manage billing' }
+    ? { href: DEFAULT_OPERATOROS_NAVIGATION_URLS.billingUrl, label: 'Manage billing' }
     : { href: '/login', label: 'See pricing' };
 }
 
@@ -58,6 +59,6 @@ export function moduleCtaTarget(
   if (status === 'Coming Soon') return { href: '/pricing', label: 'View access options' };
   if (status === 'Locked')      return { href: '/pricing', label: 'View access options' };
   // Available / Beta — surface depends on auth state only.
-  if (signedIn)                 return { href: '/app',     label: 'Open in OperatorOS' };
+  if (signedIn) return { href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, label: 'Open in OperatorOS' };
   return { href: '/login', label: 'Sign in to launch' };
 }

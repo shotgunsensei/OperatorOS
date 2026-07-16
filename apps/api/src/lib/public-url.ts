@@ -18,6 +18,7 @@ import {
   resolveHostRole,
   type PublicHostRole,
 } from '../../../../packages/modules/public-url.js';
+import { resolveOperatorOSAppsUrl } from '../../../../packages/modules/navigation.js';
 
 export * from '../../../../packages/modules/public-url.js';
 
@@ -50,9 +51,10 @@ export function resolvePlatformBaseUrl(): string {
  * return URLs (the authenticated console lives on `app.operatoros.net`).
  */
 export function resolveAppBaseUrl(): string {
-  const explicit = process.env.APP_URL || process.env.OPERATOROS_BASE_URL;
-  if (explicit && explicit.trim()) return trimTrailingSlash(explicit.trim());
-  return isProductionEnv() ? PLATFORM_DOMAINS.app : 'http://localhost:5000';
+  return trimTrailingSlash(resolveOperatorOSAppsUrl(
+    process.env.OPERATOROS_APPS_URL,
+    isProductionEnv() ? 'production' : 'development',
+  ));
 }
 
 /** Resolve the clean public origin for an inbound Fastify request. */
