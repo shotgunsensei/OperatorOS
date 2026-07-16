@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { evaluateProductionEnvironment } from './production-env-preflight.mjs';
 
@@ -45,17 +46,28 @@ export function validateDeploymentEnvironment(env = process.env) {
 
 export function resolveRuntimeEntrypoints(cwd = process.cwd()) {
   return {
-    tsxCli: resolve(cwd, 'node_modules/tsx/dist/cli.mjs'),
+    databaseReleaseEntry: resolve(cwd, 'apps/api/dist/apps/api/src/scripts/database-release.js'),
+    apiEntry: resolve(cwd, 'apps/api/dist/apps/api/src/index.js'),
     nextCli: resolve(cwd, 'apps/web/node_modules/next/dist/bin/next'),
   };
 }
 
-function spawnNode(entrypoint, args, env, cwd = process.cwd()) {
-  return spawn(process.execPath, [entrypoint, ...args], {
+function spawnNode(entrypoint, args, env, cwd = process.cwd(), nodeArgs = []) {
+  return spawn(process.execPath, [...nodeArgs, entrypoint, ...args], {
     cwd,
     env,
     shell: false,
     stdio: 'inherit',
+  });
+}
+
+function waitForSuccessfulExit(child, label) {
+  return new Promise((resolvePromise, reject) => {
+    child.once('error', error => reject(new Error(`${label} spawn failed: ${error.message}`)));
+    child.once('exit', (code, signal) => {
+      if (code === 0) resolvePromise();
+      else reject(new Error(`${label} exited (${signal ?? code ?? 'unknown'})`));
+    });
   });
 }
 
@@ -87,9 +99,13 @@ async function waitForApiReady(child, readyUrl, timeoutMs) {
 }
 
 export async function startUnifiedRuntime(env = process.env) {
-  validateDeploymentEnvironment(env);
   const config = resolveRuntimeConfig(env);
+  const runtimeEnv = { ...env, INTERNAL_API_URL: env.INTERNAL_API_URL ?? config.internalApiUrl };
+  validateDeploymentEnvironment(runtimeEnv);
   const entrypoints = resolveRuntimeEntrypoints();
+  for (const [name, path] of Object.entries(entrypoints)) {
+    if (!existsSync(path)) throw new Error(`Missing production artifact ${name}: run the deployment build first`);
+  }
   const children = new Set();
   let shuttingDown = false;
 
@@ -113,10 +129,34 @@ export async function startUnifiedRuntime(env = process.env) {
     process.once(signal, () => shutdown(0, `received ${signal}`));
   }
 
+  const databaseRelease = spawnNode(
+    entrypoints.databaseReleaseEntry,
+    ['--apply'],
+    runtimeEnv,
+    process.cwd(),
+    ['--conditions=production'],
+  );
+  children.add(databaseRelease);
+  try {
+    console.info('[runtime] applying the idempotent OperatorOS database release');
+    await waitForSuccessfulExit(databaseRelease, 'Database release');
+    children.delete(databaseRelease);
+  } catch (error) {
+    children.delete(databaseRelease);
+    shutdown(1, error instanceof Error ? error.message : 'Database release failed');
+    return;
+  }
+
   const api = spawnNode(
-    entrypoints.tsxCli,
-    ['apps/api/src/index.ts'],
-    { ...env, PORT: String(config.apiPort) },
+    entrypoints.apiEntry,
+    [],
+    {
+      ...runtimeEnv,
+      PORT: String(config.apiPort),
+      OPERATOROS_DATABASE_RELEASE_APPLIED: '1',
+    },
+    process.cwd(),
+    ['--conditions=production'],
   );
   children.add(api);
   api.once('error', (error) => shutdown(1, `Fastify spawn failed: ${error.message}`));
@@ -138,7 +178,7 @@ export async function startUnifiedRuntime(env = process.env) {
   const web = spawnNode(
     entrypoints.nextCli,
     ['start', '-p', String(config.publicPort)],
-    { ...env, PORT: String(config.publicPort), INTERNAL_API_URL: config.internalApiUrl },
+    { ...runtimeEnv, PORT: String(config.publicPort), INTERNAL_API_URL: config.internalApiUrl },
     resolve(process.cwd(), 'apps/web'),
   );
   children.add(web);

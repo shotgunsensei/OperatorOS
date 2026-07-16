@@ -19,6 +19,8 @@ test('unified Replit launcher validates production authority and port separation
     APP_ENV: 'production', NODE_ENV: 'production',
     OPERATOROS_BASE_URL: 'https://operatoros.net',
     OPERATOROS_APPS_URL: 'https://app.operatoros.net/',
+    INTERNAL_API_URL: 'http://localhost:5001',
+    OPERATOROS_DATABASE_RELEASE_MODE: 'apply',
     TRUST_PROXY: 'true',
   };
   assert.doesNotThrow(() => launcher.validateDeploymentEnvironment(valid));
@@ -27,6 +29,7 @@ test('unified Replit launcher validates production authority and port separation
   assert.throws(() => launcher.validateDeploymentEnvironment({ ...valid, APP_ENV: 'dev' }), /production/);
   assert.throws(() => launcher.validateDeploymentEnvironment({ ...valid, APP_URL: 'https://legacy.invalid' }), /APP_URL/);
   assert.throws(() => launcher.validateDeploymentEnvironment({ ...valid, TECHDECK_URL: '' }), /TECHDECK_URL/);
+  assert.throws(() => launcher.validateDeploymentEnvironment({ ...valid, INTERNAL_API_URL: 'https://api.operatoros.net' }), /INTERNAL_API_URL/);
   assert.throws(() => launcher.resolveRuntimeConfig({ PORT: '5001', API_PORT: '5001' }), /different/);
   assert.deepEqual(launcher.resolveRuntimeConfig({ PORT: '5000', API_PORT: '5001' }), {
     apiPort: 5001,
@@ -36,7 +39,8 @@ test('unified Replit launcher validates production authority and port separation
     internalApiUrl: 'http://localhost:5001',
   });
   assert.deepEqual(launcher.resolveRuntimeEntrypoints('C:\\workspace'), {
-    tsxCli: resolve('C:\\workspace', 'node_modules/tsx/dist/cli.mjs'),
+    databaseReleaseEntry: resolve('C:\\workspace', 'apps/api/dist/apps/api/src/scripts/database-release.js'),
+    apiEntry: resolve('C:\\workspace', 'apps/api/dist/apps/api/src/index.js'),
     nextCli: resolve('C:\\workspace', 'apps/web/node_modules/next/dist/bin/next'),
   });
 });
@@ -49,8 +53,9 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.match(deployment, /run = \["node", "scripts\/start-unified-runtime\.mjs"\]/);
   assert.match(deployment, /export CI=true/);
   assert.match(deployment, /npm exec --yes --package=pnpm@10\.34\.5 -- pnpm install --frozen-lockfile/);
-  assert.match(deployment, /cd apps\/web && node node_modules\/next\/dist\/bin\/next build/);
-  assert.doesNotMatch(deployment, /corepack|\bnpx\b|node node_modules\/pnpm|\bpnpm -r\b/);
+  assert.match(deployment, /pnpm build:production/);
+  assert.doesNotMatch(deployment, /cd apps\/web && node node_modules\/next\/dist\/bin\/next build/);
+  assert.doesNotMatch(deployment, /corepack|\bnpx\b|node node_modules\/pnpm/);
   assert.doesNotMatch(deployment, /sleep 2 && cd apps\/web/);
   assert.match(source, /\/readyz/);
   assert.match(source, /evaluateProductionEnvironment/);
@@ -58,11 +63,15 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.match(source, /Next exited/);
   assert.match(source, /SIGTERM/);
   assert.match(source, /shell: false/);
-  assert.match(source, /node_modules\/tsx\/dist\/cli\.mjs/);
+  assert.match(source, /database-release\.js/);
+  assert.match(source, /--apply/);
+  assert.match(source, /--conditions=production/);
+  assert.match(source, /apps\/api\/dist\/apps\/api\/src\/index\.js/);
   assert.match(source, /apps\/web\/node_modules\/next\/dist\/bin\/next/);
   assert.match(source, /resolve\(process\.cwd\(\), 'apps\/web'\)/);
   assert.doesNotMatch(source, /corepack|spawnPnpm/);
   assert.equal(packageJson.packageManager, 'pnpm@10.34.5');
+  assert.equal(packageJson.scripts['build:production'], 'pnpm typecheck && pnpm build');
   assert.equal(packageJson.dependencies.pnpm, undefined);
   assert.deepEqual(packageJson.pnpm.onlyBuiltDependencies, ['bufferutil', 'esbuild']);
   for (const [name, url] of Object.entries(preflight.CANONICAL_MODULE_URLS)) {
@@ -70,4 +79,6 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   }
   assert.match(replit, /TWILIO_PUBLIC_BASE_URL = "https:\/\/callcommand-ai\.operatoros\.net"/);
   assert.match(replit, /OPERATOROS_APPS_URL = "https:\/\/app\.operatoros\.net\/"/);
+  assert.match(replit, /INTERNAL_API_URL = "http:\/\/localhost:5001"/);
+  assert.match(replit, /OPERATOROS_DATABASE_RELEASE_MODE = "apply"/);
 });

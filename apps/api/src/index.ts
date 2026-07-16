@@ -24,8 +24,10 @@ import cookie from '@fastify/cookie';
 import { db } from './db.js';
 import { workspaces, runners, tasks, taskEvents, toolTraces, publishRuns, users } from './schema.js';
 import { serveUI } from './ui.js';
-import { ensureBaseTables, ensureExtendedTables } from './lib/db-init.js';
-import { ensureSaasTables, seedPlansAndAdmin, seedModules, seedPlatformComponents, ensureTenantTables, ensureModuleShellTables, backfillPersonalTenants, backfillFreeAccountAppsForAllTenants, bootstrapSuperAdmin, seedDemoCoTenant } from './lib/saas-db-init.js';
+import {
+  applyOperatorOSDatabaseRelease,
+  verifyOperatorOSDatabaseRelease,
+} from './lib/database-release.js';
 import { registerOsRoutes } from './routes/os-routes.js';
 import { registerAuthRoutes } from './routes/auth-routes.js';
 import { registerSaasRoutes } from './routes/saas-routes.js';
@@ -230,36 +232,11 @@ await registerEntitlementRoutes(app);
 await registerEcosystemRoutes(app);
 await registerDiagnosticsRoutes(app);
 
-await ensureBaseTables();
-await ensureExtendedTables();
-await ensureSaasTables();
-// Gate 1: tenant DDL must run BEFORE any seed step that touches `users`,
-// because Drizzle's implicit SELECT * needs `platform_role` /
-// `current_tenant_id` to exist on row reads.
-await ensureTenantTables();
-// Task #72: per-shell persistence tables. Must run AFTER ensureTenantTables
-// because each table FKs `tenants(id)` and `users(id)`.
-await ensureModuleShellTables();
-await seedPlansAndAdmin();
-// Task #66: launch-fix bootstrap. Pre-seed runs the `bf-os ->
-// brandforgeos` slug rename + `subscription_plans.stripe_price_id_annual`
-// column add BEFORE seedModules so the seeder finds the renamed row.
-const { launchFixPreSeed, launchFixPostSeed } = await import('./lib/launch-fix-init.js');
-await launchFixPreSeed();
-// Task #114: seed the four platform components BEFORE seedModules so the
-// module seeder can back-fill modules.component_id by resolving component
-// slugs to ids. Purely additive — no entitlement/billing/SSO impact.
-await seedPlatformComponents();
-await seedModules();
-// Backfill + tenant-aware seeds run last so the data they need is present.
-await backfillPersonalTenants();
-await bootstrapSuperAdmin();
-await seedDemoCoTenant();
-// Task #66: post-seed aligns plan prices to PLAN_CONFIGS, back-fills
-// monthly/annual Stripe price IDs, renames John's tenant + flips type to
-// company, and back-fills tenant_modules for plan-included live modules.
-await launchFixPostSeed();
-await backfillFreeAccountAppsForAllTenants();
+if (process.env.OPERATOROS_DATABASE_RELEASE_APPLIED === '1') {
+  await verifyOperatorOSDatabaseRelease();
+} else {
+  await applyOperatorOSDatabaseRelease();
+}
 startSsoTokenCleanup();
 
 const streamSubscribers = new Map<string, Set<import('ws').WebSocket>>();
