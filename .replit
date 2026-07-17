@@ -27,7 +27,7 @@ PORT = "5000"
 [deployment]
 deploymentTarget = "autoscale"
 run = ["node", "scripts/start-unified-runtime.mjs"]
-build = ["bash", "-c", "export CI=true && npm exec --yes --package=pnpm@10.34.5 -- pnpm install --frozen-lockfile && export INTERNAL_API_URL=http://localhost:5001 && export NODE_OPTIONS='--max-old-space-size=4096' && cd apps/web && node node_modules/next/dist/bin/next build"]
+build = ["bash", "-c", "export CI=true && npm exec --yes --package=pnpm@10.34.5 -- pnpm install --frozen-lockfile && export INTERNAL_API_URL=http://localhost:5001 && export NODE_OPTIONS='--max-old-space-size=4096' && npm exec --yes --package=pnpm@10.34.5 -- pnpm build:production"]
 
 [workflows]
 runButton = "Project"
@@ -62,6 +62,8 @@ OPERATOROS_APPS_URL = "https://app.operatoros.net/"
 STRIPE_MODE = "live"
 APP_ENV = "production"
 TRUST_PROXY = "true"
+INTERNAL_API_URL = "http://localhost:5001"
+OPERATOROS_DATABASE_RELEASE_MODE = "apply"
 TRADEFLOWKIT_URL = "https://tradeflowkit.operatoros.net"
 TORQUESHED_URL = "https://torqueshed.operatoros.net"
 TECHDECK_URL = "https://techdeck.operatoros.net"

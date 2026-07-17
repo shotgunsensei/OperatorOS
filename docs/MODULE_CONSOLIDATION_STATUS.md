@@ -1,6 +1,6 @@
 # OperatorOS module consolidation status
 
-Baseline refreshed: 2026-07-16
+Baseline refreshed: 2026-07-17
 
 This file is the honest source-of-truth for **source ownership and functional
 migration**. A module being registered, entitled, or reachable on an
@@ -46,22 +46,30 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 
 ## Current verification boundary
 
-The shared source passes the workspace typecheck and production build with
-`INTERNAL_API_URL=http://localhost:5001`. The complete API regression suite ran
-against a clean PostgreSQL database with 671 tests: 665 passed, 0 failed, and 6
-live-HTTP checks were explicitly skipped because no Next development server was
-running. A fresh focused Phase 0 security gate passed 73/73 auth, SSO, tenant,
-entitlement, and viewer-write tests. These are source and isolated-database
-results, not a production deployment claim.
+The shared source passes the workspace typecheck and exact pinned `.replit`
+production build with `INTERNAL_API_URL=http://localhost:5001`. The complete API
+regression suite ran against a clean isolated PostgreSQL database with 675
+tests: 675 passed, 0 failed, and 0 skipped. A fresh focused Phase 0 security
+gate passed 73/73 auth, SSO, tenant, entitlement, and viewer-write tests. These
+are source and isolated-database results, not a production deployment claim.
 
-The Replit deployment path is also Corepack-free. The checked-in build uses
-`npm exec` to install the exact pnpm `10.34.5` lockfile, then invokes Next
-directly from `apps/web`; the runtime supervisor starts the installed `tsx` and
-Next entrypoints with Node. This exact install/build path and a disposable-
-PostgreSQL two-process rehearsal pass locally, closing the Node 20.20
-`ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING` blocker without relying on a
-production secret. The public deployment remains unverified until this source
-revision is published.
+The Replit deployment path is Corepack-free. The checked-in build uses `npm
+exec` with exact pnpm `10.34.5`, runs the mandatory workspace typecheck, and
+builds the API, runner gateway, and Next application. The production supervisor
+uses compiled artifacts only: it applies or verifies the 14-step database
+release, starts the compiled API, waits for readiness, and starts compiled
+Next. The database release applied twice without drift, and a PostgreSQL 16.14
+custom-format backup restored successfully into a new disposable database with
+matching critical counts, 61 public tables, 100 validated foreign keys, and no
+unvalidated foreign keys.
+
+The reviewed candidate passes the local production-host SSO matrix 2/2, but it
+has not been promoted to the public target. The read-only public production
+verification currently passes 32/47 checks: API readiness, all 17 module
+diagnostics, all 12 enabled callback routes, and OutCall fail-closed behavior
+pass; apex `/healthz` and anonymous host-only SSO transaction-cookie checks
+still reflect the older deployed release. Phase 2 remains blocked until the
+candidate is deployed and the public gate passes in full.
 
 The production-host Playwright gate also passes locally against a disposable
 PostgreSQL database and HTTPS host-preserving proxy: one central credential

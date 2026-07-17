@@ -1,5 +1,13 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const CONTRACT_PATH = resolve(SCRIPT_DIR, '../config/production-environment.contract.json');
+
+export const PRODUCTION_ENVIRONMENT_CONTRACT = Object.freeze(
+  JSON.parse(readFileSync(CONTRACT_PATH, 'utf8')),
+);
 
 const PROFILE_ORDER = ['core', 'revenue', 'email', 'callcommand', 'ai'];
 
@@ -20,19 +28,7 @@ const REVENUE_PRICE_VARS = [
 ];
 
 export const CANONICAL_MODULE_URLS = Object.freeze({
-  TRADEFLOWKIT_URL: 'https://tradeflowkit.operatoros.net',
-  TORQUESHED_URL: 'https://torqueshed.operatoros.net',
-  TECHDECK_URL: 'https://techdeck.operatoros.net',
-  PULSEDESK_URL: 'https://pulsedesk.operatoros.net',
-  FAULTLINELAB_URL: 'https://faultlinelab.operatoros.net',
-  NINJA_POOL_HALL_URL: 'https://ninja-pool-hall.operatoros.net',
-  BRANDFORGEOS_URL: 'https://brandforgeos.operatoros.net',
-  SNAPPROOFOS_URL: 'https://snapproofos.operatoros.net',
-  STUDYFORGE_AI_URL: 'https://studyforge-ai.operatoros.net',
-  NINJA_LAUNCH_KIT_URL: 'https://ninjalaunchkit.operatoros.net',
-  CALLCOMMAND_AI_URL: 'https://callcommand-ai.operatoros.net',
-  NINJAMATION_URL: 'https://ninjamation.operatoros.net',
-  OUTCALL_URL: 'https://outcall.operatoros.net',
+  ...PRODUCTION_ENVIRONMENT_CONTRACT.canonicalModuleUrls,
 });
 
 function isPresent(env, name) {
@@ -50,32 +46,21 @@ function requirePresent(env, issues, profile, names) {
 }
 
 function checkCore(env, issues, warnings) {
-  requirePresent(env, issues, 'core', [
-    'DATABASE_URL',
-    'SESSION_SECRET',
-    'SSO_CODE_ENCRYPTION_SECRET',
-  ]);
+  const contract = PRODUCTION_ENVIRONMENT_CONTRACT.core;
+  requirePresent(env, issues, 'core', contract.required);
 
   if (isPresent(env, 'DATABASE_URL') && !/^postgres(?:ql)?:\/\//i.test(env.DATABASE_URL)) {
     addIssue(issues, 'core', 'DATABASE_URL', 'must be a PostgreSQL URL');
   }
-  if (isPresent(env, 'SESSION_SECRET') && env.SESSION_SECRET.length < 24) {
-    addIssue(issues, 'core', 'SESSION_SECRET', 'must contain at least 24 characters');
+  for (const [name, minimum] of Object.entries(contract.minimumLengths)) {
+    if (isPresent(env, name) && env[name].length < minimum) {
+      addIssue(issues, 'core', name, `must contain at least ${minimum} characters`);
+    }
   }
-  if (isPresent(env, 'SSO_CODE_ENCRYPTION_SECRET') && env.SSO_CODE_ENCRYPTION_SECRET.length < 32) {
-    addIssue(issues, 'core', 'SSO_CODE_ENCRYPTION_SECRET', 'must contain at least 32 characters');
-  }
-  if (env.APP_ENV !== 'production') {
-    addIssue(issues, 'core', 'APP_ENV', 'must equal production');
-  }
-  if (env.NODE_ENV !== 'production') {
-    addIssue(issues, 'core', 'NODE_ENV', 'must equal production');
-  }
-  if (env.OPERATOROS_BASE_URL !== 'https://operatoros.net') {
-    addIssue(issues, 'core', 'OPERATOROS_BASE_URL', 'must equal https://operatoros.net');
-  }
-  if (env.OPERATOROS_APPS_URL !== 'https://app.operatoros.net/') {
-    addIssue(issues, 'core', 'OPERATOROS_APPS_URL', 'must equal https://app.operatoros.net/');
+  for (const [name, expected] of Object.entries(contract.exact)) {
+    if (env[name] !== expected) {
+      addIssue(issues, 'core', name, `must equal ${expected}`);
+    }
   }
   for (const [name, expected] of Object.entries(CANONICAL_MODULE_URLS)) {
     if (!isPresent(env, name)) {
@@ -87,11 +72,20 @@ function checkCore(env, issues, warnings) {
   if (!['1', 'true'].includes(String(env.TRUST_PROXY).toLowerCase())) {
     addIssue(issues, 'core', 'TRUST_PROXY', 'must be explicitly enabled behind the Replit proxy');
   }
-  if (isPresent(env, 'APP_URL')) {
-    addIssue(issues, 'core', 'APP_URL', 'must be unset; use OPERATOROS_BASE_URL and module canonical URLs');
+  for (const name of contract.unset) {
+    if (isPresent(env, name)) {
+      addIssue(issues, 'core', name, 'must be unset in the unified production runtime');
+    }
   }
-  if (['1', 'true'].includes(String(env.ALLOW_LEGACY_SSO_ROLLBACK).toLowerCase())) {
-    addIssue(issues, 'core', 'ALLOW_LEGACY_SSO_ROLLBACK', 'must be absent or false for the production release');
+  for (const name of contract.internalOnly) {
+    if (isPresent(env, name)) {
+      addIssue(issues, 'core', name, 'is supervisor-owned and must not be configured externally');
+    }
+  }
+  for (const name of contract.falseOrUnset) {
+    if (['1', 'true'].includes(String(env[name]).toLowerCase())) {
+      addIssue(issues, 'core', name, 'must be absent or false for the production release');
+    }
   }
   if (isPresent(env, 'MODULE_SSO_SECRET')) {
     warnings.push({
@@ -99,6 +93,33 @@ function checkCore(env, issues, warnings) {
       name: 'MODULE_SSO_SECRET',
       message: 'is not used by SSO v1 and should be removed unless an emergency rollback is approved',
     });
+  }
+
+  if (isPresent(env, 'CORS_ALLOWED_ORIGINS')) {
+    const values = env.CORS_ALLOWED_ORIGINS.split(',').map(value => value.trim()).filter(Boolean);
+    let valid = values.length > 0;
+    for (const value of values) {
+      try {
+        const parsed = new URL(value);
+        valid = valid
+          && value !== '*'
+          && parsed.protocol === 'https:'
+          && parsed.origin === value.replace(/\/$/, '')
+          && !parsed.username
+          && !parsed.password
+          && !['localhost', '127.0.0.1', '::1'].includes(parsed.hostname.toLowerCase());
+      } catch {
+        valid = false;
+      }
+    }
+    if (!valid) {
+      addIssue(
+        issues,
+        'core',
+        'CORS_ALLOWED_ORIGINS',
+        'must contain comma-separated exact HTTPS origins without wildcards, credentials, paths, or loopback hosts',
+      );
+    }
   }
 }
 

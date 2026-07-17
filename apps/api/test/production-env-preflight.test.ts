@@ -15,8 +15,21 @@ const coreEnv = {
   NODE_ENV: 'production',
   OPERATOROS_BASE_URL: 'https://operatoros.net',
   OPERATOROS_APPS_URL: 'https://app.operatoros.net/',
+  INTERNAL_API_URL: 'http://localhost:5001',
+  OPERATOROS_DATABASE_RELEASE_MODE: 'apply',
   TRUST_PROXY: 'true',
 };
+
+test('production environment contract is machine-readable and owns core deployment inputs', () => {
+  assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.contractVersion, 1);
+  assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.deploymentTarget, 'replit-autoscale');
+  assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact.INTERNAL_API_URL, 'http://localhost:5001');
+  assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact.OPERATOROS_DATABASE_RELEASE_MODE, 'apply');
+  assert.deepEqual(
+    preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.unset,
+    ['APP_URL', 'COOKIE_DOMAIN', 'NEXT_PUBLIC_API_URL'],
+  );
+});
 
 test('core preflight requires every exact OperatorOS module subdomain', () => {
   const { TECHDECK_URL: _omitted, ...missingTechDeck } = coreEnv;
@@ -41,13 +54,45 @@ test('production preflight defaults to core and rejects unsafe authority configu
     ...coreEnv,
     SESSION_SECRET: 'short',
     APP_URL: 'https://legacy.example',
+    COOKIE_DOMAIN: '.operatoros.net',
+    NEXT_PUBLIC_API_URL: 'http://localhost:5001',
+    INTERNAL_API_URL: 'http://127.0.0.1:5001',
+    OPERATOROS_DATABASE_RELEASE_MODE: 'skip',
     ALLOW_LEGACY_SSO_ROLLBACK: 'true',
+    ALLOW_UNSAFE_COMMANDS: 'true',
   });
   assert.equal(unsafe.ok, false);
   assert.deepEqual(
     unsafe.issues.map((issue: { name: string }) => issue.name),
-    ['SESSION_SECRET', 'APP_URL', 'ALLOW_LEGACY_SSO_ROLLBACK'],
+    [
+      'SESSION_SECRET',
+      'INTERNAL_API_URL',
+      'OPERATOROS_DATABASE_RELEASE_MODE',
+      'APP_URL',
+      'COOKIE_DOMAIN',
+      'NEXT_PUBLIC_API_URL',
+      'ALLOW_LEGACY_SSO_ROLLBACK',
+      'ALLOW_UNSAFE_COMMANDS',
+    ],
   );
+});
+
+test('production preflight rejects wildcard, insecure, credentialed, and localhost CORS origins', () => {
+  for (const value of [
+    '*',
+    'http://example.com',
+    'https://user:pass@example.com',
+    'https://localhost:3000',
+    'not-a-url',
+  ]) {
+    const report = preflight.evaluateProductionEnvironment({ ...coreEnv, CORS_ALLOWED_ORIGINS: value });
+    assert.equal(report.ok, false, value);
+    assert.deepEqual(report.issues.map((issue: { name: string }) => issue.name), ['CORS_ALLOWED_ORIGINS']);
+  }
+  assert.equal(preflight.evaluateProductionEnvironment({
+    ...coreEnv,
+    CORS_ALLOWED_ORIGINS: 'https://ops.example.com,https://status.example.com',
+  }).ok, true);
 });
 
 test('all readiness profiles pass with live shared-runtime providers', () => {

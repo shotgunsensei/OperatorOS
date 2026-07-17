@@ -20,6 +20,7 @@ To run OperatorOS, ensure you have PostgreSQL running and the following environm
 - `OPERATOROS_BASE_URL=https://operatoros.net`
 - `OPERATOROS_APPS_URL=https://app.operatoros.net/`
 - `INTERNAL_API_URL=http://localhost:5001`: private server-side Next-to-Fastify route
+- `OPERATOROS_DATABASE_RELEASE_MODE=apply`: authorizes the reviewed idempotent release before API startup
 - `TRUST_PROXY=true` behind the managed Replit proxy
 - the exact canonical module URL variables documented in `.env.example`
 - `OPENAI_API_KEY`: optional provider configuration; mock output is never production acceptance evidence
@@ -30,13 +31,17 @@ Commands:
 - `$env:CI='true'; corepack pnpm install --frozen-lockfile`: install the pinned workspace
 - `corepack pnpm dev`: start local development services
 - `corepack pnpm typecheck`: run all supported TypeScript checks
-- `INTERNAL_API_URL=http://localhost:5001 corepack pnpm build`: build production artifacts
+- `$env:INTERNAL_API_URL='http://localhost:5001'; corepack pnpm build:production`: typecheck and build production artifacts
 - `corepack pnpm --dir apps/api test`: run tests against an isolated PostgreSQL database
 - `corepack pnpm preflight:production -- --core`: validate production authority configuration
+- `corepack pnpm db:plan`: print the ordered, secret-free database release plan
 
-The repository does not define `db:push`, `generate`, lint, or format scripts.
-Schema initialization is currently idempotent API startup SQL. Never run an
-imported child application's Drizzle migration against OperatorOS.
+The repository does not define `db:push`, migration generation, lint, or format
+scripts. `corepack pnpm db:apply` is the only supported root release apply path
+and requires an isolated/approved `DATABASE_URL` plus
+`OPERATOROS_DATABASE_RELEASE_MODE=apply`. The Replit supervisor runs its
+compiled equivalent before Fastify. Never run an imported child application's
+Drizzle migration against OperatorOS.
 
 ## Stack
 
@@ -51,6 +56,7 @@ imported child application's Drizzle migration against OperatorOS.
 - **API Entrypoint:** `apps/api/src/index.ts`
 - **Web Frontend Entrypoint:** `apps/web/src/app/page.tsx`
 - **DB Schema (Source of Truth):** `apps/api/src/schema.ts`
+- **Database Release Contract:** `apps/api/src/lib/database-release-contract.ts` + `apps/api/src/lib/database-release.ts`
 - **AI Tool Definitions:** `apps/api/src/lib/ai-service.ts`
 - **Authentication Logic:** `apps/api/src/lib/auth.ts`
 - **Tenant Authorization:** `apps/api/src/lib/tenant-auth.ts`

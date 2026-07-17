@@ -1,6 +1,6 @@
 # Cross-module readiness report
 
-Assessment date: 2026-07-16. Scope: OperatorOS, TradeFlowKit, PulseDesk,
+Assessment date: 2026-07-17. Scope: OperatorOS, TradeFlowKit, PulseDesk,
 TechDeck, and TorqueShed in the consolidated `C:\Dev\OperatorOS` runtime.
 
 ## Release rule
@@ -59,17 +59,22 @@ retests, and the final matrix.
   both must pass against the deployed production database and SSO secret.
 - Optional providers are not module readiness claims. Provider-backed UI must
   stay disabled until its configuration and signed webhook/callback tests pass.
-- Database restore has documentation but still requires a recorded rehearsal.
+- A disposable PostgreSQL backup/restore rehearsal is recorded and passed.
+- The reviewed release candidate has not been deployed to the public target.
+  The read-only public gate passed 32/47 checks: API readiness, all 17 module
+  diagnostics, all 12 callback routes, and OutCall fail-closed behavior passed;
+  apex health and anonymous host-only SSO transaction-cookie checks still
+  reflect the older public release and block promotion.
 
 ## Verification evidence
 
 - `corepack pnpm typecheck`: pass across API, runner gateway, and web.
-- `INTERNAL_API_URL=http://localhost:5001 corepack pnpm build`: pass for API,
-  runner gateway, and the Next production build. The API production entrypoint
-  also started from compiled output; an unconfigured web build failed safely
-  on the missing API URL as designed.
-- Full isolated-PostgreSQL API suite: 671 tests, 665 passed, 0 failed, 6
-  explicit live-HTTP skips. The aggregate covers auth/SSO, server-side RBAC,
+- The exact pinned `.replit` build command and `corepack pnpm
+  build:production` pass for API, runner gateway, and the Next production
+  build. The unified runtime applies the compiled database release, starts the
+  compiled API, waits for readiness, and starts the compiled Next application.
+- Full isolated-PostgreSQL API suite: 675 tests, 675 passed, 0 failed, 0
+  skipped. The aggregate covers auth/SSO, server-side RBAC,
   tenant masking and cross-tenant denial, module persistence, entitlement,
   audit, and API contracts for all five assessed products.
 - Focused ecosystem contract suite: 30/30 passed.
@@ -82,10 +87,16 @@ retests, and the final matrix.
 - Local shared runtime: `operatoros.net/healthz` returned 200 and
   `api.operatoros.net/readyz` returned 200 with database, auth, SSO encryption,
   and module registry healthy/configured.
+- The 14-step database release applied twice to an isolated database without
+  drift. A PostgreSQL 16.14 custom-format backup restored into a new database
+  with matching critical table counts, 61 public tables, 100 validated foreign
+  keys, and no unvalidated foreign keys.
 
 The imported module source trees are quarantined migration snapshots, not
 independent deployable repositories. Their production behavior is therefore
 validated through the consolidated OperatorOS build, database suite, shared
 API, and host-routed browser matrix. Every module remains explicitly not
-production-ready until deployed-target health and browser gates pass and a
-restore rehearsal is recorded.
+production-ready until deployed-target health and browser gates pass. Phase 1
+source and local acceptance are complete, but the public target remains blocked
+at 32/47 checks until this candidate is deployed and the authenticated
+deployed-target gate is rerun.

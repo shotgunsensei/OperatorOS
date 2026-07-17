@@ -1,6 +1,8 @@
 # OperatorOS Environment Variables
 
-Authoritative list, grouped by surface. Booleans below indicate
+Human-readable list, grouped by surface. The machine-readable production
+authority is `config/production-environment.contract.json`; this document must
+not override it. Booleans below indicate
 "presence is enough"; anything marked _value-sensitive_ has semantic
 meaning in code (e.g. `STRIPE_MODE=live`).
 
@@ -13,15 +15,20 @@ meaning in code (e.g. `STRIPE_MODE=live`).
 | `SSO_CODE_ENCRYPTION_SECRET`             | yes             | Independent high-entropy 32+ character hub-only key used to seal one-time browser authorization codes.                                           |
 | `INTERNAL_API_URL`                       | yes (web prod)  | Server-only Fastify origin used by Next rewrites; use `http://localhost:5001` in the unified Replit workload.                                      |
 | `NEXT_PUBLIC_API_URL`                    | mobile/split only | Public API origin for Capacitor or an intentionally separate API deployment; unified web clients use same-origin `/api/*`.                      |
+| `PORT` / `API_PORT`                      | yes (unified prod) | Public Next port `5000` and private Fastify port `5001`; the supervisor rejects equal values.                                                    |
 | `OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL` | optional        | Existing user email to re-assert as `super_admin`; does not replace explicit secure seed credentials.                                             |
 | `ADMIN_EMAIL` / `ADMIN_NAME`             | optional        | Seed admin identity; email defaults to the shared root-admin constant and name defaults to `OperatorOS Admin`.                                     |
 | `ADMIN_PASSWORD`                         | conditional     | Required from the secret manager only when production must create a missing seed admin; no embedded fallback. Minimum 12 characters.              |
 | `DEMO_EMAIL` / `DEMO_PASSWORD`           | optional pair   | Optional demo seed. Creation is skipped unless an explicit `DEMO_PASSWORD` is supplied; no embedded fallback.                                      |
 | `OPERATOROS_BASE_URL`                    | yes (prod)      | Must equal `https://operatoros.net` in production; development-only fallbacks remain for local execution.                                         |
+| `OPERATOROS_APPS_URL`                    | yes (prod)      | Must equal `https://app.operatoros.net/`; modules use this external launcher rather than a relative `/app`.                                        |
 | `APP_ENV` / `NODE_ENV`                   | yes (prod)      | Both must equal `production` for the published release.                                                                                           |
 | `TRUST_PROXY`                            | yes (Replit)    | Set to `true` only behind Replit's managed deployment proxy.                                                                                      |
+| `OPERATOROS_DATABASE_RELEASE_MODE`       | yes (prod)      | Must equal `apply`; authorizes the reviewed idempotent database release before API startup.                                                        |
+| `OPERATOROS_DATABASE_RELEASE_APPLIED`    | never external  | Supervisor-owned child-process marker. Do not configure it in Replit or a secret manager.                                                         |
 | `ALLOW_LEGACY_SSO_ROLLBACK`              | no              | Must be absent or `false` for the production SSO v1 release.                                                                                      |
 | `MODULE_SSO_SECRET`                      | legacy only     | Not used by SSO v1; remove unless an explicitly approved rollback still requires it.                                                              |
+| `CORS_ALLOWED_ORIGINS`                   | optional        | Comma-separated exact HTTPS origins only; no wildcard, credentials, path, HTTP, or loopback production values.                                    |
 
 ## Email (Resend)
 
