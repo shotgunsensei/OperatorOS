@@ -1,25 +1,42 @@
 # OperatorOS
 
-OperatorOS is an AI-native Cloud Development Environment (CDE) and SaaS platform for managing application workspaces, services, and deployments.
+Status: current Replit operator summary. `AGENTS.md`,
+`docs/auth/OPERATOROS_SSO_CONTRACT_V1.md`, and
+`docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md` are the architecture and
+security authority.
+
+OperatorOS is the central identity, tenant, entitlement, billing, launcher,
+and host-routed runtime for the Shotgun Ninjas application ecosystem. Its CDE
+capabilities are platform features, not a second identity or tenant authority.
 
 ## Run & Operate
 
 To run OperatorOS, ensure you have PostgreSQL running and the following environment variables configured:
 
 - `DATABASE_URL`: PostgreSQL connection string
-- `SESSION_SECRET`: JWT signing secret
-- `NEXT_PUBLIC_API_URL`: API URL for the Next.js frontend
-- `OPENAI_API_KEY`: For AI functionalities (optional, mock fallback available)
+- `SESSION_SECRET`: strong host-session signing secret
+- `SSO_CODE_ENCRYPTION_SECRET`: strong hub-only SSO code-encryption secret
+- `APP_ENV=production` and `NODE_ENV=production`
+- `OPERATOROS_BASE_URL=https://operatoros.net`
+- `OPERATOROS_APPS_URL=https://app.operatoros.net/`
+- `INTERNAL_API_URL=http://localhost:5001`: private server-side Next-to-Fastify route
+- `TRUST_PROXY=true` behind the managed Replit proxy
+- the exact canonical module URL variables documented in `.env.example`
+- `OPENAI_API_KEY`: optional provider configuration; mock output is never production acceptance evidence
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_MODE`, `STRIPE_PRICE_*`: For Stripe integration (optional)
 - `OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL`: Email to grant `super_admin` role on boot.
 
 Commands:
-- `pnpm install`: Install dependencies
-- `pnpm dev`: Start all services in development mode
-- `pnpm build`: Build all services
-- `pnpm db:push`: Apply Drizzle ORM schema changes to the database
-- `pnpm typecheck`: Run TypeScript type checking
-- `pnpm generate`: Generate Drizzle migrations and other code
+- `$env:CI='true'; corepack pnpm install --frozen-lockfile`: install the pinned workspace
+- `corepack pnpm dev`: start local development services
+- `corepack pnpm typecheck`: run all supported TypeScript checks
+- `INTERNAL_API_URL=http://localhost:5001 corepack pnpm build`: build production artifacts
+- `corepack pnpm --dir apps/api test`: run tests against an isolated PostgreSQL database
+- `corepack pnpm preflight:production -- --core`: validate production authority configuration
+
+The repository does not define `db:push`, `generate`, lint, or format scripts.
+Schema initialization is currently idempotent API startup SQL. Never run an
+imported child application's Drizzle migration against OperatorOS.
 
 ## Stack
 
@@ -49,7 +66,11 @@ Commands:
 ## Architecture decisions
 
 - **Monorepo Structure:** Uses `pnpm` monorepo for shared code (`@operatoros/sdk`) and consistent development across services (`api`, `web`, `runner-gateway`).
-- **Multi-Tenancy:** Core architectural principle, where all data and features are scoped by `tenant_id`. Access is strictly controlled, resolving active tenant via URL, header, or user preference. Cross-tenant access results in a `404 TENANT_NOT_FOUND` to prevent leakage.
+- **Multi-Tenancy:** All module data and features are scoped by `tenant_id`.
+  Authority comes from the validated server session plus verified membership.
+  A path or `X-Tenant-Id` value is only a requested tenant selection and must
+  be revalidated; it never overrides a module session's sealed tenant. Foreign
+  resources return 404 or a stable denial without leaking another tenant.
 - **AI-First Design:** Integrated AI Agent and AI Operations Assistant with a pluggable provider architecture (OpenAI, Mock) and plan-gated tools, emphasizing AI assistance throughout the development workflow.
 - **Role-Based Access Control (RBAC):** Granular authorization via platform roles (`super_admin`, `user`) and tenant-specific roles (`owner`, `admin`, `member`), along with module and feature gating based on subscription plans. **Helper contract shape:** RBAC helpers in `tenant-auth.ts` are implemented as Fastify pre-handlers (e.g. `requireTenantOwner`, `requireTenantAdmin`, `requireTenantMember`, `requireTenantModuleAccess(slug)`), not standalone `(tenantId, userId) -> boolean` functions. The active tenant is resolved from request context (precedence: `:tenantId` URL param > `X-Tenant-Id` header > `users.current_tenant_id`) and exposed as `request.tenantContext`. Use `resolveTenantContext(request)` directly when authorization needs to happen mid-handler instead of as a pre-handler.
 - **HTTP code policy (tenant surface):**
@@ -70,7 +91,10 @@ Commands:
 
 ## Product
 
-OperatorOS offers an AI-native CDE with features including workspace and project management, task tracking, note-taking, and activity monitoring. It provides a web-based GUI and a CDE Operator Shell for terminal access, process management, and automation. Key functionalities include secure authentication, subscription management with feature gating, an admin control center, and an AI Operations Assistant with various AI-powered tools.
+OperatorOS provides central login, My Apps, tenant administration, billing,
+entitlements, Platform Command, module routing, and shared operational/CDE
+capabilities. Module product parity is tracked in
+`docs/modules/MODULE_PARITY_INDEX.md`; a rendered shell is not completion.
 
 ## User preferences
 
@@ -83,9 +107,12 @@ I like functional programming.
 
 ## Gotchas
 
-- **Tenant Context:** Always ensure the correct tenant context is active for requests, either via URL param (`:tenantId`), `X-Tenant-Id` header, or `users.current_tenant_id`. Incorrect context leads to `404 TENANT_NOT_FOUND`.
+- **Tenant Context:** Always derive effective tenant authority server-side.
+  Revalidate requested path/header/current selections against membership and
+  the sealed module session before database access.
 - **Super Admin Bootstrap:** The `super_admin` role can only be bootstrapped via the `OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL` environment variable.
-- **AI Provider Fallback:** If `OPENAI_API_KEY` is not set or OpenAI quota is exhausted, the AI module automatically falls back to a mock provider.
+- **AI Provider Fallback:** Provider-disabled/mock behavior must be explicit in
+  the UI and cannot satisfy production workflow, metering, or release gates.
 - **Stripe Integration:** Stripe billing is only enabled if `STRIPE_MODE` is set to `live` and relevant `STRIPE_SECRET_KEY` and `STRIPE_PRICE_*` variables are configured.
 - **Add-on pre-create + promote:** `subscribeToAddon` inserts an `incomplete` `addon_subscriptions` row before opening the Stripe checkout session and threads its id through `metadata.internal_addon_subscription_id`. The webhook handler promotes the same row to `active` (no duplicate insert). The double-buy guard ignores `incomplete` rows.
 - **CDE Command Denylist:** The CDE shell enforces a command denylist to prevent unsafe operations unless `ALLOW_UNSAFE_COMMANDS` is set to `true` (not recommended for production).
