@@ -12,10 +12,20 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 14);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 14);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 15);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 15);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'free_account_app_backfill');
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'directory_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'tenant_tables'),
+    'directory tables must follow tenant authority',
+  );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'directory_tables')
+      < release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'module_tables'),
+    'module tables and profiles must follow the shared directory',
+  );
 
   const api = read('apps/api/src/index.ts');
   const releaseSource = read('apps/api/src/lib/database-release.ts');
@@ -23,6 +33,7 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(api, /OPERATOROS_DATABASE_RELEASE_APPLIED/);
   assert.doesNotMatch(api, /await ensureBaseTables\(\)/);
   assert.match(releaseSource, /to_regclass\('public\.sso_handoff_tokens'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.directory_organizations'\)/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
 });
 

@@ -43,6 +43,7 @@ import { registerPlatformRoutes } from './routes/platform-routes.js';
 import { registerEntitlementRoutes } from './routes/entitlement-routes.js';
 import { registerEcosystemRoutes } from './routes/ecosystem-routes.js';
 import { registerDiagnosticsRoutes } from './routes/diagnostics-routes.js';
+import { registerDirectoryRoutes } from './routes/directory-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
 import { runAgentLoop } from './agent.js';
 import type { AgentEvent } from './agent.js';
@@ -231,6 +232,7 @@ await registerPlatformRoutes(app);
 await registerEntitlementRoutes(app);
 await registerEcosystemRoutes(app);
 await registerDiagnosticsRoutes(app);
+await registerDirectoryRoutes(app);
 
 if (process.env.OPERATOROS_DATABASE_RELEASE_APPLIED === '1') {
   await verifyOperatorOSDatabaseRelease();

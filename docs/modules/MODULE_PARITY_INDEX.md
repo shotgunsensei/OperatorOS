@@ -1,6 +1,6 @@
 # OperatorOS module parity index
 
-- Assessment date: 2026-07-16
+- Assessment date: 2026-07-17
 - Baseline code commit: `ae48d6b200164051528f4d03fe2ee035a3c3ad19`
 
 Rule: the state is the highest fully satisfied consolidation state, not the
@@ -11,9 +11,9 @@ States: **1 Registered**, **2 Source imported**, **3 Authority conformed**,
 
 | Module | State | Source commit/provenance | Active OperatorOS features | Missing parity | Data migration state | Production verification |
 | --- | ---: | --- | --- | --- | --- | --- |
-| TradeFlowKit | 3 | Legacy import; upstream commit was not recorded (provenance gap) | Leads; customers; jobs; quotes; invoices; manual payments; native deep links | Tasks; source-approved messaging/public payments/analytics and remaining route parity | No standalone-data importer/reconciliation | Local build, DB, SSO, persistence, isolation pass; deployed target unverified |
-| TechDeck | 3 | Legacy import; upstream commit was not recorded (provenance gap) | Tickets; assets; derived alerts; approval-gated runbooks; operations deep links | Shared clients/sites; VLAN/subnet/network topology; documents/evidence; signed agent execution boundary; remaining source parity | No standalone-data importer/reconciliation | Local build, DB, SSO, deep links, isolation pass; deployed target unverified |
-| PulseDesk | 3 | Legacy import; upstream commit was not recorded (provenance gap) | PHI-minimized departments and operational escalation requests | Facility/client/contact/asset/ticket/note/reply/time/SLA terminology and workflows require healthcare-domain ADR and implementation | No standalone-data importer/reconciliation | Local build, DB, SSO, isolation pass; deployed target unverified |
+| TradeFlowKit | 3 | Legacy import; upstream commit was not recorded (provenance gap) | Leads; shared organizations/contacts/sites with customer profiles; jobs; quotes; invoices; manual payments; native deep links | Projects/tasks; source-approved messaging/public payments/analytics and remaining route parity | Directory mapping documented; no standalone-data importer/reconciliation | Local build, DB, SSO, directory browser persistence/isolation pass; deployed target unverified |
+| TechDeck | 3 | Legacy import; upstream commit was not recorded (provenance gap) | Tickets; shared organizations/contacts/sites with managed-client profiles; assets; derived alerts; approval-gated runbooks; operations deep links | VLAN/subnet/network topology; documents/evidence; signed agent execution boundary; remaining source parity | Directory mapping documented; no standalone-data importer/reconciliation | Local build, DB, SSO, directory browser persistence/deep links/isolation pass; deployed target unverified |
+| PulseDesk | 3 | Legacy import; upstream commit was not recorded (provenance gap) | PHI-minimized departments/requests plus shared organizations/contacts/sites with PHI-restricted service-client profiles | Asset/ticket/note/reply/time/SLA terminology and workflows require healthcare-domain ADR and implementation | Directory mapping documented; no standalone-data importer/reconciliation | Local build, DB, SSO, directory browser persistence/isolation pass; deployed target unverified |
 | TorqueShed | 3 | `c33ade5cef525d62d371a63946b814c58a72a4a7` | Tenant-scoped diagnostic-case workflow | Vehicles; maintenance; diagnostic sessions; codes/tests/measurements; repairs/verification; Torque Assist ledger; marketplace/community; diagnostic deep route | No standalone-data importer/reconciliation | Local build, DB, SSO pass; required E2E workflow/deep route fail; deployed target unverified |
 | FaultlineLab | 3 | `46877aae35565149ccf4f4988dd94627fc6bb92b` | Tenant-scoped lab/evidence workflow | Full authored/published challenge and completion/evidence parity | No standalone-data importer/reconciliation | Local build/DB/SSO surface pass; deployed target unverified |
 | Ninja Pool Hall | 3 | `62439c4018ec551ce2891800351200c8ab2cb9e7` | Free Shoot physics plus bounded persistent practice summaries | Approved game modes, progression/results, and remaining source parity | No standalone-data importer/reconciliation | Local build/DB/SSO surface pass; deployed target unverified |
@@ -34,4 +34,5 @@ States: **1 Registered**, **2 Source imported**, **3 Authority conformed**,
   report.
 - Local production-host SSO passes, but the deployed target has not been
   verified at this source revision.
-- Backup/restore is documented but no current-schema rehearsal is recorded.
+- The Phase 1 backup/restore rehearsal predates the Phase 2 directory schema;
+  Phase 2 apply/idempotency passed, but its restore rehearsal remains open.

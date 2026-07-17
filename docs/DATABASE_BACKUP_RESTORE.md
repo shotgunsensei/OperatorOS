@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 14 ordered step identifiers without secrets
+`db:plan` is read-only and prints 15 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -118,6 +118,15 @@ accepted backup.
 
 The dump was kept only under ignored `test-results` while evidence was being
 captured. It is not a release artifact and must not be committed.
+
+## Phase 2 schema-apply rehearsal
+
+On 2026-07-17 the 15-step release, including `directory_tables`, applied twice
+to a freshly reset disposable PostgreSQL 16 database and verified the shared
+directory authority tables both times. The authoritative clean-database API
+suite then passed 679/679 with no skips. This was an apply/idempotency rehearsal,
+not a replacement backup/restore rehearsal; a Phase 2 backup/restore and
+deployed target validation remain release gates.
 
 ## Production recovery
 

@@ -10,6 +10,7 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'extended_tables', kind: 'ddl' },
   { id: 'saas_tables', kind: 'ddl' },
   { id: 'tenant_tables', kind: 'ddl' },
+  { id: 'directory_tables', kind: 'ddl' },
   { id: 'module_tables', kind: 'ddl' },
   { id: 'plans_and_admin', kind: 'seed' },
   { id: 'launch_fix_pre_seed', kind: 'repair' },

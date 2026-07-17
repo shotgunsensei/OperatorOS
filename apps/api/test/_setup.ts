@@ -64,6 +64,8 @@ export async function ensureSchemaReady() {
   // Gate 1: tenant DDL must run before any code path that selects from
   // `users` (Drizzle's implicit SELECT * needs the new columns).
   await ensureTenantTables();
+  const { ensureDirectoryTables } = await import('../src/lib/directory-db-init.js');
+  await ensureDirectoryTables();
   await ensureModuleShellTables();
   await ensureTestPlans();
 }

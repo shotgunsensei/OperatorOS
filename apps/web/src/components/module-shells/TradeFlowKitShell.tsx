@@ -29,6 +29,7 @@ import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js
 import { createTradeFlowKitAdapterContext } from '../../../../../apps/modules/tradeflowkit/adapter.js';
 import TradeFlowKitLeadCenter from './TradeFlowKitLeadCenter';
 import TradeFlowKitRevenueFlow from './TradeFlowKitRevenueFlow';
+import BusinessDirectory from './BusinessDirectory';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 interface TradeFlowKitShellProps {
@@ -367,6 +368,12 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
 
             {hasTenantContext && adapter.tenantId && (
               <TradeFlowKitRevenueFlow key={`revenue-${adapter.tenantId}`} tenantKey={adapter.tenantId} />
+            )}
+
+            {hasTenantContext && adapter.tenantId && (
+              <section id="tradeflowkit-directory" tabIndex={-1}>
+                <BusinessDirectory moduleSlug="tradeflowkit" tenantKey={adapter.tenantId} canArchive={canManageModule} />
+              </section>
             )}
 
             <section className="tfk-panel" style={{ padding: 18 }} data-testid="tradeflowkit-workflows-panel">

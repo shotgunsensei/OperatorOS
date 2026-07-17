@@ -12,10 +12,10 @@ new ADR explicitly supersedes it.
 | ADR-0005 | The canonical My Apps destination is `https://app.operatoros.net/`; return targets are exact registered origins plus validated relative paths. | Accepted | `docs/OPERATOROS_ECOSYSTEM_INTEGRATION_CONTRACT.md` |
 | ADR-0006 | OutCall remains registered but disabled and unpurchasable until a distinct/merge/cancel product ADR is accepted. | Accepted interim decision | `docs/outcall/ARCHITECTURE.md`, `docs/MODULE_CONSOLIDATION_STATUS.md` |
 | ADR-0007 | Module completion uses consolidation states 1-5; a shell or partial vertical slice cannot be reported as state 4/5 parity. | Accepted | `docs/MODULE_CONSOLIDATION_STATUS.md`, `docs/modules/MODULE_PARITY_INDEX.md` |
+| ADR-0008 | OperatorOS owns one tenant-scoped Business Directory; external organizations are distinct from subscriber tenants and modules use profile extensions instead of duplicate identity records. | Accepted | `docs/adr/ADR-0008-shared-business-directory.md` |
 
 ## Required future ADRs
 
-- Shared Business Directory ownership and module-extension model (Phase 2).
 - TradeFlowKit project versus job/work-order semantics (Phase 4).
 - PulseDesk facility/client/ticket language and PHI boundary (Phase 6).
 - Torque Assist safety, provider, and ledger semantics (Phase 8).

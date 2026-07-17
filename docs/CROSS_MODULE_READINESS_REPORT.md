@@ -15,9 +15,9 @@ tests all pass in the target deployment.
 | Module | Real shared-runtime workload | Auth/tenant enforcement | Build | DB tests | Live health | Browser E2E | Readiness |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | OperatorOS | Identity, tenant, entitlement, billing, audit, launcher | Local SSO/RBAC/tenant tests pass | Pass | Pass | Local pass; deployed target not run | Local 2/2; deployed target not run | **Not production-ready** |
-| TradeFlowKit | Leads, customers, jobs, quotes, invoices, manual payments | Server guards, persistence, viewer denial, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared local SSO/shell pass; deployed target not run | **Not production-ready** |
-| PulseDesk | Departments and PHI-minimized operations escalation queue | Server guards, manager capability, persistence, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared local SSO/shell pass; deployed target not run | **Not production-ready** |
-| TechDeck | Tickets, assets, approval-gated runbooks | Server guards, assignment, approval, audit, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared local SSO/deep-link pass; deployed target not run | **Not production-ready** |
+| TradeFlowKit | Leads; shared organizations/contacts/sites; jobs, quotes, invoices, manual payments | Server guards, persistence, viewer denial, directory profile, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared directory CRUD/refresh/reuse pass; deployed target not run | **Not production-ready** |
+| PulseDesk | Departments, PHI-minimized operations queue, shared organizations/contacts/sites | Server guards, manager capability, PHI-restricted directory profile, persistence, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared directory CRUD/refresh/reuse pass; deployed target not run | **Not production-ready** |
+| TechDeck | Tickets, shared organizations/contacts/sites, assets, approval-gated runbooks | Server guards, assignment, managed-client directory profile, approval, audit, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared directory CRUD/refresh/reuse and deep links pass; deployed target not run | **Not production-ready** |
 | TorqueShed | Persistent diagnostic-case CRUD and status workflow | Server guards, persistence, viewer denial, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared local SSO/shell pass; deployed target not run | **Not production-ready** |
 
 ## Final E2E acceptance update
@@ -29,9 +29,11 @@ revocation, implemented-data persistence, expired-session handling, disabled
 entitlements, foreign-tenant denial, unauthorized API denial, production
 builds, health/readiness, and primary navigation checks passed.
 
-Release remains blocked by missing persistent product contracts: TradeFlowKit
-projects/tasks; PulseDesk clients/contacts/assets/tickets/internal notes/time
-entries; TechDeck clients/sites/VLANs/subnets; and TorqueShed first-class
+Phase 2 closes the shared organization/contact/site foundation for
+TradeFlowKit, PulseDesk, and TechDeck, but it does not retroactively pass the
+dated 35-step run. Release remains blocked by TradeFlowKit projects/tasks;
+PulseDesk assets/tickets/internal notes/time entries; TechDeck VLANs/subnets;
+and TorqueShed first-class
 vehicles/diagnostic sessions/trouble codes/measurements, Torque Assist, token
 ledger, marketplace/community, and `/diagnostics` deep route. See
 `docs/FINAL_E2E_ACCEPTANCE_REPORT.md` for captured URLs, request IDs, responses,
@@ -49,6 +51,9 @@ retests, and the final matrix.
   state.
 - Non-migrated workflow cards explicitly say `Migration pending — disabled`.
 - Shared integration, error, health, and backup/restore contracts.
+- One shared, audited Business Directory with tenant-composite database
+  constraints, module-specific profiles, reusable responsive UI, and
+  cross-module browser persistence proof.
 
 ## Known release blockers
 
@@ -73,7 +78,7 @@ retests, and the final matrix.
   build:production` pass for API, runner gateway, and the Next production
   build. The unified runtime applies the compiled database release, starts the
   compiled API, waits for readiness, and starts the compiled Next application.
-- Full isolated-PostgreSQL API suite: 675 tests, 675 passed, 0 failed, 0
+- Full isolated-PostgreSQL API suite: 679 tests, 679 passed, 0 failed, 0
   skipped. The aggregate covers auth/SSO, server-side RBAC,
   tenant masking and cross-tenant denial, module persistence, entitlement,
   audit, and API contracts for all five assessed products.
@@ -84,11 +89,15 @@ retests, and the final matrix.
   canonical app host and all 12 enabled module hosts, including direct
   TechDeck deep-link return, silent PulseDesk sibling launch, clean URLs,
   host-only cookies, local logout, and global revocation.
+- Phase 2 production-artifact Playwright: 1/1 passed on isolated ports 5100
+  and 5101; created one organization, contact, and addressed site through
+  TradeFlowKit, survived refresh, reused the same organization ID in TechDeck
+  and PulseDesk, and exposed no script-readable auth material.
 - Local shared runtime: `operatoros.net/healthz` returned 200 and
   `api.operatoros.net/readyz` returned 200 with database, auth, SSO encryption,
   and module registry healthy/configured.
-- The 14-step database release applied twice to an isolated database without
-  drift. A PostgreSQL 16.14 custom-format backup restored into a new database
+- The 15-step database release applied twice to a clean isolated database without
+  drift. Separately, the Phase 1 PostgreSQL 16.14 custom-format backup restored into a new database
   with matching critical table counts, 61 public tables, 100 validated foreign
   keys, and no unvalidated foreign keys.
 
@@ -97,6 +106,6 @@ independent deployable repositories. Their production behavior is therefore
 validated through the consolidated OperatorOS build, database suite, shared
 API, and host-routed browser matrix. Every module remains explicitly not
 production-ready until deployed-target health and browser gates pass. Phase 1
-source and local acceptance are complete, but the public target remains blocked
+and Phase 2 source/local acceptance are complete, but the public target remains blocked
 at 32/47 checks until this candidate is deployed and the authenticated
 deployed-target gate is rerun.

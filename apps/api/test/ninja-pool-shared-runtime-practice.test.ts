@@ -14,7 +14,7 @@ function readRepoFile(path: string): string {
 test('Ninja Pool persistence stores only tenant/user-scoped practice summaries', () => {
   const schema = readRepoFile('apps/api/src/schema.ts');
   const start = schema.indexOf('export const ninjaPoolPracticeSessions');
-  const end = schema.indexOf('/**\n * First shared-runtime TradeFlowKit workflow.', start);
+  const end = schema.indexOf(' * First shared-runtime TradeFlowKit workflow.', start);
   assert.ok(start >= 0 && end > start, 'Ninja Pool practice schema block should exist');
   const block = schema.slice(start, end);
 
