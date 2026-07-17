@@ -64,10 +64,12 @@ conflict with the documents above or `docs/adr/README.md`.
 
 - Use only an isolated disposable database for tests. Never point tests or
   imported child migrations at production or a developer's persistent data.
-- The active repository currently initializes schema idempotently from
-  `apps/api/src/lib/db-init.ts` and `apps/api/src/lib/saas-db-init.ts`; it does
-  not expose supported root `db:push`, migration-generation, or migration-apply
-  scripts. Do not invent or run child `drizzle-kit push` commands.
+- The active repository owns one ordered idempotent release manifest in
+  `apps/api/src/lib/database-release-contract.ts`. `corepack pnpm db:plan` is
+  the read-only review command and `corepack pnpm db:apply` is the supported
+  root apply path. It requires `OPERATOROS_DATABASE_RELEASE_MODE=apply`.
+  Production executes the compiled equivalent through the runtime supervisor.
+  Do not invent or run child `drizzle-kit push` commands.
 - Schema work must include constraints, indexes, tenant predicates, audit
   fields, transaction boundaries, rollback notes, and clean-database tests.
 - Back up before an approved migration and follow
@@ -87,20 +89,20 @@ $env:APP_ENV='test'; $env:NODE_ENV='test'
 corepack pnpm --dir apps/api test
 
 $env:INTERNAL_API_URL='http://localhost:5001'
-corepack pnpm build
+corepack pnpm build:production
 corepack pnpm preflight:production -- --core
+corepack pnpm db:plan
 ```
 
 There is currently no repository-defined lint or formatting script. Do not
 claim either check passed. Add a reviewed command before making it a release
 gate.
 
-Production artifacts can be exercised with:
+Production artifacts must be exercised through the same readiness-gated
+supervisor used by Replit:
 
 ```powershell
-corepack pnpm --filter @operatoros/api start
-$env:PORT='5000'; $env:INTERNAL_API_URL='http://127.0.0.1:5001'
-corepack pnpm --dir apps/web start
+node scripts/start-unified-runtime.mjs
 corepack pnpm --dir apps/web test:e2e:sso:proxy
 $env:E2E_PRODUCTION_HOSTS='1'
 corepack pnpm --dir apps/web test:e2e:sso

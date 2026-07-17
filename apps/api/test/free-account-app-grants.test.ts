@@ -11,6 +11,7 @@ import {
   shouldUpgradeLegacyFreeAccountGrant,
   type PlanReconciledTenantModule,
 } from '../src/lib/free-account-apps.js';
+import { DATABASE_RELEASE_STEPS } from '../src/lib/database-release-contract.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
@@ -111,7 +112,6 @@ test('database provisioning restores unmarked legacy grants exactly once', () =>
 
 test('all creation/boot paths provision free apps while SSO remains tenant gated', () => {
   const platformRoutes = readRepoFile('apps/api/src/routes/platform-routes.ts');
-  const apiIndex = readRepoFile('apps/api/src/index.ts');
   const moduleRegistry = readRepoFile('packages/modules/registry.ts');
 
   const createRoute = platformRoutes.indexOf("app.post('/v1/platform/tenants'");
@@ -136,8 +136,10 @@ test('all creation/boot paths provision free apps while SSO remains tenant gated
     'restored tenant grant must run only after status becomes active',
   );
 
-  const postSeed = apiIndex.indexOf('await launchFixPostSeed();');
-  const allTenantBackfill = apiIndex.indexOf('await backfillFreeAccountAppsForAllTenants();');
+  const postSeed = DATABASE_RELEASE_STEPS.findIndex(step => step.id === 'launch_fix_post_seed');
+  const allTenantBackfill = DATABASE_RELEASE_STEPS.findIndex(
+    step => step.id === 'free_account_app_backfill',
+  );
   assert.ok(postSeed >= 0 && allTenantBackfill > postSeed, 'all-tenant free-app backfill must run after special seeders');
 
   // Child apps still pass through resolveTenantModuleAccess; free status is a

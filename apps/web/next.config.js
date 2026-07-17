@@ -29,8 +29,10 @@ const nextConfig = {
   // `next build`'s built-in lint+typecheck pass spuriously fail (e.g. a
   // stray `bigint` widening of `ReactNode`, or ESLint 9 removing
   // `useEslintrc`/`extensions`). The authoritative checks already run in
-  // dev/CI via `pnpm typecheck` and `pnpm lint`, so we skip the redundant
-  // pass here to keep production builds reproducible.
+  // dev/CI via the mandatory `pnpm typecheck` step in
+  // `pnpm build:production`, so we skip the redundant Next pass here to keep the
+  // production build reproducible. The repository has no lint command and no
+  // lint pass is claimed.
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   // The transpiled `@operatoros/sdk` package is authored as ESM TypeScript

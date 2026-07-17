@@ -18,7 +18,7 @@ slice is not parity.
 | Phase | Outcome | Dependencies | Current status |
 | --- | --- | --- | --- |
 | 0 | Execution framework, verified baseline, one status ledger, ADR index, and parity index | None | Complete locally on `codex/phase-0-baseline`; release gate remains closed |
-| 1 | Reproducible canonical deployment, environment contract, deployed SSO/navigation gate, and backup/restore rehearsal | Phase 0 | Pending |
+| 1 | Reproducible canonical deployment, environment contract, deployed SSO/navigation gate, and backup/restore rehearsal | Phase 0 | Source/local accepted on `codex/phase-1-platform-deployment-gate`; public gate failed 32/47 pending authorized deployment |
 | 2 | OperatorOS-owned shared Business Directory for organizations, contacts, sites, addresses, and module profiles | Phase 1 | Pending |
 | 3 | Shared attachments, notifications, providers, jobs/outbox, webhook idempotency, usage ledger, and activity timeline | Phase 2 | Pending |
 | 4 | TradeFlowKit state 5 | Phases 2-3 | Pending |
@@ -57,7 +57,11 @@ slice is not parity.
 
 ## Immediate next gate
 
-Begin Phase 1 only from the scoped Phase 0 commit. Preserve the status ledger's
-distinction between local source/runtime confidence and the unverified deployed
-release, then prove the deployment/environment contract and backup/restore
-rehearsal before shared-domain implementation work.
+Do not begin Phase 2 yet. Review and deploy the scoped Phase 1 commit through
+the `.replit` autoscale path, validate the actual production environment, then
+require 47/47 from the read-only public verifier plus authenticated deployed
+SSO, return, deep-link, refresh, entitlement, tenant-isolation, authorization,
+and logout acceptance. Record the exact deployed commit in
+`docs/CURRENT_RELEASE_GATE.md`. The Phase 1 backup/restore rehearsal and local
+production topology have passed; the remaining blocker is deployment and
+verification of the reviewed revision, not permission to weaken the contract.
