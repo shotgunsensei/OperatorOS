@@ -135,6 +135,14 @@ test('shared organizations, contacts, sites, relationships, tags, and profiles p
     assert.equal(response.statusCode, 200, response.body);
     assert.equal(response.json().organizationId, organization.id);
   }
+  const crossModuleProfile = await app.inject({
+    method: 'PUT',
+    url: url('techdeck', `/organizations/${organization.id}/profile`),
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: { phiRestricted: true },
+  });
+  assert.equal(crossModuleProfile.statusCode, 422, crossModuleProfile.body);
+  assert.equal(crossModuleProfile.json().code, 'DIRECTORY_VALIDATION_FAILED');
   const [tfkProfiles, techProfiles, pulseProfiles] = await Promise.all([
     db.select().from(tradeflowkitCustomerProfiles).where(and(eq(tradeflowkitCustomerProfiles.tenantId, ownerA.currentTenantId), eq(tradeflowkitCustomerProfiles.organizationId, organization.id))),
     db.select().from(techdeckManagedClientProfiles).where(and(eq(techdeckManagedClientProfiles.tenantId, ownerA.currentTenantId), eq(techdeckManagedClientProfiles.organizationId, organization.id))),

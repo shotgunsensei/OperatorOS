@@ -101,9 +101,18 @@ runs; they do not override this status.
 | Public read-only verifier | FAIL 32/47; candidate not deployed |
 | Lint/format | NOT DEFINED; no repository scripts exist |
 
-An initially malformed test invocation omitted the required environment and
-produced database connection failures. It was rejected as invalid evidence.
-The accepted aggregate result is the later clean-database 675/675 run above.
+An initially malformed Phase 1 test invocation omitted the required environment
+and produced database connection failures. It was rejected as invalid evidence.
+The accepted Phase 2 aggregate is the later clean-database 679/679 run above.
+
+PR #10 was reconciled with `origin/main` on 2026-07-17. The only merge
+conflict was `apps/api/src/routes/directory-routes.ts`; the resolution retained
+the strict module-specific profile schemas instead of the permissive arbitrary
+record schema present on `main`. Fresh post-merge verification passed workspace
+typecheck, the 2/2 persistent directory API suite on disposable PostgreSQL, the
+2/2 directory UI contract suite, and the configured API/runner/Next production
+build. The first sandboxed build attempt was rejected because outbound Google
+Fonts access was denied; the identical network-enabled rerun passed.
 
 ## Backup/restore evidence
 
