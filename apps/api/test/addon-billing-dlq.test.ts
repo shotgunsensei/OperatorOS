@@ -37,7 +37,7 @@ before(async () => {
   const a = await createTestUser();
   adminId = a.id;
   await db.update(usersTable).set({ platformRole: 'super_admin' }).where(eq(usersTable.id, adminId));
-  adminToken = signToken({ userId: adminId, email: a.email, role: 'admin' });
+  adminToken = signToken({ userId: adminId, email: a.email, role: 'admin', sessionType: 'platform' });
 
   const m = await createTestModule();
   moduleId = m.id;

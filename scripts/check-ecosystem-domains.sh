@@ -51,10 +51,7 @@ if [ "${#domains[@]}" -eq 0 ]; then
     operatoros.net
     app.operatoros.net
     api.operatoros.net
-    admin.operatoros.net
     auth.operatoros.net
-    docs.operatoros.net
-    status.operatoros.net
     techdeck.operatoros.net
   )
 fi

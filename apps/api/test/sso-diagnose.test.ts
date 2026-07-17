@@ -33,7 +33,7 @@ let moduleId: string;
 async function tokenFor(userId: string): Promise<string> {
   const { signToken } = await import('../src/lib/auth.js');
   const [u] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  return signToken({ userId: u.id, email: u.email, role: u.role });
+  return signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' });
 }
 
 before(async () => {

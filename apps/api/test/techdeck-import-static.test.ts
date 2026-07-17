@@ -36,13 +36,13 @@ test('TechDeck source snapshot is staged under apps/modules/techdeck without run
   }
 
   for (const excluded of [
-    'apps/modules/techdeck/source/node_modules',
     'apps/modules/techdeck/source/dist',
     'apps/modules/techdeck/source/data',
     'apps/modules/techdeck/source/package-lock.json',
   ]) {
     assert.equal(existsSync(repoPath(excluded)), false, `${excluded} should not be imported`);
   }
+  assert.match(readRepoFile('.gitignore'), /^node_modules\/$/m, 'local dependencies must remain ignored');
 });
 
 test('TechDeck source audit identifies auth, billing, tenants, APIs, and data models', () => {
@@ -63,7 +63,9 @@ test('TechDeck source audit identifies auth, billing, tenants, APIs, and data mo
   assert.match(authRoutes, /managed_by_operatoros/);
   assert.match(authRoutes, /TECHDECK_ENABLE_LOCAL_AUTH/);
   assert.match(sso, /OPERATOROS_SSO_AUDIENCE/);
-  assert.match(sso, /\/v1\/modules\/sso\/consume/);
+  assert.match(sso, /\/v1\/modules\/sso\/exchange/);
+  assert.match(sso, /OPERATOROS_SSO_CLIENT_SECRET/);
+  assert.doesNotMatch(sso, /req\.query\.token/);
   assert.match(billingDoc, /Tech Deck no longer owns subscriptions/);
   assert.match(billingDoc, /410 Gone/);
   assert.match(schema, /export const tenants = pgTable\("tenants"/);
@@ -109,7 +111,7 @@ test('OperatorOS module route shell wires TechDeck host/local fallback to the ad
 
   assert.match(appSlugPage, /TechDeckShell/);
   assert.match(appSlugPage, /'techdeck':\s*TechDeckShell/);
-  assert.match(moduleFallback, /return <InternalAppPage \/>/);
+  assert.ok(moduleFallback.includes('return <ModuleHost slug={params.slug} requestedHost={searchParams?.host} />'));
   assert.match(shell, /createTechDeckAdapterContext/);
   assert.match(shell, /hasPlatformAdminAuthority/);
   assert.match(shell, /techdeck-platform-manage-link/);

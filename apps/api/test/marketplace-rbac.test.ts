@@ -56,7 +56,7 @@ before(async () => {
   addonMod = await createTestModule();
   await db.update(modules).set({
     planMin: 'elite',
-    metadata: { addonPriceCents: 1500 } as any,
+    metadata: { commercialType: 'addon', addonPriceCents: 1500 } as any,
   }).where(eq(modules.id, addonMod.id));
   await db.insert(planModules).values({ planId: elitePlan.id, moduleId: addonMod.id });
 
@@ -80,7 +80,7 @@ after(async () => {
 });
 
 const bearer = (u: any) => ({
-  authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}`,
+  authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}`,
 });
 
 async function fetchModules() {

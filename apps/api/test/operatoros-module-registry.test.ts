@@ -18,8 +18,10 @@ const REQUIRED_MODULE_IDS = [
   'techdeck',
   'pulsedesk',
   'tradeflowkit',
+  'torqueshed',
   'snapproofos',
   'faultlinelab',
+  'ninja-pool-hall',
   'brandforgeos',
   'studyforge-ai',
   'ninja-launch-kit',
@@ -63,33 +65,40 @@ test('central module registry entries include the required routing and entitleme
     );
     assert.ok(['active', 'planned', 'hidden', 'disabled'].includes(module.status));
     assert.equal(module.iconName.length > 0, true, `iconName present for ${module.slug}`);
+    assert.equal(module.returnUrl, 'https://app.operatoros.net/');
+    assert.equal(module.subdomainUrl.startsWith('https://'), true);
+    assert.equal(module.healthCheckUrl.startsWith(module.subdomainUrl), true);
+    assert.equal(module.ssoCallbackUrl.startsWith(module.subdomainUrl), true);
+    assert.equal(module.logoutUrl.startsWith(module.subdomainUrl), true);
+    assert.equal(typeof module.enabled, 'boolean');
     assert.equal(typeof module.requiresSubscription, 'boolean');
     assert.equal(typeof module.requiresTenant, 'boolean');
   }
 });
 
 test('getModuleById and getModuleByHost resolve platform and module hosts', () => {
-  assert.equal(getModuleById('operatoros')?.hostname, 'app.operatoros.net');
+  assert.equal(getModuleById('operatoros')?.hostname, 'operatoros.net');
   assert.equal(getModuleById('techdeck')?.hostname, 'techdeck.operatoros.net');
   assert.equal(getModuleById('outcall')?.hostname, 'outcall.operatoros.net');
 
-  assert.equal(getModuleByHost('https://techdeck.operatoros.net/sso?token=x')?.id, 'techdeck');
-  assert.equal(getModuleByHost('brandforge.operatoros.net:443')?.id, 'brandforgeos');
+  assert.equal(getModuleByHost('https://techdeck.operatoros.net/sso?code=probe')?.id, 'techdeck');
+  assert.equal(getModuleByHost('brandforgeos.operatoros.net:443')?.id, 'brandforgeos');
   assert.equal(getModuleByHost('operatoros.net')?.id, 'operatoros');
   assert.equal(getModuleByHost('www.operatoros.net')?.id, 'operatoros');
   assert.equal(getModuleByHost('auth.operatoros.net')?.id, 'operatoros');
 
-  assert.equal(isKnownModuleHost('callcommand.operatoros.net'), true);
+  assert.equal(isKnownModuleHost('callcommand-ai.operatoros.net'), true);
+  assert.equal(isKnownModuleHost('ninjalaunchkit.operatoros.net'), true);
   assert.equal(isKnownModuleHost('unknown.operatoros.net'), false);
   assert.equal(isKnownModuleHost('localhost'), false);
 });
 
 test('normalizeHost strips scheme, port, path, and casing', () => {
   assert.equal(
-    normalizeHost('HTTPS://TechDeck.OperatorOS.NET:443/sso?token=x'),
+    normalizeHost('HTTPS://TechDeck.OperatorOS.NET:443/sso?code=probe'),
     'techdeck.operatoros.net',
   );
-  assert.equal(normalizeHost('brandforge.operatoros.net:443'), 'brandforge.operatoros.net');
+  assert.equal(normalizeHost('brandforgeos.operatoros.net:443'), 'brandforgeos.operatoros.net');
   assert.equal(normalizeHost('operatoros.net.'), 'operatoros.net');
 });
 
@@ -130,6 +139,20 @@ test('resolveModuleContext resolves local module fallback paths', () => {
   assert.equal(context.module?.id, 'pulsedesk');
   assert.equal(context.isLocalFallback, true);
   assert.equal(context.status, 'allowed');
+});
+
+test('production root does not treat /modules/<slug> as a local module surface', () => {
+  const context = resolveModuleContext({
+    host: 'operatoros.net',
+    pathname: '/modules/pulsedesk',
+    user: { id: 'user-1', email: 'ops@example.com', platformRole: 'user' },
+    entitlements: { pulsedesk: { enabled: true } },
+  });
+
+  assert.equal(context.surface, 'root');
+  assert.equal(context.isLocalFallback, false);
+  assert.equal(context.module?.id, 'operatoros');
+  assert.equal(context.status, 'public');
 });
 
 test('resolveModuleContext handles unknown OperatorOS subdomains safely', () => {

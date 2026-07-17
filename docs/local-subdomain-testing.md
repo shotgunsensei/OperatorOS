@@ -1,5 +1,9 @@
 # OperatorOS Local Subdomain Testing
 
+> Historical Phase 5 guide. Source imports, callbacks, cookie names, and auth
+> behavior described below are superseded by `docs/auth/MODULE_ONBOARDING.md`
+> and `docs/auth/VALIDATION_MATRIX.md`.
+
 Status: Phase 5 local testing guide. This verifies host resolution and local
 module fallback routing without importing real module source.
 

@@ -1,15 +1,17 @@
 # OperatorOS Command Center Launch Flow
 
-Status: Phase 7 implementation notes. The Command Center launchpad is now
-registry-driven and launches modules through the shared OperatorOS SSO issue
-endpoint. No module source was imported.
+Status: consolidated runtime. The Command Center is registry-driven and starts
+module authorization on the target module host. All core hosts are served by
+the same OperatorOS Next/Fastify deployment.
 
 ## Current Surfaces
 
 - Command Center UI: `apps/web/src/components/pages/MyAppsPage.tsx`
 - Registry facade: `apps/web/src/lib/operatoros-registry.ts`
 - SSO launch client: `apps/web/src/lib/module-launch.ts`
+- Browser callback: `apps/web/src/app/sso/page.tsx`
 - Server issue route: `POST /api/sso/issue` -> `POST /v1/sso/issue`
+- Server exchange route: `POST /api/sso/browser-exchange` -> `POST /v1/sso/browser-exchange`
 - Server access authority: `apps/api/src/lib/tenant-entitlements.ts`
 
 The launchpad uses the central module registry as the baseline list and overlays
@@ -26,22 +28,38 @@ the active tenant's server-resolved module access from `GET /api/modules`.
    - Locked modules
    - Planned modules
    - Unavailable modules
-6. User clicks Launch.
-7. Frontend calls `POST /api/sso/issue` with:
+6. User clicks Launch and the frontend opens the registry's exact module base
+   URL. The frontend does not mint or carry a handoff code.
+7. When that host lacks its own `operatoros_session`, middleware creates
+   host-only HttpOnly state, nonce, and PKCE verifier cookies and redirects to
+   `auth.operatoros.net/login` with the exact callback and S256 challenge.
+8. After authentication, the auth host calls `POST /api/sso/issue` with the
+   module/tenant plus the complete authorization transaction:
 
 ```json
 {
   "moduleId": "techdeck",
-  "tenantId": "tenant-id"
+  "tenantId": "tenant-id",
+  "clientId": "operatoros:techdeck",
+  "redirectUri": "https://techdeck.operatoros.net/sso",
+  "returnTo": "https://techdeck.operatoros.net/",
+  "state": "<random base64url>",
+  "nonce": "<random base64url>",
+  "codeChallenge": "<S256 base64url>",
+  "codeChallengeMethod": "S256"
 }
 ```
 
-8. Backend verifies authentication, tenant membership, module registry status,
-   tenant entitlement, per-user module access, and root platform admin override
-   server-side.
-9. Backend returns `launchUrl`.
-10. Frontend opens the returned URL through the existing web/Capacitor-safe
-    external launch helper.
+9. Backend verifies authentication, exact registered client/callback,
+   same-origin return path, tenant membership, module status, entitlement, and
+   platform-admin override. It stores a short-lived handoff and returns the
+   exact `/sso?code=...&state=...` callback.
+10. The shared callback posts the code and state to the same-origin browser
+    exchange. Fastify proves the request host, state cookie, nonce cookie, and
+    PKCE verifier; rechecks user/tenant/entitlement state; atomically consumes
+    the code; and sets a host-only `operatoros_session`.
+11. The callback removes the code from browser history and navigates to the
+    validated local path.
 
 The frontend never computes final entitlement authority. UI state is only a
 display hint from server summaries.
@@ -52,7 +70,7 @@ Active modules:
 
 - Registry status is `active`.
 - Server summary says the module is unlocked.
-- Launch button calls SSO issue.
+- Launch button opens the module host, which begins the authorization flow.
 
 Locked modules:
 
@@ -85,8 +103,8 @@ does not grant root access by email string.
 - launching: the launch button shows an in-progress state.
 - access denied: SSO issue returns `MODULE_ACCESS_DENIED`.
 - module disabled: SSO issue returns `MODULE_DISABLED`.
-- SSO failure: SSO issue returns `SSO_SECRET_NOT_CONFIGURED` or an invalid
-  response.
+- SSO failure: issue or browser exchange returns a bounded error and does not
+  automatically restart authorization.
 - network failure: fetch throws or returns no reachable response.
 - tenant failure: missing, suspended, or unavailable tenant returns the server
   error code and a user-safe message.
@@ -97,8 +115,9 @@ does not grant root access by email string.
 2. Confirm Command Center shows the active tenant.
 3. Switch tenant when multiple tenants are available.
 4. Confirm active modules render Launch buttons.
-5. Click Launch on an entitled module and confirm `/api/sso/issue` returns a
-   `launchUrl`.
+5. Click Launch on an entitled module and confirm the target host redirects to
+   auth with state, nonce, and S256 challenge; `/api/sso/issue` then returns the
+   exact callback.
 6. Confirm a locked module shows upgrade/add-on/access-options state.
 7. Confirm planned modules cannot be launched.
 8. Confirm tenant admins see Manage buttons.
@@ -116,10 +135,11 @@ login before it had a chance to establish its own session.
 
 ### Cookie scope
 
-The session cookie is emitted with `Domain=.operatoros.net` + `Secure` in
-production. Production is now detected from `APP_ENV` **or** `NODE_ENV`
-(`prod`/`production`), so the domain-scoped cookie is issued consistently
-regardless of which variable the deploy sets.
+Every host receives its own `operatoros_session` with no `Domain` attribute.
+Production cookies are `Secure`, `HttpOnly`, `SameSite=Lax`, and path `/`.
+Possessing a session on `auth.operatoros.net` therefore does not grant ambient
+authority to a module subdomain; the code exchange establishes that host's
+copy only after the server validates the full transaction.
 
 ### Opaque launch code (preferred) vs. legacy token
 
@@ -127,32 +147,25 @@ Historically the launch URL carried the full handoff JWT in the browser
 address bar (`/sso?token=<JWT>`), exposing identity and entitlement claims.
 Task #140 replaces this with an opaque, single-use code:
 
-- The hub persists the handoff row (keyed by `jti`) exactly as before, then
-  emits `/sso?code=<opaque>` — an AES-256-GCM authenticated encryption of the
-  `{ jti, aud }` binding, i.e. an opaque **reference** to that row bound to a
-  single target module. No identity or entitlement data rides in the URL, and
-  no database migration is required (the code is derived, not stored).
-- The receiving module redeems the code **server-to-server** at
-  `POST /modules/sso/exchange` (and `/v1/modules/sso/exchange`). The exchange
-  endpoint is bearer-gated by `MODULE_SSO_SECRET`, verifies the code's GCM auth
-  tag and enforces its `aud` binding (a code minted for one module cannot be
-  redeemed by another — `403 BINDING_MISMATCH`), then runs the exact same
-  single-use consume logic as the legacy path, so a redeemed code cannot be
-  replayed.
-- `?token=` continues to work during the migration window. A module opts into
-  codes via the hub env `SSO_EXCHANGE_CODE_MODULES` (comma-separated slugs, or
-  `*` for all). Unlisted modules keep receiving `?token=` URLs, so receivers
-  can be upgraded independently.
+- The hub persists the handoff row (keyed by `jti`) and emits an AES-256-GCM
+  sealed code containing the `jti`, audience/client, exact callback, validated
+  local return path, state, nonce, and S256 challenge. No identity,
+  entitlement, session JWT, or verifier rides in the URL.
+- The shared same-origin Fastify exchange verifies the target host and
+  transaction cookies, rechecks authority, and consumes the row with
+  `consumed_at IS NULL` in the update predicate. A second redemption returns
+  `CODE_REPLAYED`.
+- Legacy JWT/consume and standalone adapter paths remain dormant only for the
+  bounded rollback window. Core clients do not opt between transports.
 
-The exchange response is byte-for-byte identical to the consume response
-(identity `user` + canonical entitlement snapshot), so the receiver's
-provisioning path is the same for both `?token=` and `?code=` arrivals.
+The callback receives a canonical user/tenant/module summary and a validated
+relative return path. It never receives the session JWT value.
 
 ### Loop breaker
 
-The hub middleware exempts `/sso` from the auth gate (it is the endpoint that
-establishes the session) and bounds cross-subdomain login redirects with a
-short-lived `.operatoros.net`-scoped counter cookie. After a small number of
+The middleware exempts `/sso` from the auth gate (it is the endpoint that
+establishes the session) and bounds login redirects with a short-lived
+host-only counter cookie. After a small number of
 bounces without a session cookie taking hold, the visitor is sent to a clean
 login surface with `?launch_error=too_many_redirects` instead of looping
 forever. The counter is cleared on the first authenticated request.
@@ -161,8 +174,9 @@ All of the above authority remains **server-side**: the code only references a
 server-persisted, single-use handoff, and entitlement is always resolved by
 the API.
 
-## Remaining Follow-Up
+## Remaining production gate
 
-Phase 8 should add admin entitlement management routes and UI so tenant/module
-grants can be managed centrally without relying on seed data or direct database
-helpers.
+Deploy the unified release, run the DB-backed exchange suite against an
+isolated PostgreSQL database, and complete authenticated live browser smoke on
+all four registered callback hosts. Source completion does not make the older
+deployed 404 callbacks green.

@@ -14,6 +14,7 @@ import {
   COMPANION_MODULE_KEYS,
   COMPANION_MODULE_PRICE_CENTS,
   CORE_PRODUCTS_BY_KEY,
+  MODULE_CATALOG_BY_SLUG,
   getAdditionalSeatPriceCents,
   normalizeStackSelection,
   type CompanionModuleKey,
@@ -1016,6 +1017,26 @@ export interface AddonStripePriceLookup {
   error: string | null;
 }
 
+type AddonModuleCandidate = {
+  slug: string;
+  status?: string;
+  metadata?: Record<string, unknown> | null;
+};
+
+/**
+ * Known ecosystem modules are classified only by MODULE_CATALOG. Explicit
+ * metadata is accepted solely for admin-created modules outside that catalog.
+ * A metadata value can never override a canonical core/free classification.
+ */
+export function isCommercialAddonModule(
+  mod: AddonModuleCandidate | null | undefined,
+): boolean {
+  if (!mod) return false;
+  const catalogEntry = MODULE_CATALOG_BY_SLUG[mod.slug];
+  if (catalogEntry) return catalogEntry.commercialType === 'addon';
+  return mod.metadata?.commercialType === 'addon';
+}
+
 export async function lookupAddonStripePrice(
   moduleSlug: string,
   preloaded?: { slug: string; metadata?: Record<string, unknown> | null } | null,
@@ -1051,7 +1072,10 @@ export async function lookupAddonStripePrice(
     error: null,
   };
   if (!priceId) return base;
-  if (!STRIPE_SECRET_KEY) {
+  // The explicit in-process test seam supplies a complete client and must not
+  // depend on a real Stripe secret. In every production path the override is
+  // null, so a missing deployment secret still fails closed exactly as before.
+  if (!STRIPE_SECRET_KEY && !__stripeTestOverride?.client) {
     return { ...base, error: 'STRIPE_SECRET_KEY is not configured; cannot verify price.' };
   }
   try {
@@ -1140,7 +1164,7 @@ export async function validateAddonStripePriceId(priceId: string): Promise<Addon
   if (!/^price_[A-Za-z0-9]+$/.test(trimmed)) {
     return { ...base, error: 'Stripe Price ID must look like "price_XXXX"' };
   }
-  if (!STRIPE_SECRET_KEY) {
+  if (!STRIPE_SECRET_KEY && !__stripeTestOverride?.client) {
     return { ...base, error: 'STRIPE_SECRET_KEY is not configured; cannot validate price id' };
   }
   try {
@@ -1164,8 +1188,10 @@ export async function validateAddonStripePriceId(priceId: string): Promise<Addon
 // Accepts the loaded module row so the metadata override on
 // `modules.metadata.stripePriceId` is honored without a second DB roundtrip.
 export function isAddonPurchasable(
-  mod: { slug: string; metadata?: Record<string, unknown> | null } | null | undefined,
+  mod: AddonModuleCandidate | null | undefined,
 ): boolean {
+  if (!isCommercialAddonModule(mod)) return false;
+  if (mod?.status === 'disabled' || mod?.status === 'coming_soon') return false;
   if (!isStripeEnabled()) return true;
   return !!getAddonStripePriceIdFromModule(mod);
 }
@@ -1183,8 +1209,14 @@ export class AddonNotPurchasableError extends Error {
 // the purchase endpoint must refuse instead of falling through to the
 // local-mode insert (which would grant a free addon).
 export function assertAddonPurchasableOrThrow(
-  mod: { slug: string; metadata?: Record<string, unknown> | null },
+  mod: AddonModuleCandidate,
 ): void {
+  if (!isCommercialAddonModule(mod)) {
+    throw new AddonNotPurchasableError(
+      mod.slug,
+      `Module "${mod.slug}" is not classified as an OperatorOS add-on.`,
+    );
+  }
   if (isStripeEnabled() && !getAddonStripePriceIdFromModule(mod)) {
     throw new AddonNotPurchasableError(
       mod.slug,

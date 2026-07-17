@@ -1,111 +1,54 @@
-# Domain Migration — Tech Deck (`techdeck.app` → `techdeck.operatoros.net`)
+# OperatorOS Domain Consolidation Status
 
-> **⚠️ Do not redirect the legacy domain early.** Do **not** add any redirect
-> from `techdeck.app` to `techdeck.operatoros.net` until the new domain shows
-> **Verified** in Replit *and* both DNS resolution and HTTPS have been
-> confirmed working. Redirecting before the new subdomain is live will send
-> real users to a broken or unsecured endpoint and can cause TLS errors,
-> redirect loops, and lost traffic.
+Status: canonical domains already attached in Replit as of 2026-07-13. There
+is no pending DNS migration in this repository.
 
-## Purpose
+OperatorOS now treats these addresses as the canonical attached hostnames. The
+four platform hosts and twelve enabled module hosts are active application and
+SSO surfaces; OutCall is attached only as a reserved hostname:
 
-This document is the operator runbook for migrating an ecosystem module from a
-standalone domain onto its canonical OperatorOS subdomain. Tech Deck is the
-first migration target: it moves from the legacy `https://techdeck.app` to the
-ecosystem URL `https://techdeck.operatoros.net`. The same ordered flow applies
-to any future module that carries a `legacyUrl` in the ecosystem registry.
+- Platform: `operatoros.net`, `app.operatoros.net`, `auth.operatoros.net`, and
+  `api.operatoros.net`
+- Core: `tradeflowkit.operatoros.net`, `techdeck.operatoros.net`, and
+  `pulsedesk.operatoros.net`
+- Free: `torqueshed.operatoros.net`, `faultlinelab.operatoros.net`, and
+  `ninja-pool-hall.operatoros.net`
+- Enabled add-ons: `brandforgeos.operatoros.net`, `snapproofos.operatoros.net`,
+  `studyforge-ai.operatoros.net`, `ninjalaunchkit.operatoros.net`,
+  `callcommand-ai.operatoros.net`, and `ninjamation.operatoros.net`
+- Planned/reserved add-on: `outcall.operatoros.net`
 
-**This is a manual, infrastructure-level process.** None of the steps below are
-performed by the codebase. There are no DNS changes, redirects, or
-Cloudflare/Replit API calls committed in this repository — the app only renders
-the target and legacy URLs from `ecosystem.registry.json` and provides
-read-only domain-check scripts.
+OutCall remains registered but planned/disabled. Its attached hostname and
+reserved callback metadata do not make it an active SSO client, launchable,
+purchasable, or entitled.
 
-## Current model
+The Replit default alias `operator-os.replit.app` may reach the deployment, but
+it is not a canonical OperatorOS application origin, registered SSO callback,
+logout URI, CORS origin, or absolute auth return target.
 
-- The module is currently served from its legacy domain (e.g.
-  `https://techdeck.app`).
-- **Replit remains the host** throughout and after the migration. We are not
-  moving hosting; we are pointing a new OperatorOS subdomain at the
-  Replit-hosted deployment.
-- The ecosystem registry (`ecosystem.registry.json`, derived from the shared
-  module catalog) already declares the canonical target
-  (`ecosystemUrl: https://techdeck.operatoros.net`) and the `legacyUrl`
-  (`https://techdeck.app`). The `/ecosystem` launcher page surfaces both.
+## Source-of-truth rules
 
-## Target model
+- Runtime URLs and exact SSO callbacks come from
+  `config/operatoros-module-registry.json` and the shared module registry.
+- Public ecosystem metadata contains canonical OperatorOS subdomains only.
+- Pre-consolidation product domains may appear in historical import notes or
+  source snapshots, but never as an active launcher, callback, logout URI,
+  CORS origin, or billing return URL.
+- Every browser module call uses its current host's same-origin `/api/*`
+  surface. Credentialed sibling-origin mutations are rejected.
 
-- The module is reachable at `https://<module>.operatoros.net` (for Tech Deck:
-  `https://techdeck.operatoros.net`), served by the same Replit deployment.
-- The legacy domain (`techdeck.app`) is kept as a **legacy alias** that
-  redirects to the new subdomain — but only after verification (see warning
-  above).
-- `operatoros.net` and all `*.operatoros.net` platform components and module
-  subdomains share one DNS zone managed at the DNS provider for
-  `operatoros.net`.
+## Remaining release work
 
-## Manual Replit steps
+The infrastructure task is application release verification, not DNS change:
 
-1. Open the Replit project for the deployment that should serve the module.
-2. Go to **Publishing → Domains** (the deployment's custom-domains panel).
-3. Choose **Add domain / Link a domain** and enter the new subdomain:
-   `techdeck.operatoros.net`.
-4. Replit will display the DNS records required to verify and route the domain:
-   - an **A** record (IP address) for the apex/subdomain target,
-   - a **TXT** record used for ownership verification,
-   - and/or a **CNAME** record, depending on what Replit shows for this
-     deployment.
-5. **Copy these exact records.** Do not guess or reuse records from another
-   domain — use the precise values Replit shows for `techdeck.operatoros.net`.
+1. Publish the unified Next/Fastify source release to the existing Replit
+   deployment.
+2. Confirm the proxy preserves the original public host and HTTPS scheme.
+3. Verify `/healthz`, `/readyz`, exact `/sso` callbacks, deep links, local and
+   global logout, and no-store/no-referrer headers on every canonical host.
+4. Run the isolated-PostgreSQL and authenticated browser matrix in
+   `docs/auth/VALIDATION_MATRIX.md`.
 
-## Manual DNS steps
-
-1. Log in to the DNS provider that hosts the `operatoros.net` zone.
-2. Add the records copied from Replit, scoped to the `techdeck` subdomain:
-   - the **A** record on the `techdeck` host,
-   - the **TXT** verification record on the host Replit specified,
-   - and/or the **CNAME** record if Replit provided one instead of an A record.
-3. Use the TTL the provider defaults to (a low TTL such as 300s is fine while
-   migrating). Save the zone changes.
-4. Return to Replit's **Publishing → Domains** panel and wait for the domain
-   status to change to **Verified**. DNS propagation can take from a few
-   minutes up to a few hours.
-
-## Verification steps
-
-Run these **before** touching the legacy domain.
-
-1. Confirm the domain shows **Verified** in Replit's Domains panel.
-2. Check DNS resolution and HTTPS with the read-only scripts in this repo:
-   - macOS/Linux: `bash scripts/check-ecosystem-domains.sh`
-   - Windows/PowerShell: `pwsh scripts/check-ecosystem-domains.ps1`
-   Both print a `Domain | DNS Status | Resolved Target | HTTPS Status` table.
-   Confirm `techdeck.operatoros.net` shows a resolved target and a healthy
-   HTTPS status (2xx/3xx).
-3. Manually load `https://techdeck.operatoros.net` in a browser and confirm the
-   module loads over HTTPS with a valid certificate (no TLS warnings).
-
-## Legacy redirect steps
-
-Only after **all** verification steps pass:
-
-1. Configure a redirect from the legacy domain `techdeck.app` to
-   `https://techdeck.operatoros.net` (301/308 permanent redirect, performed at
-   the legacy domain's host/DNS/proxy layer — outside this codebase).
-2. Keep `techdeck.app` registered and pointed so the redirect keeps working;
-   treat it as a **legacy alias**, not a domain to retire immediately. Existing
-   bookmarks, links, and emails still reference it.
-3. Re-run the domain-check scripts and confirm both `techdeck.app` (now
-   redirecting) and `techdeck.operatoros.net` (canonical) behave as expected.
-
-## Rollback notes
-
-- If the new subdomain misbehaves after verification, **remove the legacy
-  redirect first** so `techdeck.app` continues serving users directly.
-- The new `techdeck.operatoros.net` records can be removed at the DNS provider
-  and the domain unlinked in Replit's Domains panel; this reverts to the
-  current model with no code changes required.
-- Because Replit remains the host throughout, rollback never involves moving
-  the deployment — only DNS records and the optional legacy redirect change.
-- No repository changes are needed to roll back; the registry already lists
-  both URLs and the app does not force any redirect.
+Do not reintroduce old standalone domains into active registry or UI data as a
+shortcut during rollout. Any externally managed legacy-domain redirect is a
+separate marketing/operations concern and is not part of OperatorOS auth.

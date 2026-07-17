@@ -1,24 +1,71 @@
 import crypto from 'node:crypto';
 import { db } from '../src/db.js';
 import {
-  users, modules, addonSubscriptions, billingEvents, ssoHandoffTokens,
+  users, modules, subscriptionPlans, addonSubscriptions, billingEvents, ssoHandoffTokens, revokedSessionTokens,
   tenants, tenantUsers, tenantModules, tenantUserModuleAccess,
   tenantEntitlements,
   saasWorkspaces, saasProjects, saasTasks, notes, activityFeed,
   usageTracking, aiActionsLog, aiPromptTemplates,
+  ninjaPoolPracticeSessions,
+  moduleWorkflowItems,
+  techdeckTickets, techdeckTicketSequences, techdeckAssets, techdeckRunbooks,
+  tradeflowkitInvoices, tradeflowkitQuotes, tradeflowkitJobs, tradeflowkitCustomers,
 } from '../src/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
+
+// DB-backed tests bootstrap production DDL modules dynamically. Provide a
+// non-production, test-process-only signing key before those modules load so
+// the suite does not depend on a developer shell secret. The dedicated
+// session-secret bootstrap tests still spawn isolated processes and override
+// this value to prove missing/weak production configuration fails closed.
+process.env.SESSION_SECRET ||= 'operatoros-integration-test-session-key-v1';
 
 export const TEST_TAG = 'test-billing-regression';
 
+async function ensureTestPlans() {
+  const { PLAN_CONFIGS } = await import('../src/lib/plans.js');
+  const canonicalPlans = PLAN_CONFIGS.filter(plan =>
+    plan.slug === 'starter' || plan.slug === 'pro' || plan.slug === 'elite'
+  );
+  const existing = await db.select({ slug: subscriptionPlans.slug })
+    .from(subscriptionPlans)
+    .where(inArray(subscriptionPlans.slug, canonicalPlans.map(plan => plan.slug)));
+  const existingSlugs = new Set(existing.map(plan => plan.slug));
+  const missing = canonicalPlans.filter(plan => !existingSlugs.has(plan.slug));
+  if (missing.length === 0) return;
+
+  // Test bootstrap needs the canonical tier rows, but must not run the
+  // production account seeder: doing so would create or depend on bootstrap
+  // admin/demo credentials. Insert only missing plan fixtures and preserve
+  // any rows a test database already owns.
+  await db.insert(subscriptionPlans).values(missing.map(plan => ({
+    name: plan.name,
+    slug: plan.slug,
+    price: plan.price,
+    interval: plan.interval,
+    maxWorkspaces: plan.limits.maxWorkspaces,
+    maxProjects: plan.limits.maxProjects,
+    maxTasks: plan.limits.maxTasks,
+    maxTeamMembers: plan.limits.maxTeamMembers,
+    maxAiActionsPerMonth: plan.limits.maxAiActionsPerMonth,
+    hasExports: plan.features.exports,
+    hasAutomation: plan.features.automation,
+    hasTemplates: plan.features.templates,
+    hasAdvancedAnalytics: plan.features.advancedAnalytics,
+  }))).onConflictDoNothing({ target: subscriptionPlans.slug });
+}
+
 export async function ensureSchemaReady() {
-  const { ensureExtendedTables } = await import('../src/lib/db-init.js');
-  const { ensureSaasTables, ensureTenantTables } = await import('../src/lib/saas-db-init.js');
+  const { ensureBaseTables, ensureExtendedTables } = await import('../src/lib/db-init.js');
+  const { ensureSaasTables, ensureTenantTables, ensureModuleShellTables } = await import('../src/lib/saas-db-init.js');
+  await ensureBaseTables();
   await ensureExtendedTables();
   await ensureSaasTables();
   // Gate 1: tenant DDL must run before any code path that selects from
   // `users` (Drizzle's implicit SELECT * needs the new columns).
   await ensureTenantTables();
+  await ensureModuleShellTables();
+  await ensureTestPlans();
 }
 
 export function uniqueId(prefix: string) {
@@ -79,6 +126,10 @@ export async function cleanupUser(userId: string) {
   try { await db.delete(addonSubscriptions).where(eq(addonSubscriptions.userId, userId)); } catch {}
   try { await db.delete(billingEvents).where(eq(billingEvents.userId, userId)); } catch {}
   try { await db.delete(ssoHandoffTokens).where(eq(ssoHandoffTokens.userId, userId)); } catch {}
+  try { await db.delete(revokedSessionTokens).where(eq(revokedSessionTokens.userId, userId)); } catch {}
+  try { await db.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.userId, userId)); } catch {}
+  try { await db.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.createdByUserId, userId)); } catch {}
+  try { await db.delete(techdeckTickets).where(eq(techdeckTickets.createdByUserId, userId)); } catch {}
   try { await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.userId, userId)); } catch {}
   try { await db.delete(tenantUsers).where(eq(tenantUsers.userId, userId)); } catch {}
   try {
@@ -87,6 +138,15 @@ export async function cleanupUser(userId: string) {
     const owned = await db.select().from(tenants).where(eq(tenants.ownerUserId, userId));
     for (const t of owned) {
       try { await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, t.id)); } catch {}
+      try { await db.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.tenantId, t.id)); } catch {}
+      try { await db.delete(techdeckTickets).where(eq(techdeckTickets.tenantId, t.id)); } catch {}
+      try { await db.delete(techdeckTicketSequences).where(eq(techdeckTicketSequences.tenantId, t.id)); } catch {}
+      try { await db.delete(techdeckAssets).where(eq(techdeckAssets.tenantId, t.id)); } catch {}
+      try { await db.delete(techdeckRunbooks).where(eq(techdeckRunbooks.tenantId, t.id)); } catch {}
+      try { await db.delete(tradeflowkitInvoices).where(eq(tradeflowkitInvoices.tenantId, t.id)); } catch {}
+      try { await db.delete(tradeflowkitQuotes).where(eq(tradeflowkitQuotes.tenantId, t.id)); } catch {}
+      try { await db.delete(tradeflowkitJobs).where(eq(tradeflowkitJobs.tenantId, t.id)); } catch {}
+      try { await db.delete(tradeflowkitCustomers).where(eq(tradeflowkitCustomers.tenantId, t.id)); } catch {}
       try { await db.delete(tenantEntitlements).where(eq(tenantEntitlements.tenantId, t.id)); } catch {}
       try { await db.delete(tenantModules).where(eq(tenantModules.tenantId, t.id)); } catch {}
       try { await db.delete(tenantUsers).where(eq(tenantUsers.tenantId, t.id)); } catch {}

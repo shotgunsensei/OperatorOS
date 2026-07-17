@@ -1,0 +1,18 @@
+{
+  "name": "Faultline Lab — Diagnostic Challenge Platform",
+  "short_name": "Faultline",
+  "description": "Diagnostic challenge platform for technical minds. A Shotgun Ninjas Productions release.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0e14",
+  "theme_color": "#22d3ee",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

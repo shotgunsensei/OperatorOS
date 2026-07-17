@@ -10,10 +10,18 @@ meaning in code (e.g. `STRIPE_MODE=live`).
 | ---------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`                           | yes             | Postgres connection string.                                                                                                                       |
 | `SESSION_SECRET`                         | yes             | JWT signing secret.                                                                                                                               |
-| `NEXT_PUBLIC_API_URL`                    | yes (web)       | API base for the Next.js frontend.                                                                                                                |
-| `OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL` | yes (boot once) | Email to promote to `super_admin`.                                                                                                                |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD`         | optional        | Seed admin user (defaults: `john@shotgunninjas.com`).                                                                                             |
-| `OPERATOROS_BASE_URL`                    | recommended     | Public base URL; used by invite accept links. Falls back to `INVITE_ACCEPT_BASE_URL` → `APP_BASE_URL` → `WEB_BASE_URL` → `http://localhost:3000`. |
+| `SSO_CODE_ENCRYPTION_SECRET`             | yes             | Independent high-entropy 32+ character hub-only key used to seal one-time browser authorization codes.                                           |
+| `INTERNAL_API_URL`                       | yes (web prod)  | Server-only Fastify origin used by Next rewrites; use `http://localhost:5001` in the unified Replit workload.                                      |
+| `NEXT_PUBLIC_API_URL`                    | mobile/split only | Public API origin for Capacitor or an intentionally separate API deployment; unified web clients use same-origin `/api/*`.                      |
+| `OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL` | optional        | Existing user email to re-assert as `super_admin`; does not replace explicit secure seed credentials.                                             |
+| `ADMIN_EMAIL` / `ADMIN_NAME`             | optional        | Seed admin identity; email defaults to the shared root-admin constant and name defaults to `OperatorOS Admin`.                                     |
+| `ADMIN_PASSWORD`                         | conditional     | Required from the secret manager only when production must create a missing seed admin; no embedded fallback. Minimum 12 characters.              |
+| `DEMO_EMAIL` / `DEMO_PASSWORD`           | optional pair   | Optional demo seed. Creation is skipped unless an explicit `DEMO_PASSWORD` is supplied; no embedded fallback.                                      |
+| `OPERATOROS_BASE_URL`                    | yes (prod)      | Must equal `https://operatoros.net` in production; development-only fallbacks remain for local execution.                                         |
+| `APP_ENV` / `NODE_ENV`                   | yes (prod)      | Both must equal `production` for the published release.                                                                                           |
+| `TRUST_PROXY`                            | yes (Replit)    | Set to `true` only behind Replit's managed deployment proxy.                                                                                      |
+| `ALLOW_LEGACY_SSO_ROLLBACK`              | no              | Must be absent or `false` for the production SSO v1 release.                                                                                      |
+| `MODULE_SSO_SECRET`                      | legacy only     | Not used by SSO v1; remove unless an explicitly approved rollback still requires it.                                                              |
 
 ## Email (Resend)
 
@@ -55,7 +63,12 @@ back across known slug aliases:
 All other modules use the canonical `STRIPE_PRICE_ADDON_<SLUG>` form
 only. See `apps/api/src/lib/billing-service.ts:stripeAddonEnvKey`.
 
-## Module base URLs (external SSO targets)
+## Canonical module host URLs
+
+In the shared Replit runtime these are routing and launch targets for the
+attached `*.operatoros.net` subdomains. They are not separate identity or SSO
+authorities. The internal fallbacks below are development compatibility only;
+production preflight requires every exact canonical URL.
 
 | Var                    | Module                | Internal fallback                                                                   |
 | ---------------------- | --------------------- | ----------------------------------------------------------------------------------- |
@@ -63,6 +76,7 @@ only. See `apps/api/src/lib/billing-service.ts:stripeAddonEnvKey`.
 | `BF_OS_URL`            | brandforgeos (legacy) | —                                                                                   |
 | `CALLCOMMAND_AI_URL`   | callcommand-ai        | falls back to `/apps/callcommand-ai`                                                |
 | `FAULTLINELAB_URL`     | faultlinelab          | —                                                                                   |
+| `NINJA_POOL_HALL_URL`  | ninja-pool-hall       | —                                                                                   |
 | `NINJAMATION_URL`      | ninjamation           | falls back to `/apps/ninjamation`                                                   |
 | `PULSEDESK_URL`        | pulsedesk             | —                                                                                   |
 | `SNAPPROOFOS_URL`      | snapproofos           | —                                                                                   |
@@ -78,6 +92,27 @@ only. See `apps/api/src/lib/billing-service.ts:stripeAddonEnvKey`.
 | Var              | Notes                                     |
 | ---------------- | ----------------------------------------- |
 | `OPENAI_API_KEY` | optional; absence triggers mock provider. |
+
+## CallCommand telephony
+
+Outbound calls require either a bound Replit Twilio connector or all three
+credential variables below. The public base URL is required for both modes so
+Twilio webhook signature validation uses the exact canonical host. Do not use
+the legacy generic `APP_URL` in production.
+
+| Var | Required | Notes |
+| --- | --- | --- |
+| `TWILIO_ACCOUNT_SID` | env mode | Server-only Twilio Account SID. |
+| `TWILIO_AUTH_TOKEN` | env mode | Server-only credential and webhook-signature key. |
+| `TWILIO_FROM_NUMBER` | env mode | Approved outbound E.164 number. |
+| `TWILIO_PUBLIC_BASE_URL` | yes for live calls | Must be `https://callcommand-ai.operatoros.net`. |
+
+Use `corepack pnpm preflight:production --all` in the production environment
+to validate the core, revenue, email, telephony, and AI configuration without
+printing secret values. Core validation requires every canonical module URL
+above to equal its exact `*.operatoros.net` origin, including disabled OutCall's
+controlled host. Individual provider readiness flags are documented in
+`docs/MODULE_ENV_MIGRATION.md`.
 
 ## CDE shell
 

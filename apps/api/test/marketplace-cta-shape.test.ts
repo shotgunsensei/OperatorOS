@@ -58,7 +58,7 @@ after(async () => {
   if (mod) await cleanupModule(mod.id);
 });
 
-const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` });
+const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` });
 
 test('GET /v1/modules contract: every row has cta + access_source + module envelope', async () => {
   const r = await app.inject({ method: 'GET', url: '/v1/modules', headers: bearer(user) });

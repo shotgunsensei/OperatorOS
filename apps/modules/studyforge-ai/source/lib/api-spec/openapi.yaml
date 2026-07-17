@@ -1,0 +1,1044 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: StudyForge AI API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: auth
+  - name: dashboard
+  - name: study-sets
+  - name: flashcards
+  - name: quizzes
+  - name: review-sheet
+  - name: study-plan
+  - name: exam-countdowns
+  - name: folders
+  - name: templates
+  - name: billing
+  - name: admin
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current session user
+      responses:
+        "200":
+          description: Current user (or null)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Sign in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/signup:
+    post:
+      operationId: signup
+      tags: [auth]
+      summary: Create a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupBody"
+      responses:
+        "200":
+          description: Account created and logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Sign out
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /auth/profile:
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      summary: Update current user's name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+  /auth/account:
+    delete:
+      operationId: deleteAccount
+      tags: [auth]
+      summary: Permanently delete the current user's account and all data
+      responses:
+        "200":
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /contact:
+    post:
+      operationId: submitContact
+      tags: [auth]
+      summary: Send a message to the StudyForge team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactBody"
+      responses:
+        "200":
+          description: Submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Dashboard summary for current user
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /study-sets:
+    get:
+      operationId: listStudySets
+      tags: [study-sets]
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema: { type: string }
+        - name: subject
+          in: query
+          required: false
+          schema: { type: string }
+        - name: folderId
+          in: query
+          required: false
+          schema: { type: ["integer", "null"] }
+      responses:
+        "200":
+          description: Study sets
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/StudySetSummary" }
+    post:
+      operationId: createStudySet
+      tags: [study-sets]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStudySetBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudySet"
+        "402":
+          description: Plan limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitErrorResponse"
+
+  /study-sets/{id}:
+    get:
+      operationId: getStudySet
+      tags: [study-sets]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Full study set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudySet"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateStudySet
+      tags: [study-sets]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStudySetBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudySet"
+    delete:
+      operationId: deleteStudySet
+      tags: [study-sets]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /study-sets/{id}/duplicate:
+    post:
+      operationId: duplicateStudySet
+      tags: [study-sets]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "201":
+          description: Duplicated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudySet"
+        "402":
+          description: Plan limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitErrorResponse"
+
+  /study-sets/{id}/regenerate:
+    post:
+      operationId: regenerateStudySet
+      tags: [study-sets]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Regenerated materials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudySet"
+
+  /study-sets/{id}/flashcards/{cardId}/status:
+    patch:
+      operationId: updateFlashcardStatus
+      tags: [flashcards]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: cardId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FlashcardStatusBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Flashcard"
+
+  /study-sets/{id}/quiz/attempts:
+    get:
+      operationId: listQuizAttempts
+      tags: [quizzes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Quiz attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/QuizAttempt" }
+    post:
+      operationId: submitQuizAttempt
+      tags: [quizzes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitQuizAttemptBody"
+      responses:
+        "201":
+          description: Attempt saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizAttemptResult"
+        "402":
+          description: Plan limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitErrorResponse"
+
+  /study-sets/{id}/study-plan/sessions/{sessionId}/complete:
+    patch:
+      operationId: toggleStudySession
+      tags: [study-plan]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: sessionId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionCompleteBody"
+      responses:
+        "200":
+          description: Updated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudySession"
+
+  /exam-countdowns:
+    get:
+      operationId: listExamCountdowns
+      tags: [exam-countdowns]
+      responses:
+        "200":
+          description: Exam countdowns
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ExamCountdown" }
+    post:
+      operationId: createExamCountdown
+      tags: [exam-countdowns]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExamCountdownBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamCountdown"
+        "402":
+          description: Plan limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitErrorResponse"
+  /exam-countdowns/{id}:
+    delete:
+      operationId: deleteExamCountdown
+      tags: [exam-countdowns]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /folders:
+    get:
+      operationId: listFolders
+      tags: [folders]
+      responses:
+        "200":
+          description: Folders
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Folder" }
+    post:
+      operationId: createFolder
+      tags: [folders]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFolderBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Folder"
+  /folders/{id}:
+    delete:
+      operationId: deleteFolder
+      tags: [folders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /templates:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      responses:
+        "200":
+          description: Templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/StudyTemplate" }
+
+  /billing/status:
+    get:
+      operationId: getBillingStatus
+      tags: [billing]
+      responses:
+        "200":
+          description: Billing status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingStatus"
+  /billing/checkout:
+    post:
+      operationId: createCheckoutSession
+      tags: [billing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutBody"
+      responses:
+        "200":
+          description: Checkout session result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutResponse"
+  /billing/portal:
+    post:
+      operationId: createBillingPortal
+      tags: [billing]
+      responses:
+        "200":
+          description: Billing portal result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutResponse"
+
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      responses:
+        "200":
+          description: Admin stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      responses:
+        "200":
+          description: All users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AdminUser" }
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties: { status: { type: string } }
+      required: [status]
+    OkResponse:
+      type: object
+      properties: { ok: { type: boolean } }
+      required: [ok]
+    ErrorResponse:
+      type: object
+      properties: { error: { type: string } }
+      required: [error]
+    LimitErrorResponse:
+      type: object
+      properties:
+        error: { type: string }
+        limitReached: { type: boolean }
+        feature: { type: string }
+        currentPlan: { type: string }
+        upgradeTo: { type: string }
+      required: [error, limitReached, feature, currentPlan, upgradeTo]
+
+    SessionResponse:
+      type: object
+      properties:
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/SessionUser"
+            - type: "null"
+      required: [user]
+    SessionUser:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        name: { type: string }
+        role: { type: string, enum: [student, tutor, admin] }
+        plan: { type: string, enum: [free, pro, tutor] }
+        createdAt: { type: string }
+      required: [id, email, name, role, plan, createdAt]
+    LoginBody:
+      type: object
+      properties:
+        email: { type: string }
+        password: { type: string }
+      required: [email, password]
+    SignupBody:
+      type: object
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 8, maxLength: 200 }
+        name: { type: string, minLength: 1, maxLength: 80 }
+      required: [email, password, name]
+    UpdateProfileBody:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+      required: [name]
+    ContactBody:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+        email: { type: string, format: email }
+        message: { type: string, minLength: 5, maxLength: 4000 }
+      required: [name, email, message]
+
+    DashboardSummary:
+      type: object
+      properties:
+        studySetsCount: { type: integer }
+        flashcardsCount: { type: integer }
+        quizAttemptsCount: { type: integer }
+        averageQuizScore: { type: number }
+        upcomingExams:
+          type: array
+          items: { $ref: "#/components/schemas/ExamCountdown" }
+        todaySessions:
+          type: array
+          items: { $ref: "#/components/schemas/TodaySession" }
+        recentStudySets:
+          type: array
+          items: { $ref: "#/components/schemas/StudySetSummary" }
+        weakAreas:
+          type: array
+          items: { $ref: "#/components/schemas/WeakArea" }
+        plan: { type: string }
+        planUsage: { $ref: "#/components/schemas/PlanUsage" }
+        streak: { $ref: "#/components/schemas/StreakInfo" }
+        activity:
+          type: array
+          items: { $ref: "#/components/schemas/DailyActivity" }
+        scoreHistory:
+          type: array
+          items: { $ref: "#/components/schemas/ScorePoint" }
+      required: [studySetsCount, flashcardsCount, quizAttemptsCount, averageQuizScore, upcomingExams, todaySessions, recentStudySets, weakAreas, plan, planUsage, streak, activity, scoreHistory]
+    StreakInfo:
+      type: object
+      properties:
+        current: { type: integer }
+        longest: { type: integer }
+        activeToday: { type: boolean }
+      required: [current, longest, activeToday]
+    DailyActivity:
+      type: object
+      properties:
+        date: { type: string }
+        count: { type: integer }
+      required: [date, count]
+    ScorePoint:
+      type: object
+      properties:
+        date: { type: string }
+        score: { type: number }
+      required: [date, score]
+    PlanUsage:
+      type: object
+      properties:
+        studySetsUsed: { type: integer }
+        studySetsLimit: { type: ["integer", "null"] }
+        quizAttemptsThisMonth: { type: integer }
+        quizAttemptsLimit: { type: ["integer", "null"] }
+      required: [studySetsUsed, studySetsLimit, quizAttemptsThisMonth, quizAttemptsLimit]
+    TodaySession:
+      type: object
+      properties:
+        sessionId: { type: integer }
+        studySetId: { type: integer }
+        studySetTitle: { type: string }
+        topic: { type: string }
+        estimatedMinutes: { type: integer }
+        completed: { type: boolean }
+      required: [sessionId, studySetId, studySetTitle, topic, estimatedMinutes, completed]
+    WeakArea:
+      type: object
+      properties:
+        topic: { type: string }
+        accuracy: { type: number }
+        studySetId: { type: integer }
+        studySetTitle: { type: string }
+      required: [topic, accuracy, studySetId, studySetTitle]
+
+    StudySetSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        subject: { type: string }
+        course: { type: ["string", "null"] }
+        difficulty: { type: string }
+        examDate: { type: ["string", "null"] }
+        flashcardCount: { type: integer }
+        quizQuestionCount: { type: integer }
+        folderId: { type: ["integer", "null"] }
+        updatedAt: { type: string }
+        qualityScore: { type: number }
+      required: [id, title, subject, course, difficulty, examDate, flashcardCount, quizQuestionCount, folderId, updatedAt, qualityScore]
+
+    StudySet:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        subject: { type: string }
+        course: { type: ["string", "null"] }
+        difficulty: { type: string }
+        learningGoal: { type: ["string", "null"] }
+        examDate: { type: ["string", "null"] }
+        notes: { type: string }
+        summary: { type: string }
+        keyTerms:
+          type: array
+          items: { $ref: "#/components/schemas/KeyTerm" }
+        flashcards:
+          type: array
+          items: { $ref: "#/components/schemas/Flashcard" }
+        quizQuestions:
+          type: array
+          items: { $ref: "#/components/schemas/QuizQuestion" }
+        shortAnswerQuestions:
+          type: array
+          items: { $ref: "#/components/schemas/ShortAnswerQuestion" }
+        reviewSheet: { $ref: "#/components/schemas/ReviewSheet" }
+        studyPlan:
+          type: array
+          items: { $ref: "#/components/schemas/StudySession" }
+        weakAreas:
+          type: array
+          items: { type: string }
+        qualityScore: { type: number }
+        folderId: { type: ["integer", "null"] }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+      required: [id, title, subject, course, difficulty, learningGoal, examDate, notes, summary, keyTerms, flashcards, quizQuestions, shortAnswerQuestions, reviewSheet, studyPlan, weakAreas, qualityScore, folderId, createdAt, updatedAt]
+
+    CreateStudySetBody:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        subject: { type: string, minLength: 1, maxLength: 100 }
+        course: { type: ["string", "null"], maxLength: 200 }
+        difficulty: { type: string, enum: [easy, medium, hard] }
+        learningGoal: { type: ["string", "null"], maxLength: 500 }
+        examDate: { type: ["string", "null"] }
+        notes: { type: string, minLength: 1, maxLength: 50000 }
+      required: [title, subject, difficulty, notes]
+    UpdateStudySetBody:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        subject: { type: string, minLength: 1, maxLength: 100 }
+        course: { type: ["string", "null"], maxLength: 200 }
+        difficulty: { type: string, enum: [easy, medium, hard] }
+        learningGoal: { type: ["string", "null"], maxLength: 500 }
+        examDate: { type: ["string", "null"] }
+        folderId: { type: ["integer", "null"] }
+
+    KeyTerm:
+      type: object
+      properties:
+        term: { type: string }
+        definition: { type: string }
+      required: [term, definition]
+
+    Flashcard:
+      type: object
+      properties:
+        id: { type: integer }
+        front: { type: string }
+        back: { type: string }
+        status: { type: string, enum: [new, known, review] }
+      required: [id, front, back, status]
+    FlashcardStatusBody:
+      type: object
+      properties:
+        status: { type: string, enum: [new, known, review] }
+      required: [status]
+
+    QuizQuestion:
+      type: object
+      properties:
+        id: { type: integer }
+        question: { type: string }
+        choices:
+          type: array
+          items: { type: string }
+        correctIndex: { type: integer }
+        explanation: { type: string }
+        topic: { type: string }
+      required: [id, question, choices, correctIndex, explanation, topic]
+    ShortAnswerQuestion:
+      type: object
+      properties:
+        id: { type: integer }
+        question: { type: string }
+        answer: { type: string }
+        topic: { type: string }
+      required: [id, question, answer, topic]
+
+    SubmitQuizAttemptBody:
+      type: object
+      properties:
+        answers:
+          type: array
+          items: { $ref: "#/components/schemas/QuizAnswerInput" }
+      required: [answers]
+    QuizAnswerInput:
+      type: object
+      properties:
+        questionId: { type: integer }
+        selectedIndex: { type: integer }
+      required: [questionId, selectedIndex]
+    QuizAttempt:
+      type: object
+      properties:
+        id: { type: integer }
+        studySetId: { type: integer }
+        score: { type: number }
+        correctCount: { type: integer }
+        totalCount: { type: integer }
+        completedAt: { type: string }
+      required: [id, studySetId, score, correctCount, totalCount, completedAt]
+    QuizAttemptResult:
+      type: object
+      properties:
+        attempt: { $ref: "#/components/schemas/QuizAttempt" }
+        breakdown:
+          type: array
+          items: { $ref: "#/components/schemas/QuizAnswerBreakdown" }
+        weakTopics:
+          type: array
+          items: { type: string }
+      required: [attempt, breakdown, weakTopics]
+    QuizAnswerBreakdown:
+      type: object
+      properties:
+        questionId: { type: integer }
+        question: { type: string }
+        selectedIndex: { type: integer }
+        correctIndex: { type: integer }
+        isCorrect: { type: boolean }
+        explanation: { type: string }
+        topic: { type: string }
+      required: [questionId, question, selectedIndex, correctIndex, isCorrect, explanation, topic]
+
+    ReviewSheet:
+      type: object
+      properties:
+        sections:
+          type: array
+          items: { $ref: "#/components/schemas/ReviewSection" }
+        cramSection:
+          type: array
+          items: { type: string }
+      required: [sections, cramSection]
+    ReviewSection:
+      type: object
+      properties:
+        heading: { type: string }
+        bullets:
+          type: array
+          items: { type: string }
+      required: [heading, bullets]
+
+    StudySession:
+      type: object
+      properties:
+        id: { type: integer }
+        day: { type: integer }
+        date: { type: string }
+        topic: { type: string }
+        focus: { type: string }
+        estimatedMinutes: { type: integer }
+        completed: { type: boolean }
+      required: [id, day, date, topic, focus, estimatedMinutes, completed]
+    SessionCompleteBody:
+      type: object
+      properties:
+        completed: { type: boolean }
+      required: [completed]
+
+    ExamCountdown:
+      type: object
+      properties:
+        id: { type: integer }
+        examName: { type: string }
+        examDate: { type: string }
+        daysRemaining: { type: integer }
+        recommendedDailyMinutes: { type: integer }
+        riskStatus: { type: string, enum: [on-track, needs-attention, cram-mode] }
+        studySetId: { type: ["integer", "null"] }
+      required: [id, examName, examDate, daysRemaining, recommendedDailyMinutes, riskStatus, studySetId]
+    CreateExamCountdownBody:
+      type: object
+      properties:
+        examName: { type: string }
+        examDate: { type: string }
+        studySetId: { type: ["integer", "null"] }
+      required: [examName, examDate]
+
+    Folder:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        color: { type: string }
+        studySetCount: { type: integer }
+      required: [id, name, color, studySetCount]
+    CreateFolderBody:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+        color: { type: string, maxLength: 32 }
+      required: [name]
+
+    StudyTemplate:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        subject: { type: string }
+        difficulty: { type: string }
+        sampleNotes: { type: string }
+        icon: { type: string }
+      required: [id, name, description, subject, difficulty, sampleNotes, icon]
+
+    BillingStatus:
+      type: object
+      properties:
+        plan: { type: string, enum: [free, pro, tutor] }
+        demoMode: { type: boolean }
+        renewsAt: { type: ["string", "null"] }
+        cancelAtPeriodEnd: { type: boolean }
+      required: [plan, demoMode, renewsAt, cancelAtPeriodEnd]
+    CheckoutBody:
+      type: object
+      properties:
+        plan: { type: string, enum: [pro, tutor] }
+      required: [plan]
+    CheckoutResponse:
+      type: object
+      properties:
+        url: { type: ["string", "null"] }
+        demoMode: { type: boolean }
+        message: { type: string }
+        plan: { type: string }
+      required: [url, demoMode, message, plan]
+
+    AdminStats:
+      type: object
+      properties:
+        totalUsers: { type: integer }
+        totalStudySets: { type: integer }
+        totalFlashcards: { type: integer }
+        totalQuizAttempts: { type: integer }
+        usersByPlan:
+          type: array
+          items: { $ref: "#/components/schemas/PlanCount" }
+        demoMode: { type: boolean }
+        recentSignups:
+          type: array
+          items: { $ref: "#/components/schemas/AdminUser" }
+      required: [totalUsers, totalStudySets, totalFlashcards, totalQuizAttempts, usersByPlan, demoMode, recentSignups]
+    PlanCount:
+      type: object
+      properties:
+        plan: { type: string }
+        count: { type: integer }
+      required: [plan, count]
+    AdminUser:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        name: { type: string }
+        role: { type: string }
+        plan: { type: string }
+        studySetCount: { type: integer }
+        createdAt: { type: string }
+      required: [id, email, name, role, plan, studySetCount, createdAt]

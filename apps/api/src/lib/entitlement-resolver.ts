@@ -30,9 +30,10 @@ import {
 } from './entitlement-service.js';
 import { getUserPlanConfig } from './plans.js';
 import {
-  tenantRoleToPublic, moduleAccessLevelToPublic,
-  type InternalTenantRole, type PublicTenantRole,
-  type InternalModuleAccessLevel, type PublicModuleRole,
+  tenantRoleToEffective, tenantRoleToPublic,
+  moduleAccessLevelToEffective, moduleAccessLevelToPublic,
+  type EffectiveTenantRole, type PublicTenantRole,
+  type StoredModuleAccessLevel, type PublicModuleRole,
 } from './role-aliases.js';
 import { hasPlatformAdminAuthority } from './rbac.js';
 
@@ -47,8 +48,8 @@ export interface EntitlementModuleEntry {
   status: string;
   /** TRUE iff the user can launch this module right now (final answer). */
   enabled: boolean;
-  /** Internal column value (none|user|manager) — kept for back-compat. */
-  accessLevel: InternalModuleAccessLevel;
+  /** Effective access value, preserving the read-only viewer grant. */
+  accessLevel: StoredModuleAccessLevel;
   /** Public alias (module_admin|module_user|viewer|none). */
   moduleRole: PublicModuleRole;
   /** Merged feature flags: plan_modules.feature_flags_json overlaid with
@@ -66,11 +67,13 @@ export interface EntitlementSnapshot {
     slug: string;
     name: string;
     type: 'personal' | 'company';
-    /** Internal role value owner|admin|member, or null if super_admin viewing without membership. */
-    role: InternalTenantRole | null;
+    /** Effective internal authorization role. Platform admins are owner-equivalent. */
+    role: EffectiveTenantRole;
+    /** Persisted tenant membership role, or null when no membership row exists. */
+    membershipRole: EffectiveTenantRole | null;
     /** Public alias (owner|tenant_admin|billing_admin|user|viewer). */
     roleAlias: PublicTenantRole;
-    /** True when access comes from platform super_admin (no membership row required). */
+    /** True when platform authority affected the decision, with or without membership. */
     viaPlatformRole: boolean;
   };
   user: {
@@ -111,10 +114,11 @@ export async function resolveEntitlements(
   const isSuper = hasPlatformAdminAuthority(user);
   if (!member && !isSuper) return null;
 
-  const internalRole: InternalTenantRole | null = (member?.role as InternalTenantRole) ?? null;
-  const roleAlias: PublicTenantRole = internalRole
-    ? tenantRoleToPublic(internalRole)
-    : 'viewer';
+  const membershipRole: EffectiveTenantRole | null = member
+    ? tenantRoleToEffective(member.role)
+    : null;
+  const internalRole: EffectiveTenantRole = isSuper ? 'owner' : membershipRole!;
+  const roleAlias: PublicTenantRole = tenantRoleToPublic(internalRole);
 
   // Task #108: subscription is TENANT-AUTHORITATIVE. The tenant owner's
   // active subscription drives module inclusion, feature flags, limits,
@@ -152,10 +156,10 @@ export async function resolveEntitlements(
   const allModules = await db.select().from(modules);
   const modBySlug = new Map(allModules.map(m => [m.slug, m]));
   const modById = new Map(allModules.map(m => [m.id, m]));
-  const grantBySlug = new Map<string, InternalModuleAccessLevel>();
+  const grantBySlug = new Map<string, StoredModuleAccessLevel>();
   for (const g of grants) {
     const mod = modById.get(g.moduleId);
-    if (mod) grantBySlug.set(mod.slug, g.accessLevel as InternalModuleAccessLevel);
+    if (mod) grantBySlug.set(mod.slug, moduleAccessLevelToEffective(g.accessLevel));
   }
 
   // Tenant-level module rows (allowAllMembers, metadata overrides).
@@ -176,13 +180,14 @@ export async function resolveEntitlements(
 
   const moduleEntries: EntitlementModuleEntry[] = summaries.map(s => {
     const mod = modBySlug.get(s.module.slug);
-    let level: InternalModuleAccessLevel = grantBySlug.get(s.module.slug) ?? 'none';
+    let level: StoredModuleAccessLevel = grantBySlug.get(s.module.slug) ?? 'none';
     if (!grantBySlug.has(s.module.slug) && mod) {
       const tm = tmByModuleId.get(mod.id);
       if (tm?.allowAllMembers && s.unlocked) level = 'user';
       if (isSuper && s.unlocked) level = 'manager';
     }
     if (!s.unlocked) level = 'none';
+    if (internalRole === 'viewer' && level !== 'none') level = 'viewer';
     const moduleRole = moduleAccessLevelToPublic(level);
 
     // Merge features: plan defaults first, then per-tenant overrides.
@@ -219,8 +224,9 @@ export async function resolveEntitlements(
       name: tenant.name,
       type: tenant.type as 'personal' | 'company',
       role: internalRole,
+      membershipRole,
       roleAlias,
-      viaPlatformRole: !member && isSuper,
+      viaPlatformRole: isSuper,
     },
     user: {
       id: user.id,

@@ -28,11 +28,13 @@ import { and, desc, eq, gte, lte, ilike, isNull, isNotNull, inArray, ne, or } fr
 import { db } from '../db.js';
 import {
   tenants, tenantUsers, users, modules, tenantModules, tenantUserModuleAccess,
-  moduleCallLogs, moduleStudySessions, moduleAutomations, moduleScaffolds,
+  moduleCallLogs, moduleStudySessions, moduleAutomations, moduleScaffolds, moduleWorkflowItems,
+  techdeckTickets, techdeckTicketSequences, techdeckAssets, techdeckRunbooks,
   addonSubscriptions, entitlementOverrides, billingEvents, adminAuditLogs,
   subscriptions, subscriptionPlans, planModules, platformComponents,
   saasWorkspaces, saasProjects, saasTasks, notes, workspaceMemberships,
-  activityFeed,
+  activityFeed, ninjaPoolPracticeSessions,
+  tradeflowkitInvoices, tradeflowkitQuotes, tradeflowkitJobs, tradeflowkitCustomers,
 } from '../schema.js';
 import { count } from 'drizzle-orm';
 import { requireSuperAdmin } from '../lib/tenant-auth.js';
@@ -48,8 +50,20 @@ import { getModuleAccessTrace } from '../lib/entitlement-service.js';
 import { getSsoCleanupHealth } from '../lib/sso-cleanup.js';
 import { getEmailFromHealth } from '../lib/email-service.js';
 import { PLAN_CONFIGS } from '../lib/plans.js';
-import { PLAN_CATALOG, MODULE_CATALOG, pickEnv } from '@operatoros/sdk';
+import {
+  ensureFreeAccountApps,
+  ensureFreeAccountAppsWithDatabase,
+} from '../lib/saas-db-init.js';
+import {
+  PLAN_CATALOG,
+  MODULE_CATALOG,
+  getCanonicalModuleBaseUrl,
+  getCanonicalModuleBaseUrlMismatch,
+  pickEnv,
+} from '@operatoros/sdk';
 import { tenantInvites } from '../schema.js';
+import { OPERATOROS_MODULE_REGISTRY } from '../../../../packages/modules/registry.js';
+import { SSO_TOKEN_TTL_SECONDS } from '../../../../packages/sso/index.js';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -274,18 +288,19 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     if (collision) return reply.code(409).send({ error: 'Slug already in use', code: 'SLUG_TAKEN' });
 
     const type = body.type === 'personal' ? 'personal' : 'company';
-    const [created] = await db.insert(tenants).values({
-      name, slug, type, ownerUserId, status: 'active',
-      metadata: body.metadata ?? null,
-    }).returning();
+    const created = await db.transaction(async (tx) => {
+      const [tenant] = await tx.insert(tenants).values({
+        name, slug, type, ownerUserId, status: 'active',
+        metadata: body.metadata ?? null,
+      }).returning();
+      await tx.insert(tenantUsers).values({ tenantId: tenant.id, userId: ownerUserId, role: 'owner' });
 
-    // Owner mapping (idempotent — defensive in case caller passed an
-    // owner who is already linked from a prior failed run).
-    const [existingMembership] = await db.select().from(tenantUsers)
-      .where(and(eq(tenantUsers.tenantId, created.id), eq(tenantUsers.userId, ownerUserId))).limit(1);
-    if (!existingMembership) {
-      await db.insert(tenantUsers).values({ tenantId: created.id, userId: ownerUserId, role: 'owner' });
-    }
+      // Tenant, owner membership, and baseline free grants commit together.
+      // A provisioning failure therefore cannot leave a partial tenant whose
+      // retry collides on slug.
+      await ensureFreeAccountAppsWithDatabase(tx, tenant.id, ownerUserId);
+      return tenant;
+    });
 
     await writeAudit({
       actorUserId: admin.id,
@@ -384,6 +399,12 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       const [after] = await db.update(tenants).set({
         status: 'active', archivedAt: null, suspendedAt: null, updatedAt: new Date(),
       }).where(eq(tenants.id, id)).returning();
+
+      // Archived tenants are intentionally skipped by the boot backfill. Once
+      // restored, reconcile the free-account grants immediately so a legacy
+      // tenant does not have to wait for the next process restart.
+      await ensureFreeAccountApps(after.id, after.ownerUserId);
+
       await writeAudit({
         actorUserId: admin.id, tenantId: id,
         targetType: 'tenant', targetId: id,
@@ -492,11 +513,22 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           //   - tenant_user_module_access, tenant_modules, tenant_invites,
           //     tenant_users
           //   - module shell tables (Task #72): module_call_logs,
-          //     module_study_sessions, module_automations, module_scaffolds
+          //     module_study_sessions, module_automations, module_scaffolds,
+          //     ninja_pool_practice_sessions
           await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.tenantId, id));
           await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.tenantId, id));
           await tx.delete(moduleAutomations).where(eq(moduleAutomations.tenantId, id));
           await tx.delete(moduleScaffolds).where(eq(moduleScaffolds.tenantId, id));
+          await tx.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.tenantId, id));
+          await tx.delete(techdeckTickets).where(eq(techdeckTickets.tenantId, id));
+          await tx.delete(techdeckTicketSequences).where(eq(techdeckTicketSequences.tenantId, id));
+          await tx.delete(techdeckAssets).where(eq(techdeckAssets.tenantId, id));
+          await tx.delete(techdeckRunbooks).where(eq(techdeckRunbooks.tenantId, id));
+          await tx.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.tenantId, id));
+          await tx.delete(tradeflowkitInvoices).where(eq(tradeflowkitInvoices.tenantId, id));
+          await tx.delete(tradeflowkitQuotes).where(eq(tradeflowkitQuotes.tenantId, id));
+          await tx.delete(tradeflowkitJobs).where(eq(tradeflowkitJobs.tenantId, id));
+          await tx.delete(tradeflowkitCustomers).where(eq(tradeflowkitCustomers.tenantId, id));
           await tx.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, id));
           await tx.delete(tenantModules).where(eq(tenantModules.tenantId, id));
           await tx.delete(tenantInvites).where(eq(tenantInvites.tenantId, id));
@@ -524,58 +556,65 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     },
   );
 
-  // Task #81: super-admin SSO Settings endpoint. Returns issuer / env /
-  // TTL / per-module launch URL pattern + a copy-paste env block for
-  // wiring child apps. Secret value is NEVER returned — only a boolean
-  // `secretStatus`. Module baseUrls are public (they're the URLs the
-  // browser is told to redirect to anyway), so they're safe to expose.
+  // Super-admin SSO Settings endpoint for the unified runtime. It exposes
+  // only public client registration metadata and secret *presence*; secret
+  // values are never returned. The old child-app HS256/JWT configuration is
+  // deliberately absent because every canonical subdomain is now served by
+  // this OperatorOS deployment and uses the browser code + PKCE lane.
   app.get(
     '/v1/platform/sso/settings',
     { preHandler: [requireSuperAdmin] },
     async () => {
-      const issuer = process.env.OPERATOROS_BASE_URL || '';
-      const apiUrl = process.env.OPERATOROS_API_URL || issuer;
+      const issuer = (process.env.OPERATOROS_BASE_URL || 'https://operatoros.net').replace(/\/+$/, '');
       const rawEnv = (process.env.APP_ENV || process.env.NODE_ENV || '').toLowerCase().trim();
       const env: 'prod' | 'staging' | 'dev' =
         rawEnv === 'prod' || rawEnv === 'production' ? 'prod'
         : rawEnv === 'staging' || rawEnv === 'stage' ? 'staging'
         : 'dev';
-      const secretStatus: 'configured' | 'missing' =
-        process.env.MODULE_SSO_SECRET && process.env.MODULE_SSO_SECRET.length >= 16
+      const codeSecretStatus: 'configured' | 'missing' =
+        process.env.SSO_CODE_ENCRYPTION_SECRET && process.env.SSO_CODE_ENCRYPTION_SECRET.length >= 32
+          ? 'configured' : 'missing';
+      const sessionSecretStatus: 'configured' | 'missing' =
+        process.env.SESSION_SECRET && process.env.SESSION_SECRET.length >= 24
           ? 'configured' : 'missing';
 
-      const modRows = await db.select().from(modules);
       const modulesOut = MODULE_CATALOG.map(c => {
-        const dbRow = modRows.find(m => m.slug === c.slug);
-        const baseUrl = dbRow?.baseUrl || pickEnv([...c.envUrlKeys]) || '';
-        const trimmed = baseUrl.replace(/\/+$/, '');
+        const registration = OPERATOROS_MODULE_REGISTRY.find(entry => entry.slug === c.slug);
+        const trimmed = registration?.productionBaseUrl.replace(/\/+$/, '') || '';
         return {
           slug: c.slug,
           displayName: c.name,
-          baseUrlConfigured: !!baseUrl,
+          baseUrlConfigured: !!trimmed,
           baseUrl: trimmed || null,
-          launchUrlPattern: trimmed ? `${trimmed}/sso?token={jwt}` : `{module_base_url}/sso?token={jwt}`,
+          clientId: registration?.clientId ?? null,
+          redirectUri: registration?.exactRedirectUris[0] ?? null,
+          logoutUri: registration?.exactLogoutUris[0] ?? null,
+          allowedOrigin: registration?.exactAllowedOrigins[0] ?? null,
+          launchUrlPattern: trimmed
+            ? `${trimmed}/sso?code={opaque_one_time_code}&state={state}`
+            : `{module_base_url}/sso?code={opaque_one_time_code}&state={state}`,
         };
       });
 
-      // Copy-paste env block for child apps. Required keys per the
-      // child-sso-integration-prompt.md contract: OPERATOROS_BASE_URL,
-      // OPERATOROS_SSO_AUDIENCE (the module slug the child verifies),
-      // OPERATOROS_SSO_ENV (matches OperatorOS-issued tokens), and
-      // MODULE_SSO_SECRET (placeholder — operator rotates it).
+      // These are the only SSO-related secret names required by the shared
+      // runtime. Per-module client secrets are intentionally not emitted.
       const envBlock = [
-        '# OperatorOS SSO — paste into the child app secrets',
-        `OPERATOROS_BASE_URL=${issuer || 'https://app.operatoros.com'}`,
-        'OPERATOROS_SSO_AUDIENCE=<your-lowercase-module-slug>',
-        `OPERATOROS_SSO_ENV=${env}`,
-        'MODULE_SSO_SECRET=<rotate-this-must-be-at-least-16-chars-and-match-operatoros>',
+        '# OperatorOS unified browser SSO (deployment secret manager)',
+        `OPERATOROS_BASE_URL=${issuer}`,
+        `APP_ENV=${env === 'prod' ? 'production' : env}`,
+        'SESSION_SECRET=<unique-high-entropy-host-session-key>',
+        'SSO_CODE_ENCRYPTION_SECRET=<unique-high-entropy-hub-only-code-key>',
+        'TRUST_PROXY=true',
       ].join('\n');
 
       return {
+        contractVersion: 'v1',
+        runtimeMode: 'unified_shared_runtime',
         issuer,
         env,
-        ttlSeconds: 90,
-        secretStatus,
+        ttlSeconds: SSO_TOKEN_TTL_SECONDS,
+        codeSecretStatus,
+        sessionSecretStatus,
         modules: modulesOut,
         envBlock,
       };
@@ -756,6 +795,15 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     if (body.planMin && !VALID_PLAN_MIN.includes(body.planMin)) {
       return badRequest(reply, `planMin must be one of ${VALID_PLAN_MIN.join(', ')}`);
     }
+    const canonicalBaseUrl = getCanonicalModuleBaseUrl(slug);
+    const canonicalUrlMismatch = getCanonicalModuleBaseUrlMismatch(slug, body.baseUrl);
+    if (canonicalUrlMismatch) {
+      return badRequest(
+        reply,
+        `baseUrl for catalog module '${slug}' must exactly match its canonical OperatorOS origin`,
+        { code: 'CANONICAL_MODULE_URL_REQUIRED', slug, ...canonicalUrlMismatch },
+      );
+    }
     for (const k of ['baseUrl', 'iconUrl'] as const) {
       if (body[k] && !isValidHttpUrl(body[k])) {
         return badRequest(reply, `${k} must be an http(s) URL`);
@@ -770,7 +818,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       description: body.description ?? '',
       iconUrl: body.iconUrl ?? null,
       category: body.category ?? 'app',
-      baseUrl: body.baseUrl ?? '',
+      baseUrl: canonicalBaseUrl ?? body.baseUrl ?? '',
       status: body.status ?? 'coming_soon',
       planMin: body.planMin ?? 'elite',
       requiresOrg: body.requiresOrg ?? false,
@@ -827,6 +875,16 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       if (body.planMin && !VALID_PLAN_MIN.includes(body.planMin)) {
         return badRequest(reply, `planMin must be one of ${VALID_PLAN_MIN.join(', ')}`);
       }
+      const targetSlug = typeof body.slug === 'string' ? body.slug : slug;
+      const canonicalBaseUrl = getCanonicalModuleBaseUrl(targetSlug);
+      const canonicalUrlMismatch = getCanonicalModuleBaseUrlMismatch(targetSlug, body.baseUrl);
+      if (canonicalUrlMismatch) {
+        return badRequest(
+          reply,
+          `baseUrl for catalog module '${targetSlug}' must exactly match its canonical OperatorOS origin`,
+          { code: 'CANONICAL_MODULE_URL_REQUIRED', slug: targetSlug, ...canonicalUrlMismatch },
+        );
+      }
       for (const k of ['baseUrl', 'iconUrl'] as const) {
         if (body[k] && !isValidHttpUrl(body[k])) {
           return badRequest(reply, `${k} must be an http(s) URL`);
@@ -851,6 +909,9 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       for (const k of ['slug','name','description','iconUrl','category','baseUrl','status','planMin','requiresOrg','ord','metadata'] as const) {
         if (body[k] !== undefined) updates[k] = body[k];
       }
+      // Any mutation of a known first-party row also heals pre-existing URL
+      // drift. Custom/admin-created modules retain their validated URL.
+      if (canonicalBaseUrl) updates.baseUrl = canonicalBaseUrl;
       const [after] = await db.update(modules).set(updates).where(eq(modules.slug, slug)).returning();
 
       await writeAudit({
@@ -1036,8 +1097,11 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       ]));
     const allPlanMonthlyPriceIdsConfigured = Object.values(planPriceIds).every(p => p.monthly);
     const allPlanAnnualPriceIdsConfigured  = Object.values(planPriceIds).every(p => p.annual);
+    const readinessAddons = MODULE_CATALOG.filter(module =>
+      module.commercialType === 'addon' && module.defaultStatus !== 'coming_soon'
+    );
     const addonPriceIds: Record<string, boolean> = Object.fromEntries(
-      MODULE_CATALOG.map(m => [m.slug, !!pickEnv([...m.stripeAddonEnvKeys])])
+      readinessAddons.map(m => [m.slug, !!pickEnv([...m.stripeAddonEnvKeys])])
     );
     const allAddonPriceIdsConfigured = Object.values(addonPriceIds).every(Boolean);
 
@@ -1963,22 +2027,57 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           remaining: { workspaces: wsCount, projects: projCount },
         });
       }
-      await db.delete(activityFeed).where(eq(activityFeed.userId, id));
-      await db.delete(saasTasks).where(eq(saasTasks.userId, id));
-      await db.delete(notes).where(eq(notes.userId, id));
-      await db.delete(workspaceMemberships).where(eq(workspaceMemberships.userId, id));
-      await db.delete(billingEvents).where(eq(billingEvents.userId, id));
-      await db.delete(subscriptions).where(eq(subscriptions.userId, id));
-      await db.delete(users).where(eq(users.id, id));
-      await writeAudit({
-        actorUserId: admin.id,
-        targetType: 'user',
-        targetId: id,
-        action: 'user_hard_deleted',
-        before: pickSafe(target, [...USER_SAFE_FIELDS]),
-        extra: { email: target.email },
-        ipAddress: request.ip,
-      }, request);
+      const beforeSnapshot = pickSafe(target, [...USER_SAFE_FIELDS]);
+      try {
+        await db.transaction(async (tx) => {
+          // All destructive steps, including the immutable audit snapshot,
+          // commit or roll back together. This prevents a later FK failure
+          // from erasing module history while leaving the account.
+          await tx.insert(adminAuditLogs).values({
+            adminId: admin.id,
+            action: 'user_hard_deleted',
+            targetUserId: id,
+            tenantId: null,
+            details: {
+              targetType: 'user',
+              targetId: id,
+              before: beforeSnapshot,
+              after: null,
+              email: target.email,
+            },
+            ipAddress: request.ip ?? null,
+          });
+          (request as any)[AUDIT_FLAG] = true;
+          await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.userId, id));
+          await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.userId, id));
+          await tx.delete(moduleAutomations).where(eq(moduleAutomations.userId, id));
+          await tx.delete(moduleScaffolds).where(eq(moduleScaffolds.userId, id));
+          await tx.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.createdByUserId, id));
+          await tx.delete(techdeckTickets).where(eq(techdeckTickets.createdByUserId, id));
+          await tx.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.userId, id));
+          await tx.delete(activityFeed).where(eq(activityFeed.userId, id));
+          await tx.delete(saasTasks).where(eq(saasTasks.userId, id));
+          await tx.delete(notes).where(eq(notes.userId, id));
+          await tx.delete(workspaceMemberships).where(eq(workspaceMemberships.userId, id));
+          await tx.delete(billingEvents).where(eq(billingEvents.userId, id));
+          await tx.delete(subscriptions).where(eq(subscriptions.userId, id));
+          await tx.delete(users).where(eq(users.id, id));
+        });
+      } catch (err: any) {
+        // Keep production logs useful without emitting target IDs, row
+        // values, or PostgreSQL's detail string.
+        console.error('[platform.users.hard-delete] tx failed', {
+          code: typeof err?.code === 'string' ? err.code : 'unknown',
+          constraint: typeof err?.constraint === 'string' ? err.constraint : null,
+        });
+        return reply.code(500).send({
+          error: 'Hard-delete failed; user rolled back to prior state.',
+          code: 'USER_DELETE_FAILED',
+          ...(process.env.NODE_ENV === 'production'
+            ? {}
+            : { detail: err?.message || String(err) }),
+        });
+      }
       return { ok: true, message: 'User permanently deleted' };
     },
   );

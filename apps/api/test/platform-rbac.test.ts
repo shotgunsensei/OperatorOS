@@ -53,7 +53,7 @@ after(async () => {
   for (const u of [alice, superAdmin]) if (u) await cleanupUser(u.id);
 });
 
-const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` });
+const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` });
 
 const SAMPLE_ROUTES: Array<{ method: 'GET' | 'POST'; url: () => string }> = [
   { method: 'GET',  url: () => '/v1/platform/tenants' },

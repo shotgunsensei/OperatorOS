@@ -476,25 +476,23 @@ export async function getAccessBreakdown(userId: string): Promise<AccessBreakdow
 export function requireModuleAccess(moduleSlug: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     await authenticate(request, reply);
-    if (reply.sent) return;
+    if (reply.sent) return reply;
     const user = (request as any).user;
 
     const { resolveTenantContext } = await import('./tenant-auth.js');
     const ctx = await resolveTenantContext(request);
     if (!ctx) {
-      reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
-      return;
+      return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
     }
     const access = await hasModuleAccess(user.id, ctx.tenantId, moduleSlug);
     if (!access.hasAccess) {
-      reply.code(403).send({
+      return reply.code(403).send({
         error: `Access to "${moduleSlug}" requires an upgraded plan or add-on.`,
         code: 'MODULE_ACCESS_DENIED',
         moduleSlug,
         source: access.source,
         reason: access.reason,
       });
-      return;
     }
     (request as any).moduleAccess = access;
   };

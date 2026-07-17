@@ -12,6 +12,7 @@ import PricingTeaser from '@/components/marketing/sections/PricingTeaser';
 import TrustSection from '@/components/marketing/sections/TrustSection';
 import FinalCta from '@/components/marketing/sections/FinalCta';
 import { useAuth } from '@/components/AuthProvider';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../packages/modules/navigation.js';
 
 /**
  * Marketing home — Phase 2.
@@ -29,7 +30,7 @@ function HomeBody() {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading && user) router.replace('/app');
+    if (!loading && user) window.location.replace(DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl);
   }, [loading, user, router]);
 
   return (

@@ -57,16 +57,40 @@ const nextConfig = {
   ...(!isMobileBuild ? {
     async rewrites() {
       const apiUrl = resolveApiUrl();
-      return [
-        {
-          source: '/api/:path*',
-          destination: `${apiUrl}/v1/:path*`,
-        },
-        {
-          source: '/ws/:path*',
-          destination: `${apiUrl}/:path*`,
-        },
-      ];
+      return {
+        // Replit attaches api.operatoros.net to this same public Next.js
+        // port. This MUST be a beforeFiles rewrite: an array/afterFiles
+        // rewrite lets real Next routes such as /, /sso, and /logout win
+        // before the API proxy is considered.
+        beforeFiles: [
+          {
+            source: '/:path*',
+            has: [{ type: 'host', value: 'api.operatoros.net' }],
+            destination: `${apiUrl}/:path*`,
+          },
+        ],
+        afterFiles: [
+          // Every registered platform/module host advertises /healthz. Keep
+          // that endpoint public and backed by the API health handler.
+          {
+            source: '/healthz',
+            destination: `${apiUrl}/healthz`,
+          },
+          {
+            source: '/readyz',
+            destination: `${apiUrl}/readyz`,
+          },
+          {
+            source: '/api/:path*',
+            destination: `${apiUrl}/v1/:path*`,
+          },
+          {
+            source: '/ws/:path*',
+            destination: `${apiUrl}/:path*`,
+          },
+        ],
+        fallback: [],
+      };
     },
     // Marketing-redesign Phase 1 route split.
     //

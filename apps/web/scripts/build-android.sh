@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WEB_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$WEB_DIR"
 
-API_URL="${NEXT_PUBLIC_API_URL:-https://operator-os.replit.app}"
+API_URL="${NEXT_PUBLIC_API_URL:-https://api.operatoros.net}"
 
 echo "============================================"
 echo "  OperatorOS Android Build"

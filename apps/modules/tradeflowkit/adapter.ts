@@ -42,7 +42,6 @@ export interface TradeFlowKitAdapterContext {
   localFallbackPath: '/modules/tradeflowkit';
   hostnames: {
     production: 'tradeflowkit.operatoros.net';
-    legacy: 'tradeflowkit.com';
   };
   coreRoutes: Array<{
     id: string;
@@ -105,7 +104,6 @@ export function createTradeFlowKitAdapterContext(input: TradeFlowKitAdapterInput
     localFallbackPath: '/modules/tradeflowkit',
     hostnames: {
       production: 'tradeflowkit.operatoros.net',
-      legacy: 'tradeflowkit.com',
     },
     coreRoutes: [
       { id: 'dashboard', label: 'Dashboard', sourcePath: '/dashboard' },

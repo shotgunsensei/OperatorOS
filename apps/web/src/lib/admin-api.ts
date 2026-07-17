@@ -83,7 +83,6 @@ export async function adminApiCall<T = any>(
   } = {},
 ): Promise<T> {
   const { action: requestedAction, ...fetchInit } = init;
-  const token = readClientStorage('token');
   const tenantId = readClientStorage('activeTenantId');
   const headers = new Headers(fetchInit.headers);
   const body = shouldJsonEncodeBody(fetchInit.body) ? JSON.stringify(fetchInit.body) : fetchInit.body;
@@ -92,7 +91,6 @@ export async function adminApiCall<T = any>(
   const action = requestedAction || `${method} ${normalizeAdminPath(path)}`;
 
   if (body != null && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-  if (token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
   if (tenantId && !headers.has('X-Tenant-Id')) headers.set('X-Tenant-Id', tenantId);
 
   let res: Response;

@@ -13,7 +13,7 @@
  *
  * These helpers are the single source of truth for turning an inbound request
  * into a clean public origin:
- *   - Recognized production hosts (`*.operatoros.net`) always resolve to a
+ *   - Exact registered production hosts always resolve to a
  *     clean `https://<host>` origin with NO internal port.
  *   - Local dev / Replit preview hosts keep their protocol and port so
  *     development keeps working.
@@ -21,10 +21,7 @@
  * They are pure (no framework or Node globals) so both the Fastify API and the
  * Next.js edge middleware can import them.
  */
-import {
-  ECOSYSTEM_ROOT_DOMAIN,
-  PLATFORM_DOMAINS,
-} from '../sdk/src/ecosystem.js';
+import { PLATFORM_DOMAINS } from '../sdk/src/ecosystem.js';
 import {
   getHostSurface,
   normalizeHost,
@@ -46,37 +43,35 @@ export interface PublicOriginInput {
 }
 
 /**
- * A recognized production host is the ecosystem root domain or any of its
- * subdomains. Ports are ignored (normalized away) before comparison.
+ * A recognized production host is an exact platform or module hostname from
+ * the registry. Merely sharing the `operatoros.net` suffix is insufficient.
+ * Ports are ignored (normalized away) before comparison.
  */
 export function isProductionHost(host: string | null | undefined): boolean {
   const normalized = normalizeHost(host);
   if (!normalized) return false;
-  return (
-    normalized === ECOSYSTEM_ROOT_DOMAIN ||
-    normalized.endsWith(`.${ECOSYSTEM_ROOT_DOMAIN}`)
-  );
+  return getHostSurface(normalized) !== 'unknown';
 }
 
-/** Loopback / preview hosts that are safe same-site redirect targets in dev. */
+/** Loopback hosts that are safe redirect targets in local development. */
 export function isLocalHost(host: string | null | undefined): boolean {
-  const normalized = normalizeHost(host);
+  const raw = String(host ?? '').trim().toLowerCase();
+  if (raw === '::1') return true;
+  const normalized = normalizeHost(host).replace(/^\[|\]$/g, '');
   if (!normalized) return false;
   return (
     normalized === 'localhost' ||
     normalized === '127.0.0.1' ||
     normalized === '0.0.0.0' ||
     normalized === '::1' ||
-    normalized.endsWith('.localhost') ||
-    normalized.endsWith('.replit.dev') ||
-    normalized.endsWith('.replit.app') ||
-    normalized.endsWith('.repl.co')
+    normalized.endsWith('.localhost')
   );
 }
 
 /**
  * True when a host is a safe SAME-SITE redirect target: a recognized
- * production host or a local/preview host. Used to reject open redirects.
+ * production host or loopback host. Used to reject open redirects. Replit
+ * preview/public suffixes are not trusted without explicit registration.
  */
 export function isSameSiteHost(host: string | null | undefined): boolean {
   return isProductionHost(host) || isLocalHost(host);
@@ -157,8 +152,9 @@ export function buildPublicUrl(path: string, hostRole: PublicHostRole): string {
  * Accepts:
  *   - Relative same-origin paths (`/app/...`), rejecting protocol-relative
  *     `//evil.com` values.
- *   - Absolute URLs whose host is same-site (`*.operatoros.net`, or local in
- *     dev), returned verbatim so cross-subdomain hand-back works.
+ *   - HTTPS URLs whose host is exactly registered, returned verbatim so
+ *     cross-subdomain hand-back works.
+ *   - HTTP(S) loopback URLs for local development only.
  *
  * Anything else collapses to `fallback`.
  */
@@ -170,14 +166,44 @@ export function sanitizeReturnTo(
   const value = raw.trim();
   if (!value) return fallback;
 
-  if (value.startsWith('/') && !value.startsWith('//')) return value;
+  // WHATWG URL parsing treats backslashes as authority separators for special
+  // schemes. For example `/\\evil.com` resolves to `https://evil.com/` when
+  // combined with an HTTPS base. Reject raw/encoded separators and controls
+  // before either the relative or absolute branch sees them.
+  if (
+    /[\\\u0000-\u001f\u007f]/.test(value) ||
+    /%(?:0[0-9a-f]|1[0-9a-f]|5c|7f)/i.test(value) ||
+    /^\/%2f/i.test(value)
+  ) {
+    return fallback;
+  }
+
+  if (value.startsWith('/')) {
+    if (value.startsWith('//')) return fallback;
+    try {
+      const trustedBase = new URL('https://operatoros-return.invalid');
+      const parsed = new URL(value, trustedBase);
+      if (parsed.origin !== trustedBase.origin || parsed.username || parsed.password) {
+        return fallback;
+      }
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch {
+      return fallback;
+    }
+  }
 
   try {
     const parsed = new URL(value);
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-      return fallback;
-    }
-    if (isSameSiteHost(parsed.hostname)) {
+    const isHttpsProductionTarget =
+      parsed.protocol === 'https:' && isProductionHost(parsed.hostname);
+    const isLocalDevelopmentTarget =
+      (parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
+      isLocalHost(parsed.hostname);
+    if (
+      !parsed.username &&
+      !parsed.password &&
+      (isHttpsProductionTarget || isLocalDevelopmentTarget)
+    ) {
       return parsed.toString();
     }
   } catch {

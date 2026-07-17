@@ -27,8 +27,19 @@ test('regular user sees only Launch + Account, in that order', () => {
   assert.ok(itemIds.includes('apps'));
   assert.ok(itemIds.includes('billing'));
   assert.ok(itemIds.includes('settings'));
+  assert.ok(itemIds.includes('contact'));
   assert.ok(!itemIds.includes('command-center'), 'no Tenant entries for non-admin');
   assert.ok(!itemIds.includes('platform'), 'no Platform entry for non-super-admin');
+});
+
+test('Contact is an external account link to the canonical OperatorOS contact page', () => {
+  const sections = buildNavSections({ isSuperAdmin: false, isTenantAdmin: false });
+  const account = sections.find(section => section.label === 'Account');
+  const contact = account?.items.find(item => item.id === 'contact');
+
+  assert.ok(contact, 'Account section must include Contact');
+  assert.equal(contact.label, 'Contact');
+  assert.equal(contact.href, 'https://operatoros.net/john');
 });
 
 test('tenant admin sees Launch + Tenant + Account, in that order', () => {
@@ -63,7 +74,7 @@ test('snapshot: regular user sidebar IA', () => {
   const snap = sectionShape(buildNavSections({ isSuperAdmin: false, isTenantAdmin: false }));
   assert.deepEqual(snap, [
     { label: 'Launch',  ids: ['my-apps', 'apps', 'ai-tools'] },
-    { label: 'Account', ids: ['billing', 'settings'] },
+    { label: 'Account', ids: ['billing', 'settings', 'contact'] },
   ]);
 });
 
@@ -72,7 +83,7 @@ test('snapshot: tenant admin sidebar IA', () => {
   assert.deepEqual(snap, [
     { label: 'Launch',  ids: ['my-apps', 'apps', 'ai-tools'] },
     { label: 'Tenant',  ids: ['command-center', 'tenant-users', 'tenant-modules', 'tenant-billing', 'tenant-settings'] },
-    { label: 'Account', ids: ['billing', 'settings'] },
+    { label: 'Account', ids: ['billing', 'settings', 'contact'] },
   ]);
 });
 
@@ -82,7 +93,7 @@ test('snapshot: super admin sidebar IA', () => {
     { label: 'Launch',   ids: ['my-apps', 'apps', 'ai-tools'] },
     { label: 'Tenant',   ids: ['command-center', 'tenant-users', 'tenant-modules', 'tenant-billing', 'tenant-settings'] },
     { label: 'Platform', ids: ['platform'] },
-    { label: 'Account',  ids: ['billing', 'settings'] },
+    { label: 'Account',  ids: ['billing', 'settings', 'contact'] },
   ]);
 });
 

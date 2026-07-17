@@ -27,7 +27,7 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
 
   useEffect(() => {
     try {
-      const parked = localStorage.getItem(PENDING_INVITE_EMAIL_KEY);
+      const parked = sessionStorage.getItem(PENDING_INVITE_EMAIL_KEY);
       if (parked) setEmail(parked);
     } catch {}
   }, []);

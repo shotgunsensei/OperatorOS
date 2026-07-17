@@ -50,32 +50,29 @@ function notFound(reply: any, code: string, msg: string) {
  * Task #108 — accept either the internal vocabulary
  * (owner|admin|member) or the public spec vocabulary
  * (owner|tenant_admin|billing_admin|user|viewer). Returns the
- * normalized INTERNAL value, or null when nothing matches.
+ * normalized stored value, preserving read-only `viewer`, or null when
+ * nothing matches.
  *
  * Delegates to the canonical mapper in `role-aliases.ts` so every
- * write path agrees on the public→internal mapping (in particular
- * `viewer` maps to `member` here and to `'user'` on the module-access
- * side — i.e. read-only access, NOT revocation).
+ * write path agrees on the public→stored mapping.
  */
 import {
   normalizeIncomingTenantRole,
   normalizeIncomingModuleAccessLevel,
+  type EffectiveTenantRole,
+  type StoredModuleAccessLevel,
 } from '../lib/role-aliases.js';
 
-function normalizeRoleInput(r: any): 'owner' | 'admin' | 'member' | null {
+function normalizeRoleInput(r: any): EffectiveTenantRole | null {
   return normalizeIncomingTenantRole(r);
-}
-function isValidRole(r: any): r is 'owner' | 'admin' | 'member' {
-  return normalizeRoleInput(r) !== null;
 }
 /**
  * Task #108 — accept either internal access levels (none|user|manager)
  * or public module role aliases (none|module_user|module_admin|viewer).
- * Delegates to the canonical mapper so `viewer` maps consistently to
- * read-only access (`'user'`) and NOT to `'none'` (which would silently
- * revoke the grant).
+ * Delegates to the canonical mapper so `viewer` stays a distinct read-only
+ * grant instead of becoming a writer or a silent revocation.
  */
-function normalizeAccessLevelInput(v: any): 'none' | 'user' | 'manager' | null {
+function normalizeAccessLevelInput(v: any): StoredModuleAccessLevel | null {
   return normalizeIncomingModuleAccessLevel(v);
 }
 function isValidEmail(e: any): e is string {

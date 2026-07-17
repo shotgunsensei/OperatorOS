@@ -1,7 +1,6 @@
 export const ROOT_SUPER_ADMIN_EMAIL = 'john@shotgunninjas.com';
-export const SESSION_COOKIE_NAME = 'token';
+export const SESSION_COOKIE_NAME = 'operatoros_session';
 export const SESSION_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
-export const PRODUCTION_SESSION_COOKIE_DOMAIN = '.operatoros.net';
 
 export type PlatformRole = 'super_admin' | 'user' | string | null | undefined;
 export type SameSitePolicy = 'lax' | 'strict' | 'none';
@@ -30,7 +29,6 @@ export interface SessionCookieOptions {
 
 export interface SessionCookieOptionsInput {
   nodeEnv?: string | null;
-  cookieDomain?: string | null;
   maxAge?: number | null;
 }
 
@@ -84,20 +82,7 @@ export function requirePlatformAdmin<TUser extends OperatorOSUserLike = Operator
   return user;
 }
 
-/**
- * Production detection for the shared session cookie.
- *
- * The bug this guards against: the cookie is only scoped to
- * `.operatoros.net` (and marked `Secure`) in production. If we keyed that
- * off `NODE_ENV` alone but the deployment only sets `APP_ENV=production`
- * (which the rest of the platform treats as the prod signal — see
- * `isProductionEnv`, `resolveSsoIssuer`), the cookie became host-only and
- * was never sent to sibling subdomains (app./auth./<module>.operatoros.net).
- * That produced the cross-subdomain login loop. We now honor BOTH signals.
- *
- * An explicit `input.nodeEnv` still wins (kept for deterministic tests);
- * it accepts either `production` or `prod`.
- */
+/** Production detection controls Secure; cookie scope remains host-only. */
 function runtimeIsProduction(explicit?: string | null): boolean {
   if (explicit !== undefined && explicit !== null) {
     const v = explicit.toLowerCase();
@@ -110,17 +95,11 @@ function runtimeIsProduction(explicit?: string | null): boolean {
 
 export function getSessionCookieOptions(input: SessionCookieOptionsInput = {}): SessionCookieOptions {
   const isProduction = runtimeIsProduction(input.nodeEnv);
-  const configuredDomain = input.cookieDomain?.trim();
-  const domain = isProduction
-    ? (configuredDomain && configuredDomain.length > 0 ? configuredDomain : PRODUCTION_SESSION_COOKIE_DOMAIN)
-    : undefined;
-
   return {
     path: '/',
     httpOnly: true,
     secure: isProduction,
     sameSite: 'lax',
-    ...(domain ? { domain } : {}),
     maxAge: input.maxAge ?? SESSION_COOKIE_MAX_AGE_SECONDS,
   };
 }

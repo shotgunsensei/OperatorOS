@@ -47,11 +47,13 @@
  * (auth, page rendering, button enablement, banner toggling) is the
  * real frontend wiring under test.
  */
-import { test, expect, request as pwRequest } from '@playwright/test';
+import { test, expect, type APIRequestContext } from '@playwright/test';
 import { Client } from 'pg';
-
-const API = process.env.E2E_API_URL ?? 'http://localhost:5001';
-const WEB = process.env.E2E_WEB_URL ?? 'http://localhost:5000';
+import {
+  E2E_WEB_URL as WEB,
+  expectNoScriptReadableAuth,
+  registerAndLogin,
+} from './session-auth';
 
 async function withDb<T>(fn: (c: Client) => Promise<T>): Promise<T> {
   const c = new Client({ connectionString: process.env.DATABASE_URL });
@@ -63,17 +65,17 @@ async function withDb<T>(fn: (c: Client) => Promise<T>): Promise<T> {
   }
 }
 
-async function registerSuperAdmin(api: Awaited<ReturnType<typeof pwRequest.newContext>>) {
+async function registerSuperAdmin(api: APIRequestContext) {
   const ts = Date.now();
   const email = `t43-admin-${ts}-${Math.random().toString(36).slice(2, 8)}@example.com`;
   const password = 'CorrectHorseBattery9!';
-  const reg = await api.post(`${API}/v1/auth/register`, {
-    data: { email, password, name: 'T43 Admin' },
+  const user = await registerAndLogin(api, {
+    email,
+    password,
+    name: 'T43 Admin',
   });
-  expect(reg.ok(), `register: ${reg.status()} ${await reg.text()}`).toBeTruthy();
-  const { token, user } = await reg.json();
   await withDb(c => c.query(`UPDATE users SET platform_role = 'super_admin' WHERE id = $1`, [user.id]));
-  return { token, userId: user.id as string };
+  return { userId: user.id };
 }
 
 async function pickModuleAndPlant(plantedId: string | null, declaredCents: number | null) {
@@ -114,15 +116,15 @@ async function cleanup(slug: string | null, userId: string | null) {
 test('planted override survives reload, malformed save is rejected without overwriting, clear falls back', async ({ page }) => {
   const ts = Date.now();
   const plantedId = `price_e2e_planted_${ts}`;
-  const api = await pwRequest.newContext();
-  const { token, userId } = await registerSuperAdmin(api);
+  const api = page.context().request;
+  const { userId } = await registerSuperAdmin(api);
   let moduleSlug: string | null = null;
 
   try {
     moduleSlug = await pickModuleAndPlant(plantedId, null);
 
-    await page.addInitScript((tk) => { localStorage.setItem('token', tk); }, token);
     await page.goto(`${WEB}/platform/modules/${moduleSlug}`);
+    await expectNoScriptReadableAuth(page);
 
     // Property 1 — the planted DB value is what the UI shows on a cold load.
     const currentOverride = page.getByTestId('text-current-stripe-price-id');
@@ -182,8 +184,8 @@ test('successful save updates the override and the mismatch pill disappears', as
   const initialId = `price_e2e_initial_${ts}`;
   const newId = `price_e2e_new_${ts}`;
   const declared = 9900;
-  const api = await pwRequest.newContext();
-  const { token, userId } = await registerSuperAdmin(api);
+  const api = page.context().request;
+  const { userId } = await registerSuperAdmin(api);
   let moduleSlug: string | null = null;
 
   try {
@@ -249,8 +251,8 @@ test('successful save updates the override and the mismatch pill disappears', as
       }
     });
 
-    await page.addInitScript((tk) => { localStorage.setItem('token', tk); }, token);
     await page.goto(`${WEB}/platform/modules/${slug}`);
+    await expectNoScriptReadableAuth(page);
 
     // Initial: planted override is shown.
     await expect(page.getByTestId('text-current-stripe-price-id'))

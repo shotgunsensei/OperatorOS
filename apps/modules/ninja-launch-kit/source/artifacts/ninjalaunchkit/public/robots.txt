@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /account
+Disallow: /dashboard
+Disallow: /builder
+Disallow: /kits
+Disallow: /exports
+Disallow: /brands
+Disallow: /api/
+
+Sitemap: https://1b38743a-bdcb-4da2-99b1-ed58d54ff38a-00-1se5l5253y5xg.janeway.replit.dev/sitemap.xml

@@ -13,9 +13,9 @@ the final framework's public prefix and appear in the explicit safe list only.
 | `OPERATOROS_BASE_URL`      | server config            | Canonical parent base/issuer per repository contract.                             |
 | `OUTCALL_URL`              | parent server config     | Parent registry runtime override, normally canonical URL.                         |
 | `DATABASE_URL`             | secret                   | Approved shared PostgreSQL connection with TLS.                                   |
-| `MODULE_SSO_SECRET`        | secret                   | Existing OperatorOS handoff signing secret; do not rename.                        |
+| `SSO_CODE_ENCRYPTION_SECRET` | secret                 | Hub-only OperatorOS browser-code key; configure on the unified runtime only.       |
 | `OPERATOROS_SERVICE_TOKEN` | secret                   | Existing entitlement introspection/propagation token when used.                   |
-| `SESSION_SECRET`           | secret                   | OutCall child-session signing/encryption key if the runtime uses signed sessions. |
+| `SESSION_SECRET`           | secret                   | Shared-runtime host-session signing key. Never expose it to browser code.          |
 
 ## Twilio
 
@@ -45,4 +45,7 @@ overwrite ciphertext keys without a migration.
 Only the canonical OutCall URL, public OperatorOS URL, and Stripe publishable key
 may be exposed if the UI needs them. Twilio credentials, SSO/service/session
 secrets, database URLs, HMAC/encryption keys, webhook secrets, OTPs, and provider
-signatures are never placed in browser bundles or logs.
+signatures are never placed in browser bundles or logs. Unified-runtime
+OutCall does not receive a module-shared SSO signing secret. If OutCall later
+becomes a separately deployed workload, provision an independent per-client
+server exchange credential under the reviewed SSO v1 contract.

@@ -26,6 +26,8 @@ import { useTenant } from '@/components/TenantProvider';
 import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createPulseDeskAdapterContext } from '../../../../../apps/modules/pulsedesk/adapter.js';
+import PulseDeskDepartmentEscalationQueue from './PulseDeskDepartmentEscalationQueue';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 interface PulseDeskShellProps {
   baseUrl?: string;
@@ -235,7 +237,7 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
   }), [adapterRole, platformAdmin, tenantId, user]);
 
   const isLoading = authLoading || tenantLoading;
-  const hasTenantContext = !!adapter.tenantId || platformAdmin;
+  const hasTenantContext = !!adapter.tenantId;
   const roleLabel = platformAdmin
     ? 'Platform super admin'
     : activeRole
@@ -268,7 +270,12 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
     <main className="pulsedesk-shell" data-testid="pulsedesk-module-shell">
       <style>{shellCss}</style>
       <section className="pulsedesk-wrap">
-        <header className="pulsedesk-header" data-testid="pulsedesk-module-header">
+        <header
+          id="pulsedesk-overview"
+          className="pulsedesk-header"
+          data-testid="pulsedesk-module-header"
+          tabIndex={-1}
+        >
           <div className="pulsedesk-header-top">
             <div style={{ minWidth: 0 }}>
               <div style={eyebrowStyle}>Healthcare operations command layer</div>
@@ -278,7 +285,7 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
               </p>
             </div>
             <div className="pulsedesk-actions">
-              <HeaderLink href="/app" testId="pulsedesk-return-command-center" Icon={ArrowLeft}>
+              <HeaderLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} testId="pulsedesk-return-command-center" Icon={ArrowLeft}>
                 Command Center
               </HeaderLink>
               {canManageModule && (
@@ -287,7 +294,7 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
                 </HeaderLink>
               )}
               {platformAdmin && (
-                <HeaderLink href="/app/platform/modules/pulsedesk" testId="pulsedesk-platform-manage-link" Icon={ShieldCheck}>
+                <HeaderLink href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}app/platform/modules/pulsedesk`} testId="pulsedesk-platform-manage-link" Icon={ShieldCheck}>
                   Platform Command
                 </HeaderLink>
               )}
@@ -320,7 +327,12 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
         <div className="pulsedesk-body">
           <nav className="pulsedesk-rail" aria-label="PulseDesk sections" data-testid="pulsedesk-module-sidebar">
             {workflowShortcuts.map(({ id, label, Icon, tone }) => (
-              <a key={id} href={`#pulsedesk-${id}`} style={railLinkStyle} data-testid={`pulsedesk-sidebar-${id}`}>
+              <a
+                key={id}
+                href={id === 'tickets' || id === 'departments' ? '#pulsedesk-operations' : `#pulsedesk-${id}`}
+                style={railLinkStyle}
+                data-testid={`pulsedesk-sidebar-${id}`}
+              >
                 <Icon size={15} color={tone} />
                 <span>{label}</span>
               </a>
@@ -338,14 +350,37 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
               ))}
             </section>
 
-            <section className="pulsedesk-panel" style={{ padding: 18 }} data-testid="pulsedesk-operations-panel">
+            <section
+              id="pulsedesk-operations"
+              className="pulsedesk-panel"
+              style={{ padding: 18 }}
+              data-testid="pulsedesk-operations-panel"
+              tabIndex={-1}
+            >
+              {adapter.tenantId ? (
+                <PulseDeskDepartmentEscalationQueue
+                  key={adapter.tenantId}
+                  tenantKey={adapter.tenantId}
+                />
+              ) : (
+                <StatePanel
+                  testId="pulsedesk-operations-no-tenant"
+                  tone={colors.red}
+                  Icon={AlertTriangle}
+                  title="Select a tenant to open the operations queue"
+                  body="The live PulseDesk queue never loads without an explicit OperatorOS tenant context, including for platform administrators."
+                />
+              )}
+            </section>
+
+            <section className="pulsedesk-panel" style={{ padding: 18 }} data-testid="pulsedesk-workflow-map">
               <SectionHeading
                 Icon={HeartPulse}
-                title="Operations Queue"
-                subtitle="Primary PulseDesk workflows stay grouped by clinical operations intent."
+                title="Clinical operations map"
+                subtitle="The department escalation queue is live; remaining workflow surfaces stay gated until their controlled migration."
               />
               <div className="pulsedesk-workflow-grid" style={{ marginTop: 14 }}>
-                {workflowShortcuts.map(({ id, label, summary, Icon, tone }) => (
+                {workflowShortcuts.filter(({ id }) => id !== 'tickets').map(({ id, label, summary, Icon, tone }) => (
                   <WorkflowPanel key={id} id={id} label={label} summary={summary} Icon={Icon} tone={tone} />
                 ))}
               </div>
@@ -360,15 +395,21 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
               <div style={emptyStateStyle} data-testid="pulsedesk-empty-state">
                 <HeartPulse size={18} color={colors.green} />
                 <div>
-                  <div style={{ fontWeight: 800 }}>Ready for a controlled import smoke pass</div>
+                  <div style={{ fontWeight: 800 }}>PHI-minimized department coordination is active</div>
                   <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                    The shell is tenant-aware, SSO-owned by OperatorOS, and separated from PulseDesk-local checkout ownership.
+                    OperatorOS owns the session, tenant, entitlement, and manager capability. PulseDesk stores structured operational workflow data only.
                   </div>
                 </div>
               </div>
             </section>
 
-            <section id="pulsedesk-settings" className="pulsedesk-panel" style={{ padding: 18 }} data-testid="pulsedesk-settings-panel">
+            <section
+              id="pulsedesk-settings"
+              className="pulsedesk-panel"
+              style={{ padding: 18 }}
+              data-testid="pulsedesk-settings-panel"
+              tabIndex={-1}
+            >
               <SectionHeading
                 Icon={ShieldCheck}
                 title="Settings and Admin"
@@ -499,7 +540,9 @@ function WorkflowPanel({
         <h3 style={{ margin: 0, fontSize: 15 }}>{label}</h3>
       </div>
       <p style={{ color: colors.muted, fontSize: 13, lineHeight: 1.45, margin: '10px 0 0' }}>{summary}</p>
-      <div style={{ marginTop: 12, color: tone, fontSize: 12, fontWeight: 800 }}>OperatorOS gated</div>
+      <div style={{ marginTop: 12, color: colors.amber, fontSize: 12, fontWeight: 800 }}>
+        Migration pending — disabled
+      </div>
     </article>
   );
 }

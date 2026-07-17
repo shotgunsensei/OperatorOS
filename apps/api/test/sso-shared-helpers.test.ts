@@ -4,7 +4,6 @@ process.env.APP_ENV = 'dev';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  buildSsoLaunchUrl,
   buildSsoLaunchUrlWithCode,
   createSsoExchangeCode,
   createSsoHandoffClaims,
@@ -15,6 +14,11 @@ import {
   verifySsoHandoffToken,
 } from '../../../packages/sso/index.js';
 import { getModuleById } from '../../../packages/modules/registry.js';
+import {
+  isPkceChallenge,
+  isPkceVerifier,
+  isSsoTransactionValue,
+} from '../../../packages/sso/browser-contract.js';
 
 const SECRET = 'sso-helper-test-secret-1234567890';
 
@@ -50,7 +54,7 @@ test('shared SSO helper builds required audience-bound claims', () => {
   assert.equal(claims.iss, 'https://operatoros.test');
   assert.equal(claims.aud, 'techdeck');
   assert.equal(claims.iat, 1_800_000_000);
-  assert.equal(claims.exp, 1_800_000_090);
+  assert.equal(claims.exp, 1_800_000_060);
   assert.equal(claims.jti, 'jti-fixture');
   assert.equal(claims.nonce, 'nonce-fixture');
 });
@@ -112,14 +116,6 @@ test('shared SSO helper rejects expired tokens and normalizes env/secrets', () =
   assert.equal(resolveSsoSecret(SECRET), SECRET);
 });
 
-test('shared SSO launch URL targets the module /sso receiver', () => {
-  const token = 'signed-token';
-  assert.equal(
-    buildSsoLaunchUrl('https://techdeck.operatoros.net/', token),
-    'https://techdeck.operatoros.net/sso?token=signed-token',
-  );
-});
-
 test('opaque exchange code round-trips the jti+aud binding under the correct secret', () => {
   const jti = 'handoff-jti-abc123';
   const aud = 'pulsedesk';
@@ -138,6 +134,33 @@ test('opaque exchange code round-trips the jti+aud binding under the correct sec
   const code2 = createSsoExchangeCode({ jti, aud }, SECRET);
   assert.notEqual(code, code2);
   assert.deepEqual(parseSsoExchangeCode(code2, SECRET), { jti, aud });
+});
+
+test('opaque browser authorization code preserves its complete transaction binding', () => {
+  const binding = {
+    jti: 'handoff-jti-browser',
+    aud: 'techdeck',
+    clientId: 'operatoros:techdeck',
+    redirectUri: 'https://techdeck.operatoros.net/sso',
+    returnTo: '/tickets?view=mine',
+    state: 's'.repeat(43),
+    nonce: 'n'.repeat(43),
+    codeChallenge: 'c'.repeat(43),
+  };
+  const code = createSsoExchangeCode(binding, SECRET);
+  assert.deepEqual(parseSsoExchangeCode(code, SECRET), binding);
+  for (const privateValue of Object.values(binding)) {
+    assert.ok(!code.includes(privateValue), 'encrypted code must not disclose transaction binding values');
+  }
+});
+
+test('browser transaction validators enforce state, nonce, and S256 PKCE shapes', () => {
+  assert.equal(isSsoTransactionValue('s'.repeat(43)), true);
+  assert.equal(isSsoTransactionValue('short'), false);
+  assert.equal(isPkceChallenge('c'.repeat(43)), true);
+  assert.equal(isPkceChallenge('c'.repeat(42)), false);
+  assert.equal(isPkceVerifier('v'.repeat(64)), true);
+  assert.equal(isPkceVerifier('contains spaces'.repeat(4)), false);
 });
 
 test('opaque exchange code fails closed on tamper, wrong secret, or malformed input', () => {

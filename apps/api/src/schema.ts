@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const workspaces = pgTable('workspaces', {
@@ -598,11 +598,26 @@ export const ssoHandoffTokens = pgTable('sso_handoff_tokens', {
   index('idx_sso_tokens_tenant').on(t.tenantId),
 ]);
 
+export const revokedSessionTokens = pgTable('revoked_session_tokens', {
+  tokenHash: varchar('token_hash', { length: 64 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 }).notNull(),
+  sessionType: text('session_type').notNull(),
+  tenantId: varchar('tenant_id', { length: 36 }),
+  moduleId: text('module_id'),
+  expiresAt: timestamp('expires_at').notNull(),
+  revokedAt: timestamp('revoked_at').defaultNow().notNull(),
+  reason: text('reason').notNull().default('local_logout'),
+}, (t) => [
+  index('idx_revoked_sessions_user').on(t.userId),
+  index('idx_revoked_sessions_expires').on(t.expiresAt),
+]);
+
 export type ModuleRow = typeof modules.$inferSelect;
 export type PlanModuleRow = typeof planModules.$inferSelect;
 export type AddonSubscriptionRow = typeof addonSubscriptions.$inferSelect;
 export type EntitlementOverrideRow = typeof entitlementOverrides.$inferSelect;
 export type SsoHandoffTokenRow = typeof ssoHandoffTokens.$inferSelect;
+export type RevokedSessionTokenRow = typeof revokedSessionTokens.$inferSelect;
 
 export const aiPromptTemplates = pgTable('ai_prompt_templates', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
@@ -720,8 +735,11 @@ export const tenantUsers = pgTable('tenant_users', {
   tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
   userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
   // Tenant-scoped role (distinct from `users.platform_role`).
-  // owner > admin > member. Owners cannot be demoted by admins.
-  role: text('role', { enum: ['owner', 'admin', 'member'] }).notNull().default('member'),
+  // owner > admin > member > viewer. Startup DDL canonicalizes older public
+  // aliases before authorization reads them.
+  role: text('role', {
+    enum: ['owner', 'admin', 'member', 'viewer'],
+  }).notNull().default('member'),
   joinedAt: timestamp('joined_at').defaultNow().notNull(),
 }, (t) => [
   index('idx_tenant_users_tenant').on(t.tenantId),
@@ -760,14 +778,17 @@ export const tenantModules = pgTable('tenant_modules', {
 
 // Per-user, per-module grant inside a tenant.
 //   none    — explicit denial (overrides allowAllMembers)
-//   user    — can use the module
+//   viewer  — can read module data but cannot mutate it
+//   user    — can use and mutate the module
 //   manager — can use AND grant access to other tenant members
 export const tenantUserModuleAccess = pgTable('tenant_user_module_access', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
   userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
   moduleId: varchar('module_id', { length: 36 }).notNull().references(() => modules.id),
-  accessLevel: text('access_level', { enum: ['none', 'user', 'manager'] }).notNull().default('none'),
+  accessLevel: text('access_level', {
+    enum: ['none', 'user', 'manager', 'module_user', 'module_admin', 'viewer'],
+  }).notNull().default('none'),
   grantedByUserId: varchar('granted_by_user_id', { length: 36 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -780,7 +801,9 @@ export const tenantInvites = pgTable('tenant_invites', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
   email: text('email').notNull(),
-  role: text('role', { enum: ['owner', 'admin', 'member'] }).notNull().default('member'),
+  role: text('role', {
+    enum: ['owner', 'admin', 'member', 'viewer'],
+  }).notNull().default('member'),
   token: text('token').notNull().unique(),
   invitedByUserId: varchar('invited_by_user_id', { length: 36 }).notNull().references(() => users.id),
   acceptedAt: timestamp('accepted_at'),
@@ -881,7 +904,403 @@ export const moduleScaffolds = pgTable('module_scaffolds', {
   index('idx_module_scaffolds_tenant_created').on(t.tenantId, t.createdAt),
 ]);
 
+/** Tenant-owned workflow records for TorqueShed, FaultlineLab, BrandForgeOS,
+ * and SnapProofOS. Route contracts retain each product's distinct vocabulary. */
+export const moduleWorkflowItems = pgTable('module_workflow_items', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  moduleSlug: text('module_slug').notNull(),
+  itemType: text('item_type').notNull(),
+  title: text('title').notNull(),
+  status: text('status').notNull(),
+  summary: text('summary'),
+  data: jsonb('data').$type<Record<string, string | number | boolean | null>>().notNull().default({}),
+  version: integer('version').notNull().default(1),
+  deletedAt: timestamp('deleted_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_module_workflow_tenant_module_created').on(t.tenantId, t.moduleSlug, t.createdAt),
+  index('idx_module_workflow_tenant_status').on(t.tenantId, t.moduleSlug, t.status),
+]);
+
+/**
+ * First shared-runtime TechDeck workflow.
+ *
+ * The imported standalone app carries a much broader MSP data model. This
+ * table deliberately owns only technician queue state and references the
+ * central OperatorOS tenant/user records for authority and assignment.
+ */
+export const techdeckTicketSequences = pgTable('techdeck_ticket_sequences', {
+  tenantId: varchar('tenant_id', { length: 36 }).primaryKey().references(() => tenants.id),
+  lastNumber: integer('last_number').notNull().default(0),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const techdeckTickets = pgTable('techdeck_tickets', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  number: integer('number').notNull(),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  assignedToUserId: varchar('assigned_to_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  priority: text('priority', {
+    enum: ['critical', 'high', 'medium', 'low'],
+  }).notNull().default('medium'),
+  status: text('status', {
+    enum: ['open', 'in_progress', 'waiting_on_client', 'resolved', 'closed'],
+  }).notNull().default('open'),
+  responseDeadline: timestamp('response_deadline'),
+  resolutionDeadline: timestamp('resolution_deadline'),
+  respondedAt: timestamp('responded_at'),
+  resolvedAt: timestamp('resolved_at'),
+  closedAt: timestamp('closed_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [
+  index('idx_techdeck_tickets_tenant_created').on(t.tenantId, t.createdAt),
+  index('idx_techdeck_tickets_tenant_status').on(t.tenantId, t.status),
+  index('idx_techdeck_tickets_tenant_priority').on(t.tenantId, t.priority),
+  index('idx_techdeck_tickets_assigned').on(t.tenantId, t.assignedToUserId),
+  index('idx_techdeck_tickets_deadline').on(t.tenantId, t.resolutionDeadline),
+  uniqueIndex('idx_techdeck_tickets_number').on(t.tenantId, t.number),
+]);
+
+export const techdeckAssets = pgTable('techdeck_assets', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  type: text('type').notNull().default('endpoint'),
+  hostname: text('hostname'),
+  ipAddress: text('ip_address'),
+  operatingSystem: text('operating_system'),
+  health: text('health').notNull().default('unknown'),
+  lastSeenAt: timestamp('last_seen_at'),
+  notes: text('notes'),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [
+  index('idx_techdeck_assets_tenant_health').on(t.tenantId, t.health),
+  index('idx_techdeck_assets_tenant_created').on(t.tenantId, t.createdAt),
+]);
+
+export const techdeckRunbooks = pgTable('techdeck_runbooks', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  approvedByUserId: varchar('approved_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  platform: text('platform').notNull(),
+  purpose: text('purpose').notNull(),
+  scriptText: text('script_text').notNull(),
+  riskLevel: text('risk_level').notNull().default('medium'),
+  status: text('status').notNull().default('draft'),
+  approvedAt: timestamp('approved_at'),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [
+  index('idx_techdeck_runbooks_tenant_status').on(t.tenantId, t.status),
+  index('idx_techdeck_runbooks_tenant_created').on(t.tenantId, t.createdAt),
+]);
+
+/**
+ * First shared-runtime PulseDesk workflow.
+ *
+ * This deliberately stores only PHI-minimized operational intake, department
+ * routing, assignment, status, SLA, and structured history. OperatorOS owns
+ * identity, tenant membership, module entitlement, and billing authority.
+ */
+export const pulsedeskDepartments = pgTable('pulsedesk_departments', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  name: text('name').notNull(),
+  active: boolean('active').notNull().default(true),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_pulsedesk_departments_tenant_active').on(t.tenantId, t.active),
+  uniqueIndex('idx_pulsedesk_departments_tenant_name_ci').on(
+    t.tenantId,
+    sql`lower(${t.name})`,
+  ),
+]);
+
+export const pulsedeskRequestSequences = pgTable('pulsedesk_request_sequences', {
+  tenantId: varchar('tenant_id', { length: 36 }).primaryKey().references(() => tenants.id),
+  lastNumber: integer('last_number').notNull().default(0),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const pulsedeskRequests = pgTable('pulsedesk_requests', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  number: integer('number').notNull(),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  assignedToUserId: varchar('assigned_to_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  departmentId: varchar('department_id', { length: 36 }).references(() => pulsedeskDepartments.id, { onDelete: 'set null' }),
+  summary: text('summary').notNull(),
+  locationLabel: text('location_label'),
+  category: text('category', {
+    enum: [
+      'it_infrastructure',
+      'medical_equipment',
+      'supplies_inventory',
+      'facilities_building',
+      'housekeeping_environmental',
+      'safety_compliance',
+      'vendor_external',
+      'administrative',
+      'hr_staff',
+      'other',
+    ],
+  }).notNull(),
+  priority: text('priority', {
+    enum: ['critical', 'high', 'normal', 'low'],
+  }).notNull().default('normal'),
+  status: text('status', {
+    enum: [
+      'new',
+      'triage',
+      'assigned',
+      'waiting_department',
+      'waiting_vendor',
+      'in_progress',
+      'escalated',
+      'resolved',
+      'closed',
+    ],
+  }).notNull().default('new'),
+  isPatientImpacting: boolean('is_patient_impacting').notNull().default(false),
+  dueAt: timestamp('due_at'),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_pulsedesk_requests_tenant_created').on(t.tenantId, t.createdAt),
+  index('idx_pulsedesk_requests_tenant_status').on(t.tenantId, t.status),
+  index('idx_pulsedesk_requests_tenant_priority').on(t.tenantId, t.priority),
+  index('idx_pulsedesk_requests_tenant_department').on(t.tenantId, t.departmentId),
+  index('idx_pulsedesk_requests_tenant_assignee').on(t.tenantId, t.assignedToUserId),
+  index('idx_pulsedesk_requests_tenant_due').on(t.tenantId, t.dueAt),
+  uniqueIndex('idx_pulsedesk_requests_number').on(t.tenantId, t.number),
+]);
+
+export const pulsedeskRequestEvents = pgTable('pulsedesk_request_events', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  // Event history is immutable. Keep the default restrictive FK behavior so
+  // an accidental direct request delete cannot silently erase its audit trail.
+  requestId: varchar('request_id', { length: 36 }).notNull().references(
+    () => pulsedeskRequests.id,
+    { onDelete: 'restrict' },
+  ),
+  actorUserId: varchar('actor_user_id', { length: 36 }).notNull().references(() => users.id),
+  eventType: text('event_type', {
+    enum: [
+      'created',
+      'updated',
+      'department_changed',
+      'assignee_changed',
+      'priority_changed',
+      'status_changed',
+      'escalated',
+    ],
+  }).notNull(),
+  fromStatus: text('from_status'),
+  toStatus: text('to_status'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_pulsedesk_request_events_tenant_request_created').on(t.tenantId, t.requestId, t.createdAt),
+]);
+
+/**
+ * First shared-runtime Ninja Pool Hall workflow.
+ *
+ * Physics and ball state remain local to the browser. This table stores only
+ * bounded personal practice-rack summaries; it is not an authoritative
+ * multiplayer or competitive leaderboard record.
+ */
+export const ninjaPoolPracticeSessions = pgTable('ninja_pool_practice_sessions', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  status: text('status', {
+    enum: ['active', 'completed', 'abandoned'],
+  }).notNull().default('active'),
+  shots: integer('shots').notNull().default(0),
+  objectBallsPocketed: integer('object_balls_pocketed').notNull().default(0),
+  scratches: integer('scratches').notNull().default(0),
+  version: integer('version').notNull().default(1),
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_ninja_pool_practice_tenant_user_started').on(t.tenantId, t.userId, t.startedAt.desc()),
+  index('idx_ninja_pool_practice_tenant_status').on(t.tenantId, t.status),
+  uniqueIndex('idx_ninja_pool_practice_one_active')
+    .on(t.tenantId, t.userId)
+    .where(sql`${t.status} = 'active'`),
+]);
+
+/**
+ * First shared-runtime TradeFlowKit workflow.
+ *
+ * This table deliberately holds only manual lead tracking. It has no local
+ * identity, subscription, provider-messaging, or customer/job conversion
+ * fields; OperatorOS tenant/module guards own access to every row.
+ */
+export const tradeflowkitLeads = pgTable('tradeflowkit_leads', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  source: text('source').notNull().default('manual'),
+  status: text('status', {
+    enum: ['new', 'contacted', 'qualified', 'follow_up', 'lost'],
+  }).notNull().default('new'),
+  name: text('name').notNull(),
+  phone: text('phone'),
+  email: text('email'),
+  serviceType: text('service_type'),
+  description: text('description'),
+  urgency: text('urgency', {
+    enum: ['normal', 'urgent', 'emergency'],
+  }).notNull().default('normal'),
+  estimatedValueCents: integer('estimated_value_cents'),
+  nextFollowUpAt: timestamp('next_follow_up_at'),
+  lastContactedAt: timestamp('last_contacted_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [
+  index('idx_tradeflowkit_leads_tenant_created').on(t.tenantId, t.createdAt),
+  index('idx_tradeflowkit_leads_tenant_status').on(t.tenantId, t.status),
+  index('idx_tradeflowkit_leads_tenant_followup').on(t.tenantId, t.nextFollowUpAt),
+]);
+
+export type TradeFlowKitLineItem = {
+  description: string;
+  quantity: number;
+  unitPriceCents: number;
+};
+
+export const tradeflowkitCustomers = pgTable('tradeflowkit_customers', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  phone: text('phone'),
+  email: text('email'),
+  address: text('address'),
+  notes: text('notes'),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [
+  index('idx_tfk_customers_tenant_created').on(t.tenantId, t.createdAt),
+]);
+
+export const tradeflowkitJobs = pgTable('tradeflowkit_jobs', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  customerId: varchar('customer_id', { length: 36 }).notNull().references(() => tradeflowkitCustomers.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  status: text('status').notNull().default('lead'),
+  priority: text('priority').notNull().default('normal'),
+  scheduledStart: timestamp('scheduled_start'),
+  scheduledEnd: timestamp('scheduled_end'),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [
+  index('idx_tfk_jobs_tenant_status').on(t.tenantId, t.status),
+  index('idx_tfk_jobs_tenant_customer').on(t.tenantId, t.customerId),
+]);
+
+export const tradeflowkitQuotes = pgTable('tradeflowkit_quotes', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  customerId: varchar('customer_id', { length: 36 }).notNull().references(() => tradeflowkitCustomers.id),
+  jobId: varchar('job_id', { length: 36 }).references(() => tradeflowkitJobs.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  status: text('status').notNull().default('draft'),
+  lineItems: jsonb('line_items').$type<TradeFlowKitLineItem[]>().notNull(),
+  subtotalCents: integer('subtotal_cents').notNull(),
+  taxRateBps: integer('tax_rate_bps').notNull().default(0),
+  taxCents: integer('tax_cents').notNull().default(0),
+  discountCents: integer('discount_cents').notNull().default(0),
+  totalCents: integer('total_cents').notNull(),
+  notes: text('notes'),
+  expiresAt: timestamp('expires_at'),
+  sentAt: timestamp('sent_at'),
+  acceptedAt: timestamp('accepted_at'),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [
+  index('idx_tfk_quotes_tenant_status').on(t.tenantId, t.status),
+  index('idx_tfk_quotes_tenant_customer').on(t.tenantId, t.customerId),
+]);
+
+export const tradeflowkitInvoices = pgTable('tradeflowkit_invoices', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  customerId: varchar('customer_id', { length: 36 }).notNull().references(() => tradeflowkitCustomers.id),
+  jobId: varchar('job_id', { length: 36 }).references(() => tradeflowkitJobs.id),
+  sourceQuoteId: varchar('source_quote_id', { length: 36 }).references(() => tradeflowkitQuotes.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  status: text('status').notNull().default('draft'),
+  lineItems: jsonb('line_items').$type<TradeFlowKitLineItem[]>().notNull(),
+  subtotalCents: integer('subtotal_cents').notNull(),
+  taxRateBps: integer('tax_rate_bps').notNull().default(0),
+  taxCents: integer('tax_cents').notNull().default(0),
+  discountCents: integer('discount_cents').notNull().default(0),
+  totalCents: integer('total_cents').notNull(),
+  notes: text('notes'),
+  dueDate: timestamp('due_date'),
+  sentAt: timestamp('sent_at'),
+  paidAt: timestamp('paid_at'),
+  paymentMethod: text('payment_method'),
+  paymentReference: text('payment_reference'),
+  paymentNotes: text('payment_notes'),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [
+  index('idx_tfk_invoices_tenant_status').on(t.tenantId, t.status),
+  index('idx_tfk_invoices_tenant_customer').on(t.tenantId, t.customerId),
+  uniqueIndex('uniq_tfk_invoice_source_quote').on(t.tenantId, t.sourceQuoteId)
+    .where(sql`${t.sourceQuoteId} IS NOT NULL AND ${t.deletedAt} IS NULL`),
+]);
+
 export type ModuleCallLogRow = typeof moduleCallLogs.$inferSelect;
 export type ModuleStudySessionRow = typeof moduleStudySessions.$inferSelect;
 export type ModuleAutomationRow = typeof moduleAutomations.$inferSelect;
 export type ModuleScaffoldRow = typeof moduleScaffolds.$inferSelect;
+export type TechDeckTicketRow = typeof techdeckTickets.$inferSelect;
+export type TechDeckAssetRow = typeof techdeckAssets.$inferSelect;
+export type TechDeckRunbookRow = typeof techdeckRunbooks.$inferSelect;
+export type PulseDeskDepartmentRow = typeof pulsedeskDepartments.$inferSelect;
+export type PulseDeskRequestRow = typeof pulsedeskRequests.$inferSelect;
+export type PulseDeskRequestEventRow = typeof pulsedeskRequestEvents.$inferSelect;
+export type NinjaPoolPracticeSessionRow = typeof ninjaPoolPracticeSessions.$inferSelect;
+export type TradeFlowKitLeadRow = typeof tradeflowkitLeads.$inferSelect;
+export type TradeFlowKitCustomerRow = typeof tradeflowkitCustomers.$inferSelect;
+export type TradeFlowKitJobRow = typeof tradeflowkitJobs.$inferSelect;
+export type TradeFlowKitQuoteRow = typeof tradeflowkitQuotes.$inferSelect;
+export type TradeFlowKitInvoiceRow = typeof tradeflowkitInvoices.$inferSelect;

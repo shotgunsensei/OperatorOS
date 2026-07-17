@@ -24,6 +24,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://operatoros.net'),
   title: 'OperatorOS — The Command Layer for Modern Operations',
   description:
     'The modular command layer for modern business operations. One console, every tool your team launches. Powered by Shotgun Ninjas.',

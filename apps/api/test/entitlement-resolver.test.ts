@@ -11,7 +11,7 @@
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
   tenants, tenantUsers, tenantModules, tenantUserModuleAccess,
@@ -98,6 +98,38 @@ test('tenant role alias: member -> user', async () => {
   const snap = await resolveEntitlements(member.id, tenant.id);
   assert.equal(snap!.tenant.role, 'member');
   assert.equal(snap!.tenant.roleAlias, 'user');
+});
+
+test('tenant viewer remains read-only in entitlement and module-role snapshots', async () => {
+  await db.update(tenantUsers).set({ role: 'viewer' }).where(and(
+    eq(tenantUsers.tenantId, tenant.id),
+    eq(tenantUsers.userId, member.id),
+  ));
+  await db.insert(tenantUserModuleAccess).values({
+    tenantId: tenant.id,
+    userId: member.id,
+    moduleId: mod.id,
+    accessLevel: 'manager',
+  });
+  try {
+    const snap = await resolveEntitlements(member.id, tenant.id);
+    assert.equal(snap!.tenant.role, 'viewer');
+    assert.equal(snap!.tenant.membershipRole, 'viewer');
+    assert.equal(snap!.tenant.roleAlias, 'viewer');
+    const entry = snap!.modules.find((candidate) => candidate.slug === mod.slug)!;
+    assert.equal(entry.enabled, true);
+    assert.equal(entry.accessLevel, 'viewer');
+    assert.equal(entry.moduleRole, 'viewer');
+  } finally {
+    await db.delete(tenantUserModuleAccess).where(and(
+      eq(tenantUserModuleAccess.tenantId, tenant.id),
+      eq(tenantUserModuleAccess.userId, member.id),
+    ));
+    await db.update(tenantUsers).set({ role: 'member' }).where(and(
+      eq(tenantUsers.tenantId, tenant.id),
+      eq(tenantUsers.userId, member.id),
+    ));
+  }
 });
 
 test('module entry carries spec fields: enabled, accessLevel, moduleRole, features', async () => {

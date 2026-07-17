@@ -41,7 +41,6 @@ export interface PulseDeskAdapterContext {
   localFallbackPath: '/modules/pulsedesk';
   hostnames: {
     production: 'pulsedesk.operatoros.net';
-    legacy: 'pulsedesk.support';
   };
   coreRoutes: Array<{
     id: string;
@@ -100,7 +99,6 @@ export function createPulseDeskAdapterContext(input: PulseDeskAdapterInput): Pul
     localFallbackPath: '/modules/pulsedesk',
     hostnames: {
       production: 'pulsedesk.operatoros.net',
-      legacy: 'pulsedesk.support',
     },
     coreRoutes: [
       { id: 'dashboard', label: 'Dashboard', sourcePath: '/dashboard' },

@@ -1,8 +1,13 @@
 # OperatorOS Module Workspace
 
-This directory holds imported module snapshots and module adapters for
-OperatorOS consolidation work. The current production surfaces remain in
-`apps/web`, `apps/api`, and the existing OperatorOS module shell routes.
+This directory holds imported module snapshots and typed adapters for the
+unified OperatorOS runtime. Production execution is owned by `apps/web` and
+`apps/api`; module subdomains are host-routed into the shared Next/Fastify
+deployment and render the module shells under `apps/web`.
+
+The `source/` trees are migration inputs and rollback/audit references. Their
+standalone web servers, login routes, sessions, billing endpoints, and deploy
+configuration are not started by the OperatorOS workspace.
 
 ## Intended Boundary
 
@@ -25,11 +30,19 @@ Modules must not own:
 OperatorOS remains the parent control plane for identity, tenants, billing,
 entitlements, launch, SSO, and audit.
 
-## Reserved Modules
+## Imported Modules
 
-- `techdeck` - imported as a source snapshot with an OperatorOS adapter.
-- `pulsedesk` - imported as a source snapshot with an OperatorOS adapter.
-- `tradeflowkit` - imported as a source snapshot with an OperatorOS adapter.
+- `techdeck` - active shared-runtime shell plus imported source snapshot.
+- `pulsedesk` - active shared-runtime shell plus imported source snapshot.
+- `tradeflowkit` - active shared-runtime shell plus imported source snapshot.
+- `torqueshed`, `faultlinelab`, and `ninja-pool-hall` - free-module source
+  snapshots; product workflow migration pending.
+- `brandforgeos` and `snapproofos` - add-on source snapshots; runtime product
+  APIs pending.
+- `studyforge-ai`, `ninja-launch-kit`, and `callcommand-ai` - add-on source
+  snapshots alongside partial native shared-runtime MVPs.
+- `outcall` - planned/disabled architecture placeholder; no product workload.
 
-Do not import additional module source into this workspace until the matching
-module-specific migration phase is approved.
+`scripts/import-module-snapshot.ps1` is the required import path for any later
+snapshot. A copied tree is never a production activation: each module still
+needs its own authority-conformance and tenant-scoped workflow slices.

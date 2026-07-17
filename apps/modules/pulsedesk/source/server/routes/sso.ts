@@ -42,11 +42,8 @@ import { Router, type Request, type Response } from "express";
 import { storage } from "../storage";
 import {
   loadConfig,
-  verifyToken,
-  consumeToken,
   exchangeCode,
   claimsFromExchange,
-  peekJti,
   getPublicConfig,
   SsoRejectError,
   extractEntitlementClaims,
@@ -152,11 +149,8 @@ router.get("/api/public/sso-config", (_req, res) => {
 });
 
 router.get("/sso", ssoRateLimiter, async (req, res) => {
-  const tokenRaw = req.query.token;
-  const token = typeof tokenRaw === "string" ? tokenRaw.trim() : "";
   const codeRaw = req.query.code;
   const code = typeof codeRaw === "string" ? codeRaw.trim() : "";
-  const earlyJti = peekJti(token);
 
   // One correlation id per launch attempt: it appears in every audit row for
   // this request and is surfaced to the user on the launcher error page, so a
@@ -168,50 +162,25 @@ router.get("/sso", ssoRateLimiter, async (req, res) => {
   // null via the OPERATOROS_BASE_URL fallback inside `launchErrorRedirect`.
   const redirect = { hubBaseUrl: cfg?.baseUrl, cid };
 
-  if (!token && !code) {
-    return reject(req, res, "missing_token", 400, earlyJti, "validation_failed", { code: "missing_token" }, redirect);
+  if (!code) {
+    return reject(req, res, "missing_code", 400, null, "validation_failed", { code: "missing_code" }, redirect);
   }
 
   if (!cfg) {
-    return reject(req, res, "sso_not_configured", 503, earlyJti, "configuration_failed", {}, redirect);
+    return reject(req, res, "sso_not_configured", 503, null, "configuration_failed", {}, redirect);
   }
 
   let claims: OperatorOsTokenClaims;
   let consumeResponse: OperatorOsConsumeResponse | null = null;
 
-  // Task #140: opaque-code path (preferred). The JWT never rides in the
-  // browser URL — we redeem the code server-to-server for the same
-  // single-use consume payload the token path returns. `?token=` is kept
-  // working for backward compatibility during the migration window, and a
-  // present `?code=` always wins over a stray `?token=`.
-  if (code) {
-    try {
-      consumeResponse = await exchangeCode(code, cfg);
-      claims = claimsFromExchange(consumeResponse, cfg);
-    } catch (err) {
-      if (err instanceof SsoRejectError) {
-        return reject(req, res, err.code, err.httpStatus, null, "consume_failed", { code: err.code, via: "code" }, redirect);
-      }
-      return reject(req, res, "consume_failed", 401, null, "consume_failed", { code: "consume_failed", via: "code" }, redirect);
+  try {
+    consumeResponse = await exchangeCode(code, cfg);
+    claims = claimsFromExchange(consumeResponse, cfg);
+  } catch (err) {
+    if (err instanceof SsoRejectError) {
+      return reject(req, res, err.code, err.httpStatus, null, "consume_failed", { code: err.code, via: "code" }, redirect);
     }
-  } else {
-    try {
-      claims = await verifyToken(token, cfg);
-    } catch (err) {
-      if (err instanceof SsoRejectError) {
-        return reject(req, res, err.code, err.httpStatus, earlyJti, "validation_failed", { code: err.code }, redirect);
-      }
-      return reject(req, res, "signature_invalid", 401, earlyJti, "validation_failed", { code: "signature_invalid" }, redirect);
-    }
-
-    try {
-      consumeResponse = await consumeToken(claims, cfg);
-    } catch (err) {
-      if (err instanceof SsoRejectError) {
-        return reject(req, res, err.code, err.httpStatus, claims.jti, "consume_failed", { code: err.code }, redirect);
-      }
-      return reject(req, res, "consume_failed", 401, claims.jti, "consume_failed", { code: "consume_failed" }, redirect);
-    }
+    return reject(req, res, "consume_failed", 401, null, "consume_failed", { code: "consume_failed", via: "code" }, redirect);
   }
 
   return finishSso(req, res, claims, consumeResponse, cfg, cid);
@@ -307,16 +276,21 @@ async function finishSso(
     }
   }
 
-  req.session.userId = provisioned.user.id;
-  req.session.orgId = provisioned.org.id;
-  req.session.authSource = "operatoros";
-  req.session.operatorOsUserId = claims.sub;
-  req.session.operatorOsTenantId = operatorOsTenantId ?? undefined;
-  req.session.operatorOsModuleSlug = cfg.audience;
-  req.session.operatorOsEntitlementSnapshotId = cachedSnapshot?.id;
+  req.session.regenerate((regenerateError) => {
+    if (regenerateError) {
+      console.error("[sso] session rotation failed:", regenerateError);
+      return res.status(500).json({ code: "session_error" });
+    }
+    req.session.userId = provisioned.user.id;
+    req.session.orgId = provisioned.org.id;
+    req.session.authSource = "operatoros";
+    req.session.operatorOsUserId = claims.sub;
+    req.session.operatorOsTenantId = operatorOsTenantId ?? undefined;
+    req.session.operatorOsModuleSlug = cfg.audience;
+    req.session.operatorOsEntitlementSnapshotId = cachedSnapshot?.id;
 
-  req.session.save((err) => {
-    if (err) {
+    req.session.save((err) => {
+      if (err) {
       console.error("[sso] session save failed:", err);
       void logAttempt(
         req,
@@ -326,9 +300,9 @@ async function finishSso(
         provisioned.user.id,
         provisioned.org.id
       );
-      return res.status(500).json({ code: "session_error" });
-    }
-    void logAttempt(
+        return res.status(500).json({ code: "session_error" });
+      }
+      void logAttempt(
       req,
       "success",
       true,
@@ -346,7 +320,8 @@ async function finishSso(
       provisioned.user.id,
       provisioned.org.id
     );
-    res.redirect(302, "/dashboard");
+      res.redirect(302, "/dashboard");
+    });
   });
 }
 

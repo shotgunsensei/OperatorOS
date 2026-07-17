@@ -32,18 +32,18 @@ export interface MarketingCatalogSource {
 }
 
 const SOURCE: readonly MarketingCatalogSource[] = [
-  { slug: 'tradeflowkit',     name: 'TradeFlowKit',     description: 'Job tracker for trade & service businesses', planMin: 'starter', ord: 1,  defaultStatus: 'live' },
-  { slug: 'torqueshed',       name: 'TorqueShed',       description: 'Mechanic shop dashboard & invoicing',        planMin: 'starter', ord: 2,  defaultStatus: 'live' },
-  { slug: 'techdeck',         name: 'TechDeck',         description: 'Onsite tech command center',                 planMin: 'starter', ord: 3,  defaultStatus: 'live' },
-  { slug: 'pulsedesk',        name: 'PulseDesk',        description: 'Healthcare operations coordination',         planMin: 'pro',     ord: 4,  defaultStatus: 'live' },
-  { slug: 'faultlinelab',     name: 'FaultlineLab',     description: 'Diagnostic + RCA workflow',                  planMin: 'starter', ord: 5,  defaultStatus: 'live' },
+  { slug: 'tradeflowkit',     name: 'TradeFlowKit',     description: 'Quote-to-payment revenue and operations control', planMin: 'starter', ord: 1,  defaultStatus: 'live' },
+  { slug: 'torqueshed',       name: 'TorqueShed',       description: 'Automotive diagnostics, repair, and proof of knowledge', planMin: 'starter', ord: 2,  defaultStatus: 'live' },
+  { slug: 'techdeck',         name: 'TechDeck',         description: 'Engineer-first IT and MSP operations console', planMin: 'starter', ord: 3,  defaultStatus: 'live' },
+  { slug: 'pulsedesk',        name: 'PulseDesk',        description: 'Healthcare operations and department escalation', planMin: 'pro',     ord: 4,  defaultStatus: 'live' },
+  { slug: 'faultlinelab',     name: 'FaultlineLab',     description: 'Diagnostic challenges and proof-of-skill labs', planMin: 'starter', ord: 5,  defaultStatus: 'live' },
   { slug: 'ninja-pool-hall',  name: 'Ninja Pool Hall',  description: 'Companion engagement experience',            planMin: 'starter', ord: 6,  defaultStatus: 'live' },
   { slug: 'brandforgeos',     name: 'BrandForgeOS',     description: 'Brand and marketing command system',         planMin: 'pro',     ord: 7,  defaultStatus: 'live' },
   { slug: 'snapproofos',      name: 'SnapProofOS',      description: 'Photo-based proof of work',                  planMin: 'elite',   ord: 8,  defaultStatus: 'live' },
   { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                planMin: 'elite',   ord: 9,  defaultStatus: 'live' },
   { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Build & ship internal tools fast',           planMin: 'elite',   ord: 10, defaultStatus: 'live' },
   { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'AI phone agent + call automation',           planMin: 'elite',   ord: 11, defaultStatus: 'live' },
-  { slug: 'ninjamation',      name: 'Ninjamation',      description: 'Cross-app workflow automation',              planMin: 'elite',   ord: 12, defaultStatus: 'live' },
+  { slug: 'ninjamation',      name: 'Ninjamation',      description: 'AI-assisted cross-app workflow automation',  planMin: 'elite',   ord: 12, defaultStatus: 'live' },
 ];
 
 export type MarketingStatus = 'Available' | 'Coming Soon' | 'Beta' | 'Locked';

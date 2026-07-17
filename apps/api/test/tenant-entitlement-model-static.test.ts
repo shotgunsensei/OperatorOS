@@ -56,3 +56,11 @@ test('Shotgun Ninjas bootstrap seeds internal tenant module entitlements without
   assert.match(launchFix, /source:\s*'admin'/);
   assert.doesNotMatch(launchFix, /STRIPE_PRICE_TECHDECK_MONTHLY/);
 });
+
+test('tenant-role startup migration preserves viewer and canonicalizes public aliases', () => {
+  const init = readRepoFile('apps/api/src/lib/saas-db-init.ts');
+  assert.match(init, /UPDATE tenant_users SET role = CASE role[\s\S]*WHEN 'tenant_admin' THEN 'admin'[\s\S]*WHEN 'billing_admin' THEN 'admin'[\s\S]*WHEN 'user' THEN 'member'/);
+  assert.match(init, /tenant_users_role_check[\s\S]*CHECK \(role IN \('owner','admin','member','viewer'\)\)/);
+  assert.match(init, /UPDATE tenant_invites SET role = CASE role/);
+  assert.match(init, /tenant_invites_role_check[\s\S]*CHECK \(role IN \('owner','admin','member','viewer'\)\)/);
+});

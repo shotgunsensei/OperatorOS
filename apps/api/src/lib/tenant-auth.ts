@@ -4,7 +4,7 @@
  * Two distinct authority axes:
  *   1. PLATFORM   — `users.platform_role` ('super_admin' | 'user').
  *                   Only super_admin may reach platform-only routes.
- *   2. TENANT     — `tenant_users.role` ('owner' | 'admin' | 'member').
+ *   2. TENANT     — `tenant_users.role` ('owner' | 'admin' | 'member' | 'viewer').
  *                   Scoped to one tenant.
  *
  * Tenant context resolution precedence (per request):
@@ -33,13 +33,16 @@ import { tenants, tenantUsers, modules, addonSubscriptions } from '../schema.js'
 import { authenticate } from './auth.js';
 import { isAddonPurchasable } from './billing-service.js';
 import { hasPlatformAdminAuthority } from './rbac.js';
+import { tenantRoleToEffective } from './role-aliases.js';
 import {
   TenantEntitlementError,
   requireTenantModuleAccess as requireTenantModuleAccessDecision,
 } from './tenant-entitlements.js';
 
-export type TenantRoleRank = 0 | 1 | 2; // member | admin | owner
-export const TENANT_ROLE_RANK: Record<'member' | 'admin' | 'owner', TenantRoleRank> = {
+export type TenantRoleRank = -1 | 0 | 1 | 2; // viewer | member | admin | owner
+export type TenantRole = 'owner' | 'admin' | 'member' | 'viewer';
+export const TENANT_ROLE_RANK: Record<TenantRole, TenantRoleRank> = {
+  viewer: -1,
   member: 0,
   admin: 1,
   owner: 2,
@@ -47,12 +50,34 @@ export const TENANT_ROLE_RANK: Record<'member' | 'admin' | 'owner', TenantRoleRa
 
 export type TenantStatus = 'active' | 'suspended' | 'archived';
 
+export interface EffectiveTenantAuthority {
+  role: TenantRole;
+  membershipRole: TenantRole | null;
+  viaPlatformRole: boolean;
+}
+
+/** Keep persisted membership visible while applying platform authority consistently. */
+export function resolveEffectiveTenantAuthority(
+  membershipRole: TenantRole | null,
+  isPlatformAdmin: boolean,
+): EffectiveTenantAuthority | null {
+  if (!membershipRole && !isPlatformAdmin) return null;
+  return {
+    role: isPlatformAdmin ? 'owner' : membershipRole!,
+    membershipRole,
+    viaPlatformRole: isPlatformAdmin,
+  };
+}
+
 export interface TenantContext {
   tenantId: string;
   tenantSlug: string;
   tenantType: 'personal' | 'company';
-  role: 'owner' | 'admin' | 'member';
-  /** True when access was granted via super_admin override (membership not required). */
+  /** Effective role used for authorization. Platform admins are always owner-equivalent. */
+  role: TenantRole;
+  /** The persisted tenant membership role, when one exists, retained for audit context. */
+  membershipRole: TenantRole | null;
+  /** True when platform authority affected the authorization decision. */
   viaPlatformRole: boolean;
   status: TenantStatus;
   /** True when tenant is suspended and caller is not super_admin. */
@@ -129,7 +154,16 @@ export async function resolveTenantContext(request: FastifyRequest): Promise<Ten
   const params = (request.params ?? {}) as Record<string, string | undefined>;
   const headerVal = request.headers['x-tenant-id'];
   const headerTenantId = Array.isArray(headerVal) ? headerVal[0] : headerVal;
-  const tenantId = params.tenantId || headerTenantId || user.currentTenantId || null;
+  const requestedTenantId = params.tenantId || headerTenantId || null;
+  const sessionTenantId = (request as any).authSession?.sessionType === 'module'
+    ? (request as any).authSession.tenantId as string
+    : null;
+  if (sessionTenantId && requestedTenantId && requestedTenantId !== sessionTenantId) {
+    (request as any).sessionTenantMismatch = true;
+    c.context = null;
+    return null;
+  }
+  const tenantId = sessionTenantId || requestedTenantId || user.currentTenantId || null;
   if (!tenantId) {
     c.context = null;
     return null;
@@ -154,12 +188,15 @@ export async function resolveTenantContext(request: FastifyRequest): Promise<Ten
 
   const membership = await loadMembership(request, tenant.id, user.id);
   if (membership) {
+    const membershipRole = tenantRoleToEffective(membership.role);
+    const authority = resolveEffectiveTenantAuthority(membershipRole, isSuper)!;
     const ctx: TenantContext = {
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
       tenantType: tenant.type as 'personal' | 'company',
-      role: membership.role as 'owner' | 'admin' | 'member',
-      viaPlatformRole: false,
+      // Keep the real membership for audit, but never let a low tenant role
+      // accidentally strip authority from a platform super-admin.
+      ...authority,
       status: tenantStatus,
       suspended: tenantStatus === 'suspended' && !isSuper,
     };
@@ -168,14 +205,14 @@ export async function resolveTenantContext(request: FastifyRequest): Promise<Ten
   }
 
   if (isSuper) {
+    const authority = resolveEffectiveTenantAuthority(null, true)!;
     // Super admins get a synthetic 'owner' role for inspection purposes,
     // but `viaPlatformRole` flags the bypass for audit logging.
     const ctx: TenantContext = {
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
       tenantType: tenant.type as 'personal' | 'company',
-      role: 'owner',
-      viaPlatformRole: true,
+      ...authority,
       status: tenantStatus,
       suspended: false,
     };
@@ -198,10 +235,10 @@ export async function resolveTenantContext(request: FastifyRequest): Promise<Ten
  */
 export async function requireSuperAdmin(request: FastifyRequest, reply: FastifyReply) {
   await authenticate(request, reply);
-  if (reply.sent) return;
+  if (reply.sent) return reply;
   const user = (request as any).user;
   if (!hasPlatformAdminAuthority(user)) {
-    reply.code(403).send({
+    return reply.code(403).send({
       error: 'Platform super-admin role required',
       code: 'PLATFORM_ROLE_REQUIRED',
     });
@@ -211,7 +248,16 @@ export async function requireSuperAdmin(request: FastifyRequest, reply: FastifyR
 function denyTenantNotFound(reply: FastifyReply) {
   // Cross-tenant + missing tenant collapse to 404 to avoid leaking
   // existence of tenants the caller cannot see.
-  reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+  return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+}
+
+function denySessionTenantMismatch(request: FastifyRequest, reply: FastifyReply): boolean {
+  if (!(request as any).sessionTenantMismatch) return false;
+  reply.code(403).send({
+    error: 'This module session is bound to a different tenant',
+    code: 'SESSION_TENANT_MISMATCH',
+  });
+  return true;
 }
 
 /**
@@ -222,31 +268,40 @@ function denyTenantNotFound(reply: FastifyReply) {
 export function requireTenantRole(min: 'owner' | 'admin' | 'member') {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     await authenticate(request, reply);
-    if (reply.sent) return;
+    if (reply.sent) return reply;
 
     const ctx = await resolveTenantContext(request);
     if (!ctx) {
+      if (denySessionTenantMismatch(request, reply)) return reply;
       return denyTenantNotFound(reply);
     }
     // Gate 2: a suspended tenant blocks all member operations (super_admin
     // bypasses via viaPlatformRole and never gets `suspended:true` set).
     if (ctx.suspended) {
-      reply.code(403).send({
+      return reply.code(403).send({
         error: 'Tenant is suspended. Contact platform administrator.',
         code: 'TENANT_SUSPENDED',
       });
-      return;
     }
-    if (TENANT_ROLE_RANK[ctx.role] < TENANT_ROLE_RANK[min]) {
+    const viewerReadAllowed = ctx.role === 'viewer'
+      && min === 'member'
+      && (request.method === 'GET' || request.method === 'HEAD');
+    if (ctx.role === 'viewer' && min === 'member' && !viewerReadAllowed) {
+      return reply.code(403).send({
+        error: 'Read-only tenant access cannot modify tenant data',
+        code: 'TENANT_WRITE_ACCESS_REQUIRED',
+        currentRole: ctx.role,
+      });
+    }
+    if (!viewerReadAllowed && TENANT_ROLE_RANK[ctx.role] < TENANT_ROLE_RANK[min]) {
       // The user IS a member, just not high enough. 403 is correct here:
       // existence is already known from the membership.
-      reply.code(403).send({
+      return reply.code(403).send({
         error: `Tenant role '${min}' or higher required`,
         code: 'TENANT_ROLE_INSUFFICIENT',
         currentRole: ctx.role,
         requiredRole: min,
       });
-      return;
     }
     (request as any).tenantContext = ctx;
   };
@@ -260,24 +315,36 @@ export const requireTenantMember = requireTenantRole('member');
  * Pre-handler factory: require the caller to have an active access grant
  * on the named module within the active tenant. The module must also be
  * `enabled` / `trial` / `purchased` / `beta` for the tenant.
- * Super admins bypass.
+ * Super admins bypass tenant grants, but never the platform-wide module
+ * disabled/archive kill switch enforced by the central resolver.
  */
 export function requireTenantModuleAccess(moduleSlug: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     await authenticate(request, reply);
-    if (reply.sent) return;
+    if (reply.sent) return reply;
     const user = (request as any).user;
+    const sessionModuleId = (request as any).authSession?.sessionType === 'module'
+      ? (request as any).authSession.moduleId as string
+      : null;
+    if (sessionModuleId && sessionModuleId !== moduleSlug) {
+      return reply.code(403).send({
+        error: 'This module session is bound to a different module',
+        code: 'SESSION_MODULE_MISMATCH',
+      });
+    }
     const ctx = await resolveTenantContext(request);
-    if (!ctx) return denyTenantNotFound(reply);
+    if (!ctx) {
+      if (denySessionTenantMismatch(request, reply)) return reply;
+      return denyTenantNotFound(reply);
+    }
 
     // Gate 2: launching ANY module inside a suspended tenant is blocked
     // for non-super-admins (matches read/write block in requireTenantRole).
     if (ctx.suspended && !hasPlatformAdminAuthority(user)) {
-      reply.code(403).send({
+      return reply.code(403).send({
         error: 'Tenant is suspended. Contact platform administrator.',
         code: 'TENANT_SUSPENDED',
       });
-      return;
     }
 
     try {
@@ -287,18 +354,52 @@ export function requireTenantModuleAccess(moduleSlug: string) {
       return;
     } catch (err) {
       if (err instanceof TenantEntitlementError) {
-        reply.code(err.statusCode).send({
+        return reply.code(err.statusCode).send({
           error: err.message,
           code: err.code,
           moduleSlug,
           ...err.payload,
         });
-        return;
       }
       throw err;
     }
 
   };
+}
+
+/**
+ * Mutation guard for module routes. It must run after
+ * `requireTenantModuleAccess(...)`, which records the effective access level
+ * on the request. A `viewer` grant is intentionally launch/read capable but
+ * never write capable.
+ */
+export async function requireTenantModuleWriteAccess(
+  request: FastifyRequest,
+  reply: FastifyReply,
+) {
+  const ctx = (request as any).tenantContext as TenantContext | undefined;
+  if (ctx?.membershipRole === 'viewer' && !ctx.viaPlatformRole) {
+    return reply.code(403).send({
+      error: 'Read-only tenant access cannot modify module data',
+      code: 'TENANT_WRITE_ACCESS_REQUIRED',
+      currentRole: 'viewer',
+    });
+  }
+  const accessLevel = (request as any).tenantModuleAccessLevel as string | undefined;
+  if (accessLevel === 'viewer') {
+    return reply.code(403).send({
+      error: 'Read-only module access cannot modify module data',
+      code: 'TENANT_MODULE_WRITE_ACCESS_REQUIRED',
+      currentAccessLevel: accessLevel,
+    });
+  }
+  if (!accessLevel || accessLevel === 'none') {
+    return reply.code(403).send({
+      error: 'Write-capable module access is required',
+      code: 'TENANT_MODULE_WRITE_ACCESS_REQUIRED',
+      currentAccessLevel: accessLevel ?? 'none',
+    });
+  }
 }
 
 /**
@@ -335,7 +436,8 @@ export async function canPurchaseAddon(
   if (!membership) {
     return { allowed: false, code: 'TENANT_NOT_FOUND', reason: 'Tenant not found' };
   }
-  if (membership.role !== 'owner' && membership.role !== 'admin') {
+  const tenantRole = tenantRoleToEffective(membership.role);
+  if (tenantRole !== 'owner' && tenantRole !== 'admin') {
     return {
       allowed: false,
       code: 'TENANT_ROLE_INSUFFICIENT',
@@ -354,5 +456,5 @@ export async function canPurchaseAddon(
   if (live) {
     return { allowed: false, code: 'ADDON_ALREADY_ACTIVE', reason: 'Tenant already has an active add-on for this module' };
   }
-  return { allowed: true, tenantRole: membership.role as 'owner' | 'admin' };
+  return { allowed: true, tenantRole };
 }

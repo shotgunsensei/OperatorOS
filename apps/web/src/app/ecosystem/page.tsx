@@ -21,9 +21,9 @@ import {
  * card. All module data is consumed from the foundation's shared SDK
  * helpers (`getAllModules`/`getActiveModules`/`getPlannedModules`) —
  * there is deliberately no second module list defined here so the two
- * surfaces can never drift. Tech Deck leads (its `ord`/`first` flag is
- * resolved inside the SDK), with a visible legacy `techdeck.app`
- * reference. Nothing here embeds or implements any module app.
+ * surfaces can never drift. TechDeck leads (its `ord`/`first` flag is
+ * resolved inside the SDK). Nothing here embeds or implements any module
+ * app, and every launch uses the canonical OperatorOS subdomain.
  */
 export default function EcosystemPage() {
   const active = getActiveModules();
@@ -338,23 +338,6 @@ function ModuleCard({ module: m }: { module: EcosystemModule }) {
       >
         {m.description}
       </p>
-
-      {m.legacyUrl && (
-        <p
-          data-testid={`ecosystem-legacy-${m.slug}`}
-          style={{ fontSize: 12, color: brand.textMuted, margin: 0 }}
-        >
-          Legacy:{' '}
-          <a
-            href={m.legacyUrl}
-            target="_blank"
-            rel="noreferrer"
-            style={{ color: brand.textMuted, textDecoration: 'underline' }}
-          >
-            {m.legacyUrl.replace(/^https?:\/\//, '')}
-          </a>
-        </p>
-      )}
 
       <a
         href={launchable ? m.ecosystemUrl : undefined}

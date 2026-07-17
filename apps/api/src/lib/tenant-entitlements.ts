@@ -30,8 +30,30 @@ import {
   tenantHasActiveEntitlement,
 } from './product-entitlements.js';
 import { hasPlatformAdminAuthority } from './rbac.js';
+import { moduleAccessLevelToEffective, tenantRoleToEffective } from './role-aliases.js';
 
 const LAUNCHABLE_TENANT_MODULE_STATUSES = ['enabled', 'trial', 'purchased', 'beta'] as const;
+const LAUNCHABLE_GLOBAL_MODULE_STATUSES = new Set(['live', 'active', 'beta']);
+
+export type GlobalModuleUnavailableReason =
+  | 'module_archived'
+  | 'module_disabled'
+  | 'module_unavailable';
+
+/**
+ * Resolve the platform-wide module kill switch before tenant/user grants.
+ * Platform administrators intentionally do not bypass this control: archived,
+ * disabled, hidden, or not-yet-live modules must not mint SSO sessions or serve
+ * guarded module APIs.
+ */
+export function globalModuleUnavailableReason(
+  module: Pick<ModuleRow, 'status' | 'archivedAt'>,
+): GlobalModuleUnavailableReason | null {
+  if (module.archivedAt) return 'module_archived';
+  if (LAUNCHABLE_GLOBAL_MODULE_STATUSES.has(module.status)) return null;
+  if (['disabled', 'deprecated', 'hidden'].includes(module.status)) return 'module_disabled';
+  return 'module_unavailable';
+}
 
 export type TenantModuleGrantSource =
   | 'stripe'
@@ -44,7 +66,7 @@ export type TenantModuleGrantSource =
   | 'trial';
 
 export type TenantModuleAccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
-export type TenantModuleAccessLevel = 'none' | 'user' | 'manager';
+export type TenantModuleAccessLevel = 'none' | 'viewer' | 'user' | 'manager';
 
 export interface UserTenantMembership {
   tenant: TenantRow;
@@ -221,6 +243,7 @@ export async function tenantHasModuleEntitlement(
     resolveModule(moduleId),
   ]);
   if (!tenant || !module) return false;
+  if (globalModuleUnavailableReason(module)) return false;
 
   const tenantModule = await getTenantModuleRow(tenantId, module.id);
   if (tenantModule) {
@@ -266,6 +289,22 @@ export async function resolveTenantModuleAccess(
       hasAccess: false,
       source: null,
       reason: 'module_not_found',
+      accessLevel: 'none',
+      tenantModule: null,
+      userModuleAccess: null,
+      viaPlatformRole: false,
+    };
+  }
+
+  const globalUnavailableReason = globalModuleUnavailableReason(module);
+  if (globalUnavailableReason) {
+    return {
+      tenantId,
+      moduleSlug: module.slug,
+      moduleId: module.id,
+      hasAccess: false,
+      source: null,
+      reason: globalUnavailableReason,
       accessLevel: 'none',
       tenantModule: null,
       userModuleAccess: null,
@@ -337,6 +376,7 @@ export async function resolveTenantModuleAccess(
       viaPlatformRole: false,
     };
   }
+  const tenantViewer = tenantRoleToEffective(membership.role) === 'viewer';
 
   if (tenantModule && !LAUNCHABLE_TENANT_MODULE_STATUSES.includes(tenantModule.status as any)) {
     return {
@@ -353,7 +393,11 @@ export async function resolveTenantModuleAccess(
     };
   }
 
-  if (userModuleAccess?.accessLevel === 'none') {
+  const explicitAccessLevel = userModuleAccess
+    ? moduleAccessLevelToEffective(userModuleAccess.accessLevel)
+    : null;
+
+  if (explicitAccessLevel === 'none') {
     return {
       tenantId,
       moduleSlug: module.slug,
@@ -368,14 +412,16 @@ export async function resolveTenantModuleAccess(
     };
   }
 
-  if (userModuleAccess?.accessLevel === 'user' || userModuleAccess?.accessLevel === 'manager') {
+  if (explicitAccessLevel === 'viewer'
+    || explicitAccessLevel === 'user'
+    || explicitAccessLevel === 'manager') {
     return {
       tenantId,
       moduleSlug: module.slug,
       moduleId: module.id,
       hasAccess: true,
       source: sourceFromTenantModule(tenantModule),
-      accessLevel: userModuleAccess.accessLevel,
+      accessLevel: tenantViewer ? 'viewer' : explicitAccessLevel,
       tenantModule,
       userModuleAccess,
       viaPlatformRole: false,
@@ -390,7 +436,7 @@ export async function resolveTenantModuleAccess(
         moduleId: module.id,
         hasAccess: true,
         source: sourceFromTenantModule(tenantModule),
-        accessLevel: 'user',
+        accessLevel: tenantViewer ? 'viewer' : 'user',
         tenantModule,
         userModuleAccess,
         viaPlatformRole: false,
@@ -419,7 +465,7 @@ export async function resolveTenantModuleAccess(
           moduleId: module.id,
           hasAccess: true,
           source: 'plan',
-          accessLevel: 'user',
+          accessLevel: tenantViewer ? 'viewer' : 'user',
           tenantModule: null,
           userModuleAccess,
           viaPlatformRole: false,
@@ -445,7 +491,7 @@ export async function resolveTenantModuleAccess(
       moduleId: module.id,
       hasAccess: true,
       source: 'plan',
-      accessLevel: 'user',
+      accessLevel: tenantViewer ? 'viewer' : 'user',
       tenantModule: null,
       userModuleAccess,
       viaPlatformRole: false,
@@ -477,6 +523,21 @@ function accessErrorFor(decision: TenantModuleAccessDecision): TenantEntitlement
   }
   if (decision.reason === 'tenant_suspended') {
     return new TenantEntitlementError(403, 'TENANT_SUSPENDED', 'Tenant is suspended');
+  }
+  if (decision.reason === 'module_archived') {
+    return new TenantEntitlementError(403, 'MODULE_ARCHIVED', 'Module is archived', {
+      moduleSlug: decision.moduleSlug,
+    });
+  }
+  if (decision.reason === 'module_disabled') {
+    return new TenantEntitlementError(403, 'MODULE_DISABLED', 'Module is disabled', {
+      moduleSlug: decision.moduleSlug,
+    });
+  }
+  if (decision.reason === 'module_unavailable') {
+    return new TenantEntitlementError(403, 'MODULE_UNAVAILABLE', 'Module is not available for launch', {
+      moduleSlug: decision.moduleSlug,
+    });
   }
   if (decision.reason === 'tenant_module_disabled' || decision.reason === 'no_plan_grant') {
     return new TenantEntitlementError(403, 'TENANT_MODULE_DISABLED', 'Module is not enabled for this tenant', {

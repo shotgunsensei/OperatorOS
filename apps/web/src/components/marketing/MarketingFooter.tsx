@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import OperatorLogo from '../brand/OperatorLogo';
 import { brand } from '@/lib/design-tokens';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 const COL_PRODUCT = [
   { href: '/modules', label: 'Modules' },
@@ -21,7 +22,7 @@ const COL_MODULES = [
 
 const COL_ACTIONS = [
   { href: '/login', label: 'Login' },
-  { href: '/app', label: 'Operator Console' },
+  { href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, label: 'Operator Console' },
   { href: '/modules', label: 'View Modules' },
   { href: 'https://operatoros.net/john', label: 'Contact', external: true },
 ];

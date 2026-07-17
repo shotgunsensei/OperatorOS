@@ -19,6 +19,11 @@ import NinjamationShell from '@/components/module-shells/NinjamationShell';
 import TechDeckShell from '@/components/module-shells/TechDeckShell';
 import PulseDeskShell from '@/components/module-shells/PulseDeskShell';
 import TradeFlowKitShell from '@/components/module-shells/TradeFlowKitShell';
+import NinjaPoolHallShell from '@/components/module-shells/NinjaPoolHallShell';
+import WorkflowModuleShell from '@/components/module-shells/WorkflowModuleShell';
+import OperatorOSEcosystemHeader from '@/components/module-shells/OperatorOSEcosystemHeader';
+import { useModuleDeepLinkTarget } from './ModuleDeepLinkTarget';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
 
 // Mirrors the server's UserModuleSummary shape returned by
 // GET /v1/modules/:slug. Defined inline (rather than imported from the
@@ -45,11 +50,17 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string }>>
   'ninja-launch-kit': NinjaLaunchKitShell,
   'callcommand-ai':   CallCommandShell,
   'ninjamation':      NinjamationShell,
+  'ninja-pool-hall':  NinjaPoolHallShell,
+  'torqueshed':       () => <WorkflowModuleShell moduleSlug="torqueshed" />,
+  'faultlinelab':     () => <WorkflowModuleShell moduleSlug="faultlinelab" />,
+  'brandforgeos':     () => <WorkflowModuleShell moduleSlug="brandforgeos" />,
+  'snapproofos':      () => <WorkflowModuleShell moduleSlug="snapproofos" />,
 };
 
 function InternalAppContent() {
   const params = useParams<{ slug: string }>();
   const slug = params?.slug;
+  const initialSectionId = useModuleDeepLinkTarget();
   const [mod, setMod] = useState<UserModuleSummary['module'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -98,6 +109,44 @@ function InternalAppContent() {
     return () => { alive = false; };
   }, [slug]);
 
+  useEffect(() => {
+    if (!initialSectionId || loading || !mod) return;
+
+    let focusFrame: number | null = null;
+    let stopWaitingTimer: number | null = null;
+    let observer: MutationObserver | null = null;
+
+    const revealTarget = () => {
+      const target = document.getElementById(initialSectionId);
+      if (!target) return false;
+
+      observer?.disconnect();
+      if (stopWaitingTimer !== null) window.clearTimeout(stopWaitingTimer);
+      focusFrame = window.requestAnimationFrame(() => {
+        target.scrollIntoView({ block: 'start' });
+        target.focus({ preventScroll: true });
+      });
+      return true;
+    };
+
+    // The selected shell can briefly render its tenant-loading state. Observe
+    // that bounded transition so a valid deep link still reaches its native
+    // workflow once the stable section is mounted.
+    if (!revealTarget()) {
+      observer = new MutationObserver(() => {
+        revealTarget();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      stopWaitingTimer = window.setTimeout(() => observer?.disconnect(), 5_000);
+    }
+
+    return () => {
+      observer?.disconnect();
+      if (focusFrame !== null) window.cancelAnimationFrame(focusFrame);
+      if (stopWaitingTimer !== null) window.clearTimeout(stopWaitingTimer);
+    };
+  }, [initialSectionId, loading, mod]);
+
   if (!slug) return null;
 
   if (loading) {
@@ -139,6 +188,7 @@ function InternalAppContent() {
   if (Shell) {
     return (
       <div>
+        <OperatorOSEcosystemHeader moduleName={mod.name} moduleSlug={mod.slug} />
         <div style={{ padding: `${space.lg}px ${space.xxl}px 0` }}>
           <BackLink />
         </div>
@@ -147,7 +197,7 @@ function InternalAppContent() {
     );
   }
 
-  // Generic launcher card for the remaining 7 external modules.
+  // Fallback launcher for reserved/planned modules (currently OutCall only).
   const isExternal = mod.baseUrl && /^https?:\/\//i.test(mod.baseUrl);
   return (
     <div style={{ padding: space.xxl, maxWidth: 720, margin: '0 auto' }} data-testid={`app-shell-${mod.slug}`}>
@@ -246,7 +296,7 @@ export default function InternalAppPage() {
 function BackLink() {
   return (
     <Link
-      href="/app"
+      href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}
       data-testid="link-back-to-apps"
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,

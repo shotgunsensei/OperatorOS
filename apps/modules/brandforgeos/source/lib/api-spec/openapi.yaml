@@ -1,0 +1,1716 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: BrandForge OS API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: Auth
+    description: Browser and mobile authentication endpoints.
+  - name: tenants
+    description: Tenant/workspace management
+  - name: brands
+    description: Brand management
+  - name: personas
+    description: Audience personas
+  - name: campaigns
+    description: Campaign management
+  - name: copy
+    description: Copy generation and management
+  - name: calendar
+    description: Content calendar
+  - name: dashboard
+    description: Dashboard and analytics
+  - name: ai
+    description: AI generation endpoints
+  - name: onboarding
+    description: Onboarding wizard
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/user:
+    get:
+      tags: [Auth]
+      operationId: getCurrentAuthUser
+      summary: Get the currently authenticated user
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Auth status resolved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserEnvelope'
+  /login:
+    get:
+      tags: [Auth]
+      operationId: beginBrowserLogin
+      summary: Start the browser OIDC login flow
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to the OIDC authorization endpoint.
+  /callback:
+    get:
+      tags: [Auth]
+      operationId: handleBrowserLoginCallback
+      summary: Complete the browser OIDC login flow
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: iss
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+      responses:
+        '302':
+          description: Redirect on success or failure.
+  /logout:
+    get:
+      tags: [Auth]
+      operationId: logoutBrowserSession
+      summary: Clear the session and begin OIDC logout
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '302':
+          description: Redirect to the OIDC provider logout URL.
+  /mobile-auth/token-exchange:
+    post:
+      tags: [Auth]
+      operationId: exchangeMobileAuthorizationCode
+      summary: Exchange a mobile OIDC code for a session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileTokenExchangeRequest'
+      responses:
+        '200':
+          description: Session created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileTokenExchangeSuccess'
+        '400':
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /mobile-auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logoutMobileSession
+      summary: Delete a mobile session token
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+      responses:
+        '200':
+          description: Logout processed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutSuccess'
+
+  # Tenant endpoints
+  /tenants:
+    get:
+      tags: [tenants]
+      operationId: listTenants
+      summary: List tenants for the current user
+      responses:
+        '200':
+          description: List of tenants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tenant'
+    post:
+      tags: [tenants]
+      operationId: createTenant
+      summary: Create a new tenant/workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantBody'
+      responses:
+        '201':
+          description: Tenant created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+  /tenants/{tenantId}:
+    get:
+      tags: [tenants]
+      operationId: getTenant
+      summary: Get tenant details
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: Tenant details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+    patch:
+      tags: [tenants]
+      operationId: updateTenant
+      summary: Update tenant details
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTenantBody'
+      responses:
+        '200':
+          description: Tenant updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+
+  # Onboarding
+  /tenants/{tenantId}/onboarding:
+    get:
+      tags: [onboarding]
+      operationId: getOnboarding
+      summary: Get onboarding state
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: Onboarding data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingData'
+    post:
+      tags: [onboarding]
+      operationId: completeOnboarding
+      summary: Complete the onboarding wizard
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardingInput'
+      responses:
+        '200':
+          description: Onboarding completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingData'
+
+  # Brands
+  /tenants/{tenantId}/brands:
+    get:
+      tags: [brands]
+      operationId: listBrands
+      summary: List brands for a tenant
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: List of brands
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Brand'
+    post:
+      tags: [brands]
+      operationId: createBrand
+      summary: Create a new brand
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBrandBody'
+      responses:
+        '201':
+          description: Brand created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brand'
+  /tenants/{tenantId}/brands/{brandId}:
+    get:
+      tags: [brands]
+      operationId: getBrand
+      summary: Get brand details
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - $ref: '#/components/parameters/BrandIdParam'
+      responses:
+        '200':
+          description: Brand details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brand'
+    patch:
+      tags: [brands]
+      operationId: updateBrand
+      summary: Update brand details
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - $ref: '#/components/parameters/BrandIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBrandBody'
+      responses:
+        '200':
+          description: Brand updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brand'
+    delete:
+      tags: [brands]
+      operationId: deleteBrand
+      summary: Delete a brand
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - $ref: '#/components/parameters/BrandIdParam'
+      responses:
+        '204':
+          description: Brand deleted
+
+  # Personas
+  /tenants/{tenantId}/personas:
+    get:
+      tags: [personas]
+      operationId: listPersonas
+      summary: List audience personas
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: List of personas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Persona'
+    post:
+      tags: [personas]
+      operationId: createPersona
+      summary: Create a persona
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePersonaBody'
+      responses:
+        '201':
+          description: Persona created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Persona'
+  /tenants/{tenantId}/personas/{personaId}:
+    patch:
+      tags: [personas]
+      operationId: updatePersona
+      summary: Update a persona
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - name: personaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePersonaBody'
+      responses:
+        '200':
+          description: Persona updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Persona'
+    delete:
+      tags: [personas]
+      operationId: deletePersona
+      summary: Delete a persona
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - name: personaId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Persona deleted
+
+  # Campaigns
+  /tenants/{tenantId}/campaigns:
+    get:
+      tags: [campaigns]
+      operationId: listCampaigns
+      summary: List campaigns
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of campaigns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Campaign'
+    post:
+      tags: [campaigns]
+      operationId: createCampaign
+      summary: Create a campaign
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCampaignBody'
+      responses:
+        '201':
+          description: Campaign created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+  /tenants/{tenantId}/campaigns/{campaignId}:
+    get:
+      tags: [campaigns]
+      operationId: getCampaign
+      summary: Get campaign details
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - $ref: '#/components/parameters/CampaignIdParam'
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+    patch:
+      tags: [campaigns]
+      operationId: updateCampaign
+      summary: Update a campaign
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - $ref: '#/components/parameters/CampaignIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCampaignBody'
+      responses:
+        '200':
+          description: Campaign updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+    delete:
+      tags: [campaigns]
+      operationId: deleteCampaign
+      summary: Delete a campaign
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - $ref: '#/components/parameters/CampaignIdParam'
+      responses:
+        '204':
+          description: Campaign deleted
+
+  # Copy assets
+  /tenants/{tenantId}/copy-assets:
+    get:
+      tags: [copy]
+      operationId: listCopyAssets
+      summary: List copy assets
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: campaignId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of copy assets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CopyAsset'
+    post:
+      tags: [copy]
+      operationId: createCopyAsset
+      summary: Create a copy asset
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCopyAssetBody'
+      responses:
+        '201':
+          description: Copy asset created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CopyAsset'
+  /tenants/{tenantId}/copy-assets/{copyAssetId}:
+    patch:
+      tags: [copy]
+      operationId: updateCopyAsset
+      summary: Update a copy asset
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - name: copyAssetId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCopyAssetBody'
+      responses:
+        '200':
+          description: Copy asset updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CopyAsset'
+    delete:
+      tags: [copy]
+      operationId: deleteCopyAsset
+      summary: Delete a copy asset
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - name: copyAssetId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Copy asset deleted
+
+  # Content Calendar
+  /tenants/{tenantId}/calendar-items:
+    get:
+      tags: [calendar]
+      operationId: listCalendarItems
+      summary: List content calendar items
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of calendar items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CalendarItem'
+    post:
+      tags: [calendar]
+      operationId: createCalendarItem
+      summary: Create a calendar item
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCalendarItemBody'
+      responses:
+        '201':
+          description: Calendar item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarItem'
+  /tenants/{tenantId}/calendar-items/{itemId}:
+    patch:
+      tags: [calendar]
+      operationId: updateCalendarItem
+      summary: Update a calendar item
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCalendarItemBody'
+      responses:
+        '200':
+          description: Calendar item updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarItem'
+    delete:
+      tags: [calendar]
+      operationId: deleteCalendarItem
+      summary: Delete a calendar item
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Calendar item deleted
+
+  # Dashboard / Analytics
+  /tenants/{tenantId}/dashboard:
+    get:
+      tags: [dashboard]
+      operationId: getDashboard
+      summary: Get dashboard summary data
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+
+  /tenants/{tenantId}/activity:
+    get:
+      tags: [dashboard]
+      operationId: getRecentActivity
+      summary: Get recent activity feed
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ActivityItem'
+
+  /tenants/{tenantId}/analytics:
+    get:
+      tags: [dashboard]
+      operationId: getAnalytics
+      summary: Get analytics overview
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            default: '30d'
+      responses:
+        '200':
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsData'
+
+  # AI Generation
+  /tenants/{tenantId}/ai/generate-copy:
+    post:
+      tags: [ai]
+      operationId: generateAiCopy
+      summary: Generate AI copy
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateAiCopyBody'
+      responses:
+        '200':
+          description: Generated copy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratedCopy'
+
+  /tenants/{tenantId}/ai/generate-strategy:
+    post:
+      tags: [ai]
+      operationId: generateAiStrategy
+      summary: Generate AI strategy recommendations
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateStrategyBody'
+      responses:
+        '200':
+          description: Generated strategy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratedStrategy'
+
+  /tenants/{tenantId}/ai/generate-campaign-ideas:
+    post:
+      tags: [ai]
+      operationId: generateCampaignIdeas
+      summary: Generate AI campaign ideas
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateCampaignIdeasBody'
+      responses:
+        '200':
+          description: Campaign ideas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratedCampaignIdeas'
+
+  # Members
+  /tenants/{tenantId}/members:
+    get:
+      tags: [tenants]
+      operationId: listMembers
+      summary: List tenant members
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: List of members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Member'
+
+  # Usage
+  /tenants/{tenantId}/usage:
+    get:
+      tags: [dashboard]
+      operationId: getUsage
+      summary: Get AI credit usage
+      parameters:
+        - $ref: '#/components/parameters/TenantIdParam'
+      responses:
+        '200':
+          description: Usage data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageData'
+
+components:
+  parameters:
+    AuthorizationSessionHeader:
+      name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+    SessionCookie:
+      name: sid
+      in: cookie
+      required: false
+      schema:
+        type: string
+    TenantIdParam:
+      name: tenantId
+      in: path
+      required: true
+      schema:
+        type: integer
+    BrandIdParam:
+      name: brandId
+      in: path
+      required: true
+      schema:
+        type: integer
+    CampaignIdParam:
+      name: campaignId
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    AuthUser:
+      type: object
+      required: [id, email, firstName, lastName, profileImageUrl]
+      properties:
+        id:
+          type: string
+        email:
+          type: [string, 'null']
+          format: email
+        firstName:
+          type: [string, 'null']
+        lastName:
+          type: [string, 'null']
+        profileImageUrl:
+          type: [string, 'null']
+    AuthUserEnvelope:
+      type: object
+      required: [user]
+      properties:
+        user:
+          oneOf:
+            - $ref: '#/components/schemas/AuthUser'
+            - type: 'null'
+    MobileTokenExchangeRequest:
+      type: object
+      required: [code, code_verifier, redirect_uri, state]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        code_verifier:
+          type: string
+          minLength: 1
+        redirect_uri:
+          type: string
+          minLength: 1
+          format: uri
+        state:
+          type: string
+          minLength: 1
+        nonce:
+          type: string
+          minLength: 1
+    MobileTokenExchangeSuccess:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+    LogoutSuccess:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          const: true
+
+    # Tenant
+    Tenant:
+      type: object
+      required: [id, name, slug, plan, onboardingCompleted, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        plan:
+          type: string
+        industry:
+          type: [string, 'null']
+        businessType:
+          type: [string, 'null']
+        onboardingCompleted:
+          type: boolean
+        aiCreditsUsed:
+          type: integer
+        aiCreditsLimit:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+    CreateTenantBody:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        industry:
+          type: string
+        businessType:
+          type: string
+    UpdateTenantBody:
+      type: object
+      properties:
+        name:
+          type: string
+        industry:
+          type: string
+        businessType:
+          type: string
+
+    # Onboarding
+    OnboardingData:
+      type: object
+      required: [completed]
+      properties:
+        completed:
+          type: boolean
+        businessName:
+          type: [string, 'null']
+        industry:
+          type: [string, 'null']
+        businessType:
+          type: [string, 'null']
+        products:
+          type: [string, 'null']
+        idealCustomer:
+          type: [string, 'null']
+        geoMarket:
+          type: [string, 'null']
+        tone:
+          type: [string, 'null']
+        competitors:
+          type: [string, 'null']
+        goals:
+          type: array
+          items:
+            type: string
+        channels:
+          type: array
+          items:
+            type: string
+        brandColors:
+          type: array
+          items:
+            type: string
+        brandSummary:
+          type: [string, 'null']
+        icpSummary:
+          type: [string, 'null']
+        messagingPillars:
+          type: array
+          items:
+            type: string
+        recommendedCampaign:
+          type: [string, 'null']
+    OnboardingInput:
+      type: object
+      required: [businessName, industry]
+      properties:
+        businessName:
+          type: string
+          minLength: 1
+        industry:
+          type: string
+          minLength: 1
+        businessType:
+          type: string
+        products:
+          type: string
+        idealCustomer:
+          type: string
+        geoMarket:
+          type: string
+        tone:
+          type: string
+        competitors:
+          type: string
+        goals:
+          type: array
+          items:
+            type: string
+        channels:
+          type: array
+          items:
+            type: string
+        brandColors:
+          type: array
+          items:
+            type: string
+
+    # Brand
+    Brand:
+      type: object
+      required: [id, tenantId, name, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        name:
+          type: string
+        logoUrl:
+          type: [string, 'null']
+        primaryColor:
+          type: [string, 'null']
+        secondaryColor:
+          type: [string, 'null']
+        accentColor:
+          type: [string, 'null']
+        fontHeading:
+          type: [string, 'null']
+        fontBody:
+          type: [string, 'null']
+        voiceTone:
+          type: [string, 'null']
+        description:
+          type: [string, 'null']
+        guidelines:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+    CreateBrandBody:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+        accentColor:
+          type: string
+        fontHeading:
+          type: string
+        fontBody:
+          type: string
+        voiceTone:
+          type: string
+        description:
+          type: string
+        guidelines:
+          type: string
+    UpdateBrandBody:
+      type: object
+      properties:
+        name:
+          type: string
+        logoUrl:
+          type: string
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+        accentColor:
+          type: string
+        fontHeading:
+          type: string
+        fontBody:
+          type: string
+        voiceTone:
+          type: string
+        description:
+          type: string
+        guidelines:
+          type: string
+
+    # Persona
+    Persona:
+      type: object
+      required: [id, tenantId, name, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        name:
+          type: string
+        ageRange:
+          type: [string, 'null']
+        gender:
+          type: [string, 'null']
+        location:
+          type: [string, 'null']
+        interests:
+          type: [string, 'null']
+        painPoints:
+          type: [string, 'null']
+        goals:
+          type: [string, 'null']
+        channels:
+          type: [string, 'null']
+        description:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+    CreatePersonaBody:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        ageRange:
+          type: string
+        gender:
+          type: string
+        location:
+          type: string
+        interests:
+          type: string
+        painPoints:
+          type: string
+        goals:
+          type: string
+        channels:
+          type: string
+        description:
+          type: string
+    UpdatePersonaBody:
+      type: object
+      properties:
+        name:
+          type: string
+        ageRange:
+          type: string
+        gender:
+          type: string
+        location:
+          type: string
+        interests:
+          type: string
+        painPoints:
+          type: string
+        goals:
+          type: string
+        channels:
+          type: string
+        description:
+          type: string
+
+    # Campaign
+    Campaign:
+      type: object
+      required: [id, tenantId, name, status, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        brandId:
+          type: [integer, 'null']
+        name:
+          type: string
+        objective:
+          type: [string, 'null']
+        targetAudience:
+          type: [string, 'null']
+        coreMessage:
+          type: [string, 'null']
+        offer:
+          type: [string, 'null']
+        status:
+          type: string
+        channels:
+          type: array
+          items:
+            type: string
+        startDate:
+          type: [string, 'null']
+          format: date
+        endDate:
+          type: [string, 'null']
+          format: date
+        budget:
+          type: [string, 'null']
+        notes:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+    CreateCampaignBody:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        brandId:
+          type: integer
+        objective:
+          type: string
+        targetAudience:
+          type: string
+        coreMessage:
+          type: string
+        offer:
+          type: string
+        status:
+          type: string
+        channels:
+          type: array
+          items:
+            type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        budget:
+          type: string
+        notes:
+          type: string
+    UpdateCampaignBody:
+      type: object
+      properties:
+        name:
+          type: string
+        brandId:
+          type: integer
+        objective:
+          type: string
+        targetAudience:
+          type: string
+        coreMessage:
+          type: string
+        offer:
+          type: string
+        status:
+          type: string
+        channels:
+          type: array
+          items:
+            type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        budget:
+          type: string
+        notes:
+          type: string
+
+    # Copy Asset
+    CopyAsset:
+      type: object
+      required: [id, tenantId, title, content, copyType, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        campaignId:
+          type: [integer, 'null']
+        brandId:
+          type: [integer, 'null']
+        title:
+          type: string
+        content:
+          type: string
+        copyType:
+          type: string
+        channel:
+          type: [string, 'null']
+        tone:
+          type: [string, 'null']
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    CreateCopyAssetBody:
+      type: object
+      required: [title, content, copyType]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        content:
+          type: string
+        copyType:
+          type: string
+          minLength: 1
+        campaignId:
+          type: integer
+        brandId:
+          type: integer
+        channel:
+          type: string
+        tone:
+          type: string
+        status:
+          type: string
+    UpdateCopyAssetBody:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        copyType:
+          type: string
+        channel:
+          type: string
+        tone:
+          type: string
+        status:
+          type: string
+
+    # Calendar Item
+    CalendarItem:
+      type: object
+      required: [id, tenantId, title, itemType, scheduledDate, status, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        campaignId:
+          type: [integer, 'null']
+        brandId:
+          type: [integer, 'null']
+        title:
+          type: string
+        description:
+          type: [string, 'null']
+        itemType:
+          type: string
+        channel:
+          type: [string, 'null']
+        scheduledDate:
+          type: string
+          format: date
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    CreateCalendarItemBody:
+      type: object
+      required: [title, itemType, scheduledDate]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        itemType:
+          type: string
+          minLength: 1
+        channel:
+          type: string
+        scheduledDate:
+          type: string
+          format: date
+        status:
+          type: string
+        campaignId:
+          type: integer
+        brandId:
+          type: integer
+    UpdateCalendarItemBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        itemType:
+          type: string
+        channel:
+          type: string
+        scheduledDate:
+          type: string
+          format: date
+        status:
+          type: string
+
+    # Dashboard
+    DashboardSummary:
+      type: object
+      required: [totalBrands, totalCampaigns, totalCopyAssets, totalCalendarItems, activeCampaigns, aiCreditsUsed, aiCreditsLimit, campaignsByStatus, recentCopyAssets, upcomingCalendarItems]
+      properties:
+        totalBrands:
+          type: integer
+        totalCampaigns:
+          type: integer
+        totalCopyAssets:
+          type: integer
+        totalCalendarItems:
+          type: integer
+        activeCampaigns:
+          type: integer
+        aiCreditsUsed:
+          type: integer
+        aiCreditsLimit:
+          type: integer
+        campaignsByStatus:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatusCount'
+        recentCopyAssets:
+          type: array
+          items:
+            $ref: '#/components/schemas/CopyAsset'
+        upcomingCalendarItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalendarItem'
+    StatusCount:
+      type: object
+      required: [status, count]
+      properties:
+        status:
+          type: string
+        count:
+          type: integer
+
+    ActivityItem:
+      type: object
+      required: [id, action, entityType, entityName, timestamp]
+      properties:
+        id:
+          type: integer
+        action:
+          type: string
+        entityType:
+          type: string
+        entityName:
+          type: string
+        userId:
+          type: [string, 'null']
+        userName:
+          type: [string, 'null']
+        timestamp:
+          type: string
+          format: date-time
+
+    AnalyticsData:
+      type: object
+      required: [contentOutput, campaignPerformance, channelBreakdown, aiUsageTrend]
+      properties:
+        contentOutput:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeSeriesPoint'
+        campaignPerformance:
+          type: array
+          items:
+            $ref: '#/components/schemas/CampaignPerformanceItem'
+        channelBreakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChannelBreakdownItem'
+        aiUsageTrend:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeSeriesPoint'
+    TimeSeriesPoint:
+      type: object
+      required: [date, value]
+      properties:
+        date:
+          type: string
+        value:
+          type: integer
+    CampaignPerformanceItem:
+      type: object
+      required: [name, impressions, clicks, conversions]
+      properties:
+        name:
+          type: string
+        impressions:
+          type: integer
+        clicks:
+          type: integer
+        conversions:
+          type: integer
+    ChannelBreakdownItem:
+      type: object
+      required: [channel, count]
+      properties:
+        channel:
+          type: string
+        count:
+          type: integer
+
+    # AI Generation
+    GenerateAiCopyBody:
+      type: object
+      required: [copyType, prompt]
+      properties:
+        copyType:
+          type: string
+          minLength: 1
+        prompt:
+          type: string
+          minLength: 1
+        tone:
+          type: string
+        channel:
+          type: string
+        audience:
+          type: string
+        brandId:
+          type: integer
+        length:
+          type: string
+    GeneratedCopy:
+      type: object
+      required: [variants]
+      properties:
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/CopyVariant'
+    CopyVariant:
+      type: object
+      required: [title, content]
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+
+    GenerateStrategyBody:
+      type: object
+      required: [strategyType]
+      properties:
+        strategyType:
+          type: string
+          minLength: 1
+        context:
+          type: string
+        brandId:
+          type: integer
+    GeneratedStrategy:
+      type: object
+      required: [title, content, suggestions]
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        suggestions:
+          type: array
+          items:
+            type: string
+
+    GenerateCampaignIdeasBody:
+      type: object
+      properties:
+        objective:
+          type: string
+        audience:
+          type: string
+        brandId:
+          type: integer
+        budget:
+          type: string
+    GeneratedCampaignIdeas:
+      type: object
+      required: [ideas]
+      properties:
+        ideas:
+          type: array
+          items:
+            $ref: '#/components/schemas/CampaignIdea'
+    CampaignIdea:
+      type: object
+      required: [name, objective, channels, description]
+      properties:
+        name:
+          type: string
+        objective:
+          type: string
+        channels:
+          type: array
+          items:
+            type: string
+        description:
+          type: string
+        estimatedBudget:
+          type: [string, 'null']
+
+    # Members
+    Member:
+      type: object
+      required: [id, userId, tenantId, role, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        tenantId:
+          type: integer
+        role:
+          type: string
+        userName:
+          type: [string, 'null']
+        userEmail:
+          type: [string, 'null']
+        userImage:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+
+    # Usage
+    UsageData:
+      type: object
+      required: [creditsUsed, creditsLimit, usageHistory]
+      properties:
+        creditsUsed:
+          type: integer
+        creditsLimit:
+          type: integer
+        plan:
+          type: string
+        usageHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsageHistoryItem'
+    UsageHistoryItem:
+      type: object
+      required: [date, credits, action]
+      properties:
+        date:
+          type: string
+          format: date-time
+        credits:
+          type: integer
+        action:
+          type: string

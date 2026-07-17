@@ -16,13 +16,11 @@ export function setActiveTenantId(tenantId: string | null) {
 }
 
 async function apiFetch(path: string, options: RequestInit = {}) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const tenantId = getActiveTenantId();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
   };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
   if (tenantId && !headers['X-Tenant-Id']) headers['X-Tenant-Id'] = tenantId;
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: 'include' });
@@ -39,6 +37,10 @@ export const authApi = {
     apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
 
   logout: () => apiFetch('/auth/logout', { method: 'POST' }),
+
+  logoutAll: () => apiFetch('/auth/logout-all', { method: 'POST' }),
+
+  refresh: () => apiFetch('/auth/refresh', { method: 'POST' }),
 
   me: () => apiFetch('/auth/me'),
 
@@ -225,11 +227,525 @@ export const tenantApi = {
     apiFetch(`/tenants/${tenantId}/switch`, { method: 'POST' }),
 };
 
+export type TechDeckTicketPriority = 'critical' | 'high' | 'medium' | 'low';
+export type TechDeckTicketStatus = 'open' | 'in_progress' | 'waiting_on_client' | 'resolved' | 'closed';
+
+export interface TechDeckTicket {
+  id: string;
+  tenantId: string;
+  number: number;
+  createdByUserId: string;
+  assignedToUserId: string | null;
+  title: string;
+  description: string | null;
+  priority: TechDeckTicketPriority;
+  status: TechDeckTicketStatus;
+  responseDeadline: string | null;
+  resolutionDeadline: string | null;
+  respondedAt: string | null;
+  resolvedAt: string | null;
+  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TechDeckTicketListResponse {
+  tickets: TechDeckTicket[];
+}
+
+export interface TechDeckTicketCreateInput {
+  title: string;
+  description?: string | null;
+  priority?: TechDeckTicketPriority;
+  assignedToUserId?: string | null;
+  responseDeadline?: string | null;
+  resolutionDeadline?: string | null;
+}
+
+export interface TechDeckTicketUpdateInput {
+  title?: string;
+  description?: string | null;
+  priority?: TechDeckTicketPriority;
+  assignedToUserId?: string | null;
+  responseDeadline?: string | null;
+  resolutionDeadline?: string | null;
+}
+
+export type TechDeckAssetType = 'endpoint' | 'server' | 'network' | 'printer' | 'mobile' | 'other';
+export type TechDeckAssetHealth = 'unknown' | 'healthy' | 'warning' | 'critical' | 'offline';
+export type TechDeckRunbookPlatform = 'powershell' | 'bash' | 'network' | 'generic';
+export type TechDeckRunbookRisk = 'low' | 'medium' | 'high';
+export type TechDeckRunbookStatus = 'draft' | 'approved' | 'retired';
+
+export interface TechDeckAsset {
+  id: string;
+  tenantId: string;
+  name: string;
+  type: TechDeckAssetType;
+  hostname: string | null;
+  ipAddress: string | null;
+  operatingSystem: string | null;
+  health: TechDeckAssetHealth;
+  lastSeenAt: string | null;
+  notes: string | null;
+  version: number;
+  updatedAt: string;
+}
+
+export interface TechDeckRunbook {
+  id: string;
+  tenantId: string;
+  name: string;
+  platform: TechDeckRunbookPlatform;
+  purpose: string;
+  scriptText: string;
+  riskLevel: TechDeckRunbookRisk;
+  status: TechDeckRunbookStatus;
+  approvedByUserId: string | null;
+  approvedAt: string | null;
+  version: number;
+  updatedAt: string;
+}
+
+export interface TechDeckHealthAlert {
+  id: string;
+  assetId: string;
+  assetName: string;
+  severity: 'warning' | 'critical' | 'offline';
+  message: string;
+  observedAt: string;
+}
+
+export interface TechDeckOpsResponse {
+  assets: TechDeckAsset[];
+  runbooks: TechDeckRunbook[];
+  alerts: TechDeckHealthAlert[];
+  executionEnabled: false;
+}
+
+export type PulseDeskRequestPriority = 'critical' | 'high' | 'normal' | 'low';
+export type PulseDeskRequestStatus =
+  | 'new'
+  | 'triage'
+  | 'assigned'
+  | 'waiting_department'
+  | 'waiting_vendor'
+  | 'in_progress'
+  | 'escalated'
+  | 'resolved'
+  | 'closed';
+export type PulseDeskRequestCategory =
+  | 'it_infrastructure'
+  | 'medical_equipment'
+  | 'supplies_inventory'
+  | 'facilities_building'
+  | 'housekeeping_environmental'
+  | 'safety_compliance'
+  | 'vendor_external'
+  | 'administrative'
+  | 'hr_staff'
+  | 'other';
+export type PulseDeskEscalationReasonCode =
+  | 'patient_care_risk'
+  | 'safety_risk'
+  | 'department_nonresponse'
+  | 'sla_breach'
+  | 'resource_blocked'
+  | 'other';
+
+export interface PulseDeskDepartment {
+  id: string;
+  name: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PulseDeskRequest {
+  id: string;
+  requestNumber: string;
+  summary: string;
+  category: PulseDeskRequestCategory;
+  priority: PulseDeskRequestPriority;
+  status: PulseDeskRequestStatus;
+  departmentId: string | null;
+  assignedToUserId: string | null;
+  locationLabel: string | null;
+  isPatientImpacting: boolean;
+  dueAt: string | null;
+  version: number;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+  departmentName?: string | null;
+  assignedToName?: string | null;
+}
+
+export interface PulseDeskRequestEvent {
+  id: string;
+  type: string;
+  actorUserId?: string | null;
+  fromStatus?: PulseDeskRequestStatus | null;
+  toStatus?: PulseDeskRequestStatus | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface PulseDeskDepartmentsResponse {
+  departments: PulseDeskDepartment[];
+  capabilities: PulseDeskCapabilities;
+}
+
+export interface PulseDeskRequestsResponse {
+  requests: PulseDeskRequest[];
+  capabilities: PulseDeskCapabilities;
+}
+
+export interface PulseDeskRequestDetailResponse {
+  request: PulseDeskRequest;
+  events: PulseDeskRequestEvent[];
+  capabilities: PulseDeskCapabilities;
+}
+
+export interface PulseDeskCapabilities {
+  canManageWorkflow: boolean;
+}
+
+export interface PulseDeskAssignee {
+  id: string;
+  name: string;
+}
+
+export interface PulseDeskAssigneesResponse {
+  assignees: PulseDeskAssignee[];
+  capabilities: PulseDeskCapabilities;
+}
+
+export interface PulseDeskRequestFilters {
+  status?: PulseDeskRequestStatus;
+  priority?: PulseDeskRequestPriority;
+  category?: PulseDeskRequestCategory;
+  departmentId?: string;
+  assignedToUserId?: string;
+  isPatientImpacting?: boolean;
+  search?: string;
+  limit?: number;
+}
+
+export interface PulseDeskRequestCreateInput {
+  summary: string;
+  category: PulseDeskRequestCategory;
+  priority: PulseDeskRequestPriority;
+  departmentId?: string | null;
+  locationLabel?: string | null;
+  isPatientImpacting: boolean;
+  phiAcknowledged: true;
+}
+
+export interface PulseDeskRequestUpdateInput {
+  expectedVersion: number;
+  summary?: string;
+  category?: PulseDeskRequestCategory;
+  priority?: PulseDeskRequestPriority;
+  departmentId?: string | null;
+  assignedToUserId?: string | null;
+  locationLabel?: string | null;
+  isPatientImpacting?: boolean;
+  phiAcknowledged?: true;
+}
+
+export type NinjaPoolPracticeStatus = 'active' | 'completed' | 'abandoned';
+
+export interface NinjaPoolPracticeSession {
+  id: string;
+  status: NinjaPoolPracticeStatus;
+  shots: number;
+  objectBallsPocketed: number;
+  scratches: number;
+  version: number;
+  startedAt: string;
+  completedAt: string | null;
+  updatedAt: string;
+}
+
+export interface NinjaPoolPracticeSessionsResponse {
+  sessions: NinjaPoolPracticeSession[];
+}
+
+export interface NinjaPoolPracticeProgressInput {
+  expectedVersion: number;
+  shots: number;
+  objectBallsPocketed: number;
+  scratches: number;
+}
+
+export type NativeWorkflowModuleSlug = 'torqueshed' | 'faultlinelab' | 'brandforgeos' | 'snapproofos';
+
+export interface ModuleWorkflowItem {
+  id: string;
+  tenantId: string;
+  createdByUserId: string;
+  moduleSlug: NativeWorkflowModuleSlug;
+  itemType: string;
+  title: string;
+  status: string;
+  summary: string | null;
+  data: Record<string, string | number | boolean | null>;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ModuleWorkflowListResponse {
+  items: ModuleWorkflowItem[];
+  itemType: string;
+  statuses: string[];
+}
+
+export interface TradeFlowKitLineItem { description: string; quantity: number; unitPriceCents: number }
+export interface TradeFlowKitCustomer { id: string; name: string; phone: string | null; email: string | null; version: number }
+export interface TradeFlowKitJob { id: string; customerId: string; title: string; status: string; priority: string; version: number }
+export interface TradeFlowKitQuote {
+  id: string; customerId: string; jobId: string | null; status: string; lineItems: TradeFlowKitLineItem[];
+  subtotalCents: number; taxRateBps: number; taxCents: number; discountCents: number; totalCents: number; version: number;
+}
+export interface TradeFlowKitInvoice extends TradeFlowKitQuote {
+  sourceQuoteId: string | null; dueDate: string | null; paidAt: string | null;
+  paymentMethod: string | null; paymentReference: string | null;
+}
+export interface TradeFlowKitRevenueResponse {
+  customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[];
+  quotes: TradeFlowKitQuote[]; invoices: TradeFlowKitInvoice[];
+}
+
 // Task #72 — backend persistence for the polished module shells.
-// Each helper hits `/v1/modules/{slug}/...` which is gated by
-// `requireTenantMember` and stamps the active tenant from the
-// X-Tenant-Id header that `apiFetch` already sets.
+// Each helper hits `/v1/modules/{slug}/...`, whose route group is gated by
+// `requireTenantMember` plus `requireTenantModuleAccess(slug)`, and stamps the
+// active tenant from the X-Tenant-Id header that `apiFetch` already sets.
 export const moduleShellApi = {
+  workflows: {
+    list: (slug: NativeWorkflowModuleSlug, status?: string): Promise<ModuleWorkflowListResponse> =>
+      apiFetch(`/modules/${slug}/work-items${status ? `?status=${encodeURIComponent(status)}` : ''}`) as Promise<ModuleWorkflowListResponse>,
+    create: (
+      slug: NativeWorkflowModuleSlug,
+      input: { title: string; summary?: string | null; data?: Record<string, string | number | boolean | null> },
+    ): Promise<ModuleWorkflowItem> => apiFetch(`/modules/${slug}/work-items`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }) as Promise<ModuleWorkflowItem>,
+    update: (
+      slug: NativeWorkflowModuleSlug,
+      id: string,
+      input: { expectedVersion: number; title?: string; summary?: string | null; status?: string; data?: Record<string, string | number | boolean | null> },
+    ): Promise<ModuleWorkflowItem> => apiFetch(`/modules/${slug}/work-items/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }) as Promise<ModuleWorkflowItem>,
+    delete: (slug: NativeWorkflowModuleSlug, id: string): Promise<{ ok: true }> =>
+      apiFetch(`/modules/${slug}/work-items/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<{ ok: true }>,
+  },
+  ninjaPoolHall: {
+    listPracticeSessions: (limit = 8): Promise<NinjaPoolPracticeSessionsResponse> =>
+      apiFetch(`/modules/ninja-pool-hall/practice-sessions?limit=${encodeURIComponent(String(limit))}`) as Promise<NinjaPoolPracticeSessionsResponse>,
+    startPracticeSession: (): Promise<NinjaPoolPracticeSession> =>
+      apiFetch('/modules/ninja-pool-hall/practice-sessions', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      }) as Promise<NinjaPoolPracticeSession>,
+    savePracticeShot: (
+      id: string,
+      input: NinjaPoolPracticeProgressInput,
+    ): Promise<NinjaPoolPracticeSession> =>
+      apiFetch(`/modules/ninja-pool-hall/practice-sessions/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }) as Promise<NinjaPoolPracticeSession>,
+    abandonPracticeSession: (
+      id: string,
+      expectedVersion: number,
+    ): Promise<NinjaPoolPracticeSession> =>
+      apiFetch(`/modules/ninja-pool-hall/practice-sessions/${encodeURIComponent(id)}/abandon`, {
+        method: 'POST',
+        body: JSON.stringify({ expectedVersion }),
+      }) as Promise<NinjaPoolPracticeSession>,
+  },
+  pulsedesk: {
+    listDepartments: (includeInactive = true): Promise<PulseDeskDepartmentsResponse> => {
+      const query = includeInactive ? '?includeInactive=true' : '';
+      return apiFetch(`/modules/pulsedesk/departments${query}`) as Promise<PulseDeskDepartmentsResponse>;
+    },
+    createDepartment: (name: string): Promise<PulseDeskDepartment> =>
+      apiFetch('/modules/pulsedesk/departments', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      }) as Promise<PulseDeskDepartment>,
+    updateDepartment: (
+      id: string,
+      input: { name?: string; active?: boolean },
+    ): Promise<PulseDeskDepartment> =>
+      apiFetch(`/modules/pulsedesk/departments/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }) as Promise<PulseDeskDepartment>,
+    listAssignees: (): Promise<PulseDeskAssigneesResponse> =>
+      apiFetch('/modules/pulsedesk/assignees') as Promise<PulseDeskAssigneesResponse>,
+    listRequests: (filters?: PulseDeskRequestFilters): Promise<PulseDeskRequestsResponse> => {
+      const query = new URLSearchParams();
+      if (filters?.status) query.set('status', filters.status);
+      if (filters?.priority) query.set('priority', filters.priority);
+      if (filters?.category) query.set('category', filters.category);
+      if (filters?.departmentId) query.set('departmentId', filters.departmentId);
+      if (filters?.assignedToUserId) query.set('assignedToUserId', filters.assignedToUserId);
+      if (filters?.isPatientImpacting !== undefined) {
+        query.set('isPatientImpacting', String(filters.isPatientImpacting));
+      }
+      if (filters?.search) query.set('search', filters.search);
+      if (filters?.limit) query.set('limit', String(filters.limit));
+      const suffix = query.size > 0 ? `?${query.toString()}` : '';
+      return apiFetch(`/modules/pulsedesk/requests${suffix}`) as Promise<PulseDeskRequestsResponse>;
+    },
+    createRequest: (input: PulseDeskRequestCreateInput): Promise<PulseDeskRequest> =>
+      apiFetch('/modules/pulsedesk/requests', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<PulseDeskRequest>,
+    getRequest: (id: string): Promise<PulseDeskRequestDetailResponse> =>
+      apiFetch(`/modules/pulsedesk/requests/${encodeURIComponent(id)}`) as Promise<PulseDeskRequestDetailResponse>,
+    updateRequest: (id: string, input: PulseDeskRequestUpdateInput): Promise<PulseDeskRequest> =>
+      apiFetch(`/modules/pulsedesk/requests/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }) as Promise<PulseDeskRequest>,
+    transitionRequest: (
+      id: string,
+      input: {
+        expectedVersion: number;
+        toStatus: PulseDeskRequestStatus;
+        reasonCode?: PulseDeskEscalationReasonCode;
+      },
+    ): Promise<PulseDeskRequest> =>
+      apiFetch(`/modules/pulsedesk/requests/${encodeURIComponent(id)}/transitions`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<PulseDeskRequest>,
+  },
+  techdeck: {
+    getOps: (): Promise<TechDeckOpsResponse> =>
+      apiFetch('/modules/techdeck/ops') as Promise<TechDeckOpsResponse>,
+    createAsset: (input: {
+      name: string;
+      type?: TechDeckAssetType;
+      hostname?: string;
+      ipAddress?: string;
+      operatingSystem?: string;
+      health?: TechDeckAssetHealth;
+      notes?: string;
+    }): Promise<TechDeckAsset> => apiFetch('/modules/techdeck/assets', {
+      method: 'POST', body: JSON.stringify(input),
+    }) as Promise<TechDeckAsset>,
+    updateAsset: (
+      id: string,
+      input: { expectedVersion: number; health?: TechDeckAssetHealth; lastSeenAt?: string | null; notes?: string | null },
+    ): Promise<TechDeckAsset> => apiFetch(`/modules/techdeck/assets/${encodeURIComponent(id)}`, {
+      method: 'PATCH', body: JSON.stringify(input),
+    }) as Promise<TechDeckAsset>,
+    createRunbook: (input: {
+      name: string;
+      platform: TechDeckRunbookPlatform;
+      purpose: string;
+      scriptText: string;
+      riskLevel?: TechDeckRunbookRisk;
+    }): Promise<TechDeckRunbook> => apiFetch('/modules/techdeck/runbooks', {
+      method: 'POST', body: JSON.stringify(input),
+    }) as Promise<TechDeckRunbook>,
+    approveRunbook: (id: string, expectedVersion: number): Promise<TechDeckRunbook> =>
+      apiFetch(`/modules/techdeck/runbooks/${encodeURIComponent(id)}/approve`, {
+        method: 'POST', body: JSON.stringify({ expectedVersion }),
+      }) as Promise<TechDeckRunbook>,
+    retireRunbook: (id: string, expectedVersion: number): Promise<TechDeckRunbook> =>
+      apiFetch(`/modules/techdeck/runbooks/${encodeURIComponent(id)}/retire`, {
+        method: 'POST', body: JSON.stringify({ expectedVersion }),
+      }) as Promise<TechDeckRunbook>,
+    list: (filters?: {
+      status?: TechDeckTicketStatus;
+      priority?: TechDeckTicketPriority;
+      assignment?: 'mine' | 'unassigned';
+      search?: string;
+    }): Promise<TechDeckTicketListResponse> => {
+      const query = new URLSearchParams();
+      if (filters?.status) query.set('status', filters.status);
+      if (filters?.priority) query.set('priority', filters.priority);
+      if (filters?.assignment) query.set('assignment', filters.assignment);
+      if (filters?.search) query.set('search', filters.search);
+      const suffix = query.size > 0 ? `?${query.toString()}` : '';
+      return apiFetch(`/modules/techdeck/tickets${suffix}`) as Promise<TechDeckTicketListResponse>;
+    },
+    get: (id: string): Promise<TechDeckTicket> =>
+      apiFetch(`/modules/techdeck/tickets/${encodeURIComponent(id)}`) as Promise<TechDeckTicket>,
+    create: (input: TechDeckTicketCreateInput): Promise<TechDeckTicket> =>
+      apiFetch('/modules/techdeck/tickets', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<TechDeckTicket>,
+    update: (id: string, input: TechDeckTicketUpdateInput): Promise<TechDeckTicket> =>
+      apiFetch(`/modules/techdeck/tickets/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }) as Promise<TechDeckTicket>,
+    updateStatus: (id: string, status: TechDeckTicketStatus): Promise<TechDeckTicket> =>
+      apiFetch(`/modules/techdeck/tickets/${encodeURIComponent(id)}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }) as Promise<TechDeckTicket>,
+    delete: (id: string): Promise<{ ok: true }> =>
+      apiFetch(`/modules/techdeck/tickets/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<{ ok: true }>,
+  },
+  tradeflowkit: {
+    revenue: (): Promise<TradeFlowKitRevenueResponse> =>
+      apiFetch('/modules/tradeflowkit/revenue') as Promise<TradeFlowKitRevenueResponse>,
+    createCustomer: (input: { name: string; phone?: string; email?: string }): Promise<TradeFlowKitCustomer> =>
+      apiFetch('/modules/tradeflowkit/customers', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitCustomer>,
+    createJob: (input: { customerId: string; title: string; priority?: string }): Promise<TradeFlowKitJob> =>
+      apiFetch('/modules/tradeflowkit/jobs', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitJob>,
+    createQuote: (input: { customerId: string; jobId?: string; lineItems: TradeFlowKitLineItem[]; taxRateBps?: number; discountCents?: number }): Promise<TradeFlowKitQuote> =>
+      apiFetch('/modules/tradeflowkit/quotes', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitQuote>,
+    transitionQuote: (id: string, expectedVersion: number, status: string): Promise<TradeFlowKitQuote> =>
+      apiFetch(`/modules/tradeflowkit/quotes/${encodeURIComponent(id)}/transition`, { method: 'POST', body: JSON.stringify({ expectedVersion, status }) }) as Promise<TradeFlowKitQuote>,
+    invoiceQuote: (id: string, expectedVersion: number): Promise<TradeFlowKitInvoice> =>
+      apiFetch(`/modules/tradeflowkit/quotes/${encodeURIComponent(id)}/invoice`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<TradeFlowKitInvoice>,
+    transitionInvoice: (id: string, expectedVersion: number, status: string): Promise<TradeFlowKitInvoice> =>
+      apiFetch(`/modules/tradeflowkit/invoices/${encodeURIComponent(id)}/transition`, { method: 'POST', body: JSON.stringify({ expectedVersion, status }) }) as Promise<TradeFlowKitInvoice>,
+    payInvoice: (id: string, expectedVersion: number, paymentMethod: string, paymentReference?: string): Promise<TradeFlowKitInvoice> =>
+      apiFetch(`/modules/tradeflowkit/invoices/${encodeURIComponent(id)}/pay`, { method: 'POST', body: JSON.stringify({ expectedVersion, paymentMethod, paymentReference }) }) as Promise<TradeFlowKitInvoice>,
+    list: (filters?: { status?: string; search?: string }) => {
+      const query = new URLSearchParams();
+      if (filters?.status) query.set('status', filters.status);
+      if (filters?.search) query.set('search', filters.search);
+      const suffix = query.size > 0 ? `?${query.toString()}` : '';
+      return apiFetch(`/modules/tradeflowkit/leads${suffix}`);
+    },
+    get: (id: string) => apiFetch(`/modules/tradeflowkit/leads/${encodeURIComponent(id)}`),
+    create: (input: {
+      name: string;
+      phone?: string;
+      email?: string;
+      serviceType?: string;
+      description?: string;
+      urgency?: 'normal' | 'urgent' | 'emergency';
+      estimatedValueCents?: number | null;
+      nextFollowUpAt?: string | null;
+    }) => apiFetch('/modules/tradeflowkit/leads', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+    update: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/tradeflowkit/leads/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    delete: (id: string) =>
+      apiFetch(`/modules/tradeflowkit/leads/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  },
   callcommand: {
     list: () => apiFetch('/modules/callcommand-ai/calls'),
     get: (id: string) => apiFetch(`/modules/callcommand-ai/calls/${id}`),

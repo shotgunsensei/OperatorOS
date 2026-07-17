@@ -15,10 +15,14 @@
  * UI wiring — the Pending Invites row, the Resend button click, and
  * the success status text — does not silently regress.
  */
-import { test, expect, request as pwRequest } from '@playwright/test';
-
-const API = process.env.E2E_API_URL ?? 'http://localhost:5001';
-const WEB = process.env.E2E_WEB_URL ?? 'http://localhost:5000';
+import { test, expect } from '@playwright/test';
+import {
+  E2E_API_URL as API,
+  E2E_WEB_URL as WEB,
+  expectNoScriptReadableAuth,
+  registerAndLogin,
+  resolveCurrentTenant,
+} from './session-auth';
 
 test('admin can resend a pending invite from the Members page', async ({ page }) => {
   const ts = Date.now();
@@ -26,47 +30,31 @@ test('admin can resend a pending invite from the Members page', async ({ page })
   const inviteeEmail = `task30-invitee-${ts}@example.com`;
   const password = 'CorrectHorseBattery9!';
 
-  const api = await pwRequest.newContext();
+  const api = page.context().request;
 
-  // 1) Register an owner user. Backend returns { token, user }.
-  const reg = await api.post(`${API}/v1/auth/register`, {
-    data: { email: ownerEmail, password, name: 'Task30 Owner' },
+  // 1) Register and sign in an owner through the production cookie contract.
+  await registerAndLogin(api, {
+    email: ownerEmail,
+    password,
+    name: 'Task30 Owner',
   });
-  expect(reg.ok(), `register: ${reg.status()} ${await reg.text()}`).toBeTruthy();
-  const { token } = await reg.json();
-
-  const auth = { Authorization: `Bearer ${token}` };
 
   // 2) Use the personal tenant that registration auto-provisions for the
   //    new user. There is no public POST /v1/tenants — every account is
   //    born with its own personal tenant where they are the owner, which
   //    is exactly the role we need to drive the Members page.
-  const tenantsRes = await api.get(`${API}/v1/me/tenants`, { headers: auth });
-  expect(tenantsRes.ok(), `list tenants: ${tenantsRes.status()} ${await tenantsRes.text()}`).toBeTruthy();
-  const meTenants = await tenantsRes.json();
-  const tenantId: string =
-    meTenants.current ?? meTenants.tenants?.[0]?.id;
-  expect(tenantId, 'expected the new user to have at least one tenant').toBeTruthy();
-
-  // Pin the active tenant server-side too, so any cookie-only request
-  // (the SPA does both) resolves the same tenant the UI shows.
-  await api.post(`${API}/v1/tenants/${tenantId}/switch`, { headers: auth })
-    .catch(() => undefined);
+  const tenantId = await resolveCurrentTenant(api);
 
   // 3) Create a pending invite as the owner.
   const inviteRes = await api.post(`${API}/v1/tenants/${tenantId}/invites`, {
-    headers: auth,
     data: { email: inviteeEmail, role: 'member' },
   });
   expect(inviteRes.ok(), `create invite: ${inviteRes.status()} ${await inviteRes.text()}`).toBeTruthy();
   const inviteId: string = (await inviteRes.json()).invite.id;
 
-  // 4) Seed browser auth state and load the SPA.
-  await page.addInitScript(({ token, tenantId }) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('activeTenantId', tenantId);
-  }, { token, tenantId });
+  // 4) Load the SPA with the host-only session already in its cookie jar.
   await page.goto(WEB);
+  await expectNoScriptReadableAuth(page);
 
   // Wait until the dashboard chrome (sidebar) renders, then jump to Members.
   await page.getByRole('button', { name: 'Members' }).click();

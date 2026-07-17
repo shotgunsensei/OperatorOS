@@ -150,16 +150,18 @@ Current module sources of truth:
 - API seed code writes module rows and platform component rows into the database.
 - Web module pages read API/module data and launch via OperatorOS handoff.
 
-Current target domain declarations already exist:
+The baseline originally declared extra platform hosts. The current
+screenshot-confirmed deployment contract is intentionally narrower:
 
 - `operatoros.net`
 - `app.operatoros.net`
 - `api.operatoros.net`
-- `admin.operatoros.net`
 - `auth.operatoros.net`
-- `docs.operatoros.net`
-- `status.operatoros.net`
-- `<module>.operatoros.net`, with explicit slug-to-subdomain overrides for BrandForgeOS, StudyForge AI, Ninja Launch Kit, and CallCommand AI.
+- the exact 13 registered `<module>.operatoros.net` hosts, with the explicit
+  `ninja-launch-kit` to `ninjalaunchkit.operatoros.net` mapping.
+
+The earlier `admin`, `docs`, and `status` names are not attached/current
+platform surfaces and are no longer advertised by the runtime registry.
 
 Current routing behavior:
 
@@ -167,7 +169,8 @@ Current routing behavior:
 - Next rewrites `/api/:path*` to `${INTERNAL_API_URL || NEXT_PUBLIC_API_URL}/v1/:path*`.
 - Platform Command browser calls should use `/api/platform/*`, which rewrites to backend `/v1/platform/*`.
 - Prior route-contract work explicitly avoids frontend `/api/v1/platform/*`, `/v1/v1/platform/*`, or raw browser `/v1/platform/*`.
-- `detectOperatorOSHost(hostname)` exists in the SDK and can classify root/app/api/admin/module subdomains, but it is not wired into Next middleware or a host-based router yet.
+- `detectOperatorOSHost(hostname)` classifies root/app/auth/api/module hosts;
+  active Next middleware performs exact host routing.
 - `docs/DOMAIN-MIGRATION.md` covers manual DNS/Replit migration for TechDeck subdomain routing, but this is infrastructure-level and not app-level host routing.
 
 Routing risks before consolidation:

@@ -34,6 +34,7 @@ import {
   getAdapter, type AdapterTarget, type AdapterRequest, type PushShape,
   type PushAuthMode, type AdapterSkipReason,
 } from './entitlement-adapters.js';
+import { selectPlanModuleReconciliation } from './free-account-apps.js';
 
 function getSigningSecret(): string | null {
   const secret = process.env.MODULE_SSO_SECRET;
@@ -115,16 +116,13 @@ export async function recomputeAndPropagateEntitlements(
 
   // -------------------------------------------------------------------
   // 2. Find dropped modules: tenant_modules.source='included' AND status='enabled'
-  //    AND moduleId NOT IN includedModuleIds. Disable each and revoke
-  //    every per-user access row attached to it.
+  //    AND moduleId NOT IN includedModuleIds. Free-with-any-account rows are
+  //    excluded from plan reconciliation in both directions. Disable each
+  //    remaining dropped row and revoke every attached per-user access row.
   // -------------------------------------------------------------------
   const tmRows = await db.select().from(tenantModules)
     .where(eq(tenantModules.tenantId, tenantId));
-  const dropped = tmRows.filter(tm =>
-    tm.source === 'included' &&
-    tm.status === 'enabled' &&
-    !includedModuleIds.has(tm.moduleId),
-  );
+  const { dropped, reEnabled } = selectPlanModuleReconciliation(tmRows, includedModuleIds);
 
   // Task #108 — two-way reconciliation. Modules NEWLY included by the
   // owner's plan (e.g. on an upgrade) and currently disabled with
@@ -132,11 +130,6 @@ export async function recomputeAndPropagateEntitlements(
   // pipeline reconcile both directions instead of being revoke-only,
   // so admins don't have to manually re-enable plan modules after a
   // plan upgrade.
-  const reEnabled = tmRows.filter(tm =>
-    tm.source === 'included' &&
-    tm.status === 'disabled' &&
-    includedModuleIds.has(tm.moduleId),
-  );
   if (reEnabled.length > 0) {
     const reEnabledIds = reEnabled.map(r => r.moduleId);
     await db.update(tenantModules)

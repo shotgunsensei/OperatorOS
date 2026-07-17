@@ -177,7 +177,7 @@ export const PROJECTS: ProjectCard[] = [
   {
     name: 'TechDeck',
     tagline: 'MSP and IT operations console for technician workflows.',
-    url: 'https://techdeck.app',
+    url: 'https://techdeck.operatoros.net',
     bullets: [
       'Technician command center and runbooks',
       'Script, alert, and ticket-context surfacing',
@@ -188,7 +188,7 @@ export const PROJECTS: ProjectCard[] = [
   {
     name: 'PulseDesk',
     tagline: 'Healthcare operations management — not a generic helpdesk.',
-    url: 'https://pulsedesk.support',
+    url: 'https://pulsedesk.operatoros.net',
     bullets: [
       'Clinical coordination and visibility',
       'Radiology / clinical operations context',
@@ -199,7 +199,7 @@ export const PROJECTS: ProjectCard[] = [
   {
     name: 'TradeFlowKit',
     tagline: 'Business operations and revenue workflow platform.',
-    url: 'https://tradeflowkit.com',
+    url: 'https://tradeflowkit.operatoros.net',
     bullets: [
       'Quote → invoice → payment flow',
       'Service workflow management',
@@ -210,7 +210,7 @@ export const PROJECTS: ProjectCard[] = [
   {
     name: 'TorqueShed',
     tagline: 'Automotive diagnostics and technician knowledge platform.',
-    url: 'https://torqueshed.pro',
+    url: 'https://torqueshed.operatoros.net',
     bullets: [
       'Symptom trees and repair workflows',
       'Technician reasoning and community validation',
@@ -221,7 +221,7 @@ export const PROJECTS: ProjectCard[] = [
   {
     name: 'FaultlineLab',
     tagline: 'Advanced diagnostic challenge and problem-solving platform.',
-    url: 'https://faultlinelab.com',
+    url: 'https://faultlinelab.operatoros.net',
     bullets: [
       'Complex troubleshooting scenarios',
       'Clue-based investigation workflows',
@@ -232,7 +232,7 @@ export const PROJECTS: ProjectCard[] = [
   {
     name: 'BrandForge OS',
     tagline: 'Brand and marketing tooling for structured asset systems.',
-    url: 'https://bf-os.com',
+    url: 'https://brandforgeos.operatoros.net',
     bullets: [
       'Brand asset operations',
       'Campaign workflow design',
@@ -243,7 +243,7 @@ export const PROJECTS: ProjectCard[] = [
   {
     name: 'SnapProofOS',
     tagline: 'Operational proof and evidence capture for field workflows.',
-    url: 'https://snapproofos.com',
+    url: 'https://snapproofos.operatoros.net',
     bullets: [
       'Field proof capture',
       'Documentation workflows',

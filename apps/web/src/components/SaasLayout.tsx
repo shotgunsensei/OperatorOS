@@ -32,7 +32,7 @@ interface SaasLayoutProps {
   // Optional override — set when the active tenant role is known to the
   // shell (e.g. from a /me/tenants response). Falls back to false when
   // unavailable, hiding tenant-admin entries (safer default).
-  tenantRole?: 'owner' | 'admin' | 'member' | null;
+  tenantRole?: 'owner' | 'admin' | 'member' | 'viewer' | null;
 }
 
 export default function SaasLayout({ activePage, onNavigate, children, tenantRole }: SaasLayoutProps) {

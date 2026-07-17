@@ -185,7 +185,7 @@ export function resolveExchangeUrl(
 }
 
 export function loadConfig(): OperatorOsSsoConfig | null {
-  const secret = process.env.MODULE_SSO_SECRET;
+  const secret = process.env.OPERATOROS_SSO_CLIENT_SECRET;
   const audienceRaw = process.env.OPERATOROS_SSO_AUDIENCE;
   const env = process.env.OPERATOROS_SSO_ENV;
   const apiUrl = process.env.OPERATOROS_API_URL;

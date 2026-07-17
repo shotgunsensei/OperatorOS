@@ -55,7 +55,7 @@ export const CORE_PRODUCTS: readonly ProductCatalogEntry[] = [
     name: 'PulseDesk',
     monthlyPriceCents: 14900,
     includedSeats: INCLUDED_SEATS,
-    description: 'Internal operations, ticketing, inventory, and asset management.',
+    description: 'Healthcare operations coordination, department escalation, inventory, and asset visibility.',
     stripePriceEnvKey: 'STRIPE_PRICE_PULSEDESK_MONTHLY',
   },
   {
@@ -79,7 +79,7 @@ export const FREE_WITH_ANY_ACCOUNT: readonly ModuleCatalogItem[] = [
   {
     key: 'torqueshed',
     name: 'TorqueShed',
-    description: 'Fleet and vehicle maintenance value for every operator team.',
+    description: 'Automotive diagnostics, repair workflow, and proof-of-knowledge tools.',
   },
   {
     key: 'faultlinelab',
@@ -99,7 +99,7 @@ export const COMPANION_MODULES: readonly ModuleCatalogItem[] = [
   { key: 'studyforge-ai', name: 'StudyForge AI', description: 'AI-assisted study and team training.' },
   { key: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Launch planning and internal tool scaffolding.' },
   { key: 'callcommand-ai', name: 'CallCommand AI', description: 'AI phone operations and call automation.' },
-  { key: 'ninjamation', name: 'Ninjamation', description: 'Cross-app workflow automation.' },
+  { key: 'ninjamation', name: 'Ninjamation', description: 'AI-assisted cross-app workflow automation.' },
 ] as const;
 
 export const COMPANION_MODULE_KEYS = new Set<CompanionModuleKey>(

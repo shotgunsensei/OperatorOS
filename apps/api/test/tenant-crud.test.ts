@@ -47,7 +47,7 @@ after(async () => {
   for (const u of [superAdmin, owner]) if (u) await cleanupUser(u.id);
 });
 
-const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` });
+const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` });
 
 test('POST /v1/platform/tenants creates tenant + owner mapping + audit', async () => {
   const slug = `tcrud-${uniqueId("t").replace(/_/g,"-")}`;

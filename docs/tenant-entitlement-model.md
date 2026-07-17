@@ -1,5 +1,9 @@
 # OperatorOS Tenant And Entitlement Model
 
+> Historical Phase 6 record. The current 13-module catalog, commercial groups,
+> and consolidation state are defined in `packages/sdk/src/catalog.ts` and
+> `docs/MODULE_CONSOLIDATION_STATUS.md`.
+
 Status: Phase 6 implementation notes. OperatorOS remains the authority for
 users, tenants, roles, module access, root platform administration, audit hooks,
 and future billing-driven entitlement changes.
@@ -52,19 +56,25 @@ database module table, then evaluates:
 
 1. User exists and is active.
 2. Module exists.
-3. Platform admin/root authority through `hasPlatformAdminAuthority`.
-4. Tenant exists and is not archived or suspended.
-5. User is a tenant member.
-6. Disabled or archived `tenant_modules` row denies access.
-7. `tenant_user_module_access.access_level = 'none'` denies access.
-8. Explicit user or manager grant allows access.
-9. `tenant_modules.allow_all_members` allows tenant members.
-10. Active `tenant_entitlements` row allows access when the user is within seat capacity.
-11. Tenant owner's active or trialing subscription plus `plan_modules` allows access.
-12. Otherwise the request is denied.
+3. The global database module row is launchable (`live`, `active`, or `beta`)
+   and is not archived. This platform-wide kill switch is evaluated before any
+   administrator override.
+4. Platform admin/root authority through `hasPlatformAdminAuthority`.
+5. Tenant exists and is not archived or suspended.
+6. User is a tenant member.
+7. Disabled or archived `tenant_modules` row denies access.
+8. `tenant_user_module_access.access_level = 'none'` denies access.
+9. Explicit user or manager grant allows access.
+10. `tenant_modules.allow_all_members` allows tenant members.
+11. Active `tenant_entitlements` row allows access when the user is within seat capacity.
+12. Tenant owner's active or trialing subscription plus `plan_modules` allows access.
+13. Otherwise the request is denied.
 
 Root platform admins are allowed server-side through `hasPlatformAdminAuthority`
-and receive manager-level module access. This is not a frontend-only bypass.
+and receive manager-level module access. They do not bypass a globally disabled,
+unavailable, or archived module. When a platform admin also has a persisted
+tenant membership, the membership role remains available as audit context while
+the effective tenant authorization role is consistently owner-equivalent.
 
 ## Grant And Revoke Behavior
 

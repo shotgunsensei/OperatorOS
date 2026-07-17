@@ -35,6 +35,7 @@
     "../../apps/modules/tradeflowkit/adapter.ts",
     "../../packages/auth/**/*.ts",
     "../../packages/modules/**/*.ts",
+    "../../packages/sso/**/*.ts",
     "../../packages/sdk/src/**/*.ts"
   ],
   "exclude": [

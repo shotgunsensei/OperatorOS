@@ -2,9 +2,20 @@
 
 import { getActiveTenantId } from './auth';
 import { openExternal } from './launch';
+import { getModuleById } from '../../../../packages/modules/registry.js';
+
+export interface SsoAuthorizationRequest {
+  clientId: string;
+  redirectUri: string;
+  returnTo: string;
+  state: string;
+  nonce: string;
+  codeChallenge: string;
+  codeChallengeMethod: 'S256';
+}
 
 export interface ModuleLaunchResponse {
-  token?: string;
+  code?: string;
   launchUrl?: string;
   redirectUrl?: string;
   redirect_url?: string;
@@ -36,11 +47,6 @@ export class ModuleLaunchError extends Error {
   }
 }
 
-function readBearerToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem('token');
-}
-
 function launchUrlFromResponse(data: ModuleLaunchResponse): string | null {
   return data.launchUrl || data.redirectUrl || data.redirect_url || null;
 }
@@ -63,12 +69,11 @@ export function friendlyModuleLaunchError(err: unknown): string {
 export async function issueModuleLaunch(
   moduleId: string,
   tenantId: string | null | undefined = getActiveTenantId(),
+  authorization?: SsoAuthorizationRequest,
 ): Promise<ModuleLaunchResponse> {
-  const token = readBearerToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (token) headers.Authorization = `Bearer ${token}`;
   if (tenantId) headers['X-Tenant-Id'] = tenantId;
 
   let res: Response;
@@ -77,7 +82,7 @@ export async function issueModuleLaunch(
       method: 'POST',
       headers,
       credentials: 'include',
-      body: JSON.stringify({ moduleId, tenantId }),
+      body: JSON.stringify({ moduleId, tenantId, ...authorization }),
     });
   } catch (err) {
     throw new ModuleLaunchError((err as Error)?.message || 'Failed to fetch', 0, 'NETWORK_ERROR');
@@ -109,13 +114,26 @@ export async function issueModuleLaunch(
 
 export async function launchModuleViaSso(
   moduleId: string,
-  tenantId?: string | null,
+  _tenantId?: string | null,
 ): Promise<ModuleLaunchResponse> {
-  const handoff = await issueModuleLaunch(moduleId, tenantId);
-  const launchUrl = launchUrlFromResponse(handoff);
-  if (!launchUrl) {
-    throw new ModuleLaunchError('SSO issue succeeded but no launch URL was returned.', 200, 'LAUNCH_URL_MISSING', handoff);
+  const module = getModuleById(moduleId);
+  if (!module || module.status !== 'active') {
+    throw new ModuleLaunchError('Module is not available for launch.', 404, 'MODULE_UNAVAILABLE');
   }
-  await openExternal(launchUrl);
-  return handoff;
+
+  // Enter the module host first. Its middleware owns the state/nonce/PKCE
+  // transaction cookies, then performs a central-auth round trip only when
+  // that host does not already have a valid local session.
+  await openExternal(module.productionBaseUrl);
+  return {
+    launchUrl: module.productionBaseUrl,
+    redirectUrl: module.productionBaseUrl,
+    module: {
+      id: module.id,
+      slug: module.slug,
+      name: module.name,
+      hostname: module.hostname,
+      entitlementKey: module.entitlementKey,
+    },
+  };
 }

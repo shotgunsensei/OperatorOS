@@ -1,0 +1,2284 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: SnapProof AI API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: auth
+  - name: organizations
+  - name: jobs
+  - name: customers
+  - name: findings
+  - name: notes
+  - name: parts
+  - name: labor
+  - name: files
+  - name: templates
+  - name: reports
+  - name: exports
+  - name: share
+  - name: team
+  - name: branding
+  - name: activity
+  - name: dashboard
+  - name: billing
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ── Auth ──
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Organizations ──
+  /organizations:
+    post:
+      operationId: createOrganization
+      tags: [organizations]
+      summary: Create an organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrganizationBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+
+  /organizations/{id}:
+    get:
+      operationId: getOrganization
+      tags: [organizations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+    patch:
+      operationId: updateOrganization
+      tags: [organizations]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrganizationBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+
+  # ── Jobs ──
+  /jobs:
+    get:
+      operationId: listJobs
+      tags: [jobs]
+      summary: List jobs
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: customerId
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Job"
+                  total:
+                    type: integer
+                required: [jobs, total]
+    post:
+      operationId: createJob
+      tags: [jobs]
+      summary: Create a job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJobBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      tags: [jobs]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobDetail"
+    patch:
+      operationId: updateJob
+      tags: [jobs]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateJobBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+    delete:
+      operationId: deleteJob
+      tags: [jobs]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Customers ──
+  /customers:
+    get:
+      operationId: listCustomers
+      tags: [customers]
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Customer"
+                  total:
+                    type: integer
+                required: [customers, total]
+    post:
+      operationId: createCustomer
+      tags: [customers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomerBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      tags: [customers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+    patch:
+      operationId: updateCustomer
+      tags: [customers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomerBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+    delete:
+      operationId: deleteCustomer
+      tags: [customers]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Job Findings ──
+  /jobs/{jobId}/findings:
+    get:
+      operationId: listFindings
+      tags: [findings]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Finding"
+    post:
+      operationId: createFinding
+      tags: [findings]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFindingBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Finding"
+
+  /findings/{id}:
+    patch:
+      operationId: updateFinding
+      tags: [findings]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFindingBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Finding"
+    delete:
+      operationId: deleteFinding
+      tags: [findings]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Job Notes ──
+  /jobs/{jobId}/notes:
+    get:
+      operationId: listNotes
+      tags: [notes]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Note"
+    post:
+      operationId: createNote
+      tags: [notes]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+
+  /notes/{id}:
+    patch:
+      operationId: updateNote
+      tags: [notes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNoteBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+    delete:
+      operationId: deleteNote
+      tags: [notes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Job Parts ──
+  /jobs/{jobId}/parts:
+    get:
+      operationId: listParts
+      tags: [parts]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Part"
+    post:
+      operationId: createPart
+      tags: [parts]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePartBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Part"
+
+  /parts/{id}:
+    patch:
+      operationId: updatePart
+      tags: [parts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePartBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Part"
+    delete:
+      operationId: deletePart
+      tags: [parts]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Job Labor ──
+  /jobs/{jobId}/labor:
+    get:
+      operationId: listLabor
+      tags: [labor]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LaborEntry"
+    post:
+      operationId: createLabor
+      tags: [labor]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLaborBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaborEntry"
+
+  /labor/{id}:
+    patch:
+      operationId: updateLabor
+      tags: [labor]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLaborBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaborEntry"
+    delete:
+      operationId: deleteLabor
+      tags: [labor]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Job Files ──
+  /jobs/{jobId}/files:
+    get:
+      operationId: listFiles
+      tags: [files]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JobFile"
+    post:
+      operationId: uploadFile
+      tags: [files]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadFileBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobFile"
+
+  /files/{id}:
+    patch:
+      operationId: updateFile
+      tags: [files]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFileBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobFile"
+    delete:
+      operationId: deleteFile
+      tags: [files]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Templates ──
+  /templates:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+    post:
+      operationId: createTemplate
+      tags: [templates]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTemplateBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+
+  /templates/{id}:
+    get:
+      operationId: getTemplate
+      tags: [templates]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+
+  # ── Reports ──
+  /jobs/{jobId}/reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+
+  /jobs/{jobId}/generate-report:
+    post:
+      operationId: generateReport
+      tags: [reports]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateReportBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+    patch:
+      operationId: updateReport
+      tags: [reports]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReportBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+  # ── Exports ──
+  /exports:
+    get:
+      operationId: listExports
+      tags: [exports]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Export"
+
+  /reports/{reportId}/export:
+    post:
+      operationId: createExport
+      tags: [exports]
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExportBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Export"
+
+  # ── Share Links ──
+  /reports/{reportId}/share:
+    post:
+      operationId: createShareLink
+      tags: [share]
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareLink"
+
+  /share/{token}:
+    get:
+      operationId: getSharedReport
+      tags: [share]
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedReportView"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Team ──
+  /team/members:
+    get:
+      operationId: listTeamMembers
+      tags: [team]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamMember"
+
+  /team/invite:
+    post:
+      operationId: inviteTeamMember
+      tags: [team]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteTeamMemberBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+
+  /team/members/{id}:
+    patch:
+      operationId: updateTeamMember
+      tags: [team]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTeamMemberBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+    delete:
+      operationId: removeTeamMember
+      tags: [team]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed
+
+  # ── Branding ──
+  /branding:
+    get:
+      operationId: getBranding
+      tags: [branding]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branding"
+    patch:
+      operationId: updateBranding
+      tags: [branding]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBrandingBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Branding"
+
+  # ── Activity ──
+  /activity:
+    get:
+      operationId: listActivity
+      tags: [activity]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEntry"
+
+  # ── Dashboard ──
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/recent-jobs:
+    get:
+      operationId: getRecentJobs
+      tags: [dashboard]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Job"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+            default: month
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  # ── Billing ──
+  /billing/plan:
+    get:
+      operationId: getBillingPlan
+      tags: [billing]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingPlan"
+
+  /billing/subscribe:
+    post:
+      operationId: subscribeToPlan
+      tags: [billing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscribeBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingPlan"
+
+  # ── Settings ──
+  /settings/profile:
+    get:
+      operationId: getProfile
+      tags: [auth]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required: [success]
+
+    # ── Auth ──
+    RegisterBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        firstName:
+          type: string
+        lastName:
+          type: string
+        organizationName:
+          type: string
+      required: [email, password, firstName, lastName]
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, tech, viewer]
+        organizationId:
+          type: ["integer", "null"]
+        organizationName:
+          type: ["string", "null"]
+        hasCompletedOnboarding:
+          type: boolean
+      required: [id, email, firstName, lastName, role, organizationId, organizationName, hasCompletedOnboarding]
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: ["string", "null"]
+        jobTitle:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        role:
+          type: string
+        organizationId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, email, firstName, lastName, phone, jobTitle, avatarUrl, role, organizationId, createdAt]
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: ["string", "null"]
+        jobTitle:
+          type: ["string", "null"]
+
+    # ── Organizations ──
+    Organization:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        logoUrl:
+          type: ["string", "null"]
+        accentColor:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, slug, logoUrl, accentColor, createdAt]
+
+    CreateOrganizationBody:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        accentColor:
+          type: string
+      required: [name]
+
+    UpdateOrganizationBody:
+      type: object
+      properties:
+        name:
+          type: string
+        accentColor:
+          type: string
+        logoUrl:
+          type: ["string", "null"]
+
+    # ── Jobs ──
+    Job:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        jobType:
+          type: string
+        status:
+          type: string
+          enum: [draft, in_progress, completed, archived]
+        customerId:
+          type: ["integer", "null"]
+        customerName:
+          type: ["string", "null"]
+        siteAddress:
+          type: ["string", "null"]
+        assignedToId:
+          type: ["integer", "null"]
+        assignedToName:
+          type: ["string", "null"]
+        templateId:
+          type: ["integer", "null"]
+        notesCount:
+          type: integer
+        findingsCount:
+          type: integer
+        filesCount:
+          type: integer
+        reportsCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, title, jobType, status, customerId, customerName, siteAddress, assignedToId, assignedToName, templateId, notesCount, findingsCount, filesCount, reportsCount, createdAt, updatedAt]
+
+    JobDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        jobType:
+          type: string
+        status:
+          type: string
+          enum: [draft, in_progress, completed, archived]
+        description:
+          type: ["string", "null"]
+        customerId:
+          type: ["integer", "null"]
+        customerName:
+          type: ["string", "null"]
+        siteAddress:
+          type: ["string", "null"]
+        assignedToId:
+          type: ["integer", "null"]
+        assignedToName:
+          type: ["string", "null"]
+        templateId:
+          type: ["integer", "null"]
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Finding"
+        notes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Note"
+        parts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Part"
+        labor:
+          type: array
+          items:
+            $ref: "#/components/schemas/LaborEntry"
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobFile"
+        reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/Report"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, title, jobType, status, description, customerId, customerName, siteAddress, assignedToId, assignedToName, templateId, findings, notes, parts, labor, files, reports, createdAt, updatedAt]
+
+    CreateJobBody:
+      type: object
+      properties:
+        title:
+          type: string
+        jobType:
+          type: string
+        description:
+          type: string
+        customerId:
+          type: integer
+        siteAddress:
+          type: string
+        assignedToId:
+          type: integer
+        templateId:
+          type: integer
+      required: [title, jobType]
+
+    UpdateJobBody:
+      type: object
+      properties:
+        title:
+          type: string
+        jobType:
+          type: string
+        status:
+          type: string
+          enum: [draft, in_progress, completed, archived]
+        description:
+          type: string
+        customerId:
+          type: ["integer", "null"]
+        siteAddress:
+          type: ["string", "null"]
+        assignedToId:
+          type: ["integer", "null"]
+        templateId:
+          type: ["integer", "null"]
+
+    # ── Customers ──
+    Customer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        company:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        jobsCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, email, phone, company, address, notes, jobsCount, createdAt]
+
+    CreateCustomerBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        company:
+          type: string
+        address:
+          type: string
+        notes:
+          type: string
+      required: [name]
+
+    UpdateCustomerBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        company:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    # ── Findings ──
+    Finding:
+      type: object
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        issue:
+          type: string
+        cause:
+          type: ["string", "null"]
+        resolution:
+          type: ["string", "null"]
+        recommendation:
+          type: ["string", "null"]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, jobId, issue, cause, resolution, recommendation, severity, sortOrder, createdAt]
+
+    CreateFindingBody:
+      type: object
+      properties:
+        issue:
+          type: string
+        cause:
+          type: string
+        resolution:
+          type: string
+        recommendation:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+      required: [issue]
+
+    UpdateFindingBody:
+      type: object
+      properties:
+        issue:
+          type: string
+        cause:
+          type: ["string", "null"]
+        resolution:
+          type: ["string", "null"]
+        recommendation:
+          type: ["string", "null"]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        sortOrder:
+          type: integer
+
+    # ── Notes ──
+    Note:
+      type: object
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        content:
+          type: string
+        noteType:
+          type: string
+          enum: [internal, customer_facing, voice_transcript]
+        isVoiceNote:
+          type: boolean
+        audioUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, jobId, content, noteType, isVoiceNote, audioUrl, createdAt]
+
+    CreateNoteBody:
+      type: object
+      properties:
+        content:
+          type: string
+        noteType:
+          type: string
+          enum: [internal, customer_facing, voice_transcript]
+        isVoiceNote:
+          type: boolean
+        audioUrl:
+          type: string
+      required: [content]
+
+    UpdateNoteBody:
+      type: object
+      properties:
+        content:
+          type: string
+        noteType:
+          type: string
+          enum: [internal, customer_facing, voice_transcript]
+
+    # ── Parts ──
+    Part:
+      type: object
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        name:
+          type: string
+        partNumber:
+          type: ["string", "null"]
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        totalPrice:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, jobId, name, partNumber, quantity, unitPrice, totalPrice, createdAt]
+
+    CreatePartBody:
+      type: object
+      properties:
+        name:
+          type: string
+        partNumber:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+      required: [name, quantity, unitPrice]
+
+    UpdatePartBody:
+      type: object
+      properties:
+        name:
+          type: string
+        partNumber:
+          type: ["string", "null"]
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+
+    # ── Labor ──
+    LaborEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        description:
+          type: string
+        hours:
+          type: number
+        rate:
+          type: number
+        totalCost:
+          type: number
+        technicianId:
+          type: ["integer", "null"]
+        technicianName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, jobId, description, hours, rate, totalCost, technicianId, technicianName, createdAt]
+
+    CreateLaborBody:
+      type: object
+      properties:
+        description:
+          type: string
+        hours:
+          type: number
+        rate:
+          type: number
+        technicianId:
+          type: integer
+      required: [description, hours, rate]
+
+    UpdateLaborBody:
+      type: object
+      properties:
+        description:
+          type: string
+        hours:
+          type: number
+        rate:
+          type: number
+
+    # ── Files ──
+    JobFile:
+      type: object
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        fileName:
+          type: string
+        fileUrl:
+          type: string
+        fileType:
+          type: string
+          enum: [image, document, audio, other]
+        fileSize:
+          type: integer
+        caption:
+          type: ["string", "null"]
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, jobId, fileName, fileUrl, fileType, fileSize, caption, sortOrder, createdAt]
+
+    UploadFileBody:
+      type: object
+      properties:
+        fileName:
+          type: string
+        fileUrl:
+          type: string
+        fileType:
+          type: string
+          enum: [image, document, audio, other]
+        fileSize:
+          type: integer
+        caption:
+          type: string
+      required: [fileName, fileUrl, fileType, fileSize]
+
+    UpdateFileBody:
+      type: object
+      properties:
+        caption:
+          type: ["string", "null"]
+        sortOrder:
+          type: integer
+
+    # ── Templates ──
+    Template:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        industry:
+          type: string
+        icon:
+          type: string
+        defaultJobType:
+          type: string
+        sections:
+          type: array
+          items:
+            type: string
+        isSystem:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, description, industry, icon, defaultJobType, sections, isSystem, createdAt]
+
+    CreateTemplateBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        industry:
+          type: string
+        icon:
+          type: string
+        defaultJobType:
+          type: string
+        sections:
+          type: array
+          items:
+            type: string
+      required: [name, industry, defaultJobType]
+
+    # ── Reports ──
+    Report:
+      type: object
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        title:
+          type: string
+        reportType:
+          type: string
+          enum: [client_summary, technical_summary, estimate, change_order, executive_summary, full_report]
+        tone:
+          type: string
+          enum: [client_friendly, technical, executive, concise, detailed]
+        content:
+          type: object
+          additionalProperties: true
+        status:
+          type: string
+          enum: [draft, final]
+        version:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, jobId, title, reportType, tone, content, status, version, createdAt]
+
+    GenerateReportBody:
+      type: object
+      properties:
+        reportType:
+          type: string
+          enum: [client_summary, technical_summary, estimate, change_order, executive_summary, full_report]
+        tone:
+          type: string
+          enum: [client_friendly, technical, executive, concise, detailed]
+        templateId:
+          type: integer
+      required: [reportType, tone]
+
+    UpdateReportBody:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: object
+          additionalProperties: true
+        status:
+          type: string
+          enum: [draft, final]
+
+    # ── Exports ──
+    Export:
+      type: object
+      properties:
+        id:
+          type: integer
+        reportId:
+          type: integer
+        jobTitle:
+          type: string
+        format:
+          type: string
+          enum: [pdf, html]
+        fileUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, completed, failed]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, reportId, jobTitle, format, fileUrl, status, createdAt]
+
+    CreateExportBody:
+      type: object
+      properties:
+        format:
+          type: string
+          enum: [pdf, html]
+      required: [format]
+
+    # ── Share Links ──
+    ShareLink:
+      type: object
+      properties:
+        id:
+          type: integer
+        reportId:
+          type: integer
+        token:
+          type: string
+        url:
+          type: string
+        expiresAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, reportId, token, url, expiresAt, createdAt]
+
+    SharedReportView:
+      type: object
+      properties:
+        organizationName:
+          type: string
+        organizationLogo:
+          type: ["string", "null"]
+        accentColor:
+          type: ["string", "null"]
+        reportTitle:
+          type: string
+        jobTitle:
+          type: string
+        customerName:
+          type: ["string", "null"]
+        siteAddress:
+          type: ["string", "null"]
+        technicianName:
+          type: ["string", "null"]
+        content:
+          type: object
+          additionalProperties: true
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Finding"
+        parts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Part"
+        labor:
+          type: array
+          items:
+            $ref: "#/components/schemas/LaborEntry"
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobFile"
+        createdAt:
+          type: string
+          format: date-time
+      required: [organizationName, organizationLogo, accentColor, reportTitle, jobTitle, customerName, siteAddress, technicianName, content, findings, parts, labor, files, createdAt]
+
+    # ── Team ──
+    TeamMember:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, tech, viewer]
+        status:
+          type: string
+          enum: [active, invited, disabled]
+        joinedAt:
+          type: string
+          format: date-time
+      required: [id, userId, email, firstName, lastName, role, status, joinedAt]
+
+    InviteTeamMemberBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, tech, viewer]
+        firstName:
+          type: string
+        lastName:
+          type: string
+      required: [email, role]
+
+    UpdateTeamMemberBody:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [admin, tech, viewer]
+
+    # ── Branding ──
+    Branding:
+      type: object
+      properties:
+        id:
+          type: integer
+        organizationId:
+          type: integer
+        logoUrl:
+          type: ["string", "null"]
+        accentColor:
+          type: string
+        companyName:
+          type: string
+        footerText:
+          type: ["string", "null"]
+        contactEmail:
+          type: ["string", "null"]
+        contactPhone:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        headerHtml:
+          type: ["string", "null"]
+        footerHtml:
+          type: ["string", "null"]
+      required: [id, organizationId, logoUrl, accentColor, companyName, footerText, contactEmail, contactPhone, website, headerHtml, footerHtml]
+
+    UpdateBrandingBody:
+      type: object
+      properties:
+        logoUrl:
+          type: ["string", "null"]
+        accentColor:
+          type: string
+        companyName:
+          type: string
+        footerText:
+          type: ["string", "null"]
+        contactEmail:
+          type: ["string", "null"]
+        contactPhone:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        headerHtml:
+          type: ["string", "null"]
+        footerHtml:
+          type: ["string", "null"]
+
+    # ── Activity ──
+    ActivityEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: integer
+        entityName:
+          type: string
+        userId:
+          type: integer
+        userName:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, action, entityType, entityId, entityName, userId, userName, metadata, createdAt]
+
+    # ── Dashboard ──
+    DashboardSummary:
+      type: object
+      properties:
+        totalJobs:
+          type: integer
+        activeJobs:
+          type: integer
+        completedJobs:
+          type: integer
+        totalCustomers:
+          type: integer
+        totalReports:
+          type: integer
+        totalExports:
+          type: integer
+        reportsThisMonth:
+          type: integer
+        reportLimit:
+          type: integer
+        storageUsedMb:
+          type: number
+        storageLimitMb:
+          type: number
+        teamMembers:
+          type: integer
+        pendingDrafts:
+          type: integer
+      required: [totalJobs, activeJobs, completedJobs, totalCustomers, totalReports, totalExports, reportsThisMonth, reportLimit, storageUsedMb, storageLimitMb, teamMembers, pendingDrafts]
+
+    DashboardStats:
+      type: object
+      properties:
+        jobsByStatus:
+          type: array
+          items:
+            type: object
+            properties:
+              status:
+                type: string
+              count:
+                type: integer
+            required: [status, count]
+        jobsByType:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              count:
+                type: integer
+            required: [type, count]
+        reportsOverTime:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              count:
+                type: integer
+            required: [date, count]
+        topCustomers:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              jobCount:
+                type: integer
+            required: [name, jobCount]
+      required: [jobsByStatus, jobsByType, reportsOverTime, topCustomers]
+
+    # ── Billing ──
+    BillingPlan:
+      type: object
+      properties:
+        planId:
+          type: string
+          enum: [free, solo, pro, team, whitelabel]
+        planName:
+          type: string
+        monthlyPrice:
+          type: number
+        reportLimit:
+          type: integer
+        teamSeatLimit:
+          type: integer
+        features:
+          type: array
+          items:
+            type: string
+        currentUsage:
+          type: object
+          properties:
+            reportsUsed:
+              type: integer
+            teamSeats:
+              type: integer
+            storageUsedMb:
+              type: number
+          required: [reportsUsed, teamSeats, storageUsedMb]
+      required: [planId, planName, monthlyPrice, reportLimit, teamSeatLimit, features, currentUsage]
+
+    SubscribeBody:
+      type: object
+      properties:
+        planId:
+          type: string
+          enum: [free, solo, pro, team, whitelabel]
+      required: [planId]

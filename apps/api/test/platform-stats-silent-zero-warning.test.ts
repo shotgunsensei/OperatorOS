@@ -101,7 +101,7 @@ after(async () => {
 
 beforeEach(() => { warnLogs.length = 0; });
 
-const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` });
+const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` });
 
 async function fetchStats() {
   const res = await app.inject({ method: 'GET', url: '/v1/platform/stats', headers: bearer(superAdmin) });

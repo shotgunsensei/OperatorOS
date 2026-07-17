@@ -76,10 +76,11 @@ all data queries for explicit org/tenant filters.
 
 ## Medium Risks
 
-### Full App Is Not Mounted Inside Next Yet
+### Only the First Workflow Is Mounted Inside Next
 
-The OperatorOS Next.js shell presents PulseDesk as a launchable module, while
-the full imported PulseDesk Vite app remains a child runtime behind SSO.
+The OperatorOS Next.js shell now hosts the department escalation queue, while
+the rest of the imported PulseDesk Vite workflows remain retained source or
+child-runtime migration candidates.
 
 Risk: feature routes are present in the imported source but not fully exercised
 inside the OperatorOS Next.js surface.
@@ -93,8 +94,30 @@ PulseDesk is healthcare operations software.
 
 Risk: workflow data may be sensitive even when it is not formally stored as PHI.
 
-Mitigation: avoid logging tokens, secrets, patient data, or private operations
-payloads. Keep tenant filters mandatory and audit admin/security actions.
+Mitigation: the shared request contract accepts only bounded single-line
+operational summary/location fields, shows the exact no-PHI warning, and
+requires explicit acknowledgement before intake or text edits. Activity-feed
+and event metadata never copy summary/location values. Keep tenant filters
+mandatory and audit admin/security actions.
+
+### Shared Queue Concurrency and Assignment Drift
+
+Risk: simultaneous manager edits could overwrite routing or assign a user whose
+access was revoked.
+
+Mitigation: every request update/transition requires an expected version and
+uses a tenant-and-version SQL predicate with an atomic increment. Assignment
+validates active same-tenant membership and current PulseDesk access; clients
+must refresh after a `REQUEST_VERSION_CONFLICT`.
+
+### Structured Event Retention
+
+Risk: accidental direct database deletion could remove the workflow history
+needed for operational review.
+
+Mitigation: the slice exposes no request delete route and the event foreign key
+uses restrictive delete behavior rather than cascading. Event metadata is
+structured and PHI-minimized.
 
 ### Legacy Docs Can Confuse Deployment
 

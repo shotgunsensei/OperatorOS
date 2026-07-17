@@ -3,7 +3,17 @@ import { hashPassword } from './auth.js';
 import { users, subscriptionPlans, subscriptions, saasWorkspaces, saasProjects, saasTasks, notes, activityFeed, workspaceMemberships, modules, planModules, tenants, tenantUsers, tenantModules, tenantUserModuleAccess, platformComponents } from '../schema.js';
 import { eq, and, sql, isNull } from 'drizzle-orm';
 import { PLAN_CONFIGS } from './plans.js';
-import { MODULE_CATALOG, MODULE_CATALOG_BY_SLUG, PLATFORM_COMPONENTS, pickEnv } from '@operatoros/sdk';
+import { MODULE_CATALOG, MODULE_CATALOG_BY_SLUG, PLATFORM_COMPONENTS } from '@operatoros/sdk';
+import {
+  FREE_ACCOUNT_APP_SLUGS,
+  FREE_ACCOUNT_METADATA_PATCH,
+  NEW_FREE_ACCOUNT_GRANT_METADATA,
+  shouldUpgradeLegacyFreeAccountGrant,
+} from './free-account-apps.js';
+import { ROOT_SUPER_ADMIN_EMAIL } from '../../../../packages/auth/index.js';
+import { resolveSeedPassword } from './seed-credential-policy.js';
+
+export { FREE_ACCOUNT_APP_SLUGS } from './free-account-apps.js';
 
 export async function ensureSaasTables() {
   await db.execute(`
@@ -405,6 +415,21 @@ export async function ensureSaasTables() {
     UPDATE sso_handoff_tokens SET issued_at = COALESCE(issued_at, created_at) WHERE issued_at IS NULL;
     ALTER TABLE sso_handoff_tokens ALTER COLUMN issued_at SET NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_sso_tokens_expires ON sso_handoff_tokens(expires_at);
+
+    -- Per-host JWT denylist. Only a SHA-256 fingerprint is retained; raw
+    -- bearer/cookie credentials are never persisted.
+    CREATE TABLE IF NOT EXISTS revoked_session_tokens (
+      token_hash VARCHAR(64) PRIMARY KEY,
+      user_id VARCHAR(36) NOT NULL,
+      session_type TEXT NOT NULL,
+      tenant_id VARCHAR(36),
+      module_id TEXT,
+      expires_at TIMESTAMP NOT NULL,
+      revoked_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      reason TEXT NOT NULL DEFAULT 'local_logout'
+    );
+    CREATE INDEX IF NOT EXISTS idx_revoked_sessions_user ON revoked_session_tokens(user_id);
+    CREATE INDEX IF NOT EXISTS idx_revoked_sessions_expires ON revoked_session_tokens(expires_at);
     CREATE INDEX IF NOT EXISTS idx_sso_tokens_user ON sso_handoff_tokens(user_id);
   `);
 
@@ -451,19 +476,10 @@ interface ModuleSeed {
 /**
  * Module catalog seed.
  *
- * Spec: each live module must have its launch base URL provided via env
- * (e.g. TRADEFLOWKIT_URL). When the env var is missing we DEFAULT TO
- * `coming_soon` rather than guessing a public URL — a missing env value
- * means the module is not yet wired up in this environment, and pointing
- * the launch button at a guessed URL would silently leak unsigned SSO
- * traffic to the wrong place. Status flips back to `live` automatically
- * the moment the env var is configured and the server restarts.
- *
- * `defaultStatus` is the status the module *would* have if its URL is
- * configured. The actual `status` column is computed as:
- *   - `coming_soon` if defaultStatus === 'coming_soon'
- *   - `coming_soon` if defaultStatus === 'live' but envUrl is missing
- *   - defaultStatus otherwise
+ * Every first-party module is deployed on its catalog-owned OperatorOS
+ * subdomain. The exact `canonicalBaseUrl` is therefore seeded directly and
+ * reconciled on every startup; legacy URL env vars and admin-edited rows can
+ * never redirect SSO to a different origin.
  */
 interface ModuleSeedSpec {
   slug: string;
@@ -471,17 +487,9 @@ interface ModuleSeedSpec {
   description: string;
   category: string;
   defaultStatus: 'live' | 'beta' | 'coming_soon';
-  envUrl: string | undefined;
+  canonicalBaseUrl: string;
   planMin: 'starter' | 'pro' | 'elite';
   ord: number;
-  /**
-   * Task #66: when `true`, the module ships with an internal MVP shell
-   * mounted at `/apps/<slug>` in the web app. The seeder treats an
-   * internal shell as equivalent to an env URL for status-derivation
-   * purposes (so the row stays `live` and `baseUrl` defaults to the
-   * internal route when no external URL is configured).
-   */
-  internal?: boolean;
   /**
    * Default add-on price in USD cents seeded into modules.metadata
    * on first insert. After insert, admins can edit modules.metadata
@@ -503,9 +511,9 @@ interface ModuleSeedSpec {
 // edit `modules.metadata` to set custom prices per module.
 const ADDON_DEFAULT_CENTS = { starter: 1900, pro: 2900, elite: 4900 } as const;
 
-// Task #66: derived from the SDK MODULE_CATALOG so the slug list,
-// env-key chains, plan tiers, and internal-shell flags can never drift
-// between API seed and web app. The seed-specific fields below
+// Derived from the SDK MODULE_CATALOG so the slug list, canonical origins,
+// plan tiers, and lifecycle defaults can never drift between the API seed
+// and web app. The seed-specific fields below
 // (description, category, defaultStatus, addonPriceCents) come from
 // the catalog where it carries them; addonPriceCents is computed from
 // the plan tier so we don't duplicate per-tier pricing in two places.
@@ -517,10 +525,9 @@ const MODULE_SEED_SPECS: ModuleSeedSpec[] = MODULE_CATALOG.map(c => ({
   defaultStatus: c.defaultStatus === 'beta' ? 'beta'
     : c.defaultStatus === 'coming_soon' ? 'coming_soon'
     : 'live',
-  envUrl: pickEnv(c.envUrlKeys),
+  canonicalBaseUrl: c.canonicalBaseUrl,
   planMin: c.planMin,
   ord: c.ord,
-  internal: c.internal,
   addonPriceCents: ADDON_DEFAULT_CENTS[c.planMin],
 }));
 
@@ -529,15 +536,8 @@ export const MODULE_SEEDS: ModuleSeed[] = MODULE_SEED_SPECS.map(s => ({
   name: s.name,
   description: s.description,
   category: s.category,
-  // Task #66: an internal MVP shell counts as a launchable surface, so
-  // a module marked `internal: true` stays `live` even without an env URL.
-  status: s.defaultStatus === 'live' && !s.envUrl && !s.internal
-    ? 'coming_soon'
-    : s.defaultStatus,
-  // Task #66: when no external URL is configured but the module ships
-  // an internal shell, point baseUrl at the in-app route so the
-  // marketplace launcher hands off cleanly.
-  baseUrl: s.envUrl ?? (s.internal ? `/apps/${s.slug}` : ''),
+  status: s.defaultStatus,
+  baseUrl: s.canonicalBaseUrl,
   planMin: s.planMin,
   ord: s.ord,
 }));
@@ -647,20 +647,18 @@ export async function seedModules() {
         ...tfkPushConfig,
       });
     } else {
-      // Re-apply env-derived fields so adding/removing an env URL between
-      // restarts is reflected on existing rows. We deliberately scope this
-      // re-apply to the *env-derived* fields (`baseUrl` + the derived
-      // `status` for live-default modules) — admin-edited fields like
+      // Re-apply the immutable catalog URL on every restart. We deliberately
+      // scope reconciliation to `baseUrl` + the catalog-derived `status` for
+      // live-default modules — admin-edited fields like
       // `planMin`, `ord`, `description`, `name`, `iconUrl` are preserved.
       //
       // Status policy:
-      //   - defaultStatus === 'live' + envUrl present  → flip to 'live'
-      //   - defaultStatus === 'live' + envUrl missing  → flip to 'coming_soon'
+      //   - defaultStatus === 'live'                   → flip to 'live'
       //   - defaultStatus !== 'live'                   → leave whatever the
       //     admin chose (so admins can promote a `coming_soon` module to
       //     `beta` without us stomping it on every restart).
       const updates: Record<string, unknown> = { updatedAt: new Date() };
-      updates.baseUrl = m.baseUrl || existing[0].baseUrl;
+      updates.baseUrl = m.baseUrl;
       // Back-fill metadata.addonPriceCents on rows that pre-date the
       // addon-price seeding (existing.metadata is null OR missing the
       // key). Never overwrite a value an admin has already set.
@@ -669,9 +667,7 @@ export async function seedModules() {
         updates.metadata = { ...existingMd, addonPriceCents: spec.addonPriceCents };
       }
       if (spec.defaultStatus === 'live') {
-        // Task #66: an internal MVP shell is a launchable surface, so
-        // treat it as equivalent to an env URL for status purposes.
-        updates.status = (spec.envUrl || spec.internal) ? 'live' : 'coming_soon';
+        updates.status = 'live';
       }
       // Task #66 catalog rename: existing rows that pre-date the
       // BrandForgeOS rename keep getting nudged to the canonical name.
@@ -758,37 +754,54 @@ export async function seedPlansAndAdmin() {
     console.log('[seed] Created subscription plans from PLAN_CONFIGS:', PLAN_CONFIGS.map(p => p.name).join(', '));
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL || 'john@shotgunninjas.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Dr0p$0fJup1t3r';
+  const adminEmail = process.env.ADMIN_EMAIL?.trim() || ROOT_SUPER_ADMIN_EMAIL;
+  const adminName = process.env.ADMIN_NAME?.trim() || 'OperatorOS Admin';
 
   const existingAdmin = await db.select().from(users).where(eq(users.email, adminEmail)).limit(1);
   if (existingAdmin.length === 0) {
-    const passwordHash = await hashPassword(adminPassword);
-    const [admin] = await db.insert(users).values({
-      email: adminEmail,
-      passwordHash,
-      name: 'John',
-      role: 'admin',
-      status: 'active',
-    }).returning();
-
-    const [elitePlan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.slug, 'elite')).limit(1);
-    if (elitePlan && admin) {
-      await db.insert(subscriptions).values({
-        userId: admin.id,
-        planId: elitePlan.id,
+    const adminPassword = resolveSeedPassword({
+      envName: 'ADMIN_PASSWORD',
+      value: process.env.ADMIN_PASSWORD,
+      requiredInProduction: true,
+    });
+    if (!adminPassword) {
+      console.warn('[seed] ADMIN_PASSWORD not set outside production; skipping bootstrap admin creation');
+    } else {
+      const passwordHash = await hashPassword(adminPassword);
+      const [admin] = await db.insert(users).values({
+        email: adminEmail,
+        passwordHash,
+        name: adminName,
+        role: 'admin',
         status: 'active',
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-      });
+      }).returning();
+
+      const [elitePlan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.slug, 'elite')).limit(1);
+      if (elitePlan && admin) {
+        await db.insert(subscriptions).values({
+          userId: admin.id,
+          planId: elitePlan.id,
+          status: 'active',
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        });
+      }
+      console.log(`[seed] Created admin account: ${adminEmail}`);
     }
-    console.log(`[seed] Created admin account: ${adminEmail}`);
   }
 
   const demoEmail = process.env.DEMO_EMAIL || 'demo@operatoros.com';
   const existingDemo = await db.select().from(users).where(eq(users.email, demoEmail)).limit(1);
   if (existingDemo.length === 0) {
-    const demoPassword = process.env.DEMO_PASSWORD || 'Demo1234!';
+    const demoPassword = resolveSeedPassword({
+      envName: 'DEMO_PASSWORD',
+      value: process.env.DEMO_PASSWORD,
+      requiredInProduction: false,
+    });
+    if (!demoPassword) {
+      console.warn('[seed] DEMO_PASSWORD not set; skipping optional demo account creation');
+      return;
+    }
     const demoHash = await hashPassword(demoPassword);
     const [demoUser] = await db.insert(users).values({
       email: demoEmail,
@@ -1006,8 +1019,6 @@ export async function ensureTenantTables() {
     -- Task #108: per-(plan, module) feature flag defaults. Tenants can
     -- override individual keys via tenant_modules.metadata.features.
     ALTER TABLE plan_modules ADD COLUMN IF NOT EXISTS feature_flags_json JSONB;
-    -- Task #108: per-tenant overrides for tenant_modules (notably .features).
-    ALTER TABLE tenant_modules ADD COLUMN IF NOT EXISTS metadata JSONB;
     CREATE INDEX IF NOT EXISTS idx_modules_archived ON modules(archived_at);
 
     -- tenant_users --------------------------------------------------------
@@ -1025,15 +1036,19 @@ export async function ensureTenantTables() {
       ALTER TABLE tenant_users ADD CONSTRAINT tenant_users_role_check
         CHECK (role IN ('owner', 'admin', 'member'));
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    -- Task #108: extend the role taxonomy to accept the public spec
-    -- vocabulary alongside the legacy internal one. We drop the old
-    -- strict CHECK and add a permissive one so writers can store any
-    -- of: owner|admin|member|tenant_admin|billing_admin|user|viewer.
-    -- Resolvers normalize on read via role-aliases.ts.
+    -- Canonicalize the historical public aliases before narrowing the stored
+    -- authorization vocabulary. Viewer remains distinct and read-only.
+    UPDATE tenant_users SET role = CASE role
+      WHEN 'tenant_admin' THEN 'admin'
+      WHEN 'billing_admin' THEN 'admin'
+      WHEN 'user' THEN 'member'
+      ELSE role
+    END
+    WHERE role IN ('tenant_admin','billing_admin','user');
     DO $$ BEGIN
       ALTER TABLE tenant_users DROP CONSTRAINT IF EXISTS tenant_users_role_check;
       ALTER TABLE tenant_users ADD CONSTRAINT tenant_users_role_check
-        CHECK (role IN ('owner','admin','member','tenant_admin','billing_admin','user','viewer'));
+        CHECK (role IN ('owner','admin','member','viewer'));
     EXCEPTION WHEN others THEN NULL; END $$;
 
     -- tenant_modules ------------------------------------------------------
@@ -1048,6 +1063,9 @@ export async function ensureTenantTables() {
       updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
       UNIQUE(tenant_id, module_id)
     );
+    -- Task #108: per-tenant overrides (notably .features). This ALTER must
+    -- follow CREATE TABLE so a brand-new database can bootstrap cleanly.
+    ALTER TABLE tenant_modules ADD COLUMN IF NOT EXISTS metadata JSONB;
     CREATE INDEX IF NOT EXISTS idx_tenant_modules_tenant ON tenant_modules(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_tenant_modules_module ON tenant_modules(module_id);
     DO $$ BEGIN
@@ -1101,15 +1119,23 @@ export async function ensureTenantTables() {
     );
     CREATE INDEX IF NOT EXISTS idx_tenant_invites_tenant ON tenant_invites(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_tenant_invites_email  ON tenant_invites(email);
+    UPDATE tenant_invites SET role = CASE role
+      WHEN 'tenant_admin' THEN 'admin'
+      WHEN 'billing_admin' THEN 'admin'
+      WHEN 'user' THEN 'member'
+      ELSE role
+    END
+    WHERE role IN ('tenant_admin','billing_admin','user');
     DO $$ BEGIN
+      ALTER TABLE tenant_invites DROP CONSTRAINT IF EXISTS tenant_invites_role_check;
       ALTER TABLE tenant_invites ADD CONSTRAINT tenant_invites_role_check
-        CHECK (role IN ('owner', 'admin', 'member'));
-    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+        CHECK (role IN ('owner','admin','member','viewer'));
+    EXCEPTION WHEN others THEN NULL; END $$;
   `);
 }
 
 /**
- * Task #72 — idempotent DDL for the four module-shell persistence tables.
+ * Idempotent DDL for shared-runtime module-shell persistence tables.
  * Safe to run on every boot. Called from index.ts after ensureTenantTables.
  */
 export async function ensureModuleShellTables() {
@@ -1202,50 +1228,562 @@ export async function ensureModuleShellTables() {
       ALTER TABLE module_scaffolds ADD CONSTRAINT module_scaffolds_status_check
         CHECK (status IN ('queued','ready','failed'));
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    CREATE TABLE IF NOT EXISTS module_workflow_items (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      created_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      module_slug TEXT NOT NULL,
+      item_type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      status TEXT NOT NULL,
+      summary TEXT,
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      version INTEGER NOT NULL DEFAULT 1,
+      deleted_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_module_workflow_tenant_module_created
+      ON module_workflow_items(tenant_id, module_slug, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_module_workflow_tenant_status
+      ON module_workflow_items(tenant_id, module_slug, status);
+
+    -- TechDeck shared-runtime slices: ticket queue, asset posture, and
+    -- approval-only runbooks. Local auth, billing, and command execution stay
+    -- outside these tables.
+    CREATE TABLE IF NOT EXISTS techdeck_ticket_sequences (
+      tenant_id VARCHAR(36) PRIMARY KEY REFERENCES tenants(id),
+      last_number INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      CONSTRAINT techdeck_ticket_sequences_number_check CHECK (last_number >= 0)
+    );
+    CREATE TABLE IF NOT EXISTS techdeck_tickets (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      number INTEGER NOT NULL,
+      created_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      assigned_to_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      priority TEXT NOT NULL DEFAULT 'medium',
+      status TEXT NOT NULL DEFAULT 'open',
+      response_deadline TIMESTAMP,
+      resolution_deadline TIMESTAMP,
+      responded_at TIMESTAMP,
+      resolved_at TIMESTAMP,
+      closed_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      deleted_at TIMESTAMP
+    );
+    ALTER TABLE techdeck_tickets ADD COLUMN IF NOT EXISTS response_deadline TIMESTAMP;
+    ALTER TABLE techdeck_tickets ADD COLUMN IF NOT EXISTS responded_at TIMESTAMP;
+    ALTER TABLE techdeck_tickets ALTER COLUMN number DROP DEFAULT;
+    CREATE INDEX IF NOT EXISTS idx_techdeck_tickets_tenant_created
+      ON techdeck_tickets(tenant_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_techdeck_tickets_tenant_status
+      ON techdeck_tickets(tenant_id, status);
+    CREATE INDEX IF NOT EXISTS idx_techdeck_tickets_tenant_priority
+      ON techdeck_tickets(tenant_id, priority);
+    CREATE INDEX IF NOT EXISTS idx_techdeck_tickets_assigned
+      ON techdeck_tickets(tenant_id, assigned_to_user_id);
+    CREATE INDEX IF NOT EXISTS idx_techdeck_tickets_deadline
+      ON techdeck_tickets(tenant_id, resolution_deadline);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_techdeck_tickets_number
+      ON techdeck_tickets(tenant_id, number);
+    INSERT INTO techdeck_ticket_sequences (tenant_id, last_number, updated_at)
+      SELECT tenant_id, MAX(number), NOW()
+      FROM techdeck_tickets
+      GROUP BY tenant_id
+    ON CONFLICT (tenant_id) DO UPDATE SET
+      last_number = GREATEST(techdeck_ticket_sequences.last_number, EXCLUDED.last_number),
+      updated_at = NOW();
+    DO $$ BEGIN
+      ALTER TABLE techdeck_tickets ADD CONSTRAINT techdeck_tickets_priority_check
+        CHECK (priority IN ('critical','high','medium','low'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE techdeck_tickets ADD CONSTRAINT techdeck_tickets_status_check
+        CHECK (status IN ('open','in_progress','waiting_on_client','resolved','closed'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    CREATE TABLE IF NOT EXISTS techdeck_assets (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      created_by_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+      name TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'endpoint', hostname TEXT,
+      ip_address TEXT, operating_system TEXT, health TEXT NOT NULL DEFAULT 'unknown',
+      last_seen_at TIMESTAMP, notes TEXT, version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL, deleted_at TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_techdeck_assets_tenant_health ON techdeck_assets(tenant_id, health);
+    CREATE INDEX IF NOT EXISTS idx_techdeck_assets_tenant_created ON techdeck_assets(tenant_id, created_at DESC);
+    DO $$ BEGIN ALTER TABLE techdeck_assets ADD CONSTRAINT techdeck_assets_health_check CHECK (health IN ('unknown','healthy','warning','critical','offline'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN ALTER TABLE techdeck_assets ADD CONSTRAINT techdeck_assets_type_check CHECK (type IN ('endpoint','server','network','printer','mobile','other'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    CREATE TABLE IF NOT EXISTS techdeck_runbooks (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      created_by_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+      approved_by_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+      name TEXT NOT NULL, platform TEXT NOT NULL, purpose TEXT NOT NULL,
+      script_text TEXT NOT NULL, risk_level TEXT NOT NULL DEFAULT 'medium',
+      status TEXT NOT NULL DEFAULT 'draft', approved_at TIMESTAMP,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL, deleted_at TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_techdeck_runbooks_tenant_status ON techdeck_runbooks(tenant_id, status);
+    CREATE INDEX IF NOT EXISTS idx_techdeck_runbooks_tenant_created ON techdeck_runbooks(tenant_id, created_at DESC);
+    DO $$ BEGIN ALTER TABLE techdeck_runbooks ADD CONSTRAINT techdeck_runbooks_platform_check CHECK (platform IN ('powershell','bash','network','generic'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN ALTER TABLE techdeck_runbooks ADD CONSTRAINT techdeck_runbooks_risk_check CHECK (risk_level IN ('low','medium','high'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN ALTER TABLE techdeck_runbooks ADD CONSTRAINT techdeck_runbooks_status_check CHECK (status IN ('draft','approved','retired'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- PulseDesk shared-runtime slice: PHI-minimized department escalation
+    -- queue. Free-form notes, descriptions, attachments, email, vendors,
+    -- local identity, and billing intentionally remain outside these tables.
+    CREATE TABLE IF NOT EXISTS pulsedesk_departments (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      name TEXT NOT NULL,
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_pulsedesk_departments_tenant_active
+      ON pulsedesk_departments(tenant_id, active);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_pulsedesk_departments_tenant_name_ci
+      ON pulsedesk_departments(tenant_id, lower(name));
+    DO $$ BEGIN
+      ALTER TABLE pulsedesk_departments ADD CONSTRAINT pulsedesk_departments_name_check
+        CHECK (char_length(name) BETWEEN 2 AND 80 AND name !~ '[[:cntrl:]]');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    CREATE TABLE IF NOT EXISTS pulsedesk_request_sequences (
+      tenant_id VARCHAR(36) PRIMARY KEY REFERENCES tenants(id),
+      last_number INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      CONSTRAINT pulsedesk_request_sequences_number_check CHECK (last_number >= 0)
+    );
+
+    CREATE TABLE IF NOT EXISTS pulsedesk_requests (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      number INTEGER NOT NULL,
+      created_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      assigned_to_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+      department_id VARCHAR(36) REFERENCES pulsedesk_departments(id) ON DELETE SET NULL,
+      summary TEXT NOT NULL,
+      location_label TEXT,
+      category TEXT NOT NULL,
+      priority TEXT NOT NULL DEFAULT 'normal',
+      status TEXT NOT NULL DEFAULT 'new',
+      is_patient_impacting BOOLEAN NOT NULL DEFAULT false,
+      due_at TIMESTAMP,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_pulsedesk_requests_tenant_created
+      ON pulsedesk_requests(tenant_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_pulsedesk_requests_tenant_status
+      ON pulsedesk_requests(tenant_id, status);
+    CREATE INDEX IF NOT EXISTS idx_pulsedesk_requests_tenant_priority
+      ON pulsedesk_requests(tenant_id, priority);
+    CREATE INDEX IF NOT EXISTS idx_pulsedesk_requests_tenant_department
+      ON pulsedesk_requests(tenant_id, department_id);
+    CREATE INDEX IF NOT EXISTS idx_pulsedesk_requests_tenant_assignee
+      ON pulsedesk_requests(tenant_id, assigned_to_user_id);
+    CREATE INDEX IF NOT EXISTS idx_pulsedesk_requests_tenant_due
+      ON pulsedesk_requests(tenant_id, due_at);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_pulsedesk_requests_number
+      ON pulsedesk_requests(tenant_id, number);
+    INSERT INTO pulsedesk_request_sequences (tenant_id, last_number, updated_at)
+      SELECT tenant_id, MAX(number), NOW()
+      FROM pulsedesk_requests
+      GROUP BY tenant_id
+    ON CONFLICT (tenant_id) DO UPDATE SET
+      last_number = GREATEST(pulsedesk_request_sequences.last_number, EXCLUDED.last_number),
+      updated_at = NOW();
+    DO $$ BEGIN
+      ALTER TABLE pulsedesk_requests ADD CONSTRAINT pulsedesk_requests_number_check
+        CHECK (number >= 1);
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE pulsedesk_requests ADD CONSTRAINT pulsedesk_requests_version_check
+        CHECK (version >= 1);
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE pulsedesk_requests ADD CONSTRAINT pulsedesk_requests_summary_check
+        CHECK (char_length(summary) BETWEEN 5 AND 160 AND summary !~ '[[:cntrl:]]');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE pulsedesk_requests ADD CONSTRAINT pulsedesk_requests_location_check
+        CHECK (location_label IS NULL OR (char_length(location_label) <= 120 AND location_label !~ '[[:cntrl:]]'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE pulsedesk_requests ADD CONSTRAINT pulsedesk_requests_priority_check
+        CHECK (priority IN ('critical','high','normal','low'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE pulsedesk_requests ADD CONSTRAINT pulsedesk_requests_status_check
+        CHECK (status IN ('new','triage','assigned','waiting_department','waiting_vendor','in_progress','escalated','resolved','closed'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE pulsedesk_requests ADD CONSTRAINT pulsedesk_requests_category_check
+        CHECK (category IN ('it_infrastructure','medical_equipment','supplies_inventory','facilities_building','housekeeping_environmental','safety_compliance','vendor_external','administrative','hr_staff','other'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    CREATE TABLE IF NOT EXISTS pulsedesk_request_events (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      request_id VARCHAR(36) NOT NULL REFERENCES pulsedesk_requests(id) ON DELETE RESTRICT,
+      actor_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      event_type TEXT NOT NULL,
+      from_status TEXT,
+      to_status TEXT,
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    -- Early development builds used a cascading request FK. Replace that
+    -- behavior in-place so repeated startup preserves immutable history.
+    DO $$ BEGIN
+      IF EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'pulsedesk_request_events_request_id_fkey'
+          AND conrelid = 'pulsedesk_request_events'::regclass
+          AND confdeltype = 'c'
+      ) THEN
+        ALTER TABLE pulsedesk_request_events
+          DROP CONSTRAINT pulsedesk_request_events_request_id_fkey;
+        ALTER TABLE pulsedesk_request_events
+          ADD CONSTRAINT pulsedesk_request_events_request_id_fkey
+          FOREIGN KEY (request_id) REFERENCES pulsedesk_requests(id) ON DELETE RESTRICT;
+      END IF;
+    END $$;
+    CREATE INDEX IF NOT EXISTS idx_pulsedesk_request_events_tenant_request_created
+      ON pulsedesk_request_events(tenant_id, request_id, created_at);
+    DO $$ BEGIN
+      ALTER TABLE pulsedesk_request_events ADD CONSTRAINT pulsedesk_request_events_type_check
+        CHECK (event_type IN ('created','updated','department_changed','assignee_changed','priority_changed','status_changed','escalated'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE pulsedesk_request_events ADD CONSTRAINT pulsedesk_request_events_from_status_check
+        CHECK (from_status IS NULL OR from_status IN ('new','triage','assigned','waiting_department','waiting_vendor','in_progress','escalated','resolved','closed'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE pulsedesk_request_events ADD CONSTRAINT pulsedesk_request_events_to_status_check
+        CHECK (to_status IS NULL OR to_status IN ('new','triage','assigned','waiting_department','waiting_vendor','in_progress','escalated','resolved','closed'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- Ninja Pool Hall shared-runtime slice: personal, local practice-rack
+    -- summaries only. Ball coordinates, arbitrary game state, multiplayer
+    -- rooms, local identity, competitive rankings, and billing stay outside.
+    CREATE TABLE IF NOT EXISTS ninja_pool_practice_sessions (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      status TEXT NOT NULL DEFAULT 'active',
+      shots INTEGER NOT NULL DEFAULT 0,
+      object_balls_pocketed INTEGER NOT NULL DEFAULT 0,
+      scratches INTEGER NOT NULL DEFAULT 0,
+      version INTEGER NOT NULL DEFAULT 1,
+      started_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      completed_at TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ninja_pool_practice_tenant_user_started
+      ON ninja_pool_practice_sessions(tenant_id, user_id, started_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_ninja_pool_practice_tenant_status
+      ON ninja_pool_practice_sessions(tenant_id, status);
+    -- Preserve at most one recoverable local-practice summary per user. If a
+    -- development database predates this invariant, retain the newest active
+    -- row and safely finalize the rest before creating the partial index.
+    WITH ranked_active AS (
+      SELECT id, row_number() OVER (
+        PARTITION BY tenant_id, user_id
+        ORDER BY updated_at DESC, started_at DESC, id DESC
+      ) AS row_number
+      FROM ninja_pool_practice_sessions
+      WHERE status = 'active'
+    )
+    UPDATE ninja_pool_practice_sessions AS sessions
+      SET status = 'abandoned',
+          version = sessions.version + 1,
+          updated_at = NOW()
+      FROM ranked_active
+      WHERE sessions.id = ranked_active.id
+        AND ranked_active.row_number > 1;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_ninja_pool_practice_one_active
+      ON ninja_pool_practice_sessions(tenant_id, user_id)
+      WHERE status = 'active';
+    DO $$ BEGIN
+      ALTER TABLE ninja_pool_practice_sessions ADD CONSTRAINT ninja_pool_practice_status_check
+        CHECK (status IN ('active','completed','abandoned'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE ninja_pool_practice_sessions ADD CONSTRAINT ninja_pool_practice_shots_check
+        CHECK (shots BETWEEN 0 AND 1000);
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE ninja_pool_practice_sessions ADD CONSTRAINT ninja_pool_practice_balls_check
+        CHECK (object_balls_pocketed BETWEEN 0 AND 15);
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE ninja_pool_practice_sessions ADD CONSTRAINT ninja_pool_practice_scratches_check
+        CHECK (scratches >= 0 AND scratches <= shots);
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE ninja_pool_practice_sessions ADD CONSTRAINT ninja_pool_practice_version_check
+        CHECK (version >= 1);
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    -- TradeFlowKit shared-runtime slice: manual, tenant-scoped lead tracking.
+    -- Provider messaging, public intake, conversion, local auth, and local
+    -- subscription state intentionally remain outside this table.
+    CREATE TABLE IF NOT EXISTS tradeflowkit_leads (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      created_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      source TEXT NOT NULL DEFAULT 'manual',
+      status TEXT NOT NULL DEFAULT 'new',
+      name TEXT NOT NULL,
+      phone TEXT,
+      email TEXT,
+      service_type TEXT,
+      description TEXT,
+      urgency TEXT NOT NULL DEFAULT 'normal',
+      estimated_value_cents INTEGER,
+      next_follow_up_at TIMESTAMP,
+      last_contacted_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      deleted_at TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_tradeflowkit_leads_tenant_created
+      ON tradeflowkit_leads(tenant_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_tradeflowkit_leads_tenant_status
+      ON tradeflowkit_leads(tenant_id, status);
+    CREATE INDEX IF NOT EXISTS idx_tradeflowkit_leads_tenant_followup
+      ON tradeflowkit_leads(tenant_id, next_follow_up_at);
+    DO $$ BEGIN
+      ALTER TABLE tradeflowkit_leads ADD CONSTRAINT tradeflowkit_leads_source_check
+        CHECK (source IN ('manual'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE tradeflowkit_leads ADD CONSTRAINT tradeflowkit_leads_status_check
+        CHECK (status IN ('new','contacted','qualified','follow_up','lost'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE tradeflowkit_leads ADD CONSTRAINT tradeflowkit_leads_urgency_check
+        CHECK (urgency IN ('normal','urgent','emergency'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE tradeflowkit_leads ADD CONSTRAINT tradeflowkit_leads_value_check
+        CHECK (estimated_value_cents IS NULL OR estimated_value_cents BETWEEN 0 AND 1000000000);
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    CREATE TABLE IF NOT EXISTS tradeflowkit_customers (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      created_by_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+      name TEXT NOT NULL, phone TEXT, email TEXT, address TEXT, notes TEXT,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      deleted_at TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_tfk_customers_tenant_created ON tradeflowkit_customers(tenant_id, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS tradeflowkit_jobs (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      customer_id VARCHAR(36) NOT NULL REFERENCES tradeflowkit_customers(id),
+      created_by_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+      title TEXT NOT NULL, description TEXT,
+      status TEXT NOT NULL DEFAULT 'lead', priority TEXT NOT NULL DEFAULT 'normal',
+      scheduled_start TIMESTAMP, scheduled_end TIMESTAMP,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      deleted_at TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_tfk_jobs_tenant_status ON tradeflowkit_jobs(tenant_id, status);
+    CREATE INDEX IF NOT EXISTS idx_tfk_jobs_tenant_customer ON tradeflowkit_jobs(tenant_id, customer_id);
+    DO $$ BEGIN ALTER TABLE tradeflowkit_jobs ADD CONSTRAINT tfk_jobs_status_check CHECK (status IN ('lead','quoted','scheduled','in_progress','done','invoiced','paid','canceled'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN ALTER TABLE tradeflowkit_jobs ADD CONSTRAINT tfk_jobs_priority_check CHECK (priority IN ('low','normal','urgent'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    CREATE TABLE IF NOT EXISTS tradeflowkit_quotes (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      customer_id VARCHAR(36) NOT NULL REFERENCES tradeflowkit_customers(id),
+      job_id VARCHAR(36) REFERENCES tradeflowkit_jobs(id),
+      created_by_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'draft', line_items JSONB NOT NULL,
+      subtotal_cents INTEGER NOT NULL, tax_rate_bps INTEGER NOT NULL DEFAULT 0,
+      tax_cents INTEGER NOT NULL DEFAULT 0, discount_cents INTEGER NOT NULL DEFAULT 0,
+      total_cents INTEGER NOT NULL, notes TEXT, expires_at TIMESTAMP,
+      sent_at TIMESTAMP, accepted_at TIMESTAMP, version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL, deleted_at TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_tfk_quotes_tenant_status ON tradeflowkit_quotes(tenant_id, status);
+    CREATE INDEX IF NOT EXISTS idx_tfk_quotes_tenant_customer ON tradeflowkit_quotes(tenant_id, customer_id);
+    DO $$ BEGIN ALTER TABLE tradeflowkit_quotes ADD CONSTRAINT tfk_quotes_status_check CHECK (status IN ('draft','sent','accepted','declined'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+    CREATE TABLE IF NOT EXISTS tradeflowkit_invoices (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      customer_id VARCHAR(36) NOT NULL REFERENCES tradeflowkit_customers(id),
+      job_id VARCHAR(36) REFERENCES tradeflowkit_jobs(id),
+      source_quote_id VARCHAR(36) REFERENCES tradeflowkit_quotes(id),
+      created_by_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'draft', line_items JSONB NOT NULL,
+      subtotal_cents INTEGER NOT NULL, tax_rate_bps INTEGER NOT NULL DEFAULT 0,
+      tax_cents INTEGER NOT NULL DEFAULT 0, discount_cents INTEGER NOT NULL DEFAULT 0,
+      total_cents INTEGER NOT NULL, notes TEXT, due_date TIMESTAMP,
+      sent_at TIMESTAMP, paid_at TIMESTAMP, payment_method TEXT,
+      payment_reference TEXT, payment_notes TEXT, version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL, deleted_at TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_tfk_invoices_tenant_status ON tradeflowkit_invoices(tenant_id, status);
+    CREATE INDEX IF NOT EXISTS idx_tfk_invoices_tenant_customer ON tradeflowkit_invoices(tenant_id, customer_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_tfk_invoice_source_quote
+      ON tradeflowkit_invoices(tenant_id, source_quote_id)
+      WHERE source_quote_id IS NOT NULL AND deleted_at IS NULL;
+    DO $$ BEGIN ALTER TABLE tradeflowkit_invoices ADD CONSTRAINT tfk_invoices_status_check CHECK (status IN ('draft','sent','processing','paid','void'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN ALTER TABLE tradeflowkit_quotes ADD CONSTRAINT tfk_quotes_money_check CHECK (subtotal_cents >= 0 AND tax_rate_bps BETWEEN 0 AND 10000 AND tax_cents >= 0 AND discount_cents >= 0 AND total_cents >= 0);
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN ALTER TABLE tradeflowkit_invoices ADD CONSTRAINT tfk_invoices_money_check CHECK (subtotal_cents >= 0 AND tax_rate_bps BETWEEN 0 AND 10000 AND tax_cents >= 0 AND discount_cents >= 0 AND total_cents >= 0);
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
   `);
 }
-
-// Task #139: the apps that are free with any OperatorOS account. Kept as a
-// plain slug list here (rather than importing the SDK's FREE_WITH_ANY_ACCOUNT)
-// so the DB-seeding layer stays decoupled from the SDK catalog shape.
-export const FREE_ACCOUNT_APP_SLUGS = ['torqueshed', 'faultlinelab', 'ninja-pool-hall'] as const;
 
 /**
  * Task #139: idempotently grant the free-with-any-account apps to a tenant.
  *
- * Insert-if-missing (ON CONFLICT DO NOTHING) on both `tenant_modules` and
- * `tenant_user_module_access`, so re-running on boot never stomps an admin
- * override (e.g. an owner who disabled one of these on their own tenant).
+ * Missing tenant-module rows are inserted as enabled. Existing rows that have
+ * not yet been classified as free-account grants receive a one-time migration:
+ * status/source/all-member access and the owner grant are restored, then the
+ * metadata marker is written. This repairs rows disabled by historical plan
+ * reconciliation. Once classified, later backfills leave tenant-admin changes
+ * alone, including an explicit disable or per-user deny made after migration.
+ *
  * `allowAllMembers: true` makes every member of the tenant a user of the
  * module; the owner also gets an explicit `manager` grant so they can manage
  * access for any future members. Mirrors the Demo Co / fixShotgunTenant seed
  * pattern. Missing modules are logged and skipped, never fatal.
  */
-export async function ensureFreeAccountApps(tenantId: string, ownerUserId: string): Promise<void> {
+type FreeAccountDatabase = Pick<typeof db, 'select' | 'insert' | 'update'>;
+
+export async function ensureFreeAccountAppsWithDatabase(
+  database: FreeAccountDatabase,
+  tenantId: string,
+  ownerUserId: string,
+): Promise<void> {
+  const metadataPatchJson = JSON.stringify(FREE_ACCOUNT_METADATA_PATCH);
+
   for (const slug of FREE_ACCOUNT_APP_SLUGS) {
-    const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+    const [mod] = await database.select().from(modules).where(eq(modules.slug, slug)).limit(1);
     if (!mod) {
       console.warn(`[free-apps] module '${slug}' not found; skipping free-account grant`);
       continue;
     }
-    await db.insert(tenantModules).values({
-      tenantId,
-      moduleId: mod.id,
-      status: 'enabled',
-      source: 'included',
-      allowAllMembers: true,
-      metadata: { grantedBy: 'free_account', freeWithAnyAccount: true },
-    }).onConflictDoNothing({ target: [tenantModules.tenantId, tenantModules.moduleId] });
+    const [existing] = await database.select().from(tenantModules).where(and(
+      eq(tenantModules.tenantId, tenantId),
+      eq(tenantModules.moduleId, mod.id),
+    )).limit(1);
+    const migrateLegacyGrant = !existing || shouldUpgradeLegacyFreeAccountGrant(existing);
 
-    await db.insert(tenantUserModuleAccess).values({
+    if (!existing) {
+      await database.insert(tenantModules).values({
+        tenantId,
+        moduleId: mod.id,
+        status: 'enabled',
+        source: 'included',
+        allowAllMembers: true,
+        metadata: NEW_FREE_ACCOUNT_GRANT_METADATA,
+      }).onConflictDoNothing({ target: [tenantModules.tenantId, tenantModules.moduleId] });
+    } else if (migrateLegacyGrant) {
+      // Exact JSON-boolean predicate makes the migration idempotent under
+      // concurrent/repeated startup and rejects the string "true" marker.
+      await database.update(tenantModules).set({
+        status: 'enabled',
+        source: 'included',
+        allowAllMembers: true,
+        metadata: sql`COALESCE(${tenantModules.metadata}, '{}'::jsonb) || ${metadataPatchJson}::jsonb`,
+        updatedAt: new Date(),
+      }).where(and(
+        eq(tenantModules.tenantId, tenantId),
+        eq(tenantModules.moduleId, mod.id),
+        sql`(${tenantModules.metadata} -> 'freeWithAnyAccount') IS DISTINCT FROM 'true'::jsonb`,
+      ));
+    }
+
+    const ownerGrantInsert = database.insert(tenantUserModuleAccess).values({
       tenantId,
       userId: ownerUserId,
       moduleId: mod.id,
       accessLevel: 'manager',
-    }).onConflictDoNothing({
-      target: [tenantUserModuleAccess.tenantId, tenantUserModuleAccess.userId, tenantUserModuleAccess.moduleId],
     });
+    if (migrateLegacyGrant) {
+      await ownerGrantInsert.onConflictDoUpdate({
+        target: [tenantUserModuleAccess.tenantId, tenantUserModuleAccess.userId, tenantUserModuleAccess.moduleId],
+        set: { accessLevel: 'manager', updatedAt: new Date() },
+      });
+    } else {
+      await ownerGrantInsert.onConflictDoNothing({
+        target: [tenantUserModuleAccess.tenantId, tenantUserModuleAccess.userId, tenantUserModuleAccess.moduleId],
+      });
+    }
   }
+}
+
+export async function ensureFreeAccountApps(tenantId: string, ownerUserId: string): Promise<void> {
+  return ensureFreeAccountAppsWithDatabase(db, tenantId, ownerUserId);
+}
+
+/**
+ * Backfill free-account grants for every non-archived tenant, regardless of
+ * whether it is personal or company-owned. Suspended tenants are included so
+ * their grants are ready after reactivation; central access checks still deny
+ * them while suspended. Run this after special tenant seeders on boot.
+ */
+export async function backfillFreeAccountAppsForAllTenants(): Promise<void> {
+  const allTenants = await db.select({
+    id: tenants.id,
+    ownerUserId: tenants.ownerUserId,
+    status: tenants.status,
+  }).from(tenants);
+
+  let ensured = 0;
+  let archivedSkipped = 0;
+  for (const tenant of allTenants) {
+    if (tenant.status === 'archived') {
+      archivedSkipped += 1;
+      continue;
+    }
+    await ensureFreeAccountApps(tenant.id, tenant.ownerUserId);
+    ensured += 1;
+  }
+
+  console.log(
+    `[backfill] Free-account apps: ${ensured} tenants ensured, ${archivedSkipped} archived tenants skipped`,
+  );
 }
 
 /**

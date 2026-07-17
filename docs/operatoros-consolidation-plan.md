@@ -1,8 +1,13 @@
 # OperatorOS Consolidation Plan
 
-Phase: target architecture plan for subdomain-routed module consolidation.
+Phase: historical target architecture plan for subdomain-routed module consolidation.
 
-Status: planning document only. No module has been migrated by this plan.
+Status: superseded planning record. Module sources and initial functional
+vertical slices have since been imported. Do not implement this document's
+former parent-domain-cookie proposal. The current exact-host, host-only session,
+and opaque-code authority is defined by
+`docs/auth/OPERATOROS_SSO_CONTRACT_V1.md` and
+`docs/MODULE_CONSOLIDATION_STATUS.md`.
 
 ## Target Domain Model
 
@@ -134,11 +139,11 @@ The current `detectOperatorOSHost(hostname)` helper should become the routing fo
 
 Routing behavior:
 
-- `operatoros.net` and `www.operatoros.net` render the public root surface.
+- `operatoros.net` renders the public root surface.
 - `app.operatoros.net` renders `/app` and authenticated command center routes.
 - `auth.operatoros.net` renders shared auth flows.
 - `api.operatoros.net` serves the Fastify API directly.
-- `<module>.operatoros.net` resolves a module slug from the ecosystem registry and renders the corresponding module surface only after auth/entitlement checks.
+- Each exact registered module host resolves its slug from the ecosystem registry and renders the corresponding module surface only after auth/entitlement checks.
 - Localhost, Replit preview hosts, and foreign custom hosts remain inert unless explicitly configured.
 
 Implementation guidance:
@@ -151,19 +156,20 @@ Implementation guidance:
 
 ## Shared Session Strategy
 
-Target session behavior:
+Current session behavior that supersedes the original proposal:
 
-- API remains the authority for JWT verification.
-- Browser session cookie is HttpOnly, Secure in production, and scoped to `.operatoros.net` when running on the OperatorOS domain.
-- Same-site policy remains explicit and tested.
-- Auth redirects preserve `next` only for same-origin or known OperatorOS subdomain targets.
-- Logout clears the parent-domain cookie across the ecosystem.
-
-Required hardening:
-
-- Add a safe env var for cookie domain, such as `OPERATOROS_COOKIE_DOMAIN=.operatoros.net`, with no default on localhost.
-- Add tests for cookie options in production and development.
-- Add CSRF review before enabling broad credentialed subdomain writes.
+- The API remains the authority for JWT verification and token-version revocation.
+- Every browser session cookie is HttpOnly, Secure in production, host-only,
+  and has no `Domain` attribute.
+- Root/app/auth sessions are platform-scoped without tenant/module claims;
+  module sessions bind one exact module and tenant.
+- Auth redirects accept only exact registered hosts and validated local return
+  paths; merely sharing the `operatoros.net` suffix is insufficient.
+- Local logout clears only the current host. Global logout increments the
+  OperatorOS token version so other host sessions fail on their next
+  authenticated request.
+- Credentialed browser mutations must be same-origin. Sibling subdomains do
+  not receive broad write authority.
 
 ## Root Super-Admin Strategy
 
@@ -275,17 +281,18 @@ Acceptance criteria:
 - Localhost and Replit preview hosts remain inert.
 - No module business logic is migrated yet.
 
-### Phase 3 - Shared Parent-Domain Session
+### Phase 3 - Host-Only Session Boundary (superseded design correction)
 
 Goals:
 
-- Add explicit cookie domain configuration.
-- Make auth redirects safe across known OperatorOS hosts.
-- Add logout clearing for parent-domain cookies.
+- Keep cookies host-only with no parent-domain configuration.
+- Make auth redirects safe across exact registered OperatorOS hosts.
+- Implement local host logout plus token-version-backed global logout.
 
 Acceptance criteria:
 
-- `app.operatoros.net` and module subdomains can share the session cookie in production config.
+- `app.operatoros.net` and module subdomains never share a parent-domain
+  cookie; each exact host establishes its own correctly scoped session.
 - Localhost development still works.
 - API remains the JWT authority.
 

@@ -25,6 +25,24 @@ import TenantBillingPage from '@/components/pages/TenantBillingPage';
 import OperatorLoader from '@/components/brand/OperatorLoader';
 import { isSuperAdmin, isTenantAdmin } from '@/lib/rbac';
 
+const LINKABLE_CONSOLE_PAGES = new Set([
+  'my-apps',
+  'apps',
+  'billing',
+  'settings',
+  'command-center',
+  'tenant-users',
+  'tenant-modules',
+  'tenant-billing',
+  'tenant-settings',
+]);
+
+function initialConsolePage(): string {
+  if (typeof window === 'undefined') return 'my-apps';
+  const requested = new URLSearchParams(window.location.search).get('page');
+  return requested && LINKABLE_CONSOLE_PAGES.has(requested) ? requested : 'my-apps';
+}
+
 /**
  * Console route — /app
  *
@@ -46,35 +64,19 @@ function AppContent() {
   const { user, loading, authError, logout, clearAuthError } = useAuth();
   const { activeRole: tenantRole } = useTenant();
   const [authPage, setAuthPage] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>('login');
-  const [activePage, setActivePage] = useState<string>('my-apps');
-  const [didInitialLand, setDidInitialLand] = useState(false);
+  const [activePage, setActivePage] = useState<string>(initialConsolePage);
 
   useEffect(() => {
     if (!user) {
-      setDidInitialLand(false);
       setActivePage('my-apps');
       setAuthPage('login');
     }
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user || didInitialLand) return;
-    if (activePage !== 'my-apps') { setDidInitialLand(true); return; }
-    if (isSuperAdmin((user as any).platformRole)) {
-      setActivePage('platform');
-      setDidInitialLand(true);
-    } else if (isTenantAdmin(tenantRole, (user as any).platformRole)) {
-      setActivePage('command-center');
-      setDidInitialLand(true);
-    } else if (tenantRole === 'member') {
-      setDidInitialLand(true);
-    }
-  }, [user?.id, tenantRole]);
-
-  useEffect(() => {
     if (loading || !user) return;
     let pending: string | null = null;
-    try { pending = localStorage.getItem('operatoros.pendingInviteToken'); } catch {}
+    try { pending = sessionStorage.getItem('operatoros.pendingInviteToken'); } catch {}
     if (pending) {
       // Canonical invite URL post-split lives under /app/*.
       window.location.replace(`/app/invites/${encodeURIComponent(pending)}`);
@@ -105,6 +107,12 @@ function AppContent() {
       // Canonical Platform URL post-split lives under /app/*.
       window.location.href = '/app/platform';
       return;
+    }
+    if (LINKABLE_CONSOLE_PAGES.has(page)) {
+      const url = new URL(window.location.href);
+      if (page === 'my-apps') url.searchParams.delete('page');
+      else url.searchParams.set('page', page);
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
     }
     setActivePage(page);
   };

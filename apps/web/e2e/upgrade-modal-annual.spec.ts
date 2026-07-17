@@ -51,18 +51,19 @@
  *   ("if response.checkoutUrl, set window.location.href to it") is
  *   the regression we need to guard.
  *
- * Fixture note: registration (POST /v1/auth/register) intentionally
- * does not create a personal tenant — the boot-time
- * `backfillPersonalTenants` does. We provision the tenant + owner
- * membership directly via SQL so the freshly registered user can
- * actually reach the Billing page. (Followed up separately as
- * tech-debt: "Give new sign-ups a workspace automatically".)
+ * Fixture note: registration now provisions a personal tenant. This
+ * scenario still creates a dedicated owner tenant and selects it in the
+ * database so billing-page state is deterministic and isolated from the
+ * account's default free-module grants.
  */
-import { test, expect, request as pwRequest } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { Client } from 'pg';
-
-const API = process.env.E2E_API_URL ?? 'http://localhost:5001';
-const WEB = process.env.E2E_WEB_URL ?? 'http://localhost:5000';
+import {
+  E2E_API_URL as API,
+  E2E_WEB_URL as WEB,
+  expectNoScriptReadableAuth,
+  registerAndLogin,
+} from './session-auth';
 
 async function withDb<T>(fn: (c: Client) => Promise<T>): Promise<T> {
   const url = process.env.DATABASE_URL;
@@ -82,30 +83,21 @@ test('annual toggle flips the price and sends interval=year to /billing/subscrib
   const password = 'CorrectHorseBattery9!';
   const tenantSlug = `task70-tenant-${ts.toString(36)}`;
 
-  const api = await pwRequest.newContext();
+  const api = page.context().request;
   let userId: string | null = null;
   let tenantId: string | null = null;
 
   try {
-    // 1) Register a fresh user. Registration returns { ok: true } and
-    //    does NOT auto-provision a tenant — we plant one below.
-    const reg = await api.post(`${API}/v1/auth/register`, {
-      data: { email, password, name: 'Task70 Upgrade Test' },
+    // 1) Register and sign in through the production cookie-session flow.
+    const user = await registerAndLogin(api, {
+      email,
+      password,
+      name: 'Task70 Upgrade Test',
     });
-    expect(reg.ok(), `register: ${reg.status()} ${await reg.text()}`).toBeTruthy();
-
-    // 2) Login to obtain a JWT. Login also sets an httpOnly cookie,
-    //    but the SPA reads `localStorage.token` for the Authorization
-    //    header — so we seed both later.
-    const login = await api.post(`${API}/v1/auth/login`, { data: { email, password } });
-    expect(login.ok(), `login: ${login.status()} ${await login.text()}`).toBeTruthy();
-    const loginBody = await login.json();
-    const token: string = loginBody.token;
-    userId = loginBody.user.id;
-    expect(token, 'login returned a token').toBeTruthy();
+    userId = user.id;
     expect(userId, 'login returned a user id').toBeTruthy();
 
-    // 3) Provision a personal tenant + owner membership and set it as
+    // 2) Provision a personal tenant + owner membership and set it as
     //    current_tenant_id so the API's tenant context resolver
     //    (apps/api/src/lib/tenant-auth.ts) returns a tenant for this
     //    user. Without this, /v1/billing/usage would 404.
@@ -127,7 +119,7 @@ test('annual toggle flips the price and sends interval=year to /billing/subscrib
       return tid;
     });
 
-    // 4) Fetch the Pro plan from the live billing config so the
+    // 3) Fetch the Pro plan from the live billing config so the
     //    displayed-price assertion uses whatever the server actually
     //    returns (different envs may seed different cents).
     const plansRes = await api.get(`${API}/v1/billing/plans`);
@@ -154,15 +146,7 @@ test('annual toggle flips the price and sends interval=year to /billing/subscrib
     const monthlyDollars = Math.round(monthlyCents / 100);
     const annualDollars = Math.round(annualCents / 100);
 
-    // 5) Seed browser auth — token + active tenant — then go to the
-    //    SPA root. We click into Billing via the sidebar so this is a
-    //    real navigation, not a deep link.
-    await page.addInitScript(({ token, tenantId }) => {
-      localStorage.setItem('token', token);
-      localStorage.setItem('activeTenantId', tenantId);
-    }, { token, tenantId });
-
-    // 6) Install the deterministic subscribe interceptor BEFORE the
+    // 4) Install the deterministic subscribe interceptor BEFORE the
     //    modal is opened. We *override* the response with a stubbed
     //    checkoutUrl pointing at a known local sentinel so the
     //    redirect branch is deterministic regardless of whether
@@ -196,14 +180,15 @@ test('annual toggle flips the price and sends interval=year to /billing/subscrib
     });
 
     await page.goto(WEB);
+    await expectNoScriptReadableAuth(page);
 
-    // 7) Navigate to Billing via the sidebar nav entry. Mobile/desktop
+    // 5) Navigate to Billing via the sidebar nav entry. Mobile/desktop
     //    both render `data-testid="nav-billing"` (sidebar-nav.ts).
     const billingNav = page.getByTestId('nav-billing');
     await billingNav.waitFor({ timeout: 15_000 });
     await billingNav.click();
 
-    // 8) Open the upgrade modal. The button only renders when the
+    // 6) Open the upgrade modal. The button only renders when the
     //    current plan is not "elite" — new users start on the free
     //    tier so it's present.
     const upgradeBtn = page.getByTestId('button-upgrade-plan');

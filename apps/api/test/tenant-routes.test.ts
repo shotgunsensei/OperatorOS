@@ -66,7 +66,7 @@ after(async () => {
 });
 
 function bearer(u: any) {
-  return { authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` };
+  return { authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` };
 }
 
 test('GET /v1/tenants requires super_admin (403 for normal user)', async () => {
