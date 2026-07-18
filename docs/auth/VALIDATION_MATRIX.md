@@ -63,8 +63,10 @@ Local HTTPS probes also returned:
 ### Source/database regression
 
 - Focused Phase 1 deployment/security contracts: 11/11 passed.
-- Complete API suite: 675/675 passed, 0 failed, 0 skipped against a clean
+- Complete API suite: 679/679 passed, 0 failed, 0 skipped against a clean
   disposable PostgreSQL 16.14 database.
+- Phase 2 compiled-runtime directory browser workflow: 1/1 passed locally;
+  this adds persistence evidence but does not replace deployed SSO validation.
 - Production build: API, runner gateway, and Next passed after the required
   workspace typecheck.
 

@@ -518,6 +518,80 @@ export interface TradeFlowKitRevenueResponse {
   quotes: TradeFlowKitQuote[]; invoices: TradeFlowKitInvoice[];
 }
 
+export type DirectoryModuleSlug = 'tradeflowkit' | 'techdeck' | 'pulsedesk';
+export interface DirectoryPagination { total: number; limit: number; offset: number; hasMore: boolean }
+export interface DirectoryOrganization {
+  id: string; tenantId: string; name: string; type: 'customer' | 'client' | 'vendor' | 'partner' | 'facility' | 'other';
+  status: 'active' | 'inactive'; website: string | null; notes: string | null; version: number; archivedAt: string | null;
+}
+export interface DirectoryContact {
+  id: string; tenantId: string; firstName: string; lastName: string; email: string | null; phone: string | null;
+  title: string | null; status: 'active' | 'inactive'; version: number; archivedAt: string | null;
+}
+export interface DirectoryAddress {
+  id: string; label: string | null; line1: string; line2: string | null; city: string; region: string;
+  postalCode: string; countryCode: string; version: number;
+}
+export interface DirectorySite {
+  id: string; tenantId: string; organizationId: string; name: string; type: string; status: 'active' | 'inactive';
+  timezone: string | null; notes: string | null; version: number; address: DirectoryAddress | null; organization: DirectoryOrganization;
+}
+export interface DirectoryOrganizationDetail {
+  organization: DirectoryOrganization;
+  contacts: Array<DirectoryContact & { association: { id: string; role: string | null; isPrimary: boolean } }>;
+  sites: DirectorySite[];
+  relationships: Array<{ id: string; fromOrganizationId: string; toOrganizationId: string; type: string; notes: string | null; version: number }>;
+  profile: Record<string, unknown> | null;
+}
+
+const directoryPath = (slug: DirectoryModuleSlug, path: string) => `/modules/${slug}/directory${path}`;
+export const directoryApi = {
+  organizations: {
+    list: (slug: DirectoryModuleSlug, search = ''): Promise<{ organizations: DirectoryOrganization[]; pagination: DirectoryPagination }> =>
+      apiFetch(directoryPath(slug, `/organizations?limit=50&sort=name${search ? `&search=${encodeURIComponent(search)}` : ''}`)) as Promise<any>,
+    get: (slug: DirectoryModuleSlug, id: string): Promise<DirectoryOrganizationDetail> =>
+      apiFetch(directoryPath(slug, `/organizations/${encodeURIComponent(id)}`)) as Promise<DirectoryOrganizationDetail>,
+    create: (slug: DirectoryModuleSlug, input: { name: string; type: DirectoryOrganization['type']; website?: string; notes?: string }): Promise<DirectoryOrganization> =>
+      apiFetch(directoryPath(slug, '/organizations'), { method: 'POST', body: JSON.stringify(input) }) as Promise<DirectoryOrganization>,
+    update: (slug: DirectoryModuleSlug, id: string, input: { expectedVersion: number; name?: string; type?: DirectoryOrganization['type']; website?: string | null; notes?: string | null; status?: DirectoryOrganization['status'] }): Promise<DirectoryOrganization> =>
+      apiFetch(directoryPath(slug, `/organizations/${encodeURIComponent(id)}`), { method: 'PATCH', body: JSON.stringify(input) }) as Promise<DirectoryOrganization>,
+    archive: (slug: DirectoryModuleSlug, id: string, expectedVersion: number): Promise<DirectoryOrganization> =>
+      apiFetch(directoryPath(slug, `/organizations/${encodeURIComponent(id)}`), { method: 'DELETE', body: JSON.stringify({ expectedVersion }) }) as Promise<DirectoryOrganization>,
+    associateContact: (slug: DirectoryModuleSlug, id: string, contactId: string, role?: string): Promise<unknown> =>
+      apiFetch(directoryPath(slug, `/organizations/${encodeURIComponent(id)}/contacts`), { method: 'POST', body: JSON.stringify({ contactId, role, isPrimary: false }) }),
+    removeContact: (slug: DirectoryModuleSlug, id: string, contactId: string): Promise<{ ok: true }> =>
+      apiFetch(directoryPath(slug, `/organizations/${encodeURIComponent(id)}/contacts/${encodeURIComponent(contactId)}`), { method: 'DELETE' }) as Promise<{ ok: true }>,
+    profile: (slug: DirectoryModuleSlug, id: string, input: Record<string, unknown>): Promise<Record<string, unknown>> =>
+      apiFetch(directoryPath(slug, `/organizations/${encodeURIComponent(id)}/profile`), { method: 'PUT', body: JSON.stringify(input) }) as Promise<Record<string, unknown>>,
+  },
+  contacts: {
+    list: (slug: DirectoryModuleSlug, search = ''): Promise<{ contacts: DirectoryContact[]; pagination: DirectoryPagination }> =>
+      apiFetch(directoryPath(slug, `/contacts?limit=50${search ? `&search=${encodeURIComponent(search)}` : ''}`)) as Promise<any>,
+    create: (slug: DirectoryModuleSlug, input: { firstName: string; lastName?: string; email?: string; phone?: string; title?: string }): Promise<DirectoryContact> =>
+      apiFetch(directoryPath(slug, '/contacts'), { method: 'POST', body: JSON.stringify(input) }) as Promise<DirectoryContact>,
+    update: (slug: DirectoryModuleSlug, id: string, input: { expectedVersion: number; firstName?: string; lastName?: string; email?: string | null; phone?: string | null; title?: string | null }): Promise<DirectoryContact> =>
+      apiFetch(directoryPath(slug, `/contacts/${encodeURIComponent(id)}`), { method: 'PATCH', body: JSON.stringify(input) }) as Promise<DirectoryContact>,
+    archive: (slug: DirectoryModuleSlug, id: string, expectedVersion: number): Promise<DirectoryContact> =>
+      apiFetch(directoryPath(slug, `/contacts/${encodeURIComponent(id)}`), { method: 'DELETE', body: JSON.stringify({ expectedVersion }) }) as Promise<DirectoryContact>,
+  },
+  sites: {
+    list: (slug: DirectoryModuleSlug, search = ''): Promise<{ sites: DirectorySite[]; pagination: DirectoryPagination }> =>
+      apiFetch(directoryPath(slug, `/sites?limit=50${search ? `&search=${encodeURIComponent(search)}` : ''}`)) as Promise<any>,
+    create: (slug: DirectoryModuleSlug, input: Record<string, unknown>): Promise<DirectorySite> =>
+      apiFetch(directoryPath(slug, '/sites'), { method: 'POST', body: JSON.stringify(input) }) as Promise<DirectorySite>,
+    update: (slug: DirectoryModuleSlug, id: string, input: Record<string, unknown>): Promise<DirectorySite> =>
+      apiFetch(directoryPath(slug, `/sites/${encodeURIComponent(id)}`), { method: 'PATCH', body: JSON.stringify(input) }) as Promise<DirectorySite>,
+    archive: (slug: DirectoryModuleSlug, id: string, expectedVersion: number): Promise<DirectorySite> =>
+      apiFetch(directoryPath(slug, `/sites/${encodeURIComponent(id)}`), { method: 'DELETE', body: JSON.stringify({ expectedVersion }) }) as Promise<DirectorySite>,
+    associateContact: (slug: DirectoryModuleSlug, id: string, contactId: string, role?: string): Promise<unknown> =>
+      apiFetch(directoryPath(slug, `/sites/${encodeURIComponent(id)}/contacts`), { method: 'POST', body: JSON.stringify({ contactId, role, isPrimary: false }) }),
+  },
+  relationships: {
+    create: (slug: DirectoryModuleSlug, input: { fromOrganizationId: string; toOrganizationId: string; type: string; notes?: string }): Promise<unknown> =>
+      apiFetch(directoryPath(slug, '/relationships'), { method: 'POST', body: JSON.stringify(input) }),
+  },
+};
+
 // Task #72 — backend persistence for the polished module shells.
 // Each helper hits `/v1/modules/{slug}/...`, whose route group is gated by
 // `requireTenantMember` plus `requireTenantModuleAccess(slug)`, and stamps the

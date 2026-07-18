@@ -31,6 +31,7 @@ import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js
 import { createTechDeckAdapterContext } from '../../../../../apps/modules/techdeck/adapter.js';
 import TechDeckTicketQueue from './TechDeckTicketQueue';
 import TechDeckOperations from './TechDeckOperations';
+import BusinessDirectory from './BusinessDirectory';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 interface TechDeckShellProps {
@@ -322,6 +323,8 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
                 key={id}
                 href={id === 'tickets'
                   ? '#techdeck-ticket-queue'
+                  : id === 'clients'
+                    ? '#techdeck-directory'
                   : ['assets', 'itops'].includes(id)
                     ? '#techdeck-ops'
                     : `#techdeck-${id}`}
@@ -367,6 +370,12 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
                 canWrite={canWriteModule}
                 canApprove={canManageModule}
               />
+            )}
+
+            {hasTenantContext && adapter.tenantId && (
+              <section id="techdeck-directory" tabIndex={-1}>
+                <BusinessDirectory moduleSlug="techdeck" tenantKey={adapter.tenantId} canArchive={canManageModule} />
+              </section>
             )}
 
             <section className="techdeck-panel" style={{ padding: 18 }} data-testid="techdeck-operations-panel">

@@ -14,6 +14,7 @@ import {
   seedPlatformComponents,
 } from './saas-db-init.js';
 import { launchFixPostSeed, launchFixPreSeed } from './launch-fix-init.js';
+import { ensureDirectoryTables } from './directory-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -29,6 +30,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   extended_tables: ensureExtendedTables,
   saas_tables: ensureSaasTables,
   tenant_tables: ensureTenantTables,
+  directory_tables: ensureDirectoryTables,
   module_tables: ensureModuleShellTables,
   plans_and_admin: seedPlansAndAdmin,
   launch_fix_pre_seed: launchFixPreSeed,
@@ -47,6 +49,7 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.users') IS NOT NULL AS users,
       to_regclass('public.tenants') IS NOT NULL AS tenants,
       to_regclass('public.modules') IS NOT NULL AS modules,
+      to_regclass('public.directory_organizations') IS NOT NULL AS directory_organizations,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;

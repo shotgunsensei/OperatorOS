@@ -19,7 +19,7 @@ slice is not parity.
 | --- | --- | --- | --- |
 | 0 | Execution framework, verified baseline, one status ledger, ADR index, and parity index | None | Complete locally on `codex/phase-0-baseline`; release gate remains closed |
 | 1 | Reproducible canonical deployment, environment contract, deployed SSO/navigation gate, and backup/restore rehearsal | Phase 0 | Source/local accepted on `codex/phase-1-platform-deployment-gate`; public gate failed 32/47 pending authorized deployment |
-| 2 | OperatorOS-owned shared Business Directory for organizations, contacts, sites, addresses, and module profiles | Phase 1 | Pending |
+| 2 | OperatorOS-owned shared Business Directory for organizations, contacts, sites, addresses, and module profiles | Phase 1 | Source/local accepted on `codex/phase-2-shared-business-directory` by explicit owner direction; not deployed |
 | 3 | Shared attachments, notifications, providers, jobs/outbox, webhook idempotency, usage ledger, and activity timeline | Phase 2 | Pending |
 | 4 | TradeFlowKit state 5 | Phases 2-3 | Pending |
 | 5 | TechDeck state 5 | Phases 2-3 | Pending |
@@ -57,11 +57,11 @@ slice is not parity.
 
 ## Immediate next gate
 
-Do not begin Phase 2 yet. Review and deploy the scoped Phase 1 commit through
-the `.replit` autoscale path, validate the actual production environment, then
-require 47/47 from the read-only public verifier plus authenticated deployed
-SSO, return, deep-link, refresh, entitlement, tenant-isolation, authorization,
-and logout acceptance. Record the exact deployed commit in
-`docs/CURRENT_RELEASE_GATE.md`. The Phase 1 backup/restore rehearsal and local
-production topology have passed; the remaining blocker is deployment and
-verification of the reviewed revision, not permission to weaken the contract.
+Phase 2 source work proceeded only because the owner explicitly directed it;
+that does not waive the failed Phase 1 public release gate. Before Phase 3 or
+any production-readiness claim, review the Phase 2 commit, deploy the reviewed
+Phase 1/2 revision through `.replit`, require 47/47 from the read-only public
+verifier, and run authenticated deployed SSO, return, directory persistence,
+deep-link, refresh, entitlement, tenant-isolation, authorization, logout, and
+backup/restore acceptance. Record the exact deployed commit in
+`docs/CURRENT_RELEASE_GATE.md` and never weaken the contract to make it pass.

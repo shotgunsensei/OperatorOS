@@ -27,6 +27,7 @@ import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createPulseDeskAdapterContext } from '../../../../../apps/modules/pulsedesk/adapter.js';
 import PulseDeskDepartmentEscalationQueue from './PulseDeskDepartmentEscalationQueue';
+import BusinessDirectory from './BusinessDirectory';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 interface PulseDeskShellProps {
@@ -329,7 +330,11 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
             {workflowShortcuts.map(({ id, label, Icon, tone }) => (
               <a
                 key={id}
-                href={id === 'tickets' || id === 'departments' ? '#pulsedesk-operations' : `#pulsedesk-${id}`}
+                href={id === 'tickets' || id === 'departments'
+                  ? '#pulsedesk-operations'
+                  : id === 'vendors' || id === 'facilities'
+                    ? '#pulsedesk-directory'
+                    : `#pulsedesk-${id}`}
                 style={railLinkStyle}
                 data-testid={`pulsedesk-sidebar-${id}`}
               >
@@ -372,6 +377,12 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
                 />
               )}
             </section>
+
+            {adapter.tenantId && (
+              <section id="pulsedesk-directory" tabIndex={-1}>
+                <BusinessDirectory moduleSlug="pulsedesk" tenantKey={adapter.tenantId} canArchive={canManageModule} />
+              </section>
+            )}
 
             <section className="pulsedesk-panel" style={{ padding: 18 }} data-testid="pulsedesk-workflow-map">
               <SectionHeading

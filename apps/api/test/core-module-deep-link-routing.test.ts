@@ -27,12 +27,18 @@ test('core module deep links resolve only to live native shell sections', () => 
   for (const path of ['customers', 'jobs', 'quotes', 'invoices']) {
     assert.equal(resolveCoreModuleDeepLink('tradeflowkit', [path])?.sectionId, 'tradeflowkit-revenue-flow');
   }
+  for (const path of ['directory', 'contacts', 'sites']) {
+    assert.equal(resolveCoreModuleDeepLink('tradeflowkit', [path])?.sectionId, 'tradeflowkit-directory');
+  }
   assert.deepEqual(resolveCoreModuleDeepLink('techdeck', ['tickets']), {
     sectionId: 'techdeck-ticket-queue',
     label: 'Ticket Queue',
   });
   for (const path of ['assets', 'alerts', 'scripts', 'network']) {
     assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-ops');
+  }
+  for (const path of ['clients', 'sites', 'contacts']) {
+    assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-directory');
   }
   assert.deepEqual(resolveCoreModuleDeepLink('pulsedesk', ['tickets']), {
     sectionId: 'pulsedesk-operations',
@@ -42,6 +48,9 @@ test('core module deep links resolve only to live native shell sections', () => 
     sectionId: 'pulsedesk-operations',
     label: 'Departments',
   });
+  for (const path of ['clients', 'facilities', 'sites', 'contacts', 'vendors']) {
+    assert.equal(resolveCoreModuleDeepLink('pulsedesk', [path])?.sectionId, 'pulsedesk-directory');
+  }
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['settings'])?.sectionId, 'techdeck-settings');
 });
 
@@ -49,7 +58,7 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['payments']), null);
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['leads', 'lead-123']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['tickets', 'ticket-123']), null);
-  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['facilities']), null);
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets']), null);
   assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['dashboard']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['Tickets']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['..']), null);
@@ -81,14 +90,17 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
   for (const [source, targetId] of [
     [tradeFlowKitShell, 'tradeflowkit-overview'],
     [tradeFlowKitShell, 'tradeflowkit-lead-center'],
+    [tradeFlowKitShell, 'tradeflowkit-directory'],
     [tradeFlowKitRevenue, 'tradeflowkit-revenue-flow'],
     [tradeFlowKitShell, 'tradeflowkit-settings'],
     [techDeckShell, 'techdeck-overview'],
     [techDeckShell, 'techdeck-ticket-queue'],
+    [techDeckShell, 'techdeck-directory'],
     [techDeckOps, 'techdeck-ops'],
     [techDeckShell, 'techdeck-settings'],
     [pulseDeskShell, 'pulsedesk-overview'],
     [pulseDeskShell, 'pulsedesk-operations'],
+    [pulseDeskShell, 'pulsedesk-directory'],
     [pulseDeskShell, 'pulsedesk-settings'],
   ] as const) {
     assert.ok(source.includes(`id="${targetId}"`), `missing focus target ${targetId}`);

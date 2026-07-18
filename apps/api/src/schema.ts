@@ -822,6 +822,232 @@ export type TenantUserModuleAccessRow = typeof tenantUserModuleAccess.$inferSele
 export type TenantInviteRow = typeof tenantInvites.$inferSelect;
 
 // ===========================================================================
+// Phase 2 — OperatorOS-owned shared Business Directory
+// ===========================================================================
+
+export const directoryOrganizations = pgTable('directory_organizations', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  name: text('name').notNull(),
+  normalizedName: text('normalized_name').notNull(),
+  type: text('type', {
+    enum: ['customer', 'client', 'vendor', 'partner', 'facility', 'other'],
+  }).notNull().default('client'),
+  status: text('status', { enum: ['active', 'inactive'] }).notNull().default('active'),
+  website: text('website'),
+  notes: text('notes'),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  index('idx_directory_orgs_tenant_name').on(t.tenantId, t.normalizedName),
+  index('idx_directory_orgs_tenant_type').on(t.tenantId, t.type),
+  index('idx_directory_orgs_tenant_status').on(t.tenantId, t.status, t.archivedAt),
+  uniqueIndex('uq_directory_orgs_tenant_active_name').on(t.tenantId, t.normalizedName)
+    .where(sql`${t.archivedAt} IS NULL`),
+]);
+
+export const directoryContacts = pgTable('directory_contacts', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull().default(''),
+  normalizedName: text('normalized_name').notNull(),
+  email: text('email'),
+  normalizedEmail: text('normalized_email'),
+  phone: text('phone'),
+  title: text('title'),
+  status: text('status', { enum: ['active', 'inactive'] }).notNull().default('active'),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  index('idx_directory_contacts_tenant_name').on(t.tenantId, t.normalizedName),
+  index('idx_directory_contacts_tenant_status').on(t.tenantId, t.status, t.archivedAt),
+  uniqueIndex('uq_directory_contacts_tenant_active_email').on(t.tenantId, t.normalizedEmail)
+    .where(sql`${t.normalizedEmail} IS NOT NULL AND ${t.archivedAt} IS NULL`),
+]);
+
+export const directoryAddresses = pgTable('directory_addresses', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  label: text('label'),
+  line1: text('line1').notNull(),
+  line2: text('line2'),
+  city: text('city').notNull(),
+  region: text('region').notNull(),
+  postalCode: text('postal_code').notNull(),
+  countryCode: varchar('country_code', { length: 2 }).notNull().default('US'),
+  normalizedKey: text('normalized_key').notNull(),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  index('idx_directory_addresses_tenant_postal').on(t.tenantId, t.postalCode),
+  uniqueIndex('uq_directory_addresses_tenant_active_key').on(t.tenantId, t.normalizedKey)
+    .where(sql`${t.archivedAt} IS NULL`),
+]);
+
+export const directorySites = pgTable('directory_sites', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  organizationId: varchar('organization_id', { length: 36 }).notNull().references(() => directoryOrganizations.id),
+  addressId: varchar('address_id', { length: 36 }).references(() => directoryAddresses.id),
+  name: text('name').notNull(),
+  normalizedName: text('normalized_name').notNull(),
+  type: text('type', { enum: ['headquarters', 'office', 'facility', 'service', 'remote', 'other'] }).notNull().default('office'),
+  status: text('status', { enum: ['active', 'inactive'] }).notNull().default('active'),
+  timezone: text('timezone'),
+  notes: text('notes'),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  index('idx_directory_sites_tenant_org').on(t.tenantId, t.organizationId),
+  index('idx_directory_sites_tenant_status').on(t.tenantId, t.status, t.archivedAt),
+  uniqueIndex('uq_directory_sites_tenant_org_active_name').on(t.tenantId, t.organizationId, t.normalizedName)
+    .where(sql`${t.archivedAt} IS NULL`),
+]);
+
+export const directoryOrganizationContacts = pgTable('directory_organization_contacts', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  organizationId: varchar('organization_id', { length: 36 }).notNull().references(() => directoryOrganizations.id),
+  contactId: varchar('contact_id', { length: 36 }).notNull().references(() => directoryContacts.id),
+  role: text('role'),
+  isPrimary: boolean('is_primary').notNull().default(false),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_directory_org_contacts').on(t.tenantId, t.organizationId, t.contactId),
+  index('idx_directory_org_contacts_contact').on(t.tenantId, t.contactId),
+]);
+
+export const directorySiteContacts = pgTable('directory_site_contacts', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  siteId: varchar('site_id', { length: 36 }).notNull().references(() => directorySites.id),
+  contactId: varchar('contact_id', { length: 36 }).notNull().references(() => directoryContacts.id),
+  role: text('role'),
+  isPrimary: boolean('is_primary').notNull().default(false),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_directory_site_contacts').on(t.tenantId, t.siteId, t.contactId),
+  index('idx_directory_site_contacts_contact').on(t.tenantId, t.contactId),
+]);
+
+export const directoryRelationships = pgTable('directory_relationships', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  fromOrganizationId: varchar('from_organization_id', { length: 36 }).notNull().references(() => directoryOrganizations.id),
+  toOrganizationId: varchar('to_organization_id', { length: 36 }).notNull().references(() => directoryOrganizations.id),
+  type: text('type').notNull(),
+  notes: text('notes'),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  index('idx_directory_relationships_from').on(t.tenantId, t.fromOrganizationId),
+  index('idx_directory_relationships_to').on(t.tenantId, t.toOrganizationId),
+  uniqueIndex('uq_directory_relationships_active').on(t.tenantId, t.fromOrganizationId, t.toOrganizationId, t.type)
+    .where(sql`${t.archivedAt} IS NULL`),
+]);
+
+export const directoryTags = pgTable('directory_tags', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  name: text('name').notNull(),
+  normalizedName: text('normalized_name').notNull(),
+  color: text('color'),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  uniqueIndex('uq_directory_tags_tenant_active_name').on(t.tenantId, t.normalizedName)
+    .where(sql`${t.archivedAt} IS NULL`),
+]);
+
+export const directoryTagAssignments = pgTable('directory_tag_assignments', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  tagId: varchar('tag_id', { length: 36 }).notNull().references(() => directoryTags.id),
+  entityType: text('entity_type', { enum: ['organization', 'contact', 'site'] }).notNull(),
+  organizationId: varchar('organization_id', { length: 36 }).references(() => directoryOrganizations.id),
+  contactId: varchar('contact_id', { length: 36 }).references(() => directoryContacts.id),
+  siteId: varchar('site_id', { length: 36 }).references(() => directorySites.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_directory_tag_assignments_entity').on(t.tenantId, t.entityType),
+  uniqueIndex('uq_directory_tag_assignments_org').on(t.tenantId, t.tagId, t.organizationId),
+  uniqueIndex('uq_directory_tag_assignments_contact').on(t.tenantId, t.tagId, t.contactId),
+  uniqueIndex('uq_directory_tag_assignments_site').on(t.tenantId, t.tagId, t.siteId),
+]);
+
+export const tradeflowkitCustomerProfiles = pgTable('tradeflowkit_customer_profiles', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  organizationId: varchar('organization_id', { length: 36 }).notNull().references(() => directoryOrganizations.id),
+  customerStatus: text('customer_status').notNull().default('active'),
+  paymentTermsDays: integer('payment_terms_days'),
+  notes: text('notes'),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [uniqueIndex('uq_tfk_customer_profiles_tenant_org').on(t.tenantId, t.organizationId)]);
+
+export const techdeckManagedClientProfiles = pgTable('techdeck_managed_client_profiles', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  organizationId: varchar('organization_id', { length: 36 }).notNull().references(() => directoryOrganizations.id),
+  serviceTier: text('service_tier'),
+  accountCode: text('account_code'),
+  notes: text('notes'),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [uniqueIndex('uq_techdeck_client_profiles_tenant_org').on(t.tenantId, t.organizationId)]);
+
+export const pulsedeskServiceClientProfiles = pgTable('pulsedesk_service_client_profiles', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  organizationId: varchar('organization_id', { length: 36 }).notNull().references(() => directoryOrganizations.id),
+  facilityCategory: text('facility_category'),
+  phiRestricted: boolean('phi_restricted').notNull().default(true),
+  notes: text('notes'),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [uniqueIndex('uq_pulsedesk_client_profiles_tenant_org').on(t.tenantId, t.organizationId)]);
+
+export type DirectoryOrganizationRow = typeof directoryOrganizations.$inferSelect;
+export type DirectoryContactRow = typeof directoryContacts.$inferSelect;
+export type DirectoryAddressRow = typeof directoryAddresses.$inferSelect;
+export type DirectorySiteRow = typeof directorySites.$inferSelect;
+
+// ===========================================================================
 // Task #72 — module shell persistence tables
 //
 // The four polished module first-screens (CallCommand AI, StudyForge AI,
