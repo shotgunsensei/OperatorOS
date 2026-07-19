@@ -1,0 +1,1372 @@
+'use client';
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import type { FormEvent } from 'react';
+import {
+  Activity,
+  AlertTriangle,
+  ArrowLeft,
+  Car,
+  CheckCircle2,
+  ClipboardCheck,
+  FileUp,
+  Gauge,
+  Plus,
+  RefreshCw,
+  Search,
+  Settings2,
+  ShieldCheck,
+  Wrench,
+} from 'lucide-react';
+import {
+  moduleShellApi,
+  type TorqueShedDashboard,
+  type TorqueShedDiagnostic,
+  type TorqueShedVehicle,
+} from '@/lib/auth';
+import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import { ShellLiveBadge } from './ShellChrome';
+
+type Tab = 'dashboard' | 'garage' | 'service' | 'builds' | 'diagnostics' | 'templates';
+
+function errorText(error: unknown): string {
+  const value = error as { error?: unknown; message?: unknown; code?: unknown };
+  const message =
+    typeof value?.error === 'string'
+      ? value.error
+      : typeof value?.message === 'string'
+        ? value.message
+        : 'TorqueShed could not complete that request.';
+  return `${message}${value?.code ? ` (${String(value.code)})` : ''}`;
+}
+
+function number(value: FormDataEntryValue | null): number | undefined {
+  if (value === null || String(value).trim() === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+let keySequence = 0;
+function key(prefix: string): string {
+  keySequence += 1;
+  return `torqueshed:${prefix}:${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${keySequence}`}`;
+}
+
+function money(value: unknown): string {
+  const minor = Number(value ?? 0);
+  return Number.isFinite(minor)
+    ? new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(minor / 100)
+    : '$0.00';
+}
+
+const input: React.CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  border: `1px solid ${semantic.border}`,
+  borderRadius: radius.sm,
+  background: semantic.bg,
+  color: semantic.text,
+  padding: '10px 11px',
+  fontSize: fontSize.body,
+};
+const label: React.CSSProperties = {
+  display: 'grid',
+  gap: 5,
+  color: semantic.textMuted,
+  fontSize: fontSize.sm,
+};
+const button: React.CSSProperties = {
+  border: 0,
+  borderRadius: radius.sm,
+  background: '#f59e0b',
+  color: '#18130a',
+  padding: '10px 14px',
+  fontWeight: 800,
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 7,
+};
+
+export default function TorqueShedWorkspace() {
+  const [tab, setTab] = useState<Tab>('dashboard');
+  const [dashboard, setDashboard] = useState<TorqueShedDashboard | null>(null);
+  const [vehicles, setVehicles] = useState<TorqueShedVehicle[]>([]);
+  const [builds, setBuilds] = useState<Array<Record<string, any>>>([]);
+  const [diagnostics, setDiagnostics] = useState<TorqueShedDiagnostic[]>([]);
+  const [reminders, setReminders] = useState<Array<Record<string, any>>>([]);
+  const [templates, setTemplates] = useState<Array<Record<string, any>>>([]);
+  const [vendors, setVendors] = useState<Array<Record<string, any>>>([]);
+  const [vehicleDetail, setVehicleDetail] = useState<Record<string, any> | null>(null);
+  const [diagnosticDetail, setDiagnosticDetail] = useState<Record<string, any> | null>(null);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const query = new URLSearchParams({ limit: '100' });
+      if (search.trim()) query.set('search', search.trim());
+      const [
+        dashboardData,
+        vehicleData,
+        buildData,
+        diagnosticData,
+        reminderData,
+        templateData,
+        vendorData,
+      ] = await Promise.all([
+        moduleShellApi.torqueshed.dashboard(),
+        moduleShellApi.torqueshed.listVehicles(query.toString()),
+        moduleShellApi.torqueshed.listBuilds(),
+        moduleShellApi.torqueshed.listDiagnostics('limit=100'),
+        moduleShellApi.torqueshed.listReminders(),
+        moduleShellApi.torqueshed.listTemplates(),
+        moduleShellApi.torqueshed.listVendors(),
+      ]);
+      setDashboard(dashboardData);
+      setVehicles(vehicleData.vehicles);
+      setBuilds(buildData.builds);
+      setDiagnostics(diagnosticData.diagnostics);
+      setReminders(reminderData.reminders);
+      setTemplates(templateData.templates);
+      setVendors(vendorData.vendors);
+    } catch (next) {
+      setError(errorText(next));
+    } finally {
+      setLoading(false);
+    }
+  }, [search]);
+
+  const openVehicle = useCallback(async (id: string) => {
+    setBusy('vehicle-detail');
+    setError('');
+    try {
+      setVehicleDetail(await moduleShellApi.torqueshed.getVehicle(id));
+      setTab('garage');
+    } catch (next) {
+      setError(errorText(next));
+    } finally {
+      setBusy('');
+    }
+  }, []);
+
+  const openDiagnostic = useCallback(async (id: string) => {
+    setBusy('diagnostic-detail');
+    setError('');
+    try {
+      setDiagnosticDetail(await moduleShellApi.torqueshed.getDiagnostic(id));
+      setTab('diagnostics');
+    } catch (next) {
+      setError(errorText(next));
+    } finally {
+      setBusy('');
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+  useEffect(() => {
+    const path = window.location.pathname;
+    const diagnostic = path.match(/\/diagnostics\/([a-z0-9-]+)\/?$/i);
+    const vehicle = path.match(/\/vehicles\/([a-z0-9-]+)\/?$/i);
+    if (diagnostic?.[1]) void openDiagnostic(diagnostic[1]);
+    else if (/\/diagnostics(?:\/|$)/.test(path)) setTab('diagnostics');
+    else if (vehicle?.[1]) void openVehicle(vehicle[1]);
+    else if (/\/(?:garage|vehicles)(?:\/|$)/.test(path)) setTab('garage');
+    else if (/\/(?:maintenance|repairs|reminders)(?:\/|$)/.test(path)) setTab('service');
+    else if (/\/builds(?:\/|$)/.test(path)) setTab('builds');
+    else if (/\/diagnostic-templates(?:\/|$)/.test(path)) setTab('templates');
+  }, [openDiagnostic, openVehicle]);
+
+  async function mutate(
+    name: string,
+    operation: () => Promise<unknown>,
+    form?: HTMLFormElement,
+    refresh?: () => Promise<void>,
+  ) {
+    setBusy(name);
+    setError('');
+    setNotice('');
+    try {
+      await operation();
+      form?.reset();
+      setNotice(`${name} saved.`);
+      await load();
+      if (refresh) await refresh();
+    } catch (next) {
+      setError(errorText(next));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  const selectedVehicleId = vehicleDetail?.vehicle?.id ?? vehicles[0]?.id ?? '';
+  const vehicleOptions = useMemo(
+    () =>
+      vehicles.map((vehicle) => ({
+        id: vehicle.id,
+        name: `${vehicle.nickname ? `${vehicle.nickname} — ` : ''}${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+      })),
+    [vehicles],
+  );
+
+  function vehicleForm(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    void mutate(
+      'Vehicle',
+      () =>
+        moduleShellApi.torqueshed.createVehicle({
+          nickname: data.get('nickname'),
+          year: number(data.get('year')),
+          make: data.get('make'),
+          model: data.get('model'),
+          trim: data.get('trim'),
+          engine: data.get('engine'),
+          transmission: data.get('transmission'),
+          drivetrain: data.get('drivetrain'),
+          currentMileage: number(data.get('mileage')),
+          vin: data.get('vin'),
+          visibility: data.get('visibility'),
+        }),
+      form,
+    );
+  }
+
+  function serviceForm(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const vehicleId = String(data.get('vehicleId'));
+    void mutate(
+      'Service record',
+      () =>
+        moduleShellApi.torqueshed.addServiceRecord(
+          vehicleId,
+          {
+            kind: data.get('kind'),
+            title: data.get('title'),
+            description: data.get('description'),
+            mileage: number(data.get('mileage')),
+            laborMinutes: number(data.get('laborMinutes')),
+            laborCostMinor: number(data.get('laborCostMinor')),
+            partsCostMinor: number(data.get('partsCostMinor')),
+            vendorId: data.get('vendorId') || undefined,
+            occurredAt: new Date().toISOString(),
+            status: 'completed',
+          },
+          key('service'),
+        ),
+      form,
+      vehicleDetail?.vehicle?.id === vehicleId ? () => openVehicle(vehicleId) : undefined,
+    );
+  }
+
+  function diagnosticForm(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    void mutate(
+      'Diagnostic session',
+      () =>
+        moduleShellApi.torqueshed.createDiagnostic({
+          vehicleId: data.get('vehicleId'),
+          title: data.get('title'),
+          customerConcern: data.get('customerConcern'),
+          symptoms: data.get('symptoms'),
+          visibility: data.get('visibility'),
+        }),
+      form,
+    );
+  }
+
+  return (
+    <main
+      data-testid="torqueshed-module-shell"
+      style={{ maxWidth: 1240, margin: '0 auto', padding: space.xxl }}
+    >
+      <style>{`@media (max-width: 760px) { [data-testid="torqueshed-builds"], [data-testid="torqueshed-diagnostics"] { grid-template-columns: minmax(0, 1fr) !important; } [data-testid="torqueshed-module-shell"] { padding: 16px !important; } }`}</style>
+      <header
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: space.lg,
+          flexWrap: 'wrap',
+          alignItems: 'flex-start',
+          marginBottom: space.xl,
+        }}
+      >
+        <div style={{ display: 'flex', gap: space.md }}>
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              display: 'grid',
+              placeItems: 'center',
+              borderRadius: radius.md,
+              background: '#f59e0b20',
+              border: '1px solid #f59e0b55',
+            }}
+          >
+            <Wrench color="#f59e0b" />
+          </div>
+          <div>
+            <div
+              style={{
+                color: '#f59e0b',
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: 1.2,
+                textTransform: 'uppercase',
+              }}
+            >
+              Automotive operations and diagnostics
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+              <h1 style={{ margin: '3px 0', color: semantic.text }}>TorqueShed</h1>
+              <ShellLiveBadge />
+            </div>
+            <p style={{ color: semantic.textMuted, margin: 0 }}>
+              Durable garage, maintenance, build, and evidence-driven diagnostic records.
+            </p>
+          </div>
+        </div>
+        <a
+          href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}
+          style={{
+            color: '#f59e0b',
+            textDecoration: 'none',
+            fontWeight: 700,
+            display: 'flex',
+            gap: 7,
+            alignItems: 'center',
+          }}
+        >
+          <ArrowLeft size={16} /> My Apps
+        </a>
+      </header>
+
+      <div
+        style={{
+          ...cardStyle,
+          display: 'flex',
+          gap: 6,
+          flexWrap: 'wrap',
+          marginBottom: space.lg,
+          padding: 8,
+        }}
+      >
+        {(
+          [
+            ['dashboard', 'Dashboard', Gauge],
+            ['garage', 'Garage', Car],
+            ['service', 'Maintenance & repair', Wrench],
+            ['builds', 'Builds', Settings2],
+            ['diagnostics', 'Diagnostics', Activity],
+            ['templates', 'Templates & vendors', ClipboardCheck],
+          ] as const
+        ).map(([id, name, Icon]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            aria-pressed={tab === id}
+            style={{
+              ...button,
+              background: tab === id ? '#f59e0b' : 'transparent',
+              color: tab === id ? '#18130a' : semantic.textMuted,
+            }}
+          >
+            <Icon size={15} />
+            {name}
+          </button>
+        ))}
+        <button
+          onClick={() => void load()}
+          disabled={loading}
+          style={{
+            ...button,
+            marginLeft: 'auto',
+            background: 'transparent',
+            color: semantic.textMuted,
+          }}
+        >
+          <RefreshCw size={15} />
+          {loading ? 'Loading…' : 'Refresh'}
+        </button>
+      </div>
+
+      {error && (
+        <div
+          role="alert"
+          style={{
+            ...cardStyle,
+            borderColor: semantic.accentDanger,
+            color: semantic.accentDanger,
+            display: 'flex',
+            gap: 8,
+            marginBottom: space.md,
+          }}
+        >
+          <AlertTriangle size={18} />
+          {error}
+        </div>
+      )}
+      {notice && (
+        <div
+          role="status"
+          style={{
+            ...cardStyle,
+            borderColor: '#16a34a77',
+            color: '#22c55e',
+            display: 'flex',
+            gap: 8,
+            marginBottom: space.md,
+          }}
+        >
+          <CheckCircle2 size={18} />
+          {notice}
+        </div>
+      )}
+      <div
+        style={{
+          ...cardStyle,
+          borderColor: '#f59e0b44',
+          background: '#f59e0b0b',
+          color: semantic.textMuted,
+          display: 'flex',
+          gap: 9,
+          marginBottom: space.lg,
+        }}
+      >
+        <ShieldCheck size={18} color="#f59e0b" />
+        <span>
+          VINs are retained only as a masked suffix plus tenant-scoped fingerprint. Public-build
+          visibility never publishes VINs, maintenance costs, files, or private diagnostics.
+        </span>
+      </div>
+
+      {tab === 'dashboard' && (
+        <section data-testid="torqueshed-dashboard" style={{ display: 'grid', gap: space.lg }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit,minmax(155px,1fr))',
+              gap: space.md,
+            }}
+          >
+            {[
+              ['Vehicles', dashboard?.metrics.vehicles ?? 0],
+              ['Service records', dashboard?.metrics.serviceRecords ?? 0],
+              ['Builds', dashboard?.metrics.builds ?? 0],
+              ['Diagnostics', dashboard?.metrics.diagnostics ?? 0],
+              ['Due reminders', dashboard?.metrics.reminders ?? 0],
+              ['Recorded service cost', money(dashboard?.metrics.serviceCostMinor)],
+            ].map(([name, value]) => (
+              <article key={name} style={cardStyle}>
+                <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{name}</div>
+                <strong style={{ color: semantic.text, fontSize: 24 }}>{value}</strong>
+              </article>
+            ))}
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit,minmax(290px,1fr))',
+              gap: space.lg,
+            }}
+          >
+            <article style={cardStyle}>
+              <h2 style={{ marginTop: 0, color: semantic.text }}>Recent diagnostics</h2>
+              {diagnostics.slice(0, 5).map((row) => (
+                <button
+                  key={row.id}
+                  onClick={() => void openDiagnostic(row.id)}
+                  style={{
+                    ...button,
+                    width: '100%',
+                    background: 'transparent',
+                    color: semantic.text,
+                    borderTop: `1px solid ${semantic.border}`,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span>{row.title}</span>
+                  <span style={{ color: '#f59e0b' }}>{row.status}</span>
+                </button>
+              ))}
+              {diagnostics.length === 0 && (
+                <p style={{ color: semantic.textMuted }}>No diagnostic sessions yet.</p>
+              )}
+            </article>
+            <article style={cardStyle}>
+              <h2 style={{ marginTop: 0, color: semantic.text }}>Upcoming service</h2>
+              {reminders.slice(0, 5).map((row) => (
+                <div
+                  key={row.id}
+                  style={{
+                    padding: '9px 0',
+                    borderTop: `1px solid ${semantic.border}`,
+                    color: semantic.text,
+                  }}
+                >
+                  {row.title}
+                  <div style={{ fontSize: fontSize.sm, color: semantic.textMuted }}>
+                    {row.dueMileage
+                      ? `Due at ${Number(row.dueMileage).toLocaleString()} mi`
+                      : row.dueAt
+                        ? new Date(row.dueAt).toLocaleDateString()
+                        : 'Scheduled'}
+                  </div>
+                </div>
+              ))}
+              {reminders.length === 0 && (
+                <p style={{ color: semantic.textMuted }}>No open reminders.</p>
+              )}
+            </article>
+          </div>
+        </section>
+      )}
+
+      {tab === 'garage' && (
+        <section
+          data-testid="torqueshed-garage"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,320px),1fr))',
+            gap: space.lg,
+            alignItems: 'start',
+          }}
+        >
+          <div style={{ display: 'grid', gap: space.md }}>
+            <form onSubmit={vehicleForm} style={{ ...cardStyle, display: 'grid', gap: space.sm }}>
+              <h2 style={{ margin: 0, color: semantic.text }}>Add vehicle</h2>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2,minmax(0,1fr))',
+                  gap: space.sm,
+                }}
+              >
+                <label style={label}>
+                  Year
+                  <input
+                    name="year"
+                    type="number"
+                    min="1886"
+                    max={new Date().getFullYear() + 2}
+                    required
+                    style={input}
+                  />
+                </label>
+                <label style={label}>
+                  Nickname
+                  <input name="nickname" maxLength={100} style={input} />
+                </label>
+              </div>
+              <label style={label}>
+                Make
+                <input name="make" required maxLength={100} style={input} />
+              </label>
+              <label style={label}>
+                Model
+                <input name="model" required maxLength={100} style={input} />
+              </label>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2,minmax(0,1fr))',
+                  gap: space.sm,
+                }}
+              >
+                <label style={label}>
+                  Trim
+                  <input name="trim" style={input} />
+                </label>
+                <label style={label}>
+                  Mileage
+                  <input name="mileage" type="number" min="0" style={input} />
+                </label>
+              </div>
+              <label style={label}>
+                Engine
+                <input name="engine" style={input} />
+              </label>
+              <label style={label}>
+                Transmission
+                <input name="transmission" style={input} />
+              </label>
+              <label style={label}>
+                Drivetrain
+                <input name="drivetrain" style={input} />
+              </label>
+              <label style={label}>
+                VIN (masked after save)
+                <input name="vin" minLength={17} maxLength={17} autoComplete="off" style={input} />
+              </label>
+              <label style={label}>
+                Visibility
+                <select name="visibility" style={input}>
+                  <option value="private">Private</option>
+                  <option value="tenant">Team</option>
+                  <option value="public_build">Public-build eligible</option>
+                </select>
+              </label>
+              <button disabled={busy === 'Vehicle'} style={button}>
+                <Plus size={16} />
+                Save vehicle
+              </button>
+            </form>
+          </div>
+          <div style={{ display: 'grid', gap: space.md, minWidth: 0 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Search size={18} color={semantic.textMuted} />
+              <input
+                aria-label="Search garage"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search make, model, or nickname"
+                style={input}
+              />
+            </div>
+            {vehicles.map((row) => (
+              <article key={row.id} style={{ ...cardStyle, borderLeft: '3px solid #f59e0b' }}>
+                <button
+                  onClick={() => void openVehicle(row.id)}
+                  style={{
+                    border: 0,
+                    background: 'transparent',
+                    padding: 0,
+                    color: semantic.text,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    width: '100%',
+                  }}
+                >
+                  <h3 style={{ margin: 0 }}>
+                    {row.nickname || `${row.year} ${row.make} ${row.model}`}
+                  </h3>
+                  <div style={{ color: semantic.textMuted, marginTop: 5 }}>
+                    {row.year} {row.make} {row.model} {row.trim || ''} ·{' '}
+                    {row.currentMileage?.toLocaleString() ?? '—'} mi ·{' '}
+                    {row.vinMasked ?? 'VIN not recorded'}
+                  </div>
+                </button>
+              </article>
+            ))}
+            {vehicles.length === 0 && !loading && (
+              <div style={{ ...cardStyle, color: semantic.textMuted }}>
+                No vehicles match this garage view.
+              </div>
+            )}
+            {vehicleDetail && (
+              <article style={{ ...cardStyle, borderColor: '#f59e0b55' }}>
+                <h2 style={{ marginTop: 0, color: semantic.text }}>
+                  {vehicleDetail.vehicle.nickname ||
+                    `${vehicleDetail.vehicle.year} ${vehicleDetail.vehicle.make} ${vehicleDetail.vehicle.model}`}
+                </h2>
+                <p style={{ color: semantic.textMuted }}>
+                  {vehicleDetail.serviceRecords.length} service records ·{' '}
+                  {vehicleDetail.diagnostics.length} diagnostic sessions ·{' '}
+                  {vehicleDetail.builds.length} builds
+                </p>
+                {vehicleDetail.serviceRecords.slice(0, 5).map((row: any) => (
+                  <div
+                    key={row.id}
+                    style={{
+                      padding: '8px 0',
+                      borderTop: `1px solid ${semantic.border}`,
+                      color: semantic.text,
+                    }}
+                  >
+                    {row.title}
+                    <span style={{ float: 'right', color: semantic.textMuted }}>
+                      {money(row.totalCostMinor)}
+                    </span>
+                  </div>
+                ))}
+              </article>
+            )}
+          </div>
+        </section>
+      )}
+
+      {tab === 'service' && (
+        <section
+          data-testid="torqueshed-service"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit,minmax(310px,1fr))',
+            gap: space.lg,
+            alignItems: 'start',
+          }}
+        >
+          <form onSubmit={serviceForm} style={{ ...cardStyle, display: 'grid', gap: space.sm }}>
+            <h2 style={{ margin: 0, color: semantic.text }}>Record maintenance or repair</h2>
+            <label style={label}>
+              Vehicle
+              <select name="vehicleId" required defaultValue={selectedVehicleId} style={input}>
+                {vehicleOptions.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label style={label}>
+              Record type
+              <select name="kind" style={input}>
+                <option value="maintenance">Maintenance</option>
+                <option value="repair">Repair</option>
+                <option value="inspection">Inspection</option>
+                <option value="modification">Modification</option>
+              </select>
+            </label>
+            <label style={label}>
+              Title
+              <input name="title" required maxLength={180} style={input} />
+            </label>
+            <label style={label}>
+              Description
+              <textarea name="description" rows={3} style={input} />
+            </label>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2,minmax(0,1fr))',
+                gap: space.sm,
+              }}
+            >
+              <label style={label}>
+                Mileage
+                <input name="mileage" type="number" min="0" style={input} />
+              </label>
+              <label style={label}>
+                Labor minutes
+                <input name="laborMinutes" type="number" min="0" style={input} />
+              </label>
+              <label style={label}>
+                Labor cost (cents)
+                <input name="laborCostMinor" type="number" min="0" style={input} />
+              </label>
+              <label style={label}>
+                Parts cost (cents)
+                <input name="partsCostMinor" type="number" min="0" style={input} />
+              </label>
+            </div>
+            <label style={label}>
+              Vendor
+              <select name="vendorId" style={input}>
+                <option value="">No vendor</option>
+                {vendors.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button disabled={!vehicles.length || busy === 'Service record'} style={button}>
+              <Plus size={16} />
+              Save service record
+            </button>
+          </form>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = event.currentTarget;
+              const data = new FormData(form);
+              void mutate(
+                'Service reminder',
+                () =>
+                  moduleShellApi.torqueshed.createReminder(String(data.get('vehicleId')), {
+                    title: data.get('title'),
+                    dueMileage: number(data.get('dueMileage')),
+                    dueAt: data.get('dueAt')
+                      ? new Date(String(data.get('dueAt'))).toISOString()
+                      : undefined,
+                  }),
+                form,
+              );
+            }}
+            style={{ ...cardStyle, display: 'grid', gap: space.sm }}
+          >
+            <h2 style={{ margin: 0, color: semantic.text }}>Schedule reminder</h2>
+            <label style={label}>
+              Vehicle
+              <select name="vehicleId" required defaultValue={selectedVehicleId} style={input}>
+                {vehicleOptions.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label style={label}>
+              Reminder
+              <input name="title" required style={input} />
+            </label>
+            <label style={label}>
+              Due mileage
+              <input name="dueMileage" type="number" min="0" style={input} />
+            </label>
+            <label style={label}>
+              Due date
+              <input name="dueAt" type="date" style={input} />
+            </label>
+            <button disabled={!vehicles.length || busy === 'Service reminder'} style={button}>
+              <Plus size={16} />
+              Save reminder
+            </button>
+            <h3 style={{ color: semantic.text }}>Open reminders</h3>
+            {reminders.map((row) => (
+              <div
+                key={row.id}
+                style={{
+                  color: semantic.textMuted,
+                  borderTop: `1px solid ${semantic.border}`,
+                  paddingTop: 8,
+                }}
+              >
+                {row.title} · {row.status}
+              </div>
+            ))}
+          </form>
+        </section>
+      )}
+
+      {tab === 'builds' && (
+        <section
+          data-testid="torqueshed-builds"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(280px,.8fr) minmax(320px,1.3fr)',
+            gap: space.lg,
+            alignItems: 'start',
+          }}
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = event.currentTarget;
+              const data = new FormData(form);
+              void mutate(
+                'Build',
+                () =>
+                  moduleShellApi.torqueshed.createBuild({
+                    vehicleId: data.get('vehicleId') || undefined,
+                    title: data.get('title'),
+                    description: data.get('description'),
+                    visibility: data.get('visibility'),
+                    budgetMinor: number(data.get('budgetMinor')),
+                  }),
+                form,
+              );
+            }}
+            style={{ ...cardStyle, display: 'grid', gap: space.sm }}
+          >
+            <h2 style={{ margin: 0, color: semantic.text }}>Start project build</h2>
+            <label style={label}>
+              Vehicle
+              <select name="vehicleId" style={input}>
+                <option value="">Unlinked build</option>
+                {vehicleOptions.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label style={label}>
+              Title
+              <input name="title" required style={input} />
+            </label>
+            <label style={label}>
+              Description
+              <textarea name="description" rows={4} style={input} />
+            </label>
+            <label style={label}>
+              Budget (cents)
+              <input name="budgetMinor" type="number" min="0" style={input} />
+            </label>
+            <label style={label}>
+              Visibility
+              <select name="visibility" style={input}>
+                <option value="private">Private</option>
+                <option value="tenant">Team</option>
+                <option value="public_build">Public-build eligible</option>
+              </select>
+            </label>
+            <button style={button}>
+              <Plus size={16} />
+              Save build
+            </button>
+          </form>
+          <div style={{ display: 'grid', gap: space.md }}>
+            {builds.map((row) => (
+              <article key={row.id} style={{ ...cardStyle, borderLeft: '3px solid #f59e0b' }}>
+                <h3 style={{ margin: 0, color: semantic.text }}>{row.title}</h3>
+                <p style={{ color: semantic.textMuted }}>
+                  {row.description || 'No description'} · {row.status} · {money(row.budgetMinor)}
+                </p>
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const form = event.currentTarget;
+                    const data = new FormData(form);
+                    void mutate(
+                      'Build task',
+                      () =>
+                        moduleShellApi.torqueshed.addBuildTask(row.id, {
+                          title: data.get('title'),
+                        }),
+                      form,
+                    );
+                  }}
+                  style={{ display: 'flex', gap: 8 }}
+                >
+                  <input name="title" required placeholder="Add a build task" style={input} />
+                  <button style={button}>
+                    <Plus size={15} />
+                  </button>
+                </form>
+              </article>
+            ))}
+            {!builds.length && (
+              <div style={{ ...cardStyle, color: semantic.textMuted }}>No build projects yet.</div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {tab === 'diagnostics' && (
+        <section
+          data-testid="torqueshed-diagnostics"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(300px,.85fr) minmax(340px,1.4fr)',
+            gap: space.lg,
+            alignItems: 'start',
+          }}
+        >
+          <form onSubmit={diagnosticForm} style={{ ...cardStyle, display: 'grid', gap: space.sm }}>
+            <h2 style={{ margin: 0, color: semantic.text }}>Start diagnostic session</h2>
+            <label style={label}>
+              Vehicle
+              <select name="vehicleId" required defaultValue={selectedVehicleId} style={input}>
+                {vehicleOptions.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label style={label}>
+              Title
+              <input name="title" required style={input} />
+            </label>
+            <label style={label}>
+              Customer concern
+              <textarea name="customerConcern" required rows={3} style={input} />
+            </label>
+            <label style={label}>
+              Symptoms
+              <textarea name="symptoms" rows={3} style={input} />
+            </label>
+            <label style={label}>
+              Visibility
+              <select name="visibility" style={input}>
+                <option value="private">Private</option>
+                <option value="tenant">Team</option>
+              </select>
+            </label>
+            <button disabled={!vehicles.length} style={button}>
+              <Plus size={16} />
+              Start session
+            </button>
+          </form>
+          <div style={{ display: 'grid', gap: space.md }}>
+            {diagnostics.map((row) => (
+              <button
+                key={row.id}
+                onClick={() => void openDiagnostic(row.id)}
+                style={{
+                  ...cardStyle,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  background: semantic.bg,
+                  color: semantic.text,
+                  borderLeft: '3px solid #f59e0b',
+                }}
+              >
+                <strong>{row.title}</strong>
+                <div style={{ color: semantic.textMuted, marginTop: 5 }}>
+                  {row.nickname || `${row.year ?? ''} ${row.make ?? ''} ${row.model ?? ''}`} ·{' '}
+                  {row.status}
+                </div>
+              </button>
+            ))}
+            {diagnosticDetail && (
+              <DiagnosticDetail
+                detail={diagnosticDetail}
+                busy={busy}
+                mutate={mutate}
+                refresh={() => openDiagnostic(diagnosticDetail.diagnostic.id)}
+              />
+            )}
+          </div>
+        </section>
+      )}
+
+      {tab === 'templates' && (
+        <section
+          data-testid="torqueshed-templates"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit,minmax(310px,1fr))',
+            gap: space.lg,
+            alignItems: 'start',
+          }}
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = event.currentTarget;
+              const data = new FormData(form);
+              void mutate(
+                'Diagnostic template',
+                () =>
+                  moduleShellApi.torqueshed.createTemplate({
+                    name: data.get('name'),
+                    description: data.get('description'),
+                    concernPattern: data.get('concernPattern'),
+                    visibility: data.get('visibility'),
+                    testPlan: String(data.get('testPlan') || '')
+                      .split('\n')
+                      .filter(Boolean)
+                      .map((title) => ({ title })),
+                  }),
+                form,
+              );
+            }}
+            style={{ ...cardStyle, display: 'grid', gap: space.sm }}
+          >
+            <h2 style={{ margin: 0, color: semantic.text }}>Diagnostic template</h2>
+            <label style={label}>
+              Name
+              <input name="name" required style={input} />
+            </label>
+            <label style={label}>
+              Concern pattern
+              <textarea name="concernPattern" rows={2} style={input} />
+            </label>
+            <label style={label}>
+              Test plan (one step per line)
+              <textarea name="testPlan" rows={5} style={input} />
+            </label>
+            <label style={label}>
+              Visibility
+              <select name="visibility" style={input}>
+                <option value="private">Private</option>
+                <option value="tenant">Team</option>
+              </select>
+            </label>
+            <button style={button}>
+              <Plus size={16} />
+              Save template
+            </button>
+            {templates.map((row) => (
+              <div
+                key={row.id}
+                style={{
+                  borderTop: `1px solid ${semantic.border}`,
+                  paddingTop: 8,
+                  color: semantic.text,
+                }}
+              >
+                {row.name}
+                <span style={{ float: 'right', color: semantic.textMuted }}>{row.visibility}</span>
+              </div>
+            ))}
+          </form>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = event.currentTarget;
+              const data = new FormData(form);
+              void mutate(
+                'Vendor',
+                () =>
+                  moduleShellApi.torqueshed.createVendor({
+                    name: data.get('name'),
+                    website: data.get('website'),
+                    phone: data.get('phone'),
+                    email: data.get('email'),
+                  }),
+                form,
+              );
+            }}
+            style={{ ...cardStyle, display: 'grid', gap: space.sm }}
+          >
+            <h2 style={{ margin: 0, color: semantic.text }}>Parts and service vendor</h2>
+            <label style={label}>
+              Name
+              <input name="name" required style={input} />
+            </label>
+            <label style={label}>
+              Website
+              <input name="website" type="url" style={input} />
+            </label>
+            <label style={label}>
+              Phone
+              <input name="phone" style={input} />
+            </label>
+            <label style={label}>
+              Email
+              <input name="email" type="email" style={input} />
+            </label>
+            <button style={button}>
+              <Plus size={16} />
+              Save vendor
+            </button>
+            {vendors.map((row) => (
+              <div
+                key={row.id}
+                style={{
+                  borderTop: `1px solid ${semantic.border}`,
+                  paddingTop: 8,
+                  color: semantic.text,
+                }}
+              >
+                {row.name}
+              </div>
+            ))}
+          </form>
+        </section>
+      )}
+    </main>
+  );
+}
+
+function DiagnosticDetail({
+  detail,
+  busy,
+  mutate,
+  refresh,
+}: {
+  detail: Record<string, any>;
+  busy: string;
+  mutate: (
+    name: string,
+    operation: () => Promise<unknown>,
+    form?: HTMLFormElement,
+    refresh?: () => Promise<void>,
+  ) => Promise<void>;
+  refresh: () => Promise<void>;
+}) {
+  const diagnostic = detail.diagnostic as TorqueShedDiagnostic;
+  return (
+    <article
+      style={{ ...cardStyle, borderColor: '#f59e0b66' }}
+      data-testid="torqueshed-diagnostic-timeline"
+    >
+      <h2 style={{ marginTop: 0, color: semantic.text }}>{diagnostic.title}</h2>
+      <p style={{ color: semantic.textMuted }}>{diagnostic.customerConcern}</p>
+      <label style={label}>
+        Workflow status
+        <select
+          value={diagnostic.status}
+          onChange={(event) =>
+            void mutate(
+              'Diagnostic status',
+              () =>
+                moduleShellApi.torqueshed.updateDiagnostic(diagnostic.id, {
+                  expectedVersion: diagnostic.version,
+                  status: event.target.value,
+                }),
+              undefined,
+              refresh,
+            )
+          }
+          disabled={busy === 'Diagnostic status'}
+          style={input}
+        >
+          {['open', 'testing', 'repairing', 'verified', 'resolved', 'archived'].map((status) => (
+            <option key={status}>{status}</option>
+          ))}
+        </select>
+      </label>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))',
+          gap: space.sm,
+          marginTop: space.md,
+        }}
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const data = new FormData(form);
+            void mutate(
+              'Trouble code',
+              () =>
+                moduleShellApi.torqueshed.addTroubleCode(diagnostic.id, {
+                  code: data.get('code'),
+                  description: data.get('description'),
+                  freezeFrame: { note: data.get('freezeFrame') },
+                }),
+              form,
+              refresh,
+            );
+          }}
+          style={{ display: 'grid', gap: 7 }}
+        >
+          <strong style={{ color: semantic.text }}>Trouble code</strong>
+          <input name="code" required placeholder="P0171" style={input} />
+          <input name="description" placeholder="Description" style={input} />
+          <input name="freezeFrame" placeholder="Freeze-frame note" style={input} />
+          <button style={button}>
+            <Plus size={15} />
+            Add code
+          </button>
+        </form>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const data = new FormData(form);
+            void mutate(
+              'Diagnostic evidence',
+              () =>
+                moduleShellApi.torqueshed.addDiagnosticEntry(
+                  diagnostic.id,
+                  {
+                    kind: data.get('kind'),
+                    title: data.get('title'),
+                    valueText: data.get('valueText'),
+                    valueNumeric: number(data.get('valueNumeric')),
+                    unit: data.get('unit'),
+                    referenceMin: number(data.get('referenceMin')),
+                    referenceMax: number(data.get('referenceMax')),
+                    outcome: data.get('outcome'),
+                  },
+                  key('entry'),
+                ),
+              form,
+              refresh,
+            );
+          }}
+          style={{ display: 'grid', gap: 7 }}
+        >
+          <strong style={{ color: semantic.text }}>Timeline evidence</strong>
+          <select name="kind" style={input}>
+            {[
+              'symptom',
+              'condition',
+              'inspection',
+              'test',
+              'measurement',
+              'hypothesis',
+              'confirmed_cause',
+              'repair',
+              'verification',
+              'resolution',
+            ].map((kind) => (
+              <option key={kind} value={kind}>
+                {kind.replaceAll('_', ' ')}
+              </option>
+            ))}
+          </select>
+          <input name="title" required placeholder="Fuel pressure under load" style={input} />
+          <input name="valueText" placeholder="Observation or result" style={input} />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input name="valueNumeric" type="number" step="any" placeholder="Value" style={input} />
+            <input name="unit" placeholder="Unit" style={input} />
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input name="referenceMin" type="number" step="any" placeholder="Min" style={input} />
+            <input name="referenceMax" type="number" step="any" placeholder="Max" style={input} />
+          </div>
+          <input name="outcome" placeholder="Outcome" style={input} />
+          <button style={button}>
+            <Plus size={15} />
+            Add evidence
+          </button>
+        </form>
+      </div>
+      <h3 style={{ color: semantic.text }}>Complete timeline</h3>
+      {detail.timeline.map((row: any) => (
+        <div
+          key={`${row.timelineType}-${row.id}`}
+          style={{
+            borderTop: `1px solid ${semantic.border}`,
+            padding: '9px 0',
+            color: semantic.text,
+          }}
+        >
+          <strong>
+            {row.timelineType === 'trouble_code' ? row.code : row.title || row.originalName}
+          </strong>
+          <div style={{ fontSize: fontSize.sm, color: semantic.textMuted }}>
+            {row.valueText ?? row.description ?? row.outcome ?? row.scanStatus ?? ''} ·{' '}
+            {new Date(row.timelineAt).toLocaleString()}
+          </div>
+        </div>
+      ))}
+      {!detail.timeline.length && (
+        <p style={{ color: semantic.textMuted }}>No evidence has been recorded yet.</p>
+      )}
+      <form
+        onSubmit={async (event) => {
+          event.preventDefault();
+          const form = event.currentTarget;
+          const file = new FormData(form).get('file') as File;
+          if (!file?.size) return;
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          let binary = '';
+          for (let i = 0; i < bytes.length; i += 32768)
+            binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
+          void mutate(
+            'Diagnostic attachment',
+            () =>
+              moduleShellApi.torqueshed.uploadAttachment('diagnostics', diagnostic.id, {
+                originalName: file.name,
+                declaredMimeType: file.type,
+                contentBase64: btoa(binary),
+              }),
+            form,
+            refresh,
+          );
+        }}
+        style={{
+          display: 'flex',
+          gap: 8,
+          alignItems: 'center',
+          marginTop: space.md,
+          flexWrap: 'wrap',
+        }}
+      >
+        <input
+          name="file"
+          type="file"
+          accept="image/png,image/jpeg,application/pdf,text/plain,text/csv,application/json"
+          required
+          style={{ color: semantic.textMuted }}
+        />
+        <button style={button}>
+          <FileUp size={15} />
+          Attach evidence
+        </button>
+      </form>
+    </article>
+  );
+}

@@ -20,6 +20,7 @@ new ADR explicitly supersedes it.
 | ADR-0013 | TechDeck stores bounded external vault references only and exposes no plaintext secret or reveal path. | Accepted | `docs/adr/ADR-0013-techdeck-credential-references.md` |
 | ADR-0014 | TechDeck runbooks are documentation-only; remote execution requires a separately approved signed endpoint-agent boundary. | Accepted | `docs/adr/ADR-0014-techdeck-remote-action-boundary.md` |
 | ADR-0015 | PulseDesk owns PHI-minimized healthcare operations service delivery; TechDeck retains technical configuration/network ownership and neither product duplicates shared Directory authority. | Accepted | `docs/adr/ADR-0015-pulsedesk-healthcare-operations-boundary.md` |
+| ADR-0016 | TorqueShed separates private/personal, tenant/team, and future public-build views; plaintext VINs are never retained and diagnostics are never public-build data. | Accepted | `docs/adr/ADR-0016-torqueshed-ownership-vin-public-build-boundary.md` |
 
 ## Required future ADRs
 

@@ -547,6 +547,23 @@ export interface TradeFlowKitTask {
   dueAt: string | null; sortOrder: number; completedAt: string | null; version: number;
 }
 
+export interface TorqueShedVehicle {
+  id: string; ownerUserId: string; nickname: string | null; year: number; make: string; model: string;
+  trim: string | null; engine: string | null; transmission: string | null; drivetrain: string | null;
+  currentMileage: number | null; ownershipStatus: string; visibility: 'private' | 'tenant' | 'public_build';
+  vinMasked: string | null; notes: string | null; version: number; updatedAt: string;
+}
+export interface TorqueShedDiagnostic {
+  id: string; vehicleId: string; title: string; customerConcern: string; symptoms: string | null;
+  conditions: Record<string, unknown>; confirmedCause: string | null; repairPerformed: string | null;
+  verification: string | null; resolution: string | null; status: string; visibility: 'private' | 'tenant';
+  version: number; updatedAt: string; year?: number; make?: string; model?: string; nickname?: string | null;
+}
+export interface TorqueShedDashboard {
+  metrics: { vehicles: number; serviceRecords: number; builds: number; diagnostics: number; reminders: number; serviceCostMinor: string | number };
+  generatedAt: string;
+}
+
 export interface PulseDeskServiceTicket {
   id: string;
   humanId: string;
@@ -786,6 +803,33 @@ export const moduleShellApi = {
         method: 'POST',
         body: JSON.stringify({ expectedVersion }),
       }) as Promise<NinjaPoolPracticeSession>,
+  },
+  torqueshed: {
+    dashboard: (): Promise<TorqueShedDashboard> => apiFetch('/modules/torqueshed/dashboard') as Promise<TorqueShedDashboard>,
+    listVehicles: (query = ''): Promise<{ vehicles: TorqueShedVehicle[]; pagination: { total: number } }> => apiFetch(`/modules/torqueshed/vehicles${query ? `?${query}` : ''}`) as Promise<any>,
+    getVehicle: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/vehicles/${encodeURIComponent(id)}`) as Promise<any>,
+    createVehicle: (input: Record<string, unknown>): Promise<TorqueShedVehicle> => apiFetch('/modules/torqueshed/vehicles', { method: 'POST', body: JSON.stringify(input) }) as Promise<TorqueShedVehicle>,
+    updateVehicle: (id: string, input: Record<string, unknown>): Promise<TorqueShedVehicle> => apiFetch(`/modules/torqueshed/vehicles/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TorqueShedVehicle>,
+    addMileage: (id: string, input: Record<string, unknown>, key: string): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/vehicles/${encodeURIComponent(id)}/mileage-events`, { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(input) }) as Promise<any>,
+    addServiceRecord: (id: string, input: Record<string, unknown>, key: string): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/vehicles/${encodeURIComponent(id)}/service-records`, { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(input) }) as Promise<any>,
+    listBuilds: (): Promise<{ builds: Array<Record<string, any>> }> => apiFetch('/modules/torqueshed/builds?limit=100') as Promise<any>,
+    getBuild: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/builds/${encodeURIComponent(id)}`) as Promise<any>,
+    createBuild: (input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch('/modules/torqueshed/builds', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    addBuildStage: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/builds/${encodeURIComponent(id)}/stages`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    addBuildTask: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/builds/${encodeURIComponent(id)}/tasks`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    listReminders: (): Promise<{ reminders: Array<Record<string, any>> }> => apiFetch('/modules/torqueshed/reminders') as Promise<any>,
+    createReminder: (vehicleId: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/vehicles/${encodeURIComponent(vehicleId)}/reminders`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    listDiagnostics: (query = ''): Promise<{ diagnostics: TorqueShedDiagnostic[]; pagination: { total: number } }> => apiFetch(`/modules/torqueshed/diagnostics${query ? `?${query}` : ''}`) as Promise<any>,
+    getDiagnostic: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/diagnostics/${encodeURIComponent(id)}`) as Promise<any>,
+    createDiagnostic: (input: Record<string, unknown>): Promise<TorqueShedDiagnostic> => apiFetch('/modules/torqueshed/diagnostics', { method: 'POST', body: JSON.stringify(input) }) as Promise<TorqueShedDiagnostic>,
+    updateDiagnostic: (id: string, input: Record<string, unknown>): Promise<TorqueShedDiagnostic> => apiFetch(`/modules/torqueshed/diagnostics/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TorqueShedDiagnostic>,
+    addTroubleCode: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/diagnostics/${encodeURIComponent(id)}/trouble-codes`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    addDiagnosticEntry: (id: string, input: Record<string, unknown>, key: string): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/diagnostics/${encodeURIComponent(id)}/entries`, { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(input) }) as Promise<any>,
+    listTemplates: (): Promise<{ templates: Array<Record<string, any>> }> => apiFetch('/modules/torqueshed/diagnostic-templates') as Promise<any>,
+    createTemplate: (input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch('/modules/torqueshed/diagnostic-templates', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    listVendors: (): Promise<{ vendors: Array<Record<string, any>> }> => apiFetch('/modules/torqueshed/vendors') as Promise<any>,
+    createVendor: (input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch('/modules/torqueshed/vendors', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    uploadAttachment: (objectType: 'vehicles' | 'builds' | 'diagnostics', id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/${objectType}/${encodeURIComponent(id)}/attachments`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
   },
   pulsedesk: {
     getServiceDeskDashboard: (): Promise<PulseDeskServiceDashboard> =>

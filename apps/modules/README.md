@@ -35,8 +35,10 @@ entitlements, launch, SSO, and audit.
 - `techdeck` - active shared-runtime shell plus imported source snapshot.
 - `pulsedesk` - active shared-runtime shell plus imported source snapshot.
 - `tradeflowkit` - active shared-runtime shell plus imported source snapshot.
-- `torqueshed`, `faultlinelab`, and `ninja-pool-hall` - free-module source
-  snapshots; product workflow migration pending.
+- `torqueshed` - active shared-runtime Phase 7 automotive foundation plus a
+  read-only source snapshot; database/runtime verification is still pending.
+- `faultlinelab` and `ninja-pool-hall` - free-module source snapshots with
+  partial native workflows; deeper product migration pending.
 - `brandforgeos` and `snapproofos` - add-on source snapshots; runtime product
   APIs pending.
 - `studyforge-ai`, `ninja-launch-kit`, and `callcommand-ai` - add-on source

@@ -311,6 +311,61 @@ tables restored. The compiled supervisor then applied/verified the matching
 ready while external providers remained disabled. The disposable dump,
 container, and databases were removed after evidence capture.
 
+## Phase 7 implementation
+
+Branch: `codex/phase-7-torqueshed-foundation`
+Status: source candidate implemented; consolidation state remains 3 because
+the isolated-database/runtime gate is blocked, not passed.
+
+### Implemented scope
+
+- Audited immutable snapshot `c33ade5...`, local checkout `68da454...`, newer
+  committed reference `508b384...`, and the dirty working-tree design without
+  modifying/fetching/running the standalone repository. Uncommitted material
+  is recorded as design evidence only, never deterministic provenance.
+- Added the accepted ownership/privacy ADR: private, tenant/team, and future
+  public-build eligibility are distinct; diagnostic data cannot be public;
+  plaintext VINs are discarded after fingerprint/suffix transformation.
+- Added 14 namespaced, tenant-composite, indexed, versioned/archive-aware
+  tables for vehicles, mileage, vendors, service/parts/costs, builds/stages/
+  tasks, reminders, diagnostics/codes/entries/templates, and import mappings.
+- Added owner/manager/team/viewer controls, search/filter/page, optimistic
+  conflicts, state machines, idempotent mileage/service/evidence, minor-unit
+  costs, mutation audit, non-enumerating foreign records, shared attachments,
+  complete diagnostic timelines, dashboards, native responsive UI, and
+  `/diagnostics`, `/vehicles/:id`, and `/builds/:id` deep routes.
+- Added a no-write dry-run importer with explicit OperatorOS identity mapping,
+  whole-export/per-row hashes, authority exclusion, reference/count/cost/file
+  reconciliation, and no apply mode. Torque Assist/ledger and marketplace/
+  community are deliberately absent until Phases 8 and 9.
+- Added `torqueshed_tables` as the tenth DDL step and twentieth ordered root
+  release step. Updated the final acceptance journey to use the persisted
+  vehicle/session IDs instead of old hard-coded probes.
+
+### Fresh verification
+
+| Gate | Result |
+| --- | --- |
+| Focused Phase 7 contracts | PASS 8/8; domain, VIN, schema, routes, UI, deep-route registration, importer, and private vendor-reference enforcement; final combined regression PASS 15/15 in 22,035.5247 ms |
+| Release contracts | PASS 2/2 after updating the expected ordered count to 20 |
+| Core deep-link/viewer contracts | PASS 5/5 |
+| Dry-run CLI | PASS; fingerprint `d93bb6199ffd7e8064cd0c214305965d2bed14f6a00768233bc254f5c12ce96a`, 14/14 references, 17 attachment bytes, service cost 8,399 minor units, part cost 899, zero errors |
+| Database release plan | PASS; 20 additive steps, TorqueShed after PulseDesk and before shared services |
+| Workspace typecheck | PASS for API, runner gateway, and web after the final authorization fix; API and web also passed focused typecheck during implementation |
+| Production build | PASS after the final authorization fix; SDK/API/runner and Next 14.2.35 with 20 static page-generation entries |
+| Production core preflight | PASS with exact canonical non-secret test configuration |
+| Isolated PostgreSQL apply/workflow/full API | **BLOCKED/NOT RUN**; Docker CLI and WSL 2 exist, but Docker Desktop reports `unable to start`; stopped `com.docker.service` cannot be opened by this process |
+| Compiled runtime/readiness/health | **NOT RUN** because no isolated database was available |
+| Production-host SSO/deep-link/logout E2E | **NOT RUN** because the runtime gate could not start |
+| Public verifier/deployed workflow | **NOT RUN**; deployment remains unauthorized |
+| Lint/format | NOT DEFINED; no repository scripts exist |
+
+The database-independent result is not promoted to state 4. After Docker is
+started once with administrator rights or Windows is restarted, rerun the
+exact clean-database workflow, complete API, release apply/idempotency,
+compiled supervisor, local SSO/deep-link browser, and current public gates.
+The owner directed later branches to proceed while preserving failed gates.
+
 ## Open release blockers
 
 1. Human-authorized deployment of the reviewed cumulative revision.
@@ -328,15 +383,19 @@ container, and databases were removed after evidence capture.
    internal-note isolation, attachment/provider, deep-link/logout,
    second-tenant denial, and an approved privacy-reviewed frozen-export
    apply/reconciliation/cutover.
-7. Remaining module parity, provenance, repeatable migration, reconciliation,
+7. TorqueShed Phase 7 requires a usable Docker/PostgreSQL test runtime, clean
+   release apply, full workflow/API regression, compiled runtime, local SSO/
+   deep-link/logout browser evidence, and later deployed/data-cutover gates.
+8. Remaining module parity, provenance, repeatable migration, reconciliation,
    and rollback gaps recorded in `docs/modules/MODULE_PARITY_INDEX.md`.
-8. Ninjamation source/product decision and the disabled OutCall boundary.
+9. Ninjamation source/product decision and the disabled OutCall boundary.
 
 ## Next action
 
-Commit the scoped Phase 6 PulseDesk source/local state 4 candidate, then create
-the separate Phase 7 TorqueShed branch per the owner's direction even though
-the release gate is closed. Deployment and every production-readiness claim
+Commit the scoped Phase 7 TorqueShed source candidate with the Docker/database
+blocker preserved, then create the separate Phase 8 Torque Assist branch per
+the owner's direction even though the release gate is closed. Deployment and
+every production-readiness claim
 remain blocked until the cumulative revision is deployed through `.replit`
 and the closure steps in `docs/CURRENT_RELEASE_GATE.md` pass. Do not weaken
 exact-host cookies, PKCE, return validation, tenant checks, privacy controls or

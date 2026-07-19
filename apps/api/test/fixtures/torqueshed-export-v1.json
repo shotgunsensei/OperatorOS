@@ -1,0 +1,21 @@
+{
+  "exportVersion": 1,
+  "sourceCommit": "508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75",
+  "identityMappings": [{ "sourceUserId": "legacy-owner-1", "operatorOsUserId": "operator-user-1" }],
+  "users": [{ "id": "legacy-owner-1", "email": "excluded@example.test" }],
+  "sessions": [{ "id": "legacy-session-1" }],
+  "vehicles": [{ "id": "vehicle-1", "ownerUserId": "legacy-owner-1", "year": 1997, "make": "Ford", "model": "Ranger", "vin": "1FTCR15X0VTA12345" }],
+  "mileageEvents": [{ "id": "mileage-1", "vehicleId": "vehicle-1", "mileage": 181250 }],
+  "vendors": [{ "id": "vendor-1", "ownerUserId": "legacy-owner-1", "name": "Northside Parts" }],
+  "serviceRecords": [{ "id": "service-1", "vehicleId": "vehicle-1", "vendorId": "vendor-1", "laborCostMinor": 3500, "partsCostMinor": 4899, "otherCostMinor": 0 }],
+  "parts": [{ "id": "part-1", "serviceRecordId": "service-1", "vendorId": "vendor-1", "name": "Oil filter", "quantity": 1, "unitCostMinor": 899 }],
+  "builds": [{ "id": "build-1", "ownerUserId": "legacy-owner-1", "vehicleId": "vehicle-1", "title": "Trail build" }],
+  "buildStages": [{ "id": "stage-1", "buildId": "build-1", "title": "Fuel system" }],
+  "buildTasks": [{ "id": "task-1", "buildId": "build-1", "stageId": "stage-1", "title": "Fuel pressure test" }],
+  "reminders": [{ "id": "reminder-1", "vehicleId": "vehicle-1", "title": "Oil service" }],
+  "diagnostics": [{ "id": "diagnostic-1", "ownerUserId": "legacy-owner-1", "vehicleId": "vehicle-1", "title": "Lean condition" }],
+  "troubleCodes": [{ "id": "code-1", "diagnosticId": "diagnostic-1", "code": "P0171" }],
+  "diagnosticEntries": [{ "id": "entry-1", "diagnosticId": "diagnostic-1", "kind": "measurement", "valueNumeric": 35, "unit": "psi" }],
+  "templates": [{ "id": "template-1", "ownerUserId": "legacy-owner-1", "name": "Lean under load" }],
+  "attachments": [{ "id": "attachment-1", "objectType": "diagnostic", "objectId": "diagnostic-1", "originalName": "fuel-pressure.txt", "byteSize": 17 }]
+}

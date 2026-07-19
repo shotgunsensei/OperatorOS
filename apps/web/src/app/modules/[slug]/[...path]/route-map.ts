@@ -10,7 +10,7 @@ type CoreModuleDeepLinkMap = Readonly<
 >;
 
 /**
- * Deliberately small route contract for the three core consolidated modules.
+ * Deliberately small route contract for consolidated native modules.
  *
  * A path belongs here only when the shared OperatorOS runtime already renders
  * a meaningful native workflow for it. Imported-but-pending child routes must
@@ -71,6 +71,19 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/vendors': { sectionId: 'pulsedesk-directory', label: 'Shared Vendors' },
     '/settings': { sectionId: 'pulsedesk-settings', label: 'Settings' },
   },
+  torqueshed: {
+    '/dashboard': { sectionId: 'torqueshed-dashboard', label: 'Dashboard' },
+    '/garage': { sectionId: 'torqueshed-garage', label: 'Garage' },
+    '/vehicles': { sectionId: 'torqueshed-garage', label: 'Vehicles' },
+    '/maintenance': { sectionId: 'torqueshed-service', label: 'Maintenance' },
+    '/repairs': { sectionId: 'torqueshed-service', label: 'Repairs' },
+    '/reminders': { sectionId: 'torqueshed-service', label: 'Service Reminders' },
+    '/builds': { sectionId: 'torqueshed-builds', label: 'Builds' },
+    '/diagnostics': { sectionId: 'torqueshed-diagnostics', label: 'Diagnostics' },
+    '/diagnostic-templates': { sectionId: 'torqueshed-templates', label: 'Diagnostic Templates' },
+    '/vendors': { sectionId: 'torqueshed-templates', label: 'Vendors' },
+    '/settings': { sectionId: 'torqueshed-templates', label: 'Settings' },
+  },
 };
 
 const SAFE_PATH_SEGMENT = /^[a-z0-9-]+$/;
@@ -105,6 +118,12 @@ export function resolveCoreModuleDeepLink(
   if (slug === 'pulsedesk' && pathSegments.length === 2) {
     const [resource] = pathSegments;
     if (resource === 'tickets' || resource === 'requests') return { sectionId: 'pulsedesk-operations', label: 'Ticket Record' };
+  }
+  if (slug === 'torqueshed' && pathSegments.length === 2) {
+    const [resource] = pathSegments;
+    if (resource === 'vehicles') return { sectionId: 'torqueshed-garage', label: 'Vehicle Record' };
+    if (resource === 'builds') return { sectionId: 'torqueshed-builds', label: 'Build Record' };
+    if (resource === 'diagnostics') return { sectionId: 'torqueshed-diagnostics', label: 'Diagnostic Session' };
   }
   return null;
 }

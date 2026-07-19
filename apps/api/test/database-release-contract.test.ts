@@ -12,8 +12,8 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 19);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 19);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 20);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 20);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'free_account_app_backfill');
   assert.ok(
@@ -42,8 +42,13 @@ test('database release plan is explicit, ordered, additive, and reusable by star
     'PulseDesk tables must follow shared Directory and TechDeck boundary tables',
   );
   assert.ok(
-    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'shared_service_tables')
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'torqueshed_tables')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'pulsedesk_tables'),
+    'TorqueShed tables must follow the completed core module foundations',
+  );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'shared_service_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'torqueshed_tables'),
     'shared services must follow tenant, directory, and active module tables',
   );
 
@@ -62,6 +67,8 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.techdeck_configuration_relationships'\)/);
   assert.match(releaseSource, /to_regclass\('public\.pulsedesk_ticket_messages'\)/);
   assert.match(releaseSource, /to_regclass\('public\.pulsedesk_sla_policies'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.torqueshed_vehicles'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.torqueshed_diagnostic_entries'\)/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
 });
 
