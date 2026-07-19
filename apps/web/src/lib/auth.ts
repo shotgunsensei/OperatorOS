@@ -564,6 +564,26 @@ export interface TorqueShedDashboard {
   generatedAt: string;
 }
 
+export interface TorqueShedMarketplaceListing {
+  id: string; sellerUserId: string; categorySlug?: string; categoryName?: string;
+  listingType: 'sell' | 'wanted' | 'trade'; status: 'draft' | 'published' | 'sold' | 'expired' | 'archived' | 'removed';
+  condition: 'new' | 'excellent' | 'working' | 'parts'; title: string; description: string;
+  priceMinor: number | null; currency: string; negotiable: boolean; locality: string | null; region: string | null;
+  favorited?: boolean; favoriteCount?: number; sellerDisplayName?: string | null; version: number; expiresAt?: string | null;
+}
+
+export interface TorqueShedCommunityPost {
+  id: string; authorUserId: string; topicSlug?: string; topicName?: string; authorDisplayName?: string | null;
+  title: string; body: string; status: 'draft' | 'published' | 'hidden' | 'removed' | 'archived';
+  visibility: 'public' | 'followers' | 'private'; commentCount?: number; reactionCount?: number;
+  viewerReaction?: 'like' | 'helpful' | 'insightful' | null; version: number; createdAt: string; updatedAt: string;
+}
+
+export interface TorqueShedCommunityComment {
+  id: string; postId: string; parentId: string | null; authorUserId: string; authorDisplayName?: string | null;
+  body: string; status: string; reactionCount?: number; viewerReaction?: string | null; version: number; createdAt: string;
+}
+
 export interface TorqueAssistResult {
   status: 'follow_up_required' | 'plan_ready';
   summary: string;
@@ -881,6 +901,44 @@ export const moduleShellApi = {
     listVendors: (): Promise<{ vendors: Array<Record<string, any>> }> => apiFetch('/modules/torqueshed/vendors') as Promise<any>,
     createVendor: (input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch('/modules/torqueshed/vendors', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
     uploadAttachment: (objectType: 'vehicles' | 'builds' | 'diagnostics', id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/${objectType}/${encodeURIComponent(id)}/attachments`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    getSocialPolicy: (): Promise<Record<string, any>> => apiFetch('/modules/torqueshed/social/policy') as Promise<any>,
+    listMarketplaceCategories: (): Promise<{ categories: Array<{ id: string; slug: string; name: string }> }> => apiFetch('/modules/torqueshed/marketplace/categories') as Promise<any>,
+    listMarketplace: (query = ''): Promise<{ listings: TorqueShedMarketplaceListing[]; pagination: { limit: number; offset: number } }> => apiFetch(`/modules/torqueshed/marketplace/listings${query ? `?${query}` : ''}`) as Promise<any>,
+    getMarketplaceListing: (id: string): Promise<{ listing: TorqueShedMarketplaceListing; media: Array<Record<string, any>>; transactionPolicy: string }> => apiFetch(`/modules/torqueshed/marketplace/listings/${encodeURIComponent(id)}`) as Promise<any>,
+    createMarketplaceListing: (input: Record<string, unknown>): Promise<TorqueShedMarketplaceListing> => apiFetch('/modules/torqueshed/marketplace/listings', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    updateMarketplaceListing: (id: string, input: Record<string, unknown>): Promise<TorqueShedMarketplaceListing> => apiFetch(`/modules/torqueshed/marketplace/listings/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }) as Promise<any>,
+    publishMarketplaceListing: (id: string, expectedVersion: number): Promise<TorqueShedMarketplaceListing> => apiFetch(`/modules/torqueshed/marketplace/listings/${encodeURIComponent(id)}/publish`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<any>,
+    renewMarketplaceListing: (id: string, expectedVersion: number): Promise<TorqueShedMarketplaceListing> => apiFetch(`/modules/torqueshed/marketplace/listings/${encodeURIComponent(id)}/renew`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<any>,
+    setMarketplaceListingStatus: (id: string, status: 'sold' | 'archived', expectedVersion: number): Promise<TorqueShedMarketplaceListing> => apiFetch(`/modules/torqueshed/marketplace/listings/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify({ status, expectedVersion }) }) as Promise<any>,
+    setMarketplaceFavorite: (id: string, favorited: boolean): Promise<{ favorited: boolean }> => apiFetch(`/modules/torqueshed/marketplace/listings/${encodeURIComponent(id)}/favorite`, { method: favorited ? 'PUT' : 'DELETE' }) as Promise<any>,
+    contactMarketplaceSeller: (id: string, body: string): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/marketplace/listings/${encodeURIComponent(id)}/contact`, { method: 'POST', body: JSON.stringify({ body }) }) as Promise<any>,
+    reportMarketplaceListing: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/marketplace/listings/${encodeURIComponent(id)}/report`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    listMarketplaceConversations: (): Promise<{ conversations: Array<Record<string, any>> }> => apiFetch('/modules/torqueshed/marketplace/conversations') as Promise<any>,
+    getMarketplaceConversation: (id: string): Promise<{ conversation: Record<string, any>; messages: Array<Record<string, any>> }> => apiFetch(`/modules/torqueshed/marketplace/conversations/${encodeURIComponent(id)}/messages`) as Promise<any>,
+    sendMarketplaceMessage: (id: string, body: string): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/marketplace/conversations/${encodeURIComponent(id)}/messages`, { method: 'POST', body: JSON.stringify({ body }) }) as Promise<any>,
+    listCommunityTopics: (): Promise<{ topics: Array<{ id: string; slug: string; name: string }> }> => apiFetch('/modules/torqueshed/community/topics') as Promise<any>,
+    getCommunityProfile: (): Promise<{ viewerUserId: string; profile: Record<string, any> | null; preferences: Record<string, any> }> => apiFetch('/modules/torqueshed/community/profile/me') as Promise<any>,
+    saveCommunityProfile: (input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch('/modules/torqueshed/community/profile/me', { method: 'PUT', body: JSON.stringify(input) }) as Promise<any>,
+    saveCommunityPreferences: (input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch('/modules/torqueshed/community/preferences', { method: 'PUT', body: JSON.stringify(input) }) as Promise<any>,
+    setCommunityFollow: (userId: string, following: boolean): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/community/follows/${encodeURIComponent(userId)}`, { method: following ? 'PUT' : 'DELETE' }) as Promise<any>,
+    setCommunityBlock: (userId: string, blocked: boolean): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/community/blocks/${encodeURIComponent(userId)}`, { method: blocked ? 'PUT' : 'DELETE' }) as Promise<any>,
+    listCommunityPosts: (query = ''): Promise<{ posts: TorqueShedCommunityPost[]; pagination: { limit: number; offset: number } }> => apiFetch(`/modules/torqueshed/community/posts${query ? `?${query}` : ''}`) as Promise<any>,
+    getCommunityPost: (id: string): Promise<{ post: TorqueShedCommunityPost; comments: TorqueShedCommunityComment[]; tags: Array<Record<string, any>>; media: Array<Record<string, any>> }> => apiFetch(`/modules/torqueshed/community/posts/${encodeURIComponent(id)}`) as Promise<any>,
+    createCommunityPost: (input: Record<string, unknown>): Promise<TorqueShedCommunityPost> => apiFetch('/modules/torqueshed/community/posts', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    updateCommunityPost: (id: string, input: Record<string, unknown>): Promise<TorqueShedCommunityPost> => apiFetch(`/modules/torqueshed/community/posts/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }) as Promise<any>,
+    publishCommunityPost: (id: string, expectedVersion: number): Promise<TorqueShedCommunityPost> => apiFetch(`/modules/torqueshed/community/posts/${encodeURIComponent(id)}/publish`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<any>,
+    archiveCommunityPost: (id: string, expectedVersion: number): Promise<{ archived: boolean }> => apiFetch(`/modules/torqueshed/community/posts/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ expectedVersion }) }) as Promise<any>,
+    addCommunityComment: (id: string, input: Record<string, unknown>): Promise<TorqueShedCommunityComment> => apiFetch(`/modules/torqueshed/community/posts/${encodeURIComponent(id)}/comments`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    updateCommunityComment: (id: string, input: Record<string, unknown>): Promise<TorqueShedCommunityComment> => apiFetch(`/modules/torqueshed/community/comments/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }) as Promise<any>,
+    archiveCommunityComment: (id: string, expectedVersion: number): Promise<{ archived: boolean }> => apiFetch(`/modules/torqueshed/community/comments/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ expectedVersion }) }) as Promise<any>,
+    setCommunityPostReaction: (id: string, reaction: 'like' | 'helpful' | 'insightful'): Promise<{ reaction: string }> => apiFetch(`/modules/torqueshed/community/posts/${encodeURIComponent(id)}/reaction`, { method: 'PUT', body: JSON.stringify({ reaction }) }) as Promise<any>,
+    clearCommunityPostReaction: (id: string): Promise<{ reaction: null }> => apiFetch(`/modules/torqueshed/community/posts/${encodeURIComponent(id)}/reaction`, { method: 'DELETE' }) as Promise<any>,
+    setCommunityCommentReaction: (id: string, reaction: 'like' | 'helpful' | 'insightful'): Promise<{ reaction: string }> => apiFetch(`/modules/torqueshed/community/comments/${encodeURIComponent(id)}/reaction`, { method: 'PUT', body: JSON.stringify({ reaction }) }) as Promise<any>,
+    reportCommunityComment: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/community/comments/${encodeURIComponent(id)}/report`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    reportCommunityPost: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/community/posts/${encodeURIComponent(id)}/report`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    uploadSocialMedia: (objectType: 'marketplace_listing' | 'community_post', id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/social/media/${objectType}/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    listModerationReports: (status = 'open'): Promise<{ reports: Array<Record<string, any>> }> => apiFetch(`/modules/torqueshed/moderation/reports?status=${encodeURIComponent(status)}`) as Promise<any>,
+    moderateSocialReport: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/moderation/reports/${encodeURIComponent(id)}/action`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
     getTorqueAssistStatus: (): Promise<TorqueAssistStatus> =>
       apiFetch('/modules/torqueshed/torque-assist/status') as Promise<TorqueAssistStatus>,
     getTorqueAssistContext: (diagnosticSessionId: string): Promise<Record<string, any>> =>

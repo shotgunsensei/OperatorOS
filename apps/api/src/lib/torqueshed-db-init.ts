@@ -337,6 +337,265 @@ export async function ensureTorqueShedTables(): Promise<void> {
       CONSTRAINT torqueshed_ai_provider_circuit_failure_check CHECK (consecutive_failures BETWEEN 0 AND 100000)
     );
 
+    CREATE TABLE IF NOT EXISTS torqueshed_social_profiles (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id), display_name VARCHAR(100) NOT NULL, bio TEXT,
+      specialties TEXT, locality VARCHAR(100), region VARCHAR(100), country_code CHAR(2) NOT NULL DEFAULT 'US',
+      visibility VARCHAR(20) NOT NULL DEFAULT 'tenant', created_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      updated_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id), version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(), updated_at TIMESTAMP NOT NULL DEFAULT NOW(), archived_at TIMESTAMP,
+      CONSTRAINT uq_torqueshed_social_profiles_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT uq_torqueshed_social_profiles_user UNIQUE (tenant_id, user_id),
+      CONSTRAINT torqueshed_social_profile_visibility_check CHECK (visibility IN ('tenant','private')),
+      CONSTRAINT torqueshed_social_profile_version_check CHECK (version >= 1)
+    );
+
+    CREATE TABLE IF NOT EXISTS torqueshed_social_notification_preferences (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id), messages_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      comments_enabled BOOLEAN NOT NULL DEFAULT TRUE, reactions_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+      follows_enabled BOOLEAN NOT NULL DEFAULT TRUE, moderation_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+      version INTEGER NOT NULL DEFAULT 1, updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CONSTRAINT uq_torqueshed_social_preferences_user UNIQUE (tenant_id, user_id),
+      CONSTRAINT torqueshed_social_preferences_version_check CHECK (version >= 1)
+    );
+
+    CREATE TABLE IF NOT EXISTS torqueshed_social_blocks (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      blocker_user_id VARCHAR(36) NOT NULL REFERENCES users(id), blocked_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CONSTRAINT uq_torqueshed_social_block UNIQUE (tenant_id, blocker_user_id, blocked_user_id),
+      CONSTRAINT torqueshed_social_block_distinct_check CHECK (blocker_user_id <> blocked_user_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_social_blocks_reverse
+      ON torqueshed_social_blocks(tenant_id, blocked_user_id, blocker_user_id);
+
+    CREATE TABLE IF NOT EXISTS torqueshed_marketplace_categories (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      slug VARCHAR(80) NOT NULL, name VARCHAR(120) NOT NULL, active BOOLEAN NOT NULL DEFAULT TRUE,
+      display_order INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CONSTRAINT uq_torqueshed_marketplace_categories_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT uq_torqueshed_marketplace_category_slug UNIQUE (tenant_id, slug),
+      CONSTRAINT torqueshed_marketplace_category_order_check CHECK (display_order BETWEEN 0 AND 10000)
+    );
+
+    CREATE TABLE IF NOT EXISTS torqueshed_marketplace_listings (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      seller_user_id VARCHAR(36) NOT NULL REFERENCES users(id), category_id VARCHAR(36) NOT NULL,
+      vehicle_id VARCHAR(36), build_id VARCHAR(36), listing_type VARCHAR(20) NOT NULL DEFAULT 'sell',
+      status VARCHAR(20) NOT NULL DEFAULT 'draft', condition VARCHAR(20) NOT NULL,
+      title VARCHAR(160) NOT NULL, description TEXT NOT NULL, price_minor INTEGER, currency CHAR(3) NOT NULL DEFAULT 'USD',
+      negotiable BOOLEAN NOT NULL DEFAULT FALSE, locality VARCHAR(100), region VARCHAR(100), country_code CHAR(2) NOT NULL DEFAULT 'US',
+      content_hash CHAR(64) NOT NULL, created_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      updated_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id), version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(), updated_at TIMESTAMP NOT NULL DEFAULT NOW(), published_at TIMESTAMP,
+      sold_at TIMESTAMP, expires_at TIMESTAMP, renewed_at TIMESTAMP, archived_at TIMESTAMP,
+      CONSTRAINT torqueshed_marketplace_listing_category_fk FOREIGN KEY (tenant_id, category_id)
+        REFERENCES torqueshed_marketplace_categories(tenant_id, id),
+      CONSTRAINT torqueshed_marketplace_listing_vehicle_fk FOREIGN KEY (tenant_id, vehicle_id)
+        REFERENCES torqueshed_vehicles(tenant_id, id),
+      CONSTRAINT torqueshed_marketplace_listing_build_fk FOREIGN KEY (tenant_id, build_id)
+        REFERENCES torqueshed_builds(tenant_id, id),
+      CONSTRAINT uq_torqueshed_marketplace_listings_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT uq_torqueshed_marketplace_listings_seller UNIQUE (tenant_id, id, seller_user_id),
+      CONSTRAINT torqueshed_marketplace_listing_type_check CHECK (listing_type IN ('sell','wanted','trade')),
+      CONSTRAINT torqueshed_marketplace_listing_status_check CHECK (status IN ('draft','published','sold','expired','archived','removed')),
+      CONSTRAINT torqueshed_marketplace_listing_condition_check CHECK (condition IN ('new','excellent','working','parts')),
+      CONSTRAINT torqueshed_marketplace_listing_price_check CHECK (price_minor IS NULL OR price_minor >= 0),
+      CONSTRAINT torqueshed_marketplace_listing_hash_check CHECK (content_hash ~ '^[0-9a-f]{64}$'),
+      CONSTRAINT torqueshed_marketplace_listing_version_check CHECK (version >= 1)
+    );
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_marketplace_listing_search
+      ON torqueshed_marketplace_listings(tenant_id, status, category_id, created_at DESC, id);
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_marketplace_listing_seller
+      ON torqueshed_marketplace_listings(tenant_id, seller_user_id, status, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_marketplace_listing_expiry
+      ON torqueshed_marketplace_listings(tenant_id, expires_at) WHERE status = 'published';
+
+    CREATE TABLE IF NOT EXISTS torqueshed_marketplace_favorites (
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id), user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      listing_id VARCHAR(36) NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CONSTRAINT torqueshed_marketplace_favorite_listing_fk FOREIGN KEY (tenant_id, listing_id)
+        REFERENCES torqueshed_marketplace_listings(tenant_id, id),
+      CONSTRAINT pk_torqueshed_marketplace_favorites PRIMARY KEY (tenant_id, user_id, listing_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS torqueshed_marketplace_conversations (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      listing_id VARCHAR(36) NOT NULL, buyer_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      seller_user_id VARCHAR(36) NOT NULL REFERENCES users(id), created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW(), archived_at TIMESTAMP,
+      CONSTRAINT torqueshed_marketplace_conversation_listing_fk FOREIGN KEY (tenant_id, listing_id, seller_user_id)
+        REFERENCES torqueshed_marketplace_listings(tenant_id, id, seller_user_id),
+      CONSTRAINT uq_torqueshed_marketplace_conversation UNIQUE (tenant_id, listing_id, buyer_user_id),
+      CONSTRAINT uq_torqueshed_marketplace_conversations_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT torqueshed_marketplace_conversation_distinct_check CHECK (buyer_user_id <> seller_user_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_marketplace_conversation_participants
+      ON torqueshed_marketplace_conversations(tenant_id, buyer_user_id, seller_user_id, updated_at DESC);
+
+    CREATE TABLE IF NOT EXISTS torqueshed_marketplace_messages (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      conversation_id VARCHAR(36) NOT NULL, sender_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      body TEXT NOT NULL, content_hash CHAR(64) NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      edited_at TIMESTAMP, archived_at TIMESTAMP,
+      CONSTRAINT torqueshed_marketplace_message_conversation_fk FOREIGN KEY (tenant_id, conversation_id)
+        REFERENCES torqueshed_marketplace_conversations(tenant_id, id),
+      CONSTRAINT uq_torqueshed_marketplace_messages_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT torqueshed_marketplace_message_hash_check CHECK (content_hash ~ '^[0-9a-f]{64}$')
+    );
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_marketplace_messages_conversation
+      ON torqueshed_marketplace_messages(tenant_id, conversation_id, created_at, id);
+
+    CREATE TABLE IF NOT EXISTS torqueshed_community_topics (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      slug VARCHAR(80) NOT NULL, name VARCHAR(120) NOT NULL, active BOOLEAN NOT NULL DEFAULT TRUE,
+      display_order INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CONSTRAINT uq_torqueshed_community_topics_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT uq_torqueshed_community_topic_slug UNIQUE (tenant_id, slug)
+    );
+
+    CREATE TABLE IF NOT EXISTS torqueshed_community_tags (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      slug VARCHAR(80) NOT NULL, name VARCHAR(80) NOT NULL, created_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(), archived_at TIMESTAMP,
+      CONSTRAINT uq_torqueshed_community_tags_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT uq_torqueshed_community_tag_slug UNIQUE (tenant_id, slug)
+    );
+
+    CREATE TABLE IF NOT EXISTS torqueshed_community_posts (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      author_user_id VARCHAR(36) NOT NULL REFERENCES users(id), topic_id VARCHAR(36), vehicle_id VARCHAR(36), build_id VARCHAR(36),
+      title VARCHAR(180) NOT NULL, body TEXT NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'draft',
+      visibility VARCHAR(20) NOT NULL DEFAULT 'public', content_hash CHAR(64) NOT NULL,
+      created_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id), updated_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      version INTEGER NOT NULL DEFAULT 1, created_at TIMESTAMP NOT NULL DEFAULT NOW(), updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      published_at TIMESTAMP, edited_at TIMESTAMP, archived_at TIMESTAMP,
+      CONSTRAINT torqueshed_community_post_topic_fk FOREIGN KEY (tenant_id, topic_id)
+        REFERENCES torqueshed_community_topics(tenant_id, id),
+      CONSTRAINT torqueshed_community_post_vehicle_fk FOREIGN KEY (tenant_id, vehicle_id)
+        REFERENCES torqueshed_vehicles(tenant_id, id),
+      CONSTRAINT torqueshed_community_post_build_fk FOREIGN KEY (tenant_id, build_id)
+        REFERENCES torqueshed_builds(tenant_id, id),
+      CONSTRAINT uq_torqueshed_community_posts_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT torqueshed_community_post_status_check CHECK (status IN ('draft','published','hidden','removed','archived')),
+      CONSTRAINT torqueshed_community_post_visibility_check CHECK (visibility IN ('public','followers','private')),
+      CONSTRAINT torqueshed_community_post_hash_check CHECK (content_hash ~ '^[0-9a-f]{64}$'),
+      CONSTRAINT torqueshed_community_post_version_check CHECK (version >= 1)
+    );
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_community_post_feed
+      ON torqueshed_community_posts(tenant_id, status, visibility, created_at DESC, id);
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_community_post_author
+      ON torqueshed_community_posts(tenant_id, author_user_id, status, updated_at DESC);
+
+    CREATE TABLE IF NOT EXISTS torqueshed_community_post_tags (
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id), post_id VARCHAR(36) NOT NULL, tag_id VARCHAR(36) NOT NULL,
+      CONSTRAINT torqueshed_community_post_tag_post_fk FOREIGN KEY (tenant_id, post_id)
+        REFERENCES torqueshed_community_posts(tenant_id, id),
+      CONSTRAINT torqueshed_community_post_tag_tag_fk FOREIGN KEY (tenant_id, tag_id)
+        REFERENCES torqueshed_community_tags(tenant_id, id),
+      CONSTRAINT pk_torqueshed_community_post_tags PRIMARY KEY (tenant_id, post_id, tag_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS torqueshed_community_comments (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      post_id VARCHAR(36) NOT NULL, parent_id VARCHAR(36), author_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      body TEXT NOT NULL, status VARCHAR(20) NOT NULL DEFAULT 'published', content_hash CHAR(64) NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1, created_at TIMESTAMP NOT NULL DEFAULT NOW(), updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      edited_at TIMESTAMP, archived_at TIMESTAMP,
+      CONSTRAINT torqueshed_community_comment_post_fk FOREIGN KEY (tenant_id, post_id)
+        REFERENCES torqueshed_community_posts(tenant_id, id),
+      CONSTRAINT uq_torqueshed_community_comments_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT uq_torqueshed_community_comments_post_id UNIQUE (tenant_id, post_id, id),
+      CONSTRAINT torqueshed_community_comment_parent_fk FOREIGN KEY (tenant_id, post_id, parent_id)
+        REFERENCES torqueshed_community_comments(tenant_id, post_id, id),
+      CONSTRAINT torqueshed_community_comment_status_check CHECK (status IN ('published','hidden','removed','archived')),
+      CONSTRAINT torqueshed_community_comment_hash_check CHECK (content_hash ~ '^[0-9a-f]{64}$'),
+      CONSTRAINT torqueshed_community_comment_version_check CHECK (version >= 1),
+      CONSTRAINT torqueshed_community_comment_not_own_parent CHECK (parent_id IS NULL OR parent_id <> id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_community_comments_post
+      ON torqueshed_community_comments(tenant_id, post_id, created_at, id);
+
+    CREATE TABLE IF NOT EXISTS torqueshed_community_post_reactions (
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id), user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      post_id VARCHAR(36) NOT NULL, reaction VARCHAR(20) NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CONSTRAINT torqueshed_community_post_reaction_post_fk FOREIGN KEY (tenant_id, post_id)
+        REFERENCES torqueshed_community_posts(tenant_id, id),
+      CONSTRAINT pk_torqueshed_community_post_reactions PRIMARY KEY (tenant_id, user_id, post_id),
+      CONSTRAINT torqueshed_community_post_reaction_check CHECK (reaction IN ('like','helpful','insightful'))
+    );
+
+    CREATE TABLE IF NOT EXISTS torqueshed_community_comment_reactions (
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id), user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      comment_id VARCHAR(36) NOT NULL, reaction VARCHAR(20) NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CONSTRAINT torqueshed_community_comment_reaction_comment_fk FOREIGN KEY (tenant_id, comment_id)
+        REFERENCES torqueshed_community_comments(tenant_id, id),
+      CONSTRAINT pk_torqueshed_community_comment_reactions PRIMARY KEY (tenant_id, user_id, comment_id),
+      CONSTRAINT torqueshed_community_comment_reaction_check CHECK (reaction IN ('like','helpful','insightful'))
+    );
+
+    CREATE TABLE IF NOT EXISTS torqueshed_community_follows (
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id), follower_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      followed_user_id VARCHAR(36) NOT NULL REFERENCES users(id), created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CONSTRAINT pk_torqueshed_community_follows PRIMARY KEY (tenant_id, follower_user_id, followed_user_id),
+      CONSTRAINT torqueshed_community_follow_distinct_check CHECK (follower_user_id <> followed_user_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_community_followed
+      ON torqueshed_community_follows(tenant_id, followed_user_id, follower_user_id);
+
+    CREATE TABLE IF NOT EXISTS torqueshed_social_reports (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      reporter_user_id VARCHAR(36) NOT NULL REFERENCES users(id), target_type VARCHAR(30) NOT NULL,
+      target_id VARCHAR(36) NOT NULL, reason_code VARCHAR(40) NOT NULL, details TEXT,
+      status VARCHAR(20) NOT NULL DEFAULT 'open', assigned_user_id VARCHAR(36) REFERENCES users(id),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(), updated_at TIMESTAMP NOT NULL DEFAULT NOW(), resolved_at TIMESTAMP,
+      CONSTRAINT uq_torqueshed_social_reporter_target UNIQUE (tenant_id, reporter_user_id, target_type, target_id),
+      CONSTRAINT uq_torqueshed_social_reports_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT torqueshed_social_report_target_check CHECK (target_type IN ('listing','message','post','comment','profile')),
+      CONSTRAINT torqueshed_social_report_status_check CHECK (status IN ('open','reviewing','resolved','dismissed')),
+      CONSTRAINT torqueshed_social_report_reason_check CHECK (reason_code IN ('spam','harassment','fraud','prohibited_item','privacy','unsafe','other'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_social_reports_queue
+      ON torqueshed_social_reports(tenant_id, status, created_at, id);
+
+    CREATE TABLE IF NOT EXISTS torqueshed_social_moderation_actions (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      report_id VARCHAR(36), target_type VARCHAR(30) NOT NULL, target_id VARCHAR(36) NOT NULL,
+      action VARCHAR(30) NOT NULL, reason TEXT NOT NULL, moderator_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb, created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CONSTRAINT torqueshed_social_moderation_report_fk FOREIGN KEY (tenant_id, report_id)
+        REFERENCES torqueshed_social_reports(tenant_id, id),
+      CONSTRAINT torqueshed_social_moderation_target_check CHECK (target_type IN ('listing','message','post','comment','profile')),
+      CONSTRAINT torqueshed_social_moderation_action_check CHECK (action IN ('hide','remove','restore','resolve','dismiss','warn')),
+      CONSTRAINT torqueshed_social_moderation_metadata_check CHECK (jsonb_typeof(metadata_json) = 'object')
+    );
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_social_moderation_target
+      ON torqueshed_social_moderation_actions(tenant_id, target_type, target_id, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS torqueshed_social_rate_windows (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      scope VARCHAR(30) NOT NULL, subject_id VARCHAR(80) NOT NULL, window_started_at TIMESTAMP NOT NULL,
+      request_count INTEGER NOT NULL DEFAULT 1, updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CONSTRAINT uq_torqueshed_social_rate_window UNIQUE (tenant_id, scope, subject_id, window_started_at),
+      CONSTRAINT torqueshed_social_rate_scope_check CHECK (scope IN ('tenant_write','user_write','user_message','tenant_message','user_report','tenant_report')),
+      CONSTRAINT torqueshed_social_rate_count_check CHECK (request_count BETWEEN 1 AND 100000)
+    );
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_social_rate_expiry
+      ON torqueshed_social_rate_windows(window_started_at);
+
+    CREATE OR REPLACE FUNCTION torqueshed_reject_moderation_action_mutation()
+    RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      RAISE EXCEPTION 'TorqueShed moderation actions are append-only'
+        USING ERRCODE = '55000';
+    END;
+    $$;
+    DROP TRIGGER IF EXISTS torqueshed_social_moderation_append_only ON torqueshed_social_moderation_actions;
+    CREATE TRIGGER torqueshed_social_moderation_append_only
+      BEFORE UPDATE OR DELETE ON torqueshed_social_moderation_actions
+      FOR EACH ROW EXECUTE FUNCTION torqueshed_reject_moderation_action_mutation();
+
     CREATE OR REPLACE FUNCTION torqueshed_reject_token_ledger_mutation()
     RETURNS trigger LANGUAGE plpgsql AS $$
     BEGIN

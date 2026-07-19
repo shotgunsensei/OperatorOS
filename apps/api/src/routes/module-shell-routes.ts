@@ -85,6 +85,7 @@ import { allocateTradeFlowKitNumber, registerTradeFlowKitRoutes } from './tradef
 import { registerTechDeckRoutes } from './techdeck-routes.js';
 import { registerTorqueShedRoutes } from './torqueshed-routes.js';
 import { registerTorqueAssistRoutes } from './torque-assist-routes.js';
+import { registerTorqueShedSocialRoutes } from './torqueshed-social-routes.js';
 
 // Task #91 — per-tenant + per-user budget for outbound calls. Each placed
 // call burns real Twilio minutes, so we cap dial attempts to a small
@@ -573,6 +574,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerTechDeckRoutes(app);
   await registerTorqueShedRoutes(app);
   await registerTorqueAssistRoutes(app);
+  await registerTorqueShedSocialRoutes(app);
 
   // ===== TradeFlowKit: lead and revenue compatibility routes ==============
   //

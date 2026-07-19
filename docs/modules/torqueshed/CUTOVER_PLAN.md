@@ -19,6 +19,10 @@ freeze, or data apply is authorized.
 5. Run garage-to-diagnostic workflow, role/ownership/tenant, concurrency,
    refresh/restart, build/readiness, exact-host SSO, deep links, return, and
    logout acceptance on the target revision.
+6. Run Marketplace listing/search/save/contact/report/expiry and Community
+   profile/follow/block/post/comment/reaction/report/moderation/media journeys.
+   Prove scan-before-visibility, blocked-user and second-tenant denial, stable
+   moderation actions, privacy-safe location, and absence of protection claims.
 
 ## Human-gated cutover
 
@@ -31,6 +35,12 @@ all mappings/counts/costs/attachments before routing users.
 Do not copy repositories into OperatorOS. Do not copy `.env` files,
 credentials, sessions, users, billing/token data, databases, or storage
 directories. The standalone repository remains read-only provenance.
+
+There is no Phase 9 social-data cutover because no approved authoritative
+standalone export exists. Production enablement requires staffed tenant
+moderation ownership, a published prohibited-content/privacy policy, report
+response/appeal/retention procedures, scanner readiness, abuse monitoring, and
+legal review of the off-platform transaction boundary.
 
 ## Abort and rollback
 

@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-18
-- Phase: **8 Torque Assist source candidate; TorqueShed state 3 and ecosystem release gate blocked**
+- Phase: **9 TorqueShed Marketplace/Community source candidate; TorqueShed state 3 and ecosystem release gate blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -10,28 +10,36 @@
 - Phase 4 implementation commit: `9ba9d09`
 - Phase 5 implementation commit: `d4966b7`
 - Phase 7 implementation commit: `5430d46`
-- Execution branch: `codex/phase-8-torque-assist`
+- Phase 8 implementation commit: `09bb543`
+- Execution branch: `codex/phase-9-torqueshed-marketplace-community`
 - Release gate: **closed**
 
 ## Current verdict
 
-The Phase 8 branch implements Torque Assist inside the Phase 7 TorqueShed
-diagnostic workflow. The server reloads trusted tenant/user/diagnostic context,
-enforces bounded provider execution and strict facts/assumptions/ranked
-hypotheses/safety/tests/follow-up output, and never accepts browser provider,
-tenant, price, units, or payment-success authority. OperatorOS owns token
-packages, Stripe checkout, signed raw-body webhooks, refunds, audit, and
-entitlements. The append-only ledger computes balance from credits, debits and
-reversals; an accepted assist result and its exact one debit are designed to
-commit atomically.
+The Phase 9 branch extends the Phase 7 automotive foundation and Phase 8
+Torque Assist/accounting candidate with tenant-scoped Marketplace and
+Community workloads. It adds durable listing/category/favorite/conversation/
+message/expiry records; profiles/preferences/follows/blocks; posts/topics/tags/
+comments/reactions; shared scanned images; reports; and an append-only
+moderation action log. Trusted session tenant/user/role/module authority is
+used throughout. Foreign, private, hidden, and blocked resources are not
+enumerated.
 
-Phase 8 domain/static contracts pass 7/7, the cumulative Phase 7/release/access
-contracts pass 15/15, the final workspace typecheck and production build pass,
-the core production preflight passes, and the read-only 20-step release plan
-passes. Database-backed tests exist for signed credit/refund,
-test/live mismatch, replay safety, provider failure/retry, rate limits,
-cross-tenant denial, concurrent spending, exact debit, negative-balance
-reconciliation, and database-enforced append-only behavior. They are unrun
+Marketplace contact stays in-app, while payment and fulfillment are explicitly
+off-platform. OperatorOS does not implement or claim checkout, escrow,
+shipping/tracking, taxes, payment protection, inspection, title verification,
+seller reputation, guarantees, disputes, or refunds for Marketplace activity.
+Prices are informational integer minor-unit amounts and exact locations are
+rejected.
+
+Phase 9 domain/static contracts pass 7/7 across the final focused runs, and the
+cumulative database-independent Phase 7-9/release set passes 24/24 after one
+whitespace-sensitive UI assertion was corrected and rerun. Fresh API/web
+typechecks and the read-only 20-step release plan pass. The production build
+and core preflight results are recorded in the Phase 9 section below.
+Database-backed tests cover Marketplace/Community persistence, viewer denial,
+cross-tenant isolation, saved listings, contact/messages, reports, publishing,
+comments, reactions, blocking and append-only moderation. They are unrun
 because Docker Desktop does not provide a usable daemon.
 
 No repository was copied into OperatorOS. Standalone source remains read-only
@@ -39,7 +47,7 @@ evidence and only approved behavior was ported into the canonical shared
 runtime. No deployment, production database mutation, real provider traffic,
 source write freeze, or importer apply occurred.
 
-This is a TorqueShed state 3 source candidate, not state 4, state 5, or an
+This is a combined TorqueShed Phase 7-9 state 3 source candidate, not state 4, state 5, or an
 ecosystem release declaration. PulseDesk, TradeFlowKit, and TechDeck retain
 their earlier state 4 evidence. No module is promoted from source or rendered
 UI alone.
@@ -58,6 +66,54 @@ Use documents in this order when statements conflict:
 
 Historical acceptance and baseline reports remain evidence for their dated
 runs; they do not override this status.
+
+## Phase 9 implementation
+
+Status: source candidate implemented; TorqueShed remains state 3 because clean
+database, scanner/job, runtime, browser and deployed evidence is unavailable.
+
+- Added ADR-0018 and the tenant moderation policy. “Public” social visibility
+  means authenticated same-tenant members, never anonymous internet users.
+- Added ordered idempotent tables for profiles/preferences/blocks, categories,
+  listings/favorites/conversations/messages, topics/tags/posts/comments/
+  reactions/follows, reports, append-only moderation actions and user/tenant
+  rate windows under the existing `torqueshed_tables` release operation.
+- Implemented draft/publish/sold/expired/archive/renew listing lifecycle,
+  category/type/condition/search/sort/page filters, saved listings,
+  privacy-safe locality, safe vehicle/build links, in-app contact and reporting.
+- Implemented community profile/privacy/preferences, follows/blocks, draft/
+  publish/edit/archive posts, topics/tags, comments/replies, reactions, media,
+  feeds, reports and manager moderation.
+- Reused shared private attachment storage/jobs/scanning and added WebP
+  signature recognition. Social media is capped at 20 JPEG/PNG/WebP images per
+  object and cannot publish or become visible to other members before `clean`.
+- Added plain-text/stored-XSS/prohibited-item/location validation, recent
+  duplicate hashes, per-user/per-tenant write/message/report limits, 404-style
+  non-enumeration and bilateral block predicates.
+- Added a responsive native Marketplace/Community client with listings,
+  saved/search/filter/sort/create/publish/renew/sold/archive/contact/report,
+  conversation replies, profiles/preferences, post feeds, comments/reactions,
+  follows/blocks, image upload/display, moderation queue and durable deep-link
+  routing.
+- Updated final acceptance step 19 to create and publish valid listing and post
+  drafts instead of probing obsolete placeholder payloads.
+
+| Phase 9 gate | Result |
+| --- | --- |
+| Phase 9 domain/static contracts | PASS 7/7 in 5,152.6855 ms on the final combined rerun; earlier focused static rerun 4/4 in 1,414.8039 ms |
+| Cumulative Phase 7-9/release contracts | PASS 24/24 in 25,971.4411 ms after correcting one whitespace-only assertion and rerunning it; no behavior change was needed |
+| API and web typecheck | PASS; fresh `pnpm --dir apps/api typecheck` and `pnpm --dir apps/web typecheck`, exit 0 |
+| Database release plan | PASS; 20 additive steps, with Phase 9 extending the existing TorqueShed operation |
+| Production build | PASS on the final exact-source rerun; API/runner/web typecheck, SDK/API/runner builds and Next.js 14.2.35 build completed with 20/20 static pages and exit 0 |
+| Core production preflight | PASS with exact canonical non-secret values and `TRUST_PROXY=true` |
+| Isolated database workflow/full API | **BLOCKED/NOT RUN**; Docker engine API returns HTTP 500 |
+| Runtime/browser/deployed acceptance | **BLOCKED/NOT RUN**; no clean database/runtime and no deployment authorization |
+| Lint/format | NOT DEFINED; the repository has no lint or formatting script |
+
+The current Docker probe fails with `request returned 500 Internal Server Error`
+for the Docker Desktop Linux engine `v1.55/info` endpoint. Therefore no
+database apply/idempotency/trigger, persistence/restart, scanner job, complete
+API, production supervisor, SSO, browser or deployed result is inferred.
 
 ## Phase 1 implementation
 

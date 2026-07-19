@@ -18,6 +18,8 @@ import {
   Search,
   Settings2,
   ShieldCheck,
+  Store,
+  Users,
   Wrench,
 } from 'lucide-react';
 import {
@@ -32,8 +34,9 @@ import {
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import { ShellLiveBadge } from './ShellChrome';
+import { TorqueShedCommunityPanel, TorqueShedMarketplacePanel } from './TorqueShedSocialPanels';
 
-type Tab = 'dashboard' | 'garage' | 'service' | 'builds' | 'diagnostics' | 'templates';
+type Tab = 'dashboard' | 'garage' | 'service' | 'builds' | 'diagnostics' | 'templates' | 'marketplace' | 'community';
 
 function errorText(error: unknown): string {
   const value = error as { error?: unknown; message?: unknown; code?: unknown };
@@ -188,6 +191,8 @@ export default function TorqueShedWorkspace() {
     else if (/\/(?:garage|vehicles)(?:\/|$)/.test(path)) setTab('garage');
     else if (/\/(?:maintenance|repairs|reminders)(?:\/|$)/.test(path)) setTab('service');
     else if (/\/builds(?:\/|$)/.test(path)) setTab('builds');
+    else if (/\/marketplace(?:\/|$)/.test(path)) setTab('marketplace');
+    else if (/\/community(?:\/|$)/.test(path)) setTab('community');
     else if (/\/diagnostic-templates(?:\/|$)/.test(path)) setTab('templates');
   }, [openDiagnostic, openVehicle]);
 
@@ -378,6 +383,8 @@ export default function TorqueShedWorkspace() {
             ['builds', 'Builds', Settings2],
             ['diagnostics', 'Diagnostics', Activity],
             ['templates', 'Templates & vendors', ClipboardCheck],
+            ['marketplace', 'Marketplace', Store],
+            ['community', 'Community', Users],
           ] as const
         ).map(([id, name, Icon]) => (
           <button
@@ -458,6 +465,9 @@ export default function TorqueShedWorkspace() {
           visibility never publishes VINs, maintenance costs, files, or private diagnostics.
         </span>
       </div>
+
+      {tab === 'marketplace' && <TorqueShedMarketplacePanel />}
+      {tab === 'community' && <TorqueShedCommunityPanel />}
 
       {tab === 'dashboard' && (
         <section data-testid="torqueshed-dashboard" style={{ display: 'grid', gap: space.lg }}>
