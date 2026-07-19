@@ -30,7 +30,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 
 | Product | Slug | Canonical host | Commercial class | Source project observed | Current OperatorOS functional state |
 | --- | --- | --- | --- | --- | --- |
-| TradeFlowKit | `tradeflowkit` | `tradeflowkit.operatoros.net` | core | `C:\Dev\TradeFlowKit` | Source snapshot + OperatorOS adapter shell + shared organizations/contacts/sites and customer profiles + tenant-scoped Lead Center and native customer → job → quote → invoice → payment workflow. Directory browser persistence, controlled transitions, audit, optimistic concurrency, deep links, tenant isolation, and viewer denial are verified; projects/tasks and remaining parity pending |
+| TradeFlowKit | `tradeflowkit` | `tradeflowkit.operatoros.net` | core | `C:\Dev\TradeFlowKit` at `6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55` | Source/local state 4 candidate: lead conversion into shared Directory customers; numbered jobs and first-class dependent tasks; comments/tags/private attachments/activity; quotes/public decisions; idempotent invoices; partial manual and deterministic test-provider payments; customer portal/documents; shared messaging; settings; real analytics; CSV export; complete local deep links. ADR-0010/0011 resolve projects and excluded authority/unsafe legacy scope; deployed workflow and cutover evidence still block state 5 |
 | TorqueShed | `torqueshed` | `torqueshed.operatoros.net` | free | `C:\Dev\TorqueShed-Codex` exists, but is not currently saved in the Codex project list | Commit-pinned source snapshot + native tenant-scoped diagnostic case board (symptoms/context, testing/repair/proof states, audit, optimistic concurrency); deeper standalone parity pending |
 | TechDeck | `techdeck` | `techdeck.operatoros.net` | core | `C:\Dev\Tech-Deck` | Source snapshot + OperatorOS adapter shell + shared organizations/contacts/sites and managed-client profiles + tenant-scoped Ticket Queue, asset-health inventory, derived alerts, and approval-only runbooks. Directory persistence, optimistic concurrency, tenant isolation, role boundaries, audit, and deep links are verified; VLAN/subnet and remaining MSP parity are pending |
 | PulseDesk | `pulsedesk` | `pulsedesk.operatoros.net` | core | `C:\Dev\PulseDesk` | Source snapshot + OperatorOS adapter shell + shared organizations/contacts/sites with PHI-restricted service-client profiles + PHI-minimized tenant-scoped Department Escalation Queue; asset/ticket/note/time and remaining product workflows pending |
@@ -47,24 +47,30 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 ## Current verification boundary
 
 The shared source passes the API, runner, and web typechecks and the exact
-production build shape with `INTERNAL_API_URL=http://localhost:5001`. The
-complete API regression suite ran serially against a new clean isolated
-PostgreSQL database: 692 total, 686 passed, 0 failed, and 6 HTTP-only tests
-skipped because no Next development server was running. The focused Phase 3
-gate passed 24/24. These are source and isolated-database results, not a public
-deployment claim.
+production build shape with `INTERNAL_API_URL=http://localhost:5001`.
+TradeFlowKit's frozen-source focused suite passed 29/29. The first complete Phase 4 API run reported
+695 total, 687 passed, 2 failed, and 6 HTTP-only skips; both failures were
+static slice-boundary assertions made stale by the renamed TradeFlowKit schema
+heading. The corrected Ninja Pool/PulseDesk regression passed 13/13. A later
+stale assertion requiring TradeFlowKit to retain disabled placeholder cards was
+also corrected after the workflows became live. The frozen-source aggregate
+passed 687, failed 0, and skipped 6 out of 693. These are
+source and isolated-database results, not a public deployment claim.
 
 The Replit deployment path is Corepack-free. The checked-in build uses `npm
 exec` with exact pnpm `10.34.5`, runs the mandatory workspace typecheck, and
 builds the API, runner gateway, and Next application. The production supervisor
-uses compiled artifacts only: it applies or verifies the 16-step database
+uses compiled artifacts only: it applies or verifies the 17-step database
 release, starts the compiled API, waits for readiness, and starts compiled
-Next. The 16-step Phase 3 database release applied twice without drift. A
-PostgreSQL 16 custom-format backup restored into a new disposable database
-with the exact critical-row vector, 83 public tables, 382 public constraints,
-and all 10 shared service tables. Its SHA-256 is recorded in the backup
-runbook. This closes the local Phase 2 directory-schema restore gap, but not
-the public deployment gate.
+Next. The 17-step Phase 4 database release applied twice without drift, with
+the TradeFlowKit step ordered after shared Directory-backed profiles and
+before shared services. A PostgreSQL 16 custom-format backup with SHA-256
+`d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82`
+restored into a new disposable database in 3.570 seconds. Source and restore
+matched 94 public tables, including all 17 TradeFlowKit, 9 Directory, and 10
+shared-service tables; the restored database accepted the full release apply.
+This closes the local Phase 4 schema-recovery gate, but not public deployment
+or standalone-data cutover.
 
 The reviewed candidate passes the local production-host SSO matrix 2/2, but it
 has not been promoted to the public target. The read-only public production
@@ -97,21 +103,25 @@ viewers to read while denying their writes. Together with the eight existing
 shells, all twelve enabled modules now have an OperatorOS-owned functional
 surface. OutCall remains the deliberate planned/disabled exception.
 
-TradeFlowKit now also runs its defining revenue path inside OperatorOS rather
-than stopping at manual leads. A focused 2/2 PostgreSQL flow proves customer
-and job creation, integer-cent quote totals, controlled quote acceptance,
-idempotent quote-to-invoice conversion, manual customer-payment recording,
-linked job status, cross-tenant denial, and viewer write denial. The native web
-shell exposes this sequence and `/customers`, `/jobs`, `/quotes`, and
-`/invoices` deep links resolve to it. Customer payments remain explicitly
-separate from OperatorOS subscription/add-on billing authority.
+TradeFlowKit now runs its approved revenue and field-service workflow inside
+OperatorOS. Lead conversion creates or reuses shared Directory identities and
+a numbered job; first-class tasks enforce dependencies and optimistic
+versions; normalized quote/invoice items use integer cents; public quote
+decisions and customer documents store only token hashes; invoice conversion,
+manual payments, test-provider completion, and outbound messages are
+idempotent. The native shell exposes persisted operations metrics, tasks,
+settings, CSV exports, loading/empty/error/conflict states, and supported deep
+links. Customer payments remain explicitly separate from OperatorOS
+subscription/add-on billing authority, and production processing fails closed
+until a reviewed centralized adapter is configured.
 
-Phase 3 adds one deliberately thin shared-infrastructure proof without raising
-TradeFlowKit's consolidation state: job attachments now use private authorized
+Phase 3 added the shared-infrastructure foundation used by the Phase 4 state 4
+candidate: job attachments use private authorized
 storage, scan jobs, idempotency, usage/activity, notifications/outbox, and
 transaction-bound platform audit. CallCommand's signed Twilio status callback
-uses the shared verified receipt/deduplication/retry ledger. The remaining
-workflows and deployed evidence in the parity index are still required.
+uses the shared verified receipt/deduplication/retry ledger. TradeFlowKit still
+requires deployed workflow/public-document smoke and approved migration
+cutover evidence before state 5.
 
 TechDeck now extends beyond its ticket queue with a tenant-scoped operations
 workspace. A focused 2/2 PostgreSQL flow proves asset health/version handling,

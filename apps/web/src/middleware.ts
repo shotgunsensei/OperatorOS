@@ -96,6 +96,10 @@ function isOperationalExempt(pathname: string): boolean {
   return false;
 }
 
+function isPublicTradeFlowKitDocumentPath(pathname: string): boolean {
+  return /^\/public\/tradeflowkit\/(quotes|invoices|customers)\/[A-Za-z0-9_-]{32,64}$/.test(pathname);
+}
+
 function isSsoCallbackPath(pathname: string): boolean {
   return pathname === '/sso' || pathname.startsWith('/sso/');
 }
@@ -389,6 +393,9 @@ export async function middleware(req: NextRequest) {
   }
 
   if (isOperationalExempt(pathname)) return withAuthSecurityHeaders(NextResponse.next());
+  if (isPublicTradeFlowKitDocumentPath(pathname) && context.module?.slug === 'tradeflowkit') {
+    return withAuthSecurityHeaders(NextResponse.next());
+  }
 
   if (context.surface === 'auth' && pathname === '/') {
     return withAuthSecurityHeaders(rewriteTo('/login', req));

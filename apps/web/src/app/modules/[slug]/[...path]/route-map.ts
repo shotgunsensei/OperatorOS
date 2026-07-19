@@ -25,9 +25,12 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/directory': { sectionId: 'tradeflowkit-directory', label: 'Business Directory' },
     '/contacts': { sectionId: 'tradeflowkit-directory', label: 'Shared Contacts' },
     '/sites': { sectionId: 'tradeflowkit-directory', label: 'Shared Sites' },
-    '/jobs': { sectionId: 'tradeflowkit-revenue-flow', label: 'Jobs' },
+    '/jobs': { sectionId: 'tradeflowkit-operations', label: 'Jobs' },
+    '/tasks': { sectionId: 'tradeflowkit-operations', label: 'Tasks' },
     '/quotes': { sectionId: 'tradeflowkit-revenue-flow', label: 'Quotes' },
     '/invoices': { sectionId: 'tradeflowkit-revenue-flow', label: 'Invoices' },
+    '/payments': { sectionId: 'tradeflowkit-revenue-flow', label: 'Payments' },
+    '/analytics': { sectionId: 'tradeflowkit-operations', label: 'Operational Analytics' },
     '/settings': { sectionId: 'tradeflowkit-settings', label: 'Settings' },
   },
   techdeck: {
@@ -70,7 +73,15 @@ export function resolveCoreModuleDeepLink(
   }
 
   const routePath = `/${pathSegments.join('/')}`;
-  return CORE_MODULE_DEEP_LINKS[slug]?.[routePath] ?? null;
+  const exact = CORE_MODULE_DEEP_LINKS[slug]?.[routePath];
+  if (exact) return exact;
+  if (slug === 'tradeflowkit' && pathSegments.length === 2) {
+    const [resource] = pathSegments;
+    if (resource === 'jobs' || resource === 'tasks') return { sectionId: 'tradeflowkit-operations', label: resource === 'jobs' ? 'Job Record' : 'Task Record' };
+    if (resource === 'leads') return { sectionId: 'tradeflowkit-lead-center', label: 'Lead Record' };
+    if (['customers', 'quotes', 'invoices', 'payments'].includes(resource)) return { sectionId: 'tradeflowkit-revenue-flow', label: 'Revenue Record' };
+  }
+  return null;
 }
 
 export function formatModuleDeepPath(pathSegments: readonly string[]): string {

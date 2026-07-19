@@ -53,13 +53,19 @@ test('session refresh preserves scope and revokes the replaced token', async () 
 });
 
 test('unfinished primary-module workflow cards are visibly disabled', () => {
-  for (const shell of ['TechDeckShell.tsx', 'PulseDeskShell.tsx', 'TradeFlowKitShell.tsx']) {
+  for (const shell of ['TechDeckShell.tsx', 'PulseDeskShell.tsx']) {
     assert.match(
       read(`apps/web/src/components/module-shells/${shell}`),
       /Migration pending — disabled/,
       shell,
     );
   }
+});
+
+test('completed TradeFlowKit workflow cards do not advertise migration placeholders', () => {
+  const shell = read('apps/web/src/components/module-shells/TradeFlowKitShell.tsx');
+  assert.match(shell, /Live in shared runtime/);
+  assert.doesNotMatch(shell, /Migration pending — disabled/);
 });
 
 test('production logging and readiness expose safe shared context', () => {

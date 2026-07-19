@@ -1,11 +1,11 @@
 # OperatorOS current release gate
 
 - Evidence date: 2026-07-18
-- Candidate branch: `codex/phase-3-shared-services`
+- Candidate branch: `codex/phase-4-tradeflowkit-state-5`
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
-- Platform and Phases 2-3 source/local gate: **PASS**
+- Platform and Phases 2-4 source/local gate: **PASS; TradeFlowKit is state 4, not state 5**
 - Public deployment gate: **FAIL (32/47)**
 - Overall release decision: **CLOSED — do not promote**
 
@@ -28,6 +28,14 @@ production build, compiled runtime, and backup/restore gates passed locally.
 This direction permits continued source work only; it does not authorize a
 deployment, production data mutation, promotion, or production-ready label.
 
+Phase 4 then recovered TradeFlowKit provenance and delivered its approved
+source/local workflow as a state 4 candidate. The 17-step release,
+backup/restore, production build/runtime, full API regression, TradeFlowKit
+workflow, and local production-host SSO pass. The refreshed ecosystem browser
+gate still fails on nine later-phase PulseDesk, TechDeck, and TorqueShed gaps;
+TradeFlowKit also remains below state 5 until deployed workflow/public-document
+smoke and an approved data cutover pass.
+
 The candidate was not deployed because deployment/publishing was not
 authorized. The current public hosts still serve an older release. The release
 gate remains closed until a human deploys the reviewed commit and the public
@@ -44,19 +52,20 @@ and migration parity remain controlled by the module parity index.
 | Frozen dependency contract | PASS FROM PHASE 0 | Pinned pnpm `10.34.5`; lockfile unchanged by Phase 1 |
 | Production environment contract | PASS | Machine-readable contract plus 7 preflight tests; core CLI preflight passed with exact canonical values and non-secret local test credentials |
 | Unsafe configuration rejection | PASS | Rejects missing/short secrets, legacy `APP_URL`, parent `COOKIE_DOMAIN`, public unified-runtime API URL, unsafe commands, legacy SSO rollback, wildcard/insecure/credentialed/loopback CORS, and drifted module hosts |
-| Database release plan | PASS | `db:plan` emits 16 ordered, additive, secret-free steps; `db:apply` passed twice on clean PostgreSQL 16 |
-| Backup/restore rehearsal | PASS LOCALLY | Phase 3 custom dump restored into a new database with matching critical rows, all 10 shared tables, 83 public tables, and 382 public constraints |
-| Restored data/constraints | PASS | Source/restored exact vector `83|382|13|2|1|0|0|0|0`; dump SHA-256 `b293127c835b2c6c6937cbae93a32916d038ad44f74a3ee700c5eda2fff2c0b1` |
+| Database release plan | PASS | `db:plan` emits 17 ordered, additive, secret-free steps; `db:apply` passed twice and again after restore on PostgreSQL 16 |
+| Backup/restore rehearsal | PASS LOCALLY | Phase 4 custom dump restored in 3.570 s; source/restore matched 94 public tables, 17 TradeFlowKit, 9 Directory, and 10 shared-service tables |
+| Restored data/constraints | PASS | Restored release apply passed; dump SHA-256 `d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82` |
 | Production build | PASS | Installed workspace toolchain produced SDK, API, runner gateway, and Next artifacts after API/runner/web typechecks; Next 14.2.35 generated 20 static page entries. The exact Replit wrapper remains pinned to pnpm 10.34.5. |
-| Compiled production supervisor | PASS | Compiled 16-step release ran, Fastify and the shared worker reached readiness on 5001, and Next reached ready on 5000; no `tsx` production runtime |
+| Compiled production supervisor | PASS | Compiled 17-step release ran, Fastify and the shared worker reached readiness on 5001, and Next reached ready on 5000; no `tsx` production runtime |
 | Local canonical-host health | PASS | HTTPS apex `/healthz` returned 200 with `operatoros-api`; API `/readyz` returned 200 with database/auth/SSO/registry configured |
 | Local public URL diagnostics | PASS | TechDeck diagnostic resolved forwarded exact host, HTTPS origin, module role, and host-only cookie mode |
 | Production-host SSO browser gate | PASS LOCALLY | 2/2 Playwright scenarios in 25.3 seconds across root/app/auth and all 12 enabled modules; PKCE/state/nonce, exact callbacks, host-only cookies, deep-link return, Back, refresh, silent sibling launch, local logout, and global revocation passed |
 | Focused Phase 1 tests | PASS | 11/11 database-release, preflight, and supervisor contract tests |
 | Focused Phase 2 tests | PASS | 9/9 directory, UI, deep-link, and release-contract tests |
 | Focused Phase 3 tests | PASS | 24/24 shared-service, route, retention, lease-recovery, release, webhook, and provider-state tests on a clean database |
+| Focused Phase 4 tests | PASS | 29/29 TradeFlowKit-focused tests in the final aggregate run, including concurrent conversion, Directory association, restart, provider, migration, and financial reconciliation |
 | Phase 2 browser workflow | PASS LOCALLY | 1/1 on compiled artifacts; CRUD, refresh persistence, same organization ID across three modules, and no script-readable auth |
-| Full API regression | PASS | 692 total: 686 passed, 0 failed, 6 HTTP-only skips against a new clean PostgreSQL database; 437,069.7755 ms |
+| Full API regression | PASS | Final frozen-source run: 693 total, 687 passed, 0 failed, 6 HTTP-only skips against isolated PostgreSQL in 346.8 seconds; the earlier stale TradeFlowKit placeholder assertion was corrected and passed in the final aggregate |
 | Public read-only runtime verifier | FAIL | 32/47 on 2026-07-18; no authentication and no mutation |
 | Formatting/lint | NOT DEFINED | Repository has no supported formatting or lint script; no pass is claimed |
 

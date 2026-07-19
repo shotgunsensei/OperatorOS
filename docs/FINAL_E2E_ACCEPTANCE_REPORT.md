@@ -5,6 +5,24 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## Phase 4 follow-up
+
+The local production-host acceptance was rerun on 2026-07-18 after the
+TradeFlowKit Phase 4 candidate. It produced 29 passing evidence records and 9
+failures. Every TradeFlowKit-specific row passed: SSO launch, shared-directory
+customer creation, numbered job and first-class task persistence, intentional
+project-endpoint denial under ADR-0010, return navigation, reopen persistence,
+and disabled-entitlement denial. TradeFlowKit deep-link refresh also passed
+inside the combined step; that step remained failed only because TorqueShed's
+`/diagnostics` route is Phase 7 scope. The remaining nine failures are in
+PulseDesk, TechDeck, and TorqueShed and are carried into their later phases.
+
+The complete two-test local production-host SSO matrix separately passed all
+12 enabled modules. This follow-up does not change the report's **NOT
+ACCEPTED** verdict: the candidate is not deployed, the broader ecosystem gaps
+remain, and TradeFlowKit still lacks approved cutover/deployed workflow and
+public-document smoke evidence required for state 5.
+
 ## Phase 2 follow-up
 
 After this dated 35-step run, Phase 2 added one OperatorOS-owned persistent

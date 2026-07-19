@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Loader2, Plus, Search, Trash2, UserRound } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Loader2, Plus, Search, Trash2, UserRound } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
 
-type LeadStatus = 'new' | 'contacted' | 'qualified' | 'follow_up' | 'lost';
+type LeadStatus = 'new' | 'contacted' | 'qualified' | 'follow_up' | 'converted' | 'lost';
 type LeadUrgency = 'normal' | 'urgent' | 'emergency';
 
 interface TradeFlowKitLead {
@@ -22,6 +22,8 @@ interface TradeFlowKitLead {
   lastContactedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  customerId?: string | null;
+  jobId?: string | null;
 }
 
 const STATUS_OPTIONS: Array<{ value: LeadStatus; label: string }> = [
@@ -29,6 +31,7 @@ const STATUS_OPTIONS: Array<{ value: LeadStatus; label: string }> = [
   { value: 'contacted', label: 'Contacted' },
   { value: 'qualified', label: 'Qualified' },
   { value: 'follow_up', label: 'Follow up' },
+  { value: 'converted', label: 'Converted' },
   { value: 'lost', label: 'Lost' },
 ];
 
@@ -98,11 +101,11 @@ export default function TradeFlowKitLeadCenter({ tenantKey }: { tenantKey: strin
   }, [leads, search, statusFilter]);
 
   const metrics = useMemo(() => ({
-    open: leads.filter((lead) => lead.status !== 'lost').length,
+    open: leads.filter((lead) => !['lost', 'converted'].includes(lead.status)).length,
     new: leads.filter((lead) => lead.status === 'new').length,
     qualified: leads.filter((lead) => lead.status === 'qualified').length,
     pipelineCents: leads
-      .filter((lead) => lead.status !== 'lost')
+      .filter((lead) => !['lost', 'converted'].includes(lead.status))
       .reduce((total, lead) => total + (lead.estimatedValueCents ?? 0), 0),
   }), [leads]);
 
@@ -166,6 +169,17 @@ export default function TradeFlowKitLeadCenter({ tenantKey }: { tenantKey: strin
     }
   }
 
+  async function convertLead(lead: TradeFlowKitLead) {
+    if (updatingId || lead.status === 'converted' || lead.status === 'lost') return;
+    setUpdatingId(lead.id); setError(null);
+    try {
+      const result = await moduleShellApi.tradeflowkit.convertLead(lead.id) as { lead: TradeFlowKitLead };
+      setLeads(current => current.map(item => item.id === lead.id ? result.lead : item));
+    } catch (requestError) {
+      setError(errorMessage(requestError, 'Could not convert the lead into a customer and job.'));
+    } finally { setUpdatingId(null); }
+  }
+
   return (
     <section id="tradeflowkit-leads" className="tfk-panel tfk-lead-center" data-testid="tradeflowkit-lead-center">
       <style>{leadCenterCss}</style>
@@ -174,7 +188,7 @@ export default function TradeFlowKitLeadCenter({ tenantKey }: { tenantKey: strin
           <div className="tfk-lead-eyebrow">Live tenant workflow</div>
           <h2>Manual Lead Center</h2>
           <p>
-            Capture and progress tenant leads now. Provider messaging, public intake, and customer/job conversion remain off until their own audited migration.
+            Capture, qualify, and convert tenant leads into shared-directory customers and numbered jobs. Provider delivery uses the shared notification outbox.
           </p>
         </div>
         <div className="tfk-lead-metrics" aria-label="Lead pipeline summary">
@@ -336,15 +350,17 @@ export default function TradeFlowKitLeadCenter({ tenantKey }: { tenantKey: strin
                 <span className="sr-only">Status for {lead.name}</span>
                 <select
                   value={lead.status}
-                  disabled={updatingId === lead.id}
+                  disabled={updatingId === lead.id || lead.status === 'converted'}
                   onChange={(event) => updateStatus(lead, event.target.value as LeadStatus)}
                   data-testid={`tradeflowkit-lead-status-${lead.id}`}
                 >
-                  {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value} disabled={option.value === 'converted'}>{option.label}</option>)}
                 </select>
               </label>
               <div className="tfk-lead-delete">
-                {pendingDeleteId === lead.id ? (
+                {lead.status === 'converted' && lead.jobId ? (
+                  <a className="tfk-converted-link" href={`/modules/tradeflowkit/jobs/${lead.jobId}`}>Job <ArrowRight size={14} /></a>
+                ) : pendingDeleteId === lead.id ? (
                   <>
                     <button type="button" className="tfk-danger" disabled={updatingId === lead.id} onClick={() => deleteLead(lead.id)}>
                       Confirm
@@ -352,9 +368,7 @@ export default function TradeFlowKitLeadCenter({ tenantKey }: { tenantKey: strin
                     <button type="button" onClick={() => setPendingDeleteId(null)}>Cancel</button>
                   </>
                 ) : (
-                  <button type="button" aria-label={`Remove ${lead.name}`} onClick={() => setPendingDeleteId(lead.id)}>
-                    <Trash2 size={15} aria-hidden="true" />
-                  </button>
+                  <><button type="button" className="tfk-convert" disabled={updatingId === lead.id || lead.status === 'lost'} onClick={() => void convertLead(lead)}><ArrowRight size={14} /> Convert</button><button type="button" aria-label={`Remove ${lead.name}`} onClick={() => setPendingDeleteId(lead.id)}><Trash2 size={15} aria-hidden="true" /></button></>
                 )}
               </div>
             </article>
@@ -416,6 +430,8 @@ const leadCenterCss = `
   .tfk-lead-delete { display: flex; gap: 5px; justify-content: flex-end; }
   .tfk-lead-delete button { border: 1px solid rgba(22,101,52,.16); background: white; color: #587067; border-radius: 5px; padding: 7px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
   .tfk-lead-delete .tfk-danger { color: #b91c1c; border-color: rgba(220,38,38,.3); font-weight: 800; }
+  .tfk-lead-delete .tfk-convert { color:#047857; border-color:rgba(5,150,105,.28); font-weight:800; gap:4px; white-space:nowrap; }
+  .tfk-lead-delete .tfk-converted-link { display:inline-flex; align-items:center; gap:4px; color:#047857; font-size:12px; font-weight:800; text-decoration:none; padding:6px; }
   .tfk-lead-state { border: 1px dashed rgba(22,101,52,.24); border-radius: 7px; min-height: 90px; display: flex; align-items: center; justify-content: center; gap: 10px; color: #587067; font-size: 13px; text-align: left; }
   .tfk-lead-state > div { display: grid; gap: 3px; }
   .tfk-lead-state strong { color: #10231d; }

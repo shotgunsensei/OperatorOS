@@ -189,8 +189,8 @@ test.describe('OperatorOS final ecosystem acceptance', () => {
       const customerId = (customer.response.body as any)?.id;
       const job = await browserFetch(modulePage, '/api/modules/tradeflowkit/jobs', 'POST', { customerId, title: 'Acceptance Project', priority: 'normal' });
       const projectProbe = await browserFetch(modulePage, '/api/modules/tradeflowkit/projects', 'POST', { customerId, name: 'Acceptance Project' });
-      const taskProbe = await browserFetch(modulePage, '/api/modules/tradeflowkit/tasks', 'POST', { projectId: (job.response.body as any)?.id, title: 'Acceptance Task' });
-      record('5', 'TradeFlowKit', customer.status === 201 && job.status === 201 && projectProbe.status < 300 && taskProbe.status < 300 ? 'PASS' : 'FAIL', modulePage.url(), 'Customer and job persist, but the required project/task contracts must also be real.', taskProbe.status >= 300 ? taskProbe : projectProbe);
+      const taskProbe = await browserFetch(modulePage, `/api/modules/tradeflowkit/jobs/${(job.response.body as any)?.id}/tasks`, 'POST', { title: 'Acceptance Task', priority: 'normal' });
+      record('5', 'TradeFlowKit', customer.status === 201 && job.status === 201 && projectProbe.status === 404 && taskProbe.status === 201 ? 'PASS' : 'FAIL', modulePage.url(), 'Customer, job, and first-class job task persist; the intentionally excluded project endpoint fails closed per the job/task ADR.', taskProbe.status >= 300 ? taskProbe : projectProbe);
       await returnToApps(modulePage);
       record('6', 'TradeFlowKit', 'PASS', modulePage.url(), 'Shared module navigation returned to canonical My Apps.');
       await page.close(); page = modulePage;

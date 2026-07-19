@@ -1,7 +1,7 @@
 # OperatorOS module parity index
 
 - Assessment date: 2026-07-18
-- Baseline code commit: `ae48d6b200164051528f4d03fe2ee035a3c3ad19`
+- Phase 4 base commit: `c969e0413192259318d8f8dacc513fdffededec5`
 
 Rule: the state is the highest fully satisfied consolidation state, not the
 number of native features currently visible.
@@ -11,7 +11,7 @@ States: **1 Registered**, **2 Source imported**, **3 Authority conformed**,
 
 | Module | State | Source commit/provenance | Active OperatorOS features | Missing parity | Data migration state | Production verification |
 | --- | ---: | --- | --- | --- | --- | --- |
-| TradeFlowKit | 3 | Legacy import; upstream commit was not recorded (provenance gap) | Leads; shared organizations/contacts/sites with customer profiles; jobs; quotes; invoices; manual payments; native deep links; private job attachments through shared scan/idempotency/usage/activity/outbox services | Projects/tasks; source-approved messaging/public payments/analytics and remaining route parity | Directory mapping documented; no standalone-data importer/reconciliation | Local build, DB, SSO, directory persistence/isolation, and shared attachment proof pass; deployed target unverified |
+| TradeFlowKit | 4 | Recovered `C:\Dev\TradeFlowKit` commit `6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55`; 317 shared product files match the quarantined snapshot byte-for-byte | Lead conversion into shared Directory customers; numbered jobs and first-class dependent tasks; comments/tags/private attachments/activity; quotes/public decisions; idempotent invoices; partial manual and deterministic test-provider payments; customer portal/documents; shared messaging; settings; real analytics; CSV export; deep links | No approved source/local workflow gap; ADR-0010/0011 exclude projects and unsafe/duplicate authority surfaces. Production provider enablement and deployed acceptance remain gated | Deterministic dry-run planner, stable source mappings, authority exclusions, reference/count/financial reconciliation implemented; no production export applied and apply/cutover remains a separate human gate | TradeFlowKit-focused 29/29 and complete API 687 pass/0 fail/6 skip, full production build/runtime, 17-step DB apply, backup/restore, valid-token public-route smoke, and production-host SSO 2/2 pass locally; deployed TradeFlowKit workflow/public-document/cutover smoke not run, so not state 5 |
 | TechDeck | 3 | Legacy import; upstream commit was not recorded (provenance gap) | Tickets; shared organizations/contacts/sites with managed-client profiles; assets; derived alerts; approval-gated runbooks; operations deep links | VLAN/subnet/network topology; documents/evidence; signed agent execution boundary; remaining source parity | Directory mapping documented; no standalone-data importer/reconciliation | Local build, DB, SSO, directory browser persistence/deep links/isolation pass; deployed target unverified |
 | PulseDesk | 3 | Legacy import; upstream commit was not recorded (provenance gap) | PHI-minimized departments/requests plus shared organizations/contacts/sites with PHI-restricted service-client profiles | Asset/ticket/note/reply/time/SLA terminology and workflows require healthcare-domain ADR and implementation | Directory mapping documented; no standalone-data importer/reconciliation | Local build, DB, SSO, directory browser persistence/isolation pass; deployed target unverified |
 | TorqueShed | 3 | `c33ade5cef525d62d371a63946b814c58a72a4a7` | Tenant-scoped diagnostic-case workflow | Vehicles; maintenance; diagnostic sessions; codes/tests/measurements; repairs/verification; Torque Assist ledger; marketplace/community; diagnostic deep route | No standalone-data importer/reconciliation | Local build, DB, SSO pass; required E2E workflow/deep route fail; deployed target unverified |
@@ -27,9 +27,9 @@ States: **1 Registered**, **2 Source imported**, **3 Authority conformed**,
 
 ## Cross-cutting gaps
 
-- Core legacy imports lack immutable upstream source commit metadata. Phase 0
-  records this as a provenance defect; future parity work must recover or
-  explicitly baseline the source before claiming complete migration.
+- TechDeck and PulseDesk legacy imports still lack immutable upstream source
+  commit metadata. TradeFlowKit provenance was recovered in Phase 4; future
+  parity work must recover or explicitly baseline the other sources.
 - No enabled module has a rehearsed standalone-data importer and reconciliation
   report.
 - Local production-host SSO passes, but the deployed target has not been
@@ -37,3 +37,7 @@ States: **1 Registered**, **2 Source imported**, **3 Authority conformed**,
 - The 2026-07-18 Phase 3 backup/restore rehearsal includes the Phase 2 directory
   and Phase 3 shared-service schemas and matched all 10 shared tables. Public
   deployment and production provider acceptance remain open.
+- The Phase 4 rehearsal restored 94 public tables, including all 17
+  `tradeflowkit_*`, 9 Directory, and 10 shared-service tables, then accepted the
+  full 17-step release on the restored database. This is disposable local
+  recovery evidence, not a production cutover.

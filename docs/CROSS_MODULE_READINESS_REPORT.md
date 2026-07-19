@@ -1,6 +1,6 @@
 # Cross-module readiness report
 
-Assessment date: 2026-07-17. Scope: OperatorOS, TradeFlowKit, PulseDesk,
+Assessment updated: 2026-07-18. Scope: OperatorOS, TradeFlowKit, PulseDesk,
 TechDeck, and TorqueShed in the consolidated `C:\Dev\OperatorOS` runtime.
 
 ## Release rule
@@ -15,7 +15,7 @@ tests all pass in the target deployment.
 | Module | Real shared-runtime workload | Auth/tenant enforcement | Build | DB tests | Live health | Browser E2E | Readiness |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | OperatorOS | Identity, tenant, entitlement, billing, audit, launcher | Local SSO/RBAC/tenant tests pass | Pass | Pass | Local pass; deployed target not run | Local 2/2; deployed target not run | **Not production-ready** |
-| TradeFlowKit | Leads; shared organizations/contacts/sites; jobs, quotes, invoices, manual payments | Server guards, persistence, viewer denial, directory profile, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared directory CRUD/refresh/reuse pass; deployed target not run | **Not production-ready** |
+| TradeFlowKit | Source/local state 4 candidate: lead conversion; shared Directory customers; numbered jobs/tasks/dependencies; quotes/public decisions; idempotent invoices; partial manual/test-provider payments; portal/documents; messaging; settings; real analytics; CSV export | Server guards, versions, idempotency, persistence/restart, viewer denial, Directory mapping, and cross-tenant tests pass | Pass | Pass | Compiled shared runtime and public route pass locally; deployed target not run | TradeFlowKit rows pass in refreshed acceptance and SSO 2/2 passes; deployed workflow/cutover not run | **Not production-ready** |
 | PulseDesk | Departments, PHI-minimized operations queue, shared organizations/contacts/sites | Server guards, manager capability, PHI-restricted directory profile, persistence, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared directory CRUD/refresh/reuse pass; deployed target not run | **Not production-ready** |
 | TechDeck | Tickets, shared organizations/contacts/sites, assets, approval-gated runbooks | Server guards, assignment, managed-client directory profile, approval, audit, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared directory CRUD/refresh/reuse and deep links pass; deployed target not run | **Not production-ready** |
 | TorqueShed | Persistent diagnostic-case CRUD and status workflow | Server guards, persistence, viewer denial, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared local SSO/shell pass; deployed target not run | **Not production-ready** |
@@ -29,11 +29,12 @@ revocation, implemented-data persistence, expired-session handling, disabled
 entitlements, foreign-tenant denial, unauthorized API denial, production
 builds, health/readiness, and primary navigation checks passed.
 
-Phase 2 closes the shared organization/contact/site foundation for
-TradeFlowKit, PulseDesk, and TechDeck, but it does not retroactively pass the
-dated 35-step run. Release remains blocked by TradeFlowKit projects/tasks;
-PulseDesk assets/tickets/internal notes/time entries; TechDeck VLANs/subnets;
-and TorqueShed first-class
+Phase 4 closes the approved TradeFlowKit source/local workflow gap and resolves
+projects versus jobs through ADR-0010. The refreshed acceptance has 29 passing
+evidence records and 9 failures; all TradeFlowKit-specific rows pass. It does
+not pass the ecosystem release because deployed/cutover evidence is absent and
+the remaining failures are PulseDesk assets/tickets/internal notes/time
+entries; TechDeck VLANs/subnets; and TorqueShed first-class
 vehicles/diagnostic sessions/trouble codes/measurements, Torque Assist, token
 ledger, marketplace/community, and `/diagnostics` deep route. See
 `docs/FINAL_E2E_ACCEPTANCE_REPORT.md` for captured URLs, request IDs, responses,

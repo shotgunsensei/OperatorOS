@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 16 ordered step identifiers without secrets
+`db:plan` is read-only and prints 17 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -154,6 +154,33 @@ to a newly created target database. No external provider traffic was enabled.
 This local dump and all rehearsal databases contained no production data and
 were deleted with the disposable container after the evidence record was
 completed.
+
+## Phase 4 backup/restore rehearsal
+
+The 2026-07-18 Phase 4 rehearsal used only disposable PostgreSQL 16. The
+17-step release, including `tradeflowkit_tables`, applied idempotently before
+backup. The custom archive was restored into a newly created database and the
+restored database accepted the entire release again.
+
+| Field | Recorded value |
+| --- | --- |
+| Candidate | Uncommitted Phase 4 source on `codex/phase-4-tradeflowkit-state-5`, based on `c969e0413192259318d8f8dacc513fdffededec5` |
+| Backup format | PostgreSQL custom archive |
+| Backup duration | 1.746 seconds |
+| Restore duration | 3.570 seconds |
+| SHA-256 | `d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82` |
+| Public tables | Source 94; restored target 94 |
+| TradeFlowKit tables | Source 17; restored target 17 |
+| Directory tables | Source 9; restored target 9 |
+| Shared-service tables | Source 10; restored target 10 |
+| Release on restored target | PASS; all 17 idempotent steps completed and required TradeFlowKit/shared tables verified in 2,418 ms |
+| Provider traffic | None; Stripe, email, Twilio, and OpenAI disabled |
+
+An initial post-restore query incorrectly assumed a persistent release-ledger
+table. That query failed after the restore itself had completed. Verification
+was corrected to compare the actual schema families and execute the supported
+release apply; both passed. The dump and databases are disposable and removed
+after final evidence capture.
 
 ## Production recovery
 
