@@ -32,7 +32,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 | --- | --- | --- | --- | --- | --- |
 | TradeFlowKit | `tradeflowkit` | `tradeflowkit.operatoros.net` | core | `C:\Dev\TradeFlowKit` at `6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55` | Source/local state 4 candidate: lead conversion into shared Directory customers; numbered jobs and first-class dependent tasks; comments/tags/private attachments/activity; quotes/public decisions; idempotent invoices; partial manual and deterministic test-provider payments; customer portal/documents; shared messaging; settings; real analytics; CSV export; complete local deep links. ADR-0010/0011 resolve projects and excluded authority/unsafe legacy scope; deployed workflow and cutover evidence still block state 5 |
 | TorqueShed | `torqueshed` | `torqueshed.operatoros.net` | free | `C:\Dev\TorqueShed-Codex` exists, but is not currently saved in the Codex project list | Commit-pinned source snapshot + native tenant-scoped diagnostic case board (symptoms/context, testing/repair/proof states, audit, optimistic concurrency); deeper standalone parity pending |
-| TechDeck | `techdeck` | `techdeck.operatoros.net` | core | `C:\Dev\Tech-Deck` | Source snapshot + OperatorOS adapter shell + shared organizations/contacts/sites and managed-client profiles + tenant-scoped Ticket Queue, asset-health inventory, derived alerts, and approval-only runbooks. Directory persistence, optimistic concurrency, tenant isolation, role boundaries, audit, and deep links are verified; VLAN/subnet and remaining MSP parity are pending |
+| TechDeck | `techdeck` | `techdeck.operatoros.net` | core | Clean `C:\Dev\Tech-Deck` at `8125f8d89d8d39d60a50c8061a26133a0c917792` | Source/local state 4 candidate: Directory-linked tickets/comments/time; typed configuration inventory; network/IPAM topology; lifecycle; versioned documentation/runbooks/backlinks; shared private attachments; evidence metadata; deterministic reports; persisted dashboards and deep links. ADR-0012/0013/0014 exclude discovery/device mutation, secret values, and remote execution; deployed workflow/provider/cutover evidence still block state 5 |
 | PulseDesk | `pulsedesk` | `pulsedesk.operatoros.net` | core | `C:\Dev\PulseDesk` | Source snapshot + OperatorOS adapter shell + shared organizations/contacts/sites with PHI-restricted service-client profiles + PHI-minimized tenant-scoped Department Escalation Queue; asset/ticket/note/time and remaining product workflows pending |
 | FaultlineLab | `faultlinelab` | `faultlinelab.operatoros.net` | free | `C:\Dev\Faultline-Lab` | Commit-pinned source snapshot + native tenant-scoped diagnostic lab/evidence workflow with validated state transitions, audit, and optimistic concurrency; deeper challenge parity pending |
 | Ninja Pool Hall | `ninja-pool-hall` | `ninja-pool-hall.operatoros.net` | free | `C:\Dev\Shotgun-ninja-pool-hall` | Commit-pinned source snapshot + native tenant/user-scoped Free Shoot slice. Physics remains browser-local; the API stores bounded client-reported summaries with one-active, rate-limit, retention, idempotency, recovery, viewer, and lifecycle controls. Full game parity remains pending |
@@ -48,28 +48,30 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 
 The shared source passes the API, runner, and web typechecks and the exact
 production build shape with `INTERNAL_API_URL=http://localhost:5001`.
-TradeFlowKit's frozen-source focused suite passed 29/29. The first complete Phase 4 API run reported
-695 total, 687 passed, 2 failed, and 6 HTTP-only skips; both failures were
-static slice-boundary assertions made stale by the renamed TradeFlowKit schema
-heading. The corrected Ninja Pool/PulseDesk regression passed 13/13. A later
-stale assertion requiring TradeFlowKit to retain disabled placeholder cards was
-also corrected after the workflows became live. The frozen-source aggregate
-passed 687, failed 0, and skipped 6 out of 693. These are
-source and isolated-database results, not a public deployment claim.
+TechDeck's focused suite passed 16/16 and the new Phase 5 subset passed 5/5.
+The first complete Phase 5 API run reported 702 total, 695 passed, one stale
+static-navigation assertion failed, and 6 HTTP-only skips. The assertion was
+updated after the old TechDeck placeholder navigation became live and its
+focused rerun passed 8/8. A second stale contract expecting pnpm's obsolete
+package-level build policy was corrected to validate workspace `allowBuilds`
+and passed 2/2. The final clean-database aggregate passed 696, failed 0, and
+skipped 6 out of 702 in 616,919 ms. These are source and isolated-database
+results, not a public deployment claim.
 
 The Replit deployment path is Corepack-free. The checked-in build uses `npm
 exec` with exact pnpm `10.34.5`, runs the mandatory workspace typecheck, and
 builds the API, runner gateway, and Next application. The production supervisor
-uses compiled artifacts only: it applies or verifies the 17-step database
+uses compiled artifacts only: it applies or verifies the current 18-step database
 release, starts the compiled API, waits for readiness, and starts compiled
-Next. The 17-step Phase 4 database release applied twice without drift, with
-the TradeFlowKit step ordered after shared Directory-backed profiles and
-before shared services. A PostgreSQL 16 custom-format backup with SHA-256
+Next. The Phase 5 release adds `techdeck_tables` after TradeFlowKit and before
+shared services and applied repeatedly without drift on disposable PostgreSQL
+16. The historical 17-step Phase 4 release also applied twice without drift.
+A PostgreSQL 16 custom-format Phase 4 backup with SHA-256
 `d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82`
 restored into a new disposable database in 3.570 seconds. Source and restore
 matched 94 public tables, including all 17 TradeFlowKit, 9 Directory, and 10
 shared-service tables; the restored database accepted the full release apply.
-This closes the local Phase 4 schema-recovery gate, but not public deployment
+This closes the local Phase 5 additive schema gate, but not public deployment
 or standalone-data cutover.
 
 The reviewed candidate passes the local production-host SSO matrix 2/2, but it
@@ -86,8 +88,8 @@ The production-host Playwright gate also passes locally against a disposable
 PostgreSQL database and HTTPS host-preserving proxy: one central credential
 entry establishes the apex session, then all twelve enabled modules launch
 silently with independent host-only sessions, survive reload, keep credentials
-out of URLs/storage, and honor global revocation. The fresh Phase 0 2/2 run
-completed in 32.6 seconds and also passed direct TechDeck deep-link return,
+out of URLs/storage, and honor global revocation. The fresh Phase 5 2/2 run
+completed in 1.7 minutes and also passed direct TechDeck deep-link return,
 browser Back
 without a central-auth loop, sibling-tab PulseDesk SSO, and host-only local
 logout. Core deep-link dispatch is explicit for the currently migrated
@@ -123,15 +125,17 @@ uses the shared verified receipt/deduplication/retry ledger. TradeFlowKit still
 requires deployed workflow/public-document smoke and approved migration
 cutover evidence before state 5.
 
-TechDeck now extends beyond its ticket queue with a tenant-scoped operations
-workspace. A focused 2/2 PostgreSQL flow proves asset health/version handling,
-derived critical/offline/warning alerts, cross-tenant isolation, viewer write
-denial, member runbook drafting, and tenant-admin approval. Runbook activity
-records exclude script bodies. OperatorOS deliberately exposes no execution
-route; any future command execution requires a separately reviewed, signed
-endpoint-agent trust boundary. The native shell includes loading, empty,
-error, responsive, and admin-only approval states, and the four imported
-asset/alert/script/network paths resolve to the live workspace.
+TechDeck now runs its approved managed-operations workflows in the shared
+runtime. Directory-linked configuration items model infrastructure,
+network/IPAM, and lifecycle records with same-tenant topology and optimistic
+versions. Documentation/runbooks have draft-review-approve-publish transitions,
+immutable revisions, backlinks, private attachments, and safe rendering.
+Evidence metadata, checksummed report snapshots, ticket comments, and time are
+persisted. Focused tests cover role denial and cross-tenant isolation, and the
+native shell exposes real loading/empty/error/conflict states and the supported
+deep routes. OperatorOS deliberately exposes no execution route or secret
+value store; any future command execution requires a separately reviewed,
+signed endpoint-agent trust boundary.
 
 Local logout is also server-revocable now: OperatorOS deny-lists only the
 SHA-256 fingerprint of the current host token, rejects copied-token replay,

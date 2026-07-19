@@ -37,6 +37,9 @@ test('TechDeck ticket create normalizes its bounded workflow fields', () => {
     assignedToUserId: '11111111-1111-4111-8111-111111111111',
     responseDeadline: new Date('2026-07-14T13:00:00.000Z'),
     resolutionDeadline: new Date('2026-07-14T17:00:00.000Z'),
+    directoryOrganizationId: null,
+    directorySiteId: null,
+    configurationItemId: null,
   });
 });
 

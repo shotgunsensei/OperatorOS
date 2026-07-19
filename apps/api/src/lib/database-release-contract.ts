@@ -13,6 +13,7 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'directory_tables', kind: 'ddl' },
   { id: 'module_tables', kind: 'ddl' },
   { id: 'tradeflowkit_tables', kind: 'ddl' },
+  { id: 'techdeck_tables', kind: 'ddl' },
   { id: 'shared_service_tables', kind: 'ddl' },
   { id: 'plans_and_admin', kind: 'seed' },
   { id: 'launch_fix_pre_seed', kind: 'repair' },

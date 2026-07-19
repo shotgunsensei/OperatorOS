@@ -1,35 +1,25 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, FileCode2, Plus, RefreshCw, ServerCog, ShieldCheck } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, BarChart3, CheckCircle2, Clock3, FileCheck2, GitBranch, Network, Plus, RefreshCw, ServerCog, ShieldCheck } from 'lucide-react';
 import {
+  directoryApi,
   moduleShellApi,
+  type DirectoryOrganization,
   type TechDeckAsset,
   type TechDeckAssetHealth,
-  type TechDeckOpsResponse,
-  type TechDeckRunbookPlatform,
-  type TechDeckRunbookRisk,
+  type TechDeckAssetType,
+  type TechDeckDocument,
+  type TechDeckWorkspaceResponse,
 } from '@/lib/auth';
 
-interface Props {
-  tenantKey: string;
-  canWrite: boolean;
-  canApprove: boolean;
-}
+interface Props { tenantKey: string; canWrite: boolean; canApprove: boolean }
 
+const assetTypes: TechDeckAssetType[] = ['server', 'workstation', 'firewall', 'switch', 'access_point', 'vlan', 'subnet', 'ip_address', 'public_ip', 'application', 'domain', 'license', 'certificate', 'credential_reference', 'other'];
 const healthOptions: TechDeckAssetHealth[] = ['unknown', 'healthy', 'warning', 'critical', 'offline'];
-type AssetDraft = {
-  name: string;
-  hostname: string;
-  type: 'endpoint';
-  health: TechDeckAssetHealth;
-};
-
-const blankAsset: AssetDraft = { name: '', hostname: '', type: 'endpoint', health: 'unknown' };
-const blankRunbook = {
-  name: '', platform: 'powershell' as TechDeckRunbookPlatform,
-  purpose: '', scriptText: '', riskLevel: 'medium' as TechDeckRunbookRisk,
-};
+const blankItem = { name: '', type: 'server' as TechDeckAssetType, hostname: '', ipAddress: '', cidr: '', vlanNumber: '', directoryOrganizationId: '' };
+const blankDocument = { title: '', pageType: 'documentation', content: '', summary: '', directoryOrganizationId: '' };
+const blankEvidence = { title: '', evidenceType: 'observation', summary: '', configurationItemId: '' };
 
 function message(error: unknown): string {
   if (error && typeof error === 'object') {
@@ -40,185 +30,196 @@ function message(error: unknown): string {
 }
 
 export default function TechDeckOperations({ tenantKey, canWrite, canApprove }: Props) {
-  const [data, setData] = useState<TechDeckOpsResponse | null>(null);
+  const [data, setData] = useState<TechDeckWorkspaceResponse | null>(null);
+  const [organizations, setOrganizations] = useState<DirectoryOrganization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [asset, setAsset] = useState<AssetDraft>({ ...blankAsset });
-  const [runbook, setRunbook] = useState({ ...blankRunbook });
+  const [item, setItem] = useState({ ...blankItem });
+  const [relationship, setRelationship] = useState({ sourceAssetId: '', targetAssetId: '', relationshipType: 'depends_on' });
+  const [document, setDocument] = useState({ ...blankDocument });
+  const [evidence, setEvidence] = useState({ ...blankEvidence });
+  const [report, setReport] = useState({ name: 'Managed infrastructure inventory', reportType: 'asset_inventory' });
+  const [time, setTime] = useState({ minutes: '30', workedAt: new Date().toISOString().slice(0, 16), configurationItemId: '', notes: '', billable: false });
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try { setData(await moduleShellApi.techdeck.getOps()); }
-    catch (err) { setError(message(err)); }
+    setLoading(true); setError(null);
+    try {
+      const [workspace, directory] = await Promise.all([moduleShellApi.techdeck.getWorkspace(), directoryApi.organizations.list('techdeck')]);
+      setData(workspace); setOrganizations(directory.organizations);
+    } catch (err) { setError(message(err)); }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { void load(); }, [load, tenantKey]);
 
-  async function createAsset(event: React.FormEvent) {
+  const networkItems = useMemo(() => data?.configurationItems.filter(row => ['network', 'network_device', 'firewall', 'switch', 'access_point', 'vlan', 'subnet', 'ip_address', 'public_ip', 'dns_record', 'dhcp_scope'].includes(row.type)) ?? [], [data]);
+  const runbooks = useMemo(() => data?.documents.filter(row => row.pageType === 'runbook') ?? [], [data]);
+  const docs = useMemo(() => data?.documents.filter(row => row.pageType !== 'runbook') ?? [], [data]);
+  const organizationName = (id: string | null) => organizations.find(row => row.id === id)?.name ?? (id ? 'Linked client' : 'Unassigned');
+
+  async function action(key: string, work: () => Promise<unknown>, reset?: () => void) {
+    setBusy(key); setError(null);
+    try { await work(); reset?.(); await load(); }
+    catch (err) { setError(message(err)); }
+    finally { setBusy(null); }
+  }
+
+  function createItem(event: React.FormEvent) {
     event.preventDefault();
-    setBusy('asset-create'); setError(null);
-    try {
-      await moduleShellApi.techdeck.createAsset(asset);
-      setAsset({ ...blankAsset });
-      await load();
-    } catch (err) { setError(message(err)); }
-    finally { setBusy(null); }
+    void action('item-create', () => moduleShellApi.techdeck.createConfigurationItem({
+      name: item.name, type: item.type, hostname: item.hostname || undefined, ipAddress: item.ipAddress || undefined,
+      cidr: item.cidr || undefined, vlanNumber: item.vlanNumber ? Number(item.vlanNumber) : undefined,
+      directoryOrganizationId: item.directoryOrganizationId || undefined,
+    }), () => setItem({ ...blankItem }));
   }
 
-  async function setHealth(row: TechDeckAsset, health: TechDeckAssetHealth) {
-    setBusy(row.id); setError(null);
-    try {
-      await moduleShellApi.techdeck.updateAsset(row.id, {
-        expectedVersion: row.version,
-        health,
-        lastSeenAt: new Date().toISOString(),
-      });
-      await load();
-    } catch (err) { setError(message(err)); }
-    finally { setBusy(null); }
-  }
-
-  async function createRunbook(event: React.FormEvent) {
+  function createRelationship(event: React.FormEvent) {
     event.preventDefault();
-    setBusy('runbook-create'); setError(null);
-    try {
-      await moduleShellApi.techdeck.createRunbook(runbook);
-      setRunbook({ ...blankRunbook });
-      await load();
-    } catch (err) { setError(message(err)); }
-    finally { setBusy(null); }
+    void action('relationship-create', () => moduleShellApi.techdeck.createRelationship(relationship), () => setRelationship({ sourceAssetId: '', targetAssetId: '', relationshipType: 'depends_on' }));
   }
 
-  async function transitionRunbook(id: string, version: number, action: 'approve' | 'retire') {
-    setBusy(id); setError(null);
-    try {
-      if (action === 'approve') await moduleShellApi.techdeck.approveRunbook(id, version);
-      else await moduleShellApi.techdeck.retireRunbook(id, version);
-      await load();
-    } catch (err) { setError(message(err)); }
-    finally { setBusy(null); }
+  function createDocument(event: React.FormEvent) {
+    event.preventDefault();
+    void action('document-create', () => moduleShellApi.techdeck.createDocument({ ...document, directoryOrganizationId: document.directoryOrganizationId || undefined }), () => setDocument({ ...blankDocument }));
   }
 
-  if (loading && !data) return (
-    <section id="techdeck-ops" className="techdeck-panel td-ops-state" aria-busy="true">
-      <RefreshCw size={18} className="td-spin" /> Loading asset and runbook posture…
-      <style>{css}</style>
-    </section>
-  );
+  function createEvidence(event: React.FormEvent) {
+    event.preventDefault();
+    void action('evidence-create', () => moduleShellApi.techdeck.createEvidence({ ...evidence, configurationItemId: evidence.configurationItemId || undefined }), () => setEvidence({ ...blankEvidence }));
+  }
+
+  function createReport(event: React.FormEvent) {
+    event.preventDefault();
+    void action('report-create', () => moduleShellApi.techdeck.generateReport(report.name, report.reportType));
+  }
+
+  function createTime(event: React.FormEvent) {
+    event.preventDefault();
+    void action('time-create', () => moduleShellApi.techdeck.addTime({
+      workedAt: new Date(time.workedAt).toISOString(), minutes: Number(time.minutes), billable: time.billable,
+      configurationItemId: time.configurationItemId || undefined, notes: time.notes || undefined,
+    }), () => setTime({ ...time, minutes: '30', configurationItemId: '', notes: '' }));
+  }
+
+  function transitionDocument(row: TechDeckDocument) {
+    const transition = row.status === 'draft' ? 'review' : row.status === 'in_review' ? 'approve' : row.status === 'approved' ? 'publish' : null;
+    if (!transition || ((transition === 'approve' || transition === 'publish') && !canApprove)) return;
+    void action(`doc-${row.id}`, () => moduleShellApi.techdeck.transitionDocument(row.id, row.version, transition));
+  }
+
+  function setHealth(row: TechDeckAsset, health: TechDeckAssetHealth) {
+    void action(`item-${row.id}`, () => moduleShellApi.techdeck.updateConfigurationItem(row.id, { expectedVersion: row.version, health, lastSeenAt: new Date().toISOString() }));
+  }
+
+  if (loading && !data) return <section id="techdeck-ops" className="techdeck-panel td-state" aria-busy="true"><RefreshCw size={18} className="td-spin" />Loading managed infrastructure workspace…<style>{css}</style></section>;
 
   return (
-    <section id="techdeck-ops" className="techdeck-panel td-ops" data-testid="techdeck-ops-workspace" tabIndex={-1}>
+    <section id="techdeck-ops" className="techdeck-panel td-workspace" data-testid="techdeck-ops-workspace" tabIndex={-1}>
       <style>{css}</style>
-      <header className="td-ops-head">
-        <div>
-          <div className="td-kicker">Asset health + controlled automation</div>
-          <h2>Operations Workspace</h2>
-          <p>Track endpoint posture and review runbooks without executing commands on the OperatorOS server.</p>
-        </div>
-        <button className="td-button td-secondary" onClick={() => void load()} disabled={loading}>
-          <RefreshCw size={14} className={loading ? 'td-spin' : ''} /> Refresh
-        </button>
+      <header className="td-head">
+        <div><div className="td-kicker">Managed infrastructure + knowledge</div><h2>Operations Workspace</h2><p>Tenant-scoped inventory, network/IPAM, documentation, evidence, reports, and time tied to the shared OperatorOS Directory.</p></div>
+        <button className="td-button td-secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={14} className={loading ? 'td-spin' : ''} />Refresh</button>
       </header>
-
+      <div className="td-boundary"><ShieldCheck size={16} /><span><strong>Documentation-only runbooks.</strong> {data?.execution.reason ?? 'Remote execution is disabled.'}</span></div>
       {error && <div className="td-error" role="alert"><AlertTriangle size={16} />{error}</div>}
 
-      <div className="td-summary" id="techdeck-alerts">
-        <Summary label="Assets" value={data?.assets.length ?? 0} icon={<ServerCog size={17} />} />
-        <Summary label="Active alerts" value={data?.alerts.length ?? 0} icon={<AlertTriangle size={17} />} warn={!!data?.alerts.length} />
-        <Summary label="Approved runbooks" value={data?.runbooks.filter((r) => r.status === 'approved').length ?? 0} icon={<ShieldCheck size={17} />} />
+      <div className="td-summary">
+        <Summary label="Configuration items" value={data?.configurationItems.length ?? 0} Icon={ServerCog} />
+        <Summary label="Network/IPAM" value={networkItems.length} Icon={Network} />
+        <Summary label="Active alerts" value={data?.alerts.length ?? 0} Icon={AlertTriangle} warn={!!data?.alerts.length} />
+        <Summary label="Lifecycle due" value={data?.lifecycleDue.length ?? 0} Icon={Clock3} warn={!!data?.lifecycleDue.length} />
       </div>
 
-      {!!data?.alerts.length && (
-        <div className="td-alerts" data-testid="techdeck-derived-alerts">
-          {data.alerts.map((alert) => <div key={alert.id} className={`td-alert td-${alert.severity}`}>
-            <AlertTriangle size={15} /><span>{alert.message}</span>
-          </div>)}
+      <Panel id="techdeck-inventory" title="Configuration inventory" icon={<ServerCog size={17} />}>
+        {canWrite && <form className="td-form td-item-form" onSubmit={createItem} data-testid="techdeck-configuration-create-form">
+          <input required placeholder="Name" value={item.name} onChange={event => setItem({ ...item, name: event.target.value })} />
+          <select value={item.type} onChange={event => setItem({ ...item, type: event.target.value as TechDeckAssetType })}>{assetTypes.map(value => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select>
+          <select value={item.directoryOrganizationId} onChange={event => setItem({ ...item, directoryOrganizationId: event.target.value })}><option value="">Unassigned client</option>{organizations.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
+          <input placeholder="Hostname" value={item.hostname} onChange={event => setItem({ ...item, hostname: event.target.value })} />
+          <input placeholder="IP address" value={item.ipAddress} onChange={event => setItem({ ...item, ipAddress: event.target.value })} />
+          <input placeholder="CIDR (10.0.0.0/24)" value={item.cidr} onChange={event => setItem({ ...item, cidr: event.target.value })} />
+          <input inputMode="numeric" placeholder="VLAN" value={item.vlanNumber} onChange={event => setItem({ ...item, vlanNumber: event.target.value })} />
+          <button className="td-button" disabled={busy === 'item-create'}><Plus size={14} />Add item</button>
+        </form>}
+        <div className="td-list">
+          {data?.configurationItems.map(row => <article className="td-row" key={row.id}>
+            <div><strong>{row.name}</strong><small>{row.type.replaceAll('_', ' ')} · {organizationName(row.directoryOrganizationId)} · {row.hostname || row.ipAddress || row.cidr || row.serialNumber || 'details incomplete'} · v{row.version}</small></div>
+            {canWrite ? <select aria-label={`Health for ${row.name}`} value={row.health} disabled={busy === `item-${row.id}`} onChange={event => setHealth(row, event.target.value as TechDeckAssetHealth)}>{healthOptions.map(value => <option key={value}>{value}</option>)}</select> : <Status value={row.health} />}
+          </article>)}
+          {!data?.configurationItems.length && <Empty text="No configuration items registered for this tenant." />}
         </div>
-      )}
+      </Panel>
 
       <div className="td-columns">
-        <div id="techdeck-assets" className="td-stack">
-          <div className="td-section-title"><ServerCog size={17} /><h3>Asset posture</h3></div>
-          {canWrite && (
-            <form className="td-form" onSubmit={createAsset} data-testid="techdeck-asset-create-form">
-              <input required placeholder="Asset name" value={asset.name} onChange={(e) => setAsset({ ...asset, name: e.target.value })} />
-              <input placeholder="Hostname" value={asset.hostname} onChange={(e) => setAsset({ ...asset, hostname: e.target.value })} />
-              <select value={asset.health} onChange={(e) => setAsset({ ...asset, health: e.target.value as TechDeckAssetHealth })}>
-                {healthOptions.map((value) => <option key={value} value={value}>{value}</option>)}
-              </select>
-              <button className="td-button" disabled={busy === 'asset-create'}><Plus size={14} />Add asset</button>
-            </form>
-          )}
-          <div className="td-list">
-            {data?.assets.map((row) => (
-              <article className="td-row" key={row.id}>
-                <div><strong>{row.name}</strong><small>{row.hostname || row.type} · v{row.version}</small></div>
-                {canWrite ? (
-                  <select aria-label={`Health for ${row.name}`} value={row.health} disabled={busy === row.id}
-                    onChange={(e) => void setHealth(row, e.target.value as TechDeckAssetHealth)}>
-                    {healthOptions.map((value) => <option key={value} value={value}>{value}</option>)}
-                  </select>
-                ) : <Status value={row.health} />}
-              </article>
-            ))}
-            {!data?.assets.length && <Empty text="No assets registered for this tenant." />}
-          </div>
-        </div>
+        <Panel id="techdeck-network" title="Network and IPAM relationships" icon={<Network size={17} />}>
+          {canWrite && data && data.configurationItems.length > 1 && <form className="td-form" onSubmit={createRelationship} data-testid="techdeck-relationship-create-form">
+            <select required value={relationship.sourceAssetId} onChange={event => setRelationship({ ...relationship, sourceAssetId: event.target.value })}><option value="">Source item</option>{data.configurationItems.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
+            <select required value={relationship.targetAssetId} onChange={event => setRelationship({ ...relationship, targetAssetId: event.target.value })}><option value="">Target item</option>{data.configurationItems.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
+            <select value={relationship.relationshipType} onChange={event => setRelationship({ ...relationship, relationshipType: event.target.value })}>{['depends_on', 'connects_to', 'hosts', 'runs', 'protects', 'routes_to'].map(value => <option key={value}>{value}</option>)}</select>
+            <button className="td-button" disabled={busy === 'relationship-create'}><GitBranch size={14} />Link</button>
+          </form>}
+          <div className="td-list">{data?.relationships.map(row => <div className="td-row" key={row.id}><span>{data.configurationItems.find(item => item.id === row.sourceAssetId)?.name ?? 'Item'} <b>{row.relationshipType.replaceAll('_', ' ')}</b> {data.configurationItems.find(item => item.id === row.targetAssetId)?.name ?? 'Item'}</span></div>)}{!data?.relationships.length && <Empty text="No configuration relationships recorded." />}</div>
+        </Panel>
 
-        <div id="techdeck-scripts" className="td-stack">
-          <div className="td-section-title"><FileCode2 size={17} /><h3>Approval-only runbooks</h3></div>
-          <div className="td-boundary"><ShieldCheck size={15} />Execution disabled. Scripts require a future signed endpoint-agent boundary.</div>
-          {canWrite && (
-            <form className="td-form td-runbook-form" onSubmit={createRunbook} data-testid="techdeck-runbook-create-form">
-              <input required placeholder="Runbook name" value={runbook.name} onChange={(e) => setRunbook({ ...runbook, name: e.target.value })} />
-              <input required placeholder="Purpose and maintenance context" value={runbook.purpose} onChange={(e) => setRunbook({ ...runbook, purpose: e.target.value })} />
-              <textarea required placeholder="PowerShell, Bash, network, or generic procedure" value={runbook.scriptText} onChange={(e) => setRunbook({ ...runbook, scriptText: e.target.value })} />
-              <div className="td-form-row">
-                <select value={runbook.platform} onChange={(e) => setRunbook({ ...runbook, platform: e.target.value as TechDeckRunbookPlatform })}>
-                  {['powershell', 'bash', 'network', 'generic'].map((value) => <option key={value}>{value}</option>)}
-                </select>
-                <select value={runbook.riskLevel} onChange={(e) => setRunbook({ ...runbook, riskLevel: e.target.value as TechDeckRunbookRisk })}>
-                  {['low', 'medium', 'high'].map((value) => <option key={value}>{value} risk</option>)}
-                </select>
-                <button className="td-button" disabled={busy === 'runbook-create'}><Plus size={14} />Save draft</button>
-              </div>
-            </form>
-          )}
-          <div className="td-list">
-            {data?.runbooks.map((row) => <article className="td-row td-runbook" key={row.id}>
-              <div><strong>{row.name}</strong><small>{row.platform} · {row.riskLevel} risk · v{row.version}</small><p>{row.purpose}</p></div>
-              <div className="td-row-actions">
-                <Status value={row.status} />
-                {canApprove && row.status === 'draft' && <button className="td-button" disabled={busy === row.id} onClick={() => void transitionRunbook(row.id, row.version, 'approve')}>Approve</button>}
-                {canApprove && row.status === 'approved' && <button className="td-button td-secondary" disabled={busy === row.id} onClick={() => void transitionRunbook(row.id, row.version, 'retire')}>Retire</button>}
-              </div>
-            </article>)}
-            {!data?.runbooks.length && <Empty text="No runbooks saved for this tenant." />}
-          </div>
-        </div>
+        <Panel id="techdeck-lifecycle" title="Lifecycle and posture" icon={<Clock3 size={17} />}>
+          <div className="td-list">{data?.lifecycleDue.map(row => <div className="td-row" key={row.id}><div><strong>{row.name}</strong><small>Expiration {row.expirationDate ? new Date(row.expirationDate).toLocaleDateString() : '—'} · renewal {row.renewalDate ? new Date(row.renewalDate).toLocaleDateString() : '—'} · warranty {row.warrantyEndDate ? new Date(row.warrantyEndDate).toLocaleDateString() : '—'}</small></div><Status value={row.health} /></div>)}{!data?.lifecycleDue.length && <Empty text="No lifecycle deadlines fall within the next 30 days." />}</div>
+        </Panel>
       </div>
+
+      <Panel id="techdeck-documentation" title="Documentation and runbooks" icon={<FileCheck2 size={17} />}>
+        {canWrite && <form className="td-form td-doc-form" onSubmit={createDocument} data-testid="techdeck-document-create-form">
+          <input required placeholder="Document title" value={document.title} onChange={event => setDocument({ ...document, title: event.target.value })} />
+          <select value={document.pageType} onChange={event => setDocument({ ...document, pageType: event.target.value })}>{['documentation', 'runbook', 'knowledge_base', 'procedure', 'network_diagram', 'configuration_standard'].map(value => <option key={value}>{value.replaceAll('_', ' ')}</option>)}</select>
+          <select value={document.directoryOrganizationId} onChange={event => setDocument({ ...document, directoryOrganizationId: event.target.value })}><option value="">All clients</option>{organizations.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
+          <input placeholder="Summary" value={document.summary} onChange={event => setDocument({ ...document, summary: event.target.value })} />
+          <textarea required placeholder="Markdown or plain-text procedure. This content is never executed." value={document.content} onChange={event => setDocument({ ...document, content: event.target.value })} />
+          <button className="td-button" disabled={busy === 'document-create'}><Plus size={14} />Save draft</button>
+        </form>}
+        <div className="td-doc-columns">
+          <DocumentList title="Documentation" rows={docs} canWrite={canWrite} canApprove={canApprove} busy={busy} onTransition={transitionDocument} />
+          <div id="techdeck-runbooks"><DocumentList title="Runbooks (never executed)" rows={runbooks} canWrite={canWrite} canApprove={canApprove} busy={busy} onTransition={transitionDocument} /></div>
+        </div>
+      </Panel>
+
+      <div className="td-columns">
+        <Panel id="techdeck-evidence" title="Evidence register" icon={<FileCheck2 size={17} />}>
+          {canWrite && <form className="td-form" onSubmit={createEvidence} data-testid="techdeck-evidence-create-form"><input required placeholder="Evidence title" value={evidence.title} onChange={event => setEvidence({ ...evidence, title: event.target.value })} /><select value={evidence.evidenceType} onChange={event => setEvidence({ ...evidence, evidenceType: event.target.value })}>{['observation', 'configuration_snapshot', 'test_result', 'photo', 'document', 'other'].map(value => <option key={value}>{value.replaceAll('_', ' ')}</option>)}</select><select value={evidence.configurationItemId} onChange={event => setEvidence({ ...evidence, configurationItemId: event.target.value })}><option value="">No configuration item</option>{data?.configurationItems.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select><input placeholder="Summary" value={evidence.summary} onChange={event => setEvidence({ ...evidence, summary: event.target.value })} /><button className="td-button" disabled={busy === 'evidence-create'}><Plus size={14} />Record</button></form>}
+          <div className="td-list">{data?.evidence.map(row => <div className="td-row" key={row.id}><div><strong>{row.title}</strong><small>{row.evidenceType.replaceAll('_', ' ')} · {new Date(row.createdAt).toLocaleString()}</small></div></div>)}{!data?.evidence.length && <Empty text="No evidence records captured." />}</div>
+        </Panel>
+
+        <Panel id="techdeck-reports" title="Snapshot reports" icon={<BarChart3 size={17} />}>
+          {canWrite && <form className="td-form" onSubmit={createReport} data-testid="techdeck-report-create-form"><input required value={report.name} onChange={event => setReport({ ...report, name: event.target.value })} /><select value={report.reportType} onChange={event => setReport({ ...report, reportType: event.target.value })}>{['asset_inventory', 'network_inventory', 'lifecycle', 'ticket_summary', 'evidence_register', 'time_summary'].map(value => <option key={value}>{value.replaceAll('_', ' ')}</option>)}</select><button className="td-button" disabled={busy === 'report-create'}>Generate</button></form>}
+          <div className="td-list">{data?.reports.map(row => <div className="td-row" key={row.id}><div><strong>{row.name}</strong><small>{row.reportType.replaceAll('_', ' ')} · checksum {row.sha256.slice(0, 12)}…</small></div></div>)}{!data?.reports.length && <Empty text="No immutable report snapshots generated." />}</div>
+        </Panel>
+      </div>
+
+      <Panel id="techdeck-time" title="Technician time" icon={<Clock3 size={17} />}>
+        {canWrite && <form className="td-form td-time-form" onSubmit={createTime} data-testid="techdeck-time-create-form"><input required type="datetime-local" value={time.workedAt} onChange={event => setTime({ ...time, workedAt: event.target.value })} /><input required type="number" min="1" max="1440" value={time.minutes} onChange={event => setTime({ ...time, minutes: event.target.value })} /><select value={time.configurationItemId} onChange={event => setTime({ ...time, configurationItemId: event.target.value })}><option value="">General work</option>{data?.configurationItems.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select><input placeholder="Work notes" value={time.notes} onChange={event => setTime({ ...time, notes: event.target.value })} /><label className="td-check"><input type="checkbox" checked={time.billable} onChange={event => setTime({ ...time, billable: event.target.checked })} />Billable</label><button className="td-button" disabled={busy === 'time-create'}><Plus size={14} />Log time</button></form>}
+        <div className="td-list">{data?.timeEntries.map(row => <div className="td-row" key={row.id}><div><strong>{row.minutes} minutes {row.billable ? '· billable' : ''}</strong><small>{new Date(row.workedAt).toLocaleString()} · {row.notes || 'No notes'}</small></div></div>)}{!data?.timeEntries.length && <Empty text="No technician time recorded." />}</div>
+      </Panel>
     </section>
   );
 }
 
-function Summary({ label, value, icon, warn = false }: { label: string; value: number; icon: React.ReactNode; warn?: boolean }) {
-  return <div className={warn ? 'td-summary-card td-summary-warn' : 'td-summary-card'}>{icon}<div><strong>{value}</strong><small>{label}</small></div></div>;
-}
+function Panel({ id, title, icon, children }: { id: string; title: string; icon: React.ReactNode; children: React.ReactNode }) { return <section id={id} className="td-panel" tabIndex={-1}><div className="td-section-title">{icon}<h3>{title}</h3></div>{children}</section>; }
+function Summary({ label, value, Icon, warn = false }: { label: string; value: number; Icon: typeof ServerCog; warn?: boolean }) { return <div className={warn ? 'td-summary-card td-warn' : 'td-summary-card'}><Icon size={17} /><div><strong>{value}</strong><small>{label}</small></div></div>; }
 function Status({ value }: { value: string }) { return <span className={`td-status td-status-${value}`}>{value.replaceAll('_', ' ')}</span>; }
 function Empty({ text }: { text: string }) { return <div className="td-empty"><CheckCircle2 size={16} />{text}</div>; }
+function DocumentList({ title, rows, canWrite, canApprove, busy, onTransition }: { title: string; rows: TechDeckDocument[]; canWrite: boolean; canApprove: boolean; busy: string | null; onTransition: (row: TechDeckDocument) => void }) {
+  return <div className="td-stack"><h4>{title}</h4><div className="td-list">{rows.map(row => {
+    const allowed = row.status === 'draft' ? canWrite : ['in_review', 'approved'].includes(row.status) ? canApprove : false;
+    const label = row.status === 'draft' ? 'Submit review' : row.status === 'in_review' ? 'Approve' : row.status === 'approved' ? 'Publish' : null;
+    return <article className="td-row td-doc" key={row.id}><div><strong>{row.title}</strong><small>{row.pageType.replaceAll('_', ' ')} · v{row.version}</small><p>{row.summary || row.content.slice(0, 140)}</p></div><div className="td-actions"><Status value={row.status} />{allowed && label && <button className="td-button" disabled={busy === `doc-${row.id}`} onClick={() => onTransition(row)}>{label}</button>}</div></article>;
+  })}{!rows.length && <Empty text={`No ${title.toLowerCase()} saved.`} />}</div></div>;
+}
 
 const css = `
-.td-ops{padding:18px;display:grid;gap:16px}.td-ops-state{padding:20px;display:flex;gap:10px;align-items:center;color:#8fa3bd}
-.td-ops-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.td-ops-head h2{margin:3px 0 4px;font-size:21px}.td-ops-head p{margin:0;color:#8fa3bd;font-size:13px}.td-kicker{text-transform:uppercase;letter-spacing:.12em;color:#38bdf8;font-size:11px;font-weight:800}
-.td-button{border:1px solid rgba(56,189,248,.5);background:rgba(14,165,233,.15);color:#e5eefc;border-radius:6px;padding:8px 11px;font-weight:750;display:inline-flex;gap:7px;align-items:center;justify-content:center;cursor:pointer}.td-button:disabled{opacity:.55;cursor:not-allowed}.td-secondary{background:#101826;border-color:rgba(148,163,184,.25)}
-.td-error,.td-boundary{display:flex;gap:8px;align-items:center;border-radius:6px;padding:10px 12px;font-size:13px}.td-error{color:#fecaca;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35)}.td-boundary{color:#bae6fd;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2)}
-.td-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.td-summary-card{display:flex;gap:10px;align-items:center;background:#080d16;border:1px solid rgba(148,163,184,.16);padding:12px;border-radius:7px;color:#38bdf8}.td-summary-card strong,.td-summary-card small{display:block}.td-summary-card strong{font-size:18px;color:#e5eefc}.td-summary-card small{font-size:11px;color:#8fa3bd}.td-summary-warn{color:#f59e0b;border-color:rgba(245,158,11,.4)}
-.td-alerts{display:grid;gap:7px}.td-alert{display:flex;gap:8px;align-items:center;padding:9px 11px;border-radius:6px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);font-size:13px}.td-critical,.td-offline{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3)}
-.td-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}.td-stack{min-width:0;display:grid;align-content:start;gap:10px;background:#080d16;border:1px solid rgba(148,163,184,.16);border-radius:7px;padding:13px}.td-section-title{display:flex;gap:8px;align-items:center;color:#38bdf8}.td-section-title h3{font-size:15px;color:#e5eefc;margin:0}
-.td-form{display:grid;grid-template-columns:1.3fr 1fr .8fr auto;gap:7px}.td-runbook-form{grid-template-columns:1fr}.td-form-row{display:grid;grid-template-columns:1fr 1fr auto;gap:7px}.td-form input,.td-form select,.td-form textarea,.td-row select{min-width:0;border:1px solid rgba(148,163,184,.25);background:#101826;color:#e5eefc;border-radius:5px;padding:8px;font:inherit}.td-form textarea{min-height:95px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
-.td-list{display:grid;gap:7px}.td-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px;border:1px solid rgba(148,163,184,.13);border-radius:6px;background:#0d1320}.td-row strong,.td-row small{display:block}.td-row small{margin-top:3px;color:#8fa3bd;font-size:11px}.td-row p{margin:6px 0 0;color:#8fa3bd;font-size:12px}.td-runbook{align-items:flex-start}.td-row-actions{display:grid;gap:6px;justify-items:end}.td-status{text-transform:capitalize;border:1px solid rgba(148,163,184,.25);border-radius:999px;padding:4px 8px;font-size:10px;color:#cbd5e1}.td-status-healthy,.td-status-approved{color:#86efac;border-color:rgba(34,197,94,.4)}.td-status-warning,.td-status-draft{color:#fcd34d;border-color:rgba(245,158,11,.4)}.td-status-critical,.td-status-offline{color:#fca5a5;border-color:rgba(239,68,68,.4)}.td-empty{display:flex;gap:8px;align-items:center;color:#8fa3bd;padding:12px;font-size:13px}.td-spin{animation:tdspin 1s linear infinite}@keyframes tdspin{to{transform:rotate(360deg)}}
-@media(max-width:900px){.td-columns{grid-template-columns:1fr}}@media(max-width:650px){.td-summary{grid-template-columns:1fr}.td-ops-head{display:grid}.td-form,.td-form-row{grid-template-columns:1fr}.td-row{align-items:flex-start;flex-direction:column}.td-row-actions{justify-items:start}}
+.td-workspace{padding:18px;display:grid;gap:16px}.td-state{padding:20px;display:flex;gap:10px;align-items:center;color:#8fa3bd}.td-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.td-head h2{margin:3px 0 4px;font-size:21px}.td-head p{margin:0;color:#8fa3bd;font-size:13px;max-width:820px}.td-kicker{text-transform:uppercase;letter-spacing:.12em;color:#38bdf8;font-size:11px;font-weight:800}
+.td-button{border:1px solid rgba(56,189,248,.5);background:rgba(14,165,233,.15);color:#e5eefc;border-radius:6px;padding:8px 11px;font-weight:750;display:inline-flex;gap:7px;align-items:center;justify-content:center;cursor:pointer}.td-button:disabled{opacity:.55;cursor:not-allowed}.td-secondary{background:#101826;border-color:rgba(148,163,184,.25)}.td-error,.td-boundary{display:flex;gap:8px;align-items:center;border-radius:6px;padding:10px 12px;font-size:13px}.td-error{color:#fecaca;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35)}.td-boundary{color:#bae6fd;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2)}
+.td-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.td-summary-card{display:flex;gap:10px;align-items:center;background:#080d16;border:1px solid rgba(148,163,184,.16);padding:12px;border-radius:7px;color:#38bdf8}.td-summary-card strong,.td-summary-card small{display:block}.td-summary-card strong{font-size:18px;color:#e5eefc}.td-summary-card small{font-size:11px;color:#8fa3bd}.td-warn{color:#f59e0b;border-color:rgba(245,158,11,.4)}
+.td-panel{min-width:0;display:grid;align-content:start;gap:12px;background:#080d16;border:1px solid rgba(148,163,184,.16);border-radius:7px;padding:13px;scroll-margin-top:18px}.td-columns,.td-doc-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}.td-section-title{display:flex;gap:8px;align-items:center;color:#38bdf8}.td-section-title h3{font-size:15px;color:#e5eefc;margin:0}.td-stack{display:grid;gap:8px;align-content:start}.td-stack h4{margin:0;color:#cbd5e1;font-size:13px}
+.td-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:7px}.td-item-form{grid-template-columns:repeat(4,minmax(0,1fr))}.td-doc-form{grid-template-columns:1fr 1fr 1fr}.td-doc-form textarea{grid-column:1/-2}.td-time-form{grid-template-columns:1fr .5fr 1fr 1fr auto auto}.td-form input,.td-form select,.td-form textarea,.td-row select{min-width:0;border:1px solid rgba(148,163,184,.25);background:#101826;color:#e5eefc;border-radius:5px;padding:8px;font:inherit}.td-form textarea{min-height:100px;resize:vertical;font-size:12px}.td-check{display:flex;align-items:center;gap:5px;color:#cbd5e1;font-size:12px;white-space:nowrap}
+.td-list{display:grid;gap:7px}.td-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px;border:1px solid rgba(148,163,184,.13);border-radius:6px;background:#0d1320;font-size:13px}.td-row strong,.td-row small{display:block}.td-row small{margin-top:3px;color:#8fa3bd;font-size:11px}.td-row p{margin:6px 0 0;color:#8fa3bd;font-size:12px;white-space:pre-wrap}.td-doc{align-items:flex-start}.td-actions{display:grid;gap:6px;justify-items:end;flex:none}.td-status{text-transform:capitalize;border:1px solid rgba(148,163,184,.25);border-radius:999px;padding:4px 8px;font-size:10px;color:#cbd5e1}.td-status-healthy,.td-status-approved,.td-status-published{color:#86efac;border-color:rgba(34,197,94,.4)}.td-status-warning,.td-status-draft,.td-status-in_review{color:#fcd34d;border-color:rgba(245,158,11,.4)}.td-status-critical,.td-status-offline{color:#fca5a5;border-color:rgba(239,68,68,.4)}.td-empty{display:flex;gap:8px;align-items:center;color:#8fa3bd;padding:12px;font-size:13px}.td-spin{animation:tdspin 1s linear infinite}@keyframes tdspin{to{transform:rotate(360deg)}}
+@media(max-width:1000px){.td-item-form{grid-template-columns:repeat(2,1fr)}.td-time-form{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.td-summary,.td-columns,.td-doc-columns,.td-form,.td-item-form,.td-doc-form,.td-time-form{grid-template-columns:1fr}.td-doc-form textarea{grid-column:auto}.td-head{display:grid}.td-row{align-items:flex-start;flex-direction:column}.td-actions{justify-items:start}}
 `;

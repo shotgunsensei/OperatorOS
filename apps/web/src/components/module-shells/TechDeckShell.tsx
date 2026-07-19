@@ -22,7 +22,6 @@ import {
   Sparkles,
   TicketCheck,
   type LucideIcon,
-  Wrench,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useTenant } from '@/components/TenantProvider';
@@ -64,43 +63,45 @@ const workflowShortcuts = [
     tone: colors.cyan,
   },
   {
-    id: 'assets',
-    label: 'Assets',
-    summary: 'Client sites, endpoints, device posture, and support context.',
+    id: 'inventory',
+    label: 'Inventory',
+    summary: 'Client-linked configuration items, device posture, and support context.',
     Icon: ServerCog,
     tone: colors.green,
   },
   {
-    id: 'evidence',
-    label: 'Evidence',
-    summary: 'Secure files, screenshots, audit trails, and proof packages.',
-    Icon: FileLock2,
+    id: 'network',
+    label: 'Network / IPAM',
+    summary: 'Firewalls, switches, VLANs, subnets, addresses, and configuration relationships.',
+    Icon: Network,
     tone: colors.amber,
   },
   {
-    id: 'itops',
-    label: 'IT Ops',
-    summary: 'Scripts, response blocks, command actions, and automation saves.',
-    Icon: Wrench,
+    id: 'lifecycle',
+    label: 'Lifecycle',
+    summary: 'Renewal, expiration, warranty, health, and incomplete-record posture.',
+    Icon: Activity,
     tone: colors.violet,
   },
   {
-    id: 'clients',
-    label: 'Clients',
-    summary: 'Tenant-scoped client, portal, invoice, and service records.',
-    Icon: Network,
+    id: 'documentation',
+    label: 'Documentation',
+    summary: 'Versioned knowledge, procedures, diagrams, and review workflows.',
+    Icon: FileLock2,
     tone: colors.cyan,
   },
+  { id: 'runbooks', label: 'Runbooks', summary: 'Approval-controlled, documentation-only procedures.', Icon: ShieldCheck, tone: colors.green },
+  { id: 'evidence', label: 'Evidence', summary: 'Tenant-scoped observations, snapshots, tests, and attachments.', Icon: FileLock2, tone: colors.amber },
   {
     id: 'reports',
     label: 'Reports',
-    summary: 'Operational reporting, technician activity, and audit exports.',
+    summary: 'Checksummed infrastructure, lifecycle, ticket, evidence, and time snapshots.',
     Icon: BarChart3,
     tone: colors.green,
   },
+  { id: 'time', label: 'Time', summary: 'Technician work tied to tickets, clients, sites, and configuration items.', Icon: Gauge, tone: colors.violet },
+  { id: 'clients', label: 'Clients', summary: 'Shared OperatorOS clients, sites, contacts, and managed-service profiles.', Icon: Network, tone: colors.cyan },
 ];
-
-const pendingWorkflowShortcuts = workflowShortcuts.filter(({ id }) => !['tickets', 'assets', 'itops'].includes(id));
 
 const readinessRows = [
   ['SSO', 'OperatorOS managed', colors.green],
@@ -273,7 +274,7 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
               <div style={eyebrowStyle}>MSP operations command layer</div>
               <h1 style={titleStyle}>TechDeck</h1>
               <p style={ledeStyle}>
-                Technician workspace for tickets, assets, evidence, scripts, automation, and audit-ready support operations.
+                Technician workspace for tickets, configuration inventory, network/IPAM, lifecycle, documentation, evidence, and time.
               </p>
             </div>
             <div className="techdeck-actions">
@@ -325,8 +326,6 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
                   ? '#techdeck-ticket-queue'
                   : id === 'clients'
                     ? '#techdeck-directory'
-                  : ['assets', 'itops'].includes(id)
-                    ? '#techdeck-ops'
                     : `#techdeck-${id}`}
                 style={railLinkStyle}
                 data-testid={`techdeck-sidebar-${id}`}
@@ -378,31 +377,18 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
               </section>
             )}
 
-            <section className="techdeck-panel" style={{ padding: 18 }} data-testid="techdeck-operations-panel">
-              <SectionHeading
-                Icon={Activity}
-                title="Additional Operations"
-                subtitle="Tickets, asset posture, alerts, and approval-only runbooks are live; remaining workflows stay grouped by technician intent."
-              />
-              <div className="techdeck-workflow-grid" style={{ marginTop: 14 }}>
-                {pendingWorkflowShortcuts.map(({ id, label, summary, Icon, tone }) => (
-                  <WorkflowPanel key={id} id={id} label={label} summary={summary} Icon={Icon} tone={tone} />
-                ))}
-              </div>
-            </section>
-
             <section className="techdeck-panel" style={{ padding: 18 }} data-testid="techdeck-empty-state-panel">
               <SectionHeading
                 Icon={CheckCircle2}
-                title="Current State"
-                subtitle="No critical queue blockers are surfaced by the OperatorOS adapter."
+                title="Consolidation boundary"
+                subtitle="OperatorOS provides the active identity, tenant, entitlement, Directory, attachment, and audit controls."
               />
               <div style={emptyStateStyle} data-testid="techdeck-empty-state">
                 <Sparkles size={18} color={colors.green} />
                 <div>
-                  <div style={{ fontWeight: 800 }}>Ready for a clean demo pass</div>
+                  <div style={{ fontWeight: 800 }}>Integrated local operations workspace</div>
                   <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                    The shell is tenant-aware, SSO-owned by OperatorOS, and separated from TechDeck-local billing and login.
+                    The shell uses OperatorOS SSO, tenant authority, shared Directory records, and centralized billing. Production readiness still depends on the recorded deployment gates.
                   </div>
                 </div>
               </div>
@@ -428,7 +414,7 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
                 />
                 <AdminRow
                   label="Module-local scope"
-                  value="TechDeck owns MSP workflows, feature UI, and module-local data only."
+                  value="TechDeck owns tenant-scoped managed-infrastructure documentation workflows and module UI only."
                   tone={colors.cyan}
                 />
                 <AdminRow

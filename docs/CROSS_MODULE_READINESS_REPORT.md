@@ -17,7 +17,7 @@ tests all pass in the target deployment.
 | OperatorOS | Identity, tenant, entitlement, billing, audit, launcher | Local SSO/RBAC/tenant tests pass | Pass | Pass | Local pass; deployed target not run | Local 2/2; deployed target not run | **Not production-ready** |
 | TradeFlowKit | Source/local state 4 candidate: lead conversion; shared Directory customers; numbered jobs/tasks/dependencies; quotes/public decisions; idempotent invoices; partial manual/test-provider payments; portal/documents; messaging; settings; real analytics; CSV export | Server guards, versions, idempotency, persistence/restart, viewer denial, Directory mapping, and cross-tenant tests pass | Pass | Pass | Compiled shared runtime and public route pass locally; deployed target not run | TradeFlowKit rows pass in refreshed acceptance and SSO 2/2 passes; deployed workflow/cutover not run | **Not production-ready** |
 | PulseDesk | Departments, PHI-minimized operations queue, shared organizations/contacts/sites | Server guards, manager capability, PHI-restricted directory profile, persistence, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared directory CRUD/refresh/reuse pass; deployed target not run | **Not production-ready** |
-| TechDeck | Tickets, shared organizations/contacts/sites, assets, approval-gated runbooks | Server guards, assignment, managed-client directory profile, approval, audit, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared directory CRUD/refresh/reuse and deep links pass; deployed target not run | **Not production-ready** |
+| TechDeck | Source/local state 4 candidate: Directory-linked tickets/comments/time; configuration inventory; network/IPAM; lifecycle; versioned documentation/runbooks/backlinks; private attachments; evidence; reports; deep links | Server guards, versions, site/client pairing, managed-client Directory profile, document transitions, secret-field rejection, audit, viewer denial, and cross-tenant tests pass | Pass | Pass | Compiled 18-step shared runtime and anonymous deep-link smoke pass locally; deployed target not run | Production-host SSO 2/2 and TechDeck deep-link/refresh/Back/local logout pass locally; deployed workflow/provider/cutover not run | **Not production-ready** |
 | TorqueShed | Persistent diagnostic-case CRUD and status workflow | Server guards, persistence, viewer denial, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared local SSO/shell pass; deployed target not run | **Not production-ready** |
 
 ## Final E2E acceptance update
@@ -33,12 +33,20 @@ Phase 4 closes the approved TradeFlowKit source/local workflow gap and resolves
 projects versus jobs through ADR-0010. The refreshed acceptance has 29 passing
 evidence records and 9 failures; all TradeFlowKit-specific rows pass. It does
 not pass the ecosystem release because deployed/cutover evidence is absent and
-the remaining failures are PulseDesk assets/tickets/internal notes/time
+the remaining historical failures are PulseDesk assets/tickets/internal notes/time
 entries; TechDeck VLANs/subnets; and TorqueShed first-class
 vehicles/diagnostic sessions/trouble codes/measurements, Torque Assist, token
 ledger, marketplace/community, and `/diagnostics` deep route. See
 `docs/FINAL_E2E_ACCEPTANCE_REPORT.md` for captured URLs, request IDs, responses,
 retests, and the final matrix.
+
+Phase 5 closes the approved TechDeck source/local VLAN/subnet and broader
+managed-operations gap through ADR-0012/0013/0014. The historical TechDeck
+failure is superseded locally by shared Directory references, typed
+configuration/network/IPAM/lifecycle records, versioned documentation,
+evidence/reports/time, and real deep links. The release still fails because
+the cumulative browser acceptance has not been rerun on a deployed target and
+TechDeck provider/data-cutover evidence is absent.
 
 ## Hardening delivered in this pass
 
@@ -79,10 +87,12 @@ retests, and the final matrix.
   build:production` pass for API, runner gateway, and the Next production
   build. The unified runtime applies the compiled database release, starts the
   compiled API, waits for readiness, and starts the compiled Next application.
-- Full isolated-PostgreSQL API suite: 679 tests, 679 passed, 0 failed, 0
-  skipped. The aggregate covers auth/SSO, server-side RBAC,
-  tenant masking and cross-tenant denial, module persistence, entitlement,
-  audit, and API contracts for all five assessed products.
+- Phase 5 focused TechDeck regression: 16/16 passed; the new Phase 5 subset
+  passed 5/5. The first full Phase 5 API aggregate reported 702 total, 695
+  passed, one stale static-navigation assertion failed, and 6 HTTP-only skips;
+  the corrected focused rerun passed 8/8. A stale pnpm-policy assertion was
+  also corrected and passed 2/2. The final clean-database aggregate passed 696,
+  failed 0, and skipped 6 out of 702 in 616,919 ms.
 - Focused ecosystem contract suite: 30/30 passed.
 - Post-fix focused ecosystem/navigation suite: 15/15 passed; targeted
   database-backed tenant/module RBAC suite: 8/8 passed.
@@ -97,8 +107,9 @@ retests, and the final matrix.
 - Local shared runtime: `operatoros.net/healthz` returned 200 and
   `api.operatoros.net/readyz` returned 200 with database, auth, SSO encryption,
   and module registry healthy/configured.
-- The 15-step database release applied twice to a clean isolated database without
-  drift. Separately, the Phase 1 PostgreSQL 16.14 custom-format backup restored into a new database
+- The current 18-step database release applied repeatedly to clean isolated
+  PostgreSQL 16 databases without drift. Separately, the Phase 1 PostgreSQL
+  16.14 custom-format backup restored into a new database
   with matching critical table counts, 61 public tables, 100 validated foreign
   keys, and no unvalidated foreign keys.
 

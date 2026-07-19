@@ -69,6 +69,8 @@ export async function ensureSchemaReady() {
   await ensureModuleShellTables();
   const { ensureTradeFlowKitTables } = await import('../src/lib/tradeflowkit-db-init.js');
   await ensureTradeFlowKitTables();
+  const { ensureTechDeckTables } = await import('../src/lib/techdeck-db-init.js');
+  await ensureTechDeckTables();
   const { ensureSharedServiceTables } = await import('../src/lib/shared-services-db-init.js');
   await ensureSharedServiceTables();
   await ensureTestPlans();
@@ -171,6 +173,18 @@ export async function cleanupUser(userId: string) {
       try { await db.execute(sql`DELETE FROM tradeflowkit_sequences WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM tradeflowkit_settings WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM tradeflowkit_leads WHERE tenant_id = ${t.id}`); } catch {}
+      // TechDeck state-5 leaves are likewise tenant-restrictive and must be
+      // removed before configuration items, Directory records, and tenants.
+      try { await db.execute(sql`DELETE FROM techdeck_document_links WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM techdeck_document_revisions WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM techdeck_evidence WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM techdeck_reports WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM techdeck_time_entries WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM techdeck_ticket_comments WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM techdeck_configuration_relationships WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM techdeck_documents WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM techdeck_document_folders WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM techdeck_migration_refs WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, t.id)); } catch {}
       try { await db.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.tenantId, t.id)); } catch {}
       try { await db.delete(techdeckTickets).where(eq(techdeckTickets.tenantId, t.id)); } catch {}

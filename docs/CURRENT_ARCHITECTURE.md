@@ -1,6 +1,6 @@
 # OperatorOS current architecture
 
-Status: Phase 4 TradeFlowKit source/local architecture, 2026-07-18.
+Status: Phase 5 TechDeck source/local architecture, 2026-07-18.
 
 This document describes the executable OperatorOS control plane. The SSO and
 ecosystem integration contracts remain authoritative for protocol details.
@@ -26,7 +26,7 @@ One Replit autoscale workload owns the public runtime:
 1. `.replit` uses `npm exec` with pnpm `10.34.5` to install the frozen
    workspace and run `pnpm build:production`.
 2. `scripts/start-unified-runtime.mjs` validates the production environment.
-3. The supervisor runs the compiled 17-step database release and stops on any
+3. The supervisor runs the compiled 18-step database release and stops on any
    failure.
 4. The compiled Fastify API starts privately on port 5001 and must report
    `/readyz` before public startup continues.
@@ -89,13 +89,13 @@ become unusable. Local logout clears and revokes only the current host session.
 `OPERATOROS_DATABASE_RELEASE_MODE=apply`. The production supervisor executes
 the compiled equivalent before Fastify starts.
 
-The release has 17 ordered, idempotent steps: base, extended, SaaS, tenant,
-shared-directory, module, TradeFlowKit, and shared-service DDL; plan/admin seed; pre-seed
-repair; platform component and module catalog seed; personal-tenant and
-super-admin backfills; demo tenant seed; post-seed repair; and free-account-app
-backfill. The contract is additive and declares no destructive step. Recovery
-is restore-to-new-database followed by traffic switching, never in-place
-destructive rollback.
+The release has 18 ordered, idempotent steps: base, extended, SaaS, tenant,
+shared-directory, module, TradeFlowKit, TechDeck, and shared-service DDL;
+plan/admin seed; pre-seed repair; platform component and module catalog seed;
+personal-tenant and super-admin backfills; demo tenant seed; post-seed repair;
+and free-account-app backfill. The contract is additive and declares no
+destructive step. Recovery is restore-to-new-database followed by traffic
+switching, never in-place destructive rollback.
 
 The shared Business Directory is owned by OperatorOS and keeps tenant-scoped
 organizations, contacts, normalized addresses, sites, associations,
@@ -125,6 +125,16 @@ and migration references. Public tokens are stored only as hashes. Customer
 invoice payments remain separate from OperatorOS subscription billing, and
 the production customer-payment adapter is disabled pending a reviewed shared
 provider contract. ADR-0010 and ADR-0011 define the product boundary.
+
+TechDeck is the second module with an approved source/local state 4 candidate.
+It references shared Directory organizations/sites and shared private
+attachments while owning tenant-scoped configuration inventory, documented
+network/IPAM topology, lifecycle records, tickets/comments/time, versioned
+documentation/runbooks/backlinks, evidence metadata, deterministic report
+snapshots, and migration references. These records document operator-managed
+state; no discovery or device mutation is implied. ADR-0012, ADR-0013, and
+ADR-0014 define the network/IPAM, credential-reference, and no-remote-execution
+boundaries.
 
 Child migrations and `drizzle-kit push` are not supported deployment paths.
 

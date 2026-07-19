@@ -17,6 +17,7 @@ import { launchFixPostSeed, launchFixPreSeed } from './launch-fix-init.js';
 import { ensureDirectoryTables } from './directory-db-init.js';
 import { ensureSharedServiceTables } from './shared-services-db-init.js';
 import { ensureTradeFlowKitTables } from './tradeflowkit-db-init.js';
+import { ensureTechDeckTables } from './techdeck-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -35,6 +36,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   directory_tables: ensureDirectoryTables,
   module_tables: ensureModuleShellTables,
   tradeflowkit_tables: ensureTradeFlowKitTables,
+  techdeck_tables: ensureTechDeckTables,
   shared_service_tables: ensureSharedServiceTables,
   plans_and_admin: seedPlansAndAdmin,
   launch_fix_pre_seed: launchFixPreSeed,
@@ -58,6 +60,8 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.shared_usage_events') IS NOT NULL AS shared_usage_events,
       to_regclass('public.tradeflowkit_tasks') IS NOT NULL AS tradeflowkit_tasks,
       to_regclass('public.tradeflowkit_payments') IS NOT NULL AS tradeflowkit_payments,
+      to_regclass('public.techdeck_documents') IS NOT NULL AS techdeck_documents,
+      to_regclass('public.techdeck_configuration_relationships') IS NOT NULL AS techdeck_configuration_relationships,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;

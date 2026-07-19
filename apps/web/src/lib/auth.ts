@@ -236,6 +236,9 @@ export interface TechDeckTicket {
   number: number;
   createdByUserId: string;
   assignedToUserId: string | null;
+  directoryOrganizationId: string | null;
+  directorySiteId: string | null;
+  configurationItemId: string | null;
   title: string;
   description: string | null;
   priority: TechDeckTicketPriority;
@@ -245,6 +248,7 @@ export interface TechDeckTicket {
   respondedAt: string | null;
   resolvedAt: string | null;
   closedAt: string | null;
+  version: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -260,6 +264,9 @@ export interface TechDeckTicketCreateInput {
   assignedToUserId?: string | null;
   responseDeadline?: string | null;
   resolutionDeadline?: string | null;
+  directoryOrganizationId?: string | null;
+  directorySiteId?: string | null;
+  configurationItemId?: string | null;
 }
 
 export interface TechDeckTicketUpdateInput {
@@ -269,10 +276,14 @@ export interface TechDeckTicketUpdateInput {
   assignedToUserId?: string | null;
   responseDeadline?: string | null;
   resolutionDeadline?: string | null;
+  directoryOrganizationId?: string | null;
+  directorySiteId?: string | null;
+  configurationItemId?: string | null;
 }
 
-export type TechDeckAssetType = 'endpoint' | 'server' | 'network' | 'printer' | 'mobile' | 'other';
+export type TechDeckAssetType = 'endpoint' | 'server' | 'workstation' | 'network' | 'network_device' | 'firewall' | 'switch' | 'access_point' | 'printer' | 'mobile' | 'application' | 'domain' | 'dns_record' | 'dhcp_scope' | 'vlan' | 'subnet' | 'ip_address' | 'public_ip' | 'isp' | 'circuit' | 'vendor' | 'license' | 'certificate' | 'warranty' | 'port_mapping' | 'configuration_item' | 'credential_reference' | 'other';
 export type TechDeckAssetHealth = 'unknown' | 'healthy' | 'warning' | 'critical' | 'offline';
+export type TechDeckAssetStatus = 'active' | 'inactive' | 'planned' | 'retired';
 export type TechDeckRunbookPlatform = 'powershell' | 'bash' | 'network' | 'generic';
 export type TechDeckRunbookRisk = 'low' | 'medium' | 'high';
 export type TechDeckRunbookStatus = 'draft' | 'approved' | 'retired';
@@ -282,11 +293,31 @@ export interface TechDeckAsset {
   tenantId: string;
   name: string;
   type: TechDeckAssetType;
+  status: TechDeckAssetStatus;
+  directoryOrganizationId: string | null;
+  directorySiteId: string | null;
   hostname: string | null;
   ipAddress: string | null;
   operatingSystem: string | null;
+  vendor: string | null;
+  product: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  macAddress: string | null;
+  externalVaultReference: string | null;
+  vlanNumber: number | null;
+  cidr: string | null;
+  gateway: string | null;
+  dhcpStart: string | null;
+  dhcpEnd: string | null;
+  dnsServers: string[];
   health: TechDeckAssetHealth;
   lastSeenAt: string | null;
+  expirationDate: string | null;
+  renewalDate: string | null;
+  warrantyEndDate: string | null;
+  details: Record<string, string | number | boolean | null>;
+  tags: string[];
   notes: string | null;
   version: number;
   updatedAt: string;
@@ -511,6 +542,38 @@ export interface TradeFlowKitTask {
   priority: 'low' | 'normal' | 'high' | 'urgent'; assignedToUserId: string | null;
   dueAt: string | null; sortOrder: number; completedAt: string | null; version: number;
 }
+
+export interface TechDeckConfigurationRelationship {
+  id: string; sourceAssetId: string; targetAssetId: string; relationshipType: string; notes: string | null; createdAt: string;
+}
+export interface TechDeckDocument {
+  id: string; title: string; slug: string; pageType: string; summary: string | null; content: string;
+  status: 'draft' | 'in_review' | 'approved' | 'published' | 'archived'; minimumRole: 'member' | 'admin' | 'owner';
+  tags: string[]; version: number; updatedAt: string; directoryOrganizationId: string | null; directorySiteId: string | null;
+}
+export interface TechDeckEvidence {
+  id: string; title: string; evidenceType: string; summary: string | null; configurationItemId: string | null; documentId: string | null; ticketId: string | null; observedAt: string | null; createdAt: string;
+}
+export interface TechDeckReport {
+  id: string; name: string; reportType: string; sha256: string; snapshot: Record<string, unknown>; createdAt: string;
+}
+export interface TechDeckTimeEntry {
+  id: string; ticketId: string | null; configurationItemId: string | null; workedAt: string; minutes: number; billable: boolean; notes: string | null;
+}
+export interface TechDeckWorkspaceResponse {
+  configurationItems: TechDeckAsset[];
+  relationships: TechDeckConfigurationRelationship[];
+  folders: Array<{ id: string; name: string; parentId: string | null }>;
+  documents: TechDeckDocument[];
+  evidence: TechDeckEvidence[];
+  reports: TechDeckReport[];
+  timeEntries: TechDeckTimeEntry[];
+  comments: Array<{ id: string; ticketId: string; body: string; createdAt: string }>;
+  alerts: TechDeckAsset[];
+  lifecycleDue: TechDeckAsset[];
+  incomplete: TechDeckAsset[];
+  execution: { enabled: false; reason: string };
+}
 export interface TradeFlowKitPayment { id: string; invoiceId: string; amountCents: number; method: string; status: string; paidAt: string; }
 export interface TradeFlowKitSettings {
   tenantId: string; jobPrefix: string; quotePrefix: string; invoicePrefix: string;
@@ -722,6 +785,24 @@ export const moduleShellApi = {
       }) as Promise<PulseDeskRequest>,
   },
   techdeck: {
+    getWorkspace: (): Promise<TechDeckWorkspaceResponse> =>
+      apiFetch('/modules/techdeck/workspace') as Promise<TechDeckWorkspaceResponse>,
+    createConfigurationItem: (input: Partial<TechDeckAsset> & { name: string; type: TechDeckAssetType }): Promise<TechDeckAsset> =>
+      apiFetch('/modules/techdeck/configuration-items', { method: 'POST', body: JSON.stringify(input) }) as Promise<TechDeckAsset>,
+    updateConfigurationItem: (id: string, input: Record<string, unknown> & { expectedVersion: number }): Promise<TechDeckAsset> =>
+      apiFetch(`/modules/techdeck/configuration-items/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TechDeckAsset>,
+    createRelationship: (input: { sourceAssetId: string; targetAssetId: string; relationshipType: string; notes?: string }): Promise<TechDeckConfigurationRelationship> =>
+      apiFetch('/modules/techdeck/relationships', { method: 'POST', body: JSON.stringify(input) }) as Promise<TechDeckConfigurationRelationship>,
+    createDocument: (input: { title: string; pageType: string; content: string; summary?: string; directoryOrganizationId?: string }): Promise<TechDeckDocument> =>
+      apiFetch('/modules/techdeck/documents', { method: 'POST', body: JSON.stringify(input) }) as Promise<TechDeckDocument>,
+    transitionDocument: (id: string, expectedVersion: number, transition: 'review' | 'approve' | 'publish'): Promise<TechDeckDocument> =>
+      apiFetch(`/modules/techdeck/documents/${encodeURIComponent(id)}/${transition}`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<TechDeckDocument>,
+    createEvidence: (input: { title: string; evidenceType: string; summary?: string; configurationItemId?: string }): Promise<TechDeckEvidence> =>
+      apiFetch('/modules/techdeck/evidence', { method: 'POST', body: JSON.stringify(input) }) as Promise<TechDeckEvidence>,
+    generateReport: (name: string, reportType: string): Promise<TechDeckReport> =>
+      apiFetch('/modules/techdeck/reports', { method: 'POST', body: JSON.stringify({ name, reportType }) }) as Promise<TechDeckReport>,
+    addTime: (input: { workedAt: string; minutes: number; billable?: boolean; ticketId?: string; configurationItemId?: string; notes?: string }): Promise<TechDeckTimeEntry> =>
+      apiFetch('/modules/techdeck/time', { method: 'POST', body: JSON.stringify(input) }) as Promise<TechDeckTimeEntry>,
     getOps: (): Promise<TechDeckOpsResponse> =>
       apiFetch('/modules/techdeck/ops') as Promise<TechDeckOpsResponse>,
     createAsset: (input: {

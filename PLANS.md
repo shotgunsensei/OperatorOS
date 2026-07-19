@@ -22,7 +22,7 @@ slice is not parity.
 | 2 | OperatorOS-owned shared Business Directory for organizations, contacts, sites, addresses, and module profiles | Phase 1 | Source/local accepted on `codex/phase-2-shared-business-directory` by explicit owner direction; not deployed |
 | 3 | Shared attachments, notifications, providers, jobs/outbox, webhook idempotency, usage ledger, and activity timeline | Phase 2 | Source/local accepted on `codex/phase-3-shared-services` by explicit owner direction; public gate remains closed |
 | 4 | TradeFlowKit state 5 | Phases 2-3 | Source/local state 4 candidate on `codex/phase-4-tradeflowkit-state-5`; state 5 blocked on deployed workflow/cutover evidence |
-| 5 | TechDeck state 5 | Phases 2-3 | Pending |
+| 5 | TechDeck state 5 | Phases 2-3 | Source/local state 4 candidate on `codex/phase-5-techdeck-state-5`; state 5 blocked on deployment, provider, and data-cutover evidence |
 | 6 | PulseDesk state 5 with healthcare-operations/PHI boundary resolved | Phases 2-3 | Pending |
 | 7 | TorqueShed vehicle, maintenance, diagnostic, repair, and verification foundation | Phases 2-3 | Pending |
 | 8 | Torque Assist deterministic adapter, safety controls, metering, and append-only token ledger | Phases 3 and 7 | Pending |
@@ -59,7 +59,7 @@ slice is not parity.
 
 The owner explicitly authorized source work to continue through later phases
 on separate branches even while the public deployment gate remains failed.
-That direction permits Phase 5 source work after the scoped Phase 4 commit; it
+That direction permits Phase 6 source work after the scoped Phase 5 commit; it
 does not authorize deployment,
 production data mutation, promotion, or a production-ready label. Before any
 public promotion, deploy the reviewed cumulative revision through `.replit`,

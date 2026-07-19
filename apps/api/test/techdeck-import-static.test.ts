@@ -229,7 +229,7 @@ test('TechDeck Phase 10 docs cover SSO conversion and manual QA', () => {
   }
 });
 
-test('TechDeck Phase 11 shell polish covers header, navigation, states, and demo docs', () => {
+test('TechDeck shell polish covers header, completed navigation, states, and demo docs', () => {
   const appSlugPage = readRepoFile('apps/web/src/app/apps/[slug]/page.tsx');
   const shell = readRepoFile('apps/web/src/components/module-shells/TechDeckShell.tsx');
   const polishNotes = readRepoFile('docs/techdeck-polish-notes.md');
@@ -262,10 +262,15 @@ test('TechDeck Phase 11 shell polish covers header, navigation, states, and demo
 
   for (const needle of [
     'Tickets',
-    'Assets',
+    'Inventory',
+    'Network / IPAM',
+    'Lifecycle',
+    'Documentation',
+    'Runbooks',
     'Evidence',
-    'IT Ops',
     'Reports',
+    'Time',
+    'Clients',
   ]) {
     assert.ok(shell.includes(needle), `missing workflow shortcut: ${needle}`);
   }

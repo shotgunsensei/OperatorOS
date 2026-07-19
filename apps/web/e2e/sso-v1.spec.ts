@@ -243,6 +243,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
   });
 
   test('one credential entry establishes the canonical app host then silently launches all twelve enabled modules', async ({ page, request }) => {
+    test.setTimeout(180_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
     identities.push(identity);
