@@ -44,7 +44,13 @@ import { registerEntitlementRoutes } from './routes/entitlement-routes.js';
 import { registerEcosystemRoutes } from './routes/ecosystem-routes.js';
 import { registerDiagnosticsRoutes } from './routes/diagnostics-routes.js';
 import { registerDirectoryRoutes } from './routes/directory-routes.js';
+import { registerSharedServiceRoutes } from './routes/shared-service-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
+import {
+  getSharedServiceWorkerStatus,
+  startSharedServiceWorker,
+  stopSharedServiceWorker,
+} from './lib/shared-service-worker.js';
 import { runAgentLoop } from './agent.js';
 import type { AgentEvent } from './agent.js';
 import { analyzeWorkspace, generatePlan, generateArtifacts, runProof } from './publish/index.js';
@@ -206,6 +212,7 @@ app.addContentTypeParser(
   (_req, body, done) => {
     try {
       const text = typeof body === 'string' ? body : (body as Buffer).toString('utf8');
+      (_req as any).rawBody = Buffer.from(text, 'utf8');
       if (!text) return done(null, {});
       const params = new URLSearchParams(text);
       const out: Record<string, string> = {};
@@ -233,6 +240,7 @@ await registerEntitlementRoutes(app);
 await registerEcosystemRoutes(app);
 await registerDiagnosticsRoutes(app);
 await registerDirectoryRoutes(app);
+await registerSharedServiceRoutes(app);
 
 if (process.env.OPERATOROS_DATABASE_RELEASE_APPLIED === '1') {
   await verifyOperatorOSDatabaseRelease();
@@ -240,6 +248,10 @@ if (process.env.OPERATOROS_DATABASE_RELEASE_APPLIED === '1') {
   await applyOperatorOSDatabaseRelease();
 }
 startSsoTokenCleanup();
+startSharedServiceWorker();
+app.addHook('onClose', async () => {
+  await stopSharedServiceWorker();
+});
 
 const streamSubscribers = new Map<string, Set<import('ws').WebSocket>>();
 
@@ -418,6 +430,7 @@ app.get('/readyz', async (_req, reply) => {
     moduleRegistry: OPERATOROS_MODULE_REGISTRY.filter(module => module.status === 'active').length > 0
       ? 'configured'
       : 'missing',
+    sharedServiceWorker: getSharedServiceWorkerStatus().started ? 'configured' : 'missing',
   };
   const externalDependencies = {
     stripe: process.env.STRIPE_SECRET_KEY && process.env.STRIPE_MODE === 'live' ? 'configured' : 'disabled',
@@ -425,7 +438,9 @@ app.get('/readyz', async (_req, reply) => {
     twilio: process.env.TWILIO_ACCOUNT_SID || process.env.REPLIT_CONNECTORS_HOSTNAME ? 'configured' : 'disabled',
     openai: process.env.OPENAI_API_KEY ? 'configured' : 'disabled',
   };
-  const ready = database === 'healthy' && (!isProductionEnv() || ssoCodeEncryptionConfigured);
+  const ready = database === 'healthy'
+    && getSharedServiceWorkerStatus().started
+    && (!isProductionEnv() || ssoCodeEncryptionConfigured);
   return reply.code(ready ? 200 : 503).send({
     ready,
     checks,
@@ -1489,7 +1504,7 @@ function logCapabilityBanner(): void {
   console.info(`  env             : ${env}`);
   console.info(`  runner          : ${getRunnerMode()}`);
   console.info(`  Stripe          : ${onOff(stripeOn)}  (mode=${process.env.STRIPE_MODE ?? 'unset'})`);
-  console.info(`  OpenAI          : ${onOff(openaiOn)}  (falls back to mock provider when off)`);
+  console.info(`  OpenAI          : ${onOff(openaiOn)}  (disabled when unconfigured)`);
   console.info(`  Browser SSO v1  : ${onOff(ssoOn)}  (hub-only opaque-code sealing)`);
   console.info(`  Bootstrap admin : ${onOff(bootstrapAdminOn)}`);
   console.info(`  Module URLs     : ${configuredModules.length}/${moduleEntries.length} configured`);
@@ -1530,4 +1545,25 @@ try {
     port: socketError.port ?? port,
   }, 'operatoros_api_start_failed');
   process.exit(1);
+}
+
+let shutdownStarted = false;
+async function shutdownApi(signal: NodeJS.Signals): Promise<void> {
+  if (shutdownStarted) return;
+  shutdownStarted = true;
+  app.log.info({ signal }, 'operatoros_api_shutdown_started');
+  try {
+    // Fastify stops accepting new requests and runs the shared-worker
+    // onClose hook, which drains the active lease cycle for up to 10s.
+    await app.close();
+    app.log.info({ signal }, 'operatoros_api_shutdown_complete');
+    process.exit(0);
+  } catch {
+    app.log.error({ signal, code: 'API_SHUTDOWN_FAILED' }, 'operatoros_api_shutdown_failed');
+    process.exit(1);
+  }
+}
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.once(signal, () => { void shutdownApi(signal); });
 }

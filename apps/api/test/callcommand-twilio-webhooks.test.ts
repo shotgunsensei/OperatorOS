@@ -23,7 +23,7 @@ process.env.TWILIO_ACCOUNT_SID = 'ACtest_account_sid';
 process.env.TWILIO_AUTH_TOKEN = 'test-auth-token-deadbeef';
 process.env.TWILIO_FROM_NUMBER = '+15555550100';
 process.env.TWILIO_PUBLIC_BASE_URL = 'http://localhost:3001';
-// Force the mock AI provider so `summarizeTranscript()` is deterministic
+// Force the test AI provider so `summarizeTranscript()` is deterministic
 // even on dev machines that have OPENAI_API_KEY set. Without this, the
 // summary assertions would depend on a live OpenAI response.
 delete process.env.OPENAI_API_KEY;
@@ -143,8 +143,17 @@ test('signed status webhook transitions queued → ringing → completed', async
       payload: body,
     });
     assert.equal(r.statusCode, 200);
-    assert.deepEqual(r.json(), { ok: true });
+    assert.deepEqual(r.json(), { ok: true, duplicate: false });
     assert.equal((await reloadCall()).status, 'ringing');
+
+    const duplicate = await app.inject({
+      method: 'POST',
+      url: '/v1/modules/callcommand-ai/webhooks/twilio/status',
+      headers: { 'x-twilio-signature': signTwilio(url, body), 'content-type': 'application/json' },
+      payload: body,
+    });
+    assert.equal(duplicate.statusCode, 200);
+    assert.deepEqual(duplicate.json(), { ok: true, duplicate: true });
   }
 
   // in-progress (still maps to 'ringing' in our model) → completed
@@ -233,7 +242,7 @@ test('recording webhook persists recording url + transcript + AI summary', async
     }
     assert.equal(row.transcript, TRANSCRIPT, 'transcript should be persisted after Twilio fetch');
     assert.ok(row.summary && row.summary.length > 0, 'AI summary should be persisted');
-    // The mock AI provider returns deterministic text; ensure we did NOT
+    // The test AI provider returns deterministic text; ensure we did NOT
     // fall back to the "Twilio did not return a transcript" canned blurb.
     assert.doesNotMatch(row.summary!, /did not return a transcript/i);
     // Summary must come from the AI provider, NOT be a copy of the raw

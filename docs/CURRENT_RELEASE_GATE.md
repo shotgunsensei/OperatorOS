@@ -1,13 +1,13 @@
 # OperatorOS current release gate
 
-- Evidence date: 2026-07-17
-- Candidate branch: `codex/phase-2-shared-business-directory`
+- Evidence date: 2026-07-18
+- Candidate branch: `codex/phase-3-shared-services`
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
-- Platform and Phase 2 source/local gate: **PASS**
+- Platform and Phases 2-3 source/local gate: **PASS**
 - Public deployment gate: **FAIL (32/47)**
-- Overall release decision: **CLOSED — do not promote or begin Phase 3**
+- Overall release decision: **CLOSED — do not promote**
 
 ## Decision
 
@@ -19,6 +19,14 @@ authorization, tenant isolation, and health/readiness paths.
 At the owner's explicit direction, Phase 2 added the shared Business Directory
 and passed its local database, browser, build, and health gates. That source
 progress does not waive the still-failed public deployment gate.
+
+The owner then explicitly authorized Phase 3 and later source branches despite
+that failed public gate. Phase 3 added shared attachments, provider adapters,
+notifications/outbox, jobs, verified webhook receipts, usage/activity ledgers,
+idempotency, and the shared worker. Its clean database, aggregate regression,
+production build, compiled runtime, and backup/restore gates passed locally.
+This direction permits continued source work only; it does not authorize a
+deployment, production data mutation, promotion, or production-ready label.
 
 The candidate was not deployed because deployment/publishing was not
 authorized. The current public hosts still serve an older release. The release
@@ -36,24 +44,25 @@ and migration parity remain controlled by the module parity index.
 | Frozen dependency contract | PASS FROM PHASE 0 | Pinned pnpm `10.34.5`; lockfile unchanged by Phase 1 |
 | Production environment contract | PASS | Machine-readable contract plus 7 preflight tests; core CLI preflight passed with exact canonical values and non-secret local test credentials |
 | Unsafe configuration rejection | PASS | Rejects missing/short secrets, legacy `APP_URL`, parent `COOKIE_DOMAIN`, public unified-runtime API URL, unsafe commands, legacy SSO rollback, wildcard/insecure/credentialed/loopback CORS, and drifted module hosts |
-| Database release plan | PASS | `db:plan` emits 15 ordered, additive, secret-free steps; `db:apply` passed twice on a clean Phase 2 rehearsal database |
-| Backup/restore rehearsal | PHASE 1 PASS; PHASE 2 OPEN | Phase 1 PostgreSQL 16.14 custom dump passed; the new directory schema still requires a restore rehearsal before promotion |
-| Restored data/constraints | PASS | Source and target matched for core rows; both had 61 public tables, 100 foreign keys, and 0 unvalidated foreign keys |
-| Production build | PASS | `corepack pnpm build:production`; API, runner gateway, and Next built after mandatory workspace typecheck; 20 Next routes generated |
-| Compiled production supervisor | PASS | Compiled database release ran, compiled Fastify reached readiness on 5001, and Next reached ready on 5000; no `tsx` production runtime |
+| Database release plan | PASS | `db:plan` emits 16 ordered, additive, secret-free steps; `db:apply` passed twice on clean PostgreSQL 16 |
+| Backup/restore rehearsal | PASS LOCALLY | Phase 3 custom dump restored into a new database with matching critical rows, all 10 shared tables, 83 public tables, and 382 public constraints |
+| Restored data/constraints | PASS | Source/restored exact vector `83|382|13|2|1|0|0|0|0`; dump SHA-256 `b293127c835b2c6c6937cbae93a32916d038ad44f74a3ee700c5eda2fff2c0b1` |
+| Production build | PASS | Installed workspace toolchain produced SDK, API, runner gateway, and Next artifacts after API/runner/web typechecks; Next 14.2.35 generated 20 static page entries. The exact Replit wrapper remains pinned to pnpm 10.34.5. |
+| Compiled production supervisor | PASS | Compiled 16-step release ran, Fastify and the shared worker reached readiness on 5001, and Next reached ready on 5000; no `tsx` production runtime |
 | Local canonical-host health | PASS | HTTPS apex `/healthz` returned 200 with `operatoros-api`; API `/readyz` returned 200 with database/auth/SSO/registry configured |
 | Local public URL diagnostics | PASS | TechDeck diagnostic resolved forwarded exact host, HTTPS origin, module role, and host-only cookie mode |
 | Production-host SSO browser gate | PASS LOCALLY | 2/2 Playwright scenarios in 25.3 seconds across root/app/auth and all 12 enabled modules; PKCE/state/nonce, exact callbacks, host-only cookies, deep-link return, Back, refresh, silent sibling launch, local logout, and global revocation passed |
 | Focused Phase 1 tests | PASS | 11/11 database-release, preflight, and supervisor contract tests |
 | Focused Phase 2 tests | PASS | 9/9 directory, UI, deep-link, and release-contract tests |
+| Focused Phase 3 tests | PASS | 24/24 shared-service, route, retention, lease-recovery, release, webhook, and provider-state tests on a clean database |
 | Phase 2 browser workflow | PASS LOCALLY | 1/1 on compiled artifacts; CRUD, refresh persistence, same organization ID across three modules, and no script-readable auth |
-| Full API regression | PASS | 679/679 against a clean disposable PostgreSQL database; 0 failed, 0 skipped, 152,058.1447 ms |
-| Public read-only runtime verifier | FAIL | 32/47 on 2026-07-17; no authentication and no mutation |
+| Full API regression | PASS | 692 total: 686 passed, 0 failed, 6 HTTP-only skips against a new clean PostgreSQL database; 437,069.7755 ms |
+| Public read-only runtime verifier | FAIL | 32/47 on 2026-07-18; no authentication and no mutation |
 | Formatting/lint | NOT DEFINED | Repository has no supported formatting or lint script; no pass is claimed |
 
 ## Public deployment blocker
 
-The 2026-07-17 read-only verifier confirmed TLS/host attachment, API
+The 2026-07-18 read-only verifier confirmed TLS/host attachment, API
 readiness, all 17 public diagnostics, every enabled callback route, and
 OutCall's fail-closed callback. It failed these release-critical checks:
 
@@ -68,7 +77,7 @@ weakening the verifier.
 
 ## Human deployment closure
 
-1. Review and deploy the scoped Phase 1/2 revision through the `.replit` autoscale
+1. Review and deploy the scoped cumulative revision through the `.replit` autoscale
    build/run path.
 2. Validate the real production secrets with
    `corepack pnpm preflight:production -- --core`; enable provider profiles only
@@ -81,4 +90,6 @@ weakening the verifier.
 6. Record the deployed commit and results in this file and
    `docs/auth/VALIDATION_MATRIX.md`.
 
-Until those steps pass, Phase 3 and all production-ready labels remain blocked.
+Until those steps pass, promotion and all production-ready labels remain
+blocked. Later phase source branches may proceed only under the owner's explicit
+direction and must preserve this gate.

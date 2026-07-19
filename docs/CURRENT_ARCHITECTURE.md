@@ -1,6 +1,6 @@
 # OperatorOS current architecture
 
-Status: Phase 2 shared-directory architecture, 2026-07-17.
+Status: Phase 3 shared-services architecture, 2026-07-18.
 
 This document describes the executable OperatorOS control plane. The SSO and
 ecosystem integration contracts remain authoritative for protocol details.
@@ -23,10 +23,10 @@ switch context, never trusted authority.
 
 One Replit autoscale workload owns the public runtime:
 
-1. `.replit` installs the pinned pnpm workspace and runs
-   `corepack pnpm build:production` through the pinned deployment package.
+1. `.replit` uses `npm exec` with pnpm `10.34.5` to install the frozen
+   workspace and run `pnpm build:production`.
 2. `scripts/start-unified-runtime.mjs` validates the production environment.
-3. The supervisor runs the compiled 15-step database release and stops on any
+3. The supervisor runs the compiled 16-step database release and stops on any
    failure.
 4. The compiled Fastify API starts privately on port 5001 and must report
    `/readyz` before public startup continues.
@@ -89,12 +89,13 @@ become unusable. Local logout clears and revokes only the current host session.
 `OPERATOROS_DATABASE_RELEASE_MODE=apply`. The production supervisor executes
 the compiled equivalent before Fastify starts.
 
-The release has 15 ordered, idempotent steps: base, extended, SaaS, tenant,
-shared-directory, and module DDL; plan/admin seed; pre-seed repair; platform component and module
-catalog seed; personal-tenant and super-admin backfills; demo tenant seed;
-post-seed repair; and free-account-app backfill. The contract is additive and
-declares no destructive step. Recovery is restore-to-new-database followed by
-traffic switching, never in-place destructive rollback.
+The release has 16 ordered, idempotent steps: base, extended, SaaS, tenant,
+shared-directory, module, and shared-service DDL; plan/admin seed; pre-seed
+repair; platform component and module catalog seed; personal-tenant and
+super-admin backfills; demo tenant seed; post-seed repair; and free-account-app
+backfill. The contract is additive and declares no destructive step. Recovery
+is restore-to-new-database followed by traffic switching, never in-place
+destructive rollback.
 
 The shared Business Directory is owned by OperatorOS and keeps tenant-scoped
 organizations, contacts, normalized addresses, sites, associations,
@@ -104,14 +105,25 @@ business record inside a tenant; it is never an identity tenant or authority
 boundary. Legacy module client records remain migration inputs until a
 repeatable importer and reconciliation report are approved.
 
+Shared platform services are also owned by OperatorOS. Ten tenant/module-bound
+tables persist private attachment content and scan state, versioned notification
+templates, durable outbox and user notifications, leased jobs, verified
+webhook receipts, append-only usage and activity events, and generic
+idempotency claims. Provider adapters expose configured, disabled, or test
+state without exposing credentials. The compiled API worker uses bounded
+`SKIP LOCKED` leases, retry/dead-letter state, and expired-lease recovery.
+Imported module queues, providers, upload paths, and migrations are not runtime
+authority. The full contract is recorded in
+`docs/shared-services/SHARED_SERVICE_CONTRACTS.md`.
+
 Child migrations and `drizzle-kit push` are not supported deployment paths.
 
 ## Health and observability
 
 - `/healthz` reports process health and service version.
 - `/readyz` fails closed unless the database, session signing, SSO code
-  encryption, and module registry are ready. Optional providers report
-  `enabled` or `disabled` explicitly.
+  encryption, module registry, and shared service worker are ready. Optional
+  providers report configured or disabled state explicitly without values.
 - Structured request completion logs include request ID and bounded
   user/tenant/module context. SSO decisions include correlation IDs without
   raw codes, cookies, passwords, secrets, or authorization headers.

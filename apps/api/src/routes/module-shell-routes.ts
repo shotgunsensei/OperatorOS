@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { createHash } from 'node:crypto';
 import { db } from '../db.js';
 import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import {
@@ -17,6 +18,7 @@ import {
   tradeflowkitQuotes,
   tradeflowkitInvoices,
   activityFeed,
+  modules,
 } from '../schema.js';
 import {
   requireTenantAdmin,
@@ -34,6 +36,10 @@ import {
   summarizeTranscript,
 } from '../lib/telephony.js';
 import { getAiProvider } from '../lib/ai-provider.js';
+import {
+  receiveVerifiedWebhook,
+  registerSharedWebhookHandler,
+} from '../lib/shared-webhooks.js';
 import { checkRateLimit } from '../lib/rate-limiter.js';
 import {
   parseTradeFlowKitLeadCreate,
@@ -326,7 +332,7 @@ function extractJsonArray(text: string): unknown {
 }
 
 // Ask the AI provider for Q/A pairs. Returns null when the provider is the
-// mock (so the caller can use the deterministic splitter instead), when the
+// test provider (so the caller can use the deterministic splitter instead), when the
 // call fails, or when the response is unparseable / empty.
 async function buildCardsWithAi(source: string): Promise<StudyCard[] | null> {
   const provider = getAiProvider();
@@ -488,6 +494,26 @@ async function finalizeTranscript(
 }
 
 export async function registerModuleShellRoutes(app: FastifyInstance) {
+  registerSharedWebhookHandler('callcommand.twilio.status.v1', async context => {
+    const callId = String(context.payload.callId || '');
+    const sid = String(context.payload.sid || '');
+    const status = String(context.payload.status || '');
+    const [row] = await db.select().from(moduleCallLogs)
+      .where(and(eq(moduleCallLogs.id, callId), eq(moduleCallLogs.tenantId, context.tenantId)))
+      .limit(1);
+    if (!row) throw Object.assign(new Error('Call row is no longer available'), { code: 'CALL_ROW_NOT_FOUND' });
+    const mapped = mapTwilioStatus(status);
+    const patch: Record<string, unknown> = {
+      status: mapped,
+      updatedAt: new Date(),
+      ...(row.providerSid ? {} : { providerSid: sid }),
+    };
+    if (mapped === 'failed' && context.payload.errorCode) {
+      patch.errorMessage = `Twilio error ${String(context.payload.errorCode)}: ${String(context.payload.errorMessage || '')}`.slice(0, 500);
+    }
+    await db.update(moduleCallLogs).set(patch)
+      .where(and(eq(moduleCallLogs.id, row.id), eq(moduleCallLogs.tenantId, context.tenantId)));
+  });
   await registerPulseDeskRoutes(app);
   await registerNinjaPoolHallRoutes(app);
 
@@ -1915,18 +1941,34 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     const row = await findCallRow(sid, callId);
     if (!row) return reply.code(404).send({ error: 'Call not found' });
 
-    const mapped = mapTwilioStatus(status);
-    const patch: Record<string, unknown> = {
-      status: mapped,
-      updatedAt: new Date(),
-      // Heal the row's providerSid if the dial-POST hasn't written it yet.
-      ...(row.providerSid ? {} : { providerSid: sid }),
-    };
-    if (mapped === 'failed' && body.ErrorCode) {
-      patch.errorMessage = `Twilio error ${body.ErrorCode}: ${body.ErrorMessage ?? ''}`.slice(0, 500);
+    const [moduleRow] = await db.select({ id: modules.id }).from(modules)
+      .where(eq(modules.slug, 'callcommand-ai')).limit(1);
+    if (!moduleRow) return reply.code(503).send({ error: 'Module registry unavailable' });
+    const rawBody = (request as any).rawBody as Buffer | undefined
+      ?? Buffer.from(new URLSearchParams(Object.entries(body).sort(([a], [b]) => a.localeCompare(b))).toString(), 'utf8');
+    const bodyHash = createHash('sha256').update(rawBody).digest('hex');
+    const eventId = `${sid}:status:${body.SequenceNumber || bodyHash.slice(0, 24)}`;
+    const receipt = await receiveVerifiedWebhook({
+      tenantId: row.tenantId,
+      moduleId: moduleRow.id,
+      provider: 'twilio',
+      providerEventId: eventId,
+      eventType: `call.status.${status}`,
+      handlerKey: 'callcommand.twilio.status.v1',
+      rawBody,
+      safePayload: {
+        callId: row.id,
+        sid,
+        status,
+        errorCode: body.ErrorCode || null,
+        errorMessage: body.ErrorMessage || null,
+      },
+      correlationId: request.id,
+    });
+    if (receipt.status !== 'processed') {
+      return reply.code(503).send({ error: 'Webhook accepted for retry', code: 'WEBHOOK_RETRY_PENDING' });
     }
-    await db.update(moduleCallLogs).set(patch).where(eq(moduleCallLogs.id, row.id));
-    return { ok: true };
+    return { ok: true, duplicate: receipt.duplicate };
   });
 
   app.post('/v1/modules/callcommand-ai/webhooks/twilio/recording', async (request, reply) => {

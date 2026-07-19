@@ -15,6 +15,7 @@ import {
 } from './saas-db-init.js';
 import { launchFixPostSeed, launchFixPreSeed } from './launch-fix-init.js';
 import { ensureDirectoryTables } from './directory-db-init.js';
+import { ensureSharedServiceTables } from './shared-services-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -32,6 +33,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   tenant_tables: ensureTenantTables,
   directory_tables: ensureDirectoryTables,
   module_tables: ensureModuleShellTables,
+  shared_service_tables: ensureSharedServiceTables,
   plans_and_admin: seedPlansAndAdmin,
   launch_fix_pre_seed: launchFixPreSeed,
   platform_components: seedPlatformComponents,
@@ -50,6 +52,8 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.tenants') IS NOT NULL AS tenants,
       to_regclass('public.modules') IS NOT NULL AS modules,
       to_regclass('public.directory_organizations') IS NOT NULL AS directory_organizations,
+      to_regclass('public.shared_outbox_messages') IS NOT NULL AS shared_outbox_messages,
+      to_regclass('public.shared_usage_events') IS NOT NULL AS shared_usage_events,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
