@@ -24,7 +24,7 @@ slice is not parity.
 | 4 | TradeFlowKit state 5 | Phases 2-3 | Source/local state 4 candidate on `codex/phase-4-tradeflowkit-state-5`; state 5 blocked on deployed workflow/cutover evidence |
 | 5 | TechDeck state 5 | Phases 2-3 | Source/local state 4 candidate on `codex/phase-5-techdeck-state-5`; state 5 blocked on deployment, provider, and data-cutover evidence |
 | 6 | PulseDesk state 5 with healthcare-operations/PHI boundary resolved | Phases 2-3 | Source/local state 4 candidate on `codex/phase-6-pulsedesk-state-5`; state 5 blocked on deployed workflow, privacy-reviewed data apply, reconciliation and cutover evidence |
-| 7 | TorqueShed vehicle, maintenance, diagnostic, repair, and verification foundation | Phases 2-3 | Pending |
+| 7 | TorqueShed vehicle, maintenance, diagnostic, repair, and verification foundation | Phases 2-3 | Source candidate implemented on `codex/phase-7-torqueshed-foundation`; typecheck/build/preflight and 15 focused contracts pass, but state 4 is blocked because Docker Desktop cannot start its daemon, so DB apply/workflow/runtime/SSO gates were not run |
 | 8 | Torque Assist deterministic adapter, safety controls, metering, and append-only token ledger | Phases 3 and 7 | Pending |
 | 9 | TorqueShed marketplace and community | Phases 3, 7-8 | Pending |
 | 10A | FaultlineLab state 5 | Phases 2-3 | Pending |
@@ -59,7 +59,7 @@ slice is not parity.
 
 The owner explicitly authorized source work to continue through later phases
 on separate branches even while the public deployment gate remains failed.
-That direction permits Phase 7 source work after the scoped Phase 6 commit; it
+That direction permits Phase 8 source work after the scoped Phase 7 commit; it
 does not authorize deployment,
 production data mutation, promotion, or a production-ready label. Before any
 public promotion, deploy the reviewed cumulative revision through `.replit`,

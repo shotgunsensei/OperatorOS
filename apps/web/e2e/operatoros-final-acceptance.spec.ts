@@ -242,18 +242,18 @@ test.describe('OperatorOS final ecosystem acceptance', () => {
 
       modulePage = await launch(page, 'torqueshed', 'torqueshed-module-shell');
       record('14', 'TorqueShed', 'PASS', modulePage.url(), 'Launched from My Apps through SSO into the real module shell.');
-      const diagnostic = await browserFetch(modulePage, '/api/modules/torqueshed/work-items', 'POST', {
-        title: '2018 Ford F-150 intermittent misfire',
-        summary: 'P0302 under load; capture coil and compression evidence.',
-        data: { vehicle: '2018 Ford F-150', troubleCode: 'P0302', measurement: 'Compression 165 psi' },
-      });
       const vehicleProbe = await browserFetch(modulePage, '/api/modules/torqueshed/vehicles', 'POST', { year: 2018, make: 'Ford', model: 'F-150' });
-      const sessionProbe = await browserFetch(modulePage, '/api/modules/torqueshed/diagnostic-sessions', 'POST', { vehicleId: 'probe' });
-      record('15', 'TorqueShed', diagnostic.status === 201 && vehicleProbe.status < 300 && sessionProbe.status < 300 ? 'PASS' : 'FAIL', modulePage.url(), 'A generic diagnostic case persists, but vehicle and diagnostic-session entities must be independently addressable.', vehicleProbe.status >= 300 ? vehicleProbe : sessionProbe);
-      const codeProbe = await browserFetch(modulePage, '/api/modules/torqueshed/diagnostic-sessions/probe/trouble-codes', 'POST', { code: 'P0302' });
-      const measurementProbe = await browserFetch(modulePage, '/api/modules/torqueshed/diagnostic-sessions/probe/measurements', 'POST', { name: 'Compression', value: 165, unit: 'psi' });
+      const vehicleId = (vehicleProbe.response.body as { id?: string })?.id;
+      const sessionProbe = await browserFetch(modulePage, '/api/modules/torqueshed/diagnostic-sessions', 'POST', {
+        vehicleId, title: '2018 Ford F-150 intermittent misfire',
+        customerConcern: 'Misfire under load', symptoms: 'P0302 under load',
+      });
+      const sessionId = (sessionProbe.response.body as { id?: string })?.id;
+      record('15', 'TorqueShed', vehicleProbe.status === 201 && sessionProbe.status === 201 ? 'PASS' : 'FAIL', modulePage.url(), 'Vehicle and diagnostic-session entities persist independently in the shared runtime.', vehicleProbe.status >= 300 ? vehicleProbe : sessionProbe);
+      const codeProbe = await browserFetch(modulePage, `/api/modules/torqueshed/diagnostic-sessions/${sessionId}/trouble-codes`, 'POST', { code: 'P0302' });
+      const measurementProbe = await browserFetch(modulePage, `/api/modules/torqueshed/diagnostic-sessions/${sessionId}/measurements`, 'POST', { name: 'Compression', value: 165, unit: 'psi' });
       record('16', 'TorqueShed', codeProbe.status < 300 && measurementProbe.status < 300 ? 'PASS' : 'FAIL', modulePage.url(), 'Trouble codes and measurements must be durable child records.', codeProbe.status >= 300 ? codeProbe : measurementProbe);
-      const assistProbe = await browserFetch(modulePage, '/api/modules/torqueshed/torque-assist', 'POST', { sessionId: 'probe', adapter: 'test' });
+      const assistProbe = await browserFetch(modulePage, '/api/modules/torqueshed/torque-assist', 'POST', { sessionId, adapter: 'test' });
       record('17', 'TorqueShed', assistProbe.status < 300 ? 'PASS' : 'FAIL', modulePage.url(), 'Torque Assist must execute through an explicit test-model adapter.', assistProbe);
       const ledgerProbe = await browserFetch(modulePage, '/api/modules/torqueshed/token-ledger');
       record('18', 'TorqueShed', ledgerProbe.status === 200 ? 'PASS' : 'FAIL', modulePage.url(), 'Token usage must be recorded in a tenant/user/session-scoped ledger.', ledgerProbe);

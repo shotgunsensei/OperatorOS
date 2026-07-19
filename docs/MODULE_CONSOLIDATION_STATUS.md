@@ -31,7 +31,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 | Product | Slug | Canonical host | Commercial class | Source project observed | Current OperatorOS functional state |
 | --- | --- | --- | --- | --- | --- |
 | TradeFlowKit | `tradeflowkit` | `tradeflowkit.operatoros.net` | core | `C:\Dev\TradeFlowKit` at `6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55` | Source/local state 4 candidate: lead conversion into shared Directory customers; numbered jobs and first-class dependent tasks; comments/tags/private attachments/activity; quotes/public decisions; idempotent invoices; partial manual and deterministic test-provider payments; customer portal/documents; shared messaging; settings; real analytics; CSV export; complete local deep links. ADR-0010/0011 resolve projects and excluded authority/unsafe legacy scope; deployed workflow and cutover evidence still block state 5 |
-| TorqueShed | `torqueshed` | `torqueshed.operatoros.net` | free | `C:\Dev\TorqueShed-Codex` exists, but is not currently saved in the Codex project list | Commit-pinned source snapshot + native tenant-scoped diagnostic case board (symptoms/context, testing/repair/proof states, audit, optimistic concurrency); deeper standalone parity pending |
+| TorqueShed | `torqueshed` | `torqueshed.operatoros.net` | free | Dirty read-only `C:\Dev\TorqueShed-Codex`: local `68da4548f665`, committed reference `508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75`; immutable snapshot remains `c33ade5...` | Phase 7 source candidate: owner/team vehicles with masked VIN; mileage; service/repair/parts/vendors/minor-unit costs; builds/stages/tasks; reminders; diagnostics/codes/freeze-frame/measurements/cause/repair/verification/timeline/templates; shared files; dashboard and deep routes. State remains 3 because Docker daemon failure blocked clean DB/workflow/runtime evidence; AI/ledger and marketplace/community remain later phases |
 | TechDeck | `techdeck` | `techdeck.operatoros.net` | core | Clean `C:\Dev\Tech-Deck` at `8125f8d89d8d39d60a50c8061a26133a0c917792` | Source/local state 4 candidate: Directory-linked tickets/comments/time; typed configuration inventory; network/IPAM topology; lifecycle; versioned documentation/runbooks/backlinks; shared private attachments; evidence metadata; deterministic reports; persisted dashboards and deep links. ADR-0012/0013/0014 exclude discovery/device mutation, secret values, and remote execution; deployed workflow/provider/cutover evidence still block state 5 |
 | PulseDesk | `pulsedesk` | `pulsedesk.operatoros.net` | core | Clean `C:\Dev\PulseDesk` at `937849471e489ed23db2a263d04160a388402740` | Source/local state 4 candidate: PHI-minimized shared-Directory clients/facilities/requesters; departments; operational assets; numbered tickets; queues/teams/assignments; internal notes/requester replies; shared private attachments; time/SLA; vendor, supply and facility coordination; knowledge/tags/saved views/preferences; dashboards, configuration, bulk actions and ticket deep links. ADR-0015 excludes EHR/clinical records and resolves the TechDeck boundary; deployed workflow and authorized privacy-reviewed cutover evidence still block state 5 |
 | FaultlineLab | `faultlinelab` | `faultlinelab.operatoros.net` | free | `C:\Dev\Faultline-Lab` | Commit-pinned source snapshot + native tenant-scoped diagnostic lab/evidence workflow with validated state transitions, audit, and optimistic concurrency; deeper challenge parity pending |
@@ -67,11 +67,14 @@ cutover claim.
 The Replit deployment path is Corepack-free. The checked-in build uses `npm
 exec` with exact pnpm `10.34.5`, runs the mandatory workspace typecheck, and
 builds the API, runner gateway, and Next application. The production supervisor
-uses compiled artifacts only: it applies or verifies the current 19-step database
+uses compiled artifacts only: it applies or verifies the current 20-step database
 release, starts the compiled API, waits for readiness, and starts compiled
 Next. The Phase 6 release adds `pulsedesk_tables` after TechDeck and before
 shared services and applied cleanly/idempotently on disposable PostgreSQL 16.
-The historical 18-step Phase 5 release also applied repeatedly without drift.
+The Phase 7 plan adds `torqueshed_tables` after PulseDesk and before shared
+services, but its apply is unverified because Docker Desktop cannot start its
+daemon. The historical 19-step Phase 6 and 18-step Phase 5 releases applied
+repeatedly without drift.
 A PostgreSQL 16 custom-format Phase 4 backup with SHA-256
 `d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82`
 restored into a new disposable database in 3.570 seconds. Source and restore

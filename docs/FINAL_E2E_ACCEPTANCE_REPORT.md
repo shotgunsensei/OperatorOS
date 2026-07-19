@@ -245,3 +245,17 @@ rule. PulseDesk's local product gap is closed by the Phase 6 follow-up, but the
 ecosystem still requires the later module phases beginning with TorqueShed,
 then a fresh empty-database acceptance run and the separately authorized
 deployed-target gate on the reviewed cumulative revision.
+
+## Phase 7 source remediation note — 2026-07-18
+
+The observations above remain the authoritative result for the older tested
+revision and were not rewritten as passes. The Phase 7 source branch adds
+first-class vehicles, diagnostic sessions, trouble codes, measurements, and a
+supported `/diagnostics` native deep route. The acceptance script now carries
+the returned vehicle/session identifiers instead of hard-coded `probe` IDs.
+Torque Assist/ledger and marketplace/community remain later-phase failures by
+design.
+
+This suite was **not rerun** because Docker Desktop could not start its daemon
+and no isolated PostgreSQL runtime was available. No deployed or
+production-ready claim is inferred from source, typecheck, or build evidence.

@@ -19,6 +19,7 @@ import { ensureSharedServiceTables } from './shared-services-db-init.js';
 import { ensureTradeFlowKitTables } from './tradeflowkit-db-init.js';
 import { ensureTechDeckTables } from './techdeck-db-init.js';
 import { ensurePulseDeskTables } from './pulsedesk-db-init.js';
+import { ensureTorqueShedTables } from './torqueshed-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -39,6 +40,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   tradeflowkit_tables: ensureTradeFlowKitTables,
   techdeck_tables: ensureTechDeckTables,
   pulsedesk_tables: ensurePulseDeskTables,
+  torqueshed_tables: ensureTorqueShedTables,
   shared_service_tables: ensureSharedServiceTables,
   plans_and_admin: seedPlansAndAdmin,
   launch_fix_pre_seed: launchFixPreSeed,
@@ -66,6 +68,8 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.techdeck_configuration_relationships') IS NOT NULL AS techdeck_configuration_relationships,
       to_regclass('public.pulsedesk_ticket_messages') IS NOT NULL AS pulsedesk_ticket_messages,
       to_regclass('public.pulsedesk_sla_policies') IS NOT NULL AS pulsedesk_sla_policies,
+      to_regclass('public.torqueshed_vehicles') IS NOT NULL AS torqueshed_vehicles,
+      to_regclass('public.torqueshed_diagnostic_entries') IS NOT NULL AS torqueshed_diagnostic_entries,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
