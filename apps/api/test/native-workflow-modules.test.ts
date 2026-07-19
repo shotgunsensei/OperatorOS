@@ -22,7 +22,6 @@ import {
 
 const SPECS = [
   { slug: 'torqueshed', initial: 'open', next: 'testing' },
-  { slug: 'faultlinelab', initial: 'open', next: 'investigating' },
   { slug: 'brandforgeos', initial: 'draft', next: 'planning' },
   { slug: 'snapproofos', initial: 'draft', next: 'captured' },
 ] as const;
