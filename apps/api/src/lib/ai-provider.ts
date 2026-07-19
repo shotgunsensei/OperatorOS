@@ -3,12 +3,17 @@ export interface AiCompletionRequest {
   userPrompt: string;
   maxTokens?: number;
   temperature?: number;
+  responseFormat?: 'text' | 'json';
+  timeoutMs?: number;
 }
 
 export interface AiCompletionResponse {
   text: string;
   tokenCount: number;
   durationMs: number;
+  provider: string;
+  model: string;
+  version: string;
 }
 
 export interface AiProvider {
@@ -50,8 +55,9 @@ export class OpenAiProvider implements AiProvider {
         ],
         max_tokens: request.maxTokens || 2000,
         temperature: request.temperature ?? 0.7,
+        ...(request.responseFormat === 'json' ? { response_format: { type: 'json_object' } } : {}),
       }),
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(Math.max(1_000, Math.min(30_000, request.timeoutMs ?? 30_000))),
     });
 
     if (!res.ok) {
@@ -73,6 +79,9 @@ export class OpenAiProvider implements AiProvider {
       text,
       tokenCount,
       durationMs: Date.now() - start,
+      provider: this.name,
+      model: this.model,
+      version: 'chat-completions-v1',
     };
   }
 }
@@ -83,20 +92,127 @@ export class MockAiProvider implements AiProvider {
   async complete(request: AiCompletionRequest): Promise<AiCompletionResponse> {
     const start = Date.now();
     const toolType = this.detectToolType(request.systemPrompt);
-    const text = this.generateMockResponse(toolType, request.userPrompt);
+    const text = toolType === 'torque_assist'
+      ? this.generateTorqueAssistResponse(request.userPrompt)
+      : this.generateMockResponse(toolType, request.userPrompt);
 
     return {
       text,
-      tokenCount: Math.floor(text.length / 4),
+      tokenCount: Math.max(
+        1,
+        Math.ceil((request.systemPrompt.length + request.userPrompt.length + text.length) / 4),
+      ),
       durationMs: Date.now() - start,
+      provider: this.name,
+      model: 'operatoros-deterministic-torque-v1',
+      version: 'deterministic-v1',
     };
   }
 
   private detectToolType(systemPrompt: string): string {
+    if (systemPrompt.includes('OPERATOROS_TORQUE_ASSIST_V1')) return 'torque_assist';
     if (systemPrompt.includes('summarize')) return 'summarizer';
     if (systemPrompt.includes('break down') || systemPrompt.includes('task')) return 'task_breakdown';
     if (systemPrompt.includes('action plan') || systemPrompt.includes('project plan')) return 'project_planner';
     return 'quick_action';
+  }
+
+  private generateTorqueAssistResponse(userPrompt: string): string {
+    let context: any = {};
+    try {
+      context = JSON.parse(userPrompt)?.diagnosticContext ?? {};
+    } catch {
+      context = {};
+    }
+    const codes = Array.isArray(context.codes) ? context.codes : [];
+    const entries = Array.isArray(context.entries) ? context.entries : [];
+    const evidence = [...codes, ...entries];
+    const needsFollowUp = evidence.length === 0;
+    const concern = String(context.diagnostic?.customerConcern || 'the reported concern').slice(
+      0,
+      300,
+    );
+    const code = codes[0]?.code ? String(codes[0].code) : null;
+    const measurement = entries.find((entry: any) => entry.kind === 'measurement');
+    return JSON.stringify({
+      status: needsFollowUp ? 'follow_up_required' : 'plan_ready',
+      summary: needsFollowUp
+        ? 'More observed evidence is needed before ranking a useful diagnostic plan.'
+        : 'The available evidence supports a test-first plan while every cause remains provisional.',
+      facts: [
+        { source: 'user_entered', statement: `Reported concern: ${concern}` },
+        ...(code ? [{ source: 'observed', statement: `Recorded trouble code: ${code}` }] : []),
+        ...(measurement
+          ? [
+              {
+                source: 'observed',
+                statement:
+                  `Recorded measurement: ${String(measurement.title || 'measurement')} ${String(measurement.valueNumeric ?? measurement.valueText ?? '')} ${String(measurement.unit ?? '')}`.trim(),
+              },
+            ]
+          : []),
+      ],
+      assumptions: [
+        'Recorded observations and units are accurate and were captured under the stated conditions.',
+      ],
+      hypotheses: needsFollowUp
+        ? []
+        : [
+            {
+              rank: 1,
+              description: code
+                ? `A system condition associated with ${code} may explain the concern.`
+                : 'The measured system may be operating outside its expected range.',
+              confidence: 'low',
+              supportingEvidence: evidence
+                .slice(0, 3)
+                .map((item: any) =>
+                  String(item.code || item.title || item.kind || 'Recorded evidence'),
+                ),
+              contradictingEvidence: ['No independent repeat test has been recorded yet.'],
+            },
+          ],
+      safetyWarnings: [
+        {
+          category: 'general-shop-safety',
+          warning: 'Use approved service information, PPE, stable support, and ventilation.',
+          escalation:
+            'Stop and consult a qualified technician if hazards or required procedures are uncertain.',
+        },
+      ],
+      recommendedTests: needsFollowUp
+        ? []
+        : [
+            {
+              priority: 1,
+              title: 'Repeat and validate the recorded evidence',
+              rationale: 'A repeatable observation is required before narrowing the cause.',
+              procedure:
+                'Use the manufacturer test procedure and calibrated tooling to repeat the observation under the same conditions.',
+              stopConditions: [
+                'Stop for unsafe vehicle behavior, leaks, overheating, electrical hazards, or unstable support.',
+              ],
+            },
+            {
+              priority: 2,
+              title: 'Compare related inputs and outputs',
+              rationale:
+                'Correlated data can distinguish a sensor/reporting issue from a mechanical or electrical condition.',
+              procedure:
+                'Capture related scan data and direct measurements, then compare them with service-information ranges.',
+              stopConditions: [
+                'Do not bypass protection devices or probe high-energy circuits without the specified procedure.',
+              ],
+            },
+          ],
+      followUpQuestions: needsFollowUp
+        ? [
+            'Which warning lights or trouble codes are present, including pending and history codes?',
+            'Under what speed, load, temperature, and operating conditions does the concern occur?',
+            'What measurements or visual inspection results have already been recorded?',
+          ]
+        : [],
+    });
   }
 
   private generateMockResponse(toolType: string, userPrompt: string): string {

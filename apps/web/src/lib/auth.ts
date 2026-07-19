@@ -564,6 +564,57 @@ export interface TorqueShedDashboard {
   generatedAt: string;
 }
 
+export interface TorqueAssistResult {
+  status: 'follow_up_required' | 'plan_ready';
+  summary: string;
+  facts: Array<{ source: 'observed' | 'user_entered'; statement: string }>;
+  assumptions: string[];
+  hypotheses: Array<{
+    rank: number;
+    description: string;
+    confidence: 'low' | 'medium';
+    supportingEvidence: string[];
+    contradictingEvidence: string[];
+  }>;
+  safetyWarnings: Array<{ category: string; warning: string; escalation: string }>;
+  recommendedTests: Array<{
+    priority: number;
+    title: string;
+    rationale: string;
+    procedure: string;
+    stopConditions: string[];
+  }>;
+  followUpQuestions: string[];
+  disclaimer: string;
+}
+export interface TorqueAssistResponse {
+  assistRequestId: string;
+  diagnosticSessionId: string;
+  status: string;
+  result: TorqueAssistResult;
+  estimatedUnits: number;
+  actualUnits: number;
+  provider: string;
+  model: string;
+  providerVersion: string;
+  latencyMs: number;
+  replayed: boolean;
+}
+export interface TorqueAssistStatus {
+  provider: { name: string; state: 'configured' | 'test' | 'disabled' };
+  payments: { name: string; state: 'configured' | 'test' | 'disabled' };
+  balance: number;
+  packages: Array<{
+    key: string;
+    name: string;
+    units: number;
+    amountMinor: number;
+    currency: string;
+  }>;
+  limits: { userPerMinute: number; tenantPerMinute: number; maximumContextCharacters: number };
+  ledgerAuthoritative: true;
+}
+
 export interface PulseDeskServiceTicket {
   id: string;
   humanId: string;
@@ -830,6 +881,44 @@ export const moduleShellApi = {
     listVendors: (): Promise<{ vendors: Array<Record<string, any>> }> => apiFetch('/modules/torqueshed/vendors') as Promise<any>,
     createVendor: (input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch('/modules/torqueshed/vendors', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
     uploadAttachment: (objectType: 'vehicles' | 'builds' | 'diagnostics', id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/${objectType}/${encodeURIComponent(id)}/attachments`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    getTorqueAssistStatus: (): Promise<TorqueAssistStatus> =>
+      apiFetch('/modules/torqueshed/torque-assist/status') as Promise<TorqueAssistStatus>,
+    getTorqueAssistContext: (diagnosticSessionId: string): Promise<Record<string, any>> =>
+      apiFetch(
+        `/modules/torqueshed/diagnostics/${encodeURIComponent(diagnosticSessionId)}/torque-assist/context`,
+      ) as Promise<any>,
+    getTorqueAssistHistory: (
+      diagnosticSessionId: string,
+    ): Promise<{ requests: Array<Record<string, any>> }> =>
+      apiFetch(
+        `/modules/torqueshed/diagnostics/${encodeURIComponent(diagnosticSessionId)}/torque-assist`,
+      ) as Promise<any>,
+    getTokenLedger: (): Promise<{
+      balance: number;
+      entries: Array<Record<string, any>>;
+      purchases: Array<Record<string, any>>;
+    }> => apiFetch('/modules/torqueshed/token-ledger?limit=25') as Promise<any>,
+    purchaseTorqueTokens: (
+      input: { diagnosticSessionId: string; packageKey: string },
+      idempotencyKey: string,
+    ): Promise<{ purchase: Record<string, any>; replayed: boolean }> =>
+      apiFetch('/modules/torqueshed/token-purchases/checkout', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    runTorqueAssist: (
+      input: {
+        diagnosticSessionId: string;
+        followUpAnswers?: Array<{ question: string; answer: string }>;
+      },
+      idempotencyKey: string,
+    ): Promise<TorqueAssistResponse> =>
+      apiFetch('/modules/torqueshed/torque-assist', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify(input),
+      }) as Promise<TorqueAssistResponse>,
   },
   pulsedesk: {
     getServiceDeskDashboard: (): Promise<PulseDeskServiceDashboard> =>

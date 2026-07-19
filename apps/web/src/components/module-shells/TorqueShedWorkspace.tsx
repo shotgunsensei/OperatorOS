@@ -6,9 +6,11 @@ import {
   Activity,
   AlertTriangle,
   ArrowLeft,
+  Bot,
   Car,
   CheckCircle2,
   ClipboardCheck,
+  Coins,
   FileUp,
   Gauge,
   Plus,
@@ -23,6 +25,9 @@ import {
   type TorqueShedDashboard,
   type TorqueShedDiagnostic,
   type TorqueShedVehicle,
+  type TorqueAssistResponse,
+  type TorqueAssistResult,
+  type TorqueAssistStatus,
 } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
@@ -1179,6 +1184,7 @@ function DiagnosticDetail({
     >
       <h2 style={{ marginTop: 0, color: semantic.text }}>{diagnostic.title}</h2>
       <p style={{ color: semantic.textMuted }}>{diagnostic.customerConcern}</p>
+      <TorqueAssistPanel diagnostic={diagnostic} />
       <label style={label}>
         Workflow status
         <select
@@ -1368,5 +1374,352 @@ function DiagnosticDetail({
         </button>
       </form>
     </article>
+  );
+}
+
+function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic }) {
+  const [status, setStatus] = useState<TorqueAssistStatus | null>(null);
+  const [context, setContext] = useState<Record<string, any> | null>(null);
+  const [history, setHistory] = useState<Array<Record<string, any>>>([]);
+  const [ledger, setLedger] = useState<{
+    balance: number;
+    entries: Array<Record<string, any>>;
+  } | null>(null);
+  const [response, setResponse] = useState<TorqueAssistResponse | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [activeRequestKey, setActiveRequestKey] = useState('');
+  const [purchaseKeys, setPurchaseKeys] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const load = useCallback(async () => {
+    try {
+      const [nextStatus, nextContext, nextHistory, nextLedger] = await Promise.all([
+        moduleShellApi.torqueshed.getTorqueAssistStatus(),
+        moduleShellApi.torqueshed.getTorqueAssistContext(diagnostic.id),
+        moduleShellApi.torqueshed.getTorqueAssistHistory(diagnostic.id),
+        moduleShellApi.torqueshed.getTokenLedger(),
+      ]);
+      setStatus(nextStatus);
+      setContext(nextContext);
+      setHistory(nextHistory.requests);
+      setLedger(nextLedger);
+    } catch (next) {
+      setError(errorText(next));
+    }
+  }, [diagnostic.id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const result = (response?.result ??
+    history[0]?.responseJson ??
+    null) as TorqueAssistResult | null;
+  const providerDisabled = status?.provider.state === 'disabled';
+  const paymentsDisabled = status?.payments.state === 'disabled';
+
+  async function runAssist() {
+    const requestKey = activeRequestKey || key('torque-assist');
+    if (!activeRequestKey) setActiveRequestKey(requestKey);
+    setBusy('assist');
+    setError('');
+    setNotice('');
+    try {
+      const followUpAnswers = (result?.followUpQuestions ?? [])
+        .map((question) => ({ question, answer: answers[question]?.trim() ?? '' }))
+        .filter((item) => item.answer);
+      const next = await moduleShellApi.torqueshed.runTorqueAssist(
+        { diagnosticSessionId: diagnostic.id, followUpAnswers },
+        requestKey,
+      );
+      setResponse(next);
+      setActiveRequestKey('');
+      setAnswers({});
+      setNotice(
+        next.replayed
+          ? 'The prior accepted result was replayed without another charge.'
+          : `Accepted result recorded. ${next.actualUnits.toLocaleString()} units charged once.`,
+      );
+      await load();
+    } catch (next) {
+      setError(errorText(next));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function purchase(packageKey: string) {
+    const purchaseKey = purchaseKeys[packageKey] || key(`token-purchase:${packageKey}`);
+    setPurchaseKeys((current) => ({ ...current, [packageKey]: purchaseKey }));
+    setBusy(`purchase:${packageKey}`);
+    setError('');
+    setNotice('');
+    try {
+      const next = await moduleShellApi.torqueshed.purchaseTorqueTokens(
+        { diagnosticSessionId: diagnostic.id, packageKey },
+        purchaseKey,
+      );
+      const checkoutUrl = next.purchase.providerCheckoutUrl;
+      if (typeof checkoutUrl === 'string' && checkoutUrl.startsWith('https://')) {
+        window.location.assign(checkoutUrl);
+        return;
+      }
+      setNotice(
+        'Purchase intent created. Credits appear only after the signed payment event is verified; this page does not trust checkout success.',
+      );
+      await load();
+    } catch (next) {
+      setError(errorText(next));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  return (
+    <section
+      data-testid="torqueshed-torque-assist"
+      style={{
+        border: `1px solid ${semantic.border}`,
+        borderRadius: radius.md,
+        padding: space.md,
+        margin: `${space.md}px 0`,
+        background: '#f59e0b0b',
+        display: 'grid',
+        gap: space.md,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <h3
+            style={{
+              margin: 0,
+              color: semantic.text,
+              display: 'flex',
+              gap: 8,
+              alignItems: 'center',
+            }}
+          >
+            <Bot size={19} /> Torque Assist
+          </h3>
+          <p style={{ color: semantic.textMuted, margin: '5px 0 0' }}>
+            Evidence-ranked diagnostic planning. No result confirms a repair without verification.
+          </p>
+        </div>
+        <div style={{ color: semantic.text, textAlign: 'right' }}>
+          <strong style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <Coins size={17} /> {(ledger?.balance ?? status?.balance ?? 0).toLocaleString()} units
+          </strong>
+          <span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
+            Ledger-computed balance
+          </span>
+        </div>
+      </div>
+
+      {providerDisabled && (
+        <div style={{ color: semantic.accentDanger, display: 'flex', gap: 8 }}>
+          <AlertTriangle size={18} /> Torque Assist is disabled until the server-side AI provider is
+          configured. No API key is accepted from this page.
+        </div>
+      )}
+      {status?.provider.state === 'test' && (
+        <div style={{ color: semantic.accentWarning }}>
+          Deterministic test adapter active. This is validation behavior, not a production AI claim.
+        </div>
+      )}
+      {error && <div style={{ color: semantic.accentDanger }}>{error}</div>}
+      {notice && <div style={{ color: semantic.accentSuccess }}>{notice}</div>}
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))',
+          gap: 8,
+          color: semantic.text,
+        }}
+      >
+        <div style={{ ...cardStyle, padding: 10 }}>
+          <strong>Vehicle context</strong>
+          <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
+            {context?.vehicle?.nickname ||
+              `${context?.vehicle?.year ?? ''} ${context?.vehicle?.make ?? ''} ${context?.vehicle?.model ?? ''}`}
+          </div>
+        </div>
+        <div style={{ ...cardStyle, padding: 10 }}>
+          <strong>Evidence</strong>
+          <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
+            {context?.codeCount ?? 0} codes · {context?.evidenceCount ?? 0} timeline entries ·{' '}
+            {context?.priorServiceCount ?? 0} service records
+          </div>
+        </div>
+        <div style={{ ...cardStyle, padding: 10 }}>
+          <strong>Server estimate</strong>
+          <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
+            {(context?.estimatedUnits ?? 0).toLocaleString()} units ·{' '}
+            {(context?.contextCharacters ?? 0).toLocaleString()} context characters
+          </div>
+        </div>
+      </div>
+
+      {result?.status === 'follow_up_required' && (
+        <div style={{ display: 'grid', gap: 8 }}>
+          <strong style={{ color: semantic.text }}>Targeted follow-up</strong>
+          {result.followUpQuestions.map((question) => (
+            <label key={question} style={label}>
+              {question}
+              <textarea
+                rows={2}
+                value={answers[question] ?? ''}
+                onChange={(event) =>
+                  setAnswers((current) => ({ ...current, [question]: event.target.value }))
+                }
+                style={input}
+              />
+            </label>
+          ))}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => void runAssist()}
+        disabled={providerDisabled || busy === 'assist'}
+        style={{ ...button, opacity: providerDisabled || busy === 'assist' ? 0.55 : 1 }}
+      >
+        <Activity size={16} />
+        {busy === 'assist'
+          ? 'Analyzing safely…'
+          : activeRequestKey
+            ? 'Retry same request without duplicate charge'
+            : result?.status === 'follow_up_required'
+              ? 'Submit follow-up evidence'
+              : 'Generate diagnostic plan'}
+      </button>
+
+      {result && (
+        <div style={{ display: 'grid', gap: space.md, color: semantic.text }}>
+          <div>
+            <strong>Summary</strong>
+            <p style={{ color: semantic.textMuted }}>{result.summary}</p>
+          </div>
+          <div>
+            <strong>Facts and assumptions</strong>
+            <ul>
+              {result.facts.map((fact, index) => (
+                <li key={`${fact.source}-${index}`}>
+                  <em>{fact.source.replace('_', ' ')}:</em> {fact.statement}
+                </li>
+              ))}
+              {result.assumptions.map((assumption, index) => (
+                <li key={`assumption-${index}`}>
+                  <em>assumption:</em> {assumption}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {!!result.hypotheses.length && (
+            <div>
+              <strong>Ranked hypotheses</strong>
+              {result.hypotheses.map((hypothesis) => (
+                <div
+                  key={hypothesis.rank}
+                  style={{ borderTop: `1px solid ${semantic.border}`, padding: '8px 0' }}
+                >
+                  #{hypothesis.rank} · {hypothesis.confidence} confidence · {hypothesis.description}
+                  <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
+                    Supports: {hypothesis.supportingEvidence.join('; ') || 'None recorded'} ·
+                    Against: {hypothesis.contradictingEvidence.join('; ') || 'None recorded'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div>
+            <strong>Safety warnings</strong>
+            {result.safetyWarnings.map((warning) => (
+              <div key={warning.category} style={{ color: semantic.accentWarning, marginTop: 6 }}>
+                <AlertTriangle size={14} style={{ verticalAlign: 'middle' }} /> {warning.category}:{' '}
+                {warning.warning} {warning.escalation}
+              </div>
+            ))}
+          </div>
+          {!!result.recommendedTests.length && (
+            <div>
+              <strong>Recommended tests</strong>
+              {result.recommendedTests.map((test) => (
+                <div
+                  key={test.priority}
+                  style={{ borderTop: `1px solid ${semantic.border}`, padding: '8px 0' }}
+                >
+                  <strong>
+                    {test.priority}. {test.title}
+                  </strong>
+                  <div style={{ color: semantic.textMuted }}>{test.rationale}</div>
+                  <div>{test.procedure}</div>
+                  <div style={{ color: semantic.accentWarning, fontSize: fontSize.sm }}>
+                    Stop: {test.stopConditions.join('; ')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
+            {result.disclaimer}
+            <br />
+            Estimated{' '}
+            {(response?.estimatedUnits ?? history[0]?.estimatedUnits ?? 0).toLocaleString()} ·
+            actual {(response?.actualUnits ?? history[0]?.actualUnits ?? 0).toLocaleString()} units
+          </div>
+        </div>
+      )}
+
+      <details>
+        <summary style={{ cursor: 'pointer', color: semantic.text }}>
+          Purchase credits and usage history
+        </summary>
+        <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+          {status?.packages.map((tokenPackage) => (
+            <button
+              type="button"
+              key={tokenPackage.key}
+              disabled={paymentsDisabled || busy === `purchase:${tokenPackage.key}`}
+              onClick={() => void purchase(tokenPackage.key)}
+              style={{
+                ...button,
+                background: semantic.bgPanel,
+                color: semantic.text,
+                border: `1px solid ${semantic.border}`,
+              }}
+            >
+              {tokenPackage.name}: {tokenPackage.units.toLocaleString()} units ·{' '}
+              {money(tokenPackage.amountMinor)}
+            </button>
+          ))}
+          {paymentsDisabled && (
+            <span style={{ color: semantic.accentDanger }}>
+              Purchases are disabled until OperatorOS payment configuration and signed webhooks are
+              ready.
+            </span>
+          )}
+          {history.slice(0, 5).map((item) => (
+            <div
+              key={item.id}
+              style={{
+                borderTop: `1px solid ${semantic.border}`,
+                paddingTop: 6,
+                color: semantic.textMuted,
+              }}
+            >
+              {item.status} · {Number(item.actualUnits ?? 0).toLocaleString()} units ·{' '}
+              {item.provider || 'no provider'} · {new Date(item.createdAt).toLocaleString()}
+            </div>
+          ))}
+          {!history.length && (
+            <span style={{ color: semantic.textMuted }}>No Torque Assist usage yet.</span>
+          )}
+        </div>
+      </details>
+    </section>
   );
 }

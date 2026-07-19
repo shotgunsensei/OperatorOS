@@ -417,6 +417,78 @@ export async function createStackCheckoutSession(
   return { url: session.url!, sessionId: session.id };
 }
 
+export interface UsageCreditCheckoutInput {
+  purchaseId: string;
+  tenantId: string;
+  userId: string;
+  moduleId: string;
+  packageKey: string;
+  packageName: string;
+  units: number;
+  amountMinor: number;
+  currency: string;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+/**
+ * OperatorOS-owned one-time usage-credit checkout. The caller supplies only a
+ * server-resolved package snapshot and canonical return URLs; no client amount,
+ * units, tenant, user, or payment-success assertion reaches Stripe.
+ */
+export async function createUsageCreditCheckoutSession(
+  input: UsageCreditCheckoutInput,
+): Promise<CheckoutSessionResult> {
+  if (!isStripeEnabled()) {
+    throw Object.assign(new Error('Stripe checkout is not configured'), {
+      code: 'STRIPE_NOT_CONFIGURED',
+    });
+  }
+  if (
+    !Number.isSafeInteger(input.units) ||
+    input.units <= 0 ||
+    !Number.isSafeInteger(input.amountMinor) ||
+    input.amountMinor <= 0 ||
+    !/^[A-Z]{3}$/.test(input.currency)
+  ) {
+    throw Object.assign(new Error('Usage-credit package snapshot is invalid'), {
+      code: 'USAGE_CREDIT_PACKAGE_INVALID',
+    });
+  }
+  const metadata = {
+    operatoros_kind: 'torque_assist_credit',
+    purchase_id: input.purchaseId,
+    tenant_id: input.tenantId,
+    user_id: input.userId,
+    module_id: input.moduleId,
+    package_key: input.packageKey,
+    units: String(input.units),
+  };
+  const session = await getStripe().checkout.sessions.create({
+    mode: 'payment',
+    line_items: [
+      {
+        price_data: {
+          currency: input.currency.toLowerCase(),
+          unit_amount: input.amountMinor,
+          product_data: { name: `Torque Assist ${input.packageName} credits` },
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: input.successUrl,
+    cancel_url: input.cancelUrl,
+    metadata,
+    payment_intent_data: { metadata },
+  });
+  if (!session.id || !session.url) {
+    throw Object.assign(new Error('Stripe did not return a checkout URL'), {
+      code: 'STRIPE_CHECKOUT_INVALID',
+    });
+  }
+  return { url: session.url, sessionId: session.id };
+}
+
 export async function createPortalSession(userId: string): Promise<PortalSessionResult> {
   if (!isStripeEnabled()) {
     throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE (test or live).');
@@ -1752,4 +1824,9 @@ export function getBillingMode() {
       elite: !!getStripePriceIdForInterval('elite', 'month'),
     },
   };
+}
+
+export function getStripeRuntimeMode(): 'test' | 'live' | 'disabled' {
+  if (!isStripeEnabled()) return 'disabled';
+  return STRIPE_MODE === 'live' ? 'live' : 'test';
 }

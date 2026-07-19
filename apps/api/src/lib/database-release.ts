@@ -70,6 +70,9 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.pulsedesk_sla_policies') IS NOT NULL AS pulsedesk_sla_policies,
       to_regclass('public.torqueshed_vehicles') IS NOT NULL AS torqueshed_vehicles,
       to_regclass('public.torqueshed_diagnostic_entries') IS NOT NULL AS torqueshed_diagnostic_entries,
+      to_regclass('public.torqueshed_assist_requests') IS NOT NULL AS torqueshed_assist_requests,
+      to_regclass('public.torqueshed_token_ledger_entries') IS NOT NULL AS torqueshed_token_ledger_entries,
+      to_regclass('public.operatoros_token_purchase_intents') IS NOT NULL AS operatoros_token_purchase_intents,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;

@@ -253,10 +253,81 @@ test.describe('OperatorOS final ecosystem acceptance', () => {
       const codeProbe = await browserFetch(modulePage, `/api/modules/torqueshed/diagnostic-sessions/${sessionId}/trouble-codes`, 'POST', { code: 'P0302' });
       const measurementProbe = await browserFetch(modulePage, `/api/modules/torqueshed/diagnostic-sessions/${sessionId}/measurements`, 'POST', { name: 'Compression', value: 165, unit: 'psi' });
       record('16', 'TorqueShed', codeProbe.status < 300 && measurementProbe.status < 300 ? 'PASS' : 'FAIL', modulePage.url(), 'Trouble codes and measurements must be durable child records.', codeProbe.status >= 300 ? codeProbe : measurementProbe);
-      const assistProbe = await browserFetch(modulePage, '/api/modules/torqueshed/torque-assist', 'POST', { sessionId, adapter: 'test' });
-      record('17', 'TorqueShed', assistProbe.status < 300 ? 'PASS' : 'FAIL', modulePage.url(), 'Torque Assist must execute through an explicit test-model adapter.', assistProbe);
+      const purchaseProbe = await browserFetch(
+        modulePage,
+        '/api/modules/torqueshed/token-purchases/checkout',
+        'POST',
+        { diagnosticSessionId: sessionId, packageKey: 'roadside-25000' },
+        { 'Idempotency-Key': `acceptance-purchase-${Date.now()}` },
+      );
+      const purchase =
+        (purchaseProbe.response.body as { purchase?: Record<string, unknown> })?.purchase ?? {};
+      const paymentEvent = {
+        id: `evt_acceptance_${Date.now()}`,
+        type: 'checkout.session.completed',
+        livemode: false,
+        data: {
+          object: {
+            id: String(purchase.providerCheckoutId ?? ''),
+            payment_intent: `pi_acceptance_${Date.now()}`,
+            payment_status: 'paid',
+            amount_total: Number(purchase.amountMinor ?? 0),
+            currency: String(purchase.currency ?? '').toLowerCase(),
+            metadata: {
+              operatoros_kind: 'torque_assist_credit',
+              purchase_id: String(purchase.id ?? ''),
+              tenant_id: String(purchase.tenantId ?? ''),
+              user_id: String(purchase.userId ?? ''),
+              module_id: String(purchase.moduleId ?? ''),
+              package_key: String(purchase.packageKey ?? ''),
+              units: String(purchase.units ?? ''),
+            },
+          },
+        },
+      };
+      const paymentProbe = await browserFetch(
+        modulePage,
+        '/api/billing/torque-assist/webhook',
+        'POST',
+        paymentEvent,
+        { 'stripe-signature': 'operatoros-test-signature' },
+      );
+      const assistProbe = await browserFetch(
+        modulePage,
+        '/api/modules/torqueshed/torque-assist',
+        'POST',
+        { diagnosticSessionId: sessionId },
+        { 'Idempotency-Key': `acceptance-assist-${Date.now()}` },
+      );
+      record(
+        '17',
+        'TorqueShed',
+        purchaseProbe.status === 201 && paymentProbe.status === 200 && assistProbe.status === 200
+          ? 'PASS'
+          : 'FAIL',
+        modulePage.url(),
+        `OperatorOS purchase intent, signed payment credit, and server-selected Torque Assist completed (checkout ${purchaseProbe.status}, webhook ${paymentProbe.status}).`,
+        assistProbe,
+      );
       const ledgerProbe = await browserFetch(modulePage, '/api/modules/torqueshed/token-ledger');
-      record('18', 'TorqueShed', ledgerProbe.status === 200 ? 'PASS' : 'FAIL', modulePage.url(), 'Token usage must be recorded in a tenant/user/session-scoped ledger.', ledgerProbe);
+      const ledgerEntries =
+        (ledgerProbe.response.body as { entries?: Array<Record<string, unknown>> })?.entries ?? [];
+      const purchaseCredits = ledgerEntries.filter(
+        (entry) => entry.entryKind === 'credit' && entry.purchaseIntentId === purchase.id,
+      );
+      const assistDebits = ledgerEntries.filter(
+        (entry) => entry.entryKind === 'debit' && entry.diagnosticSessionId === sessionId,
+      );
+      record(
+        '18',
+        'TorqueShed',
+        ledgerProbe.status === 200 && purchaseCredits.length === 1 && assistDebits.length === 1
+          ? 'PASS'
+          : 'FAIL',
+        modulePage.url(),
+        'Append-only tenant/user ledger contains exactly one signed purchase credit and one successful diagnostic debit.',
+        ledgerProbe,
+      );
       const listingProbe = await browserFetch(modulePage, '/api/modules/torqueshed/marketplace/listings', 'POST', { title: 'Acceptance diagnostic tool', priceCents: 1000 });
       const communityProbe = await browserFetch(modulePage, '/api/modules/torqueshed/community/posts', 'POST', { title: 'Acceptance diagnostic finding', body: 'Verified P0302 workflow.' });
       record('19', 'TorqueShed', listingProbe.status < 300 && communityProbe.status < 300 ? 'PASS' : 'FAIL', modulePage.url(), 'Marketplace and community records must be persistent and tenant/user authorized.', listingProbe.status >= 300 ? listingProbe : communityProbe);

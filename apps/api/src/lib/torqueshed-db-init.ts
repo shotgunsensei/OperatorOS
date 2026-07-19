@@ -230,5 +230,123 @@ export async function ensureTorqueShedTables(): Promise<void> {
       CONSTRAINT uq_torqueshed_migration_source UNIQUE (tenant_id, source_type, source_id)
     );
     CREATE INDEX IF NOT EXISTS idx_torqueshed_migration_target ON torqueshed_migration_refs(tenant_id, target_type, target_id);
+
+    CREATE TABLE IF NOT EXISTS operatoros_token_purchase_intents (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id), module_id VARCHAR(36) NOT NULL REFERENCES modules(id),
+      package_key VARCHAR(80) NOT NULL, units BIGINT NOT NULL, amount_minor INTEGER NOT NULL,
+      currency CHAR(3) NOT NULL DEFAULT 'USD', provider VARCHAR(40) NOT NULL,
+      provider_mode VARCHAR(20) NOT NULL, provider_checkout_id VARCHAR(200), provider_checkout_url TEXT,
+      status VARCHAR(30) NOT NULL DEFAULT 'pending', idempotency_key VARCHAR(200) NOT NULL,
+      failure_code VARCHAR(120), created_at TIMESTAMP NOT NULL DEFAULT NOW(), updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      credited_at TIMESTAMP, refunded_at TIMESTAMP,
+      CONSTRAINT uq_operatoros_token_purchase_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT uq_operatoros_token_purchase_idempotency UNIQUE (tenant_id, user_id, module_id, idempotency_key),
+      CONSTRAINT operatoros_token_purchase_units_check CHECK (units > 0),
+      CONSTRAINT operatoros_token_purchase_amount_check CHECK (amount_minor > 0),
+      CONSTRAINT operatoros_token_purchase_mode_check CHECK (provider_mode IN ('test','live')),
+      CONSTRAINT operatoros_token_purchase_status_check CHECK (status IN ('pending','credited','failed','partially_refunded','refunded'))
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_operatoros_token_purchase_checkout
+      ON operatoros_token_purchase_intents(provider, provider_mode, provider_checkout_id)
+      WHERE provider_checkout_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_operatoros_token_purchase_scope
+      ON operatoros_token_purchase_intents(tenant_id, module_id, user_id, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS torqueshed_assist_requests (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id), diagnostic_session_id VARCHAR(36) NOT NULL,
+      status VARCHAR(30) NOT NULL DEFAULT 'processing', context_sha256 CHAR(64) NOT NULL,
+      context_chars INTEGER NOT NULL, context_items INTEGER NOT NULL, estimated_units BIGINT NOT NULL,
+      actual_units BIGINT, provider VARCHAR(80), provider_model VARCHAR(120), provider_version VARCHAR(80),
+      response_json JSONB, request_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      error_code VARCHAR(120), latency_ms INTEGER, attempt_count INTEGER NOT NULL DEFAULT 0,
+      idempotency_key VARCHAR(200) NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW(), completed_at TIMESTAMP,
+      CONSTRAINT torqueshed_assist_session_fk FOREIGN KEY (tenant_id, diagnostic_session_id)
+        REFERENCES torqueshed_diagnostic_sessions(tenant_id, id),
+      CONSTRAINT uq_torqueshed_assist_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT uq_torqueshed_assist_idempotency UNIQUE (tenant_id, user_id, idempotency_key),
+      CONSTRAINT torqueshed_assist_status_check CHECK (status IN ('processing','follow_up','complete','provider_failed','insufficient_balance')),
+      CONSTRAINT torqueshed_assist_context_hash_check CHECK (context_sha256 ~ '^[0-9a-f]{64}$'),
+      CONSTRAINT torqueshed_assist_context_size_check CHECK (context_chars BETWEEN 1 AND 48000 AND context_items BETWEEN 1 AND 1000),
+      CONSTRAINT torqueshed_assist_usage_check CHECK (estimated_units > 0 AND (actual_units IS NULL OR actual_units > 0)),
+      CONSTRAINT torqueshed_assist_attempt_check CHECK (attempt_count BETWEEN 0 AND 2),
+      CONSTRAINT torqueshed_assist_response_check CHECK (response_json IS NULL OR jsonb_typeof(response_json) = 'object')
+    );
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_assist_session
+      ON torqueshed_assist_requests(tenant_id, diagnostic_session_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_assist_user
+      ON torqueshed_assist_requests(tenant_id, user_id, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS torqueshed_token_ledger_entries (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id), module_id VARCHAR(36) NOT NULL REFERENCES modules(id),
+      entry_kind VARCHAR(30) NOT NULL, operation_type VARCHAR(120) NOT NULL, units BIGINT NOT NULL,
+      idempotency_key VARCHAR(200) NOT NULL, external_event_ref VARCHAR(240),
+      purchase_intent_id VARCHAR(36), diagnostic_session_id VARCHAR(36), assist_request_id VARCHAR(36),
+      reverses_entry_id VARCHAR(36), metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_by_user_id VARCHAR(36) REFERENCES users(id), created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CONSTRAINT uq_torqueshed_token_ledger_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT torqueshed_token_ledger_purchase_fk FOREIGN KEY (tenant_id, purchase_intent_id)
+        REFERENCES operatoros_token_purchase_intents(tenant_id, id),
+      CONSTRAINT torqueshed_token_ledger_session_fk FOREIGN KEY (tenant_id, diagnostic_session_id)
+        REFERENCES torqueshed_diagnostic_sessions(tenant_id, id),
+      CONSTRAINT torqueshed_token_ledger_request_fk FOREIGN KEY (tenant_id, assist_request_id)
+        REFERENCES torqueshed_assist_requests(tenant_id, id),
+      CONSTRAINT torqueshed_token_ledger_reversal_fk FOREIGN KEY (tenant_id, reverses_entry_id)
+        REFERENCES torqueshed_token_ledger_entries(tenant_id, id),
+      CONSTRAINT uq_torqueshed_token_ledger_idempotency UNIQUE (tenant_id, module_id, entry_kind, idempotency_key),
+      CONSTRAINT torqueshed_token_ledger_kind_check CHECK (entry_kind IN ('credit','debit','credit_reversal','debit_reversal','adjustment_credit','adjustment_debit')),
+      CONSTRAINT torqueshed_token_ledger_units_check CHECK (units > 0),
+      CONSTRAINT torqueshed_token_ledger_metadata_check CHECK (jsonb_typeof(metadata_json) = 'object'),
+      CONSTRAINT torqueshed_token_ledger_reference_check CHECK (
+        (entry_kind = 'credit' AND purchase_intent_id IS NOT NULL AND assist_request_id IS NULL) OR
+        (entry_kind = 'debit' AND diagnostic_session_id IS NOT NULL AND assist_request_id IS NOT NULL AND purchase_intent_id IS NULL) OR
+        (entry_kind IN ('credit_reversal','debit_reversal') AND reverses_entry_id IS NOT NULL) OR
+        entry_kind IN ('adjustment_credit','adjustment_debit')
+      )
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_torqueshed_token_ledger_external_event
+      ON torqueshed_token_ledger_entries(external_event_ref) WHERE external_event_ref IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_torqueshed_token_ledger_debit_request
+      ON torqueshed_token_ledger_entries(tenant_id, assist_request_id) WHERE entry_kind = 'debit';
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_token_ledger_balance
+      ON torqueshed_token_ledger_entries(tenant_id, module_id, user_id, created_at, id);
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_token_ledger_purchase
+      ON torqueshed_token_ledger_entries(tenant_id, purchase_intent_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS torqueshed_assist_rate_windows (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      scope VARCHAR(20) NOT NULL, subject_id VARCHAR(36) NOT NULL, window_started_at TIMESTAMP NOT NULL,
+      request_count INTEGER NOT NULL DEFAULT 1, updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CONSTRAINT uq_torqueshed_assist_rate_window UNIQUE (tenant_id, scope, subject_id, window_started_at),
+      CONSTRAINT torqueshed_assist_rate_scope_check CHECK (scope IN ('tenant','user')),
+      CONSTRAINT torqueshed_assist_rate_count_check CHECK (request_count BETWEEN 1 AND 100000)
+    );
+    CREATE INDEX IF NOT EXISTS idx_torqueshed_assist_rate_expiry
+      ON torqueshed_assist_rate_windows(window_started_at);
+
+    CREATE TABLE IF NOT EXISTS torqueshed_ai_provider_circuits (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      provider VARCHAR(80) NOT NULL, state VARCHAR(20) NOT NULL DEFAULT 'closed',
+      consecutive_failures INTEGER NOT NULL DEFAULT 0, open_until TIMESTAMP,
+      last_error_code VARCHAR(120), updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      CONSTRAINT uq_torqueshed_ai_provider_circuit UNIQUE (tenant_id, provider),
+      CONSTRAINT torqueshed_ai_provider_circuit_state_check CHECK (state IN ('closed','open')),
+      CONSTRAINT torqueshed_ai_provider_circuit_failure_check CHECK (consecutive_failures BETWEEN 0 AND 100000)
+    );
+
+    CREATE OR REPLACE FUNCTION torqueshed_reject_token_ledger_mutation()
+    RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      RAISE EXCEPTION 'TorqueShed token ledger is append-only; write a reversal entry'
+        USING ERRCODE = '55000';
+    END;
+    $$;
+    DROP TRIGGER IF EXISTS torqueshed_token_ledger_append_only ON torqueshed_token_ledger_entries;
+    CREATE TRIGGER torqueshed_token_ledger_append_only
+      BEFORE UPDATE OR DELETE ON torqueshed_token_ledger_entries
+      FOR EACH ROW EXECUTE FUNCTION torqueshed_reject_token_ledger_mutation();
   `);
 }
