@@ -328,9 +328,27 @@ test.describe('OperatorOS final ecosystem acceptance', () => {
         'Append-only tenant/user ledger contains exactly one signed purchase credit and one successful diagnostic debit.',
         ledgerProbe,
       );
-      const listingProbe = await browserFetch(modulePage, '/api/modules/torqueshed/marketplace/listings', 'POST', { title: 'Acceptance diagnostic tool', priceCents: 1000 });
-      const communityProbe = await browserFetch(modulePage, '/api/modules/torqueshed/community/posts', 'POST', { title: 'Acceptance diagnostic finding', body: 'Verified P0302 workflow.' });
-      record('19', 'TorqueShed', listingProbe.status < 300 && communityProbe.status < 300 ? 'PASS' : 'FAIL', modulePage.url(), 'Marketplace and community records must be persistent and tenant/user authorized.', listingProbe.status >= 300 ? listingProbe : communityProbe);
+      const listingProbe = await browserFetch(modulePage, '/api/modules/torqueshed/marketplace/listings', 'POST', {
+        title: 'Acceptance diagnostic tool',
+        description: 'Working diagnostic tool created by the production acceptance workflow.',
+        categorySlug: 'tools', type: 'sell', condition: 'working', priceMinor: 1000,
+        locality: 'Acceptance locality', region: 'NC', countryCode: 'US',
+      });
+      const listingBody = listingProbe.response.body as { id?: string; version?: number };
+      const listingPublishProbe = listingBody.id && listingBody.version
+        ? await browserFetch(modulePage, `/api/modules/torqueshed/marketplace/listings/${listingBody.id}/publish`, 'POST', { expectedVersion: listingBody.version })
+        : listingProbe;
+      const communityProbe = await browserFetch(modulePage, '/api/modules/torqueshed/community/posts', 'POST', {
+        title: 'Acceptance diagnostic finding', body: 'Verified P0302 workflow with evidence-first testing.',
+        topicSlug: 'diagnostics', visibility: 'public', tags: ['acceptance', 'diagnostics'],
+      });
+      const communityBody = communityProbe.response.body as { id?: string; version?: number };
+      const communityPublishProbe = communityBody.id && communityBody.version
+        ? await browserFetch(modulePage, `/api/modules/torqueshed/community/posts/${communityBody.id}/publish`, 'POST', { expectedVersion: communityBody.version })
+        : communityProbe;
+      const socialPass = [listingProbe, listingPublishProbe, communityProbe, communityPublishProbe]
+        .every((probe) => probe.status < 300);
+      record('19', 'TorqueShed', socialPass ? 'PASS' : 'FAIL', modulePage.url(), 'Marketplace and community drafts must persist, publish, and remain tenant/user authorized.', socialPass ? communityPublishProbe : [listingProbe, listingPublishProbe, communityProbe, communityPublishProbe].find((probe) => probe.status >= 300));
       await returnToApps(modulePage);
       record('20', 'TorqueShed', 'PASS', modulePage.url(), 'Shared module navigation returned to canonical My Apps.');
       await page.close(); page = modulePage;

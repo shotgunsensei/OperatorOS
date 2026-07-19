@@ -72,6 +72,12 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.torqueshed_diagnostic_entries') IS NOT NULL AS torqueshed_diagnostic_entries,
       to_regclass('public.torqueshed_assist_requests') IS NOT NULL AS torqueshed_assist_requests,
       to_regclass('public.torqueshed_token_ledger_entries') IS NOT NULL AS torqueshed_token_ledger_entries,
+      to_regclass('public.torqueshed_marketplace_listings') IS NOT NULL AS torqueshed_marketplace_listings,
+      to_regclass('public.torqueshed_marketplace_messages') IS NOT NULL AS torqueshed_marketplace_messages,
+      to_regclass('public.torqueshed_community_posts') IS NOT NULL AS torqueshed_community_posts,
+      to_regclass('public.torqueshed_community_comments') IS NOT NULL AS torqueshed_community_comments,
+      to_regclass('public.torqueshed_social_reports') IS NOT NULL AS torqueshed_social_reports,
+      to_regclass('public.torqueshed_social_moderation_actions') IS NOT NULL AS torqueshed_social_moderation_actions,
       to_regclass('public.operatoros_token_purchase_intents') IS NOT NULL AS operatoros_token_purchase_intents,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);

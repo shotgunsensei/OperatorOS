@@ -32,6 +32,13 @@ signed payment events, provider configuration, shared files, and audit.
 | Webhook replay creates duplicate credit/refund | Shared webhook receipts plus unique external event/idempotency references and cumulative append-only refund reversals |
 | Concurrent usage overspends a balance | Balance derived from append-only entries and rechecked under tenant/user/module advisory lock before exact debit |
 | Ledger tampering hides accounting history | Database trigger rejects update/delete; corrections are new reversal/adjustment entries; manager reconciliation flags mismatches |
+| Cross-tenant or blocked-member social enumeration | Trusted session tenant on every query; bilateral block predicates; owner/manager checks; foreign, private, hidden and blocked resources return 404 |
+| Stored XSS or unsafe marketplace content | NFKC plain-text normalization; markup/event/JavaScript rejection; bounded lengths; prohibited-item/claim rules; no rich HTML rendering |
+| Exact location, VIN or private diagnostic leakage | Locality/region/country only; street/coordinate rejection; links reload owner/tenant records and expose only safe vehicle/build labels; no VIN, costs, files, reminders or diagnostics in social projections |
+| Malicious or unscanned social media | JPEG/PNG/WebP magic-byte and declared-MIME agreement, shared size/hash/private storage, 20-image cap, asynchronous scan and clean-only publication/serving |
+| Spam, contact abuse, duplicate content or report flooding | User and tenant rate windows for writes/messages/reports; recent per-author content hashes; one conversation per listing/buyer; duplicate report constraint |
+| Fake protection, reputation or payment authority | Server policy and UI state that contact/payment/fulfillment are off-platform; no checkout, escrow, shipping, tax, title, inspection, rating, guarantee, dispute or refund implementation/claim |
+| Moderator abuse or repudiation | Owner/admin/manager authority only; stable actions/reasons; tenant-scoped target mutation; append-only action trigger, platform audit and owner notification |
 | Repudiation or destructive loss | Activity event per mutation, archives instead of hard delete, additive release, verified backup/restore cutover |
 
 ## Residual risks
@@ -50,3 +57,12 @@ signed payment events, provider configuration, shared files, and audit.
 - A signed refund after credits were consumed can produce a truthful negative
   balance. Reconciliation flags it and later usage is denied; an operational
   collections/correction policy is still required before launch.
+- Marketplace payment and fulfillment happen outside OperatorOS. Fraud,
+  delivery, tax, warranty, safety, recall and title risks are not mitigated by
+  the product and must never be described as protected transactions.
+- Automated text rules and tenant moderation do not replace legal review,
+  recall databases, jurisdiction-specific prohibited-goods policy, appeals,
+  legal hold, retention or staffed incident response.
+- Phase 9 database/media/moderation/browser tests are implemented but remain
+  unrun while the Docker daemon is unusable; static controls do not prove
+  runtime isolation, scanning, trigger enforcement, or persistence.

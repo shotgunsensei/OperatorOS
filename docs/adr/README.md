@@ -21,10 +21,11 @@ new ADR explicitly supersedes it.
 | ADR-0014 | TechDeck runbooks are documentation-only; remote execution requires a separately approved signed endpoint-agent boundary. | Accepted | `docs/adr/ADR-0014-techdeck-remote-action-boundary.md` |
 | ADR-0015 | PulseDesk owns PHI-minimized healthcare operations service delivery; TechDeck retains technical configuration/network ownership and neither product duplicates shared Directory authority. | Accepted | `docs/adr/ADR-0015-pulsedesk-healthcare-operations-boundary.md` |
 | ADR-0016 | TorqueShed separates private/personal, tenant/team, and future public-build views; plaintext VINs are never retained and diagnostics are never public-build data. | Accepted | `docs/adr/ADR-0016-torqueshed-ownership-vin-public-build-boundary.md` |
+| ADR-0017 | Torque Assist uses server-selected providers, strict evidence/safety output, signed OperatorOS credits, and an append-only computed-balance ledger with atomic exact debits. | Accepted | `docs/adr/ADR-0017-torque-assist-provider-safety-ledger.md` |
+| ADR-0018 | TorqueShed marketplace/community is authenticated and tenant-scoped; transactions remain off-platform, protection/verification claims are prohibited, and privacy/abuse/moderation controls are server-enforced. | Accepted | `docs/adr/ADR-0018-torqueshed-marketplace-community-policy.md` |
 
 ## Required future ADRs
 
-- Torque Assist safety, provider, and ledger semantics (Phase 8).
 - Ninja Launch Kit source/product alignment (Phase 11D).
 - CallCommand AI versus OutCall product boundary (Phases 11E/12B).
 - Ninjamation canonical source or newly specified product boundary (Phase 12A).

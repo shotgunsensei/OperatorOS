@@ -19,6 +19,22 @@ Legacy owners must have an explicit source-user to OperatorOS-user mapping.
 Users, sessions, memberships, credentials, token ledgers, subscription, and
 billing records are excluded.
 
+Marketplace and Community are not eligible for Phase 9 import. The inspected
+standalone checkout contains schema declarations and simulated/local-only UI,
+not an approved production dataset or authoritative export. Protected-checkout,
+shipping, dispute, seller-rating/sales-count and fee mockups are not mapped.
+No standalone table or migration is applied to OperatorOS.
+
+If a later approved export proves real user content exists, it requires a new
+versioned dry-run contract mapping each source author to an OperatorOS tenant
+member; converting prices to exact integer minor units; reducing location to
+locality/region/country; rejecting prohibited/protection claims; scanning every
+image through shared attachments; reconciling tags/comments/reactions/follows/
+favorites/messages/reports; and preserving source moderation timestamps in a
+separate import ledger. Sessions, credentials, exact addresses, private VIN/
+diagnostic data, transaction/payment/shipping records and synthetic reputation
+remain excluded.
+
 ## Reconciliation rules
 
 - Every source ID is unique and receives a per-record SHA-256 mapping ledger

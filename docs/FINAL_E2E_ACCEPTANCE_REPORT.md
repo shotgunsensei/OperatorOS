@@ -276,3 +276,21 @@ core preflight pass, but Docker still does not provide an isolated PostgreSQL
 runtime. No source or build assertion is substituted
 for signed-webhook, concurrency, persistence, runtime, browser, provider, or
 deployed evidence.
+
+## Phase 9 source remediation note — 2026-07-18
+
+The historical failure rows and release decision above remain unchanged. The
+Phase 9 branch adds tenant/user-authorized persistent Marketplace listings,
+categories, search/filter/sort/page, saved items, in-app contact/messages,
+expiry/renewal, scanned images and reports; Community profiles/preferences,
+follows/blocks, posts/topics/tags/comments/reactions/media; and owner/admin/
+manager moderation with an append-only action ledger. ADR-0018 and the native
+UI explicitly exclude checkout, escrow, shipping/tracking, tax, title,
+inspection, reputation, guarantee, dispute and refund claims.
+
+Acceptance step 19 now creates valid draft listing and post payloads and then
+publishes both using returned IDs and optimistic versions. The suite was
+**not rerun** because Docker's Linux-engine info endpoint returns HTTP 500 and
+no isolated PostgreSQL/runtime is available. Source contracts, typecheck,
+build and preflight are not substituted for database persistence, scanning,
+tenant/block privacy, moderation trigger, browser, or deployed evidence.

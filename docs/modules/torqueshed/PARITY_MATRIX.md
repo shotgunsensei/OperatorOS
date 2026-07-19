@@ -1,4 +1,4 @@
-# TorqueShed Phase 8 parity matrix
+# TorqueShed Phase 9 parity matrix
 
 Assessment date: 2026-07-18
 
@@ -19,7 +19,15 @@ product concepts are design evidence, not runtime authority. Uncommitted
 `garage.ts` and `operations.ts` are recorded only as non-deterministic design
 input and are ineligible for migration provenance.
 
-| Source capability | OperatorOS Phase 8 disposition | Evidence target |
+Phase 9 also inspected the committed standalone Marketplace and Community
+schema declarations and the product audit. They are incomplete design
+evidence: the standalone audit labels these surfaces simulated/local-only,
+and no production Marketplace or Community route implementation exists there.
+Mockup claims for protected checkout, shipping tracking, dispute windows,
+seller ratings/sales counts, and a 3% fee are explicitly rejected. Nothing was
+copied, installed, migrated, executed, or modified in the standalone checkout.
+
+| Source capability | OperatorOS Phase 9 disposition | Evidence target |
 | --- | --- | --- |
 | Standalone users, sessions, orgs, memberships, credentials | Excluded; OperatorOS authority | Auth/tenant/module guards and negative tests |
 | Vehicle profile, year/make/model/trim/engine/transmission/drivetrain | Namespaced vehicle record | CRUD, search/page, restart, tenant tests |
@@ -41,17 +49,23 @@ input and are ineligible for migration provenance.
 | Provider execution | Shared server-selected adapter with bounded context, timeout, two attempts, user/tenant rate limits, tenant circuit, disabled state, and redacted errors | Domain/static contracts plus database workflow |
 | Token purchase and credit | OperatorOS-owned package price/units, Stripe Checkout, signed raw-body webhook, test/live binding, duplicate-safe credit, failure and refund reversal | Signed payment/replay/mode/refund tests |
 | Usage debit and balance | Append-only tenant/user/module ledger; computed balance; atomic accepted request plus exact one debit; no mutable authoritative balance | Exhaustion, replay, race, append-only, reconciliation, and restart tests |
-| Marketplace and community | Excluded until later phases | No mounted routes/tables |
+| Marketplace listings | Tenant/user-owned draft/publish/sold/expired/archive lifecycle; categories, integer price minor units, safe locality, vehicle/build links, search/filter/sort/page, saved view, 30-day expiry/renewal | Domain/static contracts plus implemented DB workflow and browser acceptance |
+| Marketplace contact | One conversation per listing/buyer; persistent in-app messages, bilateral blocks, rate/duplicate limits and reports | Implemented DB workflow, outbox and browser conversation UI |
+| Marketplace media | Shared private JPEG/PNG/WebP storage, signature/hash/size validation, 20-image cap, scan-before-publication/visibility | Static contracts and implemented workflow; scanner runtime rerun pending |
+| Community profiles/privacy | Tenant/private profiles with safe locality, specialties, notification preferences, follows and bilateral blocks | API/UI plus implemented DB workflow |
+| Community content | Draft/publish/edit/archive posts; topics/tags; same-tenant/follower/private visibility; vehicle/build links; comments/replies, reactions and media | Domain/static/API/UI plus implemented DB workflow |
+| Reporting/moderation | Listing/message/profile/post/comment reports; owner/admin/manager actions; append-only moderation ledger, audit and notifications | Static trigger/route contracts and implemented DB workflow |
+| Transaction/protection claims | Explicitly excluded: checkout, escrow, shipping/tracking, taxes, payment protection, inspections, title verification, reputation, guarantees, disputes and refunds | ADR-0018, policy route, moderation policy and UI disclosure |
 | Standalone billing/Stripe | Excluded; OperatorOS platform authority | No mounted child route/schema |
 | Child runtime and migrations | Excluded | Root release manifest only |
 
 ## Completion boundary
 
-The combined Phase 7/8 candidate can reach consolidation state 4 only after
+The combined Phase 7/8/9 candidate can reach consolidation state 4 only after
 isolated database apply, the complete foundation and Torque Assist payment/
-ledger/provider/role/tenant/concurrency/restart tests, root typecheck/build/
-preflight, local production readiness, and production-host SSO/deep-link
-checks pass.
+ledger/provider/role/tenant/concurrency/restart tests, Marketplace/Community
+persistence/isolation/media/moderation workflow, root typecheck/build/preflight,
+local production readiness, and production-host SSO/deep-link checks pass.
 State 5 additionally requires an approved cumulative deployment, current
 public acceptance, and an approved standalone-data apply/cutover. A rendered
 shell or older public deployment is not parity.

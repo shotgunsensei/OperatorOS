@@ -26,7 +26,7 @@ slice is not parity.
 | 6 | PulseDesk state 5 with healthcare-operations/PHI boundary resolved | Phases 2-3 | Source/local state 4 candidate on `codex/phase-6-pulsedesk-state-5`; state 5 blocked on deployed workflow, privacy-reviewed data apply, reconciliation and cutover evidence |
 | 7 | TorqueShed vehicle, maintenance, diagnostic, repair, and verification foundation | Phases 2-3 | Source candidate implemented on `codex/phase-7-torqueshed-foundation`; typecheck/build/preflight and 15 focused contracts pass, but state 4 is blocked because Docker Desktop cannot start its daemon, so DB apply/workflow/runtime/SSO gates were not run |
 | 8 | Torque Assist deterministic adapter, safety controls, metering, and append-only token ledger | Phases 3 and 7 | Source candidate implemented on `codex/phase-8-torque-assist`; 7/7 Phase 8 and 15/15 cumulative contracts, workspace typecheck, production build, core preflight, and 20-step read-only release plan pass. State remains 3 because Docker/database workflows, runtime and browser gates are unrun |
-| 9 | TorqueShed marketplace and community | Phases 3, 7-8 | Pending |
+| 9 | TorqueShed marketplace and community | Phases 3, 7-8 | Source candidate implemented on `codex/phase-9-torqueshed-marketplace-community`; durable listing/contact/expiry and profile/post/comment/reaction/follow/block/media/report/moderation workflows, policy and native UI pass database-independent contracts/typecheck. State remains 3 because Docker/database/scanner/runtime/browser/deployed gates are unrun |
 | 10A | FaultlineLab state 5 | Phases 2-3 | Pending |
 | 10B | Ninja Pool Hall state 5 | Phases 2-3 | Pending |
 | 11A | BrandForgeOS state 5 | Phases 2-3 | Pending |
@@ -59,7 +59,7 @@ slice is not parity.
 
 The owner explicitly authorized source work to continue through later phases
 on separate branches even while the public deployment gate remains failed.
-That direction permits Phase 9 source work after the scoped Phase 8 commit; it
+That direction permits Phase 10A source work after the scoped Phase 9 commit; it
 does not authorize deployment,
 production data mutation, promotion, or a production-ready label. Before any
 public promotion, deploy the reviewed cumulative revision through `.replit`,

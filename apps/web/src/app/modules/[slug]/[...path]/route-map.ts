@@ -82,6 +82,8 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/diagnostics': { sectionId: 'torqueshed-diagnostics', label: 'Diagnostics' },
     '/diagnostic-templates': { sectionId: 'torqueshed-templates', label: 'Diagnostic Templates' },
     '/vendors': { sectionId: 'torqueshed-templates', label: 'Vendors' },
+    '/marketplace': { sectionId: 'torqueshed-marketplace', label: 'Marketplace' },
+    '/community': { sectionId: 'torqueshed-community', label: 'Community' },
     '/settings': { sectionId: 'torqueshed-templates', label: 'Settings' },
   },
 };
@@ -124,6 +126,8 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'vehicles') return { sectionId: 'torqueshed-garage', label: 'Vehicle Record' };
     if (resource === 'builds') return { sectionId: 'torqueshed-builds', label: 'Build Record' };
     if (resource === 'diagnostics') return { sectionId: 'torqueshed-diagnostics', label: 'Diagnostic Session' };
+    if (resource === 'marketplace') return { sectionId: 'torqueshed-marketplace', label: 'Marketplace Listing' };
+    if (resource === 'community') return { sectionId: 'torqueshed-community', label: 'Community Post' };
   }
   return null;
 }
