@@ -86,6 +86,7 @@ import { registerTechDeckRoutes } from './techdeck-routes.js';
 import { registerTorqueShedRoutes } from './torqueshed-routes.js';
 import { registerTorqueAssistRoutes } from './torque-assist-routes.js';
 import { registerTorqueShedSocialRoutes } from './torqueshed-social-routes.js';
+import { registerFaultlineLabRoutes } from './faultlinelab-routes.js';
 
 // Task #91 — per-tenant + per-user budget for outbound calls. Each placed
 // call burns real Twilio minutes, so we cap dial attempts to a small
@@ -128,10 +129,6 @@ const WORKFLOW_MODULES = {
   torqueshed: {
     slug: 'torqueshed', itemType: 'diagnostic_case', initialStatus: 'open',
     statuses: new Set(['open', 'testing', 'repairing', 'verified', 'closed']),
-  },
-  faultlinelab: {
-    slug: 'faultlinelab', itemType: 'diagnostic_lab', initialStatus: 'open',
-    statuses: new Set(['open', 'investigating', 'hypothesis', 'validated', 'closed']),
   },
   brandforgeos: {
     slug: 'brandforgeos', itemType: 'campaign', initialStatus: 'draft',
@@ -575,6 +572,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerTorqueShedRoutes(app);
   await registerTorqueAssistRoutes(app);
   await registerTorqueShedSocialRoutes(app);
+  await registerFaultlineLabRoutes(app);
 
   // ===== TradeFlowKit: lead and revenue compatibility routes ==============
   //

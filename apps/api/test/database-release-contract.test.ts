@@ -12,8 +12,8 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 20);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 20);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 21);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 21);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'free_account_app_backfill');
   assert.ok(
@@ -47,8 +47,13 @@ test('database release plan is explicit, ordered, additive, and reusable by star
     'TorqueShed tables must follow the completed core module foundations',
   );
   assert.ok(
-    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'shared_service_tables')
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'faultlinelab_tables')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'torqueshed_tables'),
+    'FaultlineLab tables must follow TorqueShed and the completed core module foundations',
+  );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'shared_service_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'faultlinelab_tables'),
     'shared services must follow tenant, directory, and active module tables',
   );
 
@@ -77,6 +82,11 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.torqueshed_community_comments'\)/);
   assert.match(releaseSource, /to_regclass\('public\.torqueshed_social_reports'\)/);
   assert.match(releaseSource, /to_regclass\('public\.torqueshed_social_moderation_actions'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.faultlinelab_challenges'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.faultlinelab_challenge_versions'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.faultlinelab_sessions'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.faultlinelab_session_actions'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.faultlinelab_submissions'\)/);
   assert.match(releaseSource, /to_regclass\('public\.operatoros_token_purchase_intents'\)/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
 });
