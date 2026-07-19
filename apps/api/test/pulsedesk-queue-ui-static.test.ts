@@ -14,7 +14,7 @@ function readRepoFile(path: string): string {
 test('PulseDesk shell mounts the live tenant-scoped department escalation queue', () => {
   const shell = readRepoFile('apps/web/src/components/module-shells/PulseDeskShell.tsx');
   assert.match(shell, /PulseDeskDepartmentEscalationQueue/);
-  assert.match(shell, /key=\{adapter\.tenantId\}/);
+  assert.match(shell, /department-queue-\$\{adapter\.tenantId\}/);
   assert.match(shell, /tenantKey=\{adapter\.tenantId\}/);
   assert.match(shell, /const hasTenantContext = !!adapter\.tenantId/);
   assert.match(shell, /pulsedesk-operations-panel/);

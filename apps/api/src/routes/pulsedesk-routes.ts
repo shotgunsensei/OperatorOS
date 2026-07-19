@@ -1,8 +1,10 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { and, asc, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
   activityFeed,
+  directoryOrganizations,
+  directorySites,
   pulsedeskDepartments,
   pulsedeskRequestEvents,
   pulsedeskRequests,
@@ -133,7 +135,7 @@ function assigneeNotFound(reply: FastifyReply) {
 }
 
 function formatRequestNumber(number: number): string {
-  return `PD-${String(number).padStart(5, '0')}`;
+  return `PD-${String(number).padStart(6, '0')}`;
 }
 
 function departmentView(department: typeof pulsedeskDepartments.$inferSelect) {
@@ -141,9 +143,34 @@ function departmentView(department: typeof pulsedeskDepartments.$inferSelect) {
     id: department.id,
     name: department.name,
     active: department.active,
+    description: department.description,
+    directoryOrganizationId: department.directoryOrganizationId,
+    directorySiteId: department.directorySiteId,
+    version: department.version,
     createdAt: department.createdAt,
     updatedAt: department.updatedAt,
   };
+}
+
+async function validateDepartmentDirectoryReferences(
+  tenantId: string,
+  organizationId: string | null | undefined,
+  siteId: string | null | undefined,
+): Promise<boolean> {
+  if (siteId && !organizationId) return false;
+  if (organizationId) {
+    const [organization] = await db.select({ id: directoryOrganizations.id }).from(directoryOrganizations).where(and(
+      eq(directoryOrganizations.tenantId, tenantId), eq(directoryOrganizations.id, organizationId), isNull(directoryOrganizations.archivedAt),
+    )).limit(1);
+    if (!organization) return false;
+  }
+  if (siteId) {
+    const [site] = await db.select({ id: directorySites.id, organizationId: directorySites.organizationId }).from(directorySites).where(and(
+      eq(directorySites.tenantId, tenantId), eq(directorySites.id, siteId), isNull(directorySites.archivedAt),
+    )).limit(1);
+    if (!site || site.organizationId !== organizationId) return false;
+  }
+  return true;
 }
 
 async function enrichRequests(rows: PulseDeskRequestRow[], tenantId: string) {
@@ -274,12 +301,19 @@ export async function registerPulseDeskRoutes(app: FastifyInstance) {
       }
       const ctx = (request as any).tenantContext as PulseDeskContext;
       const actor = (request as any).user as PulseDeskActor;
+      if (!await validateDepartmentDirectoryReferences(ctx.tenantId, input.directoryOrganizationId, input.directorySiteId)) {
+        return reply.code(404).send({ error: 'Service client or facility not found', code: 'PULSEDESK_DIRECTORY_REFERENCE_NOT_FOUND' });
+      }
       try {
         const department = await db.transaction(async (tx) => {
           const [created] = await tx.insert(pulsedeskDepartments).values({
             tenantId: ctx.tenantId,
             createdByUserId: actor.id,
             name: input.name,
+            description: input.description,
+            directoryOrganizationId: input.directoryOrganizationId,
+            directorySiteId: input.directorySiteId,
+            updatedByUserId: actor.id,
             active: true,
           }).returning();
           await tx.insert(activityFeed).values({
@@ -326,19 +360,26 @@ export async function registerPulseDeskRoutes(app: FastifyInstance) {
       )).limit(1);
       if (!before) return departmentNotFound(reply);
 
-      const changedFields = Object.keys(patch).filter((field) => {
-        const key = field as keyof typeof patch;
-        return patch[key] !== before[key];
+      const { expectedVersion, ...changes } = patch;
+      const effectiveOrganizationId = changes.directoryOrganizationId === undefined ? before.directoryOrganizationId : changes.directoryOrganizationId;
+      const effectiveSiteId = changes.directorySiteId === undefined ? before.directorySiteId : changes.directorySiteId;
+      if (!await validateDepartmentDirectoryReferences(ctx.tenantId, effectiveOrganizationId, effectiveSiteId)) {
+        return reply.code(404).send({ error: 'Service client or facility not found', code: 'PULSEDESK_DIRECTORY_REFERENCE_NOT_FOUND' });
+      }
+      const changedFields = Object.keys(changes).filter((field) => {
+        const key = field as keyof typeof changes;
+        return changes[key] !== (before as unknown as Record<string, unknown>)[field];
       });
       if (changedFields.length === 0) return departmentView(before);
 
       try {
         const department = await db.transaction(async (tx) => {
           const [updated] = await tx.update(pulsedeskDepartments)
-            .set({ ...patch, updatedAt: new Date() })
+            .set({ ...changes, updatedByUserId: actor.id, updatedAt: new Date(), version: sql`${pulsedeskDepartments.version} + 1` })
             .where(and(
               eq(pulsedeskDepartments.id, id),
               eq(pulsedeskDepartments.tenantId, ctx.tenantId),
+              eq(pulsedeskDepartments.version, expectedVersion),
             ))
             .returning();
           if (!updated) return null;
@@ -359,7 +400,7 @@ export async function registerPulseDeskRoutes(app: FastifyInstance) {
           });
           return updated;
         });
-        if (!department) return departmentNotFound(reply);
+        if (!department) return reply.code(409).send({ error: 'Department changed; refresh before updating', code: 'PULSEDESK_VERSION_CONFLICT' });
         return departmentView(department);
       } catch (error) {
         if (hasPostgresCode(error, '23505')) {

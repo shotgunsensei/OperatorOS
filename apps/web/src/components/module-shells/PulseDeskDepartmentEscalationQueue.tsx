@@ -398,6 +398,7 @@ export default function PulseDeskDepartmentEscalationQueue({ tenantKey }: { tena
     setSuccessMessage(null);
     try {
       const updated = await moduleShellApi.pulsedesk.updateDepartment(department.id, {
+        expectedVersion: department.version,
         active: !department.active,
       });
       setDepartments((current) => current.map((item) => item.id === updated.id ? updated : item));

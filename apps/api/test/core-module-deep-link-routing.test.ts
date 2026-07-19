@@ -55,6 +55,10 @@ test('core module deep links resolve only to live native shell sections', () => 
   for (const path of ['clients', 'facilities', 'sites', 'contacts', 'vendors']) {
     assert.equal(resolveCoreModuleDeepLink('pulsedesk', [path])?.sectionId, 'pulsedesk-directory');
   }
+  for (const path of ['assets', 'supply-requests', 'facility-requests', 'knowledge']) {
+    assert.equal(resolveCoreModuleDeepLink('pulsedesk', [path])?.sectionId, 'pulsedesk-operations');
+  }
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['service-desk', 'admin'])?.sectionId, 'pulsedesk-operations');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['settings'])?.sectionId, 'techdeck-settings');
 });
 
@@ -63,7 +67,9 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['leads', 'lead-123'])?.sectionId, 'tradeflowkit-lead-center');
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['jobs', 'job-123'])?.sectionId, 'tradeflowkit-operations');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['tickets', 'ticket-123']), null);
-  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets']), null);
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['tickets', 'ticket-123'])?.sectionId, 'pulsedesk-operations');
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets', 'asset-123']), null);
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['unknown']), null);
   assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['dashboard']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['Tickets']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['..']), null);

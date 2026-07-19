@@ -52,20 +52,24 @@ test('session refresh preserves scope and revokes the replaced token', async () 
   assert.match(routes, /\/v1\/auth\/refresh/);
 });
 
-test('unfinished primary-module workflow cards are visibly disabled', () => {
-  for (const shell of ['TechDeckShell.tsx', 'PulseDeskShell.tsx']) {
-    assert.match(
-      read(`apps/web/src/components/module-shells/${shell}`),
-      /Migration pending — disabled/,
-      shell,
-    );
-  }
+test('unfinished TechDeck workflow cards remain visibly disabled', () => {
+  assert.match(
+    read('apps/web/src/components/module-shells/TechDeckShell.tsx'),
+    /Migration pending — disabled/,
+  );
 });
 
-test('completed TradeFlowKit workflow cards do not advertise migration placeholders', () => {
-  const shell = read('apps/web/src/components/module-shells/TradeFlowKitShell.tsx');
-  assert.match(shell, /Live in shared runtime/);
-  assert.doesNotMatch(shell, /Migration pending — disabled/);
+test('completed TradeFlowKit and PulseDesk workflows do not advertise migration placeholders', () => {
+  const completedShells = [
+    ['TradeFlowKitShell.tsx', /Live in shared runtime/],
+    ['PulseDeskShell.tsx', /PulseDeskServiceDeskWorkspace/],
+  ] as const;
+
+  for (const [filename, completedMarker] of completedShells) {
+    const shell = read(`apps/web/src/components/module-shells/${filename}`);
+    assert.match(shell, completedMarker, filename);
+    assert.doesNotMatch(shell, /Migration pending — disabled/, filename);
+  }
 });
 
 test('production logging and readiness expose safe shared context', () => {

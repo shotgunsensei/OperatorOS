@@ -33,7 +33,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 | TradeFlowKit | `tradeflowkit` | `tradeflowkit.operatoros.net` | core | `C:\Dev\TradeFlowKit` at `6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55` | Source/local state 4 candidate: lead conversion into shared Directory customers; numbered jobs and first-class dependent tasks; comments/tags/private attachments/activity; quotes/public decisions; idempotent invoices; partial manual and deterministic test-provider payments; customer portal/documents; shared messaging; settings; real analytics; CSV export; complete local deep links. ADR-0010/0011 resolve projects and excluded authority/unsafe legacy scope; deployed workflow and cutover evidence still block state 5 |
 | TorqueShed | `torqueshed` | `torqueshed.operatoros.net` | free | `C:\Dev\TorqueShed-Codex` exists, but is not currently saved in the Codex project list | Commit-pinned source snapshot + native tenant-scoped diagnostic case board (symptoms/context, testing/repair/proof states, audit, optimistic concurrency); deeper standalone parity pending |
 | TechDeck | `techdeck` | `techdeck.operatoros.net` | core | Clean `C:\Dev\Tech-Deck` at `8125f8d89d8d39d60a50c8061a26133a0c917792` | Source/local state 4 candidate: Directory-linked tickets/comments/time; typed configuration inventory; network/IPAM topology; lifecycle; versioned documentation/runbooks/backlinks; shared private attachments; evidence metadata; deterministic reports; persisted dashboards and deep links. ADR-0012/0013/0014 exclude discovery/device mutation, secret values, and remote execution; deployed workflow/provider/cutover evidence still block state 5 |
-| PulseDesk | `pulsedesk` | `pulsedesk.operatoros.net` | core | `C:\Dev\PulseDesk` | Source snapshot + OperatorOS adapter shell + shared organizations/contacts/sites with PHI-restricted service-client profiles + PHI-minimized tenant-scoped Department Escalation Queue; asset/ticket/note/time and remaining product workflows pending |
+| PulseDesk | `pulsedesk` | `pulsedesk.operatoros.net` | core | Clean `C:\Dev\PulseDesk` at `937849471e489ed23db2a263d04160a388402740` | Source/local state 4 candidate: PHI-minimized shared-Directory clients/facilities/requesters; departments; operational assets; numbered tickets; queues/teams/assignments; internal notes/requester replies; shared private attachments; time/SLA; vendor, supply and facility coordination; knowledge/tags/saved views/preferences; dashboards, configuration, bulk actions and ticket deep links. ADR-0015 excludes EHR/clinical records and resolves the TechDeck boundary; deployed workflow and authorized privacy-reviewed cutover evidence still block state 5 |
 | FaultlineLab | `faultlinelab` | `faultlinelab.operatoros.net` | free | `C:\Dev\Faultline-Lab` | Commit-pinned source snapshot + native tenant-scoped diagnostic lab/evidence workflow with validated state transitions, audit, and optimistic concurrency; deeper challenge parity pending |
 | Ninja Pool Hall | `ninja-pool-hall` | `ninja-pool-hall.operatoros.net` | free | `C:\Dev\Shotgun-ninja-pool-hall` | Commit-pinned source snapshot + native tenant/user-scoped Free Shoot slice. Physics remains browser-local; the API stores bounded client-reported summaries with one-active, rate-limit, retention, idempotency, recovery, viewer, and lifecycle controls. Full game parity remains pending |
 | BrandForgeOS | `brandforgeos` | `brandforgeos.operatoros.net` | add-on | `C:\Dev\BrandForge-OS` | Commit-pinned source snapshot + native tenant-scoped campaign production board with draft-to-published workflow, audit, viewer denial, and optimistic concurrency; deeper asset generation parity pending |
@@ -58,20 +58,26 @@ and passed 2/2. The final clean-database aggregate passed 696, failed 0, and
 skipped 6 out of 702 in 616,919 ms. These are source and isolated-database
 results, not a public deployment claim.
 
+Phase 6 adds 37/37 focused PulseDesk passes and a final clean-database
+aggregate of 706 pass, 0 fail, and 6 HTTP-only skips out of 712 in 1,305,103
+ms. Its dry-run importer resolved 34/34 references with zero missing/privacy
+findings. These remain source/local results, not a public deployment or data
+cutover claim.
+
 The Replit deployment path is Corepack-free. The checked-in build uses `npm
 exec` with exact pnpm `10.34.5`, runs the mandatory workspace typecheck, and
 builds the API, runner gateway, and Next application. The production supervisor
-uses compiled artifacts only: it applies or verifies the current 18-step database
+uses compiled artifacts only: it applies or verifies the current 19-step database
 release, starts the compiled API, waits for readiness, and starts compiled
-Next. The Phase 5 release adds `techdeck_tables` after TradeFlowKit and before
-shared services and applied repeatedly without drift on disposable PostgreSQL
-16. The historical 17-step Phase 4 release also applied twice without drift.
+Next. The Phase 6 release adds `pulsedesk_tables` after TechDeck and before
+shared services and applied cleanly/idempotently on disposable PostgreSQL 16.
+The historical 18-step Phase 5 release also applied repeatedly without drift.
 A PostgreSQL 16 custom-format Phase 4 backup with SHA-256
 `d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82`
 restored into a new disposable database in 3.570 seconds. Source and restore
 matched 94 public tables, including all 17 TradeFlowKit, 9 Directory, and 10
 shared-service tables; the restored database accepted the full release apply.
-This closes the local Phase 5 additive schema gate, but not public deployment
+This closes the local Phase 6 additive schema gate, but not public deployment
 or standalone-data cutover.
 
 The reviewed candidate passes the local production-host SSO matrix 2/2, but it
@@ -88,9 +94,8 @@ The production-host Playwright gate also passes locally against a disposable
 PostgreSQL database and HTTPS host-preserving proxy: one central credential
 entry establishes the apex session, then all twelve enabled modules launch
 silently with independent host-only sessions, survive reload, keep credentials
-out of URLs/storage, and honor global revocation. The fresh Phase 5 2/2 run
-completed in 1.7 minutes and also passed direct TechDeck deep-link return,
-browser Back
+out of URLs/storage, and honor global revocation. The fresh Phase 6 2/2 run
+completed in 3.9 minutes and passed direct deep-link return, browser Back
 without a central-auth loop, sibling-tab PulseDesk SSO, and host-only local
 logout. Core deep-link dispatch is explicit for the currently migrated
 workflows and returns a module-scoped recovery state for unsupported paths.

@@ -59,6 +59,11 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/tickets': { sectionId: 'pulsedesk-operations', label: 'Request Queue' },
     '/requests': { sectionId: 'pulsedesk-operations', label: 'Request Queue' },
     '/departments': { sectionId: 'pulsedesk-operations', label: 'Departments' },
+    '/assets': { sectionId: 'pulsedesk-operations', label: 'Operational Equipment' },
+    '/supply-requests': { sectionId: 'pulsedesk-operations', label: 'Supply Requests' },
+    '/facility-requests': { sectionId: 'pulsedesk-operations', label: 'Facility Requests' },
+    '/knowledge': { sectionId: 'pulsedesk-operations', label: 'Operational Knowledge' },
+    '/service-desk/admin': { sectionId: 'pulsedesk-operations', label: 'Service Desk Administration' },
     '/clients': { sectionId: 'pulsedesk-directory', label: 'Service Clients' },
     '/facilities': { sectionId: 'pulsedesk-directory', label: 'Shared Facilities' },
     '/sites': { sectionId: 'pulsedesk-directory', label: 'Shared Sites' },
@@ -96,6 +101,10 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'documents' || resource === 'runbooks') return { sectionId: 'techdeck-documentation', label: 'Document' };
     if (resource === 'evidence') return { sectionId: 'techdeck-evidence', label: 'Evidence Record' };
     if (resource === 'reports') return { sectionId: 'techdeck-reports', label: 'Report Snapshot' };
+  }
+  if (slug === 'pulsedesk' && pathSegments.length === 2) {
+    const [resource] = pathSegments;
+    if (resource === 'tickets' || resource === 'requests') return { sectionId: 'pulsedesk-operations', label: 'Ticket Record' };
   }
   return null;
 }

@@ -192,10 +192,17 @@ export interface PulseDeskRequestListQuery {
 
 export interface PulseDeskDepartmentCreateInput {
   name: string;
+  description?: string | null;
+  directoryOrganizationId?: string | null;
+  directorySiteId?: string | null;
 }
 
 export interface PulseDeskDepartmentPatchInput {
+  expectedVersion: number;
   name?: string;
+  description?: string | null;
+  directoryOrganizationId?: string | null;
+  directorySiteId?: string | null;
   active?: boolean;
 }
 
@@ -236,8 +243,8 @@ const LIST_FIELDS = new Set([
   'search',
   'limit',
 ]);
-const DEPARTMENT_CREATE_FIELDS = new Set(['name']);
-const DEPARTMENT_PATCH_FIELDS = new Set(['name', 'active']);
+const DEPARTMENT_CREATE_FIELDS = new Set(['name', 'description', 'directoryOrganizationId', 'directorySiteId']);
+const DEPARTMENT_PATCH_FIELDS = new Set(['expectedVersion', 'name', 'description', 'directoryOrganizationId', 'directorySiteId', 'active']);
 const DEPARTMENT_LIST_FIELDS = new Set(['includeInactive']);
 
 function bodyRecord(input: unknown): Record<string, unknown> {
@@ -601,7 +608,7 @@ export function parsePulseDeskRequestListQuery(input: unknown): PulseDeskRequest
 export function parsePulseDeskDepartmentCreate(input: unknown): PulseDeskDepartmentCreateInput {
   const body = bodyRecord(input);
   assertKnownFields(body, DEPARTMENT_CREATE_FIELDS);
-  return {
+  const result: PulseDeskDepartmentCreateInput = {
     name: normalizedSingleLineText(
       body.name,
       'name',
@@ -609,12 +616,21 @@ export function parsePulseDeskDepartmentCreate(input: unknown): PulseDeskDepartm
       PULSEDESK_DEPARTMENT_NAME_MAX_LENGTH,
     ),
   };
+  if ('description' in body) result.description = optionalSingleLineText(body.description, 'description', 500);
+  if ('directoryOrganizationId' in body) result.directoryOrganizationId = optionalIdentifier(body.directoryOrganizationId, 'directoryOrganizationId');
+  if ('directorySiteId' in body) result.directorySiteId = optionalIdentifier(body.directorySiteId, 'directorySiteId');
+  if (result.directorySiteId && !result.directoryOrganizationId) {
+    throw new PulseDeskRequestValidationError('directoryOrganizationId is required when directorySiteId is set', 'directoryOrganizationId');
+  }
+  return result;
 }
 
 export function parsePulseDeskDepartmentPatch(input: unknown): PulseDeskDepartmentPatchInput {
   const body = bodyRecord(input);
   assertKnownFields(body, DEPARTMENT_PATCH_FIELDS);
-  const patch: PulseDeskDepartmentPatchInput = {};
+  const patch: PulseDeskDepartmentPatchInput = {
+    expectedVersion: parsePulseDeskExpectedVersion(body.expectedVersion),
+  };
   if ('name' in body) {
     patch.name = normalizedSingleLineText(
       body.name,
@@ -624,7 +640,10 @@ export function parsePulseDeskDepartmentPatch(input: unknown): PulseDeskDepartme
     );
   }
   if ('active' in body) patch.active = requiredBoolean(body.active, 'active');
-  if (Object.keys(patch).length === 0) {
+  if ('description' in body) patch.description = optionalSingleLineText(body.description, 'description', 500);
+  if ('directoryOrganizationId' in body) patch.directoryOrganizationId = optionalIdentifier(body.directoryOrganizationId, 'directoryOrganizationId');
+  if ('directorySiteId' in body) patch.directorySiteId = optionalIdentifier(body.directorySiteId, 'directorySiteId');
+  if (Object.keys(patch).length === 1) {
     throw new PulseDeskRequestValidationError('At least one editable department field is required');
   }
   return patch;

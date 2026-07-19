@@ -11,6 +11,7 @@
     "db:apply": "tsx apps/api/src/scripts/database-release.ts --apply",
     "import:tradeflowkit:dry-run": "tsx apps/api/src/scripts/tradeflowkit-import.ts --dry-run",
     "import:techdeck:dry-run": "tsx apps/api/src/scripts/techdeck-import.ts --dry-run",
+    "import:pulsedesk:dry-run": "tsx apps/api/src/scripts/pulsedesk-import.ts --dry-run",
     "dev": "pnpm -r --parallel --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web dev",
     "dev:api": "pnpm --dir apps/api dev",
     "dev:runner": "pnpm --dir apps/runner-gateway dev",

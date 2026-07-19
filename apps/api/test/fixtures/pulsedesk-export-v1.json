@@ -1,0 +1,90 @@
+{
+  "exportVersion": 1,
+  "clients": [
+    { "id": "client-1", "name": "Northstar Health Operations", "type": "client" }
+  ],
+  "sites": [
+    { "id": "site-1", "clientId": "client-1", "name": "Main Facility" }
+  ],
+  "contacts": [
+    { "id": "contact-1", "clientId": "client-1", "siteId": "site-1", "firstName": "Alex", "lastName": "Rivera" }
+  ],
+  "departments": [
+    { "id": "department-1", "clientId": "client-1", "siteId": "site-1", "name": "Facilities" }
+  ],
+  "queues": [
+    { "id": "queue-1", "name": "Healthcare Operations" }
+  ],
+  "teams": [
+    { "id": "team-1", "queueId": "queue-1", "name": "Operations Team" }
+  ],
+  "teamMembers": [
+    { "id": "team-member-1", "teamId": "team-1", "userId": "legacy-user-1" }
+  ],
+  "ticketOptions": [
+    { "id": "option-1", "kind": "category", "key": "facilities_building", "name": "Facilities and building" }
+  ],
+  "slaPolicies": [
+    { "id": "sla-1", "name": "Priority operations", "responseMinutes": 60, "resolutionMinutes": 480 }
+  ],
+  "assets": [
+    { "id": "asset-1", "clientId": "client-1", "siteId": "site-1", "departmentId": "department-1", "assetTag": "OPS-100", "name": "Backup refrigerator" }
+  ],
+  "tickets": [
+    { "id": "ticket-1", "clientId": "client-1", "siteId": "site-1", "contactId": "contact-1", "departmentId": "department-1", "assetId": "asset-1", "queueId": "queue-1", "teamId": "team-1", "slaPolicyId": "sla-1", "summary": "Equipment temperature alert" }
+  ],
+  "messages": [
+    { "id": "message-1", "ticketId": "ticket-1", "visibility": "requester", "body": "Operations team acknowledged the equipment alert." }
+  ],
+  "assignments": [
+    { "id": "assignment-1", "ticketId": "ticket-1", "queueId": "queue-1", "teamId": "team-1", "userId": "legacy-user-1" }
+  ],
+  "slaEvents": [
+    { "id": "sla-event-1", "ticketId": "ticket-1", "slaPolicyId": "sla-1", "eventType": "applied" }
+  ],
+  "timeEntries": [
+    { "id": "time-1", "ticketId": "ticket-1", "minutes": 30, "workType": "onsite" }
+  ],
+  "vendors": [
+    { "id": "vendor-1", "name": "Northstar Equipment Service", "type": "vendor" }
+  ],
+  "vendorEngagements": [
+    { "id": "vendor-engagement-1", "ticketId": "ticket-1", "vendorId": "vendor-1", "status": "requested" }
+  ],
+  "supplyRequests": [
+    { "id": "supply-1", "ticketId": "ticket-1", "departmentId": "department-1", "itemName": "Temperature probe", "quantity": 2 }
+  ],
+  "facilityRequests": [
+    { "id": "facility-request-1", "ticketId": "ticket-1", "siteId": "site-1", "departmentId": "department-1", "title": "Inspect equipment outlet" }
+  ],
+  "knowledgeArticles": [
+    { "id": "article-1", "title": "Equipment temperature response", "body": "Confirm the equipment alarm and notify facilities operations." }
+  ],
+  "tags": [
+    { "id": "tag-1", "name": "equipment" }
+  ],
+  "ticketTags": [
+    { "id": "ticket-tag-1", "ticketId": "ticket-1", "tagId": "tag-1" }
+  ],
+  "savedViews": [
+    { "id": "view-1", "name": "Priority operations", "filters": { "priority": "high" } }
+  ],
+  "notificationPreferences": [
+    { "id": "preference-1", "userId": "legacy-user-1", "inAppEnabled": true }
+  ],
+  "users": [
+    { "id": "legacy-user-1", "email": "legacy.operator@example.test" }
+  ],
+  "sessions": [
+    { "id": "legacy-session-1" }
+  ],
+  "subscriptions": [
+    { "id": "legacy-subscription-1" }
+  ],
+  "credentials": [
+    { "id": "legacy-credential-1", "apiKey": "excluded-provider-value" }
+  ],
+  "attachmentBytes": [
+    { "id": "legacy-attachment-bytes-1", "content": "excluded" }
+  ]
+}

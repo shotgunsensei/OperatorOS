@@ -388,6 +388,10 @@ export interface PulseDeskDepartment {
   id: string;
   name: string;
   active: boolean;
+  description: string | null;
+  directoryOrganizationId: string | null;
+  directorySiteId: string | null;
+  version: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -541,6 +545,65 @@ export interface TradeFlowKitTask {
   status: 'todo' | 'in_progress' | 'blocked' | 'completed' | 'canceled';
   priority: 'low' | 'normal' | 'high' | 'urgent'; assignedToUserId: string | null;
   dueAt: string | null; sortOrder: number; completedAt: string | null; version: number;
+}
+
+export interface PulseDeskServiceTicket {
+  id: string;
+  humanId: string;
+  number: number;
+  summary: string;
+  description: string;
+  locationLabel: string | null;
+  status: PulseDeskRequestStatus;
+  priority: PulseDeskRequestPriority;
+  category: PulseDeskRequestCategory;
+  ticketTypeKey: string;
+  directoryOrganizationId: string | null;
+  directorySiteId: string | null;
+  requesterContactId: string | null;
+  departmentId: string | null;
+  assetId: string | null;
+  queueId: string | null;
+  teamId: string | null;
+  assignedToUserId: string | null;
+  slaPolicyId: string | null;
+  responseDueAt: string | null;
+  resolutionDueAt: string | null;
+  firstRespondedAt: string | null;
+  resolvedAt: string | null;
+  closedAt: string | null;
+  archivedAt: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  sla: { state: 'due' | 'at_risk' | 'overdue' | 'met'; responseOverdue: boolean; resolutionOverdue: boolean };
+}
+
+export interface PulseDeskServiceTicketDetail {
+  ticket: PulseDeskServiceTicket;
+  messages: Array<{ id: string; visibility: 'requester' | 'internal'; body: string; authorUserId: string; createdAt: string }>;
+  events: Array<{ id: string; eventType: string; visibility: 'requester' | 'internal'; metadata: Record<string, unknown>; createdAt: string }>;
+  timeEntries: Array<{ id: string; minutes: number; workType: string; description: string | null; userId: string; createdAt: string }>;
+  assignments: Array<{ id: string; assignedToUserId: string | null; queueId: string | null; teamId: string | null; assignedAt: string; endedAt: string | null }>;
+  slaEvents: Array<{ id: string; eventType: string; occurredAt: string; targetAt: string | null }>;
+  vendorEngagements: Array<Record<string, unknown>>;
+  tags: Array<{ id: string; name: string; color: string | null }>;
+  capabilities: { canViewInternal: boolean; canManage: boolean };
+}
+
+export interface PulseDeskServiceConfiguration {
+  queues: Array<{ id: string; name: string; description: string | null; active: boolean; version: number }>;
+  teams: Array<{ id: string; queueId: string | null; name: string; active: boolean; version: number }>;
+  options: Array<{ id: string; kind: string; key: string; name: string; active: boolean; version: number }>;
+  slaPolicies: Array<{ id: string; name: string; responseMinutes: number; resolutionMinutes: number; atRiskPercent: number; defaultPolicy: boolean; active: boolean; version: number }>;
+  departments: PulseDeskDepartment[];
+  defaults: { statuses: string[]; priorities: string[]; categories: string[]; types: string[] };
+}
+
+export interface PulseDeskServiceDashboard {
+  metrics: { tickets: number; openTickets: number; atRisk: number; overdue: number; operationalAssets: number; pendingSupplyRequests: number; openFacilityRequests: number; timeMinutes: number };
+  byStatus: Record<string, number>;
+  generatedAt: string;
 }
 
 export interface TechDeckConfigurationRelationship {
@@ -725,6 +788,72 @@ export const moduleShellApi = {
       }) as Promise<NinjaPoolPracticeSession>,
   },
   pulsedesk: {
+    getServiceDeskDashboard: (): Promise<PulseDeskServiceDashboard> =>
+      apiFetch('/modules/pulsedesk/dashboard') as Promise<PulseDeskServiceDashboard>,
+    listServiceTickets: (query = ''): Promise<{ tickets: PulseDeskServiceTicket[]; pagination: { limit: number; offset: number; total: number } }> =>
+      apiFetch(`/modules/pulsedesk/tickets${query ? `?${query}` : ''}`) as Promise<any>,
+    getServiceTicket: (id: string): Promise<PulseDeskServiceTicketDetail> =>
+      apiFetch(`/modules/pulsedesk/tickets/${encodeURIComponent(id)}`) as Promise<PulseDeskServiceTicketDetail>,
+    createServiceTicket: (input: Record<string, unknown>): Promise<PulseDeskServiceTicket> =>
+      apiFetch('/modules/pulsedesk/tickets', { method: 'POST', body: JSON.stringify(input) }) as Promise<PulseDeskServiceTicket>,
+    updateServiceTicket: (id: string, input: Record<string, unknown>): Promise<PulseDeskServiceTicket> =>
+      apiFetch(`/modules/pulsedesk/tickets/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<PulseDeskServiceTicket>,
+    addTicketReply: (id: string, body: string, idempotencyKey: string): Promise<unknown> =>
+      apiFetch(`/modules/pulsedesk/tickets/${encodeURIComponent(id)}/replies`, { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify({ body, phiAcknowledged: true }) }),
+    addTicketInternalNote: (id: string, body: string, idempotencyKey: string): Promise<unknown> =>
+      apiFetch(`/modules/pulsedesk/tickets/${encodeURIComponent(id)}/internal-notes`, { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify({ body, phiAcknowledged: true }) }),
+    addTicketTime: (id: string, input: { minutes: number; workType: string; description?: string }, idempotencyKey: string): Promise<unknown> =>
+      apiFetch(`/modules/pulsedesk/tickets/${encodeURIComponent(id)}/time-entries`, { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify({ ...input, phiAcknowledged: true }) }),
+    assignServiceTicket: (id: string, input: Record<string, unknown>): Promise<unknown> =>
+      apiFetch(`/modules/pulsedesk/tickets/${encodeURIComponent(id)}/assignments`, { method: 'POST', body: JSON.stringify(input) }),
+    transitionServiceTicket: (id: string, action: string, expectedVersion: number): Promise<PulseDeskServiceTicket> =>
+      apiFetch(`/modules/pulsedesk/tickets/${encodeURIComponent(id)}/actions/${encodeURIComponent(action)}`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<PulseDeskServiceTicket>,
+    evaluateServiceTicketSla: (id: string): Promise<unknown> =>
+      apiFetch(`/modules/pulsedesk/tickets/${encodeURIComponent(id)}/sla/evaluate`, { method: 'POST', body: JSON.stringify({}) }),
+    addVendorEngagement: (id: string, input: Record<string, unknown>): Promise<unknown> =>
+      apiFetch(`/modules/pulsedesk/tickets/${encodeURIComponent(id)}/vendor-engagements`, { method: 'POST', body: JSON.stringify(input) }),
+    uploadTicketAttachment: (id: string, input: { originalName: string; declaredMimeType?: string; contentBase64: string; visibility: 'requester' | 'internal' }): Promise<unknown> =>
+      apiFetch(`/modules/pulsedesk/tickets/${encodeURIComponent(id)}/attachments`, { method: 'POST', body: JSON.stringify({ ...input, phiAcknowledged: true }) }),
+    listTicketAttachments: (id: string, visibility: 'requester' | 'internal'): Promise<Array<Record<string, unknown>>> =>
+      apiFetch(`/modules/pulsedesk/tickets/${encodeURIComponent(id)}/attachments?visibility=${visibility}`) as Promise<any>,
+    bulkServiceTickets: (input: Record<string, unknown>): Promise<unknown> =>
+      apiFetch('/modules/pulsedesk/tickets/bulk', { method: 'POST', body: JSON.stringify(input) }),
+    getServiceConfiguration: (): Promise<PulseDeskServiceConfiguration> =>
+      apiFetch('/modules/pulsedesk/configuration') as Promise<PulseDeskServiceConfiguration>,
+    createServiceQueue: (input: { name: string; description?: string }): Promise<unknown> =>
+      apiFetch('/modules/pulsedesk/queues', { method: 'POST', body: JSON.stringify(input) }),
+    createSlaPolicy: (input: Record<string, unknown>): Promise<unknown> =>
+      apiFetch('/modules/pulsedesk/sla-policies', { method: 'POST', body: JSON.stringify(input) }),
+    listServiceAssets: (): Promise<{ assets: Array<Record<string, any>> }> =>
+      apiFetch('/modules/pulsedesk/assets?limit=100') as Promise<any>,
+    listServiceClients: (type?: DirectoryOrganization['type']): Promise<{ organizations: DirectoryOrganization[]; pagination: DirectoryPagination }> =>
+      apiFetch(`/modules/pulsedesk/clients?limit=100${type ? `&type=${encodeURIComponent(type)}` : ''}`) as Promise<any>,
+    listServiceFacilities: (): Promise<{ sites: DirectorySite[]; pagination: DirectoryPagination }> =>
+      apiFetch('/modules/pulsedesk/facilities?limit=100') as Promise<any>,
+    listServiceContacts: (): Promise<{ contacts: DirectoryContact[]; pagination: DirectoryPagination }> =>
+      apiFetch('/modules/pulsedesk/contacts?limit=100') as Promise<any>,
+    createServiceAsset: (input: Record<string, unknown>): Promise<unknown> =>
+      apiFetch('/modules/pulsedesk/assets', { method: 'POST', body: JSON.stringify({ ...input, phiAcknowledged: true }) }),
+    listSupplyRequests: (): Promise<{ supplyRequests: Array<Record<string, any>> }> =>
+      apiFetch('/modules/pulsedesk/supply-requests') as Promise<any>,
+    createSupplyRequest: (input: Record<string, unknown>): Promise<unknown> =>
+      apiFetch('/modules/pulsedesk/supply-requests', { method: 'POST', body: JSON.stringify({ ...input, phiAcknowledged: true }) }),
+    listFacilityRequests: (): Promise<{ facilityRequests: Array<Record<string, any>> }> =>
+      apiFetch('/modules/pulsedesk/facility-requests') as Promise<any>,
+    createFacilityRequest: (input: Record<string, unknown>): Promise<unknown> =>
+      apiFetch('/modules/pulsedesk/facility-requests', { method: 'POST', body: JSON.stringify({ ...input, phiAcknowledged: true }) }),
+    listKnowledge: (): Promise<{ articles: Array<Record<string, any>> }> =>
+      apiFetch('/modules/pulsedesk/knowledge') as Promise<any>,
+    createKnowledge: (input: Record<string, unknown>): Promise<unknown> =>
+      apiFetch('/modules/pulsedesk/knowledge', { method: 'POST', body: JSON.stringify({ ...input, phiAcknowledged: true }) }),
+    listSavedViews: (): Promise<{ savedViews: Array<Record<string, any>> }> =>
+      apiFetch('/modules/pulsedesk/saved-views') as Promise<any>,
+    createSavedView: (input: Record<string, unknown>): Promise<unknown> =>
+      apiFetch('/modules/pulsedesk/saved-views', { method: 'POST', body: JSON.stringify(input) }),
+    getNotificationPreferences: (): Promise<Record<string, any>> =>
+      apiFetch('/modules/pulsedesk/notification-preferences') as Promise<any>,
+    saveNotificationPreferences: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/pulsedesk/notification-preferences', { method: 'PUT', body: JSON.stringify(input) }) as Promise<any>,
     listDepartments: (includeInactive = true): Promise<PulseDeskDepartmentsResponse> => {
       const query = includeInactive ? '?includeInactive=true' : '';
       return apiFetch(`/modules/pulsedesk/departments${query}`) as Promise<PulseDeskDepartmentsResponse>;
@@ -736,7 +865,7 @@ export const moduleShellApi = {
       }) as Promise<PulseDeskDepartment>,
     updateDepartment: (
       id: string,
-      input: { name?: string; active?: boolean },
+      input: { expectedVersion: number; name?: string; active?: boolean; description?: string | null; directoryOrganizationId?: string | null; directorySiteId?: string | null },
     ): Promise<PulseDeskDepartment> =>
       apiFetch(`/modules/pulsedesk/departments/${encodeURIComponent(id)}`, {
         method: 'PATCH',

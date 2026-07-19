@@ -1446,13 +1446,20 @@ export const techdeckMigrationRefs = pgTable('techdeck_migration_refs', {
 export const pulsedeskDepartments = pgTable('pulsedesk_departments', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  directoryOrganizationId: varchar('directory_organization_id', { length: 36 }).references(() => directoryOrganizations.id, { onDelete: 'set null' }),
+  directorySiteId: varchar('directory_site_id', { length: 36 }).references(() => directorySites.id, { onDelete: 'set null' }),
   name: text('name').notNull(),
+  description: text('description'),
   active: boolean('active').notNull().default(true),
   createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).references(() => users.id),
+  version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
 }, (t) => [
   index('idx_pulsedesk_departments_tenant_active').on(t.tenantId, t.active),
+  index('idx_pulsedesk_departments_tenant_site').on(t.tenantId, t.directorySiteId),
   uniqueIndex('idx_pulsedesk_departments_tenant_name_ci').on(
     t.tenantId,
     sql`lower(${t.name})`,
@@ -1472,7 +1479,16 @@ export const pulsedeskRequests = pgTable('pulsedesk_requests', {
   createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
   assignedToUserId: varchar('assigned_to_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
   departmentId: varchar('department_id', { length: 36 }).references(() => pulsedeskDepartments.id, { onDelete: 'set null' }),
+  directoryOrganizationId: varchar('directory_organization_id', { length: 36 }).references(() => directoryOrganizations.id, { onDelete: 'set null' }),
+  directorySiteId: varchar('directory_site_id', { length: 36 }).references(() => directorySites.id, { onDelete: 'set null' }),
+  requesterContactId: varchar('requester_contact_id', { length: 36 }).references(() => directoryContacts.id, { onDelete: 'set null' }),
+  queueId: varchar('queue_id', { length: 36 }),
+  teamId: varchar('team_id', { length: 36 }),
+  assetId: varchar('asset_id', { length: 36 }),
+  slaPolicyId: varchar('sla_policy_id', { length: 36 }),
+  ticketTypeKey: varchar('ticket_type_key', { length: 80 }).notNull().default('service_request'),
   summary: text('summary').notNull(),
+  description: text('description').notNull().default(''),
   locationLabel: text('location_label'),
   category: text('category', {
     enum: [
@@ -1506,6 +1522,14 @@ export const pulsedeskRequests = pgTable('pulsedesk_requests', {
   }).notNull().default('new'),
   isPatientImpacting: boolean('is_patient_impacting').notNull().default(false),
   dueAt: timestamp('due_at'),
+  responseDueAt: timestamp('response_due_at'),
+  resolutionDueAt: timestamp('resolution_due_at'),
+  firstRespondedAt: timestamp('first_responded_at'),
+  resolvedAt: timestamp('resolved_at'),
+  closedAt: timestamp('closed_at'),
+  reopenedAt: timestamp('reopened_at'),
+  archivedAt: timestamp('archived_at'),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).references(() => users.id),
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -1516,6 +1540,9 @@ export const pulsedeskRequests = pgTable('pulsedesk_requests', {
   index('idx_pulsedesk_requests_tenant_department').on(t.tenantId, t.departmentId),
   index('idx_pulsedesk_requests_tenant_assignee').on(t.tenantId, t.assignedToUserId),
   index('idx_pulsedesk_requests_tenant_due').on(t.tenantId, t.dueAt),
+  index('idx_pulsedesk_requests_tenant_org_site').on(t.tenantId, t.directoryOrganizationId, t.directorySiteId),
+  index('idx_pulsedesk_requests_tenant_queue').on(t.tenantId, t.queueId, t.status),
+  index('idx_pulsedesk_requests_tenant_sla').on(t.tenantId, t.resolutionDueAt, t.status),
   uniqueIndex('idx_pulsedesk_requests_number').on(t.tenantId, t.number),
 ]);
 
@@ -1538,8 +1565,18 @@ export const pulsedeskRequestEvents = pgTable('pulsedesk_request_events', {
       'priority_changed',
       'status_changed',
       'escalated',
+      'assignment_changed',
+      'requester_reply_added',
+      'internal_note_added',
+      'time_logged',
+      'sla_changed',
+      'vendor_updated',
+      'attachment_added',
+      'reopened',
+      'archived',
     ],
   }).notNull(),
+  visibility: text('visibility', { enum: ['requester', 'internal'] }).notNull().default('requester'),
   fromStatus: text('from_status'),
   toStatus: text('to_status'),
   metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
@@ -1547,6 +1584,322 @@ export const pulsedeskRequestEvents = pgTable('pulsedesk_request_events', {
 }, (t) => [
   index('idx_pulsedesk_request_events_tenant_request_created').on(t.tenantId, t.requestId, t.createdAt),
 ]);
+
+/**
+ * PulseDesk healthcare-operations service desk extensions.
+ *
+ * Shared Directory rows remain the only organization/contact/site/vendor
+ * authority. These tables contain only tenant-scoped workflow state and never
+ * patient, clinical, identity, subscription, or credential authority.
+ */
+export const pulsedeskQueues = pgTable('pulsedesk_queues', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  name: text('name').notNull(),
+  description: text('description'),
+  active: boolean('active').notNull().default(true),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  uniqueIndex('uq_pulsedesk_queues_tenant_name').on(t.tenantId, t.name).where(sql`${t.archivedAt} IS NULL`),
+  index('idx_pulsedesk_queues_tenant_active').on(t.tenantId, t.active, t.archivedAt),
+]);
+
+export const pulsedeskTeams = pgTable('pulsedesk_teams', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  queueId: varchar('queue_id', { length: 36 }).references(() => pulsedeskQueues.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  active: boolean('active').notNull().default(true),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  uniqueIndex('uq_pulsedesk_teams_tenant_name').on(t.tenantId, t.name).where(sql`${t.archivedAt} IS NULL`),
+  index('idx_pulsedesk_teams_tenant_queue').on(t.tenantId, t.queueId, t.active),
+]);
+
+export const pulsedeskTeamMembers = pgTable('pulsedesk_team_members', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  teamId: varchar('team_id', { length: 36 }).notNull().references(() => pulsedeskTeams.id, { onDelete: 'cascade' }),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  lead: boolean('lead').notNull().default(false),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_pulsedesk_team_members').on(t.tenantId, t.teamId, t.userId),
+  index('idx_pulsedesk_team_members_user').on(t.tenantId, t.userId),
+]);
+
+export const pulsedeskTicketOptions = pgTable('pulsedesk_ticket_options', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  kind: text('kind', { enum: ['status', 'priority', 'type', 'category'] }).notNull(),
+  key: varchar('key', { length: 80 }).notNull(),
+  name: text('name').notNull(),
+  color: varchar('color', { length: 7 }),
+  sortOrder: integer('sort_order').notNull().default(0),
+  responseMinutes: integer('response_minutes'),
+  resolutionMinutes: integer('resolution_minutes'),
+  closedState: boolean('closed_state').notNull().default(false),
+  active: boolean('active').notNull().default(true),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  uniqueIndex('uq_pulsedesk_ticket_options_tenant_kind_key').on(t.tenantId, t.kind, t.key).where(sql`${t.archivedAt} IS NULL`),
+  index('idx_pulsedesk_ticket_options_tenant_kind').on(t.tenantId, t.kind, t.active, t.sortOrder),
+]);
+
+export const pulsedeskSlaPolicies = pgTable('pulsedesk_sla_policies', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  name: text('name').notNull(),
+  description: text('description'),
+  responseMinutes: integer('response_minutes').notNull().default(240),
+  resolutionMinutes: integer('resolution_minutes').notNull().default(1440),
+  atRiskPercent: integer('at_risk_percent').notNull().default(80),
+  defaultPolicy: boolean('default_policy').notNull().default(false),
+  active: boolean('active').notNull().default(true),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  uniqueIndex('uq_pulsedesk_sla_tenant_name').on(t.tenantId, t.name).where(sql`${t.archivedAt} IS NULL`),
+  uniqueIndex('uq_pulsedesk_sla_tenant_default').on(t.tenantId).where(sql`${t.defaultPolicy} = TRUE AND ${t.archivedAt} IS NULL`),
+  index('idx_pulsedesk_sla_tenant_active').on(t.tenantId, t.active),
+]);
+
+export const pulsedeskAssets = pgTable('pulsedesk_assets', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  directoryOrganizationId: varchar('directory_organization_id', { length: 36 }).references(() => directoryOrganizations.id, { onDelete: 'set null' }),
+  directorySiteId: varchar('directory_site_id', { length: 36 }).references(() => directorySites.id, { onDelete: 'set null' }),
+  departmentId: varchar('department_id', { length: 36 }).references(() => pulsedeskDepartments.id, { onDelete: 'set null' }),
+  assetTag: varchar('asset_tag', { length: 100 }).notNull(),
+  name: text('name').notNull(),
+  equipmentType: varchar('equipment_type', { length: 100 }).notNull().default('operational_equipment'),
+  manufacturer: text('manufacturer'),
+  model: text('model'),
+  serialNumber: text('serial_number'),
+  locationLabel: text('location_label'),
+  status: text('status', { enum: ['active', 'maintenance', 'out_of_service', 'retired'] }).notNull().default('active'),
+  maintenanceDueAt: timestamp('maintenance_due_at'),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  uniqueIndex('uq_pulsedesk_assets_tenant_tag').on(t.tenantId, t.assetTag).where(sql`${t.archivedAt} IS NULL`),
+  index('idx_pulsedesk_assets_tenant_site').on(t.tenantId, t.directorySiteId, t.status),
+  index('idx_pulsedesk_assets_tenant_department').on(t.tenantId, t.departmentId),
+]);
+
+export const pulsedeskTicketMessages = pgTable('pulsedesk_ticket_messages', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  ticketId: varchar('ticket_id', { length: 36 }).notNull().references(() => pulsedeskRequests.id, { onDelete: 'restrict' }),
+  authorUserId: varchar('author_user_id', { length: 36 }).notNull().references(() => users.id),
+  visibility: text('visibility', { enum: ['requester', 'internal'] }).notNull(),
+  body: text('body').notNull(),
+  idempotencyKey: varchar('idempotency_key', { length: 160 }).notNull(),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [
+  uniqueIndex('uq_pulsedesk_ticket_messages_idempotency').on(t.tenantId, t.ticketId, t.idempotencyKey),
+  index('idx_pulsedesk_ticket_messages_ticket').on(t.tenantId, t.ticketId, t.createdAt),
+]);
+
+export const pulsedeskTicketAssignments = pgTable('pulsedesk_ticket_assignments', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  ticketId: varchar('ticket_id', { length: 36 }).notNull().references(() => pulsedeskRequests.id, { onDelete: 'restrict' }),
+  assignedToUserId: varchar('assigned_to_user_id', { length: 36 }).references(() => users.id),
+  queueId: varchar('queue_id', { length: 36 }).references(() => pulsedeskQueues.id, { onDelete: 'set null' }),
+  teamId: varchar('team_id', { length: 36 }).references(() => pulsedeskTeams.id, { onDelete: 'set null' }),
+  assignedByUserId: varchar('assigned_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  assignedAt: timestamp('assigned_at').defaultNow().notNull(),
+  endedAt: timestamp('ended_at'),
+}, (t) => [
+  index('idx_pulsedesk_assignments_ticket').on(t.tenantId, t.ticketId, t.assignedAt),
+  index('idx_pulsedesk_assignments_user').on(t.tenantId, t.assignedToUserId, t.endedAt),
+]);
+
+export const pulsedeskTimeEntries = pgTable('pulsedesk_time_entries', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  ticketId: varchar('ticket_id', { length: 36 }).notNull().references(() => pulsedeskRequests.id, { onDelete: 'restrict' }),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  minutes: integer('minutes').notNull(),
+  workType: text('work_type', { enum: ['remote', 'onsite', 'vendor', 'administrative'] }).notNull().default('onsite'),
+  description: text('description'),
+  idempotencyKey: varchar('idempotency_key', { length: 160 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_pulsedesk_time_idempotency').on(t.tenantId, t.ticketId, t.idempotencyKey),
+  index('idx_pulsedesk_time_ticket').on(t.tenantId, t.ticketId, t.createdAt),
+]);
+
+export const pulsedeskSlaEvents = pgTable('pulsedesk_sla_events', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  ticketId: varchar('ticket_id', { length: 36 }).notNull().references(() => pulsedeskRequests.id, { onDelete: 'restrict' }),
+  slaPolicyId: varchar('sla_policy_id', { length: 36 }).references(() => pulsedeskSlaPolicies.id, { onDelete: 'set null' }),
+  eventType: text('event_type', { enum: ['applied', 'first_response', 'at_risk', 'overdue', 'resolved', 'reopened'] }).notNull(),
+  targetAt: timestamp('target_at'),
+  occurredAt: timestamp('occurred_at').defaultNow().notNull(),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+}, (t) => [index('idx_pulsedesk_sla_events_ticket').on(t.tenantId, t.ticketId, t.occurredAt)]);
+
+export const pulsedeskVendorEngagements = pgTable('pulsedesk_vendor_engagements', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  ticketId: varchar('ticket_id', { length: 36 }).notNull().references(() => pulsedeskRequests.id, { onDelete: 'restrict' }),
+  vendorOrganizationId: varchar('vendor_organization_id', { length: 36 }).notNull().references(() => directoryOrganizations.id, { onDelete: 'restrict' }),
+  status: text('status', { enum: ['requested', 'acknowledged', 'scheduled', 'waiting', 'completed', 'cancelled'] }).notNull().default('requested'),
+  referenceCode: varchar('reference_code', { length: 120 }),
+  expectedAt: timestamp('expected_at'),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_pulsedesk_vendor_ticket').on(t.tenantId, t.ticketId),
+  index('idx_pulsedesk_vendor_org').on(t.tenantId, t.vendorOrganizationId, t.status),
+]);
+
+export const pulsedeskSupplyRequests = pgTable('pulsedesk_supply_requests', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  ticketId: varchar('ticket_id', { length: 36 }).references(() => pulsedeskRequests.id, { onDelete: 'set null' }),
+  departmentId: varchar('department_id', { length: 36 }).references(() => pulsedeskDepartments.id, { onDelete: 'set null' }),
+  itemName: text('item_name').notNull(),
+  quantity: integer('quantity').notNull().default(1),
+  urgency: text('urgency', { enum: ['critical', 'high', 'normal', 'low'] }).notNull().default('normal'),
+  status: text('status', { enum: ['requested', 'approved', 'ordered', 'received', 'cancelled'] }).notNull().default('requested'),
+  requestedByUserId: varchar('requested_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [index('idx_pulsedesk_supply_tenant_status').on(t.tenantId, t.status, t.createdAt)]);
+
+export const pulsedeskFacilityRequests = pgTable('pulsedesk_facility_requests', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  ticketId: varchar('ticket_id', { length: 36 }).references(() => pulsedeskRequests.id, { onDelete: 'set null' }),
+  directorySiteId: varchar('directory_site_id', { length: 36 }).references(() => directorySites.id, { onDelete: 'set null' }),
+  departmentId: varchar('department_id', { length: 36 }).references(() => pulsedeskDepartments.id, { onDelete: 'set null' }),
+  requestType: varchar('request_type', { length: 80 }).notNull().default('maintenance'),
+  title: text('title').notNull(),
+  locationLabel: text('location_label'),
+  priority: text('priority', { enum: ['critical', 'high', 'normal', 'low'] }).notNull().default('normal'),
+  status: text('status', { enum: ['new', 'assigned', 'in_progress', 'resolved', 'closed', 'cancelled'] }).notNull().default('new'),
+  requestedByUserId: varchar('requested_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  assignedToUserId: varchar('assigned_to_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [index('idx_pulsedesk_facility_tenant_status').on(t.tenantId, t.status, t.createdAt)]);
+
+export const pulsedeskTags = pgTable('pulsedesk_tags', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  name: text('name').notNull(),
+  color: varchar('color', { length: 7 }),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [uniqueIndex('uq_pulsedesk_tags_tenant_name').on(t.tenantId, t.name)]);
+
+export const pulsedeskTicketTags = pgTable('pulsedesk_ticket_tags', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  ticketId: varchar('ticket_id', { length: 36 }).notNull().references(() => pulsedeskRequests.id, { onDelete: 'restrict' }),
+  tagId: varchar('tag_id', { length: 36 }).notNull().references(() => pulsedeskTags.id, { onDelete: 'cascade' }),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [uniqueIndex('uq_pulsedesk_ticket_tags').on(t.tenantId, t.ticketId, t.tagId)]);
+
+export const pulsedeskSavedViews = pgTable('pulsedesk_saved_views', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  name: text('name').notNull(),
+  filters: jsonb('filters').$type<Record<string, string | boolean | number | null>>().notNull().default(sql`'{}'::jsonb`),
+  sort: jsonb('sort').$type<{ field: string; direction: 'asc' | 'desc' }>().notNull().default(sql`'{"field":"updatedAt","direction":"desc"}'::jsonb`),
+  shared: boolean('shared').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_pulsedesk_saved_views_user_name').on(t.tenantId, t.userId, t.name),
+  index('idx_pulsedesk_saved_views_tenant_shared').on(t.tenantId, t.shared),
+]);
+
+export const pulsedeskKnowledgeArticles = pgTable('pulsedesk_knowledge_articles', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  slug: varchar('slug', { length: 120 }).notNull(),
+  title: text('title').notNull(),
+  summary: text('summary'),
+  body: text('body').notNull(),
+  status: text('status', { enum: ['draft', 'published', 'archived'] }).notNull().default('draft'),
+  visibility: text('visibility', { enum: ['requester', 'internal'] }).notNull().default('internal'),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  publishedAt: timestamp('published_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  uniqueIndex('uq_pulsedesk_knowledge_tenant_slug').on(t.tenantId, t.slug).where(sql`${t.archivedAt} IS NULL`),
+  index('idx_pulsedesk_knowledge_tenant_status').on(t.tenantId, t.status, t.visibility),
+]);
+
+export const pulsedeskNotificationPreferences = pgTable('pulsedesk_notification_preferences', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  inAppEnabled: boolean('in_app_enabled').notNull().default(true),
+  emailEnabled: boolean('email_enabled').notNull().default(false),
+  eventPreferences: jsonb('event_preferences').$type<Record<string, boolean>>().notNull().default(sql`'{}'::jsonb`),
+  version: integer('version').notNull().default(1),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [uniqueIndex('uq_pulsedesk_notification_preferences_user').on(t.tenantId, t.userId)]);
+
+export const pulsedeskMigrationRefs = pgTable('pulsedesk_migration_refs', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  sourceType: varchar('source_type', { length: 80 }).notNull(),
+  sourceId: varchar('source_id', { length: 160 }).notNull(),
+  targetType: varchar('target_type', { length: 80 }).notNull(),
+  targetId: varchar('target_id', { length: 36 }).notNull(),
+  sourceHash: varchar('source_hash', { length: 64 }).notNull(),
+  importedAt: timestamp('imported_at').defaultNow().notNull(),
+}, (t) => [uniqueIndex('uq_pulsedesk_migration_source').on(t.tenantId, t.sourceType, t.sourceId)]);
 
 /**
  * First shared-runtime Ninja Pool Hall workflow.
