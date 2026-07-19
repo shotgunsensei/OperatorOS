@@ -79,6 +79,7 @@ import {
 } from '../lib/techdeck-ops.js';
 import { getTenantMembership, resolveTenantModuleAccess } from '../lib/tenant-entitlements.js';
 import { registerPulseDeskRoutes } from './pulsedesk-routes.js';
+import { registerPulseDeskServiceDeskRoutes } from './pulsedesk-service-desk-routes.js';
 import { registerNinjaPoolHallRoutes } from './ninja-pool-hall-routes.js';
 import { allocateTradeFlowKitNumber, registerTradeFlowKitRoutes } from './tradeflowkit-routes.js';
 import { registerTechDeckRoutes } from './techdeck-routes.js';
@@ -564,6 +565,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       .where(and(eq(moduleCallLogs.id, row.id), eq(moduleCallLogs.tenantId, context.tenantId)));
   });
   await registerPulseDeskRoutes(app);
+  await registerPulseDeskServiceDeskRoutes(app);
   await registerNinjaPoolHallRoutes(app);
   await registerTradeFlowKitRoutes(app);
   await registerTechDeckRoutes(app);

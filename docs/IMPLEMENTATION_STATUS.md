@@ -1,45 +1,49 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-18
-- Phase: **5 source/local state 4 candidate; state 5/public deployment gate blocked**
+- Phase: **6 source/local state 4 candidate; state 5/public deployment gate blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
 - Phase 2 merge commit: `bf7f4ff`
 - Phase 3 implementation commit: `c969e0413192259318d8f8dacc513fdffededec5`
 - Phase 4 implementation commit: `9ba9d09`
-- Execution branch: `codex/phase-5-techdeck-state-5`
+- Phase 5 implementation commit: `d4966b7`
+- Execution branch: `codex/phase-6-pulsedesk-state-5`
 - Release gate: **closed**
 
 ## Current verdict
 
-The Phase 5 candidate recovers TechDeck provenance and ports its approved
-managed-operations product into active OperatorOS boundaries: Directory-linked
-tickets/comments/time, typed configuration inventory, documentation-grade
-network/IPAM topology, lifecycle tracking, versioned documentation and
-runbooks, backlinks, shared private attachments, evidence metadata,
-deterministic report snapshots, real dashboards, and record deep links.
+The Phase 6 candidate resolves PulseDesk as a PHI-minimized healthcare
+operations service desk and completes its approved source/local workflow:
+shared Directory clients, facilities, departments and requesters; operational
+assets; numbered tickets; queues, teams and assignments; internal notes and
+requester-visible replies; shared private attachments; time and SLA state;
+vendor, supply and facility coordination; knowledge, tags, saved views,
+notifications, dashboards, configuration, bulk actions and record deep links.
 
 The clean provenance source is
-`C:\Dev\Tech-Deck@8125f8d89d8d39d60a50c8061a26133a0c917792`. The source
-remains read-only and its standalone server, identity, billing, dependencies,
-migrations, and uploads are not activated. ADR-0012 defines TechDeck's
-documentation-grade network/IPAM ownership, ADR-0013 permits only non-secret
-external vault references, and ADR-0014 keeps runbooks documentation-only.
-There is no remote execute/dispatch route or module-owned secret store.
+`C:\Dev\PulseDesk@937849471e489ed23db2a263d04160a388402740`. The source
+remains read-only and its standalone server, identity, billing, connectors,
+dependencies, migrations, database, and files were not activated or copied
+into OperatorOS. ADR-0015 assigns patient charts, diagnoses, treatment,
+insurance and clinical records outside PulseDesk; TechDeck retains network,
+configuration, credentials and remote-action authority. PulseDesk stores only
+the operational minimum and visibly warns users not to enter patient data.
 
-The deterministic TechDeck importer stops at dry run because no production
-data mutation or cutover was authorized. Local PostgreSQL release, typecheck,
-production build/runtime, exact-host SSO, TechDeck deep-link return, and
-logout pass. The current public deployment still reflects the older release
-and previously returned 32/47. No deployment, publishing, production database
-mutation, provider traffic, or standalone write freeze occurred. The owner
-explicitly directed later source phases to continue on separate branches;
-this does not authorize deployment or waive state 5.
+The deterministic PulseDesk importer stops at privacy-reviewed dry run because
+no production data mutation or cutover was authorized. Local workflow,
+privacy, tenant/role, persistence/restart, importer and ordered-release tests
+pass, as do the production build, compiled local runtime, health/readiness,
+path-preserving PulseDesk PKCE smoke and exact-host SSO matrix. The current
+public deployment still reflects an older revision and previously returned
+32/47. No deployment, publishing, production database mutation, provider
+traffic, source write freeze or importer apply occurred.
 
-This is a TechDeck source/local state 4 declaration, not a state 5 or ecosystem
-release declaration. TradeFlowKit remains state 4 under its Phase 4 evidence.
-No module is state 5 solely because it launches or renders a shell.
+This is a PulseDesk source/local state 4 declaration, not state 5 or an
+ecosystem release declaration. TradeFlowKit and TechDeck remain state 4 under
+their earlier evidence. No module is state 5 solely because it launches,
+renders a shell, or passes local tests.
 
 ## Source of truth
 
@@ -192,24 +196,61 @@ runs; they do not override this status.
   revalidated in the trusted tenant before insert. The clean focused regression
   passed.
 
+## Phase 6 implementation
+
+- Recovered the clean PulseDesk provenance checkout, compared its 228 tracked
+  product files with the older quarantined snapshot, audited the standalone
+  route/table/authority surfaces, and recorded the source-to-target parity,
+  migration, cutover and threat-model decisions.
+- Added ADR-0015 for the healthcare-operations boundary. PulseDesk is not an
+  EHR and owns no patient chart, diagnosis, treatment, insurance, network,
+  credential, identity, billing or provider authority. Shared Directory owns
+  organizations, sites and contacts; TechDeck owns network/configuration data.
+- Expanded the additive PulseDesk model with Directory-linked departments,
+  queues, teams, memberships, categories/options, SLA policies, operational
+  assets, ticket messages, assignments, time, SLA events, vendor engagements,
+  supply/facility requests, tags, saved views, knowledge, notification
+  preferences and migration references. Composite tenant foreign keys,
+  checks, indexes, audit fields, archive state and versions are explicit.
+- Added guarded APIs for service-client profiles, facilities, requesters,
+  tickets, search/filter/sort/page, transitions, queues, assignment, messages,
+  time, SLA, attachments, vendors, operations requests, knowledge, tags, saved
+  views, safe bulk updates, preferences, configuration and real aggregates.
+  Writes use trusted session tenant context, capability checks, optimistic
+  versions, idempotency and required transaction boundaries.
+- Added recursive prohibited-field/text validation, sanitized plain text,
+  decoded-text upload review, no-PHI acknowledgement, non-enumerating foreign
+  reference errors, requester/internal visibility isolation, content-free
+  notification payloads and audit metadata, and an explicit network/credential
+  field rejection boundary.
+- Replaced the partial PulseDesk shell with responsive persisted dashboard,
+  ticket, operations, knowledge and administration surfaces. The UI includes
+  loading/error/empty/success/conflict states, Directory selectors, the
+  no-patient-data warning and durable `/tickets/:id` deep links.
+- Added a deterministic dry-run importer with export/record fingerprints,
+  source mappings, Directory consolidation, authority/provider/file
+  exclusions, prohibited-field review, duplicate/reference validation, counts
+  and reconciliation. Apply mode remains intentionally unsupported.
+- Added the ordered `pulsedesk_tables` release step, making the root release 19
+  additive idempotent steps, with clean-database verification.
+
 ## Fresh verification
 
 | Gate | Result |
 | --- | --- |
-| Database release plan | PASS; 18 ordered, additive, secret-free steps; TechDeck follows TradeFlowKit and precedes shared services |
-| Database apply | PASS repeatedly on isolated PostgreSQL 16; full release and required TechDeck tables verified without drift |
-| New Phase 5 tests | PASS 5/5 for configuration/network/lifecycle, documentation/evidence/report/time workflow, role and tenant denial, importer, and static boundary |
-| TechDeck focused regression | PASS 16/16, including existing ticket/runbook behavior, new workflow, deep links, isolation, release contract, and importer |
-| TechDeck dry-run CLI | PASS on the versioned fixture; stable fingerprint `356117c32885d1761fa3c0a1674d185d9d63b6dad910cfaac2bbdb09674fd374`, 8 mappings, 12/12 references resolved, zero missing references/errors |
+| Database release plan | PASS; 19 ordered, additive, secret-free steps; PulseDesk follows TechDeck and precedes shared services |
+| Database apply | PASS on a clean isolated PostgreSQL 16 database; all 19 steps and required PulseDesk tables verified in 26,277 ms |
+| PulseDesk focused regression | PASS 37/37 for privacy, lifecycle/SLA, importer, schema/routes/UI, Directory mapping, role/tenant denial, idempotency and restart workflow; post-bootstrap focused workflow passed 1/1 |
+| PulseDesk dry-run CLI | PASS; stable fingerprint `2371e62e36925e22ffea4a9f3adcf77d352aea3bd8d970c27b18b95584b5dffe`, 34/34 references resolved, zero missing/privacy findings; authority/provider/file exclusions reconciled |
 | Production core preflight | PASS with exact canonical non-secret test configuration |
 | Workspace typecheck | PASS for API, runner gateway, and web |
 | Production build | PASS; SDK, API, runner, and Next 14.2.35 production artifacts; 20 static page-generation entries |
-| Compiled runtime | PASS; 18-step release, Fastify readiness on 5001, shared worker readiness, and Next readiness on 5000 |
-| Local HTTPS health/readiness | PASS; API readiness and web root returned 200; eight anonymous TechDeck deep links returned exact-host PKCE redirects; anonymous workspace API returned 401 |
-| Local production-host SSO | PASS 2/2 in 1.7 minutes across all 12 enabled modules, including TechDeck deep-link return, refresh, Back, silent sibling launch, local logout, and global revocation |
-| First complete Phase 5 API run | 702 total; 695 passed, 1 stale TechDeck static-navigation assertion failed, 6 HTTP-only skips; assertion corrected and focused rerun passed 8/8 |
-| Final complete API regression | PASS; 702 total, 696 passed, 0 failed, 6 HTTP-only skips, 616,919 ms on a new disposable PostgreSQL 16 database |
-| Backup/restore | Phase 4 custom-format restore remains the latest local rehearsal. Phase 5's additive 18-step release was repeatedly applied to disposable databases; no production backup, apply, or restore was authorized |
+| Compiled runtime | PASS; idempotent 19-step release, Fastify readiness on 5001, shared worker readiness, and Next readiness on 5000; initial empty-production start correctly failed closed until a disposable local bootstrap secret was supplied |
+| Local HTTPS health/readiness | PASS; API readiness and web health returned 200; eight anonymous PulseDesk deep links returned exact-host path-preserving PKCE redirects; anonymous workspace API returned 401 |
+| Local production-host SSO | PASS 2/2 in 3.9 minutes across all 12 enabled modules, including deep-link return, refresh, Back, silent PulseDesk sibling launch, host-only local logout, and global revocation |
+| Intermediate complete API runs | First reused a release-seeded DB and was rejected for fixture contamination (687 pass/19 fail/6 skip). The next empty run exposed the missing PulseDesk test-bootstrap call (695 pass/12 fail/6 skip); it was fixed and the focused journey passed |
+| Final complete API regression | PASS; 712 total, 706 passed, 0 failed, 6 HTTP-only skips, 1,305,103 ms on a new disposable PostgreSQL 16 database |
+| Backup/restore | Phase 4 custom-format restore remains the latest local rehearsal. Phase 6's additive 19-step release applied cleanly and idempotently to disposable databases; no production backup, apply, or restore was authorized |
 | Public read-only verifier | FAIL 32/47 on 2026-07-18; candidate not deployed |
 | Lint/format | NOT DEFINED; no repository scripts exist |
 
@@ -229,8 +270,17 @@ Fonts access was denied; the identical network-enabled rerun passed.
 
 ## Backup/restore evidence
 
+The Phase 6 schema rehearsal used only disposable PostgreSQL 16 in Docker. The
+current 19-step release, including `pulsedesk_tables`, applied cleanly to an
+empty database, then applied idempotently again through the compiled runtime.
+No persistent or production database was migrated, so Phase 4 remains the
+latest custom-format restore rehearsal. Any authorized PulseDesk data apply
+still requires a fresh provider snapshot, verified logical backup,
+privacy-reviewed frozen export, mapping/count/attachment reconciliation and a
+restore-to-new-database rollback owner.
+
 The Phase 5 schema rehearsal used only disposable PostgreSQL 16 in Docker.
-The current 18-step release, including `techdeck_tables`, applied repeatedly
+The then-current 18-step release, including `techdeck_tables`, applied repeatedly
 without drift to clean databases and through the compiled supervisor. This
 phase did not take a new production-style logical backup because no persistent
 or production database was migrated; the Phase 4 custom-format restore remains
@@ -274,16 +324,20 @@ container, and databases were removed after evidence capture.
 5. TechDeck state 5 requires deployed managed-operations CRUD/reload,
    attachment/provider, deep-link/logout, second-tenant denial, and an approved
    frozen-export apply/reconciliation/cutover. Remote action remains excluded.
-6. Remaining module parity, provenance, repeatable migration, reconciliation,
+6. PulseDesk state 5 requires deployed service-desk CRUD/reload, privacy and
+   internal-note isolation, attachment/provider, deep-link/logout,
+   second-tenant denial, and an approved privacy-reviewed frozen-export
+   apply/reconciliation/cutover.
+7. Remaining module parity, provenance, repeatable migration, reconciliation,
    and rollback gaps recorded in `docs/modules/MODULE_PARITY_INDEX.md`.
-7. Ninjamation source/product decision and the disabled OutCall boundary.
+8. Ninjamation source/product decision and the disabled OutCall boundary.
 
 ## Next action
 
-Commit the scoped Phase 5 TechDeck source/local state 4 candidate, then create
-the separate Phase 6
-PulseDesk branch per the owner's direction even though the release gate is
-closed. Deployment and every production-readiness claim remain blocked until
-the cumulative revision is deployed through `.replit` and the closure steps in
-`docs/CURRENT_RELEASE_GATE.md` pass. Do not weaken exact-host cookies, PKCE,
-return validation, tenant checks, or the verifier to make it pass.
+Commit the scoped Phase 6 PulseDesk source/local state 4 candidate, then create
+the separate Phase 7 TorqueShed branch per the owner's direction even though
+the release gate is closed. Deployment and every production-readiness claim
+remain blocked until the cumulative revision is deployed through `.replit`
+and the closure steps in `docs/CURRENT_RELEASE_GATE.md` pass. Do not weaken
+exact-host cookies, PKCE, return validation, tenant checks, privacy controls or
+the verifier to make it pass.

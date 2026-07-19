@@ -109,6 +109,8 @@ export function createPulseDeskAdapterContext(input: PulseDeskAdapterInput): Pul
       { id: 'facility-requests', label: 'Facility Requests', sourcePath: '/facility-requests' },
       { id: 'vendors', label: 'Vendors', sourcePath: '/vendors' },
       { id: 'analytics', label: 'Analytics', sourcePath: '/analytics' },
+      { id: 'knowledge', label: 'Knowledge', sourcePath: '/knowledge' },
+      { id: 'service-desk-admin', label: 'Service Desk Admin', sourcePath: '/service-desk/admin' },
     ],
   };
 }

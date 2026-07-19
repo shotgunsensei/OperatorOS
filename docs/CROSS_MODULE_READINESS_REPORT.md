@@ -16,7 +16,7 @@ tests all pass in the target deployment.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | OperatorOS | Identity, tenant, entitlement, billing, audit, launcher | Local SSO/RBAC/tenant tests pass | Pass | Pass | Local pass; deployed target not run | Local 2/2; deployed target not run | **Not production-ready** |
 | TradeFlowKit | Source/local state 4 candidate: lead conversion; shared Directory customers; numbered jobs/tasks/dependencies; quotes/public decisions; idempotent invoices; partial manual/test-provider payments; portal/documents; messaging; settings; real analytics; CSV export | Server guards, versions, idempotency, persistence/restart, viewer denial, Directory mapping, and cross-tenant tests pass | Pass | Pass | Compiled shared runtime and public route pass locally; deployed target not run | TradeFlowKit rows pass in refreshed acceptance and SSO 2/2 passes; deployed workflow/cutover not run | **Not production-ready** |
-| PulseDesk | Departments, PHI-minimized operations queue, shared organizations/contacts/sites | Server guards, manager capability, PHI-restricted directory profile, persistence, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared directory CRUD/refresh/reuse pass; deployed target not run | **Not production-ready** |
+| PulseDesk | Source/local state 4 candidate: PHI-minimized Directory clients/facilities/requesters; departments; operational assets; numbered tickets; queue/team assignment; notes/replies; shared attachments; time/SLA; vendor, supply and facility coordination; knowledge, views, configuration, dashboards and deep links | Server guards, capability limits, versions, idempotency, privacy validation, internal-note isolation, restart persistence, Directory mapping and cross-tenant tests pass | Pass | Pass | Compiled 19-step shared runtime and anonymous deep-link smoke pass locally; deployed target not run | Local production-host SSO/return/logout evidence recorded below; deployed workflow/privacy/cutover not run | **Not production-ready** |
 | TechDeck | Source/local state 4 candidate: Directory-linked tickets/comments/time; configuration inventory; network/IPAM; lifecycle; versioned documentation/runbooks/backlinks; private attachments; evidence; reports; deep links | Server guards, versions, site/client pairing, managed-client Directory profile, document transitions, secret-field rejection, audit, viewer denial, and cross-tenant tests pass | Pass | Pass | Compiled 18-step shared runtime and anonymous deep-link smoke pass locally; deployed target not run | Production-host SSO 2/2 and TechDeck deep-link/refresh/Back/local logout pass locally; deployed workflow/provider/cutover not run | **Not production-ready** |
 | TorqueShed | Persistent diagnostic-case CRUD and status workflow | Server guards, persistence, viewer denial, and cross-tenant tests pass | Pass | Pass | Shared local runtime pass; deployed target not run | Shared local SSO/shell pass; deployed target not run | **Not production-ready** |
 
@@ -47,6 +47,15 @@ configuration/network/IPAM/lifecycle records, versioned documentation,
 evidence/reports/time, and real deep links. The release still fails because
 the cumulative browser acceptance has not been rerun on a deployed target and
 TechDeck provider/data-cutover evidence is absent.
+
+Phase 6 closes the approved PulseDesk source/local service-desk gap through
+ADR-0015 without introducing an EHR or unnecessary PHI. The historical
+PulseDesk failures are superseded locally by shared Directory references,
+operational assets, ticket messages/time/SLA, assignments, shared private
+attachments, vendor/supply/facility workflows, real dashboards and ticket deep
+links. The release still fails because the cumulative browser workflow has not
+run on the deployed target and no privacy-reviewed data apply, reconciliation
+or cutover was authorized.
 
 ## Hardening delivered in this pass
 
@@ -93,13 +102,18 @@ TechDeck provider/data-cutover evidence is absent.
   the corrected focused rerun passed 8/8. A stale pnpm-policy assertion was
   also corrected and passed 2/2. The final clean-database aggregate passed 696,
   failed 0, and skipped 6 out of 702 in 616,919 ms.
+- Phase 6 PulseDesk focused regression passed 37/37. The final clean-database
+  API aggregate passed 706, failed 0, and skipped 6 HTTP-only tests out of 712
+  in 1,305,103 ms. The privacy-reviewed dry-run resolved 34/34 references with
+  no missing references or privacy findings.
 - Focused ecosystem contract suite: 30/30 passed.
 - Post-fix focused ecosystem/navigation suite: 15/15 passed; targeted
   database-backed tenant/module RBAC suite: 8/8 passed.
 - Production-host HTTPS Playwright SSO matrix: 2/2 passed locally across the
   canonical app host and all 12 enabled module hosts, including direct
-  TechDeck deep-link return, silent PulseDesk sibling launch, clean URLs,
-  host-only cookies, local logout, and global revocation.
+  deep-link return, silent PulseDesk sibling launch, clean URLs, host-only
+  cookies, local logout, and global revocation. The fresh Phase 6 run passed in
+  3.9 minutes.
 - Phase 2 production-artifact Playwright: 1/1 passed on isolated ports 5100
   and 5101; created one organization, contact, and addressed site through
   TradeFlowKit, survived refresh, reused the same organization ID in TechDeck
@@ -107,7 +121,7 @@ TechDeck provider/data-cutover evidence is absent.
 - Local shared runtime: `operatoros.net/healthz` returned 200 and
   `api.operatoros.net/readyz` returned 200 with database, auth, SSO encryption,
   and module registry healthy/configured.
-- The current 18-step database release applied repeatedly to clean isolated
+- The current 19-step database release applied and verified on clean isolated
   PostgreSQL 16 databases without drift. Separately, the Phase 1 PostgreSQL
   16.14 custom-format backup restored into a new database
   with matching critical table counts, 61 public tables, 100 validated foreign

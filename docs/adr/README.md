@@ -19,10 +19,10 @@ new ADR explicitly supersedes it.
 | ADR-0012 | TechDeck owns documentation-grade network/IPAM and configuration records linked to shared Directory clients/sites; it does not claim discovery or device mutation. | Accepted | `docs/adr/ADR-0012-techdeck-network-ipam-ownership.md` |
 | ADR-0013 | TechDeck stores bounded external vault references only and exposes no plaintext secret or reveal path. | Accepted | `docs/adr/ADR-0013-techdeck-credential-references.md` |
 | ADR-0014 | TechDeck runbooks are documentation-only; remote execution requires a separately approved signed endpoint-agent boundary. | Accepted | `docs/adr/ADR-0014-techdeck-remote-action-boundary.md` |
+| ADR-0015 | PulseDesk owns PHI-minimized healthcare operations service delivery; TechDeck retains technical configuration/network ownership and neither product duplicates shared Directory authority. | Accepted | `docs/adr/ADR-0015-pulsedesk-healthcare-operations-boundary.md` |
 
 ## Required future ADRs
 
-- PulseDesk facility/client/ticket language and PHI boundary (Phase 6).
 - Torque Assist safety, provider, and ledger semantics (Phase 8).
 - Ninja Launch Kit source/product alignment (Phase 11D).
 - CallCommand AI versus OutCall product boundary (Phases 11E/12B).

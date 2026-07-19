@@ -27,6 +27,7 @@ import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createPulseDeskAdapterContext } from '../../../../../apps/modules/pulsedesk/adapter.js';
 import PulseDeskDepartmentEscalationQueue from './PulseDeskDepartmentEscalationQueue';
+import PulseDeskServiceDeskWorkspace from './PulseDeskServiceDeskWorkspace';
 import BusinessDirectory from './BusinessDirectory';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
@@ -55,21 +56,21 @@ const workflowShortcuts = [
   {
     id: 'tickets',
     label: 'Tickets',
-    summary: 'Clinical operations requests, escalations, assignments, and status tracking.',
+    summary: 'Healthcare operations requests, escalations, assignments, replies, time, and SLA tracking.',
     Icon: ClipboardList,
     tone: colors.blue,
   },
   {
     id: 'departments',
     label: 'Departments',
-    summary: 'Department-level visibility for imaging, clinical, administrative, and facility teams.',
+    summary: 'Facility-linked department routing for imaging operations, administration, and facility teams.',
     Icon: Building2,
     tone: colors.cyan,
   },
   {
     id: 'assets',
     label: 'Assets',
-    summary: 'Equipment, workstation, facility asset, and maintenance context for each tenant.',
+    summary: 'Operational equipment and maintenance context; network and configuration authority stays in TechDeck.',
     Icon: Stethoscope,
     tone: colors.green,
   },
@@ -102,9 +103,9 @@ const workflowShortcuts = [
     tone: colors.blue,
   },
   {
-    id: 'inboxes',
-    label: 'Inboxes',
-    summary: 'Email intake and notification routing that stays tied to tenant context.',
+    id: 'notifications',
+    label: 'Notifications',
+    summary: 'Idempotent in-app notification routing through shared OperatorOS services without copying ticket text.',
     Icon: Inbox,
     tone: colors.green,
   },
@@ -363,10 +364,22 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
               tabIndex={-1}
             >
               {adapter.tenantId ? (
-                <PulseDeskDepartmentEscalationQueue
-                  key={adapter.tenantId}
-                  tenantKey={adapter.tenantId}
-                />
+                <div style={{ display: 'grid', gap: 16 }}>
+                  <PulseDeskServiceDeskWorkspace
+                    key={`service-desk-${adapter.tenantId}`}
+                    tenantKey={adapter.tenantId}
+                    canManageModule={canManageModule}
+                  />
+                  <details style={{ borderTop: `1px solid ${colors.border}`, paddingTop: 12 }}>
+                    <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Department escalation intake and routing</summary>
+                    <div style={{ marginTop: 12 }}>
+                      <PulseDeskDepartmentEscalationQueue
+                        key={`department-queue-${adapter.tenantId}`}
+                        tenantKey={adapter.tenantId}
+                      />
+                    </div>
+                  </details>
+                </div>
               ) : (
                 <StatePanel
                   testId="pulsedesk-operations-no-tenant"
@@ -387,8 +400,8 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
             <section className="pulsedesk-panel" style={{ padding: 18 }} data-testid="pulsedesk-workflow-map">
               <SectionHeading
                 Icon={HeartPulse}
-                title="Clinical operations map"
-                subtitle="The department escalation queue is live; remaining workflow surfaces stay gated until their controlled migration."
+                title="Healthcare operations map"
+                subtitle="Each surface below is backed by the persisted service-desk workspace; patient and clinical records remain prohibited."
               />
               <div className="pulsedesk-workflow-grid" style={{ marginTop: 14 }}>
                 {workflowShortcuts.filter(({ id }) => id !== 'tickets').map(({ id, label, summary, Icon, tone }) => (
@@ -406,9 +419,9 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
               <div style={emptyStateStyle} data-testid="pulsedesk-empty-state">
                 <HeartPulse size={18} color={colors.green} />
                 <div>
-                  <div style={{ fontWeight: 800 }}>PHI-minimized department coordination is active</div>
+                  <div style={{ fontWeight: 800 }}>PHI-minimized healthcare operations service delivery is active</div>
                   <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                    OperatorOS owns the session, tenant, entitlement, and manager capability. PulseDesk stores structured operational workflow data only.
+                    OperatorOS owns the session, tenant, Directory, entitlement, files, and notifications. PulseDesk stores structured operational workflow data only.
                   </div>
                 </div>
               </div>
@@ -552,7 +565,7 @@ function WorkflowPanel({
       </div>
       <p style={{ color: colors.muted, fontSize: 13, lineHeight: 1.45, margin: '10px 0 0' }}>{summary}</p>
       <div style={{ marginTop: 12, color: colors.amber, fontSize: 12, fontWeight: 800 }}>
-        Migration pending — disabled
+        Active in the persisted service-desk workspace
       </div>
     </article>
   );

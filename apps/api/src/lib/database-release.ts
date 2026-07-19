@@ -18,6 +18,7 @@ import { ensureDirectoryTables } from './directory-db-init.js';
 import { ensureSharedServiceTables } from './shared-services-db-init.js';
 import { ensureTradeFlowKitTables } from './tradeflowkit-db-init.js';
 import { ensureTechDeckTables } from './techdeck-db-init.js';
+import { ensurePulseDeskTables } from './pulsedesk-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -37,6 +38,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   module_tables: ensureModuleShellTables,
   tradeflowkit_tables: ensureTradeFlowKitTables,
   techdeck_tables: ensureTechDeckTables,
+  pulsedesk_tables: ensurePulseDeskTables,
   shared_service_tables: ensureSharedServiceTables,
   plans_and_admin: seedPlansAndAdmin,
   launch_fix_pre_seed: launchFixPreSeed,
@@ -62,6 +64,8 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.tradeflowkit_payments') IS NOT NULL AS tradeflowkit_payments,
       to_regclass('public.techdeck_documents') IS NOT NULL AS techdeck_documents,
       to_regclass('public.techdeck_configuration_relationships') IS NOT NULL AS techdeck_configuration_relationships,
+      to_regclass('public.pulsedesk_ticket_messages') IS NOT NULL AS pulsedesk_ticket_messages,
+      to_regclass('public.pulsedesk_sla_policies') IS NOT NULL AS pulsedesk_sla_policies,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;

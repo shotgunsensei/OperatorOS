@@ -5,6 +5,40 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## Phase 6 follow-up
+
+The PulseDesk source/local Phase 6 candidate was verified on 2026-07-18 against
+disposable PostgreSQL 16. It resolves the healthcare-operations boundary in
+ADR-0015 and adds the approved shared-Directory client/facility/requester,
+operational asset, numbered ticket, queue/team assignment, internal
+note/requester reply, shared attachment, time/SLA, vendor, supply/facility,
+knowledge, saved-view, configuration, dashboard and ticket deep-link workflow.
+Recursive no-PHI controls, requester/internal visibility isolation, trusted
+tenant references, capability checks, versions, idempotency, transactions and
+content-free notification payloads are covered by focused and aggregate tests.
+
+Fresh local evidence includes 37/37 focused PulseDesk tests, a 712-test clean
+API aggregate with 706 pass/0 fail/6 HTTP-only skips, the privacy dry-run with
+34/34 references and no findings, a clean 19-step PostgreSQL release, workspace
+typecheck, production build, compiled readiness, eight path-preserving
+PulseDesk PKCE redirects, and the production-host SSO matrix at 2/2 in 3.9
+minutes. The direct browser case covers deep-link return, refresh, Back,
+sibling PulseDesk SSO, host-only local logout and global revocation.
+
+The historical PulseDesk failures below are therefore closed in the current
+local source; patient charts, diagnosis, treatment, insurance and clinical
+records remain deliberately absent, and network/configuration authority stays
+in TechDeck. The deterministic importer performed only a privacy-review dry
+run. No source files, standalone database, provider credentials, patient data,
+authority or billing records were copied into OperatorOS.
+
+This follow-up does not change the report's **NOT ACCEPTED** verdict. The exact
+cumulative revision has not been deployed, the full deployed workflow has not
+been exercised, and no production export/apply/reconciliation/cutover was
+authorized. This section supersedes the local PulseDesk parity diagnosis in
+the dated failure table without changing that historical run's response or
+counts.
+
 ## Phase 5 follow-up
 
 The TechDeck source/local Phase 5 candidate was verified on 2026-07-18 through
@@ -207,7 +241,7 @@ test-harness or environment failures.
 ## Release decision
 
 No application in this matrix is production-ready under the supplied release
-rule. The next work must be product implementation, not another acceptance
-rerun: define the PulseDesk domain decision, implement the missing persistent
-entities and module UI, add their tenant/RBAC/negative tests, and then rerun
-this exact gate against an empty database and the deployed target.
+rule. PulseDesk's local product gap is closed by the Phase 6 follow-up, but the
+ecosystem still requires the later module phases beginning with TorqueShed,
+then a fresh empty-database acceptance run and the separately authorized
+deployed-target gate on the reviewed cumulative revision.

@@ -31,7 +31,10 @@ test('PulseDesk persistence is additive, tenant-scoped, and keeps immutable even
   assert.match(block, /requestId:[\s\S]*references\([\s\S]*\(\) => pulsedeskRequests\.id,[\s\S]*\{ onDelete: 'restrict' \}/);
   assert.doesNotMatch(block, /pulsedeskRequests\.id, \{ onDelete: 'cascade' \}/);
   assert.match(block, /metadata: jsonb\('metadata'\)/);
-  assert.doesNotMatch(block, /deletedAt|notes?: text|description: text|email: text|attachment/i);
+  assert.match(block, /description: text\('description'\)/);
+  assert.match(block, /export const pulsedeskTicketMessages/);
+  assert.match(block, /export const pulsedeskTimeEntries/);
+  assert.doesNotMatch(block, /patientName|medicalRecordNumber|dateOfBirth|diagnosis|treatmentPlan|insuranceId|clinicalNote/);
 });
 
 test('PulseDesk startup DDL is idempotent, constrained, case-insensitive, and restrictive', () => {

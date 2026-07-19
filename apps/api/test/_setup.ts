@@ -71,6 +71,8 @@ export async function ensureSchemaReady() {
   await ensureTradeFlowKitTables();
   const { ensureTechDeckTables } = await import('../src/lib/techdeck-db-init.js');
   await ensureTechDeckTables();
+  const { ensurePulseDeskTables } = await import('../src/lib/pulsedesk-db-init.js');
+  await ensurePulseDeskTables();
   const { ensureSharedServiceTables } = await import('../src/lib/shared-services-db-init.js');
   await ensureSharedServiceTables();
   await ensureTestPlans();

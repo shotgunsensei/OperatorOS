@@ -80,7 +80,8 @@ test('department inputs are bounded, single-line, and strictly allowlisted', () 
   assert.deepEqual(parsePulseDeskDepartmentCreate({ name: '  Imaging  Operations  ' }), {
     name: 'Imaging Operations',
   });
-  assert.deepEqual(parsePulseDeskDepartmentPatch({ name: 'Radiology', active: false }), {
+  assert.deepEqual(parsePulseDeskDepartmentPatch({ expectedVersion: 1, name: 'Radiology', active: false }), {
+    expectedVersion: 1,
     name: 'Radiology',
     active: false,
   });
@@ -98,7 +99,7 @@ test('department inputs are bounded, single-line, and strictly allowlisted', () 
     assert.throws(() => parsePulseDeskDepartmentCreate(body), PulseDeskRequestValidationError);
   }
   assert.throws(
-    () => parsePulseDeskDepartmentPatch({ active: 'false' }),
+    () => parsePulseDeskDepartmentPatch({ expectedVersion: 1, active: 'false' }),
     (error: unknown) => error instanceof PulseDeskRequestValidationError && error.field === 'active',
   );
   assert.throws(
