@@ -33,9 +33,14 @@ test('core module deep links resolve only to live native shell sections', () => 
     sectionId: 'techdeck-ticket-queue',
     label: 'Ticket Queue',
   });
-  for (const path of ['assets', 'alerts', 'scripts', 'network']) {
-    assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-ops');
-  }
+  for (const path of ['assets', 'inventory', 'alerts']) assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-inventory');
+  for (const path of ['network', 'ipam']) assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-network');
+  for (const path of ['scripts', 'runbooks']) assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-runbooks');
+  assert.equal(resolveCoreModuleDeepLink('techdeck', ['lifecycle'])?.sectionId, 'techdeck-lifecycle');
+  assert.equal(resolveCoreModuleDeepLink('techdeck', ['documentation'])?.sectionId, 'techdeck-documentation');
+  assert.equal(resolveCoreModuleDeepLink('techdeck', ['evidence'])?.sectionId, 'techdeck-evidence');
+  assert.equal(resolveCoreModuleDeepLink('techdeck', ['reports'])?.sectionId, 'techdeck-reports');
+  assert.equal(resolveCoreModuleDeepLink('techdeck', ['time'])?.sectionId, 'techdeck-time');
   for (const path of ['clients', 'sites', 'contacts']) {
     assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-directory');
   }
@@ -99,6 +104,14 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
     [techDeckShell, 'techdeck-ticket-queue'],
     [techDeckShell, 'techdeck-directory'],
     [techDeckOps, 'techdeck-ops'],
+    [techDeckOps, 'techdeck-inventory'],
+    [techDeckOps, 'techdeck-network'],
+    [techDeckOps, 'techdeck-lifecycle'],
+    [techDeckOps, 'techdeck-documentation'],
+    [techDeckOps, 'techdeck-runbooks'],
+    [techDeckOps, 'techdeck-evidence'],
+    [techDeckOps, 'techdeck-reports'],
+    [techDeckOps, 'techdeck-time'],
     [techDeckShell, 'techdeck-settings'],
     [pulseDeskShell, 'pulsedesk-overview'],
     [pulseDeskShell, 'pulsedesk-operations'],

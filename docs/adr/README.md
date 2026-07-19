@@ -16,6 +16,9 @@ new ADR explicitly supersedes it.
 | ADR-0009 | OperatorOS owns shared attachments, notifications/providers, leased jobs/outbox, verified webhooks, append-only usage/activity, and idempotency. | Accepted | `docs/adr/ADR-0009-shared-platform-services.md` |
 | ADR-0010 | TradeFlowKit uses jobs/work orders as the primary operational entity with first-class tasks beneath jobs; projects are excluded absent real multi-job semantics. | Accepted | `docs/adr/ADR-0010-tradeflowkit-job-task-model.md` |
 | ADR-0011 | TradeFlowKit approved scope is deterministic lead-to-cash field operations; duplicate authority, overlapping Call Recovery, unsafe autonomous/provider paths, and destructive legacy surfaces are intentionally excluded. | Accepted | `docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md` |
+| ADR-0012 | TechDeck owns documentation-grade network/IPAM and configuration records linked to shared Directory clients/sites; it does not claim discovery or device mutation. | Accepted | `docs/adr/ADR-0012-techdeck-network-ipam-ownership.md` |
+| ADR-0013 | TechDeck stores bounded external vault references only and exposes no plaintext secret or reveal path. | Accepted | `docs/adr/ADR-0013-techdeck-credential-references.md` |
+| ADR-0014 | TechDeck runbooks are documentation-only; remote execution requires a separately approved signed endpoint-agent boundary. | Accepted | `docs/adr/ADR-0014-techdeck-remote-action-boundary.md` |
 
 ## Required future ADRs
 

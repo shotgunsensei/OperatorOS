@@ -1,0 +1,30 @@
+{
+  "exportVersion": 1,
+  "exportedAt": "2026-07-18T00:00:00.000Z",
+  "clients": [
+    { "id": "client-northstar", "name": "Northstar Managed Services" }
+  ],
+  "sites": [
+    { "id": "site-main", "clientId": "client-northstar", "name": "Main Office" }
+  ],
+  "configurationItems": [
+    { "id": "ci-firewall", "clientId": "client-northstar", "siteId": "site-main", "name": "Edge firewall", "type": "firewall", "ipAddress": "10.20.0.1", "externalVaultReference": "vault://northstar/edge-firewall" },
+    { "id": "ci-vlan", "clientId": "client-northstar", "siteId": "site-main", "name": "Production VLAN", "type": "vlan", "vlanNumber": 120, "cidr": "10.20.0.0/24" }
+  ],
+  "relationships": [
+    { "id": "rel-firewall-vlan", "sourceId": "ci-firewall", "targetId": "ci-vlan", "relationshipType": "routes_to" }
+  ],
+  "folders": [
+    { "id": "folder-runbooks", "clientId": "client-northstar", "name": "Runbooks" }
+  ],
+  "documents": [
+    { "id": "doc-recovery", "clientId": "client-northstar", "siteId": "site-main", "folderId": "folder-runbooks", "title": "Edge recovery", "pageType": "runbook", "content": "Documentation-only recovery procedure." }
+  ],
+  "revisions": [
+    { "id": "revision-recovery-1", "documentId": "doc-recovery", "version": 1 }
+  ],
+  "evidence": [],
+  "tickets": [],
+  "comments": [],
+  "timeEntries": []
+}

@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 17 ordered step identifiers without secrets
+`db:plan` is read-only and prints 18 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -181,6 +181,23 @@ table. That query failed after the restore itself had completed. Verification
 was corrected to compare the actual schema families and execute the supported
 release apply; both passed. The dump and databases are disposable and removed
 after final evidence capture.
+
+## Phase 5 disposable release rehearsal
+
+The 2026-07-18 Phase 5 rehearsal used only disposable PostgreSQL 16 databases.
+The current 18-step release adds `techdeck_tables` after TradeFlowKit and before
+shared services. It applied repeatedly without drift on clean databases and
+through the compiled production supervisor; required TechDeck relationship,
+document, and shared-service tables were verified. The complete API regression
+used a separately created clean database.
+
+No persistent or production database was migrated, so no new production-style
+dump was necessary for this additive source rehearsal. The Phase 4 custom
+archive above remains the latest restore evidence. Before any authorized
+TechDeck production schema or standalone-data apply, take a fresh provider
+snapshot and logical backup, verify the checksum, rehearse restore into a new
+database, and require the matching 18-step release plus count/reference and
+browser reconciliation. No Phase 5 apply or cutover has been authorized.
 
 ## Production recovery
 

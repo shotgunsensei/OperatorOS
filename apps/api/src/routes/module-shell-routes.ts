@@ -22,6 +22,7 @@ import {
   tradeflowkitPayments,
   directoryOrganizations,
   directoryContacts,
+  directorySites,
   directoryOrganizationContacts,
   activityFeed,
   modules,
@@ -80,6 +81,7 @@ import { getTenantMembership, resolveTenantModuleAccess } from '../lib/tenant-en
 import { registerPulseDeskRoutes } from './pulsedesk-routes.js';
 import { registerNinjaPoolHallRoutes } from './ninja-pool-hall-routes.js';
 import { allocateTradeFlowKitNumber, registerTradeFlowKitRoutes } from './tradeflowkit-routes.js';
+import { registerTechDeckRoutes } from './techdeck-routes.js';
 
 // Task #91 — per-tenant + per-user budget for outbound calls. Each placed
 // call burns real Twilio minutes, so we cap dial attempts to a small
@@ -298,6 +300,46 @@ async function validateTechDeckAssignee(
       code: 'INVALID_ASSIGNEE',
     });
     return false;
+  }
+  return true;
+}
+
+async function validateTechDeckTicketReferences(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  references: { directoryOrganizationId: string | null; directorySiteId: string | null; configurationItemId: string | null },
+): Promise<boolean> {
+  const ctx = (request as any).tenantContext as { tenantId: string };
+  if (references.directorySiteId && !references.directoryOrganizationId) {
+    reply.code(400).send({ error: 'Directory organization is required when a site is selected', code: 'DIRECTORY_ORGANIZATION_REQUIRED' });
+    return false;
+  }
+  if (references.directoryOrganizationId) {
+    const [organization] = await db.select({ id: directoryOrganizations.id }).from(directoryOrganizations).where(and(
+      eq(directoryOrganizations.tenantId, ctx.tenantId), eq(directoryOrganizations.id, references.directoryOrganizationId), isNull(directoryOrganizations.archivedAt),
+    )).limit(1);
+    if (!organization) {
+      reply.code(404).send({ error: 'Directory organization not found', code: 'DIRECTORY_ORGANIZATION_NOT_FOUND' });
+      return false;
+    }
+  }
+  if (references.directorySiteId) {
+    const [site] = await db.select({ id: directorySites.id, organizationId: directorySites.organizationId }).from(directorySites).where(and(
+      eq(directorySites.tenantId, ctx.tenantId), eq(directorySites.id, references.directorySiteId), isNull(directorySites.archivedAt),
+    )).limit(1);
+    if (!site || (references.directoryOrganizationId && site.organizationId !== references.directoryOrganizationId)) {
+      reply.code(404).send({ error: 'Directory site not found', code: 'DIRECTORY_SITE_NOT_FOUND' });
+      return false;
+    }
+  }
+  if (references.configurationItemId) {
+    const [item] = await db.select({ id: techdeckAssets.id }).from(techdeckAssets).where(and(
+      eq(techdeckAssets.tenantId, ctx.tenantId), eq(techdeckAssets.id, references.configurationItemId), isNull(techdeckAssets.deletedAt),
+    )).limit(1);
+    if (!item) {
+      reply.code(404).send({ error: 'Configuration item not found', code: 'CONFIGURATION_ITEM_NOT_FOUND' });
+      return false;
+    }
   }
   return true;
 }
@@ -524,6 +566,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerPulseDeskRoutes(app);
   await registerNinjaPoolHallRoutes(app);
   await registerTradeFlowKitRoutes(app);
+  await registerTechDeckRoutes(app);
 
   // ===== TradeFlowKit: lead and revenue compatibility routes ==============
   //
@@ -1355,6 +1398,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       }
 
       if (!await validateTechDeckAssignee(request, reply, input.assignedToUserId)) return;
+      if (!await validateTechDeckTicketReferences(request, reply, input)) return;
 
       const user = (request as any).user as { id: string };
       const ctx = (request as any).tenantContext as { tenantId: string };
@@ -1440,6 +1484,11 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
         patch.assignedToUserId!,
         before.assignedToUserId,
       )) return;
+      if (!await validateTechDeckTicketReferences(request, reply, {
+        directoryOrganizationId: patch.directoryOrganizationId === undefined ? before.directoryOrganizationId : patch.directoryOrganizationId,
+        directorySiteId: patch.directorySiteId === undefined ? before.directorySiteId : patch.directorySiteId,
+        configurationItemId: patch.configurationItemId === undefined ? before.configurationItemId : patch.configurationItemId,
+      })) return;
 
       const changedFields = Object.keys(patch);
       const requireAssignmentSnapshot = 'assignedToUserId' in patch
@@ -1448,6 +1497,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       const updateConditions = [
         eq(techdeckTickets.id, id),
         eq(techdeckTickets.tenantId, ctx.tenantId),
+        eq(techdeckTickets.version, before.version),
         isNull(techdeckTickets.deletedAt),
       ];
       if (requireAssignmentSnapshot) {
@@ -1458,7 +1508,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       const ticket = await db.transaction(async (tx) => {
         const [updated] = await tx
           .update(techdeckTickets)
-          .set({ ...patch, updatedAt: new Date() })
+          .set({ ...patch, version: sql`${techdeckTickets.version} + 1`, updatedAt: new Date() })
           .where(and(...updateConditions))
           .returning();
         if (!updated) return null;
@@ -1543,10 +1593,11 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       const ticket = await db.transaction(async (tx) => {
         const [updated] = await tx
           .update(techdeckTickets)
-          .set({ status, ...lifecyclePatch, updatedAt: now })
+          .set({ status, ...lifecyclePatch, version: sql`${techdeckTickets.version} + 1`, updatedAt: now })
           .where(and(
             eq(techdeckTickets.id, id),
             eq(techdeckTickets.tenantId, ctx.tenantId),
+            eq(techdeckTickets.version, before.version),
             isNull(techdeckTickets.deletedAt),
           ))
           .returning();

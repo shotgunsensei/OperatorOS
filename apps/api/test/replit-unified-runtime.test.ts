@@ -50,6 +50,7 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   const deployment = replit.slice(replit.indexOf('[deployment]'), replit.indexOf('[workflows]'));
   const source = readFileSync(launcherPath, 'utf8');
   const packageJson = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8'));
+  const pnpmWorkspace = readFileSync(resolve(repoRoot, 'pnpm-workspace.yaml'), 'utf8');
   assert.match(deployment, /run = \["node", "scripts\/start-unified-runtime\.mjs"\]/);
   assert.match(deployment, /export CI=true/);
   assert.match(deployment, /npm exec --yes --package=pnpm@10\.34\.5 -- pnpm install --frozen-lockfile/);
@@ -73,7 +74,8 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.equal(packageJson.packageManager, 'pnpm@10.34.5');
   assert.equal(packageJson.scripts['build:production'], 'pnpm typecheck && pnpm build');
   assert.equal(packageJson.dependencies.pnpm, undefined);
-  assert.deepEqual(packageJson.pnpm.onlyBuiltDependencies, ['bufferutil', 'esbuild']);
+  assert.equal(packageJson.pnpm, undefined);
+  assert.match(pnpmWorkspace, /^allowBuilds:\r?\n\s+bufferutil: true\r?\n\s+esbuild: true$/m);
   for (const [name, url] of Object.entries(preflight.CANONICAL_MODULE_URLS)) {
     assert.match(replit, new RegExp(`^${name} = "${String(url).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"$`, 'm'));
   }

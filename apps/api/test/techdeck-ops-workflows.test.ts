@@ -3,10 +3,11 @@ process.env.SESSION_SECRET ||= 'operatoros-techdeck-ops-test-v1';
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
   activityFeed,
+  modules,
   techdeckAssets,
   techdeckRunbooks,
   tenantModules,
@@ -27,6 +28,7 @@ let ownerB: any;
 let member: any;
 let viewer: any;
 let moduleRow: any;
+let moduleCreated = false;
 let signToken: typeof import('../src/lib/auth.js').signToken;
 
 function headers(user: any, tenantId: string) {
@@ -49,7 +51,8 @@ before(async () => {
   ownerB = await createTestUser();
   member = await createTestUser();
   viewer = await createTestUser();
-  moduleRow = await createTestModule('techdeck');
+  [moduleRow] = await db.select().from(modules).where(eq(modules.slug, 'techdeck')).limit(1);
+  if (!moduleRow) { moduleRow = await createTestModule('techdeck'); moduleCreated = true; }
 
   await db.insert(tenantUsers).values([
     { tenantId: ownerA.currentTenantId, userId: member.id, role: 'member' },
@@ -80,8 +83,13 @@ after(async () => {
     try { await db.delete(techdeckAssets).where(eq(techdeckAssets.tenantId, ownerA.currentTenantId)); } catch {}
     try { await db.delete(techdeckRunbooks).where(eq(techdeckRunbooks.tenantId, ownerA.currentTenantId)); } catch {}
   }
+  if (moduleRow) {
+    const tenantIds = [ownerA.currentTenantId, ownerB.currentTenantId];
+    try { await db.delete(tenantUserModuleAccess).where(and(eq(tenantUserModuleAccess.moduleId, moduleRow.id), inArray(tenantUserModuleAccess.tenantId, tenantIds))); } catch {}
+    try { await db.delete(tenantModules).where(and(eq(tenantModules.moduleId, moduleRow.id), inArray(tenantModules.tenantId, tenantIds))); } catch {}
+  }
   for (const user of [viewer, member, ownerA, ownerB]) if (user) await cleanupUser(user.id);
-  if (moduleRow) await cleanupModule(moduleRow.id);
+  if (moduleRow && moduleCreated) await cleanupModule(moduleRow.id);
 });
 
 test('TechDeck asset posture is versioned, tenant-isolated, and derives health alerts', async () => {

@@ -36,10 +36,19 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
   techdeck: {
     '/dashboard': { sectionId: 'techdeck-overview', label: 'Overview' },
     '/tickets': { sectionId: 'techdeck-ticket-queue', label: 'Ticket Queue' },
-    '/assets': { sectionId: 'techdeck-ops', label: 'Asset Posture' },
-    '/alerts': { sectionId: 'techdeck-ops', label: 'Health Alerts' },
-    '/scripts': { sectionId: 'techdeck-ops', label: 'Runbooks' },
-    '/network': { sectionId: 'techdeck-ops', label: 'Network Assets' },
+    '/assets': { sectionId: 'techdeck-inventory', label: 'Configuration Inventory' },
+    '/inventory': { sectionId: 'techdeck-inventory', label: 'Configuration Inventory' },
+    '/alerts': { sectionId: 'techdeck-inventory', label: 'Health Alerts' },
+    '/scripts': { sectionId: 'techdeck-runbooks', label: 'Runbooks' },
+    '/runbooks': { sectionId: 'techdeck-runbooks', label: 'Runbooks' },
+    '/network': { sectionId: 'techdeck-network', label: 'Network and IPAM' },
+    '/ipam': { sectionId: 'techdeck-network', label: 'Network and IPAM' },
+    '/lifecycle': { sectionId: 'techdeck-lifecycle', label: 'Lifecycle' },
+    '/documentation': { sectionId: 'techdeck-documentation', label: 'Documentation' },
+    '/knowledge-base': { sectionId: 'techdeck-documentation', label: 'Knowledge Base' },
+    '/evidence': { sectionId: 'techdeck-evidence', label: 'Evidence' },
+    '/reports': { sectionId: 'techdeck-reports', label: 'Reports' },
+    '/time': { sectionId: 'techdeck-time', label: 'Technician Time' },
     '/clients': { sectionId: 'techdeck-directory', label: 'Shared Clients' },
     '/sites': { sectionId: 'techdeck-directory', label: 'Shared Sites' },
     '/contacts': { sectionId: 'techdeck-directory', label: 'Shared Contacts' },
@@ -80,6 +89,13 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'jobs' || resource === 'tasks') return { sectionId: 'tradeflowkit-operations', label: resource === 'jobs' ? 'Job Record' : 'Task Record' };
     if (resource === 'leads') return { sectionId: 'tradeflowkit-lead-center', label: 'Lead Record' };
     if (['customers', 'quotes', 'invoices', 'payments'].includes(resource)) return { sectionId: 'tradeflowkit-revenue-flow', label: 'Revenue Record' };
+  }
+  if (slug === 'techdeck' && pathSegments.length === 2) {
+    const [resource] = pathSegments;
+    if (resource === 'assets' || resource === 'inventory') return { sectionId: 'techdeck-inventory', label: 'Configuration Item' };
+    if (resource === 'documents' || resource === 'runbooks') return { sectionId: 'techdeck-documentation', label: 'Document' };
+    if (resource === 'evidence') return { sectionId: 'techdeck-evidence', label: 'Evidence Record' };
+    if (resource === 'reports') return { sectionId: 'techdeck-reports', label: 'Report Snapshot' };
   }
   return null;
 }

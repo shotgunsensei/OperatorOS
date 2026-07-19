@@ -5,6 +5,31 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## Phase 5 follow-up
+
+The TechDeck source/local Phase 5 candidate was verified on 2026-07-18 through
+the compiled production runtime, a disposable PostgreSQL 16 database, and the
+host-preserving HTTPS proxy. The production-host SSO matrix passed 2/2 in 1.7
+minutes across all twelve enabled modules. Its direct TechDeck case preserved
+the `/assets` deep link through credential entry, survived refresh and browser
+Back without an auth loop, silently launched PulseDesk in a sibling tab, and
+passed host-only local logout. Global revocation passed in the all-module case.
+
+Focused TechDeck tests now pass for Directory-linked configuration inventory,
+VLAN/subnet/address topology, lifecycle records, document/runbook workflow,
+evidence, deterministic reports, comments, time, attachments, roles, tenant
+isolation, and record deep links. The historical step 12 failure below is
+therefore closed in the current local source by shared Directory client/site
+authority plus typed network/IPAM records; no duplicate TechDeck client/site
+authority was added.
+
+This follow-up does not change the report's **NOT ACCEPTED** verdict. The full
+35-step historical sequence has not yet been rerun on the cumulative candidate,
+the public target still reflects the older release, and deployed TechDeck
+workflow/provider/data-cutover evidence is absent. This section supersedes the
+local TechDeck parity diagnosis in the dated failure table, but it does not
+retroactively alter that run's captured response or pass/fail counts.
+
 ## Phase 4 follow-up
 
 The local production-host acceptance was rerun on 2026-07-18 after the

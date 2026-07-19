@@ -1,10 +1,9 @@
 /**
  * TechDeck technician ticket queue contract.
  *
- * This is intentionally smaller than the imported standalone ticketing
- * system. Client/site/asset records, comments, SLA profiles, local auth, and
- * billing are not accepted here. Tenant and actor authority always come from
- * the OperatorOS request context.
+ * Client/site/configuration-item links resolve through shared OperatorOS
+ * records. Tenant and actor authority always come from the validated request
+ * context; local auth and billing remain excluded.
  */
 
 export const TECHDECK_TICKET_PRIORITIES = [
@@ -38,6 +37,9 @@ const EDITABLE_FIELDS = new Set([
   'assignedToUserId',
   'responseDeadline',
   'resolutionDeadline',
+  'directoryOrganizationId',
+  'directorySiteId',
+  'configurationItemId',
 ]);
 const STATUS_FIELDS = new Set(['status']);
 const LIST_FIELDS = new Set(['status', 'priority', 'assignment', 'search']);
@@ -61,6 +63,9 @@ export interface TechDeckTicketCreateInput {
   assignedToUserId: string | null;
   responseDeadline: Date | null;
   resolutionDeadline: Date | null;
+  directoryOrganizationId: string | null;
+  directorySiteId: string | null;
+  configurationItemId: string | null;
 }
 
 export type TechDeckTicketPatchInput = Partial<TechDeckTicketCreateInput>;
@@ -149,6 +154,14 @@ function optionalUserId(value: unknown): string | null {
   return value;
 }
 
+function optionalResourceId(value: unknown, field: string): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+    throw new TechDeckTicketValidationError(`${field} must be a valid id`, field);
+  }
+  return value;
+}
+
 function optionalDate(value: unknown, field: 'responseDeadline' | 'resolutionDeadline'): Date | null {
   if (value === undefined || value === null || value === '') return null;
   if (typeof value !== 'string' && !(value instanceof Date)) {
@@ -177,6 +190,9 @@ export function parseTechDeckTicketCreate(input: unknown): TechDeckTicketCreateI
     assignedToUserId: optionalUserId(body.assignedToUserId),
     responseDeadline: optionalDate(body.responseDeadline, 'responseDeadline'),
     resolutionDeadline: optionalDate(body.resolutionDeadline, 'resolutionDeadline'),
+    directoryOrganizationId: optionalResourceId(body.directoryOrganizationId, 'directoryOrganizationId'),
+    directorySiteId: optionalResourceId(body.directorySiteId, 'directorySiteId'),
+    configurationItemId: optionalResourceId(body.configurationItemId, 'configurationItemId'),
   };
 }
 
@@ -191,6 +207,9 @@ export function parseTechDeckTicketPatch(input: unknown): TechDeckTicketPatchInp
   if ('assignedToUserId' in body) patch.assignedToUserId = optionalUserId(body.assignedToUserId);
   if ('responseDeadline' in body) patch.responseDeadline = optionalDate(body.responseDeadline, 'responseDeadline');
   if ('resolutionDeadline' in body) patch.resolutionDeadline = optionalDate(body.resolutionDeadline, 'resolutionDeadline');
+  if ('directoryOrganizationId' in body) patch.directoryOrganizationId = optionalResourceId(body.directoryOrganizationId, 'directoryOrganizationId');
+  if ('directorySiteId' in body) patch.directorySiteId = optionalResourceId(body.directorySiteId, 'directorySiteId');
+  if ('configurationItemId' in body) patch.configurationItemId = optionalResourceId(body.configurationItemId, 'configurationItemId');
 
   if (Object.keys(patch).length === 0) {
     throw new TechDeckTicketValidationError('At least one editable ticket field is required');
