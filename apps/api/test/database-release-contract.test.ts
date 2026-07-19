@@ -69,6 +69,9 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.pulsedesk_sla_policies'\)/);
   assert.match(releaseSource, /to_regclass\('public\.torqueshed_vehicles'\)/);
   assert.match(releaseSource, /to_regclass\('public\.torqueshed_diagnostic_entries'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.torqueshed_assist_requests'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.torqueshed_token_ledger_entries'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.operatoros_token_purchase_intents'\)/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
 });
 

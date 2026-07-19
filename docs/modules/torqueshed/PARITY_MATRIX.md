@@ -1,4 +1,4 @@
-# TorqueShed Phase 7 parity matrix
+# TorqueShed Phase 8 parity matrix
 
 Assessment date: 2026-07-18
 
@@ -19,7 +19,7 @@ product concepts are design evidence, not runtime authority. Uncommitted
 `garage.ts` and `operations.ts` are recorded only as non-deterministic design
 input and are ineligible for migration provenance.
 
-| Source capability | OperatorOS Phase 7 disposition | Evidence target |
+| Source capability | OperatorOS Phase 8 disposition | Evidence target |
 | --- | --- | --- |
 | Standalone users, sessions, orgs, memberships, credentials | Excluded; OperatorOS authority | Auth/tenant/module guards and negative tests |
 | Vehicle profile, year/make/model/trim/engine/transmission/drivetrain | Namespaced vehicle record | CRUD, search/page, restart, tenant tests |
@@ -36,16 +36,22 @@ input and are ineligible for migration provenance.
 | Photos/documents | OperatorOS shared attachment storage, MIME/signature/hash/scan service | Attachment metadata/timeline test |
 | Diagnostic templates | Private or tenant-shared reusable test plans | Role/list/create tests |
 | Dashboard and `/diagnostics` deep routes | Real aggregate API and responsive native workspace | Static, production build, browser E2E |
-| Torque Assist and token ledger | Excluded until Phase 8 | Route-negative test |
+| Torque Assist diagnostic context | Server reloads authorized vehicle, diagnostic, codes, freeze frame, observations, repair history, and bounded follow-up answers; no browser-supplied tenant/provider authority | Context preview, ownership/tenant, size/hash, and redaction tests |
+| Torque Assist response | Strict facts/assumptions/ranked low-or-medium hypotheses/warnings/tests/follow-ups/disclaimer schema with high-risk escalation | Deterministic, malformed, unsafe-certainty, provider-failure, and UI tests |
+| Provider execution | Shared server-selected adapter with bounded context, timeout, two attempts, user/tenant rate limits, tenant circuit, disabled state, and redacted errors | Domain/static contracts plus database workflow |
+| Token purchase and credit | OperatorOS-owned package price/units, Stripe Checkout, signed raw-body webhook, test/live binding, duplicate-safe credit, failure and refund reversal | Signed payment/replay/mode/refund tests |
+| Usage debit and balance | Append-only tenant/user/module ledger; computed balance; atomic accepted request plus exact one debit; no mutable authoritative balance | Exhaustion, replay, race, append-only, reconciliation, and restart tests |
 | Marketplace and community | Excluded until later phases | No mounted routes/tables |
 | Standalone billing/Stripe | Excluded; OperatorOS platform authority | No mounted child route/schema |
 | Child runtime and migrations | Excluded | Root release manifest only |
 
 ## Completion boundary
 
-Phase 7 can reach consolidation state 4 only after isolated database apply,
-the complete workflow/role/tenant/restart test, root typecheck/build/preflight,
-local production readiness, and production-host SSO/deep-link checks pass.
+The combined Phase 7/8 candidate can reach consolidation state 4 only after
+isolated database apply, the complete foundation and Torque Assist payment/
+ledger/provider/role/tenant/concurrency/restart tests, root typecheck/build/
+preflight, local production readiness, and production-host SSO/deep-link
+checks pass.
 State 5 additionally requires an approved cumulative deployment, current
 public acceptance, and an approved standalone-data apply/cutover. A rendered
 shell or older public deployment is not parity.

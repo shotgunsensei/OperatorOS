@@ -45,6 +45,15 @@ export interface SharedAiProviderAdapter {
   complete(input: AiCompletionRequest): Promise<AiCompletionResponse>;
 }
 
+let sharedAiAdapterTestOverride: SharedAiProviderAdapter | null = null;
+
+export function setSharedAiProviderAdapterForTests(adapter: SharedAiProviderAdapter | null): void {
+  if (!isOperatorOSTestEnvironment()) {
+    throw new Error('AI provider overrides are available only in the OperatorOS test environment');
+  }
+  sharedAiAdapterTestOverride = adapter;
+}
+
 class DisabledOutboundAdapter implements OutboundProviderAdapter {
   readonly status: ProviderStatus;
   constructor(kind: 'email' | 'sms') {
@@ -166,6 +175,7 @@ export function getPaymentProviderAdapter(): PaymentProviderAdapter {
 }
 
 export function getSharedAiProviderAdapter(): SharedAiProviderAdapter {
+  if (sharedAiAdapterTestOverride) return sharedAiAdapterTestOverride;
   const provider = getAiProvider();
   const info = getProviderInfo();
   return {

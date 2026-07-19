@@ -18,7 +18,7 @@ tests all pass in the target deployment.
 | TradeFlowKit | Source/local state 4 candidate: lead conversion; shared Directory customers; numbered jobs/tasks/dependencies; quotes/public decisions; idempotent invoices; partial manual/test-provider payments; portal/documents; messaging; settings; real analytics; CSV export | Server guards, versions, idempotency, persistence/restart, viewer denial, Directory mapping, and cross-tenant tests pass | Pass | Pass | Compiled shared runtime and public route pass locally; deployed target not run | TradeFlowKit rows pass in refreshed acceptance and SSO 2/2 passes; deployed workflow/cutover not run | **Not production-ready** |
 | PulseDesk | Source/local state 4 candidate: PHI-minimized Directory clients/facilities/requesters; departments; operational assets; numbered tickets; queue/team assignment; notes/replies; shared attachments; time/SLA; vendor, supply and facility coordination; knowledge, views, configuration, dashboards and deep links | Server guards, capability limits, versions, idempotency, privacy validation, internal-note isolation, restart persistence, Directory mapping and cross-tenant tests pass | Pass | Pass | Compiled 19-step shared runtime and anonymous deep-link smoke pass locally; deployed target not run | Local production-host SSO/return/logout evidence recorded below; deployed workflow/privacy/cutover not run | **Not production-ready** |
 | TechDeck | Source/local state 4 candidate: Directory-linked tickets/comments/time; configuration inventory; network/IPAM; lifecycle; versioned documentation/runbooks/backlinks; private attachments; evidence; reports; deep links | Server guards, versions, site/client pairing, managed-client Directory profile, document transitions, secret-field rejection, audit, viewer denial, and cross-tenant tests pass | Pass | Pass | Compiled 18-step shared runtime and anonymous deep-link smoke pass locally; deployed target not run | Production-host SSO 2/2 and TechDeck deep-link/refresh/Back/local logout pass locally; deployed workflow/provider/cutover not run | **Not production-ready** |
-| TorqueShed | Phase 7 automotive source candidate: vehicles/VIN masking, mileage, service/repair/parts/costs, builds/tasks, reminders, diagnostics/codes/measurements/timeline/templates/files | Static/domain/import/guard contracts pass; new full persistence/role/tenant workflow exists but is unrun because Docker daemon cannot start | Pass | Pass in source contract; browser rerun blocked | Not run for Phase 7 revision; deployed target not run | Existing shared SSO/shell evidence predates Phase 7; new `/diagnostics` rerun blocked | **Not production-ready** |
+| TorqueShed | Phase 8 source candidate: Phase 7 automotive foundation plus server-context safety-ranked Torque Assist, OperatorOS-owned token checkout/signed webhook/refunds, append-only computed-balance ledger, reconciliation and UI | Phase 8 static/domain 7/7 and cumulative 15/15 contracts pass; DB payment/ledger/provider/concurrency workflows exist but are unrun because Docker is unusable | Pass | Source contract passes; exact one-credit/one-debit browser rerun blocked | Production build and core preflight pass locally; compiled runtime and deployed target not run | Existing shared SSO/shell evidence predates Phase 7/8; new `/diagnostics` and Assist rerun blocked | **Not production-ready** |
 
 ## Final E2E acceptance update
 
@@ -36,7 +36,9 @@ not pass the ecosystem release because deployed/cutover evidence is absent and
 the remaining historical failures are PulseDesk assets/tickets/internal notes/time
 entries; TechDeck VLANs/subnets; and the older deployed TorqueShed first-class
 vehicles/diagnostic sessions/trouble codes/measurements, Torque Assist, token
-ledger, marketplace/community, and `/diagnostics` deep route. See
+ledger, marketplace/community, and `/diagnostics` deep route. Phase 7/8 source
+remediates the automotive and Assist/ledger gaps, but no browser result is
+rewritten without a clean runtime rerun. See
 `docs/FINAL_E2E_ACCEPTANCE_REPORT.md` for captured URLs, request IDs, responses,
 retests, and the final matrix.
 
@@ -122,8 +124,9 @@ or cutover was authorized.
   `api.operatoros.net/readyz` returned 200 with database, auth, SSO encryption,
   and module registry healthy/configured.
 - The last database-verified release is Phase 6's 19-step manifest on clean
-  isolated PostgreSQL 16 without drift. Phase 7 defines a 20th TorqueShed step,
-  but Docker daemon failure blocked its apply and verification. Separately, the Phase 1 PostgreSQL
+  isolated PostgreSQL 16 without drift. Phase 7 defines a 20th TorqueShed step
+  and Phase 8 extends it with Assist/accounting tables, but Docker daemon
+  failure blocked apply and verification. Separately, the Phase 1 PostgreSQL
   16.14 custom-format backup restored into a new database
   with matching critical table counts, 61 public tables, 100 validated foreign
   keys, and no unvalidated foreign keys.

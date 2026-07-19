@@ -259,3 +259,20 @@ design.
 This suite was **not rerun** because Docker Desktop could not start its daemon
 and no isolated PostgreSQL runtime was available. No deployed or
 production-ready claim is inferred from source, typecheck, or build evidence.
+
+## Phase 8 source remediation note — 2026-07-18
+
+The historical failure rows above remain unchanged. The Phase 8 branch adds
+server-loaded diagnostic context, strict evidence/safety-ranked Torque Assist
+results, shared provider controls, OperatorOS-priced token checkout, signed
+raw-body payment/refund handling, and an append-only computed-balance ledger.
+The acceptance script no longer accepts a client-selected test adapter: it
+creates a server-owned purchase intent, verifies a signed deterministic-test
+payment event, runs Assist, and requires exactly one matching purchase credit
+and one matching diagnostic debit.
+
+This suite was **not rerun**. The workspace typecheck, production build, and
+core preflight pass, but Docker still does not provide an isolated PostgreSQL
+runtime. No source or build assertion is substituted
+for signed-webhook, concurrency, persistence, runtime, browser, provider, or
+deployed evidence.

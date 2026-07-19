@@ -52,9 +52,11 @@ async function buildApp() {
   const Fastify = (await import('fastify')).default;
   const cookie = (await import('@fastify/cookie')).default;
   const { registerTorqueShedRoutes } = await import('../src/routes/torqueshed-routes.js');
+  const { registerTorqueAssistRoutes } = await import('../src/routes/torque-assist-routes.js');
   const instance = Fastify();
   await instance.register(cookie);
   await registerTorqueShedRoutes(instance);
+  await registerTorqueAssistRoutes(instance);
   await instance.ready();
   return instance;
 }
@@ -117,6 +119,11 @@ after(async () => {
       'shared_attachment_blobs',
       'shared_jobs',
       'shared_attachments',
+      'shared_idempotency_keys',
+      'torqueshed_assist_rate_windows',
+      'torqueshed_ai_provider_circuits',
+      'torqueshed_assist_requests',
+      'operatoros_token_purchase_intents',
       'torqueshed_diagnostic_entries',
       'torqueshed_diagnostic_trouble_codes',
       'torqueshed_diagnostic_sessions',
@@ -454,14 +461,14 @@ test('TorqueShed completes a durable garage-to-repair diagnostic workflow with o
       .length,
     1,
   );
-  assert.equal(
-    (
-      await inject('POST', '/v1/modules/torqueshed/torque-assist', ownerA, {
-        sessionId: diagnostic.id,
-      })
-    ).statusCode,
-    404,
+  const assistWithoutBalance = await inject(
+    'POST',
+    '/v1/modules/torqueshed/torque-assist',
+    ownerA,
+    { diagnosticSessionId: diagnostic.id },
+    { 'idempotency-key': 'phase7-assist-no-balance-001' },
   );
+  assert.equal(assistWithoutBalance.statusCode, 402, assistWithoutBalance.body);
 
   const dashboard = await inject('GET', '/v1/modules/torqueshed/dashboard', ownerA);
   assert.equal(dashboard.statusCode, 200, dashboard.body);

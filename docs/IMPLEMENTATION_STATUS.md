@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-18
-- Phase: **6 source/local state 4 candidate; state 5/public deployment gate blocked**
+- Phase: **8 Torque Assist source candidate; TorqueShed state 3 and ecosystem release gate blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -9,41 +9,40 @@
 - Phase 3 implementation commit: `c969e0413192259318d8f8dacc513fdffededec5`
 - Phase 4 implementation commit: `9ba9d09`
 - Phase 5 implementation commit: `d4966b7`
-- Execution branch: `codex/phase-6-pulsedesk-state-5`
+- Phase 7 implementation commit: `5430d46`
+- Execution branch: `codex/phase-8-torque-assist`
 - Release gate: **closed**
 
 ## Current verdict
 
-The Phase 6 candidate resolves PulseDesk as a PHI-minimized healthcare
-operations service desk and completes its approved source/local workflow:
-shared Directory clients, facilities, departments and requesters; operational
-assets; numbered tickets; queues, teams and assignments; internal notes and
-requester-visible replies; shared private attachments; time and SLA state;
-vendor, supply and facility coordination; knowledge, tags, saved views,
-notifications, dashboards, configuration, bulk actions and record deep links.
+The Phase 8 branch implements Torque Assist inside the Phase 7 TorqueShed
+diagnostic workflow. The server reloads trusted tenant/user/diagnostic context,
+enforces bounded provider execution and strict facts/assumptions/ranked
+hypotheses/safety/tests/follow-up output, and never accepts browser provider,
+tenant, price, units, or payment-success authority. OperatorOS owns token
+packages, Stripe checkout, signed raw-body webhooks, refunds, audit, and
+entitlements. The append-only ledger computes balance from credits, debits and
+reversals; an accepted assist result and its exact one debit are designed to
+commit atomically.
 
-The clean provenance source is
-`C:\Dev\PulseDesk@937849471e489ed23db2a263d04160a388402740`. The source
-remains read-only and its standalone server, identity, billing, connectors,
-dependencies, migrations, database, and files were not activated or copied
-into OperatorOS. ADR-0015 assigns patient charts, diagnoses, treatment,
-insurance and clinical records outside PulseDesk; TechDeck retains network,
-configuration, credentials and remote-action authority. PulseDesk stores only
-the operational minimum and visibly warns users not to enter patient data.
+Phase 8 domain/static contracts pass 7/7, the cumulative Phase 7/release/access
+contracts pass 15/15, the final workspace typecheck and production build pass,
+the core production preflight passes, and the read-only 20-step release plan
+passes. Database-backed tests exist for signed credit/refund,
+test/live mismatch, replay safety, provider failure/retry, rate limits,
+cross-tenant denial, concurrent spending, exact debit, negative-balance
+reconciliation, and database-enforced append-only behavior. They are unrun
+because Docker Desktop does not provide a usable daemon.
 
-The deterministic PulseDesk importer stops at privacy-reviewed dry run because
-no production data mutation or cutover was authorized. Local workflow,
-privacy, tenant/role, persistence/restart, importer and ordered-release tests
-pass, as do the production build, compiled local runtime, health/readiness,
-path-preserving PulseDesk PKCE smoke and exact-host SSO matrix. The current
-public deployment still reflects an older revision and previously returned
-32/47. No deployment, publishing, production database mutation, provider
-traffic, source write freeze or importer apply occurred.
+No repository was copied into OperatorOS. Standalone source remains read-only
+evidence and only approved behavior was ported into the canonical shared
+runtime. No deployment, production database mutation, real provider traffic,
+source write freeze, or importer apply occurred.
 
-This is a PulseDesk source/local state 4 declaration, not state 5 or an
-ecosystem release declaration. TradeFlowKit and TechDeck remain state 4 under
-their earlier evidence. No module is state 5 solely because it launches,
-renders a shell, or passes local tests.
+This is a TorqueShed state 3 source candidate, not state 4, state 5, or an
+ecosystem release declaration. PulseDesk, TradeFlowKit, and TechDeck retain
+their earlier state 4 evidence. No module is promoted from source or rendered
+UI alone.
 
 ## Source of truth
 
@@ -366,6 +365,65 @@ exact clean-database workflow, complete API, release apply/idempotency,
 compiled supervisor, local SSO/deep-link browser, and current public gates.
 The owner directed later branches to proceed while preserving failed gates.
 
+## Phase 8 implementation
+
+Branch: `codex/phase-8-torque-assist`
+Status: source candidate implemented; TorqueShed remains state 3 because final
+database/build/runtime/browser gates are blocked or unconfirmed.
+
+### Implemented scope
+
+- Added OperatorOS-owned token package snapshots, one-time Stripe Checkout,
+  signed raw-body test/live-bound webhook verification, duplicate-safe paid
+  credit, failed-payment no-credit behavior, and append-only full/partial
+  refund reversals. Browser success redirects never grant credit.
+- Added purchase intents, Assist requests, user/tenant rate windows,
+  tenant-scoped provider circuits, and tenant/user/module token entries inside
+  the existing ordered TorqueShed release operation. A database trigger rejects
+  ledger update/delete and unique constraints prevent duplicate credits and
+  more than one debit per Assist request.
+- Added computed balances, history, manager reconciliation, pre-provider
+  estimate checks, final advisory-lock rechecks, and one transaction for the
+  accepted request, exact debit, shared usage, activity, audit, and idempotency
+  completion.
+- Added a strict structured diagnostic schema, 48,000-character context bound,
+  two provider attempts, user/tenant rate limits, failure circuit, redacted
+  provider errors, no full-prompt persistence, certainty/confidence rejection,
+  high-risk automotive escalation, and a fixed non-authoritative disclaimer.
+- Added the in-session Torque Assist UI with server-derived context preview,
+  balance, packages, provider/payment status, estimates/actuals, structured
+  evidence and safety output, history, follow-up answers, and same-key safe
+  retry behavior.
+- Updated final acceptance so Phase 8 can pass only after one server-owned
+  purchase, one signed payment credit, one server-selected Assist result, and
+  exactly one matching debit. It no longer sends a client `adapter` value.
+- Added architecture, accounting, threat, parity, verification, and global
+  readiness documentation without changing Phase 7 provenance or activating
+  any child runtime.
+
+### Fresh verification
+
+| Gate | Result |
+| --- | --- |
+| Phase 8 domain/static contracts | PASS 7/7 in 2,454.7497 ms |
+| Cumulative foundation/release/deep-link/viewer contracts | PASS 15/15 in 11,464.6763 ms |
+| Targeted shared write-guard contract | PASS 2/2 after removing formatting-only churn |
+| Final workspace typecheck | PASS for API, runner gateway, and web as part of `pnpm build:production` |
+| Production build | PASS; SDK/API/runner and Next.js 14.2.35, including 20/20 static page-generation entries |
+| Read-only database release plan | PASS; 20 additive ordered steps |
+| Core production preflight | PASS with canonical non-secret configuration; initial missing `TRUST_PROXY` failed closed, corrected rerun passed |
+| Phase 7 foundation + Phase 8 database workflows | **BLOCKED/NOT RUN**; Docker does not return a usable daemon |
+| Complete clean-database API regression | **NOT RUN** |
+| Compiled runtime/readiness/health | **NOT RUN** |
+| Production-host exact credit/debit and SSO/deep-link/logout E2E | **NOT RUN** |
+| Real Stripe/OpenAI provider preflight | **NOT RUN**; no credentials or traffic authorized |
+| Public verifier/deployed workflow | **NOT RUN**; deployment unauthorized |
+| Lint/format | NOT DEFINED; no repository scripts exist |
+
+The database-independent passes do not prove ledger triggers, signed webhooks,
+refund math, concurrency locking, persistence, runtime behavior, or browser
+acceptance. Those gates remain explicit blockers.
+
 ## Open release blockers
 
 1. Human-authorized deployment of the reviewed cumulative revision.
@@ -383,17 +441,19 @@ The owner directed later branches to proceed while preserving failed gates.
    internal-note isolation, attachment/provider, deep-link/logout,
    second-tenant denial, and an approved privacy-reviewed frozen-export
    apply/reconciliation/cutover.
-7. TorqueShed Phase 7 requires a usable Docker/PostgreSQL test runtime, clean
-   release apply, full workflow/API regression, compiled runtime, local SSO/
-   deep-link/logout browser evidence, and later deployed/data-cutover gates.
+7. TorqueShed Phases 7/8 require a usable Docker/PostgreSQL test runtime, clean
+   release apply, foundation plus signed-payment/ledger/provider/concurrency
+   workflows, complete API regression, compiled
+   runtime, exact credit/debit and SSO/deep-link/logout browser evidence, and
+   later deployed/provider/data-cutover gates.
 8. Remaining module parity, provenance, repeatable migration, reconciliation,
    and rollback gaps recorded in `docs/modules/MODULE_PARITY_INDEX.md`.
 9. Ninjamation source/product decision and the disabled OutCall boundary.
 
 ## Next action
 
-Commit the scoped Phase 7 TorqueShed source candidate with the Docker/database
-blocker preserved, then create the separate Phase 8 Torque Assist branch per
+Commit the scoped Phase 8 Torque Assist source candidate with every unrun or
+unconfirmed gate preserved, then create the separate Phase 9 branch per
 the owner's direction even though the release gate is closed. Deployment and
 every production-readiness claim
 remain blocked until the cumulative revision is deployed through `.replit`
