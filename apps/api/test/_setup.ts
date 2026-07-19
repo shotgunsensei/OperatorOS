@@ -67,6 +67,8 @@ export async function ensureSchemaReady() {
   const { ensureDirectoryTables } = await import('../src/lib/directory-db-init.js');
   await ensureDirectoryTables();
   await ensureModuleShellTables();
+  const { ensureTradeFlowKitTables } = await import('../src/lib/tradeflowkit-db-init.js');
+  await ensureTradeFlowKitTables();
   const { ensureSharedServiceTables } = await import('../src/lib/shared-services-db-init.js');
   await ensureSharedServiceTables();
   await ensureTestPlans();
@@ -154,6 +156,21 @@ export async function cleanupUser(userId: string) {
       try { await db.execute(sql`DELETE FROM shared_notification_templates WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM shared_attachment_blobs WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM shared_attachments WHERE tenant_id = ${t.id}`); } catch {}
+      // TradeFlowKit state-5 leaves are restrictive by design. Tests remove
+      // them in dependency order so tenant cleanup exercises production-like
+      // retention boundaries without leaking disposable fixtures.
+      try { await db.execute(sql`DELETE FROM tradeflowkit_tag_assignments WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_tags WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_comments WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_payments WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_invoice_items WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_quote_items WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_task_dependencies WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_tasks WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_migration_refs WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_sequences WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_settings WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_leads WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, t.id)); } catch {}
       try { await db.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.tenantId, t.id)); } catch {}
       try { await db.delete(techdeckTickets).where(eq(techdeckTickets.tenantId, t.id)); } catch {}
@@ -164,6 +181,16 @@ export async function cleanupUser(userId: string) {
       try { await db.delete(tradeflowkitQuotes).where(eq(tradeflowkitQuotes.tenantId, t.id)); } catch {}
       try { await db.delete(tradeflowkitJobs).where(eq(tradeflowkitJobs.tenantId, t.id)); } catch {}
       try { await db.delete(tradeflowkitCustomers).where(eq(tradeflowkitCustomers.tenantId, t.id)); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_customer_profiles WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM directory_tag_assignments WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM directory_tags WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM directory_site_contacts WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM directory_organization_contacts WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM directory_relationships WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM directory_sites WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM directory_addresses WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM directory_contacts WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM directory_organizations WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.delete(tenantEntitlements).where(eq(tenantEntitlements.tenantId, t.id)); } catch {}
       try { await db.delete(tenantModules).where(eq(tenantModules.tenantId, t.id)); } catch {}
       try { await db.delete(tenantUsers).where(eq(tenantUsers.tenantId, t.id)); } catch {}

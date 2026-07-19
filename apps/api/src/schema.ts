@@ -1379,11 +1379,9 @@ export const ninjaPoolPracticeSessions = pgTable('ninja_pool_practice_sessions',
 ]);
 
 /**
- * First shared-runtime TradeFlowKit workflow.
- *
- * This table deliberately holds only manual lead tracking. It has no local
- * identity, subscription, provider-messaging, or customer/job conversion
- * fields; OperatorOS tenant/module guards own access to every row.
+ * OperatorOS-owned TradeFlowKit lead pipeline. Identity, subscription, and
+ * entitlement authority remain outside the module while conversion links a
+ * lead to shared-directory/customer/job records inside one tenant.
  */
 export const tradeflowkitLeads = pgTable('tradeflowkit_leads', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
@@ -1391,19 +1389,30 @@ export const tradeflowkitLeads = pgTable('tradeflowkit_leads', {
   createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
   source: text('source').notNull().default('manual'),
   status: text('status', {
-    enum: ['new', 'contacted', 'qualified', 'follow_up', 'lost'],
+    enum: ['new', 'contacted', 'qualified', 'follow_up', 'converted', 'lost'],
   }).notNull().default('new'),
   name: text('name').notNull(),
   phone: text('phone'),
   email: text('email'),
   serviceType: text('service_type'),
   description: text('description'),
+  address: text('address'),
   urgency: text('urgency', {
     enum: ['normal', 'urgent', 'emergency'],
   }).notNull().default('normal'),
   estimatedValueCents: integer('estimated_value_cents'),
+  preferredContact: text('preferred_contact'),
+  consentToSms: boolean('consent_to_sms').notNull().default(false),
+  assignedToUserId: varchar('assigned_to_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  directoryOrganizationId: varchar('directory_organization_id', { length: 36 }).references(() => directoryOrganizations.id, { onDelete: 'set null' }),
+  customerId: varchar('customer_id', { length: 36 }),
+  jobId: varchar('job_id', { length: 36 }),
+  convertedAt: timestamp('converted_at'),
+  lostReason: text('lost_reason'),
   nextFollowUpAt: timestamp('next_follow_up_at'),
   lastContactedAt: timestamp('last_contacted_at'),
+  sourceId: text('source_id'),
+  version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   deletedAt: timestamp('deleted_at'),
@@ -1423,17 +1432,25 @@ export const tradeflowkitCustomers = pgTable('tradeflowkit_customers', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
   createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  organizationId: varchar('organization_id', { length: 36 }).references(() => directoryOrganizations.id, { onDelete: 'restrict' }),
+  primaryContactId: varchar('primary_contact_id', { length: 36 }).references(() => directoryContacts.id, { onDelete: 'set null' }),
+  primarySiteId: varchar('primary_site_id', { length: 36 }).references(() => directorySites.id, { onDelete: 'set null' }),
   name: text('name').notNull(),
   phone: text('phone'),
   email: text('email'),
   address: text('address'),
   notes: text('notes'),
+  portalTokenHash: varchar('portal_token_hash', { length: 64 }),
+  sourceId: text('source_id'),
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   deletedAt: timestamp('deleted_at'),
 }, (t) => [
   index('idx_tfk_customers_tenant_created').on(t.tenantId, t.createdAt),
+  index('idx_tfk_customers_tenant_org').on(t.tenantId, t.organizationId),
+  uniqueIndex('uq_tfk_customers_tenant_source').on(t.tenantId, t.sourceId)
+    .where(sql`${t.sourceId} IS NOT NULL`),
 ]);
 
 export const tradeflowkitJobs = pgTable('tradeflowkit_jobs', {
@@ -1441,12 +1458,18 @@ export const tradeflowkitJobs = pgTable('tradeflowkit_jobs', {
   tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
   customerId: varchar('customer_id', { length: 36 }).notNull().references(() => tradeflowkitCustomers.id),
   createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  number: integer('number'),
+  siteId: varchar('site_id', { length: 36 }).references(() => directorySites.id, { onDelete: 'set null' }),
+  assignedToUserId: varchar('assigned_to_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
   title: text('title').notNull(),
   description: text('description'),
+  internalNotes: text('internal_notes'),
   status: text('status').notNull().default('lead'),
   priority: text('priority').notNull().default('normal'),
   scheduledStart: timestamp('scheduled_start'),
   scheduledEnd: timestamp('scheduled_end'),
+  completedAt: timestamp('completed_at'),
+  sourceId: text('source_id'),
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -1454,6 +1477,49 @@ export const tradeflowkitJobs = pgTable('tradeflowkit_jobs', {
 }, (t) => [
   index('idx_tfk_jobs_tenant_status').on(t.tenantId, t.status),
   index('idx_tfk_jobs_tenant_customer').on(t.tenantId, t.customerId),
+  index('idx_tfk_jobs_tenant_assignee').on(t.tenantId, t.assignedToUserId),
+  uniqueIndex('uq_tfk_jobs_tenant_number').on(t.tenantId, t.number)
+    .where(sql`${t.number} IS NOT NULL`),
+  uniqueIndex('uq_tfk_jobs_tenant_source').on(t.tenantId, t.sourceId)
+    .where(sql`${t.sourceId} IS NOT NULL`),
+]);
+
+export const tradeflowkitTasks = pgTable('tradeflowkit_tasks', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  jobId: varchar('job_id', { length: 36 }).notNull().references(() => tradeflowkitJobs.id, { onDelete: 'cascade' }),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  assignedToUserId: varchar('assigned_to_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  status: text('status').notNull().default('todo'),
+  priority: text('priority').notNull().default('normal'),
+  dueAt: timestamp('due_at'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  completedAt: timestamp('completed_at'),
+  sourceId: text('source_id'),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [
+  index('idx_tfk_tasks_tenant_job').on(t.tenantId, t.jobId, t.sortOrder),
+  index('idx_tfk_tasks_tenant_assignee').on(t.tenantId, t.assignedToUserId, t.status),
+  index('idx_tfk_tasks_tenant_due').on(t.tenantId, t.dueAt),
+  uniqueIndex('uq_tfk_tasks_tenant_source').on(t.tenantId, t.sourceId)
+    .where(sql`${t.sourceId} IS NOT NULL`),
+]);
+
+export const tradeflowkitTaskDependencies = pgTable('tradeflowkit_task_dependencies', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  taskId: varchar('task_id', { length: 36 }).notNull().references(() => tradeflowkitTasks.id, { onDelete: 'cascade' }),
+  dependsOnTaskId: varchar('depends_on_task_id', { length: 36 }).notNull().references(() => tradeflowkitTasks.id, { onDelete: 'cascade' }),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tfk_task_dependency').on(t.tenantId, t.taskId, t.dependsOnTaskId),
+  index('idx_tfk_task_dependency_parent').on(t.tenantId, t.dependsOnTaskId),
 ]);
 
 export const tradeflowkitQuotes = pgTable('tradeflowkit_quotes', {
@@ -1462,6 +1528,7 @@ export const tradeflowkitQuotes = pgTable('tradeflowkit_quotes', {
   customerId: varchar('customer_id', { length: 36 }).notNull().references(() => tradeflowkitCustomers.id),
   jobId: varchar('job_id', { length: 36 }).references(() => tradeflowkitJobs.id),
   createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  number: integer('number'),
   status: text('status').notNull().default('draft'),
   lineItems: jsonb('line_items').$type<TradeFlowKitLineItem[]>().notNull(),
   subtotalCents: integer('subtotal_cents').notNull(),
@@ -1473,6 +1540,10 @@ export const tradeflowkitQuotes = pgTable('tradeflowkit_quotes', {
   expiresAt: timestamp('expires_at'),
   sentAt: timestamp('sent_at'),
   acceptedAt: timestamp('accepted_at'),
+  declinedAt: timestamp('declined_at'),
+  expiredAt: timestamp('expired_at'),
+  publicTokenHash: varchar('public_token_hash', { length: 64 }),
+  sourceId: text('source_id'),
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -1480,6 +1551,27 @@ export const tradeflowkitQuotes = pgTable('tradeflowkit_quotes', {
 }, (t) => [
   index('idx_tfk_quotes_tenant_status').on(t.tenantId, t.status),
   index('idx_tfk_quotes_tenant_customer').on(t.tenantId, t.customerId),
+  uniqueIndex('uq_tfk_quotes_tenant_number').on(t.tenantId, t.number)
+    .where(sql`${t.number} IS NOT NULL`),
+  uniqueIndex('uq_tfk_quotes_tenant_source').on(t.tenantId, t.sourceId)
+    .where(sql`${t.sourceId} IS NOT NULL`),
+]);
+
+export const tradeflowkitQuoteItems = pgTable('tradeflowkit_quote_items', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  quoteId: varchar('quote_id', { length: 36 }).notNull().references(() => tradeflowkitQuotes.id, { onDelete: 'cascade' }),
+  lineNumber: integer('line_number').notNull(),
+  description: text('description').notNull(),
+  quantityMilli: integer('quantity_milli').notNull(),
+  unitPriceCents: integer('unit_price_cents').notNull(),
+  lineTotalCents: integer('line_total_cents').notNull(),
+  sourceId: text('source_id'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tfk_quote_item_line').on(t.tenantId, t.quoteId, t.lineNumber),
+  index('idx_tfk_quote_items_quote').on(t.tenantId, t.quoteId),
 ]);
 
 export const tradeflowkitInvoices = pgTable('tradeflowkit_invoices', {
@@ -1489,6 +1581,7 @@ export const tradeflowkitInvoices = pgTable('tradeflowkit_invoices', {
   jobId: varchar('job_id', { length: 36 }).references(() => tradeflowkitJobs.id),
   sourceQuoteId: varchar('source_quote_id', { length: 36 }).references(() => tradeflowkitQuotes.id),
   createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  number: integer('number'),
   status: text('status').notNull().default('draft'),
   lineItems: jsonb('line_items').$type<TradeFlowKitLineItem[]>().notNull(),
   subtotalCents: integer('subtotal_cents').notNull(),
@@ -1496,6 +1589,8 @@ export const tradeflowkitInvoices = pgTable('tradeflowkit_invoices', {
   taxCents: integer('tax_cents').notNull().default(0),
   discountCents: integer('discount_cents').notNull().default(0),
   totalCents: integer('total_cents').notNull(),
+  paidCents: integer('paid_cents').notNull().default(0),
+  balanceCents: integer('balance_cents').notNull().default(0),
   notes: text('notes'),
   dueDate: timestamp('due_date'),
   sentAt: timestamp('sent_at'),
@@ -1503,6 +1598,8 @@ export const tradeflowkitInvoices = pgTable('tradeflowkit_invoices', {
   paymentMethod: text('payment_method'),
   paymentReference: text('payment_reference'),
   paymentNotes: text('payment_notes'),
+  publicTokenHash: varchar('public_token_hash', { length: 64 }),
+  sourceId: text('source_id'),
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -1510,8 +1607,130 @@ export const tradeflowkitInvoices = pgTable('tradeflowkit_invoices', {
 }, (t) => [
   index('idx_tfk_invoices_tenant_status').on(t.tenantId, t.status),
   index('idx_tfk_invoices_tenant_customer').on(t.tenantId, t.customerId),
+  uniqueIndex('uq_tfk_invoices_tenant_number').on(t.tenantId, t.number)
+    .where(sql`${t.number} IS NOT NULL`),
+  uniqueIndex('uq_tfk_invoices_tenant_source').on(t.tenantId, t.sourceId)
+    .where(sql`${t.sourceId} IS NOT NULL`),
   uniqueIndex('uniq_tfk_invoice_source_quote').on(t.tenantId, t.sourceQuoteId)
     .where(sql`${t.sourceQuoteId} IS NOT NULL AND ${t.deletedAt} IS NULL`),
+]);
+
+export const tradeflowkitInvoiceItems = pgTable('tradeflowkit_invoice_items', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  invoiceId: varchar('invoice_id', { length: 36 }).notNull().references(() => tradeflowkitInvoices.id, { onDelete: 'cascade' }),
+  lineNumber: integer('line_number').notNull(),
+  description: text('description').notNull(),
+  quantityMilli: integer('quantity_milli').notNull(),
+  unitPriceCents: integer('unit_price_cents').notNull(),
+  lineTotalCents: integer('line_total_cents').notNull(),
+  sourceId: text('source_id'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tfk_invoice_item_line').on(t.tenantId, t.invoiceId, t.lineNumber),
+  index('idx_tfk_invoice_items_invoice').on(t.tenantId, t.invoiceId),
+]);
+
+export const tradeflowkitPayments = pgTable('tradeflowkit_payments', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  invoiceId: varchar('invoice_id', { length: 36 }).notNull().references(() => tradeflowkitInvoices.id, { onDelete: 'restrict' }),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  amountCents: integer('amount_cents').notNull(),
+  method: text('method').notNull(),
+  status: text('status').notNull().default('succeeded'),
+  provider: text('provider'),
+  providerReference: text('provider_reference'),
+  reference: text('reference'),
+  notes: text('notes'),
+  idempotencyKey: varchar('idempotency_key', { length: 200 }).notNull(),
+  paidAt: timestamp('paid_at').defaultNow().notNull(),
+  voidedAt: timestamp('voided_at'),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_tfk_payments_tenant_invoice').on(t.tenantId, t.invoiceId, t.paidAt),
+  uniqueIndex('uq_tfk_payments_idempotency').on(t.tenantId, t.idempotencyKey),
+  uniqueIndex('uq_tfk_payments_provider_ref').on(t.tenantId, t.provider, t.providerReference)
+    .where(sql`${t.provider} IS NOT NULL AND ${t.providerReference} IS NOT NULL`),
+]);
+
+export const tradeflowkitComments = pgTable('tradeflowkit_comments', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  entityType: text('entity_type').notNull(),
+  entityId: varchar('entity_id', { length: 36 }).notNull(),
+  body: text('body').notNull(),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [index('idx_tfk_comments_entity').on(t.tenantId, t.entityType, t.entityId, t.createdAt)]);
+
+export const tradeflowkitTags = pgTable('tradeflowkit_tags', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  name: text('name').notNull(),
+  normalizedName: text('normalized_name').notNull(),
+  color: text('color'),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [uniqueIndex('uq_tfk_tags_active_name').on(t.tenantId, t.normalizedName)
+  .where(sql`${t.archivedAt} IS NULL`)]);
+
+export const tradeflowkitTagAssignments = pgTable('tradeflowkit_tag_assignments', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  tagId: varchar('tag_id', { length: 36 }).notNull().references(() => tradeflowkitTags.id, { onDelete: 'cascade' }),
+  entityType: text('entity_type').notNull(),
+  entityId: varchar('entity_id', { length: 36 }).notNull(),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tfk_tag_assignment').on(t.tenantId, t.tagId, t.entityType, t.entityId),
+  index('idx_tfk_tag_assignments_entity').on(t.tenantId, t.entityType, t.entityId),
+]);
+
+export const tradeflowkitSettings = pgTable('tradeflowkit_settings', {
+  tenantId: varchar('tenant_id', { length: 36 }).primaryKey().references(() => tenants.id),
+  jobPrefix: varchar('job_prefix', { length: 12 }).notNull().default('JOB'),
+  quotePrefix: varchar('quote_prefix', { length: 12 }).notNull().default('QTE'),
+  invoicePrefix: varchar('invoice_prefix', { length: 12 }).notNull().default('INV'),
+  defaultTaxRateBps: integer('default_tax_rate_bps').notNull().default(0),
+  defaultHourlyRateCents: integer('default_hourly_rate_cents').notNull().default(0),
+  paymentTermsDays: integer('payment_terms_days').notNull().default(30),
+  currency: varchar('currency', { length: 3 }).notNull().default('USD'),
+  timezone: text('timezone').notNull().default('UTC'),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const tradeflowkitSequences = pgTable('tradeflowkit_sequences', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  kind: text('kind').notNull(),
+  lastNumber: integer('last_number').notNull().default(0),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [uniqueIndex('uq_tfk_sequence_kind').on(t.tenantId, t.kind)]);
+
+export const tradeflowkitMigrationRefs = pgTable('tradeflowkit_migration_refs', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  sourceTable: text('source_table').notNull(),
+  sourceId: text('source_id').notNull(),
+  targetTable: text('target_table').notNull(),
+  targetId: varchar('target_id', { length: 36 }).notNull(),
+  sourceFingerprint: varchar('source_fingerprint', { length: 64 }).notNull(),
+  importedAt: timestamp('imported_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tfk_migration_source').on(t.tenantId, t.sourceTable, t.sourceId),
+  index('idx_tfk_migration_target').on(t.tenantId, t.targetTable, t.targetId),
 ]);
 
 export type ModuleCallLogRow = typeof moduleCallLogs.$inferSelect;
@@ -1528,5 +1747,7 @@ export type NinjaPoolPracticeSessionRow = typeof ninjaPoolPracticeSessions.$infe
 export type TradeFlowKitLeadRow = typeof tradeflowkitLeads.$inferSelect;
 export type TradeFlowKitCustomerRow = typeof tradeflowkitCustomers.$inferSelect;
 export type TradeFlowKitJobRow = typeof tradeflowkitJobs.$inferSelect;
+export type TradeFlowKitTaskRow = typeof tradeflowkitTasks.$inferSelect;
 export type TradeFlowKitQuoteRow = typeof tradeflowkitQuotes.$inferSelect;
 export type TradeFlowKitInvoiceRow = typeof tradeflowkitInvoices.$inferSelect;
+export type TradeFlowKitPaymentRow = typeof tradeflowkitPayments.$inferSelect;

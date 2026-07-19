@@ -1,33 +1,47 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-18
-- Phase: **3 source/local accepted; public deployment gate still failed**
+- Phase: **4 source/local state 4 candidate; state 5/public deployment gate blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
 - Phase 2 merge commit: `bf7f4ff`
-- Execution branch: `codex/phase-3-shared-services`
+- Phase 3 implementation commit: `c969e0413192259318d8f8dacc513fdffededec5`
+- Execution branch: `codex/phase-4-tradeflowkit-state-5`
 - Release gate: **closed**
 
 ## Current verdict
 
-The Phase 3 candidate adds OperatorOS-owned shared attachments, versioned
-notification templates and outbox delivery, provider adapters, leased jobs,
-verified webhook receipts, usage/activity ledgers, idempotency, and a compiled
-worker to the Phase 2 directory runtime. The services are tenant/module scoped,
-redacted, durable, bounded, retryable, and fail closed when an external
-provider is not configured. Imported module infrastructure remains read-only
-migration evidence.
+The Phase 4 candidate ports the approved TradeFlowKit product into active
+OperatorOS boundaries: lead conversion into shared Directory identities,
+numbered jobs and first-class dependent tasks, comments/tags/private
+attachments/activity, public quote decisions, normalized quotes/invoices,
+partial manual and deterministic test-provider payments, customer documents,
+shared messaging, settings, real analytics, and CSV exports. Production
+customer payment processing remains explicitly disabled until a reviewed
+centralized adapter is configured. Imported module infrastructure remains
+read-only migration evidence.
 
-Local production-topology acceptance passed. The current public deployment did
-not pass: the unauthenticated read-only verifier returned 32/47 because apex
-health and the anonymous PKCE transaction-cookie flow still reflect the older
-release. No deployment, publishing, or production mutation occurred. The owner
-explicitly directed work to continue through later phase branches despite the
-public blocker; this does not authorize deployment or waive the public gate.
+The recovered standalone provenance is
+`C:\Dev\TradeFlowKit@6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55`; 317 shared
+product files match the quarantined snapshot byte-for-byte. ADR-0010 selects
+job/work order as the primary entity with tasks beneath it, and ADR-0011
+records deliberately excluded duplicate authority and unsafe legacy scope.
+The deterministic importer currently stops at dry run because no production
+data mutation or cutover was authorized.
 
-This is a platform/control-plane result, not a module parity declaration. No
-module is state 5 solely because it launches or renders a shell.
+Local production-topology build, readiness, backup/restore, exact-host SSO,
+and the TradeFlowKit portions of browser acceptance pass. The complete
+ecosystem browser test remains failed on nine Phase 5-9 PulseDesk, TechDeck,
+and TorqueShed gaps. The current public deployment still reflects the older
+release and previously returned 32/47. No deployment, publishing, production
+database mutation, or standalone write freeze occurred. The owner explicitly
+directed later source phases to continue on separate branches; this does not
+authorize deployment or waive state 5.
+
+This is a TradeFlowKit source/local state 4 declaration, not a state 5 or
+ecosystem release declaration. No module is state 5 solely because it launches
+or renders a shell.
 
 ## Source of truth
 
@@ -106,23 +120,59 @@ runs; they do not override this status.
 - Removed production mock/log-success behavior from AI and invite email. An
   unconfigured provider is visibly disabled and cannot report success.
 
+## Phase 4 implementation
+
+- Recovered and recorded the exact TradeFlowKit source commit, audited the
+  standalone routes, tables, jobs, providers, portals, settings, analytics,
+  and tests, and created a source-to-target parity matrix.
+- Added the accepted job/task and approved-scope ADRs. Projects, standalone
+  auth/tenant/subscription authority, destructive purge, duplicate Call
+  Recovery, autonomous schedulers, and vendor-specific export claims are not
+  represented as active functionality.
+- Expanded the additive TradeFlowKit schema to 17 namespaced tables with
+  tenant predicates, composite relationships, constraints, indexes, audit
+  fields, versioning, archive/delete state, integer minor units, public token
+  hashes, document sequences, and migration references.
+- Added lead conversion that creates or reuses shared Directory
+  organization/contact records and atomically creates the linked customer and
+  numbered job. Duplicate conversions and foreign tenant IDs fail safely.
+- Added first-class tasks with assignment, due date, priority, sort order,
+  dependency cycle/completion enforcement, comments, tags, activity, and
+  optimistic conflict handling.
+- Normalized quote/invoice line items, public quote acceptance/decline/expiry,
+  idempotent quote-to-invoice conversion, first-class partial payments, and a
+  balance invariant reconciled against succeeded payment rows.
+- Added responsive operations/settings surfaces, real persisted metrics,
+  record deep links, authenticated CSV exports, hashed-token public quote,
+  invoice, and customer portal pages, and shared outbox messaging.
+- Added an explicit customer-payment adapter that is deterministic only in
+  test and disabled everywhere else. OperatorOS remains the sole platform
+  Stripe/subscription authority.
+- Added a deterministic dry-run import planner with whole-export and
+  per-record SHA-256 fingerprints, authority exclusions, source mappings,
+  reference validation, counts, and financial reconciliation. Apply mode
+  fails closed pending a reviewed cutover action.
+
 ## Fresh verification
 
 | Gate | Result |
 | --- | --- |
-| Database release plan | PASS; 16 ordered, additive steps; no DB or secrets required |
-| Database apply | PASS twice on clean isolated PostgreSQL 16; shared service tables verified; idempotent |
-| Focused Phase 3 tests | PASS 24/24 on a clean isolated database |
+| Database release plan | PASS; 17 ordered, additive steps; TradeFlowKit follows Directory-backed module profiles and precedes shared services |
+| Database apply | PASS twice on isolated PostgreSQL 16 and again after restore; 17 TradeFlowKit tables verified; idempotent |
+| TradeFlowKit focused tests | PASS 29/29 on the frozen Phase 4 source, including concurrent conversion, Directory association, provider failure/retry, restart persistence, import reconciliation, and financial invariants |
+| TradeFlowKit dry-run CLI | PASS on the versioned fixture; stable fingerprint `7a8a3d0d064d25c496ef56bffc30048dd30cd91171465741622faedd736ec3de`, 9 mappings, zero missing references/errors, reconciled 240,000-cent subtotals and 259,200 paid cents |
+| Related corrected regression | PASS 13/13 for Ninja Pool/PulseDesk static schema boundaries after the TradeFlowKit heading changed |
 | Production core preflight | PASS with exact canonical non-secret test configuration |
-| Workspace typecheck | PASS across API, runner gateway, and web using the installed workspace toolchain |
+| Workspace typecheck | PASS for API and web; runner compiled successfully in the production build |
 | Production build | PASS; SDK, API, runner, and Next 14.2.35 production artifacts; 20 static page-generation entries |
-| Compiled runtime | PASS; 16-step release, Fastify readiness on 5001, shared worker readiness, and Next readiness on 5000 |
-| Local HTTPS health/readiness | PASS; apex health, API readiness, and exact-host diagnostics returned 200 |
+| Compiled runtime | PASS; 17-step release, Fastify readiness on 5001, shared worker readiness, and Next readiness on 5000 |
+| Local HTTPS health/readiness | PASS; apex health, API readiness, and the TradeFlowKit public quote route with a syntactically valid 43-character token returned 200 from compiled artifacts; optional providers explicitly disabled |
 | Local production-host SSO | PASS 2/2 across all 12 enabled modules |
-| Phase 2 production-artifact browser test | PASS 1/1; UI CRUD, refresh persistence, same organization ID in three modules, no script-readable auth |
-| Phase 2 local health/readiness | PASS; `/healthz`, `/readyz`, and directory deep route returned 200 on isolated ports 5100/5101 |
-| Full API regression | PASS; 692 total, 686 passed, 0 failed, 6 skipped on a new clean PostgreSQL database in 437,069.7755 ms; skips require a separately running Next dev server |
-| Backup/restore | PASS; custom dump restored with an exact critical-row vector, 83 public tables, 382 public constraints, and all 10 shared tables |
+| TradeFlowKit browser acceptance | PASS for TradeFlowKit steps 4/5/6/24/29: SSO launch, customer/job/task persistence, My Apps return, reopen, and entitlement denial; shared deep-link refresh passed before unrelated TorqueShed failure |
+| Complete ecosystem browser acceptance | FAIL; 29 evidence rows passed and 9 failed, all failures in planned PulseDesk, TechDeck, and TorqueShed Phase 5-9 scope |
+| First complete API run | 695 total; 687 passed, 2 stale static-boundary failures, 6 skipped; both failures corrected and focused rerun passed 13/13 |
+| Final complete API regression | PASS; 693 total, 687 passed, 0 failed, 6 HTTP-only skips, 346,820 ms on the frozen Phase 4 source and isolated PostgreSQL |
+| Backup/restore | PASS; dump SHA-256 `d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82`; dump 1.746 s, restore 3.570 s; source/restore matched 94 public, 17 TradeFlowKit, 9 Directory, and 10 shared tables; restored release apply passed |
 | Public read-only verifier | FAIL 32/47 on 2026-07-18; candidate not deployed |
 | Lint/format | NOT DEFINED; no repository scripts exist |
 
@@ -142,6 +192,18 @@ Fonts access was denied; the identical network-enabled rerun passed.
 
 ## Backup/restore evidence
 
+The Phase 4 rehearsal used only disposable PostgreSQL 16 in Docker. A
+custom-format dump of `operatoros_phase4` completed in 1.746 seconds and had
+SHA-256
+`d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82`.
+Restore into `operatoros_phase4_restore` completed in 3.570 seconds. Source and
+restore both reported 94 public tables, 17 `tradeflowkit_*` tables, 9
+`directory_*` tables, and 10 `shared_*` tables. The restored database then
+accepted and verified all 17 release steps in 2,418 ms. An initial verification
+query incorrectly assumed a release-ledger table that this repository does not
+use; it failed after the restore had succeeded and was replaced by the actual
+schema-count and release-apply checks above.
+
 The 2026-07-18 Phase 3 rehearsal used only disposable PostgreSQL 16 in Docker.
 The custom-format dump was 297,545 bytes with SHA-256
 `b293127c835b2c6c6937cbae93a32916d038ad44f74a3ee700c5eda2fff2c0b1`.
@@ -160,15 +222,19 @@ container, and databases were removed after evidence capture.
    acceptance on that exact revision.
 3. Production provider preflight for every feature intended to be live;
    disabled or test provider behavior is not delivery evidence.
-4. Module parity, provenance, repeatable data migration, reconciliation, and
-   rollback gaps recorded in `docs/modules/MODULE_PARITY_INDEX.md`.
-5. Ninjamation source/product decision and the disabled OutCall boundary.
+4. TradeFlowKit state 5 requires deployed revenue-workflow/public-document
+   smoke, an approved production-provider decision, and a frozen-export dry
+   run plus reviewed apply/reconciliation; none is waived by local state 4.
+5. Remaining module parity, provenance, repeatable migration, reconciliation,
+   and rollback gaps recorded in `docs/modules/MODULE_PARITY_INDEX.md`.
+6. Ninjamation source/product decision and the disabled OutCall boundary.
 
 ## Next action
 
-Review and commit the scoped Phase 3 source change. Per the owner's direction,
-Phase 4 may proceed on its own branch even though the release gate is closed.
-Deployment and every production-readiness claim remain blocked until the
-cumulative revision is deployed through `.replit` and the closure steps in
-`docs/CURRENT_RELEASE_GATE.md` pass. Do not weaken exact-host cookies, PKCE,
-return validation, tenant checks, or the verifier to make it pass.
+Commit the scoped Phase 4 source/local state 4 candidate, then create the
+separate Phase 5 TechDeck branch per the owner's direction even though the
+release gate is closed. Deployment and every production-readiness claim remain
+blocked until the cumulative revision is deployed through `.replit` and the
+closure steps in `docs/CURRENT_RELEASE_GATE.md` pass. Do not weaken exact-host
+cookies, PKCE, return validation, tenant checks, or the verifier to make it
+pass.

@@ -24,9 +24,8 @@ test('core module deep links resolve only to live native shell sections', () => 
     sectionId: 'tradeflowkit-lead-center',
     label: 'Lead Center',
   });
-  for (const path of ['customers', 'jobs', 'quotes', 'invoices']) {
-    assert.equal(resolveCoreModuleDeepLink('tradeflowkit', [path])?.sectionId, 'tradeflowkit-revenue-flow');
-  }
+  for (const path of ['customers', 'quotes', 'invoices', 'payments']) assert.equal(resolveCoreModuleDeepLink('tradeflowkit', [path])?.sectionId, 'tradeflowkit-revenue-flow');
+  for (const path of ['jobs', 'tasks', 'analytics']) assert.equal(resolveCoreModuleDeepLink('tradeflowkit', [path])?.sectionId, 'tradeflowkit-operations');
   for (const path of ['directory', 'contacts', 'sites']) {
     assert.equal(resolveCoreModuleDeepLink('tradeflowkit', [path])?.sectionId, 'tradeflowkit-directory');
   }
@@ -55,8 +54,9 @@ test('core module deep links resolve only to live native shell sections', () => 
 });
 
 test('pending, nested, malformed, and non-core module paths fail closed', () => {
-  assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['payments']), null);
-  assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['leads', 'lead-123']), null);
+  assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['payments'])?.sectionId, 'tradeflowkit-revenue-flow');
+  assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['leads', 'lead-123'])?.sectionId, 'tradeflowkit-lead-center');
+  assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['jobs', 'job-123'])?.sectionId, 'tradeflowkit-operations');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['tickets', 'ticket-123']), null);
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets']), null);
   assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['dashboard']), null);
@@ -72,6 +72,7 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
   const appPage = readRepoFile('apps/web/src/app/apps/[slug]/page.tsx');
   const tradeFlowKitShell = readRepoFile('apps/web/src/components/module-shells/TradeFlowKitShell.tsx');
   const tradeFlowKitRevenue = readRepoFile('apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx');
+  const tradeFlowKitOperations = readRepoFile('apps/web/src/components/module-shells/TradeFlowKitOperations.tsx');
   const techDeckShell = readRepoFile('apps/web/src/components/module-shells/TechDeckShell.tsx');
   const techDeckOps = readRepoFile('apps/web/src/components/module-shells/TechDeckOperations.tsx');
   const pulseDeskShell = readRepoFile('apps/web/src/components/module-shells/PulseDeskShell.tsx');
@@ -92,6 +93,7 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
     [tradeFlowKitShell, 'tradeflowkit-lead-center'],
     [tradeFlowKitShell, 'tradeflowkit-directory'],
     [tradeFlowKitRevenue, 'tradeflowkit-revenue-flow'],
+    [tradeFlowKitOperations, 'tradeflowkit-operations'],
     [tradeFlowKitShell, 'tradeflowkit-settings'],
     [techDeckShell, 'techdeck-overview'],
     [techDeckShell, 'techdeck-ticket-queue'],

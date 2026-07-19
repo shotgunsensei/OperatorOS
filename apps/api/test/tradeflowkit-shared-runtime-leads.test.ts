@@ -74,9 +74,10 @@ test('manual lead patch permits only explicit editable fields and no fake conver
     'contacted',
     'qualified',
     'follow_up',
+    'converted',
     'lost',
   ]);
-  assert.equal(TRADEFLOWKIT_LEAD_STATUSES.includes('converted' as never), false);
+  assert.equal(TRADEFLOWKIT_LEAD_STATUSES.includes('converted'), true);
 
   const patch = parseTradeFlowKitLeadPatch({ status: 'contacted', nextFollowUpAt: null });
   assert.deepEqual(patch, { status: 'contacted', nextFollowUpAt: null });
@@ -99,10 +100,7 @@ test('manual lead list filters are bounded', () => {
     () => parseTradeFlowKitLeadListQuery({ search: 'x'.repeat(101) }),
     TradeFlowKitLeadValidationError,
   );
-  assert.throws(
-    () => parseTradeFlowKitLeadListQuery({ status: 'converted' }),
-    TradeFlowKitLeadValidationError,
-  );
+  assert.equal(parseTradeFlowKitLeadListQuery({ status: 'converted' }).status, 'converted');
   assert.throws(
     () => parseTradeFlowKitLeadListQuery({ tenantId: 'other-tenant' }),
     (error: unknown) => error instanceof TradeFlowKitLeadValidationError && error.field === 'tenantId',
@@ -111,7 +109,7 @@ test('manual lead list filters are bounded', () => {
 
 test('TradeFlowKit lead routes enforce module access and tenant predicates on every resource operation', () => {
   const routes = readRepoFile('apps/api/src/routes/module-shell-routes.ts');
-  const start = routes.indexOf('// ===== TradeFlowKit: manual lead tracking');
+  const start = routes.indexOf('// ===== TradeFlowKit: lead and revenue compatibility routes');
   const end = routes.indexOf('// ===== TradeFlowKit: customer -> job -> quote -> invoice -> payment', start);
   assert.ok(start >= 0 && end > start, 'TradeFlowKit route block should be present');
   const block = routes.slice(start, end);
@@ -141,13 +139,14 @@ test('TradeFlowKit lead routes enforce module access and tenant predicates on ev
 test('TradeFlowKit lead persistence is additive and bootstrapped idempotently', () => {
   const schema = readRepoFile('apps/api/src/schema.ts');
   const init = readRepoFile('apps/api/src/lib/saas-db-init.ts');
+  const phase4Init = readRepoFile('apps/api/src/lib/tradeflowkit-db-init.ts');
 
   assert.match(schema, /export const tradeflowkitLeads = pgTable\('tradeflowkit_leads'/);
   assert.match(schema, /tenantId:.*notNull\(\).*references\(\(\) => tenants\.id\)/);
   assert.match(schema, /createdByUserId:.*notNull\(\).*references\(\(\) => users\.id\)/);
   assert.match(init, /CREATE TABLE IF NOT EXISTS tradeflowkit_leads/);
   assert.match(init, /idx_tradeflowkit_leads_tenant_created/);
-  assert.match(init, /CHECK \(status IN \('new','contacted','qualified','follow_up','lost'\)\)/);
+  assert.match(phase4Init, /CHECK \(status IN \('new','contacted','qualified','follow_up','converted','lost'\)\)/);
 });
 
 test('TradeFlowKit shell exposes the live lead API with loading, empty, error, and mobile states', () => {
@@ -161,6 +160,7 @@ test('TradeFlowKit shell exposes the live lead API with loading, empty, error, a
   assert.match(leadCenter, /tradeflowkit-lead-empty/);
   assert.match(leadCenter, /tradeflowkit-lead-error/);
   assert.match(leadCenter, /@media \(max-width: 700px\)/);
-  assert.match(leadCenter, /Provider messaging, public intake, and customer\/job conversion remain off/);
+  assert.match(leadCenter, /convert tenant leads into shared-directory customers and numbered jobs/);
+  assert.match(leadCenter, /moduleShellApi\.tradeflowkit\.convertLead/);
   assert.match(client, /\/modules\/tradeflowkit\/leads/);
 });

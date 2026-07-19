@@ -1,6 +1,6 @@
 # OperatorOS current architecture
 
-Status: Phase 3 shared-services architecture, 2026-07-18.
+Status: Phase 4 TradeFlowKit source/local architecture, 2026-07-18.
 
 This document describes the executable OperatorOS control plane. The SSO and
 ecosystem integration contracts remain authoritative for protocol details.
@@ -26,7 +26,7 @@ One Replit autoscale workload owns the public runtime:
 1. `.replit` uses `npm exec` with pnpm `10.34.5` to install the frozen
    workspace and run `pnpm build:production`.
 2. `scripts/start-unified-runtime.mjs` validates the production environment.
-3. The supervisor runs the compiled 16-step database release and stops on any
+3. The supervisor runs the compiled 17-step database release and stops on any
    failure.
 4. The compiled Fastify API starts privately on port 5001 and must report
    `/readyz` before public startup continues.
@@ -89,8 +89,8 @@ become unusable. Local logout clears and revokes only the current host session.
 `OPERATOROS_DATABASE_RELEASE_MODE=apply`. The production supervisor executes
 the compiled equivalent before Fastify starts.
 
-The release has 16 ordered, idempotent steps: base, extended, SaaS, tenant,
-shared-directory, module, and shared-service DDL; plan/admin seed; pre-seed
+The release has 17 ordered, idempotent steps: base, extended, SaaS, tenant,
+shared-directory, module, TradeFlowKit, and shared-service DDL; plan/admin seed; pre-seed
 repair; platform component and module catalog seed; personal-tenant and
 super-admin backfills; demo tenant seed; post-seed repair; and free-account-app
 backfill. The contract is additive and declares no destructive step. Recovery
@@ -115,6 +115,16 @@ state without exposing credentials. The compiled API worker uses bounded
 Imported module queues, providers, upload paths, and migrations are not runtime
 authority. The full contract is recorded in
 `docs/shared-services/SHARED_SERVICE_CONTRACTS.md`.
+
+TradeFlowKit is the first module with an approved source/local state 4
+candidate. Its namespaced runtime uses shared Directory identities and shared
+attachments/outbox/activity while owning only the tenant-scoped revenue and
+field-service domain: leads, linked customers, numbered jobs, first-class
+tasks/dependencies, quotes, invoices, payments, public documents, settings,
+and migration references. Public tokens are stored only as hashes. Customer
+invoice payments remain separate from OperatorOS subscription billing, and
+the production customer-payment adapter is disabled pending a reviewed shared
+provider contract. ADR-0010 and ADR-0011 define the product boundary.
 
 Child migrations and `drizzle-kit push` are not supported deployment paths.
 

@@ -504,7 +504,25 @@ export interface ModuleWorkflowListResponse {
 
 export interface TradeFlowKitLineItem { description: string; quantity: number; unitPriceCents: number }
 export interface TradeFlowKitCustomer { id: string; name: string; phone: string | null; email: string | null; version: number }
-export interface TradeFlowKitJob { id: string; customerId: string; title: string; status: string; priority: string; version: number }
+export interface TradeFlowKitJob { id: string; customerId: string; number: number | null; title: string; status: string; priority: string; version: number; scheduledStart?: string | null; updatedAt?: string }
+export interface TradeFlowKitTask {
+  id: string; jobId: string; title: string; description: string | null;
+  status: 'todo' | 'in_progress' | 'blocked' | 'completed' | 'canceled';
+  priority: 'low' | 'normal' | 'high' | 'urgent'; assignedToUserId: string | null;
+  dueAt: string | null; sortOrder: number; completedAt: string | null; version: number;
+}
+export interface TradeFlowKitPayment { id: string; invoiceId: string; amountCents: number; method: string; status: string; paidAt: string; }
+export interface TradeFlowKitSettings {
+  tenantId: string; jobPrefix: string; quotePrefix: string; invoicePrefix: string;
+  defaultTaxRateBps: number; defaultHourlyRateCents: number; paymentTermsDays: number;
+  currency: string; timezone: string; version: number;
+}
+export interface TradeFlowKitOperationsResponse {
+  jobs: TradeFlowKitJob[]; tasks: TradeFlowKitTask[]; payments: TradeFlowKitPayment[];
+  settings: TradeFlowKitSettings | null;
+  metrics: { leads: number; jobs: number; tasks: number; completed_tasks: number; invoiced_cents: string; collected_cents: string; outstanding_cents: string };
+  pagination: { limit: number; offset: number; returned: number };
+}
 export interface TradeFlowKitQuote {
   id: string; customerId: string; jobId: string | null; status: string; lineItems: TradeFlowKitLineItem[];
   subtotalCents: number; taxRateBps: number; taxCents: number; discountCents: number; totalCents: number; version: number;
@@ -791,6 +809,32 @@ export const moduleShellApi = {
       apiFetch(`/modules/tradeflowkit/invoices/${encodeURIComponent(id)}/transition`, { method: 'POST', body: JSON.stringify({ expectedVersion, status }) }) as Promise<TradeFlowKitInvoice>,
     payInvoice: (id: string, expectedVersion: number, paymentMethod: string, paymentReference?: string): Promise<TradeFlowKitInvoice> =>
       apiFetch(`/modules/tradeflowkit/invoices/${encodeURIComponent(id)}/pay`, { method: 'POST', body: JSON.stringify({ expectedVersion, paymentMethod, paymentReference }) }) as Promise<TradeFlowKitInvoice>,
+    operations: (filters?: { status?: string; search?: string; limit?: number; offset?: number }): Promise<TradeFlowKitOperationsResponse> => {
+      const query = new URLSearchParams();
+      if (filters?.status) query.set('status', filters.status);
+      if (filters?.search) query.set('search', filters.search);
+      if (filters?.limit) query.set('limit', String(filters.limit));
+      if (filters?.offset) query.set('offset', String(filters.offset));
+      const suffix = query.size ? `?${query.toString()}` : '';
+      return apiFetch(`/modules/tradeflowkit/operations${suffix}`) as Promise<TradeFlowKitOperationsResponse>;
+    },
+    job: (id: string) => apiFetch(`/modules/tradeflowkit/jobs/${encodeURIComponent(id)}`),
+    updateJob: (id: string, input: Record<string, unknown>): Promise<TradeFlowKitJob> =>
+      apiFetch(`/modules/tradeflowkit/jobs/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TradeFlowKitJob>,
+    createTask: (jobId: string, input: { title: string; description?: string; priority?: string; dueAt?: string; sortOrder?: number }): Promise<TradeFlowKitTask> =>
+      apiFetch(`/modules/tradeflowkit/jobs/${encodeURIComponent(jobId)}/tasks`, { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitTask>,
+    updateTask: (id: string, input: Record<string, unknown>): Promise<TradeFlowKitTask> =>
+      apiFetch(`/modules/tradeflowkit/tasks/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TradeFlowKitTask>,
+    addTaskDependency: (id: string, dependsOnTaskId: string) =>
+      apiFetch(`/modules/tradeflowkit/tasks/${encodeURIComponent(id)}/dependencies`, { method: 'POST', body: JSON.stringify({ dependsOnTaskId }) }),
+    convertLead: (id: string) => apiFetch(`/modules/tradeflowkit/leads/${encodeURIComponent(id)}/convert`, {
+      method: 'POST', headers: { 'Idempotency-Key': `lead-convert:${id}` }, body: '{}',
+    }),
+    recordPayment: (id: string, input: { expectedVersion: number; amountCents: number; method: string; reference?: string }, key: string) =>
+      apiFetch(`/modules/tradeflowkit/invoices/${encodeURIComponent(id)}/payments`, { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(input) }),
+    settings: (): Promise<TradeFlowKitSettings> => apiFetch('/modules/tradeflowkit/settings') as Promise<TradeFlowKitSettings>,
+    updateSettings: (input: Partial<TradeFlowKitSettings> & { expectedVersion: number }): Promise<TradeFlowKitSettings> =>
+      apiFetch('/modules/tradeflowkit/settings', { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TradeFlowKitSettings>,
     list: (filters?: { status?: string; search?: string }) => {
       const query = new URLSearchParams();
       if (filters?.status) query.set('status', filters.status);

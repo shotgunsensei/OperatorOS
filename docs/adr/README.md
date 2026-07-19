@@ -14,10 +14,11 @@ new ADR explicitly supersedes it.
 | ADR-0007 | Module completion uses consolidation states 1-5; a shell or partial vertical slice cannot be reported as state 4/5 parity. | Accepted | `docs/MODULE_CONSOLIDATION_STATUS.md`, `docs/modules/MODULE_PARITY_INDEX.md` |
 | ADR-0008 | OperatorOS owns one tenant-scoped Business Directory; external organizations are distinct from subscriber tenants and modules use profile extensions instead of duplicate identity records. | Accepted | `docs/adr/ADR-0008-shared-business-directory.md` |
 | ADR-0009 | OperatorOS owns shared attachments, notifications/providers, leased jobs/outbox, verified webhooks, append-only usage/activity, and idempotency. | Accepted | `docs/adr/ADR-0009-shared-platform-services.md` |
+| ADR-0010 | TradeFlowKit uses jobs/work orders as the primary operational entity with first-class tasks beneath jobs; projects are excluded absent real multi-job semantics. | Accepted | `docs/adr/ADR-0010-tradeflowkit-job-task-model.md` |
+| ADR-0011 | TradeFlowKit approved scope is deterministic lead-to-cash field operations; duplicate authority, overlapping Call Recovery, unsafe autonomous/provider paths, and destructive legacy surfaces are intentionally excluded. | Accepted | `docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md` |
 
 ## Required future ADRs
 
-- TradeFlowKit project versus job/work-order semantics (Phase 4).
 - PulseDesk facility/client/ticket language and PHI boundary (Phase 6).
 - Torque Assist safety, provider, and ledger semantics (Phase 8).
 - Ninja Launch Kit source/product alignment (Phase 11D).

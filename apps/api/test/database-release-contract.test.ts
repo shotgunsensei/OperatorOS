@@ -12,8 +12,8 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 16);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 16);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 17);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 17);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'free_account_app_backfill');
   assert.ok(
@@ -27,9 +27,14 @@ test('database release plan is explicit, ordered, additive, and reusable by star
     'module tables and profiles must follow the shared directory',
   );
   assert.ok(
-    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'shared_service_tables')
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'tradeflowkit_tables')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'module_tables'),
-    'shared services must follow tenant, directory, and module authority tables',
+    'TradeFlowKit tables must follow shared directory-backed module profiles',
+  );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'shared_service_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'tradeflowkit_tables'),
+    'shared services must follow tenant, directory, and active module tables',
   );
 
   const api = read('apps/api/src/index.ts');
@@ -41,6 +46,8 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.directory_organizations'\)/);
   assert.match(releaseSource, /to_regclass\('public\.shared_outbox_messages'\)/);
   assert.match(releaseSource, /to_regclass\('public\.shared_usage_events'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_tasks'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_payments'\)/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
 });
 

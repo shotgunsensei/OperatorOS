@@ -17,6 +17,12 @@ import {
   tradeflowkitJobs,
   tradeflowkitQuotes,
   tradeflowkitInvoices,
+  tradeflowkitQuoteItems,
+  tradeflowkitInvoiceItems,
+  tradeflowkitPayments,
+  directoryOrganizations,
+  directoryContacts,
+  directoryOrganizationContacts,
   activityFeed,
   modules,
 } from '../schema.js';
@@ -73,6 +79,7 @@ import {
 import { getTenantMembership, resolveTenantModuleAccess } from '../lib/tenant-entitlements.js';
 import { registerPulseDeskRoutes } from './pulsedesk-routes.js';
 import { registerNinjaPoolHallRoutes } from './ninja-pool-hall-routes.js';
+import { allocateTradeFlowKitNumber, registerTradeFlowKitRoutes } from './tradeflowkit-routes.js';
 
 // Task #91 — per-tenant + per-user budget for outbound calls. Each placed
 // call burns real Twilio minutes, so we cap dial attempts to a small
@@ -516,14 +523,13 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   });
   await registerPulseDeskRoutes(app);
   await registerNinjaPoolHallRoutes(app);
+  await registerTradeFlowKitRoutes(app);
 
-  // ===== TradeFlowKit: manual lead tracking ===============================
+  // ===== TradeFlowKit: lead and revenue compatibility routes ==============
   //
-  // This is the first real TradeFlowKit workflow migrated into the shared
-  // runtime. It intentionally stops at manual lead CRUD/status tracking:
-  // public intake, messaging providers, lead conversion, customer/job writes,
-  // local login, and local subscriptions remain dormant in the source
-  // snapshot until their own reviewed migration slices.
+  // The state-5 task, portal, settings, messaging, analytics, and payment
+  // surfaces live in tradeflowkit-routes.ts. These original lead/revenue
+  // paths remain the stable compatibility contract used by the native shell.
   app.get(
     '/v1/modules/tradeflowkit/leads',
     { preHandler: [...tradeflowkitGuards] },
@@ -749,12 +755,57 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     try { input = parseCustomerCreate(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
     const ctx = (request as any).tenantContext;
     const user = (request as any).user;
-    const [customer] = await db.insert(tradeflowkitCustomers).values({
-      ...input, tenantId: ctx.tenantId, createdByUserId: user.id,
-    }).returning();
-    await db.insert(activityFeed).values({
-      tenantId: ctx.tenantId, userId: user.id, action: 'created',
-      entityType: 'tradeflowkit_customer', entityId: customer.id, metadata: { name: customer.name },
+    const customer = await db.transaction(async (tx) => {
+      const normalizedName = input.name.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
+      let [organization] = await tx.select().from(directoryOrganizations).where(and(
+        eq(directoryOrganizations.tenantId, ctx.tenantId), eq(directoryOrganizations.normalizedName, normalizedName),
+        isNull(directoryOrganizations.archivedAt),
+      )).limit(1);
+      if (!organization) {
+        [organization] = await tx.insert(directoryOrganizations).values({
+          tenantId: ctx.tenantId, name: input.name, normalizedName, type: 'customer', status: 'active',
+          notes: input.notes, createdByUserId: user.id, updatedByUserId: user.id,
+        }).onConflictDoNothing().returning();
+        if (!organization) {
+          [organization] = await tx.select().from(directoryOrganizations).where(and(
+            eq(directoryOrganizations.tenantId, ctx.tenantId), eq(directoryOrganizations.normalizedName, normalizedName),
+            isNull(directoryOrganizations.archivedAt),
+          )).limit(1);
+        }
+      }
+      if (!organization) throw new Error('Directory organization could not be resolved');
+      let primaryContactId: string | null = null;
+      if (input.email || input.phone) {
+        const parts = input.name.trim().split(/\s+/);
+        const [createdContact] = await tx.insert(directoryContacts).values({
+          tenantId: ctx.tenantId, firstName: parts.shift() || input.name, lastName: parts.join(' '), normalizedName,
+          email: input.email, normalizedEmail: input.email?.toLowerCase() ?? null, phone: input.phone,
+          createdByUserId: user.id, updatedByUserId: user.id,
+        }).onConflictDoNothing().returning();
+        if (createdContact) primaryContactId = createdContact.id;
+        else if (input.email) {
+          const [existingContact] = await tx.select({ id: directoryContacts.id }).from(directoryContacts).where(and(
+            eq(directoryContacts.tenantId, ctx.tenantId), eq(directoryContacts.normalizedEmail, input.email.toLowerCase()), isNull(directoryContacts.archivedAt),
+          )).limit(1);
+          primaryContactId = existingContact?.id ?? null;
+        }
+        if (primaryContactId) {
+          await tx.insert(directoryOrganizationContacts).values({
+            tenantId: ctx.tenantId, organizationId: organization.id, contactId: primaryContactId,
+            role: 'primary', isPrimary: true, createdByUserId: user.id,
+          }).onConflictDoNothing();
+        }
+      }
+      const [created] = await tx.insert(tradeflowkitCustomers).values({
+        ...input, tenantId: ctx.tenantId, createdByUserId: user.id,
+        organizationId: organization.id, primaryContactId,
+      }).returning();
+      await tx.insert(activityFeed).values({
+        tenantId: ctx.tenantId, userId: user.id, action: 'created',
+        entityType: 'tradeflowkit_customer', entityId: created.id,
+        metadata: { name: created.name, organizationId: organization.id },
+      });
+      return created;
     });
     return reply.code(201).send(customer);
   });
@@ -771,12 +822,17 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     if (input.scheduledStart && input.scheduledEnd && input.scheduledEnd <= input.scheduledStart) {
       return reply.code(400).send({ error: 'Scheduled end must follow start', code: 'SCHEDULE_INVALID' });
     }
-    const [job] = await db.insert(tradeflowkitJobs).values({
-      ...input, tenantId: ctx.tenantId, createdByUserId: user.id,
-    }).returning();
-    await db.insert(activityFeed).values({
-      tenantId: ctx.tenantId, userId: user.id, action: 'created',
-      entityType: 'tradeflowkit_job', entityId: job.id, metadata: { customerId: job.customerId, status: job.status },
+    const job = await db.transaction(async (tx) => {
+      const number = await allocateTradeFlowKitNumber(tx, ctx.tenantId, 'job');
+      const [created] = await tx.insert(tradeflowkitJobs).values({
+        ...input, number, tenantId: ctx.tenantId, createdByUserId: user.id,
+      }).returning();
+      await tx.insert(activityFeed).values({
+        tenantId: ctx.tenantId, userId: user.id, action: 'created',
+        entityType: 'tradeflowkit_job', entityId: created.id,
+        metadata: { customerId: created.customerId, status: created.status, number },
+      });
+      return created;
     });
     return reply.code(201).send(job);
   });
@@ -797,13 +853,22 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       )).limit(1);
       if (!job) return reply.code(404).send({ error: 'Job not found for customer', code: 'JOB_NOT_FOUND' });
     }
-    const [quote] = await db.insert(tradeflowkitQuotes).values({
-      ...input, tenantId: ctx.tenantId, createdByUserId: user.id,
-    }).returning();
-    await db.insert(activityFeed).values({
-      tenantId: ctx.tenantId, userId: user.id, action: 'created',
-      entityType: 'tradeflowkit_quote', entityId: quote.id,
-      metadata: { customerId: quote.customerId, jobId: quote.jobId, totalCents: quote.totalCents },
+    const quote = await db.transaction(async (tx) => {
+      const number = await allocateTradeFlowKitNumber(tx, ctx.tenantId, 'quote');
+      const [created] = await tx.insert(tradeflowkitQuotes).values({
+        ...input, number, tenantId: ctx.tenantId, createdByUserId: user.id,
+      }).returning();
+      await tx.insert(tradeflowkitQuoteItems).values(input.lineItems.map((item, index) => ({
+        tenantId: ctx.tenantId, quoteId: created.id, lineNumber: index + 1,
+        description: item.description, quantityMilli: item.quantity * 1000,
+        unitPriceCents: item.unitPriceCents, lineTotalCents: item.quantity * item.unitPriceCents,
+      })));
+      await tx.insert(activityFeed).values({
+        tenantId: ctx.tenantId, userId: user.id, action: 'created',
+        entityType: 'tradeflowkit_quote', entityId: created.id,
+        metadata: { customerId: created.customerId, jobId: created.jobId, totalCents: created.totalCents, number },
+      });
+      return created;
     });
     return reply.code(201).send(quote);
   });
@@ -825,6 +890,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
         status: input.status,
         ...(input.status === 'sent' ? { sentAt: new Date() } : {}),
         ...(input.status === 'accepted' ? { acceptedAt: new Date() } : {}),
+        ...(input.status === 'declined' ? { declinedAt: new Date() } : {}),
         version: sql`${tradeflowkitQuotes.version} + 1`, updatedAt: new Date(),
       }).where(and(
         eq(tradeflowkitQuotes.id, id), eq(tradeflowkitQuotes.tenantId, ctx.tenantId),
@@ -860,15 +926,25 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     )).limit(1);
     if (existing) return reply.code(200).send(existing);
     const invoice = await db.transaction(async (tx) => {
+      const number = await allocateTradeFlowKitNumber(tx, ctx.tenantId, 'invoice');
       const [created] = await tx.insert(tradeflowkitInvoices).values({
-        tenantId: ctx.tenantId, customerId: quote.customerId, jobId: quote.jobId,
+        tenantId: ctx.tenantId, number, customerId: quote.customerId, jobId: quote.jobId,
         sourceQuoteId: quote.id, createdByUserId: user.id, lineItems: quote.lineItems,
         subtotalCents: quote.subtotalCents, taxRateBps: quote.taxRateBps,
         taxCents: quote.taxCents, discountCents: quote.discountCents,
-        totalCents: quote.totalCents, notes: input.notes ?? quote.notes, dueDate: input.dueDate,
+        totalCents: quote.totalCents, paidCents: 0, balanceCents: quote.totalCents,
+        notes: input.notes ?? quote.notes, dueDate: input.dueDate,
       }).returning();
+      const quoteItems = await tx.select().from(tradeflowkitQuoteItems).where(and(
+        eq(tradeflowkitQuoteItems.tenantId, ctx.tenantId), eq(tradeflowkitQuoteItems.quoteId, quote.id),
+      )).orderBy(tradeflowkitQuoteItems.lineNumber);
+      if (quoteItems.length > 0) await tx.insert(tradeflowkitInvoiceItems).values(quoteItems.map(item => ({
+        tenantId: ctx.tenantId, invoiceId: created.id, lineNumber: item.lineNumber,
+        description: item.description, quantityMilli: item.quantityMilli,
+        unitPriceCents: item.unitPriceCents, lineTotalCents: item.lineTotalCents,
+      })));
       if (quote.jobId) await tx.update(tradeflowkitJobs).set({ status: 'invoiced', updatedAt: new Date(), version: sql`${tradeflowkitJobs.version} + 1` }).where(and(eq(tradeflowkitJobs.id, quote.jobId), eq(tradeflowkitJobs.tenantId, ctx.tenantId)));
-      await tx.insert(activityFeed).values({ tenantId: ctx.tenantId, userId: user.id, action: 'created_from_quote', entityType: 'tradeflowkit_invoice', entityId: created.id, metadata: { quoteId: quote.id, totalCents: created.totalCents } });
+      await tx.insert(activityFeed).values({ tenantId: ctx.tenantId, userId: user.id, action: 'created_from_quote', entityType: 'tradeflowkit_invoice', entityId: created.id, metadata: { quoteId: quote.id, totalCents: created.totalCents, number } });
       return created;
     });
     return reply.code(201).send(invoice);
@@ -903,12 +979,19 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     if (!current) return reply.code(404).send({ error: 'Invoice not found', code: 'INVOICE_NOT_FOUND' });
     if (!['sent', 'processing'].includes(current.status)) return reply.code(409).send({ error: 'Invoice must be sent before payment', code: 'INVOICE_NOT_PAYABLE' });
     const [paid] = await db.transaction(async (tx) => {
+      const idempotencyKey = `legacy-pay:${id}:${input.expectedVersion}`;
       const rows = await tx.update(tradeflowkitInvoices).set({
         status: 'paid', paidAt: new Date(), paymentMethod: input.paymentMethod,
         paymentReference: input.paymentReference, paymentNotes: input.paymentNotes,
+        paidCents: current.totalCents, balanceCents: 0,
         version: sql`${tradeflowkitInvoices.version} + 1`, updatedAt: new Date(),
       }).where(and(eq(tradeflowkitInvoices.id, id), eq(tradeflowkitInvoices.tenantId, ctx.tenantId), eq(tradeflowkitInvoices.version, input.expectedVersion), eq(tradeflowkitInvoices.status, current.status), isNull(tradeflowkitInvoices.deletedAt))).returning();
       if (!rows[0]) return [];
+      await tx.insert(tradeflowkitPayments).values({
+        tenantId: ctx.tenantId, invoiceId: id, createdByUserId: user.id,
+        amountCents: current.balanceCents || current.totalCents, method: input.paymentMethod,
+        reference: input.paymentReference, notes: input.paymentNotes, idempotencyKey,
+      }).onConflictDoNothing();
       if (current.jobId) await tx.update(tradeflowkitJobs).set({ status: 'paid', updatedAt: new Date(), version: sql`${tradeflowkitJobs.version} + 1` }).where(and(eq(tradeflowkitJobs.id, current.jobId), eq(tradeflowkitJobs.tenantId, ctx.tenantId)));
       await tx.insert(activityFeed).values({ tenantId: ctx.tenantId, userId: user.id, action: 'payment_recorded', entityType: 'tradeflowkit_invoice', entityId: id, metadata: { amountCents: current.totalCents, method: input.paymentMethod } });
       return rows;

@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   BarChart3,
-  BellRing,
   BriefcaseBusiness,
   CheckCircle2,
   ClipboardList,
@@ -29,6 +28,7 @@ import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js
 import { createTradeFlowKitAdapterContext } from '../../../../../apps/modules/tradeflowkit/adapter.js';
 import TradeFlowKitLeadCenter from './TradeFlowKitLeadCenter';
 import TradeFlowKitRevenueFlow from './TradeFlowKitRevenueFlow';
+import TradeFlowKitOperations from './TradeFlowKitOperations';
 import BusinessDirectory from './BusinessDirectory';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
@@ -56,7 +56,7 @@ const workflowShortcuts = [
   {
     id: 'leads',
     label: 'Leads',
-    summary: 'Lead Conversion Center for missed calls, forms, follow-ups, and lead-to-cash handoff.',
+    summary: 'Manual lead intake, follow-up state, shared-directory conversion, and lead-to-cash handoff.',
     Icon: ClipboardList,
     tone: colors.green,
   },
@@ -70,35 +70,28 @@ const workflowShortcuts = [
   {
     id: 'jobs',
     label: 'Jobs',
-    summary: 'Field-service jobs from scheduling through completion, recurring work, and crew status.',
+    summary: 'Field-service jobs, scheduling, assignment, dependent tasks, comments, tags, and completion.',
     Icon: BriefcaseBusiness,
     tone: colors.green,
   },
   {
     id: 'quotes',
     label: 'Quotes',
-    summary: 'Quote creation, customer approval, conversion to jobs, and conversion to invoices.',
+    summary: 'Quote creation, hashed-link customer decisions, expiration, and idempotent invoice conversion.',
     Icon: FileText,
     tone: colors.gold,
   },
   {
     id: 'invoices',
     label: 'Invoices',
-    summary: 'Invoice creation, payment links, reminders, payment state, exports, and customer portal flow.',
+    summary: 'Invoices, line items, partial payment state, exports, public documents, and customer portal flow.',
     Icon: Receipt,
     tone: colors.blue,
   },
   {
-    id: 'reminders',
-    label: 'Reminders',
-    summary: 'Overdue invoice, pending quote, SMS, email, and follow-up automation workflow surface.',
-    Icon: BellRing,
-    tone: colors.violet,
-  },
-  {
     id: 'payments',
     label: 'Payments',
-    summary: 'Stripe Connect and invoice payment paths are legacy local surfaces pending OperatorOS billing cleanup.',
+    summary: 'First-class manual payments plus an explicit test-only provider flow; production processing fails closed.',
     Icon: CreditCard,
     tone: colors.gold,
   },
@@ -117,10 +110,8 @@ const readinessRows = [
   ['Billing', 'OperatorOS boundary', colors.gold],
   ['Manual leads', 'Live workflow', colors.green],
   ['Standalone login', 'Disabled', colors.blue],
-  ['Provider actions', 'Not migrated', colors.gold],
+  ['Provider actions', 'Test adapter verified', colors.gold],
 ];
-
-const liveWorkflowIds = new Set(['leads', 'customers', 'jobs', 'quotes', 'invoices', 'payments']);
 
 const shellCss = `
   .tfk-shell {
@@ -287,7 +278,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               <div style={eyebrowStyle}>Field-service revenue command layer</div>
               <h1 style={titleStyle}>TradeFlowKit</h1>
               <p style={ledeStyle}>
-                Tenant-scoped lead-to-cash workspace for leads, customers, jobs, quotes, invoices, reminders, payments, and performance visibility.
+                Tenant-scoped lead-to-cash workspace for leads, customers, jobs, quotes, invoices, payments, and performance visibility.
               </p>
             </div>
             <div className="tfk-actions">
@@ -367,6 +358,10 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
             </section>
 
             {hasTenantContext && adapter.tenantId && (
+              <TradeFlowKitOperations key={`operations-${adapter.tenantId}`} tenantKey={adapter.tenantId} canManage={canManageModule} />
+            )}
+
+            {hasTenantContext && adapter.tenantId && (
               <TradeFlowKitRevenueFlow key={`revenue-${adapter.tenantId}`} tenantKey={adapter.tenantId} />
             )}
 
@@ -384,7 +379,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               />
               <div className="tfk-workflow-grid" style={{ marginTop: 14 }}>
                 {workflowShortcuts.map(({ id, label, summary, Icon, tone }) => (
-                  <WorkflowPanel key={id} id={id} label={label} summary={summary} Icon={Icon} tone={tone} live={liveWorkflowIds.has(id)} />
+                  <WorkflowPanel key={id} id={id} label={label} summary={summary} Icon={Icon} tone={tone} />
                 ))}
               </div>
             </section>
@@ -400,7 +395,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
                 <div>
                   <div style={{ fontWeight: 800 }}>Lead and quote-to-payment workflows are running in the shared tenant runtime</div>
                   <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                    Customers, jobs, quotes, invoice conversion, and manual payment recording now preserve tenant scope and audit history. Provider messaging and customer-facing payment integrations remain gated for separate review.
+                    Customers, jobs, tasks, quotes, public acceptance, invoice conversion, partial payments, comments, attachments, notifications, and analytics preserve tenant scope and audit history. Production customer-payment processing remains configuration-gated; its test adapter is verified.
                   </div>
                 </div>
               </div>
@@ -527,14 +522,12 @@ function WorkflowPanel({
   summary,
   Icon,
   tone,
-  live,
 }: {
   id: string;
   label: string;
   summary: string;
   Icon: LucideIcon;
   tone: string;
-  live: boolean;
 }) {
   return (
     <article id={`tradeflowkit-${id}`} style={workflowPanelStyle} data-testid={`tradeflowkit-workflow-${id}`}>
@@ -545,8 +538,8 @@ function WorkflowPanel({
         <h3 style={{ margin: 0, fontSize: 15 }}>{label}</h3>
       </div>
       <p style={{ color: colors.muted, fontSize: 13, lineHeight: 1.45, margin: '10px 0 0' }}>{summary}</p>
-      <div style={{ marginTop: 12, color: live ? colors.green : colors.gold, fontSize: 12, fontWeight: 800 }}>
-        {live ? 'Live in shared runtime' : 'Migration pending — disabled'}
+      <div style={{ marginTop: 12, color: colors.green, fontSize: 12, fontWeight: 800 }}>
+        Live in shared runtime
       </div>
     </article>
   );

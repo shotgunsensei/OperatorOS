@@ -14,7 +14,7 @@ function readRepoFile(path: string): string {
 test('PulseDesk persistence is additive, tenant-scoped, and keeps immutable event history', () => {
   const schema = readRepoFile('apps/api/src/schema.ts');
   const start = schema.indexOf('export const pulsedeskDepartments');
-  const end = schema.indexOf(' * First shared-runtime TradeFlowKit workflow.', start);
+  const end = schema.indexOf(' * OperatorOS-owned TradeFlowKit lead pipeline.', start);
   assert.ok(start >= 0 && end > start, 'PulseDesk schema block should exist');
   const block = schema.slice(start, end);
 

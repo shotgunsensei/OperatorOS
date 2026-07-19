@@ -1,11 +1,9 @@
 /**
  * TradeFlowKit manual lead intake contract.
  *
- * This is intentionally smaller than the imported standalone Lead Conversion
- * Center. It contains no provider messaging, public webhooks, customer/job
- * conversion, local auth, or billing behavior. Tenant and actor identifiers
- * are never accepted here; route handlers derive both from OperatorOS request
- * context.
+ * Tenant and actor identifiers are never accepted here; route handlers derive
+ * both from OperatorOS request context. Conversion is exposed through its own
+ * transactional/idempotent endpoint and cannot be forged through PATCH.
  */
 
 export const TRADEFLOWKIT_LEAD_STATUSES = [
@@ -13,6 +11,7 @@ export const TRADEFLOWKIT_LEAD_STATUSES = [
   'contacted',
   'qualified',
   'follow_up',
+  'converted',
   'lost',
 ] as const;
 
@@ -198,7 +197,13 @@ export function parseTradeFlowKitLeadPatch(input: unknown): TradeFlowKitLeadPatc
   if ('urgency' in body) patch.urgency = urgency(body.urgency);
   if ('estimatedValueCents' in body) patch.estimatedValueCents = optionalMoneyCents(body.estimatedValueCents);
   if ('nextFollowUpAt' in body) patch.nextFollowUpAt = optionalDate(body.nextFollowUpAt);
-  if ('status' in body) patch.status = status(body.status);
+  if ('status' in body) {
+    const nextStatus = status(body.status);
+    if (nextStatus === 'converted') {
+      throw new TradeFlowKitLeadValidationError('converted status requires the conversion endpoint', 'status');
+    }
+    patch.status = nextStatus;
+  }
 
   if (Object.keys(patch).length === 0) {
     throw new TradeFlowKitLeadValidationError('At least one editable lead field is required');
