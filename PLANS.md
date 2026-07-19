@@ -20,7 +20,7 @@ slice is not parity.
 | 0 | Execution framework, verified baseline, one status ledger, ADR index, and parity index | None | Complete locally on `codex/phase-0-baseline`; release gate remains closed |
 | 1 | Reproducible canonical deployment, environment contract, deployed SSO/navigation gate, and backup/restore rehearsal | Phase 0 | Source/local accepted on `codex/phase-1-platform-deployment-gate`; public gate failed 32/47 pending authorized deployment |
 | 2 | OperatorOS-owned shared Business Directory for organizations, contacts, sites, addresses, and module profiles | Phase 1 | Source/local accepted on `codex/phase-2-shared-business-directory` by explicit owner direction; not deployed |
-| 3 | Shared attachments, notifications, providers, jobs/outbox, webhook idempotency, usage ledger, and activity timeline | Phase 2 | Pending |
+| 3 | Shared attachments, notifications, providers, jobs/outbox, webhook idempotency, usage ledger, and activity timeline | Phase 2 | Source/local accepted on `codex/phase-3-shared-services` by explicit owner direction; public gate remains closed |
 | 4 | TradeFlowKit state 5 | Phases 2-3 | Pending |
 | 5 | TechDeck state 5 | Phases 2-3 | Pending |
 | 6 | PulseDesk state 5 with healthcare-operations/PHI boundary resolved | Phases 2-3 | Pending |
@@ -57,11 +57,13 @@ slice is not parity.
 
 ## Immediate next gate
 
-Phase 2 source work proceeded only because the owner explicitly directed it;
-that does not waive the failed Phase 1 public release gate. Before Phase 3 or
-any production-readiness claim, review the Phase 2 commit, deploy the reviewed
-Phase 1/2 revision through `.replit`, require 47/47 from the read-only public
-verifier, and run authenticated deployed SSO, return, directory persistence,
-deep-link, refresh, entitlement, tenant-isolation, authorization, logout, and
-backup/restore acceptance. Record the exact deployed commit in
-`docs/CURRENT_RELEASE_GATE.md` and never weaken the contract to make it pass.
+The owner explicitly authorized source work to continue through later phases
+on separate branches even while the public deployment gate remains failed.
+That direction permits Phase 4 source work; it does not authorize deployment,
+production data mutation, promotion, or a production-ready label. Before any
+public promotion, deploy the reviewed cumulative revision through `.replit`,
+require 47/47 from the read-only verifier, and run authenticated deployed SSO,
+return, persistence, deep-link, refresh, entitlement, tenant-isolation,
+authorization, logout, provider, backup/restore, and module acceptance. Record
+the exact deployed commit in `docs/CURRENT_RELEASE_GATE.md` and never weaken
+the contract to make it pass.

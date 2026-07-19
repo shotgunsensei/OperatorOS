@@ -11,7 +11,7 @@
  *    handler's contract.
  *
  * Provider: we force `delete process.env.RESEND_API_KEY` so the email
- * service falls back to the `log` provider — no network required, and
+ * service selects the deterministic test provider — no network required, and
  * `sendInviteEmail` returns ok:true synchronously, exercising the
  * happy-path audit branch deterministically.
  */
@@ -32,7 +32,7 @@ let priorResendApiKey: string | undefined;
 
 before(async () => {
   await ensureSchemaReady();
-  // Force the log provider so the test never hits the network.
+  // Force the deterministic test provider so the test never hits the network.
   priorResendApiKey = process.env.RESEND_API_KEY;
   delete process.env.RESEND_API_KEY;
 
@@ -83,7 +83,7 @@ async function findAudit(action: string, inviteId: string) {
   return rows.find(r => (r.details as any)?.targetId === inviteId);
 }
 
-test('creating invite writes tenant_invite_email_sent audit row (log provider)', async () => {
+test('creating invite writes tenant_invite_email_sent audit row (test provider)', async () => {
   const create = await app.inject({
     method: 'POST', url: `/v1/tenants/${tenantA.id}/invites`,
     headers: bearer(owner),
@@ -92,12 +92,12 @@ test('creating invite writes tenant_invite_email_sent audit row (log provider)',
   assert.equal(create.statusCode, 200);
   const body = create.json();
   assert.equal(body.emailDelivery?.ok, true);
-  assert.equal(body.emailDelivery?.provider, 'log');
+  assert.equal(body.emailDelivery?.provider, 'test');
 
   const sent = await findAudit('tenant_invite_email_sent', body.invite.id);
   assert.ok(sent, 'expected tenant_invite_email_sent audit row');
   const details: any = sent!.details;
-  assert.equal(details.provider, 'log');
+  assert.equal(details.provider, 'test');
   assert.equal(details.error, null);
 });
 
@@ -116,12 +116,12 @@ test('resend on a pending invite writes tenant_invite_email_resent audit row', a
   });
   assert.equal(resend.statusCode, 200);
   assert.equal(resend.json().ok, true);
-  assert.equal(resend.json().provider, 'log');
+  assert.equal(resend.json().provider, 'test');
 
   const resent = await findAudit('tenant_invite_email_resent', inviteId);
   assert.ok(resent, 'expected tenant_invite_email_resent audit row');
   const details: any = resent!.details;
-  assert.equal(details.provider, 'log');
+  assert.equal(details.provider, 'test');
   assert.equal(details.resend, true);
 });
 

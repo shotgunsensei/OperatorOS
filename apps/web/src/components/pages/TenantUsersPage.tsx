@@ -78,10 +78,10 @@ export default function TenantUsersPage() {
       const delivery = res?.emailDelivery;
       if (!delivery) {
         setStatus({ kind: 'ok', message: 'Invite created.' });
-      } else if (delivery.ok && delivery.provider !== 'log') {
+      } else if (delivery.ok && delivery.provider === 'resend') {
         setStatus({ kind: 'ok', message: 'Invite created and email sent.' });
-      } else if (delivery.ok && delivery.provider === 'log') {
-        setStatus({ kind: 'warn', message: 'Invite created, email provider not configured (link printed to server log).' });
+      } else if (delivery.ok && delivery.provider === 'test') {
+        setStatus({ kind: 'warn', message: 'Invite created using the isolated test email adapter. Use Copy link outside test.' });
       } else {
         setStatus({ kind: 'warn', message: 'Invite created, email failed (provider not configured or returned error). Use Copy link.' });
       }

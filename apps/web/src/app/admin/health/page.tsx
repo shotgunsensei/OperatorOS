@@ -26,7 +26,7 @@ interface HealthResponse {
   auth: { sessionSecretConfigured: boolean };
   ai: { openaiKeyConfigured: boolean };
   emailFrom: { configured: boolean };
-  emailProvider: { configured: boolean; provider: 'resend' | 'log' };
+  emailProvider: { configured: boolean; provider: 'resend' | 'test' | 'disabled' };
   baseUrl: { configured: boolean };
   plans: {
     seeded: boolean;
@@ -148,7 +148,7 @@ function HealthDashboard() {
         <Row label="EMAIL_FROM configured" ok={health.emailFrom.configured} />
         <Row label="Email provider configured"
              ok={health.emailProvider?.configured ?? false}
-             sub={health.emailProvider?.provider ?? 'log'} />
+             sub={health.emailProvider?.provider ?? 'disabled'} />
         <Row label="OPERATOROS_BASE_URL configured" ok={health.baseUrl.configured} />
         <Row label="Bootstrap super-admin email set" ok={health.bootstrapSuperAdmin.emailConfigured} />
         <Row label="Shotgun tenant configured" ok={health.shotgunTenant.configured} />

@@ -13,6 +13,7 @@ new ADR explicitly supersedes it.
 | ADR-0006 | OutCall remains registered but disabled and unpurchasable until a distinct/merge/cancel product ADR is accepted. | Accepted interim decision | `docs/outcall/ARCHITECTURE.md`, `docs/MODULE_CONSOLIDATION_STATUS.md` |
 | ADR-0007 | Module completion uses consolidation states 1-5; a shell or partial vertical slice cannot be reported as state 4/5 parity. | Accepted | `docs/MODULE_CONSOLIDATION_STATUS.md`, `docs/modules/MODULE_PARITY_INDEX.md` |
 | ADR-0008 | OperatorOS owns one tenant-scoped Business Directory; external organizations are distinct from subscriber tenants and modules use profile extensions instead of duplicate identity records. | Accepted | `docs/adr/ADR-0008-shared-business-directory.md` |
+| ADR-0009 | OperatorOS owns shared attachments, notifications/providers, leased jobs/outbox, verified webhooks, append-only usage/activity, and idempotency. | Accepted | `docs/adr/ADR-0009-shared-platform-services.md` |
 
 ## Required future ADRs
 

@@ -11,7 +11,7 @@ import {
   techdeckTickets, techdeckTicketSequences, techdeckAssets, techdeckRunbooks,
   tradeflowkitInvoices, tradeflowkitQuotes, tradeflowkitJobs, tradeflowkitCustomers,
 } from '../src/schema.js';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 
 // DB-backed tests bootstrap production DDL modules dynamically. Provide a
 // non-production, test-process-only signing key before those modules load so
@@ -67,6 +67,8 @@ export async function ensureSchemaReady() {
   const { ensureDirectoryTables } = await import('../src/lib/directory-db-init.js');
   await ensureDirectoryTables();
   await ensureModuleShellTables();
+  const { ensureSharedServiceTables } = await import('../src/lib/shared-services-db-init.js');
+  await ensureSharedServiceTables();
   await ensureTestPlans();
 }
 
@@ -139,6 +141,19 @@ export async function cleanupUser(userId: string) {
     // company tenants the test forgot to clean). Cascade child rows first.
     const owned = await db.select().from(tenants).where(eq(tenants.ownerUserId, userId));
     for (const t of owned) {
+      // Shared-service tables deliberately use restrictive foreign keys so
+      // tests exercise the same deletion ordering required by production
+      // retention workflows. Remove tenant-scoped leaves before the tenant.
+      try { await db.execute(sql`DELETE FROM shared_notifications WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_outbox_messages WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_jobs WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_webhook_receipts WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_usage_events WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_activity_events WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_idempotency_keys WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_notification_templates WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_attachment_blobs WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_attachments WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, t.id)); } catch {}
       try { await db.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.tenantId, t.id)); } catch {}
       try { await db.delete(techdeckTickets).where(eq(techdeckTickets.tenantId, t.id)); } catch {}

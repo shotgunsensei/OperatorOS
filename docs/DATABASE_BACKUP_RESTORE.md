@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 15 ordered step identifiers without secrets
+`db:plan` is read-only and prints 16 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -125,8 +125,35 @@ On 2026-07-17 the 15-step release, including `directory_tables`, applied twice
 to a freshly reset disposable PostgreSQL 16 database and verified the shared
 directory authority tables both times. The authoritative clean-database API
 suite then passed 679/679 with no skips. This was an apply/idempotency rehearsal,
-not a replacement backup/restore rehearsal; a Phase 2 backup/restore and
-deployed target validation remain release gates.
+not a replacement backup/restore rehearsal. The later Phase 3 rehearsal below
+includes the Phase 2 directory schema; deployed target validation remains a
+release gate.
+
+## Phase 3 backup/restore rehearsal
+
+The 2026-07-18 rehearsal used PostgreSQL 16 in one local disposable Docker
+container. The 16-step additive release, including `shared_service_tables`,
+applied twice without drift before the source database was dumped and restored
+to a newly created target database. No external provider traffic was enabled.
+
+| Field | Recorded value |
+| --- | --- |
+| Candidate | Uncommitted Phase 3 source on `codex/phase-3-shared-services`, based on `bf7f4ff` |
+| Backup format | PostgreSQL custom archive |
+| Size | 297,545 bytes |
+| SHA-256 | `b293127c835b2c6c6937cbae93a32916d038ad44f74a3ee700c5eda2fff2c0b1` |
+| Public tables | Source 83; restored target 83 |
+| Public constraints | Source 382; restored target 382 |
+| Shared service tables | Source 10; restored target 10 |
+| Critical vector | Exact source/restored match: `83|382|13|2|1|0|0|0|0` for public tables, public constraints, modules, tenants, users, outbox, jobs, usage, and activity |
+| Release on source/restored target | PASS; all 16 idempotent steps completed and required shared tables verified |
+| Restored runtime readiness | PASS; database, auth, SSO, module registry, and shared worker ready |
+| Aggregate regression | PASS; 692 total, 686 passed, 0 failed, 6 HTTP-only skips on a separate clean database |
+| Provider traffic | None; Stripe, email, Twilio, and OpenAI disabled |
+
+This local dump and all rehearsal databases contained no production data and
+were deleted with the disposable container after the evidence record was
+completed.
 
 ## Production recovery
 

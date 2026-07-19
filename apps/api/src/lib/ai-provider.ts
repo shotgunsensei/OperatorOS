@@ -16,6 +16,14 @@ export interface AiProvider {
   complete(request: AiCompletionRequest): Promise<AiCompletionResponse>;
 }
 
+export class AiProviderDisabledError extends Error {
+  readonly code = 'AI_PROVIDER_DISABLED';
+  constructor() {
+    super('AI provider is disabled');
+    this.name = 'AiProviderDisabledError';
+  }
+}
+
 export class OpenAiProvider implements AiProvider {
   name = 'openai';
   private apiKey: string;
@@ -43,20 +51,22 @@ export class OpenAiProvider implements AiProvider {
         max_tokens: request.maxTokens || 2000,
         temperature: request.temperature ?? 0.7,
       }),
+      signal: AbortSignal.timeout(30_000),
     });
 
     if (!res.ok) {
-      const errText = await res.text();
-      if (res.status === 429 || errText.includes('insufficient_quota')) {
-        console.warn('[OpenAI] Quota exceeded, falling back to mock provider');
-        const mock = new MockAiProvider();
-        return mock.complete(request);
-      }
-      throw new Error(`OpenAI API error ${res.status}: ${errText}`);
+      const error = new Error('OpenAI provider request failed') as Error & { code?: string };
+      error.code = `OPENAI_HTTP_${res.status}`;
+      throw error;
     }
 
     const data = await res.json() as any;
     const text = data.choices?.[0]?.message?.content || '';
+    if (!text) {
+      throw Object.assign(new Error('OpenAI provider response did not include content'), {
+        code: 'OPENAI_RESPONSE_INVALID',
+      });
+    }
     const tokenCount = data.usage?.total_tokens || 0;
 
     return {
@@ -68,12 +78,10 @@ export class OpenAiProvider implements AiProvider {
 }
 
 export class MockAiProvider implements AiProvider {
-  name = 'mock';
+  name = 'test';
 
   async complete(request: AiCompletionRequest): Promise<AiCompletionResponse> {
     const start = Date.now();
-    await new Promise(r => setTimeout(r, 300));
-
     const toolType = this.detectToolType(request.systemPrompt);
     const text = this.generateMockResponse(toolType, request.userPrompt);
 
@@ -110,25 +118,38 @@ export class MockAiProvider implements AiProvider {
   }
 }
 
+export class DisabledAiProvider implements AiProvider {
+  name = 'disabled';
+  async complete(): Promise<AiCompletionResponse> {
+    throw new AiProviderDisabledError();
+  }
+}
+
 let currentProvider: AiProvider | null = null;
+let currentProviderKey = '';
 
 export function getAiProvider(): AiProvider {
-  if (currentProvider) return currentProvider;
-
   const apiKey = process.env.OPENAI_API_KEY;
+  const testEnvironment = process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test';
+  const providerKey = apiKey ? `openai:${process.env.OPENAI_MODEL || 'gpt-4o-mini'}` : (testEnvironment ? 'test' : 'disabled');
+  if (currentProvider && currentProviderKey === providerKey) return currentProvider;
+
   if (apiKey) {
     currentProvider = new OpenAiProvider(apiKey);
-  } else {
+  } else if (testEnvironment) {
     currentProvider = new MockAiProvider();
+  } else {
+    currentProvider = new DisabledAiProvider();
   }
-
+  currentProviderKey = providerKey;
   return currentProvider;
 }
 
-export function getProviderInfo(): { name: string; configured: boolean } {
+export function getProviderInfo(): { name: 'openai' | 'test' | 'disabled'; configured: boolean } {
   const apiKey = process.env.OPENAI_API_KEY;
+  const testEnvironment = process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test';
   return {
-    name: apiKey ? 'openai' : 'mock',
+    name: apiKey ? 'openai' : (testEnvironment ? 'test' : 'disabled'),
     configured: !!apiKey,
   };
 }

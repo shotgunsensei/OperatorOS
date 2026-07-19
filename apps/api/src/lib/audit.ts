@@ -16,7 +16,7 @@ export interface AuditEntry {
   extra?: Record<string, unknown>;
 }
 
-export async function writeAudit(entry: AuditEntry, request?: any): Promise<void> {
+export async function writeAudit(entry: AuditEntry, request?: any, executor: Pick<typeof db, 'insert'> = db): Promise<void> {
   const details: Record<string, unknown> = {
     targetType: entry.targetType,
     targetId: entry.targetId ?? null,
@@ -24,7 +24,7 @@ export async function writeAudit(entry: AuditEntry, request?: any): Promise<void
     after: entry.after ?? null,
     ...(entry.extra ?? {}),
   };
-  await db.insert(adminAuditLogs).values({
+  await executor.insert(adminAuditLogs).values({
     adminId: entry.actorUserId,
     action: entry.action,
     targetUserId: entry.targetType === 'user' || entry.targetType === 'tenant_user'

@@ -1,6 +1,6 @@
 # OperatorOS module consolidation status
 
-Baseline refreshed: 2026-07-17
+Baseline refreshed: 2026-07-18
 
 This file is the honest source-of-truth for **source ownership and functional
 migration**. A module being registered, entitled, or reachable on an
@@ -46,32 +46,35 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 
 ## Current verification boundary
 
-The shared source passes the workspace typecheck and exact pinned `.replit`
-production build with `INTERNAL_API_URL=http://localhost:5001`. The complete API
-regression suite ran against a clean isolated PostgreSQL database with 679
-tests: 679 passed, 0 failed, and 0 skipped. A fresh focused Phase 0 security
-gate passed 73/73 auth, SSO, tenant, entitlement, and viewer-write tests. These
-are source and isolated-database results, not a production deployment claim.
+The shared source passes the API, runner, and web typechecks and the exact
+production build shape with `INTERNAL_API_URL=http://localhost:5001`. The
+complete API regression suite ran serially against a new clean isolated
+PostgreSQL database: 692 total, 686 passed, 0 failed, and 6 HTTP-only tests
+skipped because no Next development server was running. The focused Phase 3
+gate passed 24/24. These are source and isolated-database results, not a public
+deployment claim.
 
 The Replit deployment path is Corepack-free. The checked-in build uses `npm
 exec` with exact pnpm `10.34.5`, runs the mandatory workspace typecheck, and
 builds the API, runner gateway, and Next application. The production supervisor
-uses compiled artifacts only: it applies or verifies the 15-step database
+uses compiled artifacts only: it applies or verifies the 16-step database
 release, starts the compiled API, waits for readiness, and starts compiled
-Next. The 15-step Phase 2 database release applied twice without drift. The
-separate Phase 1 PostgreSQL 16.14 custom-format backup restored successfully
-into a new disposable database with matching critical counts, 61 public
-tables, 100 validated foreign keys, and no unvalidated foreign keys; the Phase
-2 directory schema still requires its own restore rehearsal before promotion.
+Next. The 16-step Phase 3 database release applied twice without drift. A
+PostgreSQL 16 custom-format backup restored into a new disposable database
+with the exact critical-row vector, 83 public tables, 382 public constraints,
+and all 10 shared service tables. Its SHA-256 is recorded in the backup
+runbook. This closes the local Phase 2 directory-schema restore gap, but not
+the public deployment gate.
 
 The reviewed candidate passes the local production-host SSO matrix 2/2, but it
 has not been promoted to the public target. The read-only public production
 verification currently passes 32/47 checks: API readiness, all 17 module
 diagnostics, all 12 enabled callback routes, and OutCall fail-closed behavior
 pass; apex `/healthz` and anonymous host-only SSO transaction-cookie checks
-still reflect the older deployed release. Phase 3 and all production-ready
-claims remain blocked until the candidate is deployed and the public gate
-passes in full.
+still reflect the older deployed release. Per explicit owner direction, later
+source branches may proceed; every promotion and production-ready claim remains
+blocked until the cumulative candidate is deployed and the public gate passes
+in full.
 
 The production-host Playwright gate also passes locally against a disposable
 PostgreSQL database and HTTPS host-preserving proxy: one central credential
@@ -102,6 +105,13 @@ linked job status, cross-tenant denial, and viewer write denial. The native web
 shell exposes this sequence and `/customers`, `/jobs`, `/quotes`, and
 `/invoices` deep links resolve to it. Customer payments remain explicitly
 separate from OperatorOS subscription/add-on billing authority.
+
+Phase 3 adds one deliberately thin shared-infrastructure proof without raising
+TradeFlowKit's consolidation state: job attachments now use private authorized
+storage, scan jobs, idempotency, usage/activity, notifications/outbox, and
+transaction-bound platform audit. CallCommand's signed Twilio status callback
+uses the shared verified receipt/deduplication/retry ledger. The remaining
+workflows and deployed evidence in the parity index are still required.
 
 TechDeck now extends beyond its ticket queue with a tenant-scoped operations
 workspace. A focused 2/2 PostgreSQL flow proves asset health/version handling,

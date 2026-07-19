@@ -1,16 +1,13 @@
 /**
  * Email service abstraction.
  *
- * Two providers ship out of the box:
- *   - `log`    — writes the rendered email to stdout (default in dev / when
- *                no API key is configured). Lets the invite flow run end-to-end
- *                without hard-failing in environments without an outbound
- *                email connector.
- *   - `resend` — posts to the Resend HTTPS API when `RESEND_API_KEY` is set.
- *                Picked automatically; no extra config required.
+ * Explicit delivery states:
+ *   - `disabled` — production/development fail safely when unconfigured.
+ *   - `test`     — deterministic delivery metadata in isolated test mode.
+ *   - `resend` — posts to the Resend HTTPS API when an API key and explicit
+ *                sender address are configured.
  *
- * Provider selection is intentionally last-write-wins on env so a single
- * boolean (presence of RESEND_API_KEY) flips dev → prod without code edits.
+ * Provider selection is derived only from server-side environment state.
  *
  * The public surface is deliberately small (`sendInviteEmail`) so callers
  * never have to know which provider is active. New transactional emails
@@ -31,7 +28,7 @@ export interface InviteEmailInput {
 
 export interface SendResult {
   ok: boolean;
-  provider: 'log' | 'resend';
+  provider: 'disabled' | 'test' | 'resend';
   /** Provider-issued message id, when available. */
   id?: string;
   /** Populated when ok=false; safe to surface in audit logs. */
@@ -106,10 +103,14 @@ function getFromAddress(): string {
 }
 
 /** Public probe used by /v1/platform/health. Booleans only — never the value. */
-export function getEmailFromHealth(): { configured: boolean; provider: 'resend' | 'log' } {
+export function getEmailFromHealth(): { configured: boolean; provider: 'resend' | 'test' | 'disabled' } {
+  const testEnvironment = process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test';
+  const resendConfigured = Boolean(
+    process.env.RESEND_API_KEY && (process.env.EMAIL_FROM || process.env.INVITE_FROM_EMAIL),
+  );
   return {
-    configured: !!(process.env.EMAIL_FROM || process.env.INVITE_FROM_EMAIL),
-    provider: process.env.RESEND_API_KEY ? 'resend' : 'log',
+    configured: resendConfigured,
+    provider: resendConfigured ? 'resend' : (testEnvironment ? 'test' : 'disabled'),
   };
 }
 
@@ -128,39 +129,42 @@ async function sendViaResend(input: InviteEmailInput): Promise<SendResult> {
       text: inviteText(input),
       html: inviteHtml(input),
     }),
+    signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) {
-    const body = await res.text().catch(() => '');
     return {
       ok: false,
       provider: 'resend',
-      error: `resend ${res.status}: ${body.slice(0, 240)}`,
+      error: `RESEND_HTTP_${res.status}`,
     };
   }
   const data = (await res.json().catch(() => ({}))) as { id?: string };
+  if (!data.id) return { ok: false, provider: 'resend', error: 'RESEND_RESPONSE_INVALID' };
   return { ok: true, provider: 'resend', id: data.id };
 }
 
-function sendViaLog(input: InviteEmailInput): SendResult {
-  const subject = inviteSubject(input);
-  // Single-line summary so it's easy to grep, then the body for completeness.
-  console.log(
-    `[email:log] to=${input.to} subject="${subject}" acceptUrl=${input.acceptUrl} expires=${input.expiresAt.toISOString()}`,
-  );
-  console.log(`[email:log:body]\n${inviteText(input)}`);
-  return { ok: true, provider: 'log' };
+function sendViaTest(_input: InviteEmailInput): SendResult {
+  return { ok: true, provider: 'test', id: 'operatoros-test-invite' };
 }
 
 export async function sendInviteEmail(input: InviteEmailInput): Promise<SendResult> {
   try {
-    if (process.env.RESEND_API_KEY) {
+    const resendConfigured = Boolean(
+      process.env.RESEND_API_KEY && (process.env.EMAIL_FROM || process.env.INVITE_FROM_EMAIL),
+    );
+    if (resendConfigured) {
       return await sendViaResend(input);
     }
-    return sendViaLog(input);
+    if (process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test') {
+      return sendViaTest(input);
+    }
+    return { ok: false, provider: 'disabled', error: 'EMAIL_PROVIDER_DISABLED' };
   } catch (err: any) {
     return {
       ok: false,
-      provider: process.env.RESEND_API_KEY ? 'resend' : 'log',
+      provider: process.env.RESEND_API_KEY && (process.env.EMAIL_FROM || process.env.INVITE_FROM_EMAIL)
+        ? 'resend'
+        : ((process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test') ? 'test' : 'disabled'),
       error: String(err?.message ?? err).slice(0, 240),
     };
   }
