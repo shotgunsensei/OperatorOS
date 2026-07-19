@@ -78,4 +78,3 @@ The root release is additive and tenant-indexed. Before any persistent apply,
 take a verified backup, run the clean-database abuse/privacy workflow, and
 approve moderation ownership. Rollback restores to a new database and switches
 traffic; moderation and audit records are not destructively deleted.
-

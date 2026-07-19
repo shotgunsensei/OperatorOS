@@ -58,4 +58,3 @@ billing, provider credentials, prompt history, or token balance. Apply requires
 an approved backup and isolated verification. Rollback restores to a new
 database and switches traffic; accounting history is never repaired through
 destructive row edits.
-
