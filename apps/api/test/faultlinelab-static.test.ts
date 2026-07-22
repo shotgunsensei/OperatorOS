@@ -28,6 +28,9 @@ test('FaultlineLab has a dedicated persistent workspace rather than the generic 
   assert.match(workspace, /faultlinelab\.submit/);
   assert.match(workspace, /faultlinelab\.createAssignment/);
   assert.match(workspace, /faultlinelab\.createChallenge/);
+  assert.match(workspace, /data-testid="faultlinelab-module-shell"/);
+  assert.match(workspace, /data-module-shell="faultlinelab-shell"/);
+  assert.match(workspace, /window\.history\.pushState\(null, '', `\/sessions\/\$\{bundle\.session\.id\}`\)/);
 });
 
 test('FaultlineLab API preserves OperatorOS authority and server-only scoring', () => {

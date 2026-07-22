@@ -186,6 +186,9 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
       const bundle = await moduleShellApi.faultlinelab.getSession(id);
       setSession(bundle);
       setTab('session');
+      if (window.location.pathname !== `/sessions/${id}`) {
+        window.history.pushState(null, '', `/sessions/${id}`);
+      }
       const files = await moduleShellApi.faultlinelab.listSessionAttachments(id).catch(() => ({ attachments: [] }));
       setAttachments(files.attachments);
     } catch (next) {
@@ -225,6 +228,7 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
       setSession(bundle);
       setAttachments([]);
       setTab('session');
+      window.history.pushState(null, '', `/sessions/${bundle.session.id}`);
       setNotice('Investigation started. Every action and score is recorded by the server.');
       await load();
     } catch (next) {
@@ -428,7 +432,7 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
   }
 
   return (
-    <main className="fl-shell" data-testid="faultlinelab-shell">
+    <main className="fl-shell" data-testid="faultlinelab-module-shell" data-module-shell="faultlinelab-shell">
       <style>{styles}</style>
       <div className="fl-wrap">
         <header className="fl-hero" id="faultlinelab-dashboard" tabIndex={-1}>
@@ -513,7 +517,7 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
         )}
 
         {!loading && tab === 'session' && (
-          <section id="faultlinelab-session" tabIndex={-1}>
+          <section id="faultlinelab-session" data-testid="faultlinelab-session" tabIndex={-1}>
             {!session ? <div className="fl-card fl-empty">Start a challenge or open a recent attempt to enter the investigation workspace.</div> : (
               <div className="fl-grid">
                 <div className="fl-main">
@@ -549,7 +553,7 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
                       <div className="fl-actions"><button disabled={busy === 'submit'}><Send size={14} /> Submit for server scoring</button><button type="button" className="danger" onClick={() => void abandonSession()}><XCircle size={14} /> Abandon</button></div>
                     </form>
                   )}
-                  {session.session.state === 'completed' && <article className="fl-card fl-score"><span>SERVER SCORE</span><h2>{session.session.score} / {session.submission?.scoreBreakdown?.maxPossible ?? 100}</h2><strong>{session.session.scorePercentage}% · {session.session.tier} · {session.session.passed ? 'Passed' : 'Not passed'}</strong><h3>Debrief</h3><p>{session.debrief?.rootCause?.description}</p><h4>Remediation</h4><p>{session.debrief?.remediation}</p></article>}
+                  {session.session.state === 'completed' && <article className="fl-card fl-score" data-testid="faultlinelab-server-score"><span>SERVER SCORE</span><h2>{session.session.score} / {session.submission?.scoreBreakdown?.maxPossible ?? 100}</h2><strong>{session.session.scorePercentage}% · {session.session.tier} · {session.session.passed ? 'Passed' : 'Not passed'}</strong><h3>Debrief</h3><p>{session.debrief?.rootCause?.description}</p><h4>Remediation</h4><p>{session.debrief?.remediation}</p></article>}
                 </div>
                 <aside className="fl-side">
                   <article className="fl-card"><span>EVIDENCE LOCKER</span>{session.evidence.map((item) => <div className="fl-evidence" key={item.id}><b>{item.title}</b><small>{item.importance} · {item.category}</small>{item.description && <p>{item.description}</p>}</div>)}{session.evidence.length === 0 && <p>Evidence unlocks only through recorded actions.</p>}</article>

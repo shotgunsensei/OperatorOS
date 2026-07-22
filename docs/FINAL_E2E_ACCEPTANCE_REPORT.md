@@ -15,13 +15,21 @@ assignments, progress/badges, private proof, analytics/exports, and dedicated
 responsive deep links. The 52 incomplete source catalog cards remain
 non-playable, and FaultlineLab makes no certificate claim.
 
-Fresh evidence includes 11/11 focused contracts, 1/1 persistent workflow with
-tenant and role negatives, a deterministic dry-run reconciliation, API/runner/
-web typecheck, clean 21-step release apply, and production build. The compiled
-browser SSO/return/logout workflow and deployed acceptance were not run, and
-the aggregate API harness retains unrelated bootstrap-sensitive failures.
-This follow-up therefore does not change the report's **NOT ACCEPTED** verdict
-or promote FaultlineLab beyond state 3.
+Fresh evidence includes 11/11 focused contracts, a fresh 1/1 persistent
+PostgreSQL workflow with tenant and role negatives, a deterministic dry-run
+reconciliation, API/runner/web typecheck, clean 21-step release apply,
+production build, idempotent compiled supervisor startup, and canonical HTTPS
+health/readiness. The production-host browser matrix passes 3/3. Its dedicated
+FaultlineLab scenario creates and server-scores a real attempt, persists the
+score through canonical `/sessions/:id` refresh, returns through My Apps,
+invalidates the module session through global logout, reauthenticates, and
+reopens the same score without URL or browser-storage credentials.
+
+FaultlineLab is therefore a source/local state-4 candidate. This follow-up does
+not change the ecosystem report's **NOT ACCEPTED** verdict or claim state 5:
+the cumulative revision is not deployed, no authorized standalone data apply
+or cutover occurred, and the aggregate API harness retains unrelated
+bootstrap-sensitive failures.
 
 ## Phase 6 follow-up
 

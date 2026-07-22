@@ -143,6 +143,17 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
   if (!identity) return;
   const { userId, tenantId } = identity;
   const tenantTables = [
+    'faultlinelab_submissions',
+    'faultlinelab_session_actions',
+    'faultlinelab_daily_outcomes',
+    'faultlinelab_badge_awards',
+    'faultlinelab_user_challenge_progress',
+    'faultlinelab_user_progress',
+    'faultlinelab_sessions',
+    'faultlinelab_assignments',
+    'faultlinelab_challenge_versions',
+    'faultlinelab_challenges',
+    'faultlinelab_migration_refs',
     'tradeflowkit_invoices',
     'tradeflowkit_quotes',
     'tradeflowkit_jobs',
@@ -411,5 +422,92 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     collection.stop();
     await sibling.close();
+  });
+
+  test('FaultlineLab persists a server-scored investigation across return, global logout, reauthentication, and deep-link refresh', async ({ page, request }) => {
+    test.setTimeout(150_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+
+    await page.goto(`${ROOT}/app`);
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await page.getByTestId('nav-my-apps').click();
+    await expect(page.getByTestId('page-my-apps')).toBeVisible();
+
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByTestId('button-launch-faultlinelab').click();
+    const modulePage = await popupPromise;
+    await expect(modulePage.getByTestId('faultlinelab-module-shell')).toBeVisible({ timeout: 30_000 });
+    await expect(modulePage.getByTestId('faultlinelab-challenge-card').first()).toBeVisible();
+
+    await modulePage.getByTestId('faultlinelab-challenge-card').first().getByRole('button', { name: 'Standard' }).click();
+    await expect(modulePage.getByTestId('faultlinelab-session')).toBeVisible();
+    await expect(modulePage).toHaveURL(/^https:\/\/faultlinelab\.operatoros\.net\/sessions\/[a-f0-9-]+$/);
+    const sessionUrl = modulePage.url();
+    assertNoCredentialQuery(sessionUrl);
+
+    const terminal = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: 'Terminal' }) });
+    await terminal.locator('.fl-chip-row button').first().click();
+    await expect(modulePage.getByText(/^#1 command \/ /)).toBeVisible();
+
+    const submission = modulePage.locator('form').filter({ has: modulePage.getByRole('heading', { name: 'Submit diagnosis' }) });
+    await submission.locator('textarea[name="hypothesis"]').fill('The recorded evidence identifies the canonical failure mechanism.');
+    await submission.locator('select[name="rootCause"]').selectOption({ index: 1 });
+    const evidenceCount = await submission.locator('input[name="evidence"]').count();
+    for (let index = 0; index < evidenceCount; index += 1) {
+      await submission.locator('input[name="evidence"]').nth(index).check();
+    }
+    await submission.locator('textarea[name="remediation"]').fill('Apply the validated corrective action and verify the original symptom no longer reproduces.');
+    await submission.locator('textarea[name="proofNote"]').fill('Phase 10A production-host browser acceptance.');
+    await submission.getByRole('button', { name: 'Submit for server scoring' }).click();
+    const score = modulePage.getByTestId('faultlinelab-server-score');
+    await expect(score).toBeVisible();
+    const scoreValue = (await score.locator('h2').innerText()).trim();
+    const scoreSummary = (await score.locator('strong').innerText()).trim();
+
+    await modulePage.reload();
+    await expect(modulePage).toHaveURL(sessionUrl);
+    await expect(modulePage.getByTestId('faultlinelab-server-score').locator('h2')).toHaveText(scoreValue);
+    await expect(modulePage.getByTestId('faultlinelab-server-score').locator('strong')).toHaveText(scoreSummary);
+
+    await Promise.all([
+      modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      modulePage.getByRole('link', { name: 'My Apps' }).first().click(),
+    ]);
+    await expect(modulePage.getByTestId('page-my-apps')).toBeVisible();
+
+    const logoutAll = await modulePage.evaluate(async () => {
+      const response = await fetch('/api/auth/logout-all', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return { status: response.status, body: await response.text() };
+    });
+    expect(logoutAll.status, logoutAll.body).toBe(200);
+
+    await modulePage.goto(sessionUrl);
+    await expect(modulePage).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await modulePage.getByTestId('input-email').fill(identity.email);
+    await modulePage.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      modulePage.waitForURL(new RegExp(`^${sessionUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`), { timeout: 30_000 }),
+      modulePage.getByTestId('button-login').click(),
+    ]);
+    await expect(modulePage.getByTestId('faultlinelab-server-score').locator('h2')).toHaveText(scoreValue);
+    await expect(modulePage.getByTestId('faultlinelab-server-score').locator('strong')).toHaveText(scoreSummary);
+    await modulePage.reload();
+    await expect(modulePage.getByTestId('faultlinelab-server-score').locator('h2')).toHaveText(scoreValue);
+    await expect(modulePage.getByTestId('faultlinelab-server-score').locator('strong')).toHaveText(scoreSummary);
+    await assertHostOnlySession(modulePage.context(), 'faultlinelab.operatoros.net');
+    await assertNoBrowserCredentialStorage(modulePage);
+    assertNoCredentialQuery(modulePage.url());
   });
 });
