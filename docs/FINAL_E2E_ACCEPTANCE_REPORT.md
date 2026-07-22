@@ -5,6 +5,24 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## Phase 10A follow-up
+
+The FaultlineLab Phase 10A source/local candidate was verified on 2026-07-22
+against disposable PostgreSQL 16. It adds four validated runnable challenges,
+immutable content versions, safe pre-completion projections, server-recorded
+investigation actions, server-only scoring, daily and Chaos modes,
+assignments, progress/badges, private proof, analytics/exports, and dedicated
+responsive deep links. The 52 incomplete source catalog cards remain
+non-playable, and FaultlineLab makes no certificate claim.
+
+Fresh evidence includes 11/11 focused contracts, 1/1 persistent workflow with
+tenant and role negatives, a deterministic dry-run reconciliation, API/runner/
+web typecheck, clean 21-step release apply, and production build. The compiled
+browser SSO/return/logout workflow and deployed acceptance were not run, and
+the aggregate API harness retains unrelated bootstrap-sensitive failures.
+This follow-up therefore does not change the report's **NOT ACCEPTED** verdict
+or promote FaultlineLab beyond state 3.
+
 ## Phase 6 follow-up
 
 The PulseDesk source/local Phase 6 candidate was verified on 2026-07-18 against

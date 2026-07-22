@@ -1296,6 +1296,24 @@ export async function registerFaultlineLabRoutes(app: FastifyInstance): Promise<
     },
   );
 
+  app.get(
+    '/v1/modules/faultlinelab/members',
+    { preHandler: adminGuards },
+    async (request) => {
+      const members = faultlineRows(
+        await db.execute(sql`
+          SELECT u.id, u.name, u.email, tu.role
+          FROM tenant_users tu
+          JOIN users u ON u.id=tu.user_id
+          WHERE tu.tenant_id=${tenant(request)}
+          ORDER BY lower(u.name), lower(u.email)
+          LIMIT 500
+        `),
+      );
+      return { members, total: members.length };
+    },
+  );
+
   app.post(
     '/v1/modules/faultlinelab/assignments',
     { preHandler: adminGuards },

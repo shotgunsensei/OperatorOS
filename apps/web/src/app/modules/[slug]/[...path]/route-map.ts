@@ -86,6 +86,16 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/community': { sectionId: 'torqueshed-community', label: 'Community' },
     '/settings': { sectionId: 'torqueshed-templates', label: 'Settings' },
   },
+  faultlinelab: {
+    '/dashboard': { sectionId: 'faultlinelab-dashboard', label: 'Dashboard' },
+    '/challenges': { sectionId: 'faultlinelab-challenges', label: 'Challenge Board' },
+    '/daily': { sectionId: 'faultlinelab-challenges', label: 'Daily Challenge' },
+    '/sessions': { sectionId: 'faultlinelab-session', label: 'Investigations' },
+    '/assignments': { sectionId: 'faultlinelab-assignments', label: 'Assignments' },
+    '/progress': { sectionId: 'faultlinelab-progress', label: 'Progress' },
+    '/authoring': { sectionId: 'faultlinelab-authoring', label: 'Challenge Authoring' },
+    '/analytics': { sectionId: 'faultlinelab-analytics', label: 'Tenant Analytics' },
+  },
 };
 
 const SAFE_PATH_SEGMENT = /^[a-z0-9-]+$/;
@@ -128,6 +138,11 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'diagnostics') return { sectionId: 'torqueshed-diagnostics', label: 'Diagnostic Session' };
     if (resource === 'marketplace') return { sectionId: 'torqueshed-marketplace', label: 'Marketplace Listing' };
     if (resource === 'community') return { sectionId: 'torqueshed-community', label: 'Community Post' };
+  }
+  if (slug === 'faultlinelab' && pathSegments.length === 2) {
+    const [resource] = pathSegments;
+    if (resource === 'challenges') return { sectionId: 'faultlinelab-challenges', label: 'Challenge' };
+    if (resource === 'sessions') return { sectionId: 'faultlinelab-session', label: 'Investigation' };
   }
   return null;
 }

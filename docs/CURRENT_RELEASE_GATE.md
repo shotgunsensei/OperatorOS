@@ -1,11 +1,11 @@
 # OperatorOS current release gate
 
-- Evidence date: 2026-07-18
-- Candidate branch: `codex/phase-5-techdeck-state-5`
+- Evidence date: 2026-07-22
+- Candidate branch: `codex/phase-10a-faultlinelab-completion`
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
-- Platform and Phases 2-5 source/local gate: **PASS; TradeFlowKit and TechDeck are state 4, not state 5**
+- Platform and Phases 2-10A source/local gate: **PARTIAL; Phase 10A scoped gates pass, ecosystem aggregate/browser gate remains open**
 - Public deployment gate: **FAIL (32/47)**
 - Overall release decision: **CLOSED — do not promote**
 
@@ -62,7 +62,7 @@ and migration parity remain controlled by the module parity index.
 | Frozen dependency contract | PASS FROM PHASE 0 | Pinned pnpm `10.34.5`; lockfile unchanged by Phase 1 |
 | Production environment contract | PASS | Machine-readable contract plus 7 preflight tests; core CLI preflight passed with exact canonical values and non-secret local test credentials |
 | Unsafe configuration rejection | PASS | Rejects missing/short secrets, legacy `APP_URL`, parent `COOKIE_DOMAIN`, public unified-runtime API URL, unsafe commands, legacy SSO rollback, wildcard/insecure/credentialed/loopback CORS, and drifted module hosts |
-| Database release plan | PASS | `db:plan` emits 18 ordered, additive, secret-free steps; `db:apply` passed repeatedly on PostgreSQL 16; the Phase 4 17-step release also passed after restore |
+| Database release plan | PASS | `db:plan` emits 21 ordered, additive, secret-free steps; Phase 10A `db:apply` passed on fresh disposable PostgreSQL 16, including `faultlinelab_tables` before shared services |
 | Backup/restore rehearsal | PASS LOCALLY | Phase 4 custom dump restored in 3.570 s; source/restore matched 94 public tables, 17 TradeFlowKit, 9 Directory, and 10 shared-service tables |
 | Restored data/constraints | PASS | Restored release apply passed; dump SHA-256 `d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82` |
 | Production build | PASS | Installed workspace toolchain produced SDK, API, runner gateway, and Next artifacts after API/runner/web typechecks; Next 14.2.35 generated 20 static page entries. The exact Replit wrapper remains pinned to pnpm 10.34.5. |
@@ -75,8 +75,9 @@ and migration parity remain controlled by the module parity index.
 | Focused Phase 3 tests | PASS | 24/24 shared-service, route, retention, lease-recovery, release, webhook, and provider-state tests on a clean database |
 | Focused Phase 4 tests | PASS | 29/29 TradeFlowKit-focused tests in the final aggregate run, including concurrent conversion, Directory association, restart, provider, migration, and financial reconciliation |
 | Focused Phase 5 tests | PASS | TechDeck 16/16 plus new Phase 5 5/5 for managed operations, network/IPAM, lifecycle, documentation/evidence/report/time workflow, roles, isolation, importer, release, and deep links |
+| Focused Phase 10A tests | PASS | 11/11 domain/import/static/deep-link/release contracts plus 1/1 real PostgreSQL workflow for persistence, tenant isolation, viewer denial, scoring, assignments, immutability and restart |
 | Phase 2 browser workflow | PASS LOCALLY | 1/1 on compiled artifacts; CRUD, refresh persistence, same organization ID across three modules, and no script-readable auth |
-| Full API regression | PASS | Final Phase 5 run: 702 total, 696 passed, 0 failed, 6 HTTP-only skips in 616.9 seconds on a new PostgreSQL 16 database. Earlier stale TechDeck-navigation and pnpm-policy assertions were corrected and passed in focused and final reruns. |
+| Full API regression | FAIL — PRE-EXISTING/HARNESS | Phase 10A scoped tests pass. Current `main` aggregate is not green under either supported setup: schema-only misses later module DDL in `_setup`; release-applied collides with tests that blindly create canonical module slugs and changes free-app expectations. Eight quarantined snapshot byte counts and two legacy route-format assertions also fail. No failure was hidden or skipped. |
 | Public read-only runtime verifier | FAIL | 32/47 on 2026-07-18; no authentication and no mutation |
 | Formatting/lint | NOT DEFINED | Repository has no supported formatting or lint script; no pass is claimed |
 

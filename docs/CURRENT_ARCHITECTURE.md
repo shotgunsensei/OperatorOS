@@ -26,7 +26,7 @@ One Replit autoscale workload owns the public runtime:
 1. `.replit` uses `npm exec` with pnpm `10.34.5` to install the frozen
    workspace and run `pnpm build:production`.
 2. `scripts/start-unified-runtime.mjs` validates the production environment.
-3. The supervisor runs the compiled 18-step database release and stops on any
+3. The supervisor runs the compiled 21-step database release and stops on any
    failure.
 4. The compiled Fastify API starts privately on port 5001 and must report
    `/readyz` before public startup continues.
@@ -89,8 +89,9 @@ become unusable. Local logout clears and revokes only the current host session.
 `OPERATOROS_DATABASE_RELEASE_MODE=apply`. The production supervisor executes
 the compiled equivalent before Fastify starts.
 
-The release has 18 ordered, idempotent steps: base, extended, SaaS, tenant,
-shared-directory, module, TradeFlowKit, TechDeck, and shared-service DDL;
+The release has 21 ordered, idempotent steps: base, extended, SaaS, tenant,
+shared-directory, module, TradeFlowKit, TechDeck, PulseDesk, TorqueShed,
+FaultlineLab, and shared-service DDL;
 plan/admin seed; pre-seed repair; platform component and module catalog seed;
 personal-tenant and super-admin backfills; demo tenant seed; post-seed repair;
 and free-account-app backfill. The contract is additive and declares no
@@ -135,6 +136,14 @@ snapshots, and migration references. These records document operator-managed
 state; no discovery or device mutation is implied. ADR-0012, ADR-0013, and
 ADR-0014 define the network/IPAM, credential-reference, and no-remote-execution
 boundaries.
+
+FaultlineLab is a Phase 10A state-3 source/local completion candidate. It owns
+tenant-scoped versioned challenges, attempts, assignments, progress and
+append-only evidence while OperatorOS retains identity, tenant, entitlement
+and billing authority. Only four validated runnable source cases initialize;
+52 planned cards remain non-playable. Scores and evidence release are
+server-derived, proof files use shared private attachments, and no certificate
+claim exists. ADR-0019 defines this boundary.
 
 Child migrations and `drizzle-kit push` are not supported deployment paths.
 

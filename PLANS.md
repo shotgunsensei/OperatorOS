@@ -27,7 +27,7 @@ slice is not parity.
 | 7 | TorqueShed vehicle, maintenance, diagnostic, repair, and verification foundation | Phases 2-3 | Source candidate implemented on `codex/phase-7-torqueshed-foundation`; typecheck/build/preflight and 15 focused contracts pass, but state 4 is blocked because Docker Desktop cannot start its daemon, so DB apply/workflow/runtime/SSO gates were not run |
 | 8 | Torque Assist deterministic adapter, safety controls, metering, and append-only token ledger | Phases 3 and 7 | Source candidate implemented on `codex/phase-8-torque-assist`; 7/7 Phase 8 and 15/15 cumulative contracts, workspace typecheck, production build, core preflight, and 20-step read-only release plan pass. State remains 3 because Docker/database workflows, runtime and browser gates are unrun |
 | 9 | TorqueShed marketplace and community | Phases 3, 7-8 | Source candidate implemented on `codex/phase-9-torqueshed-marketplace-community`; durable listing/contact/expiry and profile/post/comment/reaction/follow/block/media/report/moderation workflows, policy and native UI pass database-independent contracts/typecheck. State remains 3 because Docker/database/scanner/runtime/browser/deployed gates are unrun |
-| 10A | FaultlineLab state 5 | Phases 2-3 | Pending |
+| 10A | FaultlineLab state 5 | Phases 2-3 | Source/local completion candidate on `codex/phase-10a-faultlinelab-completion`: four validated runnable cases, immutable challenge versions, authoring/publish, server-scored attempts, Chaos/daily modes, assignments, progress/badges, private proof, exports, dedicated UI/deep links, and dry-run reconciliation. State remains 3 until compiled browser/runtime/SSO evidence and deployed acceptance pass; state 5 is not claimed. |
 | 10B | Ninja Pool Hall state 5 | Phases 2-3 | Pending |
 | 11A | BrandForgeOS state 5 | Phases 2-3 | Pending |
 | 11B | SnapProofOS state 5 | Phases 2-3 | Pending |
@@ -59,7 +59,8 @@ slice is not parity.
 
 The owner explicitly authorized source work to continue through later phases
 on separate branches even while the public deployment gate remains failed.
-That direction permits Phase 10A source work after the scoped Phase 9 commit; it
+Phase 10A source work is complete on its scoped branch. The next source phase
+is Phase 10B, Ninja Pool Hall. That direction permits later source work; it
 does not authorize deployment,
 production data mutation, promotion, or a production-ready label. Before any
 public promotion, deploy the reviewed cumulative revision through `.replit`,
