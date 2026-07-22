@@ -59,6 +59,17 @@ test('core module deep links resolve only to live native shell sections', () => 
     assert.equal(resolveCoreModuleDeepLink('pulsedesk', [path])?.sectionId, 'pulsedesk-operations');
   }
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['service-desk', 'admin'])?.sectionId, 'pulsedesk-operations');
+  assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['dashboard'])?.sectionId, 'faultlinelab-dashboard');
+  assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['challenges'])?.sectionId, 'faultlinelab-challenges');
+  assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['daily'])?.sectionId, 'faultlinelab-challenges');
+  assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['sessions'])?.sectionId, 'faultlinelab-session');
+  assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['assignments'])?.sectionId, 'faultlinelab-assignments');
+  assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['progress'])?.sectionId, 'faultlinelab-progress');
+  assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['authoring'])?.sectionId, 'faultlinelab-authoring');
+  assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['analytics'])?.sectionId, 'faultlinelab-analytics');
+  assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['challenges', 'challenge-123'])?.sectionId, 'faultlinelab-challenges');
+  assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['sessions', 'session-123'])?.sectionId, 'faultlinelab-session');
+  assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['unknown']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['settings'])?.sectionId, 'techdeck-settings');
 });
 
@@ -87,6 +98,7 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
   const techDeckShell = readRepoFile('apps/web/src/components/module-shells/TechDeckShell.tsx');
   const techDeckOps = readRepoFile('apps/web/src/components/module-shells/TechDeckOperations.tsx');
   const pulseDeskShell = readRepoFile('apps/web/src/components/module-shells/PulseDeskShell.tsx');
+  const faultlineLabWorkspace = readRepoFile('apps/web/src/components/module-shells/FaultlineLabWorkspace.tsx');
 
   assert.match(catchAllPage, /resolveCoreModuleDeepLink/);
   assert.match(catchAllPage, /initialSectionId=\{target\.sectionId\}/);
@@ -123,6 +135,13 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
     [pulseDeskShell, 'pulsedesk-operations'],
     [pulseDeskShell, 'pulsedesk-directory'],
     [pulseDeskShell, 'pulsedesk-settings'],
+    [faultlineLabWorkspace, 'faultlinelab-dashboard'],
+    [faultlineLabWorkspace, 'faultlinelab-challenges'],
+    [faultlineLabWorkspace, 'faultlinelab-session'],
+    [faultlineLabWorkspace, 'faultlinelab-assignments'],
+    [faultlineLabWorkspace, 'faultlinelab-progress'],
+    [faultlineLabWorkspace, 'faultlinelab-authoring'],
+    [faultlineLabWorkspace, 'faultlinelab-analytics'],
   ] as const) {
     assert.ok(source.includes(`id="${targetId}"`), `missing focus target ${targetId}`);
   }

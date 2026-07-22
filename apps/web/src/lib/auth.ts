@@ -29,6 +29,18 @@ async function apiFetch(path: string, options: RequestInit = {}) {
   return data;
 }
 
+async function apiDownload(path: string): Promise<Blob> {
+  const tenantId = getActiveTenantId();
+  const headers: Record<string, string> = {};
+  if (tenantId) headers['X-Tenant-Id'] = tenantId;
+  const res = await fetch(`${API_BASE}${path}`, { headers, credentials: 'include' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Download failed' }));
+    throw { status: res.status, ...data };
+  }
+  return res.blob();
+}
+
 export const authApi = {
   register: (email: string, password: string, name: string) =>
     apiFetch('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, name }) }),
@@ -514,7 +526,7 @@ export interface NinjaPoolPracticeProgressInput {
   scratches: number;
 }
 
-export type NativeWorkflowModuleSlug = 'torqueshed' | 'faultlinelab' | 'brandforgeos' | 'snapproofos';
+export type NativeWorkflowModuleSlug = 'torqueshed' | 'brandforgeos' | 'snapproofos';
 
 export interface ModuleWorkflowItem {
   id: string;
@@ -535,6 +547,93 @@ export interface ModuleWorkflowListResponse {
   items: ModuleWorkflowItem[];
   itemType: string;
   statuses: string[];
+}
+
+export interface FaultlineChallengeSummary {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  difficulty: string;
+  scope: 'personal' | 'tenant';
+  status: 'draft' | 'published' | 'retired';
+  ownerUserId: string;
+  currentVersionNumber: number;
+  publishedVersionNumber: number | null;
+  version: number;
+  attemptCount?: number;
+  passCount?: number;
+  bestScore?: number | null;
+  bestPercentage?: number | null;
+  bestTier?: string | null;
+}
+
+export interface FaultlineChallengeContent {
+  schemaVersion: 1;
+  description: string;
+  briefing: string;
+  symptoms: Array<{ id: string; description: string; severity: string }>;
+  rootCauseOptions: Array<{ id: string; title: string }>;
+  evidence: Array<{ id: string; title: string; category: string; importance: string; description?: string }>;
+  hints: Array<{ level: number; label: string; scorePenalty: number; text?: string }>;
+  commands: Array<{ command: string; aliases: string[]; description: string }>;
+  events: Array<{ id: string; timestamp: string; source: string; level: string; message: string }>;
+  tickets: Array<{ id: string; author: string; role: string; timestamp: string }>;
+  availableTools: string[];
+}
+
+export interface FaultlineSessionBundle {
+  session: {
+    id: string;
+    challengeId: string;
+    challengeTitle?: string;
+    challengeSlug?: string;
+    challengeVersionNumber: number;
+    assignmentId?: string | null;
+    mode: 'standard' | 'daily' | 'preview' | 'assignment' | 'chaos';
+    state: 'active' | 'completed' | 'abandoned';
+    unlockedEvidence: string[];
+    hintsUsed: number[];
+    actionCount: number;
+    riskyActionCount: number;
+    score?: number | null;
+    scorePercentage?: number | null;
+    tier?: string | null;
+    passed?: boolean | null;
+    version: number;
+    startedAt: string;
+    completedAt?: string | null;
+  };
+  challenge: FaultlineChallengeContent;
+  evidence: FaultlineChallengeContent['evidence'];
+  actions: Array<{
+    id: string;
+    sequenceNumber: number;
+    kind: string;
+    targetKey: string;
+    output: string;
+    evidenceUnlocked: string[];
+    risky: boolean;
+    hintPenalty: number;
+    createdAt: string;
+  }>;
+  submission?: Record<string, any> | null;
+  debrief?: Record<string, any>;
+}
+
+export interface FaultlineAssignment {
+  id: string;
+  challengeId: string;
+  challengeTitle: string;
+  challengeSlug: string;
+  assigneeUserId: string;
+  assigneeName?: string | null;
+  assigneeEmail?: string | null;
+  title?: string | null;
+  instructions?: string | null;
+  dueAt?: string | null;
+  status: 'assigned' | 'in_progress' | 'completed' | 'canceled';
+  version: number;
 }
 
 export interface TradeFlowKitLineItem { description: string; quantity: number; unitPriceCents: number }
@@ -874,6 +973,54 @@ export const moduleShellApi = {
         method: 'POST',
         body: JSON.stringify({ expectedVersion }),
       }) as Promise<NinjaPoolPracticeSession>,
+  },
+  faultlinelab: {
+    policy: (): Promise<Record<string, any>> =>
+      apiFetch('/modules/faultlinelab/policy') as Promise<Record<string, any>>,
+    listChallenges: (includeDrafts = false): Promise<{ challenges: FaultlineChallengeSummary[]; total: number }> =>
+      apiFetch(`/modules/faultlinelab/challenges${includeDrafts ? '?includeDrafts=true' : ''}`) as Promise<any>,
+    getChallenge: (id: string): Promise<{ challenge: FaultlineChallengeSummary; content: FaultlineChallengeContent; contentHash: string }> =>
+      apiFetch(`/modules/faultlinelab/challenges/${encodeURIComponent(id)}`) as Promise<any>,
+    getAuthoringChallenge: (id: string): Promise<{ challenge: FaultlineChallengeSummary; content: Record<string, any>; versions: Array<Record<string, any>> }> =>
+      apiFetch(`/modules/faultlinelab/authoring/challenges/${encodeURIComponent(id)}`) as Promise<any>,
+    createChallenge: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/faultlinelab/authoring/challenges', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    updateChallenge: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/faultlinelab/authoring/challenges/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<any>,
+    publishChallenge: (id: string, expectedVersion: number, versionNumber?: number): Promise<Record<string, any>> =>
+      apiFetch(`/modules/faultlinelab/authoring/challenges/${encodeURIComponent(id)}/publish`, { method: 'POST', body: JSON.stringify({ expectedVersion, versionNumber }) }) as Promise<any>,
+    retireChallenge: (id: string, expectedVersion: number): Promise<Record<string, any>> =>
+      apiFetch(`/modules/faultlinelab/authoring/challenges/${encodeURIComponent(id)}/retire`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<any>,
+    exportChallenge: (id: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/faultlinelab/authoring/challenges/${encodeURIComponent(id)}/export`) as Promise<any>,
+    daily: (): Promise<Record<string, any>> => apiFetch('/modules/faultlinelab/daily') as Promise<any>,
+    listSessions: (): Promise<{ sessions: FaultlineSessionBundle['session'][]; total: number }> =>
+      apiFetch('/modules/faultlinelab/sessions') as Promise<any>,
+    getSession: (id: string): Promise<FaultlineSessionBundle> =>
+      apiFetch(`/modules/faultlinelab/sessions/${encodeURIComponent(id)}`) as Promise<FaultlineSessionBundle>,
+    startSession: (input: Record<string, unknown>): Promise<FaultlineSessionBundle> =>
+      apiFetch('/modules/faultlinelab/sessions', { method: 'POST', body: JSON.stringify(input) }) as Promise<FaultlineSessionBundle>,
+    addAction: (id: string, input: Record<string, unknown>): Promise<FaultlineSessionBundle> =>
+      apiFetch(`/modules/faultlinelab/sessions/${encodeURIComponent(id)}/actions`, { method: 'POST', body: JSON.stringify(input) }) as Promise<FaultlineSessionBundle>,
+    submit: (id: string, input: Record<string, unknown>): Promise<FaultlineSessionBundle> =>
+      apiFetch(`/modules/faultlinelab/sessions/${encodeURIComponent(id)}/submit`, { method: 'POST', body: JSON.stringify(input) }) as Promise<FaultlineSessionBundle>,
+    abandon: (id: string, expectedVersion: number): Promise<Record<string, any>> =>
+      apiFetch(`/modules/faultlinelab/sessions/${encodeURIComponent(id)}/abandon`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<any>,
+    progress: (): Promise<Record<string, any>> => apiFetch('/modules/faultlinelab/progress') as Promise<any>,
+    listAssignments: (): Promise<{ assignments: FaultlineAssignment[]; total: number }> =>
+      apiFetch('/modules/faultlinelab/assignments') as Promise<any>,
+    listMembers: (): Promise<{ members: Array<{ id: string; name: string; email: string; role: string }>; total: number }> =>
+      apiFetch('/modules/faultlinelab/members') as Promise<any>,
+    createAssignment: (input: Record<string, unknown>): Promise<{ assignment: FaultlineAssignment }> =>
+      apiFetch('/modules/faultlinelab/assignments', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    cancelAssignment: (id: string, expectedVersion: number): Promise<{ assignment: FaultlineAssignment }> =>
+      apiFetch(`/modules/faultlinelab/assignments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ expectedVersion, status: 'canceled' }) }) as Promise<any>,
+    analytics: (): Promise<Record<string, any>> => apiFetch('/modules/faultlinelab/analytics') as Promise<any>,
+    listSessionAttachments: (id: string): Promise<{ attachments: Array<Record<string, any>> }> =>
+      apiFetch(`/modules/faultlinelab/sessions/${encodeURIComponent(id)}/attachments`) as Promise<any>,
+    uploadSessionAttachment: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/faultlinelab/sessions/${encodeURIComponent(id)}/attachments`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    downloadAttempts: (): Promise<Blob> => apiDownload('/modules/faultlinelab/exports/attempts.csv'),
   },
   torqueshed: {
     dashboard: (): Promise<TorqueShedDashboard> => apiFetch('/modules/torqueshed/dashboard') as Promise<TorqueShedDashboard>,

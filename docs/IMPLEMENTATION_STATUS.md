@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
-- Last updated: 2026-07-18
-- Phase: **9 TorqueShed Marketplace/Community source candidate; TorqueShed state 3 and ecosystem release gate blocked**
+- Last updated: 2026-07-22
+- Phase: **10A FaultlineLab source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -11,10 +11,52 @@
 - Phase 5 implementation commit: `d4966b7`
 - Phase 7 implementation commit: `5430d46`
 - Phase 8 implementation commit: `09bb543`
-- Execution branch: `codex/phase-9-torqueshed-marketplace-community`
+- Phase 10A merge base: `aa0c719`
+- Execution branch: `codex/phase-10a-faultlinelab-completion`
 - Release gate: **closed**
 
 ## Current verdict
+
+Phase 10A now has a dedicated persistent FaultlineLab product surface rather
+than the generic workflow shell. Four complete cases pinned to source commit
+`46877aae35565149ccf4f4988dd94627fc6bb92b` initialize idempotently as
+tenant-scoped immutable versions. Authoring, tenant publication, daily and
+Chaos attempts, assignments, append-only action/submission evidence,
+server-only scoring, progress/badges, private proof attachments, analytics,
+CSV/JSON exports, and stable deep links are implemented. The 52 incomplete
+source catalog cards remain explicitly non-playable.
+
+Fresh Phase 10A evidence passes: 11/11 focused domain/import/static/deep-link/
+release contracts; 1/1 real PostgreSQL workflow covering persistence,
+idempotency, viewer denial, cross-tenant non-enumeration, locked evidence,
+server scoring, assignments, stale writes, append-only triggers and restart;
+the deterministic dry-run; API/runner/web typecheck; the additive 21-step
+release plan/apply; and the configured production build with 20 generated
+pages. No certificate claim, standalone authority, child billing, or child
+migration was activated.
+
+FaultlineLab is now a source/local state 4 candidate. The compiled 21-step
+supervisor reached Fastify and Next readiness, canonical HTTPS `/healthz` and
+`/readyz` returned 200, and the production-host Playwright matrix passed 3/3.
+The added browser workflow launches FaultlineLab through My Apps, creates and
+server-scores a persisted attempt, refreshes its canonical `/sessions/:id`
+deep link, returns to OperatorOS, proves global logout invalidates the module
+session, reauthenticates, and reopens the same score. The first unchanged SSO
+run exposed a stable-shell selector regression (1/2); the compatibility fix
+and related full rerun passed. A fresh isolated PostgreSQL workflow also passed
+1/1 for tenant isolation, viewer denial, scoring, immutability, and persistence.
+
+FaultlineLab remains below state 5 because this revision has not been deployed
+and no standalone export/apply/reconciliation/cutover was authorized. The full
+API harness is also not green on current `main`: a schema-bootstrap run after
+the scoped workflow reports unrelated later-module DDL gaps, while a fresh release-applied
+run reports fixture collisions
+with the seeded module catalog; both also reproduce stale source-byte and
+legacy route-format assertions. These failures predate or are outside the
+FaultlineLab scope and were not converted to skips.
+
+The Phase 9 narrative below is retained as historical evidence for the merge
+base; this Phase 10A verdict supersedes it as the current execution status.
 
 The Phase 9 branch extends the Phase 7 automotive foundation and Phase 8
 Torque Assist/accounting candidate with tenant-scoped Marketplace and

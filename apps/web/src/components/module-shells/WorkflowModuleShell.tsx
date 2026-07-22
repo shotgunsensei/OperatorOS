@@ -1,7 +1,7 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, ArrowLeft, CheckCircle2, FileCheck2, FlaskConical, Megaphone, Plus, Trash2, Wrench, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, FileCheck2, Megaphone, Plus, Trash2, Wrench, type LucideIcon } from 'lucide-react';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import {
   moduleShellApi,
@@ -30,13 +30,6 @@ const CONFIG: Record<NativeWorkflowModuleSlug, {
     titleLabel: 'Vehicle or system', titlePlaceholder: '2018 Ford F-150 — intermittent misfire',
     summaryLabel: 'Symptoms, codes, and initial theory', summaryPlaceholder: 'P0302 under load; coil swap moved the miss…',
     contextLabel: 'VIN / mileage / work order', contextPlaceholder: 'WO-1042 · 87,200 mi', accent: '#f59e0b', Icon: Wrench,
-  },
-  faultlinelab: {
-    name: 'FaultlineLab', eyebrow: 'Evidence-driven troubleshooting',
-    description: 'Capture hard failures as reusable diagnostic labs with evidence and validated conclusions.',
-    titleLabel: 'Failure or challenge', titlePlaceholder: 'Branch office loses DNS every afternoon',
-    summaryLabel: 'Evidence and working hypothesis', summaryPlaceholder: 'Packet captures show upstream SERVFAIL bursts…',
-    contextLabel: 'Domain / environment', contextPlaceholder: 'Networking · Production', accent: '#a855f7', Icon: FlaskConical,
   },
   brandforgeos: {
     name: 'BrandForgeOS', eyebrow: 'Campaign production board',
