@@ -1,5 +1,7 @@
 'use client';
 
+import type { GameState, ShotEvents } from './ninja-pool-hall/types';
+
 const API_BASE = '/api';
 
 const ACTIVE_TENANT_KEY = 'activeTenantId';
@@ -526,6 +528,85 @@ export interface NinjaPoolPracticeProgressInput {
   scratches: number;
 }
 
+export interface NinjaPoolPreferences {
+  aimGuide: boolean;
+  tableSpeed: number;
+  sound: boolean;
+  vibration: boolean;
+  callShotOn8: boolean;
+  threeFoulRule: boolean;
+}
+
+export interface NinjaPoolProfile {
+  id: string | null;
+  displayName: string;
+  preferences: NinjaPoolPreferences;
+  version: number;
+  persisted: boolean;
+  updatedAt: string | null;
+}
+
+export interface NinjaPoolProfileResponse {
+  profile: NinjaPoolProfile;
+  progression: {
+    matchesCompleted: number;
+    wins: number;
+    losses: number;
+    localMatches: number;
+    evidence: 'client_reported_server_rules';
+    competitiveRanking: false;
+  };
+}
+
+export type NinjaPoolMatchMode = 'bot' | 'local';
+export type NinjaPoolMatchStatus = 'active' | 'completed' | 'abandoned';
+
+export interface NinjaPoolMatch {
+  id: string;
+  mode: NinjaPoolMatchMode;
+  status: NinjaPoolMatchStatus;
+  opponentName: string;
+  rulesSettings: NinjaPoolPreferences;
+  logicalState: GameState;
+  winnerSeat: 0 | 1 | null;
+  result: 'win' | 'loss' | 'draw' | 'player_1' | 'player_2' | null;
+  finishReason: string | null;
+  shotCount: number;
+  evidence: 'client_reported_server_rules';
+  rulesVersion: 1;
+  version: number;
+  startedAt: string;
+  completedAt: string | null;
+  abandonedAt: string | null;
+  updatedAt: string;
+  recovered?: boolean;
+}
+
+export interface NinjaPoolShotInput {
+  expectedVersion: number;
+  clientShotId: string;
+  shooterSeat: 0 | 1;
+  calledPocket?: number;
+  eightPocket?: number;
+  events: ShotEvents;
+}
+
+export interface NinjaPoolMatchActionResponse {
+  match: NinjaPoolMatch;
+  outcome: {
+    foul?: boolean;
+    turnContinues?: boolean;
+    potNotes?: string[];
+    currentPlayer: 0 | 1;
+    groupsAssigned?: boolean;
+    groups?: Array<'solids' | 'stripes' | null>;
+    pendingChoice: GameState['pendingChoice'];
+    gameOver?: GameState['gameOver'];
+    evidence: string;
+  };
+  idempotent: boolean;
+}
+
 export type NativeWorkflowModuleSlug = 'torqueshed' | 'brandforgeos' | 'snapproofos';
 
 export interface ModuleWorkflowItem {
@@ -973,6 +1054,44 @@ export const moduleShellApi = {
         method: 'POST',
         body: JSON.stringify({ expectedVersion }),
       }) as Promise<NinjaPoolPracticeSession>,
+    getProfile: (): Promise<NinjaPoolProfileResponse> =>
+      apiFetch('/modules/ninja-pool-hall/profile') as Promise<NinjaPoolProfileResponse>,
+    saveProfile: (
+      input: { expectedVersion: number; displayName: string; preferences: NinjaPoolPreferences },
+    ): Promise<NinjaPoolProfile> => apiFetch('/modules/ninja-pool-hall/profile', {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    }) as Promise<NinjaPoolProfile>,
+    listMatches: (limit = 20): Promise<{ matches: NinjaPoolMatch[] }> =>
+      apiFetch(`/modules/ninja-pool-hall/matches?limit=${encodeURIComponent(String(limit))}`) as Promise<{ matches: NinjaPoolMatch[] }>,
+    getMatch: (id: string): Promise<{ match: NinjaPoolMatch; events: Array<Record<string, unknown>> }> =>
+      apiFetch(`/modules/ninja-pool-hall/matches/${encodeURIComponent(id)}`) as Promise<any>,
+    startMatch: (input: {
+      mode: NinjaPoolMatchMode;
+      opponentName: string;
+      clientStartId: string;
+    }): Promise<NinjaPoolMatch> => apiFetch('/modules/ninja-pool-hall/matches', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }) as Promise<NinjaPoolMatch>,
+    saveMatchShot: (id: string, input: NinjaPoolShotInput): Promise<NinjaPoolMatchActionResponse> =>
+      apiFetch(`/modules/ninja-pool-hall/matches/${encodeURIComponent(id)}/shots`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<NinjaPoolMatchActionResponse>,
+    resolveMatchChoice: (
+      id: string,
+      input: { expectedVersion: number; clientActionId: string; action: 'accept' | 'rerack' },
+    ): Promise<NinjaPoolMatchActionResponse> =>
+      apiFetch(`/modules/ninja-pool-hall/matches/${encodeURIComponent(id)}/choices`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<NinjaPoolMatchActionResponse>,
+    abandonMatch: (id: string, expectedVersion: number): Promise<NinjaPoolMatch> =>
+      apiFetch(`/modules/ninja-pool-hall/matches/${encodeURIComponent(id)}/abandon`, {
+        method: 'POST',
+        body: JSON.stringify({ expectedVersion }),
+      }) as Promise<NinjaPoolMatch>,
   },
   faultlinelab: {
     policy: (): Promise<Record<string, any>> =>

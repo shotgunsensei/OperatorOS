@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-22
-- Phase: **10A FaultlineLab source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
+- Phase: **10B Ninja Pool Hall source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -11,52 +11,69 @@
 - Phase 5 implementation commit: `d4966b7`
 - Phase 7 implementation commit: `5430d46`
 - Phase 8 implementation commit: `09bb543`
-- Phase 10A merge base: `aa0c719`
-- Execution branch: `codex/phase-10a-faultlinelab-completion`
+- Phase 10A accepted revision: `b133bfe`
+- Phase 10B merge base: `b133bfe`
+- Execution branch: `codex/phase-10b-ninja-pool-hall-completion`
 - Release gate: **closed**
 
 ## Current verdict
 
-Phase 10A now has a dedicated persistent FaultlineLab product surface rather
-than the generic workflow shell. Four complete cases pinned to source commit
-`46877aae35565149ccf4f4988dd94627fc6bb92b` initialize idempotently as
-tenant-scoped immutable versions. Authoring, tenant publication, daily and
-Chaos attempts, assignments, append-only action/submission evidence,
-server-only scoring, progress/badges, private proof attachments, analytics,
-CSV/JSON exports, and stable deep links are implemented. The 52 incomplete
-source catalog cards remain explicitly non-playable.
+Phase 10B now has a dedicated persistent Ninja Pool Hall product surface for
+Free Shoot, CPU 8-ball, and local hot-seat. Physics, rules, bot, audio, and
+types are exact hash-pinned promotions from clean source commit
+`62439c4018ec551ce2891800351200c8ab2cb9e7`; the source snapshot remains
+non-executed. Profiles/preferences, structured matches, append-only match
+events, recovery, result detail, and real personal aggregates are tenant/user
+scoped. Unsupported `/host`, `/join`, `/matches`, online relay, rankings,
+rewards, wagering, and verified-skill claims fail closed under ADR-0020.
 
-Fresh Phase 10A evidence passes: 11/11 focused domain/import/static/deep-link/
-release contracts; 1/1 real PostgreSQL workflow covering persistence,
-idempotency, viewer denial, cross-tenant non-enumeration, locked evidence,
-server scoring, assignments, stale writes, append-only triggers and restart;
-the deterministic dry-run; API/runner/web typecheck; the additive 21-step
-release plan/apply; and the configured production build with 20 generated
-pages. No certificate claim, standalone authority, child billing, or child
-migration was activated.
+Continuous physics and CPU selection remain browser-local. The API accepts
+bounded shot facts, requires versions and idempotency, applies promoted rules
+to its logical projection, and stores the result as
+`client_reported_server_rules`. Identity, tenant, entitlement, lifecycle,
+turn/rule state, persistence, timestamps, rate/retention bounds, and aggregate
+authority remain server-side. This evidence is never presented as competitive
+proof or a reward basis.
 
-FaultlineLab is now a source/local state 4 candidate. The compiled 21-step
-supervisor reached Fastify and Next readiness, canonical HTTPS `/healthz` and
-`/readyz` returned 200, and the production-host Playwright matrix passed 3/3.
-The added browser workflow launches FaultlineLab through My Apps, creates and
-server-scores a persisted attempt, refreshes its canonical `/sessions/:id`
-deep link, returns to OperatorOS, proves global logout invalidates the module
-session, reauthenticates, and reopens the same score. The first unchanged SSO
-run exposed a stable-shell selector regression (1/2); the compatibility fix
-and related full rerun passed. A fresh isolated PostgreSQL workflow also passed
-1/1 for tenant isolation, viewer denial, scoring, immutability, and persistence.
+Fresh Phase 10B evidence passes 50/50 focused
+domain/rules/import/route/static contracts and 5/5 profile/match, practice, and
+hard-delete workflows on disposable PostgreSQL;
+the exact five-file/zero-row import dry-run; workspace typecheck; the additive
+22-step release plan and clean apply/idempotent reapply; core production
+preflight; and the production build. The compiled readiness-gated supervisor
+applied all 22 steps, then canonical HTTPS `/healthz` and `/readyz` returned
+healthy with database/auth/SSO/module registry/shared worker configured.
 
-FaultlineLab remains below state 5 because this revision has not been deployed
-and no standalone export/apply/reconciliation/cutover was authorized. The full
-API harness is also not green on current `main`: a schema-bootstrap run after
-the scoped workflow reports unrelated later-module DDL gaps, while a fresh release-applied
-run reports fixture collisions
-with the seeded module catalog; both also reproduce stale source-byte and
-legacy route-format assertions. These failures predate or are outside the
-FaultlineLab scope and were not converted to skips.
+The production-host Playwright matrix passes 4/4 locally. Its Ninja Pool Hall
+scenario launches through My Apps, persists profile preferences, takes real
+canvas shots in CPU and local modes, saves and refreshes a canonical match
+detail, exercises recovery/abandon and mobile navigation, returns to
+OperatorOS, proves global logout invalidates the module session, reauthenticates,
+and confirms the profile persisted. The browser gate exposed two deep-link
+defects; mount-time route synchronization and an explicit fail-closed route map
+were added, then the focused and full matrices passed.
+
+The complete API aggregate is not green: its latest pre-repair run reported
+738 pass, 16 fail, and 6 optional live-HTTP skips out of 760. Fourteen failures
+were repaired and pass in focused reruns (Windows snapshot/line-ending
+portability, stale Phase 10A assertions, and TorqueShed test bootstrap), while
+two deterministic unrelated TorqueShed assertions remain: Assist returns 503
+because the module registry row is unavailable where 402 is expected, and the
+foundation workflow rejects a missing vehicle year where its test expects 200.
+They were not converted to skips or expanded into Phase 10B scope.
+
+Ninja Pool Hall is therefore a source/local state 4 candidate, not state 5 or
+production-ready. This revision has not been deployed, no production backup or
+database mutation was performed, and the source contains no durable dataset to
+apply. An authorized deployment, deployed SSO/return/logout/health/gameplay
+acceptance, and recorded no-data reconciliation/cutover remain required.
+
+A final idempotency audit added rejection for reused start, shot, or choice
+keys carrying different input. The affected PostgreSQL workflow reran 2/2 and
+the full workspace typecheck and production build passed afterward.
 
 The Phase 9 narrative below is retained as historical evidence for the merge
-base; this Phase 10A verdict supersedes it as the current execution status.
+base; this Phase 10B verdict supersedes it as the current execution status.
 
 The Phase 9 branch extends the Phase 7 automotive foundation and Phase 8
 Torque Assist/accounting candidate with tenant-scoped Marketplace and

@@ -12,8 +12,8 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 21);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 21);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 22);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 22);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'free_account_app_backfill');
   assert.ok(
@@ -53,8 +53,13 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   );
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'shared_service_tables')
-      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'faultlinelab_tables'),
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'ninja_pool_hall_tables'),
     'shared services must follow tenant, directory, and active module tables',
+  );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'ninja_pool_hall_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'faultlinelab_tables'),
+    'Ninja Pool Hall tables must follow the previously accepted module foundations',
   );
 
   const api = read('apps/api/src/index.ts');
@@ -87,6 +92,9 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.faultlinelab_sessions'\)/);
   assert.match(releaseSource, /to_regclass\('public\.faultlinelab_session_actions'\)/);
   assert.match(releaseSource, /to_regclass\('public\.faultlinelab_submissions'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.ninja_pool_player_profiles'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.ninja_pool_match_sessions'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.ninja_pool_match_events'\)/);
   assert.match(releaseSource, /to_regclass\('public\.operatoros_token_purchase_intents'\)/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
 });

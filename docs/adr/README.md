@@ -24,6 +24,7 @@ new ADR explicitly supersedes it.
 | ADR-0017 | Torque Assist uses server-selected providers, strict evidence/safety output, signed OperatorOS credits, and an append-only computed-balance ledger with atomic exact debits. | Accepted | `docs/adr/ADR-0017-torque-assist-provider-safety-ledger.md` |
 | ADR-0018 | TorqueShed marketplace/community is authenticated and tenant-scoped; transactions remain off-platform, protection/verification claims are prohibited, and privacy/abuse/moderation controls are server-enforced. | Accepted | `docs/adr/ADR-0018-torqueshed-marketplace-community-policy.md` |
 | ADR-0019 | FaultlineLab uses immutable versioned challenges, append-only investigation evidence, server-only scoring, and no certificate claim; only four validated source cases are playable. | Accepted | `docs/adr/ADR-0019-faultlinelab-server-scored-challenge-boundary.md` |
+| ADR-0020 | Ninja Pool Hall approves Free Shoot, CPU, and hot-seat play; physical simulation remains local, server rules persist explicitly unverified results, and the unauthenticated relay is excluded. | Accepted | `docs/adr/ADR-0020-ninja-pool-hall-local-result-trust-boundary.md` |
 
 ## Required future ADRs
 

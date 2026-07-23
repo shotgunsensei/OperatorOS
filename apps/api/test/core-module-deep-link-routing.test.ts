@@ -69,6 +69,10 @@ test('core module deep links resolve only to live native shell sections', () => 
   assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['analytics'])?.sectionId, 'faultlinelab-analytics');
   assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['challenges', 'challenge-123'])?.sectionId, 'faultlinelab-challenges');
   assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['sessions', 'session-123'])?.sectionId, 'faultlinelab-session');
+  for (const path of ['practice', 'cpu', 'local', 'profile']) {
+    assert.equal(resolveCoreModuleDeepLink('ninja-pool-hall', [path])?.sectionId, 'ninja-pool-hall-shell');
+  }
+  assert.equal(resolveCoreModuleDeepLink('ninja-pool-hall', ['matches', 'match-123'])?.sectionId, 'ninja-pool-hall-shell');
   assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['unknown']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['settings'])?.sectionId, 'techdeck-settings');
 });
@@ -81,6 +85,8 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['tickets', 'ticket-123'])?.sectionId, 'pulsedesk-operations');
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets', 'asset-123']), null);
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['unknown']), null);
+  assert.equal(resolveCoreModuleDeepLink('ninja-pool-hall', ['matches']), null);
+  assert.equal(resolveCoreModuleDeepLink('ninja-pool-hall', ['host']), null);
   assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['dashboard']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['Tickets']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['..']), null);

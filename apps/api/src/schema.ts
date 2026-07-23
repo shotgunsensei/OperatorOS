@@ -1930,6 +1930,95 @@ export const ninjaPoolPracticeSessions = pgTable('ninja_pool_practice_sessions',
     .where(sql`${t.status} = 'active'`),
 ]);
 
+export type NinjaPoolStoredPreferences = {
+  aimGuide: boolean;
+  tableSpeed: number;
+  sound: boolean;
+  vibration: boolean;
+  callShotOn8: boolean;
+  threeFoulRule: boolean;
+};
+
+export type NinjaPoolStoredLogicalState = {
+  balls: Array<{ id: number; pos: { x: number; y: number }; vel: { x: number; y: number }; inPocket: boolean }>;
+  currentPlayer: 0 | 1;
+  players: [{ name: string; group: 'solids' | 'stripes' | null }, { name: string; group: 'solids' | 'stripes' | null }];
+  ballInHand: boolean;
+  ballInHandBehindHeadString?: boolean;
+  groupsAssigned: boolean;
+  gameOver: { winner: 0 | 1 | null; reason: string } | null;
+  shotCount: number;
+  consecutiveFouls?: [number, number];
+  pendingChoice?: { type: '8OnBreak' | 'FailedBreak'; chooser: 0 | 1 } | null;
+};
+
+/** OperatorOS-owned Ninja Pool identity/preferences; never a second login. */
+export const ninjaPoolPlayerProfiles = pgTable('ninja_pool_player_profiles', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  displayName: varchar('display_name', { length: 40 }).notNull(),
+  preferences: jsonb('preferences').$type<NinjaPoolStoredPreferences>().notNull(),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_ninja_pool_profile_tenant_user').on(t.tenantId, t.userId),
+  uniqueIndex('uq_ninja_pool_profile_tenant_id').on(t.tenantId, t.id),
+]);
+
+/**
+ * Structured bot/hot-seat matches. Continuous physics is not stored; this
+ * server-owned projection contains only the deterministic logical rule state.
+ */
+export const ninjaPoolMatchSessions = pgTable('ninja_pool_match_sessions', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  mode: text('mode', { enum: ['bot', 'local'] }).notNull(),
+  status: text('status', { enum: ['active', 'completed', 'abandoned'] }).notNull().default('active'),
+  opponentName: varchar('opponent_name', { length: 40 }).notNull(),
+  rulesSettings: jsonb('rules_settings').$type<NinjaPoolStoredPreferences>().notNull(),
+  logicalState: jsonb('logical_state').$type<NinjaPoolStoredLogicalState>().notNull(),
+  winnerSeat: integer('winner_seat'),
+  result: text('result', { enum: ['win', 'loss', 'draw', 'player_1', 'player_2'] }),
+  finishReason: varchar('finish_reason', { length: 240 }),
+  shotCount: integer('shot_count').notNull().default(0),
+  clientStartId: varchar('client_start_id', { length: 160 }).notNull(),
+  evidence: text('evidence').notNull().default('client_reported_server_rules'),
+  rulesVersion: integer('rules_version').notNull().default(1),
+  version: integer('version').notNull().default(1),
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+  abandonedAt: timestamp('abandoned_at'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_ninja_pool_match_tenant_id').on(t.tenantId, t.id),
+  uniqueIndex('uq_ninja_pool_match_start').on(t.tenantId, t.userId, t.clientStartId),
+  uniqueIndex('uq_ninja_pool_one_active_match')
+    .on(t.tenantId, t.userId)
+    .where(sql`${t.status} = 'active'`),
+  index('idx_ninja_pool_matches_user_history').on(t.tenantId, t.userId, t.startedAt.desc()),
+]);
+
+/** Append-only idempotent shot/choice facts and derived rule outcomes. */
+export const ninjaPoolMatchEvents = pgTable('ninja_pool_match_events', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  matchId: varchar('match_id', { length: 36 }).notNull(),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  sequenceNumber: integer('sequence_number').notNull(),
+  clientActionId: varchar('client_action_id', { length: 160 }).notNull(),
+  eventKind: text('event_kind', { enum: ['shot', 'choice'] }).notNull(),
+  input: jsonb('input').$type<Record<string, unknown>>().notNull(),
+  outcome: jsonb('outcome').$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_ninja_pool_event_sequence').on(t.tenantId, t.matchId, t.sequenceNumber),
+  uniqueIndex('uq_ninja_pool_event_client').on(t.tenantId, t.matchId, t.clientActionId),
+  index('idx_ninja_pool_events_match').on(t.tenantId, t.matchId, t.sequenceNumber),
+]);
+
 /**
  * OperatorOS-owned TradeFlowKit lead pipeline. Identity, subscription, and
  * entitlement authority remain outside the module while conversion links a

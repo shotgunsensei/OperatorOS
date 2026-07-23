@@ -5,6 +5,34 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## Phase 10B follow-up
+
+The Ninja Pool Hall Phase 10B source/local candidate was verified on
+2026-07-22 against disposable PostgreSQL 16 and the compiled production
+artifacts. It provides Free Shoot, CPU 8-ball, local hot-seat, persistent
+profiles/preferences, structured matches, append-only events, server-applied
+logical rules/results, recovery, result detail, personal aggregates, and
+canonical deep links. Continuous physics remains browser-local and every match
+is labeled `client_reported_server_rules`; online rooms, ranking, rewards,
+wagering, and verified competition remain disabled under ADR-0020.
+
+Fresh evidence includes focused domain/rules/import/route/static contracts,
+scoped PostgreSQL persistence/isolation/viewer/hard-delete workflows, exact
+five-file and zero-row dry-run reconciliation, workspace typecheck, clean and
+idempotent 22-step release apply, production preflight/build, compiled
+supervisor startup, and canonical HTTPS health/readiness. The production-host
+browser matrix passes 4/4. Its dedicated scenario persists profile settings,
+takes real canvas shots in CPU and local modes, saves and deep-refreshes a match
+trail, exercises recovery/abandon and mobile navigation, returns through My
+Apps, invalidates the module session through global logout, reauthenticates,
+and confirms persistence without URL or browser-storage credentials.
+
+This follow-up does not change the ecosystem report's **NOT ACCEPTED** verdict
+or claim state 5. The cumulative revision is not deployed and no production
+backup, apply, traffic switch, or cutover was authorized. The full API aggregate
+also remains red on two unrelated deterministic TorqueShed foundation/Assist
+assertions after all Phase 10B and portability failures passed focused reruns.
+
 ## Phase 10A follow-up
 
 The FaultlineLab Phase 10A source/local candidate was verified on 2026-07-22

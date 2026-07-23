@@ -59,6 +59,33 @@ production deployment.
 - Repeat below 700 px and with reduced-motion enabled. Confirm the table,
   controls, history, and touch aiming remain usable.
 
+## CPU and Local 8-ball
+
+- Open `/cpu`, start a match, and confirm the real canvas rack, aim/power
+  controls, turn/rule HUD, and CPU opponent are usable. Take at least one real
+  player shot and allow the CPU to take a rules-driven shot.
+- Open `/local`, enter a bounded guest display name, start a hot-seat match,
+  and take shots for both local players. Confirm turn, group, foul,
+  ball-in-hand, call-shot-on-8, three-foul, and game-over choices come only
+  from server-applied rule state.
+- Confirm every shot uses a unique idempotency key and expected match version.
+  Retry the same key with the same facts and confirm the original response is
+  returned; reuse it with different facts and confirm a controlled conflict.
+- Confirm the API rejects impossible 8-ball claims, including `eightPocket`
+  without pocketing ball 8 and call-shot-on-8 without an explicit pocket.
+- Complete or abandon a match, open `/matches/:id`, refresh the browser, and
+  confirm the saved logical event trail and result persist. Recovery must not
+  invent continuous ball positions after reload.
+- Open `/profile`, update display/preferences, reload, and confirm persistence.
+  Exercise a stale profile version and confirm the conflict response contains
+  only the safe profile projection, not tenant/user identifiers.
+- Confirm personal totals reflect only durable completed match results and are
+  labeled as local/client-reported evidence, with no XP, achievement,
+  leaderboard, reward, wager, or verified-skill claim.
+- Confirm `/host`, `/join`, `/matches`, and `/ws/pool` do not present functional
+  online or unsupported routes. Direct visits must fail closed without a
+  redirect loop.
+
 ## Authority and Input Validation
 
 Use two tenants and two entitled users in one tenant so both isolation layers
@@ -78,6 +105,10 @@ are tested.
   the stale write returns `409 NINJA_POOL_PRACTICE_VERSION_CONFLICT`.
 - Attempt progress or abandon after completion/abandonment and confirm the
   finalized-state conflict is controlled and does not modify the row.
+- Repeat foreign-tenant, foreign-user, nonexistent-ID, viewer, stale-version,
+  and finalized-state checks for match/profile endpoints. Confirm foreign
+  resources are never enumerated and viewers cannot start, shoot, abandon, or
+  update profiles.
 - Grant module-level `viewer` access and confirm history remains readable while
   start, progress, and abandon return HTTP 403
   `TENANT_MODULE_WRITE_ACCESS_REQUIRED`. Repeat with a tenant-level `viewer`
@@ -103,6 +134,16 @@ SELECT tenant_id, user_id, action, entity_id, metadata, created_at
 FROM activity_feed
 WHERE entity_type = 'ninja_pool_practice_session'
 ORDER BY created_at DESC;
+
+SELECT tenant_id, user_id, mode, status, version, logical_state,
+       winner_seat, result, finish_reason, started_at, updated_at
+FROM ninja_pool_match_sessions
+ORDER BY tenant_id, user_id, started_at DESC;
+
+SELECT match_id, tenant_id, user_id, sequence_number, event_kind,
+       input, outcome, created_at
+FROM ninja_pool_match_events
+ORDER BY match_id, sequence_number;
 ```
 
 Confirm every row has valid tenant and user foreign keys, statuses are limited
@@ -114,27 +155,26 @@ metadata containing only counters, `mode: local_practice`, and
 or personal data should be present. These summaries must not be used as
 verified proof, ranking, anti-cheat evidence, or an authoritative physics log.
 
-Restart the API twice against the verification database and confirm the table,
-constraints, and indexes remain intact. The complete clean-PostgreSQL suite ran
-619 tests with 613 passed, 0 failed, and 6 live-HTTP checks skipped because no
-Next development server was running. It includes the Ninja Pool tenant-viewer,
-isolation, lifecycle, retention, recovery, and hard-delete assertions. Focused
-SSO remains 38/38 and tenant RBAC remains 12/12. Re-run the focused Ninja Pool
-database test after every route, role, DDL, or lifecycle change; a passing
-isolated run is not a substitute for the pending production browser smoke.
+Restart the API twice against the verification database and confirm the tables,
+constraints, append-only trigger, and indexes remain intact. Re-run the focused
+Ninja Pool database/domain/import/route tests after every route, role, DDL,
+lifecycle, engine, or rule change. A passing isolated run is not a substitute
+for the production-artifact browser gate or deployed acceptance.
 
 ## Quarantine Checks
 
-- Confirm the active web bundle imports physics and types only from
+- Confirm the active web bundle imports physics, types, rules, bot, and audio
+  only from
   `apps/web/src/lib/ninja-pool-hall/`, never from the imported source snapshot.
 - Confirm browser network traffic contains no `/ws/pool` connection, live-room
   request, ranking request, child auth request, or child billing request.
 - Treat `apps/modules/ninja-pool-hall/source` as non-executed audit/provenance
-  material. WebSocket rooms, matchmaking, rankings, bot/rule logic, PWA code,
-  Wouter routes, and the standalone server remain out of production scope.
+  material. WebSocket rooms, online matchmaking, rankings, PWA code, Wouter
+  routes, and the standalone server remain out of production scope.
 
-The current native scope is Free Shoot practice only. Full rules, CPU play,
-multiplayer, spin, sound, rankings, and proof-of-skill behavior are not yet
-consolidated and must not be represented as production-ready.
+The current native scope is Free Shoot, CPU 8-ball, and local hot-seat 8-ball.
+Online multiplayer, rankings, rewards, wagering, and proof-of-skill behavior
+are not consolidated and must not be represented as functional or
+production-ready.
 
 No new environment variables are introduced by this workflow.

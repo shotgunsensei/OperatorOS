@@ -17,6 +17,7 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'pulsedesk_tables', kind: 'ddl' },
   { id: 'torqueshed_tables', kind: 'ddl' },
   { id: 'faultlinelab_tables', kind: 'ddl' },
+  { id: 'ninja_pool_hall_tables', kind: 'ddl' },
   { id: 'shared_service_tables', kind: 'ddl' },
   { id: 'plans_and_admin', kind: 'seed' },
   { id: 'launch_fix_pre_seed', kind: 'repair' },
