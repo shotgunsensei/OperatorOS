@@ -17,7 +17,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '../../..');
 
 function readRepoFile(path: string): string {
-  return readFileSync(resolve(repoRoot, path), 'utf8');
+  return readFileSync(resolve(repoRoot, path), 'utf8').replaceAll('\r\n', '\n');
 }
 
 test('TechDeck ticket create normalizes its bounded workflow fields', () => {

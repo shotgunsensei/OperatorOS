@@ -168,6 +168,9 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
     'techdeck_tickets',
     'techdeck_ticket_sequences',
     'module_workflow_items',
+    'ninja_pool_match_events',
+    'ninja_pool_match_sessions',
+    'ninja_pool_player_profiles',
     'ninja_pool_practice_sessions',
     'module_call_logs',
     'module_study_sessions',
@@ -507,6 +510,103 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.getByTestId('faultlinelab-server-score').locator('h2')).toHaveText(scoreValue);
     await expect(modulePage.getByTestId('faultlinelab-server-score').locator('strong')).toHaveText(scoreSummary);
     await assertHostOnlySession(modulePage.context(), 'faultlinelab.operatoros.net');
+    await assertNoBrowserCredentialStorage(modulePage);
+    assertNoCredentialQuery(modulePage.url());
+  });
+
+  test('Ninja Pool Hall persists profile and real CPU/hot-seat shot trails across deep links and global reauthentication', async ({ page, request }) => {
+    test.setTimeout(180_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+
+    await page.goto(`${ROOT}/app`);
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await page.getByTestId('nav-my-apps').click();
+    await expect(page.getByTestId('page-my-apps')).toBeVisible();
+
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByTestId('button-launch-ninja-pool-hall').click();
+    const modulePage = await popupPromise;
+    await expect(modulePage.getByTestId('ninja-pool-hall-shell')).toBeVisible({ timeout: 30_000 });
+    await expect(modulePage.getByTestId('ninja-pool-dashboard')).toBeVisible();
+    await expect(modulePage.getByText('Online room intentionally disabled')).toBeVisible();
+    assertNoCredentialQuery(modulePage.url());
+
+    await modulePage.getByRole('button', { name: 'Profile', exact: true }).click();
+    await expect(modulePage).toHaveURL('https://ninja-pool-hall.operatoros.net/profile');
+    const displayName = modulePage.getByLabel('Display name');
+    await displayName.fill('Phase 10B Table Ninja');
+    await Promise.all([
+      modulePage.waitForResponse(response => response.request().method() === 'PUT'
+        && new URL(response.url()).pathname === '/api/modules/ninja-pool-hall/profile'
+        && response.status() === 200),
+      modulePage.getByRole('button', { name: 'Save profile' }).click(),
+    ]);
+
+    await modulePage.getByRole('button', { name: 'Vs CPU', exact: true }).click();
+    await expect(modulePage.getByTestId('ninja-pool-bot-match')).toBeVisible();
+    await modulePage.getByTestId('ninja-pool-start-match').click();
+    await expect(modulePage).toHaveURL(/^https:\/\/ninja-pool-hall\.operatoros\.net\/matches\/[a-f0-9-]+$/);
+    const cpuMatchUrl = modulePage.url();
+    const shotStartedAt = Date.now();
+    await modulePage.getByTestId('ninja-pool-match-shoot').click();
+    await expect(modulePage.locator('.nphm-history small').filter({ hasText: /[1-9]\d* shots/ }).first()).toBeVisible({ timeout: 20_000 });
+    expect(Date.now() - shotStartedAt, 'a local deterministic shot should settle and persist within the browser budget').toBeLessThan(20_000);
+
+    await modulePage.reload();
+    await expect(modulePage).toHaveURL(cpuMatchUrl);
+    await expect(modulePage.getByTestId('ninja-pool-match-detail')).toBeVisible({ timeout: 20_000 });
+    await expect(modulePage.getByText('active', { exact: true })).toBeVisible();
+    await expect(modulePage.locator('dd').filter({ hasText: /^[1-9]\d*$/ }).first()).toBeVisible();
+
+    await modulePage.getByRole('button', { name: 'Vs CPU', exact: true }).click();
+    await expect(modulePage.getByText('Match recovery required')).toBeVisible({ timeout: 20_000 });
+    await modulePage.getByRole('button', { name: 'End recovered match' }).click();
+    await expect(modulePage.locator('.nphm-history article').filter({ hasText: 'abandoned' }).first()).toBeVisible();
+
+    await modulePage.getByRole('button', { name: 'Local 2P', exact: true }).click();
+    await expect(modulePage.getByTestId('ninja-pool-local-match')).toBeVisible();
+    await modulePage.getByTestId('ninja-pool-start-match').click();
+    await modulePage.getByTestId('ninja-pool-match-shoot').click();
+    await expect(modulePage.locator('.nphm-history small').filter({ hasText: /[1-9]\d* shots/ }).first()).toBeVisible({ timeout: 20_000 });
+    await modulePage.getByRole('button', { name: 'End match' }).click();
+    await expect(modulePage.locator('.nphm-history article').filter({ hasText: 'abandoned' }).first()).toBeVisible();
+
+    await modulePage.setViewportSize({ width: 390, height: 844 });
+    await expect(modulePage.getByRole('navigation', { name: 'Ninja Pool Hall navigation' })).toBeVisible();
+    await expect(modulePage.getByRole('button', { name: 'Profile', exact: true })).toBeVisible();
+
+    await Promise.all([
+      modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      modulePage.getByRole('link', { name: 'My Apps' }).first().click(),
+    ]);
+    const logoutAll = await modulePage.evaluate(async () => {
+      const response = await fetch('/api/auth/logout-all', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return { status: response.status, body: await response.text() };
+    });
+    expect(logoutAll.status, logoutAll.body).toBe(200);
+
+    await modulePage.goto('https://ninja-pool-hall.operatoros.net/profile');
+    await expect(modulePage).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await modulePage.getByTestId('input-email').fill(identity.email);
+    await modulePage.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      modulePage.waitForURL('https://ninja-pool-hall.operatoros.net/profile', { timeout: 30_000 }),
+      modulePage.getByTestId('button-login').click(),
+    ]);
+    await expect(modulePage.getByLabel('Display name')).toHaveValue('Phase 10B Table Ninja');
+    await assertHostOnlySession(modulePage.context(), 'ninja-pool-hall.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
   });

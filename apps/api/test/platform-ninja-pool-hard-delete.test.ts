@@ -10,6 +10,9 @@ import {
   moduleCallLogs,
   moduleScaffolds,
   moduleStudySessions,
+  ninjaPoolMatchEvents,
+  ninjaPoolMatchSessions,
+  ninjaPoolPlayerProfiles,
   ninjaPoolPracticeSessions,
   tenants,
   users,
@@ -20,6 +23,8 @@ import {
   ensureSchemaReady,
   uniqueId,
 } from './_setup.js';
+import { makeLogicalBalls } from '../src/lib/ninja-pool-game.js';
+import { makeInitialGameState } from '../src/lib/ninja-pool-rules.js';
 
 let app: ReturnType<typeof Fastify>;
 let admin: Awaited<ReturnType<typeof createTestUser>>;
@@ -115,10 +120,54 @@ async function cleanupModuleRows(rows: SeededModuleRows) {
   await db.delete(moduleScaffolds).where(eq(moduleScaffolds.id, rows.scaffoldId));
 }
 
+async function seedStructuredPoolRows(userId: string) {
+  const [profile] = await db.insert(ninjaPoolPlayerProfiles).values({
+    tenantId: admin.currentTenantId,
+    userId,
+    displayName: 'Delete Lifecycle Player',
+    preferences: {
+      aimGuide: true,
+      tableSpeed: 1,
+      sound: false,
+      vibration: false,
+      callShotOn8: false,
+      threeFoulRule: false,
+    },
+  }).returning();
+  const [match] = await db.insert(ninjaPoolMatchSessions).values({
+    tenantId: admin.currentTenantId,
+    userId,
+    mode: 'bot',
+    opponentName: 'CPU',
+    rulesSettings: profile.preferences,
+    logicalState: makeInitialGameState(makeLogicalBalls(), ['Delete Lifecycle Player', 'CPU']),
+    clientStartId: `delete-start-${userId}`,
+  }).returning();
+  const [event] = await db.insert(ninjaPoolMatchEvents).values({
+    tenantId: admin.currentTenantId,
+    matchId: match.id,
+    userId,
+    sequenceNumber: 1,
+    clientActionId: `delete-shot-${userId}`,
+    eventKind: 'shot',
+    input: { shooterSeat: 0 },
+    outcome: { currentPlayer: 1, evidence: 'client_reported_server_rules' },
+  }).returning();
+  return { profileId: profile.id, matchId: match.id, eventId: event.id };
+}
+
+async function cleanupStructuredPoolRows(userId: string) {
+  await db.delete(ninjaPoolMatchEvents).where(eq(ninjaPoolMatchEvents.userId, userId));
+  await db.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.userId, userId));
+  await db.delete(ninjaPoolPlayerProfiles).where(eq(ninjaPoolPlayerProfiles.userId, userId));
+}
+
 before(async () => {
   await ensureSchemaReady();
   const { ensureModuleShellTables } = await import('../src/lib/saas-db-init.js');
   await ensureModuleShellTables();
+  const { ensureNinjaPoolHallTables } = await import('../src/lib/ninja-pool-hall-db-init.js');
+  await ensureNinjaPoolHallTables();
   ({ signToken } = await import('../src/lib/auth.js'));
 
   admin = await createTestUser();
@@ -148,6 +197,7 @@ test('user hard-delete removes native module rows and commits its audit atomical
     shots: 4,
     objectBallsPocketed: 3,
   }).returning();
+  const structured = await seedStructuredPoolRows(target.id);
 
   try {
     const response = await app.inject({
@@ -160,6 +210,12 @@ test('user hard-delete removes native module rows and commits its audit atomical
     assert.equal((await db.select().from(users).where(eq(users.id, target.id))).length, 0);
     assert.equal((await db.select().from(ninjaPoolPracticeSessions)
       .where(eq(ninjaPoolPracticeSessions.id, practice.id))).length, 0);
+    assert.equal((await db.select().from(ninjaPoolPlayerProfiles)
+      .where(eq(ninjaPoolPlayerProfiles.id, structured.profileId))).length, 0);
+    assert.equal((await db.select().from(ninjaPoolMatchSessions)
+      .where(eq(ninjaPoolMatchSessions.id, structured.matchId))).length, 0);
+    assert.equal((await db.select().from(ninjaPoolMatchEvents)
+      .where(eq(ninjaPoolMatchEvents.id, structured.eventId))).length, 0);
     await assertModuleRows(moduleRows, 0);
 
     const audits = await db.select().from(adminAuditLogs).where(and(
@@ -171,6 +227,7 @@ test('user hard-delete removes native module rows and commits its audit atomical
     assert.equal((audits[0].details as Record<string, unknown>).targetId, target.id);
   } finally {
     await cleanupModuleRows(moduleRows);
+    await cleanupStructuredPoolRows(target.id);
     await db.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.id, practice.id));
     await db.delete(adminAuditLogs).where(eq(adminAuditLogs.targetUserId, target.id));
     await db.delete(users).where(eq(users.id, target.id));
@@ -186,6 +243,7 @@ test('user hard-delete rolls module cleanup and audit back when a later FK block
     shots: 5,
     objectBallsPocketed: 4,
   }).returning();
+  const structured = await seedStructuredPoolRows(target.id);
   const [ownedTenant] = await db.insert(tenants).values({
     name: 'Intentional Delete Blocker',
     slug: `nph-user-block-${uniqueId('t').replace(/_/g, '-')}`,
@@ -206,6 +264,12 @@ test('user hard-delete rolls module cleanup and audit back when a later FK block
     assert.equal((await db.select().from(users).where(eq(users.id, target.id))).length, 1);
     assert.equal((await db.select().from(ninjaPoolPracticeSessions)
       .where(eq(ninjaPoolPracticeSessions.id, practice.id))).length, 1);
+    assert.equal((await db.select().from(ninjaPoolPlayerProfiles)
+      .where(eq(ninjaPoolPlayerProfiles.id, structured.profileId))).length, 1);
+    assert.equal((await db.select().from(ninjaPoolMatchSessions)
+      .where(eq(ninjaPoolMatchSessions.id, structured.matchId))).length, 1);
+    assert.equal((await db.select().from(ninjaPoolMatchEvents)
+      .where(eq(ninjaPoolMatchEvents.id, structured.eventId))).length, 1);
     await assertModuleRows(moduleRows, 1);
     const audits = await db.select().from(adminAuditLogs).where(and(
       eq(adminAuditLogs.adminId, admin.id),
@@ -215,6 +279,7 @@ test('user hard-delete rolls module cleanup and audit back when a later FK block
     assert.equal(audits.length, 0, 'failed transaction must not retain its audit row');
   } finally {
     await cleanupModuleRows(moduleRows);
+    await cleanupStructuredPoolRows(target.id);
     await db.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.id, practice.id));
     await db.delete(tenants).where(eq(tenants.id, ownedTenant.id));
     await db.delete(adminAuditLogs).where(eq(adminAuditLogs.targetUserId, target.id));

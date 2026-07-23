@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 18 ordered step identifiers without secrets
+`db:plan` is read-only and prints 22 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -118,6 +118,21 @@ accepted backup.
 
 The dump was kept only under ignored `test-results` while evidence was being
 captured. It is not a release artifact and must not be committed.
+
+## Phase 10B additive release rehearsal
+
+On 2026-07-22 the reviewed 22-step manifest, including
+`ninja_pool_hall_tables`, was applied to a clean disposable PostgreSQL 16
+database and immediately applied again. Both runs completed and verified all
+22 steps. The compiled unified supervisor repeated the release successfully
+before declaring Fastify/Next ready; canonical HTTPS `/healthz` and `/readyz`
+then passed.
+
+This was a schema/release rehearsal, not a backup/restore rehearsal and not a
+production operation. No production snapshot, logical dump, restore, apply,
+traffic switch, or source-data import occurred. Before deployment, execute the
+full backup and restore procedure above against an authorized isolated target
+and record the exact deployed revision and backup evidence.
 
 ## Phase 2 schema-apply rehearsal
 

@@ -96,6 +96,12 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/authoring': { sectionId: 'faultlinelab-authoring', label: 'Challenge Authoring' },
     '/analytics': { sectionId: 'faultlinelab-analytics', label: 'Tenant Analytics' },
   },
+  'ninja-pool-hall': {
+    '/practice': { sectionId: 'ninja-pool-hall-shell', label: 'Free Shoot' },
+    '/cpu': { sectionId: 'ninja-pool-hall-shell', label: 'CPU Match' },
+    '/local': { sectionId: 'ninja-pool-hall-shell', label: 'Local Match' },
+    '/profile': { sectionId: 'ninja-pool-hall-shell', label: 'Player Profile' },
+  },
 };
 
 const SAFE_PATH_SEGMENT = /^[a-z0-9-]+$/;
@@ -143,6 +149,10 @@ export function resolveCoreModuleDeepLink(
     const [resource] = pathSegments;
     if (resource === 'challenges') return { sectionId: 'faultlinelab-challenges', label: 'Challenge' };
     if (resource === 'sessions') return { sectionId: 'faultlinelab-session', label: 'Investigation' };
+  }
+  if (slug === 'ninja-pool-hall' && pathSegments.length === 2) {
+    const [resource] = pathSegments;
+    if (resource === 'matches') return { sectionId: 'ninja-pool-hall-shell', label: 'Saved Match' };
   }
   return null;
 }

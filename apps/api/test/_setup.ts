@@ -6,6 +6,7 @@ import {
   tenantEntitlements,
   saasWorkspaces, saasProjects, saasTasks, notes, activityFeed,
   usageTracking, aiActionsLog, aiPromptTemplates,
+  ninjaPoolMatchEvents, ninjaPoolMatchSessions, ninjaPoolPlayerProfiles,
   ninjaPoolPracticeSessions,
   moduleWorkflowItems,
   techdeckTickets, techdeckTicketSequences, techdeckAssets, techdeckRunbooks,
@@ -73,6 +74,10 @@ export async function ensureSchemaReady() {
   await ensureTechDeckTables();
   const { ensurePulseDeskTables } = await import('../src/lib/pulsedesk-db-init.js');
   await ensurePulseDeskTables();
+  const { ensureTorqueShedTables } = await import('../src/lib/torqueshed-db-init.js');
+  await ensureTorqueShedTables();
+  const { ensureNinjaPoolHallTables } = await import('../src/lib/ninja-pool-hall-db-init.js');
+  await ensureNinjaPoolHallTables();
   const { ensureSharedServiceTables } = await import('../src/lib/shared-services-db-init.js');
   await ensureSharedServiceTables();
   await ensureTestPlans();
@@ -137,6 +142,9 @@ export async function cleanupUser(userId: string) {
   try { await db.delete(billingEvents).where(eq(billingEvents.userId, userId)); } catch {}
   try { await db.delete(ssoHandoffTokens).where(eq(ssoHandoffTokens.userId, userId)); } catch {}
   try { await db.delete(revokedSessionTokens).where(eq(revokedSessionTokens.userId, userId)); } catch {}
+  try { await db.delete(ninjaPoolMatchEvents).where(eq(ninjaPoolMatchEvents.userId, userId)); } catch {}
+  try { await db.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.userId, userId)); } catch {}
+  try { await db.delete(ninjaPoolPlayerProfiles).where(eq(ninjaPoolPlayerProfiles.userId, userId)); } catch {}
   try { await db.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.userId, userId)); } catch {}
   try { await db.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.createdByUserId, userId)); } catch {}
   try { await db.delete(techdeckTickets).where(eq(techdeckTickets.createdByUserId, userId)); } catch {}

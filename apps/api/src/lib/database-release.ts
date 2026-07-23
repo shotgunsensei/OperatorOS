@@ -21,6 +21,7 @@ import { ensureTechDeckTables } from './techdeck-db-init.js';
 import { ensurePulseDeskTables } from './pulsedesk-db-init.js';
 import { ensureTorqueShedTables } from './torqueshed-db-init.js';
 import { ensureFaultlineLabTables } from './faultlinelab-db-init.js';
+import { ensureNinjaPoolHallTables } from './ninja-pool-hall-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -43,6 +44,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   pulsedesk_tables: ensurePulseDeskTables,
   torqueshed_tables: ensureTorqueShedTables,
   faultlinelab_tables: ensureFaultlineLabTables,
+  ninja_pool_hall_tables: ensureNinjaPoolHallTables,
   shared_service_tables: ensureSharedServiceTables,
   plans_and_admin: seedPlansAndAdmin,
   launch_fix_pre_seed: launchFixPreSeed,
@@ -85,6 +87,9 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.faultlinelab_sessions') IS NOT NULL AS faultlinelab_sessions,
       to_regclass('public.faultlinelab_session_actions') IS NOT NULL AS faultlinelab_session_actions,
       to_regclass('public.faultlinelab_submissions') IS NOT NULL AS faultlinelab_submissions,
+      to_regclass('public.ninja_pool_player_profiles') IS NOT NULL AS ninja_pool_player_profiles,
+      to_regclass('public.ninja_pool_match_sessions') IS NOT NULL AS ninja_pool_match_sessions,
+      to_regclass('public.ninja_pool_match_events') IS NOT NULL AS ninja_pool_match_events,
       to_regclass('public.operatoros_token_purchase_intents') IS NOT NULL AS operatoros_token_purchase_intents,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);

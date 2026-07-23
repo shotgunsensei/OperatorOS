@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import {
   existsSync,
   lstatSync,
@@ -79,6 +80,17 @@ function walkFiles(root: string): string[] {
   return files;
 }
 
+function assertSnapshotMatchesIndex(sourceRoot: string): void {
+  const relativeRoot = relative(repositoryRoot, sourceRoot).replaceAll('\\', '/');
+  execFileSync('git', ['diff', '--quiet', '--', relativeRoot], { cwd: repositoryRoot });
+  const untracked = execFileSync(
+    'git',
+    ['ls-files', '--others', '--exclude-standard', '--', relativeRoot],
+    { cwd: repositoryRoot, encoding: 'utf8' },
+  );
+  assert.equal(untracked.trim(), '', 'snapshot contains untracked files');
+}
+
 const forbiddenDirectory = /(^|\/)(?:\.git|\.agents|\.openai|\.migration-backup|\.backup|backups?|\.replit-artifact|mockup-sandbox|design-audit|node_modules|dist|build|\.next|coverage|\.cache|\.turbo|\.vercel|playwright-report|test-results|tmp|temp|uploads?)(\/|$)/i;
 const forbiddenFile = /(^|\/)(?:\.env(?:\..*)?|\.replit(?:ignore)?(?:\..*)?|id_rsa(?:\.pub)?|id_ed25519(?:\.pub)?|credentials\.json|service-account[^/]*\.json)$|\.(?:pem|key|p12|pfx|jks|keystore|sqlite|sqlite3|db|log)$/i;
 const highConfidenceSecrets = [
@@ -108,10 +120,10 @@ for (const snapshot of snapshots) {
     const files = walkFiles(sourceRoot);
     const importedFiles = files.filter((file) => file !== manifestPath);
     assert.equal(importedFiles.length, manifest.fileCount);
-    assert.equal(
-      importedFiles.reduce((sum, file) => sum + statSync(file).size, 0),
-      manifest.totalBytes,
-    );
+    assert.ok(Number.isSafeInteger(manifest.totalBytes) && manifest.totalBytes > 0);
+    // Raw working-tree byte counts are not stable under Git's platform line-ending
+    // filters. A clean index comparison is the portable content-integrity check.
+    assertSnapshotMatchesIndex(sourceRoot);
 
     for (const file of importedFiles) {
       const path = relative(sourceRoot, file).replaceAll('\\', '/');

@@ -11,10 +11,10 @@ function readRepoFile(path: string): string {
   return readFileSync(resolve(repoRoot, path), 'utf8');
 }
 
-test('Ninja Pool persistence stores only tenant/user-scoped practice summaries', () => {
+test('Ninja Pool practice persistence remains a tenant/user-scoped bounded summary', () => {
   const schema = readRepoFile('apps/api/src/schema.ts');
   const start = schema.indexOf('export const ninjaPoolPracticeSessions');
-  const end = schema.indexOf(' * OperatorOS-owned TradeFlowKit lead pipeline.', start);
+  const end = schema.indexOf('export type NinjaPoolStoredPreferences', start);
   assert.ok(start >= 0 && end > start, 'Ninja Pool practice schema block should exist');
   const block = schema.slice(start, end);
 
@@ -58,17 +58,25 @@ test('Ninja Pool routes use OperatorOS tenant/module guards on the complete rout
   assert.match(routes, /const ninjaPoolReadGuards = \[requireTenantModuleAccess\('ninja-pool-hall'\)\]/);
   assert.match(routes, /const ninjaPoolWriteGuards = \[\.\.\.ninjaPoolReadGuards, requireTenantModuleWriteAccess\]/);
 
-  const registered = [...routes.matchAll(/app\.(get|post|patch|delete)\(\s*'([^']+)'/g)]
+  const registered = [...routes.matchAll(/app\.(get|post|put|patch|delete)\(\s*'([^']+)'/g)]
     .map((match) => `${match[1]} ${match[2]}`)
     .sort();
   assert.deepEqual(registered, [
+    'get /v1/modules/ninja-pool-hall/matches',
+    'get /v1/modules/ninja-pool-hall/matches/:id',
     'get /v1/modules/ninja-pool-hall/practice-sessions',
+    'get /v1/modules/ninja-pool-hall/profile',
     'patch /v1/modules/ninja-pool-hall/practice-sessions/:id',
+    'post /v1/modules/ninja-pool-hall/matches',
+    'post /v1/modules/ninja-pool-hall/matches/:id/abandon',
+    'post /v1/modules/ninja-pool-hall/matches/:id/choices',
+    'post /v1/modules/ninja-pool-hall/matches/:id/shots',
     'post /v1/modules/ninja-pool-hall/practice-sessions',
     'post /v1/modules/ninja-pool-hall/practice-sessions/:id/abandon',
+    'put /v1/modules/ninja-pool-hall/profile',
   ]);
-  assert.equal((routes.match(/preHandler: \[\.\.\.ninjaPoolReadGuards\]/g) ?? []).length, 1);
-  assert.equal((routes.match(/preHandler: \[\.\.\.ninjaPoolWriteGuards\]/g) ?? []).length, 3);
+  assert.equal((routes.match(/preHandler: \[\.\.\.ninjaPoolReadGuards\]/g) ?? []).length, 4);
+  assert.equal((routes.match(/preHandler: \[\.\.\.ninjaPoolWriteGuards\]/g) ?? []).length, 8);
 });
 
 test('practice lookups and mutations enforce both tenant and user ownership', () => {
