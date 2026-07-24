@@ -607,7 +607,106 @@ export interface NinjaPoolMatchActionResponse {
   idempotent: boolean;
 }
 
-export type NativeWorkflowModuleSlug = 'torqueshed' | 'brandforgeos' | 'snapproofos';
+export interface BrandForgeBrand {
+  id: string;
+  name: string;
+  description: string | null;
+  primaryColor: string | null;
+  secondaryColor: string | null;
+  accentColor: string | null;
+  headingFont: string | null;
+  bodyFont: string | null;
+  voiceTone: string | null;
+  guidelines: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BrandForgePersona {
+  id: string;
+  name: string;
+  ageRange: string | null;
+  location: string | null;
+  interests: string | null;
+  painPoints: string | null;
+  goals: string | null;
+  channels: string[];
+  description: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BrandForgeCampaign {
+  id: string;
+  brandId: string | null;
+  personaId: string | null;
+  name: string;
+  objective: string | null;
+  targetAudience: string | null;
+  coreMessage: string | null;
+  offer: string | null;
+  status: 'draft' | 'planning' | 'producing' | 'review' | 'scheduled' | 'active' | 'completed' | 'archived';
+  channels: string[];
+  startAt: string | null;
+  endAt: string | null;
+  budgetCents: number | null;
+  notes: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BrandForgeCopyAsset {
+  id: string;
+  brandId: string | null;
+  campaignId: string | null;
+  title: string;
+  content: string;
+  copyType: string;
+  channel: string | null;
+  tone: string | null;
+  status: 'draft' | 'review' | 'approved' | 'published' | 'archived';
+  generationId: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BrandForgeCalendarItem {
+  id: string;
+  brandId: string | null;
+  campaignId: string | null;
+  copyAssetId: string | null;
+  title: string;
+  description: string | null;
+  itemType: string;
+  channel: string | null;
+  scheduledAt: string;
+  status: 'idea' | 'draft' | 'review' | 'scheduled' | 'published' | 'cancelled';
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BrandForgeGeneration {
+  id: string;
+  brandId: string | null;
+  campaignId: string | null;
+  generationType: 'copy' | 'strategy' | 'campaign_ideas';
+  idempotencyKey: string;
+  inputSummary: Record<string, unknown>;
+  output: Record<string, unknown>;
+  provider: string;
+  model: string;
+  providerVersion: string;
+  tokenCount: number;
+  durationMs: number;
+  createdAt: string;
+}
+
+export type NativeWorkflowModuleSlug = 'torqueshed' | 'snapproofos';
 
 export interface ModuleWorkflowItem {
   id: string;
@@ -1092,6 +1191,60 @@ export const moduleShellApi = {
         method: 'POST',
         body: JSON.stringify({ expectedVersion }),
       }) as Promise<NinjaPoolMatch>,
+  },
+  brandforgeos: {
+    dashboard: (): Promise<Record<string, any>> =>
+      apiFetch('/modules/brandforgeos/dashboard') as Promise<Record<string, any>>,
+    workspace: (): Promise<Record<string, any>> =>
+      apiFetch('/modules/brandforgeos/workspace') as Promise<Record<string, any>>,
+    saveWorkspace: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/brandforgeos/workspace', { method: 'PUT', body: JSON.stringify(input) }) as Promise<Record<string, any>>,
+    listBrands: (): Promise<{ brands: BrandForgeBrand[] }> =>
+      apiFetch('/modules/brandforgeos/brands') as Promise<{ brands: BrandForgeBrand[] }>,
+    createBrand: (input: Record<string, unknown>): Promise<BrandForgeBrand> =>
+      apiFetch('/modules/brandforgeos/brands', { method: 'POST', body: JSON.stringify(input) }) as Promise<BrandForgeBrand>,
+    updateBrand: (id: string, input: Record<string, unknown>): Promise<BrandForgeBrand> =>
+      apiFetch(`/modules/brandforgeos/brands/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<BrandForgeBrand>,
+    deleteBrand: (id: string): Promise<{ ok: true }> =>
+      apiFetch(`/modules/brandforgeos/brands/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<{ ok: true }>,
+    listPersonas: (): Promise<{ personas: BrandForgePersona[] }> =>
+      apiFetch('/modules/brandforgeos/personas') as Promise<{ personas: BrandForgePersona[] }>,
+    createPersona: (input: Record<string, unknown>): Promise<BrandForgePersona> =>
+      apiFetch('/modules/brandforgeos/personas', { method: 'POST', body: JSON.stringify(input) }) as Promise<BrandForgePersona>,
+    updatePersona: (id: string, input: Record<string, unknown>): Promise<BrandForgePersona> =>
+      apiFetch(`/modules/brandforgeos/personas/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<BrandForgePersona>,
+    deletePersona: (id: string): Promise<{ ok: true }> =>
+      apiFetch(`/modules/brandforgeos/personas/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<{ ok: true }>,
+    listCampaigns: (): Promise<{ campaigns: BrandForgeCampaign[] }> =>
+      apiFetch('/modules/brandforgeos/campaigns') as Promise<{ campaigns: BrandForgeCampaign[] }>,
+    createCampaign: (input: Record<string, unknown>): Promise<BrandForgeCampaign> =>
+      apiFetch('/modules/brandforgeos/campaigns', { method: 'POST', body: JSON.stringify(input) }) as Promise<BrandForgeCampaign>,
+    updateCampaign: (id: string, input: Record<string, unknown>): Promise<BrandForgeCampaign> =>
+      apiFetch(`/modules/brandforgeos/campaigns/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<BrandForgeCampaign>,
+    deleteCampaign: (id: string): Promise<{ ok: true }> =>
+      apiFetch(`/modules/brandforgeos/campaigns/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<{ ok: true }>,
+    addMetric: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/campaigns/${encodeURIComponent(id)}/metrics`, { method: 'POST', body: JSON.stringify(input) }) as Promise<Record<string, any>>,
+    listCopyAssets: (): Promise<{ copyAssets: BrandForgeCopyAsset[] }> =>
+      apiFetch('/modules/brandforgeos/copy-assets') as Promise<{ copyAssets: BrandForgeCopyAsset[] }>,
+    createCopyAsset: (input: Record<string, unknown>): Promise<BrandForgeCopyAsset> =>
+      apiFetch('/modules/brandforgeos/copy-assets', { method: 'POST', body: JSON.stringify(input) }) as Promise<BrandForgeCopyAsset>,
+    updateCopyAsset: (id: string, input: Record<string, unknown>): Promise<BrandForgeCopyAsset> =>
+      apiFetch(`/modules/brandforgeos/copy-assets/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<BrandForgeCopyAsset>,
+    deleteCopyAsset: (id: string): Promise<{ ok: true }> =>
+      apiFetch(`/modules/brandforgeos/copy-assets/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<{ ok: true }>,
+    listCalendar: (): Promise<{ calendarItems: BrandForgeCalendarItem[] }> =>
+      apiFetch('/modules/brandforgeos/calendar-items') as Promise<{ calendarItems: BrandForgeCalendarItem[] }>,
+    createCalendar: (input: Record<string, unknown>): Promise<BrandForgeCalendarItem> =>
+      apiFetch('/modules/brandforgeos/calendar-items', { method: 'POST', body: JSON.stringify(input) }) as Promise<BrandForgeCalendarItem>,
+    updateCalendar: (id: string, input: Record<string, unknown>): Promise<BrandForgeCalendarItem> =>
+      apiFetch(`/modules/brandforgeos/calendar-items/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<BrandForgeCalendarItem>,
+    deleteCalendar: (id: string): Promise<{ ok: true }> =>
+      apiFetch(`/modules/brandforgeos/calendar-items/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<{ ok: true }>,
+    listGenerations: (): Promise<{ generations: BrandForgeGeneration[]; provider: { name: string; configured: boolean } }> =>
+      apiFetch('/modules/brandforgeos/generations') as Promise<any>,
+    generate: (input: Record<string, unknown>): Promise<{ generation: BrandForgeGeneration }> =>
+      apiFetch('/modules/brandforgeos/generations', { method: 'POST', body: JSON.stringify(input) }) as Promise<{ generation: BrandForgeGeneration }>,
   },
   faultlinelab: {
     policy: (): Promise<Record<string, any>> =>

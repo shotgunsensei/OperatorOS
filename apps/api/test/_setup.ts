@@ -11,6 +11,9 @@ import {
   moduleWorkflowItems,
   techdeckTickets, techdeckTicketSequences, techdeckAssets, techdeckRunbooks,
   tradeflowkitInvoices, tradeflowkitQuotes, tradeflowkitJobs, tradeflowkitCustomers,
+  brandforgeCalendarItems, brandforgeCopyAssets, brandforgeCampaignMetrics,
+  brandforgeGenerations, brandforgeCampaigns, brandforgePersonas,
+  brandforgeBrands, brandforgeWorkspaceSettings,
 } from '../src/schema.js';
 import { eq, inArray, sql } from 'drizzle-orm';
 
@@ -78,6 +81,8 @@ export async function ensureSchemaReady() {
   await ensureTorqueShedTables();
   const { ensureNinjaPoolHallTables } = await import('../src/lib/ninja-pool-hall-db-init.js');
   await ensureNinjaPoolHallTables();
+  const { ensureBrandForgeOsTables } = await import('../src/lib/brandforgeos-db-init.js');
+  await ensureBrandForgeOsTables();
   const { ensureSharedServiceTables } = await import('../src/lib/shared-services-db-init.js');
   await ensureSharedServiceTables();
   await ensureTestPlans();
@@ -195,6 +200,14 @@ export async function cleanupUser(userId: string) {
       try { await db.execute(sql`DELETE FROM techdeck_documents WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM techdeck_document_folders WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM techdeck_migration_refs WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.delete(brandforgeCalendarItems).where(eq(brandforgeCalendarItems.tenantId, t.id)); } catch {}
+      try { await db.delete(brandforgeCopyAssets).where(eq(brandforgeCopyAssets.tenantId, t.id)); } catch {}
+      try { await db.delete(brandforgeCampaignMetrics).where(eq(brandforgeCampaignMetrics.tenantId, t.id)); } catch {}
+      try { await db.delete(brandforgeGenerations).where(eq(brandforgeGenerations.tenantId, t.id)); } catch {}
+      try { await db.delete(brandforgeCampaigns).where(eq(brandforgeCampaigns.tenantId, t.id)); } catch {}
+      try { await db.delete(brandforgePersonas).where(eq(brandforgePersonas.tenantId, t.id)); } catch {}
+      try { await db.delete(brandforgeBrands).where(eq(brandforgeBrands.tenantId, t.id)); } catch {}
+      try { await db.delete(brandforgeWorkspaceSettings).where(eq(brandforgeWorkspaceSettings.tenantId, t.id)); } catch {}
       try { await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, t.id)); } catch {}
       try { await db.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.tenantId, t.id)); } catch {}
       try { await db.delete(techdeckTickets).where(eq(techdeckTickets.tenantId, t.id)); } catch {}

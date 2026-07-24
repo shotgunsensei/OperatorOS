@@ -1,7 +1,7 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, ArrowLeft, CheckCircle2, FileCheck2, Megaphone, Plus, Trash2, Wrench, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, FileCheck2, Plus, Trash2, Wrench, type LucideIcon } from 'lucide-react';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import {
   moduleShellApi,
@@ -30,13 +30,6 @@ const CONFIG: Record<NativeWorkflowModuleSlug, {
     titleLabel: 'Vehicle or system', titlePlaceholder: '2018 Ford F-150 — intermittent misfire',
     summaryLabel: 'Symptoms, codes, and initial theory', summaryPlaceholder: 'P0302 under load; coil swap moved the miss…',
     contextLabel: 'VIN / mileage / work order', contextPlaceholder: 'WO-1042 · 87,200 mi', accent: '#f59e0b', Icon: Wrench,
-  },
-  brandforgeos: {
-    name: 'BrandForgeOS', eyebrow: 'Campaign production board',
-    description: 'Turn positioning into tenant-owned campaign briefs, production work, review, and publication.',
-    titleLabel: 'Campaign or asset set', titlePlaceholder: 'OperatorOS fall launch campaign',
-    summaryLabel: 'Objective, audience, and offer', summaryPlaceholder: 'Position the unified app stack for MSP operators…',
-    contextLabel: 'Channel / deliverable', contextPlaceholder: 'LinkedIn · 3 ads + landing page', accent: '#ec4899', Icon: Megaphone,
   },
   snapproofos: {
     name: 'SnapProofOS', eyebrow: 'Evidence and verification ledger',

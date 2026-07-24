@@ -1130,8 +1130,8 @@ export const moduleScaffolds = pgTable('module_scaffolds', {
   index('idx_module_scaffolds_tenant_created').on(t.tenantId, t.createdAt),
 ]);
 
-/** Tenant-owned workflow records for TorqueShed, FaultlineLab, BrandForgeOS,
- * and SnapProofOS. Route contracts retain each product's distinct vocabulary. */
+/** Tenant-owned workflow records for remaining generic TorqueShed and
+ * SnapProofOS slices. Dedicated product tables replace migrated module rows. */
 export const moduleWorkflowItems = pgTable('module_workflow_items', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
@@ -2017,6 +2017,197 @@ export const ninjaPoolMatchEvents = pgTable('ninja_pool_match_events', {
   uniqueIndex('uq_ninja_pool_event_sequence').on(t.tenantId, t.matchId, t.sequenceNumber),
   uniqueIndex('uq_ninja_pool_event_client').on(t.tenantId, t.matchId, t.clientActionId),
   index('idx_ninja_pool_events_match').on(t.tenantId, t.matchId, t.sequenceNumber),
+]);
+
+export type BrandForgeWorkspaceProfile = {
+  industry?: string;
+  businessType?: string;
+  products?: string;
+  idealCustomer?: string;
+  geographicMarket?: string;
+  competitors?: string;
+  goals: string[];
+  channels: string[];
+};
+
+/** BrandForgeOS module settings; never OperatorOS tenant or billing authority. */
+export const brandforgeWorkspaceSettings = pgTable('brandforge_workspace_settings', {
+  tenantId: varchar('tenant_id', { length: 36 }).primaryKey().references(() => tenants.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  completed: boolean('completed').notNull().default(false),
+  profile: jsonb('profile').$type<BrandForgeWorkspaceProfile>().notNull().default({ goals: [], channels: [] }),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const brandforgeBrands = pgTable('brandforge_brands', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  name: varchar('name', { length: 120 }).notNull(),
+  description: text('description'),
+  primaryColor: varchar('primary_color', { length: 7 }),
+  secondaryColor: varchar('secondary_color', { length: 7 }),
+  accentColor: varchar('accent_color', { length: 7 }),
+  headingFont: varchar('heading_font', { length: 80 }),
+  bodyFont: varchar('body_font', { length: 80 }),
+  voiceTone: text('voice_tone'),
+  guidelines: text('guidelines'),
+  version: integer('version').notNull().default(1),
+  deletedAt: timestamp('deleted_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_brandforge_brand_tenant_id').on(t.tenantId, t.id),
+  uniqueIndex('uq_brandforge_brand_name_active').on(t.tenantId, t.name)
+    .where(sql`${t.deletedAt} IS NULL`),
+  index('idx_brandforge_brands_tenant_updated').on(t.tenantId, t.updatedAt),
+]);
+
+export const brandforgePersonas = pgTable('brandforge_personas', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  name: varchar('name', { length: 120 }).notNull(),
+  ageRange: varchar('age_range', { length: 80 }),
+  location: varchar('location', { length: 160 }),
+  interests: text('interests'),
+  painPoints: text('pain_points'),
+  goals: text('goals'),
+  channels: jsonb('channels').$type<string[]>().notNull().default([]),
+  description: text('description'),
+  version: integer('version').notNull().default(1),
+  deletedAt: timestamp('deleted_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_brandforge_persona_tenant_id').on(t.tenantId, t.id),
+  uniqueIndex('uq_brandforge_persona_name_active').on(t.tenantId, t.name)
+    .where(sql`${t.deletedAt} IS NULL`),
+  index('idx_brandforge_personas_tenant_updated').on(t.tenantId, t.updatedAt),
+]);
+
+export const brandforgeCampaigns = pgTable('brandforge_campaigns', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  brandId: varchar('brand_id', { length: 36 }),
+  personaId: varchar('persona_id', { length: 36 }),
+  name: varchar('name', { length: 160 }).notNull(),
+  objective: text('objective'),
+  targetAudience: text('target_audience'),
+  coreMessage: text('core_message'),
+  offer: text('offer'),
+  status: text('status', {
+    enum: ['draft', 'planning', 'producing', 'review', 'scheduled', 'active', 'completed', 'archived'],
+  }).notNull().default('draft'),
+  channels: jsonb('channels').$type<string[]>().notNull().default([]),
+  startAt: timestamp('start_at'),
+  endAt: timestamp('end_at'),
+  budgetCents: integer('budget_cents'),
+  notes: text('notes'),
+  version: integer('version').notNull().default(1),
+  deletedAt: timestamp('deleted_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_brandforge_campaign_tenant_id').on(t.tenantId, t.id),
+  index('idx_brandforge_campaigns_tenant_status').on(t.tenantId, t.status, t.updatedAt),
+  index('idx_brandforge_campaigns_tenant_brand').on(t.tenantId, t.brandId),
+  index('idx_brandforge_campaigns_tenant_persona').on(t.tenantId, t.personaId),
+]);
+
+export const brandforgeCopyAssets = pgTable('brandforge_copy_assets', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  brandId: varchar('brand_id', { length: 36 }),
+  campaignId: varchar('campaign_id', { length: 36 }),
+  title: varchar('title', { length: 200 }).notNull(),
+  content: text('content').notNull(),
+  copyType: varchar('copy_type', { length: 60 }).notNull(),
+  channel: varchar('channel', { length: 60 }),
+  tone: varchar('tone', { length: 120 }),
+  status: text('status', {
+    enum: ['draft', 'review', 'approved', 'published', 'archived'],
+  }).notNull().default('draft'),
+  generationId: varchar('generation_id', { length: 36 }),
+  version: integer('version').notNull().default(1),
+  deletedAt: timestamp('deleted_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_brandforge_copy_tenant_id').on(t.tenantId, t.id),
+  index('idx_brandforge_copy_tenant_status').on(t.tenantId, t.status, t.updatedAt),
+  index('idx_brandforge_copy_tenant_campaign').on(t.tenantId, t.campaignId),
+]);
+
+export const brandforgeCalendarItems = pgTable('brandforge_calendar_items', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  brandId: varchar('brand_id', { length: 36 }),
+  campaignId: varchar('campaign_id', { length: 36 }),
+  copyAssetId: varchar('copy_asset_id', { length: 36 }),
+  title: varchar('title', { length: 200 }).notNull(),
+  description: text('description'),
+  itemType: varchar('item_type', { length: 60 }).notNull(),
+  channel: varchar('channel', { length: 60 }),
+  scheduledAt: timestamp('scheduled_at').notNull(),
+  status: text('status', {
+    enum: ['idea', 'draft', 'review', 'scheduled', 'published', 'cancelled'],
+  }).notNull().default('idea'),
+  version: integer('version').notNull().default(1),
+  deletedAt: timestamp('deleted_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_brandforge_calendar_tenant_id').on(t.tenantId, t.id),
+  index('idx_brandforge_calendar_tenant_date').on(t.tenantId, t.scheduledAt),
+  index('idx_brandforge_calendar_tenant_status').on(t.tenantId, t.status),
+]);
+
+export const brandforgeCampaignMetrics = pgTable('brandforge_campaign_metrics', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  campaignId: varchar('campaign_id', { length: 36 }).notNull(),
+  recordedByUserId: varchar('recorded_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  metricDate: timestamp('metric_date').notNull(),
+  channel: varchar('channel', { length: 60 }),
+  impressions: integer('impressions').notNull().default(0),
+  clicks: integer('clicks').notNull().default(0),
+  conversions: integer('conversions').notNull().default(0),
+  spendCents: integer('spend_cents').notNull().default(0),
+  revenueCents: integer('revenue_cents').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_brandforge_metrics_tenant_campaign_date').on(t.tenantId, t.campaignId, t.metricDate),
+  index('idx_brandforge_metrics_tenant_date').on(t.tenantId, t.metricDate),
+]);
+
+/** Immutable provider result and idempotency record; provider secrets are never stored. */
+export const brandforgeGenerations = pgTable('brandforge_generations', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  brandId: varchar('brand_id', { length: 36 }),
+  campaignId: varchar('campaign_id', { length: 36 }),
+  generationType: text('generation_type', { enum: ['copy', 'strategy', 'campaign_ideas'] }).notNull(),
+  idempotencyKey: varchar('idempotency_key', { length: 160 }).notNull(),
+  inputHash: varchar('input_hash', { length: 64 }).notNull(),
+  inputSummary: jsonb('input_summary').$type<Record<string, unknown>>().notNull(),
+  output: jsonb('output').$type<Record<string, unknown>>().notNull(),
+  provider: varchar('provider', { length: 40 }).notNull(),
+  model: varchar('model', { length: 120 }).notNull(),
+  providerVersion: varchar('provider_version', { length: 80 }).notNull(),
+  tokenCount: integer('token_count').notNull().default(0),
+  durationMs: integer('duration_ms').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_brandforge_generation_idempotency').on(t.tenantId, t.userId, t.idempotencyKey),
+  uniqueIndex('uq_brandforge_generation_tenant_id').on(t.tenantId, t.id),
+  index('idx_brandforge_generation_tenant_created').on(t.tenantId, t.createdAt),
 ]);
 
 /**

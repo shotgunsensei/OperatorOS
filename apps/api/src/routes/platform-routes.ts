@@ -24,7 +24,7 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq, gte, lte, ilike, isNull, isNotNull, inArray, ne, or } from 'drizzle-orm';
+import { and, desc, eq, gte, lte, ilike, isNull, isNotNull, inArray, ne, or, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
   tenants, tenantUsers, users, modules, tenantModules, tenantUserModuleAccess,
@@ -36,6 +36,9 @@ import {
   activityFeed, ninjaPoolMatchEvents, ninjaPoolMatchSessions,
   ninjaPoolPlayerProfiles, ninjaPoolPracticeSessions,
   tradeflowkitInvoices, tradeflowkitQuotes, tradeflowkitJobs, tradeflowkitCustomers,
+  brandforgeCalendarItems, brandforgeCopyAssets, brandforgeCampaignMetrics,
+  brandforgeGenerations, brandforgeCampaigns, brandforgePersonas,
+  brandforgeBrands, brandforgeWorkspaceSettings,
 } from '../schema.js';
 import { count } from 'drizzle-orm';
 import { requireSuperAdmin } from '../lib/tenant-auth.js';
@@ -529,6 +532,24 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           await tx.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.tenantId, id));
           await tx.delete(ninjaPoolPlayerProfiles).where(eq(ninjaPoolPlayerProfiles.tenantId, id));
           await tx.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.tenantId, id));
+          await tx.delete(brandforgeCalendarItems).where(eq(brandforgeCalendarItems.tenantId, id));
+          await tx.delete(brandforgeCopyAssets).where(eq(brandforgeCopyAssets.tenantId, id));
+          await tx.delete(brandforgeCampaignMetrics).where(eq(brandforgeCampaignMetrics.tenantId, id));
+          await tx.delete(brandforgeGenerations).where(eq(brandforgeGenerations.tenantId, id));
+          await tx.delete(brandforgeCampaigns).where(eq(brandforgeCampaigns.tenantId, id));
+          await tx.delete(brandforgePersonas).where(eq(brandforgePersonas.tenantId, id));
+          await tx.delete(brandforgeBrands).where(eq(brandforgeBrands.tenantId, id));
+          await tx.delete(brandforgeWorkspaceSettings).where(eq(brandforgeWorkspaceSettings.tenantId, id));
+          await tx.execute(sql`DELETE FROM shared_notifications WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_outbox_messages WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_attachment_blobs WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_attachments WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_notification_templates WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_jobs WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_webhook_receipts WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_usage_events WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_activity_events WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_idempotency_keys WHERE tenant_id = ${id}`);
           await tx.delete(tradeflowkitInvoices).where(eq(tradeflowkitInvoices.tenantId, id));
           await tx.delete(tradeflowkitQuotes).where(eq(tradeflowkitQuotes.tenantId, id));
           await tx.delete(tradeflowkitJobs).where(eq(tradeflowkitJobs.tenantId, id));
@@ -2058,6 +2079,8 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           await tx.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.userId, id));
           await tx.delete(ninjaPoolPlayerProfiles).where(eq(ninjaPoolPlayerProfiles.userId, id));
           await tx.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.userId, id));
+          await tx.execute(sql`UPDATE shared_usage_events SET user_id = NULL WHERE user_id = ${id}`);
+          await tx.execute(sql`UPDATE shared_activity_events SET actor_user_id = NULL WHERE actor_user_id = ${id}`);
           await tx.delete(activityFeed).where(eq(activityFeed.userId, id));
           await tx.delete(saasTasks).where(eq(saasTasks.userId, id));
           await tx.delete(notes).where(eq(notes.userId, id));

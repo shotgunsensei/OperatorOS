@@ -36,6 +36,31 @@ export function sanitizeSharedMetadata(
   return result;
 }
 
+/**
+ * Idempotent API replays must preserve the original public response shape.
+ * Keep bounded response content and serialize dates while applying the same
+ * secret-key denylist. A numeric tokenCount is usage telemetry, not a bearer
+ * token or credential.
+ */
+export function sanitizeIdempotencyResponse(value: unknown, depth = 0): unknown {
+  if (value === null || typeof value === 'boolean' || typeof value === 'number') return value;
+  if (typeof value === 'string') return boundedString(value, 60_000);
+  if (value instanceof Date) return value.toISOString();
+  if (depth > 8) return null;
+  if (Array.isArray(value)) {
+    return value.slice(0, 200).map((item) => sanitizeIdempotencyResponse(item, depth + 1));
+  }
+  if (!value || typeof value !== 'object') return null;
+  const result: Record<string, unknown> = {};
+  for (const [rawKey, rawValue] of Object.entries(value as Record<string, unknown>).slice(0, 120)) {
+    const key = boundedString(rawKey, 80);
+    const numericTokenCount = /^tokenCount$/i.test(key) && typeof rawValue === 'number';
+    if ((!numericTokenCount && SENSITIVE_KEY.test(key)) || UNSAFE_OBJECT_KEY.test(key)) continue;
+    result[key] = sanitizeIdempotencyResponse(rawValue, depth + 1);
+  }
+  return result;
+}
+
 export function safeFailureCode(error: unknown, fallback = 'UNEXPECTED_ERROR'): string {
   if (error && typeof error === 'object' && 'code' in error) {
     const code = String((error as { code?: unknown }).code ?? '');

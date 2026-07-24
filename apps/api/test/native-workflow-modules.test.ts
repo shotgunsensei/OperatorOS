@@ -22,7 +22,6 @@ import {
 
 const SPECS = [
   { slug: 'torqueshed', initial: 'open', next: 'testing' },
-  { slug: 'brandforgeos', initial: 'draft', next: 'planning' },
   { slug: 'snapproofos', initial: 'draft', next: 'captured' },
 ] as const;
 
@@ -155,13 +154,13 @@ for (const spec of SPECS) {
 
 test('module viewer may read but cannot create workflow records', async () => {
   const read = await app.inject({
-    method: 'GET', url: '/v1/modules/brandforgeos/work-items',
+    method: 'GET', url: '/v1/modules/snapproofos/work-items',
     headers: headers(viewer, ownerA.currentTenantId),
   });
   assert.equal(read.statusCode, 200, read.body);
 
   const write = await app.inject({
-    method: 'POST', url: '/v1/modules/brandforgeos/work-items',
+    method: 'POST', url: '/v1/modules/snapproofos/work-items',
     headers: headers(viewer, ownerA.currentTenantId),
     payload: { title: 'viewer should not create' },
   });
