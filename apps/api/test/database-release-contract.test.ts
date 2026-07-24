@@ -12,8 +12,8 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 22);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 22);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 23);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 23);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'free_account_app_backfill');
   assert.ok(
@@ -61,6 +61,11 @@ test('database release plan is explicit, ordered, additive, and reusable by star
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'faultlinelab_tables'),
     'Ninja Pool Hall tables must follow the previously accepted module foundations',
   );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'brandforgeos_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'ninja_pool_hall_tables'),
+    'BrandForgeOS tables must follow the previously accepted module foundations',
+  );
 
   const api = read('apps/api/src/index.ts');
   const releaseSource = read('apps/api/src/lib/database-release.ts');
@@ -95,6 +100,9 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.ninja_pool_player_profiles'\)/);
   assert.match(releaseSource, /to_regclass\('public\.ninja_pool_match_sessions'\)/);
   assert.match(releaseSource, /to_regclass\('public\.ninja_pool_match_events'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.brandforge_brands'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.brandforge_campaigns'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.brandforge_generations'\)/);
   assert.match(releaseSource, /to_regclass\('public\.operatoros_token_purchase_intents'\)/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
 });

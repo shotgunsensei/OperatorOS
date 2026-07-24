@@ -102,6 +102,17 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/local': { sectionId: 'ninja-pool-hall-shell', label: 'Local Match' },
     '/profile': { sectionId: 'ninja-pool-hall-shell', label: 'Player Profile' },
   },
+  brandforgeos: {
+    '/dashboard': { sectionId: 'brandforgeos-dashboard', label: 'Dashboard' },
+    '/brands': { sectionId: 'brandforgeos-brands', label: 'Brand Kits' },
+    '/personas': { sectionId: 'brandforgeos-personas', label: 'Audience Personas' },
+    '/campaigns': { sectionId: 'brandforgeos-campaigns', label: 'Campaigns' },
+    '/copy-studio': { sectionId: 'brandforgeos-copy', label: 'Copy Studio' },
+    '/calendar': { sectionId: 'brandforgeos-calendar', label: 'Content Calendar' },
+    '/analytics': { sectionId: 'brandforgeos-analytics', label: 'Analytics' },
+    '/ai-workflows': { sectionId: 'brandforgeos-ai', label: 'AI Workflows' },
+    '/settings': { sectionId: 'brandforgeos-settings', label: 'Settings' },
+  },
 };
 
 const SAFE_PATH_SEGMENT = /^[a-z0-9-]+$/;
@@ -153,6 +164,15 @@ export function resolveCoreModuleDeepLink(
   if (slug === 'ninja-pool-hall' && pathSegments.length === 2) {
     const [resource] = pathSegments;
     if (resource === 'matches') return { sectionId: 'ninja-pool-hall-shell', label: 'Saved Match' };
+  }
+  if (slug === 'brandforgeos' && pathSegments.length === 2) {
+    const [resource] = pathSegments;
+    if (resource === 'brands') return { sectionId: 'brandforgeos-brands', label: 'Brand Kit' };
+    if (resource === 'personas') return { sectionId: 'brandforgeos-personas', label: 'Audience Persona' };
+    if (resource === 'campaigns') return { sectionId: 'brandforgeos-campaigns', label: 'Campaign' };
+    if (resource === 'copy-assets') return { sectionId: 'brandforgeos-copy', label: 'Copy Asset' };
+    if (resource === 'calendar-items') return { sectionId: 'brandforgeos-calendar', label: 'Calendar Item' };
+    if (resource === 'generations') return { sectionId: 'brandforgeos-ai', label: 'Generation Result' };
   }
   return null;
 }

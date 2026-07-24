@@ -15,7 +15,7 @@ const SHELL_TEST_IDS: Record<string, string> = {
   pulsedesk: 'pulsedesk-module-shell',
   faultlinelab: 'faultlinelab-module-shell',
   'ninja-pool-hall': 'ninja-pool-hall-shell',
-  brandforgeos: 'brandforgeos-module-shell',
+  brandforgeos: 'brandforgeos-workspace',
   snapproofos: 'snapproofos-module-shell',
   'studyforge-ai': 'shell-studyforge-ai',
   'ninja-launch-kit': 'shell-ninja-launch-kit',
@@ -143,6 +143,24 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
   if (!identity) return;
   const { userId, tenantId } = identity;
   const tenantTables = [
+    'shared_notifications',
+    'shared_outbox_messages',
+    'shared_attachment_blobs',
+    'shared_attachments',
+    'shared_notification_templates',
+    'shared_jobs',
+    'shared_webhook_receipts',
+    'shared_usage_events',
+    'shared_activity_events',
+    'shared_idempotency_keys',
+    'brandforge_calendar_items',
+    'brandforge_copy_assets',
+    'brandforge_campaign_metrics',
+    'brandforge_generations',
+    'brandforge_campaigns',
+    'brandforge_personas',
+    'brandforge_brands',
+    'brandforge_workspace_settings',
     'faultlinelab_submissions',
     'faultlinelab_session_actions',
     'faultlinelab_daily_outcomes',
@@ -510,6 +528,155 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.getByTestId('faultlinelab-server-score').locator('h2')).toHaveText(scoreValue);
     await expect(modulePage.getByTestId('faultlinelab-server-score').locator('strong')).toHaveText(scoreSummary);
     await assertHostOnlySession(modulePage.context(), 'faultlinelab.operatoros.net');
+    await assertNoBrowserCredentialStorage(modulePage);
+    assertNoCredentialQuery(modulePage.url());
+  });
+
+  test('BrandForgeOS persists a full creative workflow, meters AI once, and survives return, deep-link refresh, and global reauthentication', async ({ page, request }) => {
+    test.setTimeout(180_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+    const suffix = Date.now().toString(36);
+    const brandName = `Phase 11A Brand ${suffix}`;
+    const personaName = `Phase 11A Operator ${suffix}`;
+    const campaignName = `Phase 11A Campaign ${suffix}`;
+    const copyTitle = `Phase 11A Copy ${suffix}`;
+    const calendarTitle = `Phase 11A Publish ${suffix}`;
+
+    await page.goto(`${ROOT}/app`);
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await page.getByTestId('nav-my-apps').click();
+    await expect(page.getByTestId('page-my-apps')).toBeVisible();
+
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByTestId('button-launch-brandforgeos').click();
+    const modulePage = await popupPromise;
+    await expect(modulePage.getByTestId('brandforgeos-workspace')).toBeVisible({ timeout: 30_000 });
+    await expect(modulePage.locator('#brandforgeos-dashboard')).toBeVisible();
+    expect(await modulePage.getByTestId('brandforgeos-workspace').getAttribute('data-evidence')).toBe('persisted_records_only');
+    assertNoCredentialQuery(modulePage.url());
+
+    await modulePage.getByRole('button', { name: 'Brand Kits', exact: true }).click();
+    await expect(modulePage).toHaveURL('https://brandforgeos.operatoros.net/brands');
+    await modulePage.getByLabel('Brand name').fill(brandName);
+    await modulePage.getByLabel('Voice and tone').fill('Direct, technical, and evidence-led');
+    await modulePage.getByLabel('Description').fill('A persisted Phase 11A browser acceptance brand.');
+    await Promise.all([
+      modulePage.waitForResponse(response => response.request().method() === 'POST'
+        && new URL(response.url()).pathname === '/api/modules/brandforgeos/brands'
+        && response.status() === 201),
+      modulePage.getByRole('button', { name: 'Create brand kit' }).click(),
+    ]);
+    await expect(modulePage.getByRole('heading', { name: brandName })).toBeVisible();
+
+    await modulePage.getByRole('button', { name: 'Personas', exact: true }).click();
+    await modulePage.getByLabel('Persona name').fill(personaName);
+    await modulePage.getByLabel('Pain points').fill('Fragmented creative operations');
+    await modulePage.getByLabel('Goals').fill('Ship measurable campaigns');
+    await modulePage.getByRole('button', { name: 'Create persona' }).click();
+    await expect(modulePage.getByRole('heading', { name: personaName })).toBeVisible();
+
+    await modulePage.getByRole('button', { name: 'Campaigns', exact: true }).click();
+    await modulePage.getByLabel('Campaign name').fill(campaignName);
+    await modulePage.getByLabel('Objective').fill('Prove the durable OperatorOS creative workflow');
+    await modulePage.getByLabel('Brand kit').selectOption({ label: brandName });
+    await modulePage.getByLabel('Persona').selectOption({ label: personaName });
+    await modulePage.getByRole('button', { name: 'Create campaign' }).click();
+    await expect(modulePage.getByRole('heading', { name: campaignName })).toBeVisible();
+    await modulePage.getByRole('button', { name: 'Move to planning' }).click();
+    await expect(modulePage.getByText('planning', { exact: true })).toBeVisible();
+
+    await modulePage.getByRole('button', { name: 'Copy Studio', exact: true }).click();
+    await modulePage.getByLabel('Title').fill(copyTitle);
+    await modulePage.getByLabel('Copy content').fill('This copy asset is persisted and linked to the accepted campaign.');
+    await modulePage.getByLabel('Campaign').selectOption({ label: campaignName });
+    await modulePage.getByLabel('Brand kit').selectOption({ label: brandName });
+    await modulePage.getByRole('button', { name: 'Save copy asset' }).click();
+    await expect(modulePage.getByRole('heading', { name: copyTitle })).toBeVisible();
+
+    await modulePage.getByRole('button', { name: 'Calendar', exact: true }).click();
+    await modulePage.getByLabel('Deliverable title').fill(calendarTitle);
+    await modulePage.getByLabel('Scheduled time').fill('2026-08-20T14:00');
+    await modulePage.getByLabel('Campaign').selectOption({ label: campaignName });
+    await modulePage.getByLabel('Copy asset').selectOption({ label: copyTitle });
+    await modulePage.getByRole('button', { name: 'Schedule content' }).click();
+    await expect(modulePage.getByText(calendarTitle, { exact: true })).toBeVisible();
+
+    await modulePage.getByRole('button', { name: 'Analytics', exact: true }).click();
+    await modulePage.getByLabel('Campaign').selectOption({ label: campaignName });
+    await modulePage.getByLabel('Impressions').fill('100');
+    await modulePage.getByLabel('Clicks').fill('20');
+    await modulePage.getByLabel('Conversions').fill('4');
+    await modulePage.getByRole('button', { name: 'Record metrics' }).click();
+    await expect(modulePage.locator('#brandforgeos-analytics').getByText('100', { exact: true })).toBeVisible();
+    await expect(modulePage.getByRole('link', { name: 'Download real CSV export' })).toHaveAttribute('href', '/api/modules/brandforgeos/export?format=csv');
+
+    await modulePage.getByRole('button', { name: 'AI Workflows', exact: true }).click();
+    await modulePage.getByLabel('Workflow').selectOption('copy');
+    await modulePage.getByLabel('Brief').fill('Write a concise launch message for technical operators who value persistent evidence.');
+    await modulePage.getByLabel('Brand kit').selectOption({ label: brandName });
+    await modulePage.getByLabel('Campaign').selectOption({ label: campaignName });
+    await Promise.all([
+      modulePage.waitForResponse(response => response.request().method() === 'POST'
+        && new URL(response.url()).pathname === '/api/modules/brandforgeos/generations'
+        && response.status() === 201),
+      modulePage.getByRole('button', { name: 'Generate material' }).click(),
+    ]);
+    await expect(modulePage.getByText(/test · [1-9]\d* tokens/)).toBeVisible();
+
+    const usage = await pg.query<{ events: string; units: string }>(
+      `select count(*)::text as events, coalesce(sum(units),0)::text as units
+         from shared_usage_events sue
+         join modules m on m.id=sue.module_id
+        where sue.tenant_id=$1 and m.slug='brandforgeos'
+          and sue.operation='brandforge.generation'`,
+      [identity.tenantId],
+    );
+    expect(Number(usage.rows[0].events)).toBe(1);
+    expect(Number(usage.rows[0].units)).toBeGreaterThan(0);
+
+    await modulePage.reload();
+    await expect(modulePage).toHaveURL('https://brandforgeos.operatoros.net/ai-workflows');
+    await expect(modulePage.getByText(/test · [1-9]\d* tokens/)).toBeVisible();
+    await modulePage.setViewportSize({ width: 390, height: 844 });
+    await expect(modulePage.getByRole('navigation', { name: 'BrandForgeOS workspace' })).toBeVisible();
+    await expect(modulePage.getByRole('button', { name: 'Campaigns', exact: true })).toBeVisible();
+
+    await Promise.all([
+      modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      modulePage.getByRole('link', { name: 'My Apps' }).first().click(),
+    ]);
+    await expect(modulePage.getByTestId('page-my-apps')).toBeVisible();
+    const logoutAll = await modulePage.evaluate(async () => {
+      const response = await fetch('/api/auth/logout-all', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return { status: response.status, body: await response.text() };
+    });
+    expect(logoutAll.status, logoutAll.body).toBe(200);
+
+    const campaignUrl = 'https://brandforgeos.operatoros.net/campaigns';
+    await modulePage.goto(campaignUrl);
+    await expect(modulePage).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await modulePage.getByTestId('input-email').fill(identity.email);
+    await modulePage.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      modulePage.waitForURL(campaignUrl, { timeout: 30_000 }),
+      modulePage.getByTestId('button-login').click(),
+    ]);
+    await expect(modulePage.getByRole('heading', { name: campaignName })).toBeVisible();
+    await modulePage.reload();
+    await expect(modulePage.getByRole('heading', { name: campaignName })).toBeVisible();
+    await assertHostOnlySession(modulePage.context(), 'brandforgeos.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
   });

@@ -47,7 +47,7 @@ import {
   registerSharedWebhookHandler,
 } from '../src/lib/shared-webhooks.js';
 import { ProviderDisabledError } from '../src/lib/shared-provider-adapters.js';
-import { sanitizeSharedMetadata } from '../src/lib/shared-service-safety.js';
+import { sanitizeIdempotencyResponse, sanitizeSharedMetadata } from '../src/lib/shared-service-safety.js';
 
 let user: Awaited<ReturnType<typeof createTestUser>>;
 let foreignUser: Awaited<ReturnType<typeof createTestUser>>;
@@ -111,6 +111,24 @@ test('shared metadata removes secrets and bounds nested payloads', () => {
   const prototypeKeys = sanitizeSharedMetadata(JSON.parse('{"__proto__":{"polluted":true},"constructor":{"unsafe":true},"safe":1}'));
   assert.deepEqual(prototypeKeys, { safe: 1 });
   assert.equal(({} as any).polluted, undefined);
+});
+
+test('idempotency responses preserve public shape while removing secrets', () => {
+  const createdAt = new Date('2026-07-23T12:00:00.000Z');
+  assert.deepEqual(sanitizeIdempotencyResponse({
+    generation: {
+      tokenCount: 42,
+      content: 'public result',
+      createdAt,
+      accessToken: 'must-not-replay',
+    },
+  }), {
+    generation: {
+      tokenCount: 42,
+      content: 'public result',
+      createdAt: createdAt.toISOString(),
+    },
+  });
 });
 
 test('soft-deleted attachments purge private blobs only after retention expires', async () => {

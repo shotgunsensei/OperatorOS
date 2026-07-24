@@ -94,6 +94,8 @@ export class MockAiProvider implements AiProvider {
     const toolType = this.detectToolType(request.systemPrompt);
     const text = toolType === 'torque_assist'
       ? this.generateTorqueAssistResponse(request.userPrompt)
+      : toolType === 'brandforge'
+        ? this.generateBrandForgeResponse(request.userPrompt)
       : this.generateMockResponse(toolType, request.userPrompt);
 
     return {
@@ -111,10 +113,51 @@ export class MockAiProvider implements AiProvider {
 
   private detectToolType(systemPrompt: string): string {
     if (systemPrompt.includes('OPERATOROS_TORQUE_ASSIST_V1')) return 'torque_assist';
+    if (systemPrompt.includes('OPERATOROS_BRANDFORGE_V1')) return 'brandforge';
     if (systemPrompt.includes('summarize')) return 'summarizer';
     if (systemPrompt.includes('break down') || systemPrompt.includes('task')) return 'task_breakdown';
     if (systemPrompt.includes('action plan') || systemPrompt.includes('project plan')) return 'project_planner';
     return 'quick_action';
+  }
+
+  private generateBrandForgeResponse(userPrompt: string): string {
+    let input: Record<string, unknown> = {};
+    try {
+      input = JSON.parse(userPrompt) as Record<string, unknown>;
+    } catch {
+      input = {};
+    }
+    const type = input.type;
+    const prompt = String(input.prompt ?? 'Untitled campaign').slice(0, 120);
+    if (type === 'copy') {
+      return JSON.stringify({
+        variants: [
+          { title: 'Clear value proposition', content: `${prompt}\n\nBuilt for operators who value clarity, control, and measurable follow-through.` },
+          { title: 'Outcome-led message', content: `${prompt}\n\nMove from scattered work to a focused campaign your team can actually ship.` },
+          { title: 'Direct response angle', content: `${prompt}\n\nStart with the next concrete action and turn attention into qualified momentum.` },
+        ],
+      });
+    }
+    if (type === 'strategy') {
+      return JSON.stringify({
+        title: 'Focused campaign strategy',
+        content: `Position the offer around the concrete outcome described in: ${prompt}`,
+        suggestions: [
+          'Define one primary audience segment.',
+          'Choose one measurable conversion event.',
+          'Match the message to the highest-intent channel.',
+          'Create two controlled copy variants.',
+          'Review persisted performance before expanding spend.',
+        ],
+      });
+    }
+    return JSON.stringify({
+      ideas: [
+        { name: 'Proof-led launch', objective: prompt, channels: ['Email', 'LinkedIn'], description: 'Lead with a concrete before-and-after outcome.' },
+        { name: 'Operator field guide', objective: prompt, channels: ['Content', 'Email'], description: 'Teach the workflow and connect it to the offer.' },
+        { name: 'Focused retargeting', objective: prompt, channels: ['Ads', 'Social'], description: 'Re-engage high-intent visitors with one direct CTA.' },
+      ],
+    });
   }
 
   private generateTorqueAssistResponse(userPrompt: string): string {

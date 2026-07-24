@@ -87,7 +87,10 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['unknown']), null);
   assert.equal(resolveCoreModuleDeepLink('ninja-pool-hall', ['matches']), null);
   assert.equal(resolveCoreModuleDeepLink('ninja-pool-hall', ['host']), null);
-  assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['dashboard']), null);
+  assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['dashboard'])?.sectionId, 'brandforgeos-dashboard');
+  assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['brands', 'brand-123'])?.sectionId, 'brandforgeos-brands');
+  assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['campaigns', 'campaign-123'])?.sectionId, 'brandforgeos-campaigns');
+  assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['unknown']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['Tickets']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['..']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', []), null);

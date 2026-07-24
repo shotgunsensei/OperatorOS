@@ -40,7 +40,7 @@ function camel(row: Record<string, any>): Record<string, any> {
 export async function torqueShedModule(): Promise<{ id: string; baseUrl: string }> {
   const row = first(
     await db.execute(
-      sql`SELECT id,base_url FROM modules WHERE slug='torqueshed' AND status='active' AND archived_at IS NULL LIMIT 1`,
+      sql`SELECT id,base_url FROM modules WHERE slug='torqueshed' AND status='live' AND archived_at IS NULL LIMIT 1`,
     ),
   );
   if (!row) {

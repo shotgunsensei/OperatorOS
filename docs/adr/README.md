@@ -25,6 +25,7 @@ new ADR explicitly supersedes it.
 | ADR-0018 | TorqueShed marketplace/community is authenticated and tenant-scoped; transactions remain off-platform, protection/verification claims are prohibited, and privacy/abuse/moderation controls are server-enforced. | Accepted | `docs/adr/ADR-0018-torqueshed-marketplace-community-policy.md` |
 | ADR-0019 | FaultlineLab uses immutable versioned challenges, append-only investigation evidence, server-only scoring, and no certificate claim; only four validated source cases are playable. | Accepted | `docs/adr/ADR-0019-faultlinelab-server-scored-challenge-boundary.md` |
 | ADR-0020 | Ninja Pool Hall approves Free Shoot, CPU, and hot-seat play; physical simulation remains local, server rules persist explicitly unverified results, and the unauthenticated relay is excluded. | Accepted | `docs/adr/ADR-0020-ninja-pool-hall-local-result-trust-boundary.md` |
+| ADR-0021 | BrandForgeOS owns a tenant-scoped creative workspace and provider-backed generation; OperatorOS retains identity, tenant, billing, entitlement, usage and provider authority, while random analytics and fake integrations are excluded. | Accepted | `docs/adr/ADR-0021-brandforgeos-creative-workspace-boundary.md` |
 
 ## Required future ADRs
 

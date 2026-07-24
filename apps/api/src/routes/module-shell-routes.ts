@@ -87,6 +87,7 @@ import { registerTorqueShedRoutes } from './torqueshed-routes.js';
 import { registerTorqueAssistRoutes } from './torque-assist-routes.js';
 import { registerTorqueShedSocialRoutes } from './torqueshed-social-routes.js';
 import { registerFaultlineLabRoutes } from './faultlinelab-routes.js';
+import { registerBrandForgeOsRoutes } from './brandforgeos-routes.js';
 
 // Task #91 — per-tenant + per-user budget for outbound calls. Each placed
 // call burns real Twilio minutes, so we cap dial attempts to a small
@@ -129,10 +130,6 @@ const WORKFLOW_MODULES = {
   torqueshed: {
     slug: 'torqueshed', itemType: 'diagnostic_case', initialStatus: 'open',
     statuses: new Set(['open', 'testing', 'repairing', 'verified', 'closed']),
-  },
-  brandforgeos: {
-    slug: 'brandforgeos', itemType: 'campaign', initialStatus: 'draft',
-    statuses: new Set(['draft', 'planning', 'producing', 'review', 'published']),
   },
   snapproofos: {
     slug: 'snapproofos', itemType: 'evidence_record', initialStatus: 'draft',
@@ -573,6 +570,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerTorqueAssistRoutes(app);
   await registerTorqueShedSocialRoutes(app);
   await registerFaultlineLabRoutes(app);
+  await registerBrandForgeOsRoutes(app);
 
   // ===== TradeFlowKit: lead and revenue compatibility routes ==============
   //

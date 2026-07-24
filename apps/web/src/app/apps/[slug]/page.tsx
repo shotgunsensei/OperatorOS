@@ -23,6 +23,7 @@ import NinjaPoolHallShell from '@/components/module-shells/NinjaPoolHallShell';
 import WorkflowModuleShell from '@/components/module-shells/WorkflowModuleShell';
 import TorqueShedWorkspace from '@/components/module-shells/TorqueShedWorkspace';
 import FaultlineLabWorkspace from '@/components/module-shells/FaultlineLabWorkspace';
+import BrandForgeWorkspace from '@/components/module-shells/BrandForgeWorkspace';
 import OperatorOSEcosystemHeader from '@/components/module-shells/OperatorOSEcosystemHeader';
 import { useModuleDeepLinkTarget } from './ModuleDeepLinkTarget';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
@@ -55,7 +56,7 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string }>>
   'ninja-pool-hall':  NinjaPoolHallShell,
   'torqueshed':       TorqueShedWorkspace,
   'faultlinelab':     FaultlineLabWorkspace,
-  'brandforgeos':     () => <WorkflowModuleShell moduleSlug="brandforgeos" />,
+  'brandforgeos':     BrandForgeWorkspace,
   'snapproofos':      () => <WorkflowModuleShell moduleSlug="snapproofos" />,
 };
 

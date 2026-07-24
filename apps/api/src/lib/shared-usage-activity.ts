@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
-import { sanitizeSharedMetadata } from './shared-service-safety.js';
+import { sanitizeIdempotencyResponse, sanitizeSharedMetadata } from './shared-service-safety.js';
 
 type Executor = Pick<typeof db, 'execute'>;
 
@@ -234,7 +234,7 @@ export async function completeIdempotentOperation(input: {
   const completed = await executor.execute(sql`
     UPDATE shared_idempotency_keys
     SET status = 'completed', response_status = ${input.responseStatus},
-      response_json = ${sanitizeSharedMetadata(input.responseJson)}, completed_at = NOW()
+      response_json = ${sanitizeIdempotencyResponse(input.responseJson)}, completed_at = NOW()
     WHERE tenant_id = ${input.tenantId} AND id = ${input.id} AND status = 'processing'
       AND locked_until = ${input.leaseExpiresAt}
     RETURNING id
