@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
-- Last updated: 2026-07-22
-- Phase: **10B Ninja Pool Hall source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
+- Last updated: 2026-07-26
+- Phase: **11A BrandForgeOS source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -13,10 +13,56 @@
 - Phase 8 implementation commit: `09bb543`
 - Phase 10A accepted revision: `b133bfe`
 - Phase 10B merge base: `b133bfe`
-- Execution branch: `codex/phase-10b-ninja-pool-hall-completion`
+- Phase 11A implementation commit: `d4f4c16`
+- Phase 11A merge commit: `a471399`
+- Execution branch: `codex/phase-11a-brandforgeos-closure`
 - Release gate: **closed**
 
 ## Current verdict
+
+Phase 11A provides a dedicated persistent BrandForgeOS workspace for versioned
+brand kits and personas; campaign, copy and calendar lifecycle; recorded
+campaign metrics; real JSON/CSV exports; and OperatorOS-owned AI generation
+with redaction, idempotency, shared usage and activity. The source is pinned at
+`5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e` and remains non-executed.
+ADR-0021 excludes child identity, tenants, billing, credits, admin mutation,
+random analytics, fake integrations and template-marketplace purchasing.
+
+Fresh closure evidence passes 28/28 focused domain/import/shared-service/
+database/hard-delete contracts, workspace typecheck, the production build, and
+the clean ordered 23-step release on disposable PostgreSQL 16. The compiled
+runtime reports healthy `/healthz` and ready `/readyz` with database, auth,
+SSO, registry and shared worker configured. The earlier complete API aggregate
+on this merged implementation passed 768, failed 0, and intentionally skipped
+6 live-HTTP cases out of 774.
+
+The full production-host Playwright matrix passes 5/5 locally. It proves one
+central credential establishes the platform and silently launches all twelve
+enabled modules. The BrandForgeOS case persists a brand, persona, campaign,
+copy asset, calendar item and metrics; meters the deterministic test AI
+adapter exactly once; refreshes canonical deep routes; returns through My
+Apps; globally logs out; reauthenticates; and confirms persistence.
+
+The first closure run found two real harness/security defects. Mixed
+`APP_ENV=test` and `NODE_ENV=production` previously produced a non-Secure
+session cookie; cookie policy now fails secure when either signal is
+production, with a regression test. Adding the fifth reauthentication scenario
+also exhausted the correct ten-login per-IP production limit because all local
+browsers shared loopback. Each scenario now receives a distinct private client
+identity only through the local trusted E2E proxy; production limits were not
+weakened. Cookie/proxy coverage passes 9/9, and the full matrix reran cleanly
+without retry.
+
+BrandForgeOS is therefore a source/local state 4 candidate, not state 5 or
+production-ready. This revision has not been deployed. No production backup,
+database mutation, source-data apply, provider traffic or traffic cutover was
+authorized. Deployed SSO/return/logout/health/workflow acceptance and an
+approved reconciliation/cutover record remain required.
+
+The historical implementation sections below remain evidence for their dated
+phases; this Phase 11A verdict supersedes them as current status.
+
+## Phase 10B historical evidence
 
 Phase 10B now has a dedicated persistent Ninja Pool Hall product surface for
 Free Shoot, CPU 8-ball, and local hot-seat. Physics, rules, bot, audio, and

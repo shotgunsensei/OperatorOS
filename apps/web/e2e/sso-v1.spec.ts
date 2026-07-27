@@ -259,6 +259,22 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
   let pg: Client | null = null;
   const identities: SeededIdentity[] = [];
 
+  test.beforeEach(async ({ context }, testInfo) => {
+    // The production-host proxy is a local test edge. Give each scenario a
+    // stable private client address so legitimate logout/reauth coverage does
+    // not exhaust the production per-IP login limit across the whole suite.
+    // The proxy appends its own peer address and the API validates the chain
+    // only because TRUST_PROXY is explicitly enabled for this gate.
+    const titleHash = [...testInfo.title].reduce(
+      (hash, character) => ((hash * 31) + character.charCodeAt(0)) >>> 0,
+      0,
+    );
+    const clientOctet = 10 + ((titleHash + testInfo.retry) % 200);
+    await context.setExtraHTTPHeaders({
+      'x-forwarded-for': `10.77.0.${clientOctet}`,
+    });
+  });
+
   test.beforeAll(async () => {
     const databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) throw new Error('DATABASE_URL is required for the SSO v1 browser gate');

@@ -29,7 +29,7 @@ slice is not parity.
 | 9 | TorqueShed marketplace and community | Phases 3, 7-8 | Source candidate implemented on `codex/phase-9-torqueshed-marketplace-community`; durable listing/contact/expiry and profile/post/comment/reaction/follow/block/media/report/moderation workflows, policy and native UI pass database-independent contracts/typecheck. State remains 3 because Docker/database/scanner/runtime/browser/deployed gates are unrun |
 | 10A | FaultlineLab state 5 | Phases 2-3 | Source/local state 4 candidate on `codex/phase-10a-faultlinelab-completion`: four validated runnable cases, immutable challenge versions, authoring/publish, server-scored attempts, Chaos/daily modes, assignments, progress/badges, private proof, exports, dedicated persistent deep links, dry-run reconciliation, compiled 21-step runtime/health, and production-host SSO/workflow 3/3 pass locally. State 5 remains blocked on deployed acceptance and an authorized data cutover; no production-ready claim. |
 | 10B | Ninja Pool Hall state 5 | Phases 2-3 | Source/local state 4 candidate on `codex/phase-10b-ninja-pool-hall-completion`: Free Shoot, CPU 8-ball, local hot-seat, persistent profiles/preferences, structured server-rules results/events, aggregates, recovery, deep links, zero-row dry-run reconciliation, clean/idempotent 22-step release, compiled runtime/health, and production-host SSO/gameplay 4/4 pass locally. Online relay and unsupported competitive claims are disabled. State 5 remains blocked on deployed acceptance and an authorized no-data cutover record; no production-ready claim. |
-| 11A | BrandForgeOS state 5 | Phases 2-3 | Pending |
+| 11A | BrandForgeOS state 5 | Phases 2-3 | Source/local state 4 candidate on `codex/phase-11a-brandforgeos-closure`: persistent brand/persona/campaign/copy/calendar/metrics/generation workflows, shared AI/usage, exact dry-run provenance, clean 23-step release, compiled health/readiness, and production-host browser matrix 5/5 pass locally. State 5 remains blocked on deployment and an authorized data cutover record. |
 | 11B | SnapProofOS state 5 | Phases 2-3 | Pending |
 | 11C | StudyForge AI state 5 | Phases 2-3 | Pending |
 | 11D | Ninja Launch Kit state 5 after source/product alignment ADR | Phases 2-3 | Pending |
@@ -59,8 +59,8 @@ slice is not parity.
 
 The owner explicitly authorized source work to continue through later phases
 on separate branches even while the public deployment gate remains failed.
-Phase 10B's source/local state-4 gate is complete on its scoped branch pending
-owner review. The next source phase is Phase 11A, BrandForgeOS. That direction
+Phase 11A's source/local state-4 gate is complete on its scoped closure branch
+pending owner review. The next source phase is Phase 11B, SnapProofOS. That direction
 permits later source work; it does not authorize deployment,
 production data mutation, promotion, or a production-ready label. Before any
 public promotion, deploy the reviewed cumulative revision through `.replit`,

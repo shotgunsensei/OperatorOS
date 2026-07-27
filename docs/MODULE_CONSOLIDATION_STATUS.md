@@ -1,6 +1,6 @@
 # OperatorOS module consolidation status
 
-Baseline refreshed: 2026-07-18
+Baseline refreshed: 2026-07-26
 
 This file is the honest source-of-truth for **source ownership and functional
 migration**. A module being registered, entitled, or reachable on an
@@ -36,7 +36,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 | PulseDesk | `pulsedesk` | `pulsedesk.operatoros.net` | core | Clean `C:\Dev\PulseDesk` at `937849471e489ed23db2a263d04160a388402740` | Source/local state 4 candidate: PHI-minimized shared-Directory clients/facilities/requesters; departments; operational assets; numbered tickets; queues/teams/assignments; internal notes/requester replies; shared private attachments; time/SLA; vendor, supply and facility coordination; knowledge/tags/saved views/preferences; dashboards, configuration, bulk actions and ticket deep links. ADR-0015 excludes EHR/clinical records and resolves the TechDeck boundary; deployed workflow and authorized privacy-reviewed cutover evidence still block state 5 |
 | FaultlineLab | `faultlinelab` | `faultlinelab.operatoros.net` | free | `C:\Dev\Faultline-Lab` at pinned snapshot `46877aae35565149ccf4f4988dd94627fc6bb92b` | Phase 10A source/local state-4 candidate: four hash-pinned runnable cases; immutable versioned authoring/publish; safe challenge projections; standard/daily/preview/assignment/Chaos attempts; append-only evidence; server scoring; assignments/progress/badges; private proof; analytics/exports; dedicated UI/canonical session deep links; dry-run reconciliation excludes 52 planned cards and all child authority. Compiled runtime/health and production-host SSO/workflow pass locally; deployed acceptance and authorized data cutover still block state 5 |
 | Ninja Pool Hall | `ninja-pool-hall` | `ninja-pool-hall.operatoros.net` | free | Clean `C:\Dev\Shotgun-ninja-pool-hall` and snapshot at `62439c4018ec551ce2891800351200c8ab2cb9e7` | Phase 10B source/local state-4 candidate: Free Shoot, CPU 8-ball and local hot-seat; exact physics/types/rules/bot/audio promotion; persistent profiles/preferences; structured server-rules match events/results/aggregates; recovery and canonical deep links. Continuous physics remains browser-local and evidence is explicitly client-reported. ADR-0020 excludes unsafe online relay, ranking/reward/proof claims and child authority. Local compiled runtime/health and production-host SSO/gameplay pass; deployed acceptance still blocks state 5 |
-| BrandForgeOS | `brandforgeos` | `brandforgeos.operatoros.net` | add-on | `C:\Dev\BrandForge-OS` | Commit-pinned source snapshot + native tenant-scoped campaign production board with draft-to-published workflow, audit, viewer denial, and optimistic concurrency; deeper asset generation parity pending |
+| BrandForgeOS | `brandforgeos` | `brandforgeos.operatoros.net` | add-on | Clean `C:\Dev\BrandForge-OS` and snapshot at `5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e` | Phase 11A source/local state-4 candidate: versioned brand kits/personas; campaign, copy and calendar lifecycle; persisted metrics and exports; OperatorOS-owned AI/idempotency/usage/activity; viewer denial, tenant isolation and canonical deep links. ADR-0021 excludes child identity/billing/credits/admin, random analytics, fake integrations and template purchasing. Clean 23-step release, compiled health/readiness and production-host SSO/workflow pass locally; deployed acceptance and authorized data cutover still block state 5 |
 | SnapProofOS | `snapproofos` | `snapproofos.operatoros.net` | add-on | `C:\Dev\snapproof` | Commit-pinned source snapshot + native tenant-scoped evidence/verification ledger with captured/review/verified states, audit, viewer denial, and optimistic concurrency; upload/integration parity pending |
 | StudyForge AI | `studyforge-ai` | `studyforge-ai.operatoros.net` | add-on | `C:\Dev\Study-Forge` | Commit-pinned source snapshot + tenant-gated native flashcard-session MVP; remaining parity migration pending |
 | Ninja Launch Kit | `ninja-launch-kit` | `ninjalaunchkit.operatoros.net` | add-on | `C:\Dev\Ninja-Launch-Kit` | Commit-pinned source snapshot + tenant-gated native scaffold MVP; source-product alignment and parity pending |
@@ -45,6 +45,16 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 | OutCall | `outcall` | `outcall.operatoros.net` | add-on | No saved Codex project/source path observed | Planned/disabled placeholder; not purchasable or launchable |
 
 ## Current verification boundary
+
+Phase 11A adds the ordered `brandforgeos_tables` release step and a dedicated
+workspace backed only by tenant-scoped PostgreSQL records. Fresh closure
+evidence passes 28/28 focused domain/import/shared-service/database/hard-delete
+contracts, workspace typecheck, production build, compiled `/healthz` and
+`/readyz`, and the complete production-host browser matrix 5/5. The matrix
+proves all twelve silent launches plus BrandForgeOS CRUD, AI usage
+idempotency, return, deep-link refresh, global logout, reauthentication and
+persistence. This is local/source evidence; no public deployment or data
+cutover is inferred.
 
 The shared source passes the API, runner, and web typechecks and the exact
 production build shape with `INTERNAL_API_URL=http://localhost:5001`.
