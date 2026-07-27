@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
-- Last updated: 2026-07-26
-- Phase: **11B SnapProofOS source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
+- Last updated: 2026-07-27
+- Phase: **11D Ninja Launch Kit source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -16,60 +16,116 @@
 - Phase 11A implementation commit: `d4f4c16`
 - Phase 11A merge commit: `a471399`
 - Phase 11B source provenance: `26bded38c13b5b6361d407462c68052b0c30613d`
-- Execution branch: `codex/phase-11b-snapproofos-completion`
+- Phase 11C source provenance: `a607a9f34442b1d0f6bfffbf0293609529494825`
+- Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
+- Execution branch: `codex/phase-11d-ninja-launch-kit-completion`
 - Release gate: **closed**
 
 ## Current verdict
 
-Phase 11B provides a dedicated persistent SnapProofOS workspace for
-tenant-scoped evidence cases; private note and file capture; signature/MIME
-validation, shared scanning and SHA-256 integrity recheck; member submission
-and tenant-admin review; findings; append-only internal comments and
-sequence/hash-linked custody; immutable report snapshots; real JSON/CSV exports
-with provenance; retention, legal hold and archive; persisted dashboard
-metrics; responsive mobile navigation; and canonical deep links.
+Phase 11D replaces Ninja Launch Kit's active scaffold with a dedicated
+persistent launch-execution workspace for tenant-scoped launches, phases,
+milestones and dependent tasks; 20 source-aligned templates; versioned
+campaign artifacts with draft/review/approved lifecycle; private scanned
+assets; server-computed readiness and launch gates; OperatorOS-owned AI,
+idempotency, usage and activity; audited JSON/Markdown/CSV exports; responsive
+mobile navigation; and canonical record deep links.
 
 The clean source is pinned at
-`26bded38c13b5b6361d407462c68052b0c30613d`; 336 tracked files, 259 retained
-files and 3,400,008 bytes were inventoried with zero high-confidence secret
-findings. The source runtime remains non-executed. ADR-0022 excludes child
-identity/organizations/billing, public share and file URLs, fake export paths,
-and arbitrary provider integrations. The deterministic import is dry-run only
-and refuses secure-file apply without an authorized byte export and mapping.
+`30bd1abc05846926e97bc7b26c5b7d6625e8f161`; 331 tracked files, 256 retained
+files and 1,173,062 bytes were inventoried with zero high-confidence secret
+findings. The source runtime remains non-executed. ADR-0024 keeps reusable
+brand and ongoing-campaign authority in BrandForgeOS and excludes child
+identity/billing/admin, duplicate credentials, legacy URL-token SSO,
+simulated analytics and unsupported integrations. The deterministic importer
+is commit-pinned, read-only and no-apply.
 
-Fresh closure evidence passes 17/17 focused domain/import/database/release/
+Fresh closure evidence passes the focused domain/import/database/static
+contracts and 4/4 PostgreSQL workflows, API/runner/web typecheck, the exact
+production build and core preflight, a clean 26-step release plus idempotent
+reapply, and the complete clean API aggregate at 816 pass, 0 fail and 0 skip.
+The compiled readiness-gated supervisor applied all 26 steps and started
+Fastify and Next. Direct and web-proxied `/healthz` and `/readyz` returned 200
+with database, auth, SSO code encryption, registry and shared worker ready.
+Optional Stripe, email, Twilio and OpenAI providers correctly reported
+disabled in the production-runtime proof.
+
+The final production-host Playwright matrix passes 8/8 locally in 1.7 minutes.
+It proves one central credential and twelve silent module launches. The Ninja
+Launch Kit case persists a launch, completes the required plan, generates
+draft artifacts with the deterministic local adapter, explicitly reviews and
+approves all artifacts, reaches 100% server readiness, launches, creates a
+real audited export, checks mobile navigation, returns through My Apps,
+globally logs out, directly reauthenticates to the launch deep link, refreshes
+and confirms persistence.
+
+The first browser run reached 80% because rapid acceptance clicks did not wait
+for each server-reloaded review state. Task buttons now expose pressed state
+and the test waits for every persisted task and artifact transition. The
+focused failed case passed 1/1, followed by the complete clean-process 8/8
+matrix. Repeated disposable registrations later reached the intentional
+in-memory limit; only the local test API was restarted. No security control
+was weakened. Two discarded aggregate runs also demonstrated why the harness
+must use a truly empty database: one reused mutable state and one started from
+a seeded release database. The authoritative empty-database run is 816/816.
+
+Ninja Launch Kit is therefore a source/local state 4 candidate, not state 5 or
+production-ready. This revision has not been deployed. No production backup,
+database mutation, source-data apply, live provider traffic or traffic cutover
+was authorized. Deployed SSO/return/logout/health/workflow acceptance and an
+approved reconciliation/cutover record remain required.
+
+## Phase 11C historical evidence
+
+Phase 11C provides a dedicated persistent StudyForge AI workspace for
+tenant-scoped subjects; private note and scanned document sources;
+source-grounded AI deck, quiz and study-plan generation; exact source excerpts
+and hashes; editable draft/review/published lifecycles; server-authoritative
+quiz grading; persistent attempts; per-user spaced repetition and plan
+completion; shared usage, idempotency and activity; real JSON/CSV exports;
+responsive mobile navigation; and canonical deep links.
+
+The clean source is pinned at
+`a607a9f34442b1d0f6bfffbf0293609529494825`; 298 tracked files, 224 retained
+files and 924,929 bytes were inventoried with zero high-confidence secret
+findings. The source runtime remains non-executed. ADR-0023 excludes child
+identity/billing/admin authority, ungrounded publication, fake analytics and
+unsafe document formats. The deterministic migration planner is commit-pinned,
+read-only and no-apply.
+
+Fresh closure evidence passes 14/14 focused domain/import/database/release/
 deep-link contracts, API/runner/web typecheck, the exact production build and
-core preflight, a clean 24-step release plus idempotent reapply, and the
-complete clean API aggregate at 787 pass, 0 fail and 0 skip. The compiled
+core preflight, a clean 25-step release plus idempotent reapply, and the
+complete clean API aggregate at 801 pass, 0 fail and 0 skip. The compiled
 readiness-gated supervisor applied the release and started Fastify, the shared
 worker and Next. Direct and web-proxied `/healthz` and `/readyz` returned
 healthy/ready with database, auth, SSO code encryption, registry and worker
 configured.
 
-The full production-host Playwright matrix passes 6/6 locally without retry.
+The final production-host Playwright matrix passes 7/7 locally.
 It proves one central credential and twelve silent module launches. The
-SnapProofOS case creates real persisted records, uploads private bytes, waits
-for scanning, verifies integrity under server reviewer authority, confirms
-custody continuity, creates and approves a report, downloads a real export,
-places a legal hold, checks mobile navigation, returns through My Apps,
-globally logs out, directly reauthenticates to the case deep link, refreshes,
-and confirms persistence.
+StudyForge case persists note/document sources; generates, edits, reviews and
+publishes a deck, quiz and plan; records card progress, a server-graded attempt
+and a completed session; verifies exactly three usage events; exports real
+data; checks mobile navigation; returns through My Apps; globally logs out;
+directly reauthenticates to a deep link; refreshes; and confirms persistence.
 
-The first browser run exposed only an ambiguous final test selector after the
-complete workflow succeeded. The selector was scoped, the focused case passed
-1/1, and the complete matrix reran 6/6. A subsequent immediate rerun correctly
-reached the in-memory registration limit from repeated disposable identities;
-restarting only the test API cleared the bucket. No production rate limit was
-weakened.
+The closure runs found and fixed optional-table assumptions in isolated
+hard-delete tests, a stale SnapProofOS selected-case closure, and two browser
+test synchronization races around StudyForge publish/completion. Focused
+StudyForge and SnapProofOS scenarios passed, then the complete matrix passed
+7/7. Repeated disposable registrations later reached the intentional
+in-memory rate limit; only the local test API was restarted. No production
+limit or security control was weakened.
 
-SnapProofOS is therefore a source/local state 4 candidate, not state 5 or
+StudyForge AI is therefore a source/local state 4 candidate, not state 5 or
 production-ready. This revision has not been deployed. No production backup,
-database mutation, source-data apply, provider traffic or traffic cutover was
+database mutation, source-data apply, live AI provider traffic or traffic cutover was
 authorized. Deployed SSO/return/logout/health/workflow acceptance and an
 approved reconciliation/cutover record remain required.
 
-The historical Phase 11A and earlier sections below remain evidence for their
-dated revisions; this Phase 11B verdict supersedes them as current status.
+Phase 11B evidence remains in its module documents and final acceptance
+follow-up. The Phase 11A and earlier sections below remain historical evidence.
 
 ## Phase 11A historical evidence
 

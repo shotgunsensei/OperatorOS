@@ -1,6 +1,6 @@
 'use client';
 
-import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Archive,
   CheckCircle2,
@@ -102,11 +102,17 @@ export default function SnapProofWorkspace() {
   const [evidence, setEvidence] = useState<SnapProofEvidence[]>([]);
   const [reports, setReports] = useState<SnapProofReport[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const selectedCaseIdRef = useRef<string | null>(null);
   const [detail, setDetail] = useState<any>(null);
   const [custody, setCustody] = useState<Array<Record<string, any>>>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const chooseCase = useCallback((caseId: string | null) => {
+    selectedCaseIdRef.current = caseId;
+    setSelectedCaseId(caseId);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -122,7 +128,8 @@ export default function SnapProofWorkspace() {
       setCases(caseRows.items);
       setEvidence(evidenceRows.items);
       setReports(reportRows.items);
-      setSelectedCaseId(current => current && caseRows.items.some(item => item.id === current)
+      const current = selectedCaseIdRef.current;
+      chooseCase(current && caseRows.items.some(item => item.id === current)
         ? current
         : caseRows.items[0]?.id ?? null);
     } catch (err) {
@@ -130,7 +137,7 @@ export default function SnapProofWorkspace() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [chooseCase]);
 
   const loadDetail = useCallback(async (caseId: string | null) => {
     if (!caseId) {
@@ -157,11 +164,15 @@ export default function SnapProofWorkspace() {
       const segments = window.location.pathname.split('/').filter(Boolean);
       const candidate = [...segments].reverse().find(segment => tabs.some(item => item.id === segment)) as Tab | undefined;
       if (candidate) setTab(candidate);
+      const casesIndex = segments.lastIndexOf('cases');
+      if (casesIndex >= 0 && segments[casesIndex + 1]) {
+        chooseCase(decodeURIComponent(segments[casesIndex + 1]));
+      }
     };
     sync();
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
-  }, []);
+  }, [chooseCase]);
 
   const navigate = (next: Tab) => {
     setTab(next);
@@ -170,7 +181,7 @@ export default function SnapProofWorkspace() {
   };
 
   const selectCase = (caseId: string, next: Tab = 'cases') => {
-    setSelectedCaseId(caseId);
+    chooseCase(caseId);
     setTab(next);
     const hostRouted = window.location.hostname === 'snapproofos.operatoros.net';
     const resourcePath = next === 'cases' ? `/cases/${caseId}` : `/${next}`;
@@ -183,7 +194,7 @@ export default function SnapProofWorkspace() {
     try {
       await task();
       await load();
-      await loadDetail(selectedCaseId);
+      await loadDetail(selectedCaseIdRef.current);
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -227,12 +238,12 @@ export default function SnapProofWorkspace() {
         <>
           {tab === 'dashboard' && <Dashboard counts={dashboard.counts || {}} cases={cases} onOpen={selectCase} navigate={navigate} />}
           {tab === 'cases' && <CasesPanel cases={cases} detail={detail} selectedCaseId={selectedCaseId} saving={saving} onSelect={selectCase} mutate={mutate} />}
-          {tab === 'evidence' && <EvidencePanel cases={cases} evidence={evidence} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={setSelectedCaseId} mutate={mutate} />}
+          {tab === 'evidence' && <EvidencePanel cases={cases} evidence={evidence} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={chooseCase} mutate={mutate} />}
           {tab === 'review' && <ReviewPanel caseDetail={detail} evidence={evidence} reports={reports} saving={saving} mutate={mutate} />}
-          {tab === 'findings' && <FindingsPanel cases={cases} detail={detail} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={setSelectedCaseId} mutate={mutate} />}
-          {tab === 'reports' && <ReportsPanel cases={cases} reports={reports} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={setSelectedCaseId} mutate={mutate} />}
-          {tab === 'custody' && <CustodyPanel cases={cases} selectedCaseId={selectedCaseId} events={custody} onSelectCase={setSelectedCaseId} />}
-          {tab === 'retention' && <RetentionPanel cases={cases} selectedCase={selectedCase} onSelectCase={setSelectedCaseId} saving={saving} mutate={mutate} />}
+          {tab === 'findings' && <FindingsPanel cases={cases} detail={detail} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={chooseCase} mutate={mutate} />}
+          {tab === 'reports' && <ReportsPanel cases={cases} reports={reports} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={chooseCase} mutate={mutate} />}
+          {tab === 'custody' && <CustodyPanel cases={cases} selectedCaseId={selectedCaseId} events={custody} onSelectCase={chooseCase} />}
+          {tab === 'retention' && <RetentionPanel cases={cases} selectedCase={selectedCase} onSelectCase={chooseCase} saving={saving} mutate={mutate} />}
           {tab === 'settings' && <SettingsPanel />}
         </>
       )}

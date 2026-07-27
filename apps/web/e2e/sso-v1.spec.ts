@@ -143,6 +143,24 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
   if (!identity) return;
   const { userId, tenantId } = identity;
   const tenantTables = [
+    'launchkit_exports',
+    'launchkit_artifacts',
+    'launchkit_tasks',
+    'launchkit_milestones',
+    'launchkit_phases',
+    'launchkit_generations',
+    'launchkit_launches',
+    'studyforge_card_progress',
+    'studyforge_quiz_attempts',
+    'studyforge_cards',
+    'studyforge_questions',
+    'studyforge_plan_sessions',
+    'studyforge_decks',
+    'studyforge_quizzes',
+    'studyforge_plans',
+    'studyforge_generations',
+    'studyforge_sources',
+    'studyforge_subjects',
     'snapproof_exports',
     'snapproof_custody_events',
     'snapproof_comments',
@@ -709,6 +727,333 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.reload();
     await expect(modulePage.getByRole('heading', { name: campaignName })).toBeVisible();
     await assertHostOnlySession(modulePage.context(), 'brandforgeos.operatoros.net');
+    await assertNoBrowserCredentialStorage(modulePage);
+    assertNoCredentialQuery(modulePage.url());
+  });
+
+  test('StudyForge AI persists source-grounded reviewed learning workflows, meters AI, and survives deep-link reauthentication', async ({ page, request }) => {
+    test.setTimeout(210_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+    const suffix = Date.now().toString(36);
+    const subjectName = `Phase 11C Networks ${suffix}`;
+    const sourceTitle = `Phase 11C DNS source ${suffix}`;
+    const documentTitle = `Phase 11C private document ${suffix}`;
+    const deckTitle = `Phase 11C DNS deck ${suffix}`;
+    const quizTitle = `Phase 11C DNS quiz ${suffix}`;
+    const planTitle = `Phase 11C DNS plan ${suffix}`;
+
+    await page.goto(`${ROOT}/app`);
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await page.getByTestId('nav-my-apps').click();
+    await expect(page.getByTestId('page-my-apps')).toBeVisible();
+
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByTestId('button-launch-studyforge-ai').click();
+    const modulePage = await popupPromise;
+    const workspace = modulePage.getByTestId('shell-studyforge-ai');
+    await expect(workspace).toBeVisible({ timeout: 30_000 });
+    await expect(modulePage.locator('#studyforge-dashboard')).toBeVisible();
+    expect(await workspace.getAttribute('data-evidence')).toBe('persisted_records_only');
+    assertNoCredentialQuery(modulePage.url());
+
+    await modulePage.getByRole('button', { name: 'Subjects', exact: true }).click();
+    await expect(modulePage).toHaveURL('https://studyforge-ai.operatoros.net/subjects');
+    await modulePage.getByTestId('input-studyforge-subject-name').fill(subjectName);
+    await modulePage.getByLabel('Course code').fill('NET-201');
+    await modulePage.getByTestId('button-studyforge-subject-create').click();
+    await expect(modulePage.locator('#studyforge-subjects').getByText(subjectName, { exact: true })).toBeVisible();
+
+    await modulePage.getByRole('button', { name: 'Sources', exact: true }).click();
+    await modulePage.getByTestId('input-studyforge-source-title').fill(sourceTitle);
+    await modulePage.getByTestId('textarea-studyforge-source-body').fill(
+      'Domain Name System resolvers translate host names into IP addresses. Recursive resolvers cache successful answers according to the record time to live.',
+    );
+    await modulePage.getByTestId('button-studyforge-source-create').click();
+    await expect(modulePage.locator('#studyforge-sources').getByText(sourceTitle, { exact: true })).toBeVisible();
+    await modulePage.getByTestId('input-studyforge-source-title').fill(documentTitle);
+    await modulePage.locator('input[type="file"]').setInputFiles({
+      name: 'phase-11c-private-source.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('Private tenant-authorized DNS training document for Phase 11C.'),
+    });
+    const uploadResponse = modulePage.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === '/api/modules/studyforge-ai/sources/document'
+      && response.status() === 202);
+    await modulePage.getByRole('button', { name: 'Upload phase-11c-private-source.txt' }).click();
+    await uploadResponse;
+    await expect(modulePage.locator('#studyforge-sources').getByText(documentTitle, { exact: true })).toBeVisible();
+
+    const generate = async (type: 'deck' | 'quiz' | 'study_plan', title: string) => {
+      await modulePage.getByRole('button', { name: 'AI Studio', exact: true }).click();
+      await modulePage.getByTestId('select-studyforge-generation-source').selectOption({ label: sourceTitle });
+      await modulePage.getByTestId('select-studyforge-generation-type').selectOption(type);
+      await modulePage.getByTestId('input-studyforge-generation-title').fill(title);
+      const responsePromise = modulePage.waitForResponse(response =>
+        response.request().method() === 'POST'
+        && new URL(response.url()).pathname === '/api/modules/studyforge-ai/generations'
+        && response.status() === 201);
+      await modulePage.getByTestId('button-studyforge-generation-create').click();
+      return (await responsePromise).json() as Promise<{ entity: { id: string } }>;
+    };
+
+    const deck = await generate('deck', deckTitle);
+    await modulePage.getByRole('button', { name: 'Flashcards', exact: true }).click();
+    const deckArticle = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: deckTitle }) });
+    await expect(deckArticle).toBeVisible();
+    await deckArticle.getByRole('button', { name: 'Edit card' }).first().click();
+    await deckArticle.getByLabel('Card question').fill('What does a DNS resolver translate?');
+    await deckArticle.getByLabel('Card answer').fill('Host names into IP addresses.');
+    await deckArticle.getByRole('button', { name: 'Save card' }).click();
+    await expect(deckArticle.getByText('What does a DNS resolver translate?', { exact: true })).toBeVisible();
+    await deckArticle.getByRole('button', { name: 'Move to review' }).click();
+    await deckArticle.getByRole('button', { name: 'Move to published' }).click();
+    await deckArticle.getByRole('button', { name: 'good', exact: true }).first().click();
+
+    const quiz = await generate('quiz', quizTitle);
+    await modulePage.getByRole('button', { name: 'Quizzes', exact: true }).click();
+    const quizArticle = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: quizTitle }) });
+    await expect(quizArticle).toBeVisible();
+    await quizArticle.getByRole('button', { name: 'Edit question' }).first().click();
+    await quizArticle.getByLabel('Quiz question').fill('What information does DNS resolution return?');
+    await quizArticle.getByRole('button', { name: 'Save question' }).click();
+    await expect(quizArticle.getByText('What information does DNS resolution return?', { exact: true })).toBeVisible();
+    await quizArticle.getByRole('button', { name: 'Move to review' }).click();
+    await quizArticle.getByRole('button', { name: 'Move to published' }).click();
+    const quizFields = quizArticle.locator('fieldset');
+    await expect(quizFields).toHaveCount(2);
+    for (let index = 0; index < await quizFields.count(); index += 1) {
+      await quizFields.nth(index).locator('input[type="radio"]').first().check();
+    }
+    await quizArticle.getByRole('button', { name: 'Submit quiz' }).click();
+
+    const plan = await generate('study_plan', planTitle);
+    await modulePage.getByRole('button', { name: 'Study Plans', exact: true }).click();
+    const planArticle = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: planTitle }) });
+    await expect(planArticle).toBeVisible();
+    await planArticle.getByRole('button', { name: 'Edit session' }).first().click();
+    await planArticle.getByLabel('Study session title').fill('Review DNS resolution');
+    await planArticle.getByLabel('Study session minutes').fill('25');
+    await planArticle.getByRole('button', { name: 'Save session' }).click();
+    await expect(planArticle.getByText('Review DNS resolution', { exact: true })).toBeVisible();
+    await planArticle.getByRole('button', { name: 'Move to review' }).click();
+    await planArticle.getByRole('button', { name: 'Move to published' }).click();
+    await planArticle.getByRole('button', { name: 'Complete' }).first().click();
+    await expect(planArticle.getByRole('button', { name: 'Reopen' }).first()).toBeVisible();
+
+    const persisted = await pg.query<{
+      decks: string; attempts: string; completed_sessions: string; progress: string; document_sources: string;
+    }>(
+      `select
+         (select count(*) from studyforge_decks where tenant_id=$1 and id=$2 and status='published')::text as decks,
+         (select count(*) from studyforge_quiz_attempts where tenant_id=$1 and quiz_id=$3)::text as attempts,
+         (select count(*) from studyforge_plan_sessions where tenant_id=$1 and plan_id=$4 and completed_at is not null)::text as completed_sessions,
+         (select count(*) from studyforge_card_progress where tenant_id=$1)::text as progress,
+         (select count(*) from studyforge_sources s join shared_attachments a
+            on a.tenant_id=s.tenant_id and a.id=s.attachment_id
+           where s.tenant_id=$1 and s.title=$5 and s.source_type='document')::text as document_sources`,
+      [identity.tenantId, deck.entity.id, quiz.entity.id, plan.entity.id, documentTitle],
+    );
+    expect(Number(persisted.rows[0].decks)).toBe(1);
+    expect(Number(persisted.rows[0].attempts)).toBe(1);
+    expect(Number(persisted.rows[0].completed_sessions)).toBeGreaterThan(0);
+    expect(Number(persisted.rows[0].progress)).toBeGreaterThan(0);
+    expect(Number(persisted.rows[0].document_sources)).toBe(1);
+
+    const usage = await pg.query<{ events: string; units: string }>(
+      `select count(*)::text as events, coalesce(sum(units),0)::text as units
+         from shared_usage_events sue join modules m on m.id=sue.module_id
+        where sue.tenant_id=$1 and m.slug='studyforge-ai'
+          and sue.operation='studyforge.ai_generation'`,
+      [identity.tenantId],
+    );
+    expect(Number(usage.rows[0].events)).toBe(3);
+    expect(Number(usage.rows[0].units)).toBe(3);
+
+    const exportResult = await modulePage.evaluate(async () => {
+      const response = await fetch('/api/modules/studyforge-ai/export?format=json', { credentials: 'include' });
+      return { status: response.status, body: await response.json() };
+    });
+    expect(exportResult.status).toBe(200);
+    expect((exportResult.body as any).decks.some((item: any) => item.id === deck.entity.id)).toBe(true);
+
+    await modulePage.setViewportSize({ width: 390, height: 844 });
+    await expect(modulePage.getByRole('navigation', { name: 'StudyForge workspace' })).toBeVisible();
+    await expect(modulePage.getByRole('button', { name: 'Dashboard', exact: true })).toBeVisible();
+    await Promise.all([
+      modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      modulePage.getByRole('link', { name: 'My Apps' }).first().click(),
+    ]);
+    await expect(modulePage.getByTestId('page-my-apps')).toBeVisible();
+
+    const logoutAll = await modulePage.evaluate(async () => {
+      const response = await fetch('/api/auth/logout-all', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return { status: response.status, body: await response.text() };
+    });
+    expect(logoutAll.status, logoutAll.body).toBe(200);
+
+    const deckUrl = `https://studyforge-ai.operatoros.net/decks/${deck.entity.id}`;
+    await modulePage.goto(deckUrl);
+    await expect(modulePage).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await modulePage.getByTestId('input-email').fill(identity.email);
+    await modulePage.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      modulePage.waitForURL(deckUrl, { timeout: 30_000 }),
+      modulePage.getByTestId('button-login').click(),
+    ]);
+    await expect(modulePage.getByRole('heading', { name: deckTitle })).toBeVisible();
+    await modulePage.reload();
+    await expect(modulePage).toHaveURL(deckUrl);
+    await expect(modulePage.getByRole('heading', { name: deckTitle })).toBeVisible();
+    await assertHostOnlySession(modulePage.context(), 'studyforge-ai.operatoros.net');
+    await assertNoBrowserCredentialStorage(modulePage);
+    assertNoCredentialQuery(modulePage.url());
+  });
+
+  test('Ninja Launch Kit persists reviewed launch execution, evidence readiness, exports, and deep-link reauthentication', async ({ page, request }) => {
+    test.setTimeout(210_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+    const suffix = Date.now().toString(36);
+    const launchTitle = `Phase 11D operator launch ${suffix}`;
+
+    await page.goto(`${ROOT}/app`);
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await page.getByTestId('nav-my-apps').click();
+    await expect(page.getByTestId('page-my-apps')).toBeVisible();
+
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByTestId('button-launch-ninja-launch-kit').click();
+    const modulePage = await popupPromise;
+    await expect(modulePage.getByTestId('shell-ninja-launch-kit')).toBeVisible({ timeout: 30_000 });
+    await expect(modulePage.locator('#launchkit-dashboard')).toBeVisible();
+    assertNoCredentialQuery(modulePage.url());
+
+    await modulePage.getByTestId('input-launchkit-title').fill(launchTitle);
+    await modulePage.getByTestId('input-launchkit-product-type').fill('SaaS service');
+    await modulePage.getByTestId('select-launchkit-template').selectOption('it-support-msp');
+    await modulePage.getByTestId('input-launchkit-audience').fill('MSP owners');
+    await modulePage.getByTestId('input-launchkit-problem').fill('Disconnected operational products');
+    await modulePage.getByLabel('Positioning').fill('One coherent OperatorOS launch');
+    await modulePage.getByTestId('input-launchkit-offer').fill('Operator platform launch package');
+    await modulePage.getByLabel('Price').fill('149');
+    await modulePage.getByLabel('Target date').fill('2026-09-01');
+    const createResponse = modulePage.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === '/api/modules/ninja-launch-kit/launches'
+      && response.status() === 201);
+    await modulePage.getByTestId('button-launchkit-create').click();
+    const created = await (await createResponse).json() as { launch: { id: string } };
+    const launchId = created.launch.id;
+    const launchUrl = `https://ninjalaunchkit.operatoros.net/launches/${launchId}`;
+    await expect(modulePage.getByText(launchTitle, { exact: true }).first()).toBeVisible();
+    await expect(modulePage.getByTestId('text-launchkit-readiness')).not.toHaveText('100%');
+
+    const taskButtons = modulePage.locator('[data-testid^="button-launchkit-task-"]');
+    await expect(taskButtons).toHaveCount(6);
+    for (let index = 0; index < 6; index += 1) {
+      const taskButton = taskButtons.nth(index);
+      await taskButton.click();
+      await expect(taskButton).toHaveAttribute('aria-pressed', 'true');
+    }
+
+    const generationResponse = modulePage.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === `/api/modules/ninja-launch-kit/launches/${launchId}/generations`
+      && response.status() === 201);
+    await modulePage.getByTestId('button-launchkit-generate').click();
+    await generationResponse;
+    const artifactButtons = modulePage.locator('[data-testid^="button-launchkit-artifact-"]');
+    await expect(artifactButtons).toHaveCount(8);
+    for (let index = 0; index < 8; index += 1) {
+      const artifactButton = artifactButtons.nth(index);
+      await artifactButton.click();
+      await expect(artifactButton).toHaveText('Approve');
+      await artifactButton.click();
+      await expect(artifactButton).toHaveText('Return to draft');
+    }
+    await expect(modulePage.getByTestId('text-launchkit-readiness')).toHaveText('100%');
+    await modulePage.getByTestId('button-launchkit-mark-launched').click();
+    await expect(modulePage.getByText(/SaaS service · launched/)).toBeVisible();
+
+    const downloadPromise = modulePage.waitForEvent('download');
+    await modulePage.getByTestId('button-launchkit-export-markdown').click();
+    const download = await downloadPromise;
+    expect(await download.suggestedFilename()).toMatch(/\.md$/);
+    await expect(modulePage.getByTestId('text-launchkit-export-hash')).toContainText(/[0-9a-f]{64}/);
+
+    const persisted = await pg.query<{
+      launches: string; tasks: string; artifacts: string; generations: string; exports: string; usage: string;
+    }>(
+      `select
+        (select count(*) from launchkit_launches where tenant_id=$1 and id=$2 and status='launched')::text as launches,
+        (select count(*) from launchkit_tasks where tenant_id=$1 and launch_id=$2 and required=true and status='complete')::text as tasks,
+        (select count(*) from launchkit_artifacts where tenant_id=$1 and launch_id=$2 and required=true and status='approved')::text as artifacts,
+        (select count(*) from launchkit_generations where tenant_id=$1 and launch_id=$2)::text as generations,
+        (select count(*) from launchkit_exports where tenant_id=$1 and launch_id=$2)::text as exports,
+        (select count(*) from shared_usage_events u join modules m on m.id=u.module_id
+          where u.tenant_id=$1 and m.slug='ninja-launch-kit' and u.operation='launchkit.ai_generation')::text as usage`,
+      [identity.tenantId, launchId],
+    );
+    expect(Number(persisted.rows[0].launches)).toBe(1);
+    expect(Number(persisted.rows[0].tasks)).toBe(6);
+    expect(Number(persisted.rows[0].artifacts)).toBe(8);
+    expect(Number(persisted.rows[0].generations)).toBe(1);
+    expect(Number(persisted.rows[0].exports)).toBe(1);
+    expect(Number(persisted.rows[0].usage)).toBe(1);
+
+    await modulePage.goto(launchUrl);
+    await expect(modulePage).toHaveURL(launchUrl);
+    await modulePage.reload();
+    await expect(modulePage.getByText(launchTitle, { exact: true }).first()).toBeVisible();
+    await modulePage.setViewportSize({ width: 390, height: 844 });
+    await expect(modulePage.getByTestId('button-launchkit-mark-launched')).toBeVisible();
+
+    await Promise.all([
+      modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      modulePage.getByRole('link', { name: 'My Apps' }).first().click(),
+    ]);
+    await expect(modulePage.getByTestId('page-my-apps')).toBeVisible();
+    const logoutAll = await modulePage.evaluate(async () => {
+      const response = await fetch('/api/auth/logout-all', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return { status: response.status, body: await response.text() };
+    });
+    expect(logoutAll.status, logoutAll.body).toBe(200);
+
+    await modulePage.goto(launchUrl);
+    await expect(modulePage).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await modulePage.getByTestId('input-email').fill(identity.email);
+    await modulePage.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      modulePage.waitForURL(launchUrl, { timeout: 30_000 }),
+      modulePage.getByTestId('button-login').click(),
+    ]);
+    await expect(modulePage.getByText(launchTitle, { exact: true }).first()).toBeVisible();
+    await expect(modulePage.getByTestId('text-launchkit-readiness')).toHaveText('100%');
+    await assertHostOnlySession(modulePage.context(), 'ninjalaunchkit.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
   });

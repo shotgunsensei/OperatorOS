@@ -1808,6 +1808,89 @@ export const moduleShellApi = {
       }),
     delete: (id: string) =>
       apiFetch(`/modules/studyforge-ai/sessions/${id}`, { method: 'DELETE' }),
+    workspace: () => apiFetch('/modules/studyforge-ai/workspace'),
+    createSubject: (input: { name: string; courseCode?: string | null; description?: string | null }) =>
+      apiFetch('/modules/studyforge-ai/subjects', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    createSource: (input: { subjectId?: string | null; title: string; sourceType: 'note'; body: string }) =>
+      apiFetch('/modules/studyforge-ai/sources', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    uploadSource: (input: {
+      subjectId?: string | null;
+      title: string;
+      originalName: string;
+      mimeType: string;
+      contentBase64: string;
+      idempotencyKey: string;
+    }) => {
+      const { idempotencyKey, ...body } = input;
+      return apiFetch('/modules/studyforge-ai/sources/document', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify(body),
+      });
+    },
+    generate: (input: {
+      sourceId: string;
+      subjectId?: string | null;
+      type: 'deck' | 'quiz' | 'study_plan';
+      title: string;
+      targetDate?: string | null;
+      idempotencyKey: string;
+    }) => apiFetch('/modules/studyforge-ai/generations', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+    setStatus: (entity: 'decks' | 'quizzes' | 'plans', id: string, status: string, expectedVersion: number) =>
+      apiFetch(`/modules/studyforge-ai/${entity}/${encodeURIComponent(id)}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, expectedVersion }),
+      }),
+    updateCard: (id: string, input: { question?: string; answer?: string; sourceExcerpt?: string | null; expectedVersion: number }) =>
+      apiFetch(`/modules/studyforge-ai/cards/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    updateQuestion: (id: string, input: {
+      question?: string;
+      choices?: string[];
+      correctIndex?: number;
+      explanation?: string;
+      sourceExcerpt?: string | null;
+      expectedVersion: number;
+    }) => apiFetch(`/modules/studyforge-ai/questions/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+    submitAttempt: (quizId: string, answers: Array<{ questionId: string; selectedIndex: number }>) =>
+      apiFetch(`/modules/studyforge-ai/quizzes/${encodeURIComponent(quizId)}/attempts`, {
+        method: 'POST',
+        body: JSON.stringify({ answers }),
+      }),
+    reviewCard: (cardId: string, rating: 'again' | 'hard' | 'good' | 'easy', expectedVersion?: number) =>
+      apiFetch(`/modules/studyforge-ai/cards/${encodeURIComponent(cardId)}/reviews`, {
+        method: 'POST',
+        body: JSON.stringify({ rating, ...(expectedVersion ? { expectedVersion } : {}) }),
+      }),
+    completeSession: (id: string, completed: boolean, expectedVersion: number) =>
+      apiFetch(`/modules/studyforge-ai/plan-sessions/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ completed, expectedVersion }),
+      }),
+    updatePlanSession: (id: string, input: {
+      title?: string;
+      focus?: string;
+      scheduledFor?: string | null;
+      estimatedMinutes?: number;
+      expectedVersion: number;
+    }) => apiFetch(`/modules/studyforge-ai/plan-sessions/${encodeURIComponent(id)}/content`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
   },
   ninjamation: {
     list: () => apiFetch('/modules/ninjamation/automations'),
@@ -1826,14 +1909,56 @@ export const moduleShellApi = {
       apiFetch(`/modules/ninjamation/automations/${id}`, { method: 'DELETE' }),
   },
   launchkit: {
-    list: () => apiFetch('/modules/ninja-launch-kit/scaffolds'),
-    scaffold: (input: {
-      stackId: string;
-      stackName: string;
-      files: string[];
-      name?: string;
-    }) =>
-      apiFetch('/modules/ninja-launch-kit/scaffolds', {
+    templates: () => apiFetch('/modules/ninja-launch-kit/templates'),
+    workspace: () => apiFetch('/modules/ninja-launch-kit/workspace'),
+    detail: (id: string) => apiFetch(`/modules/ninja-launch-kit/launches/${encodeURIComponent(id)}`),
+    create: (input: Record<string, unknown>) =>
+      apiFetch('/modules/ninja-launch-kit/launches', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    update: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/launches/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    createTask: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/launches/${encodeURIComponent(id)}/tasks`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    updatePhase: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/phases/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    updateMilestone: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/milestones/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    updateTask: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/tasks/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    updateArtifact: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/artifacts/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    generate: (id: string, idempotencyKey: string) =>
+      apiFetch(`/modules/ninja-launch-kit/launches/${encodeURIComponent(id)}/generations`, {
+        method: 'POST',
+        body: JSON.stringify({ idempotencyKey }),
+      }),
+    export: (id: string, format: 'json' | 'markdown' | 'csv') =>
+      apiFetch(`/modules/ninja-launch-kit/launches/${encodeURIComponent(id)}/exports`, {
+        method: 'POST',
+        body: JSON.stringify({ format }),
+      }),
+    addAsset: (id: string, input: { originalName: string; mimeType: string; contentBase64: string }) =>
+      apiFetch(`/modules/ninja-launch-kit/launches/${encodeURIComponent(id)}/assets`, {
         method: 'POST',
         body: JSON.stringify(input),
       }),

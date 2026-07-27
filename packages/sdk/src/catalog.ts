@@ -216,7 +216,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'ninja-launch-kit',
     name: 'Ninja Launch Kit',
-    description: 'Build & ship internal tools fast',
+    description: 'Plan, review, and prove launch campaigns are ready',
     category: 'ai',
     commercialType: 'addon',
     canonicalBaseUrl: 'https://ninjalaunchkit.operatoros.net',

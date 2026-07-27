@@ -12,8 +12,8 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 24);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 24);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 26);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 26);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'free_account_app_backfill');
   assert.ok(
@@ -71,6 +71,16 @@ test('database release plan is explicit, ordered, additive, and reusable by star
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'shared_service_tables'),
     'SnapProofOS evidence tables must follow the shared private attachment service',
   );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'studyforge_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'snapproofos_tables'),
+    'StudyForge learning tables must follow shared attachments and the prior accepted modules',
+  );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'ninja_launch_kit_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'studyforge_tables'),
+    'Ninja Launch Kit tables must follow shared services and prior accepted modules',
+  );
 
   const api = read('apps/api/src/index.ts');
   const releaseSource = read('apps/api/src/lib/database-release.ts');
@@ -112,6 +122,14 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.snapproof_evidence_items'\)/);
   assert.match(releaseSource, /to_regclass\('public\.snapproof_custody_events'\)/);
   assert.match(releaseSource, /to_regclass\('public\.snapproof_reports'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.studyforge_subjects'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.studyforge_sources'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.studyforge_decks'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.studyforge_card_progress'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.launchkit_launches'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.launchkit_tasks'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.launchkit_artifacts'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.launchkit_exports'\)/);
   assert.match(releaseSource, /to_regclass\('public\.operatoros_token_purchase_intents'\)/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
 });

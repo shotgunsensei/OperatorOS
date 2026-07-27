@@ -96,6 +96,10 @@ export class MockAiProvider implements AiProvider {
       ? this.generateTorqueAssistResponse(request.userPrompt)
       : toolType === 'brandforge'
         ? this.generateBrandForgeResponse(request.userPrompt)
+        : toolType === 'studyforge'
+          ? this.generateStudyForgeResponse(request.userPrompt)
+          : toolType === 'ninja_launch_kit'
+            ? this.generateNinjaLaunchKitResponse(request.userPrompt)
       : this.generateMockResponse(toolType, request.userPrompt);
 
     return {
@@ -114,6 +118,8 @@ export class MockAiProvider implements AiProvider {
   private detectToolType(systemPrompt: string): string {
     if (systemPrompt.includes('OPERATOROS_TORQUE_ASSIST_V1')) return 'torque_assist';
     if (systemPrompt.includes('OPERATOROS_BRANDFORGE_V1')) return 'brandforge';
+    if (systemPrompt.includes('OPERATOROS_STUDYFORGE_V1')) return 'studyforge';
+    if (systemPrompt.includes('OPERATOROS_NINJA_LAUNCH_KIT_V1')) return 'ninja_launch_kit';
     if (systemPrompt.includes('summarize')) return 'summarizer';
     if (systemPrompt.includes('break down') || systemPrompt.includes('task')) return 'task_breakdown';
     if (systemPrompt.includes('action plan') || systemPrompt.includes('project plan')) return 'project_planner';
@@ -156,6 +162,118 @@ export class MockAiProvider implements AiProvider {
         { name: 'Proof-led launch', objective: prompt, channels: ['Email', 'LinkedIn'], description: 'Lead with a concrete before-and-after outcome.' },
         { name: 'Operator field guide', objective: prompt, channels: ['Content', 'Email'], description: 'Teach the workflow and connect it to the offer.' },
         { name: 'Focused retargeting', objective: prompt, channels: ['Ads', 'Social'], description: 'Re-engage high-intent visitors with one direct CTA.' },
+      ],
+    });
+  }
+
+  private generateStudyForgeResponse(userPrompt: string): string {
+    let input: Record<string, unknown> = {};
+    try {
+      input = JSON.parse(userPrompt) as Record<string, unknown>;
+    } catch {
+      input = {};
+    }
+    const source = String(input.source ?? '').trim();
+    const type = String(input.type ?? 'deck');
+    const sentences = source
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => sentence.trim())
+      .filter((sentence) => sentence.length >= 8)
+      .slice(0, 5);
+    const evidence = sentences.length ? sentences : [source.slice(0, 500)];
+    if (type === 'quiz') {
+      return JSON.stringify({
+        questions: evidence.slice(0, 3).map((excerpt, index) => ({
+          question: `Which statement is supported by source passage ${index + 1}?`,
+          choices: [excerpt, 'This option is not stated in the supplied source.'],
+          correctIndex: 0,
+          explanation: 'The first choice is the exact learner-supplied source passage.',
+          sourceExcerpt: excerpt,
+        })),
+      });
+    }
+    if (type === 'study_plan') {
+      return JSON.stringify({
+        sessions: evidence.slice(0, 5).map((excerpt, index) => ({
+          title: `Source review ${index + 1}`,
+          focus: `Review and recall: ${excerpt}`,
+          estimatedMinutes: 20,
+        })),
+      });
+    }
+    return JSON.stringify({
+      cards: evidence.map((excerpt, index) => ({
+        question: `What does source passage ${index + 1} state?`,
+        answer: excerpt,
+        sourceExcerpt: excerpt,
+      })),
+    });
+  }
+
+  private generateNinjaLaunchKitResponse(userPrompt: string): string {
+    let input: Record<string, unknown> = {};
+    try {
+      input = JSON.parse(userPrompt) as Record<string, unknown>;
+    } catch {
+      input = {};
+    }
+    const title = String(input.title ?? 'New launch').slice(0, 180);
+    const audience = String(input.audience ?? 'the defined audience').slice(0, 300);
+    const offer = String(input.offer ?? 'the launch offer').slice(0, 300);
+    const channels = Array.isArray(input.channels)
+      ? input.channels.map(String).slice(0, 8).join(', ')
+      : 'the selected channels';
+    const visualNames = [
+      'Facebook ad', 'Instagram square', 'Instagram story', 'Website hero',
+      'Flyer', 'QR poster', 'Logo direction', 'Brand colors', 'Font styles',
+    ];
+    return JSON.stringify({
+      artifacts: [
+        {
+          kind: 'landing',
+          title: `${title} landing page`,
+          body: `Headline: ${title}\nAudience: ${audience}\nOffer: ${offer}\nPrimary CTA: Review the offer and choose the next step.`,
+        },
+        {
+          kind: 'ads',
+          title: `${title} paid ad set`,
+          body: `Facebook concept: Introduce ${offer} to ${audience}.\nGoogle concept: Match high-intent searches to a clear ${title} landing page.\nAll claims require owner review before publication.`,
+        },
+        {
+          kind: 'email_sms',
+          title: `${title} email and SMS`,
+          body: `Email subject: ${title} is ready for review\nEmail body: Explain ${offer}, its intended audience, and one direct CTA.\nSMS: ${title}: review the offer and launch details at the approved destination.`,
+        },
+        {
+          kind: 'social',
+          title: `${title} social sequence`,
+          body: `Post 1: Name the problem for ${audience}.\nPost 2: Explain how ${offer} addresses it.\nPost 3: Invite the audience to the approved launch destination.\nChannels: ${channels}.`,
+        },
+        {
+          kind: 'faq',
+          title: `${title} FAQ`,
+          body: `Who is this for?\n${audience}\n\nWhat is offered?\n${offer}\n\nWhere can I learn more?\nUse the owner-approved launch destination.`,
+        },
+        {
+          kind: 'qr_flyer',
+          title: `${title} flyer and QR copy`,
+          body: `${title}\n${offer}\nScan the owner-provided QR code to visit the approved launch destination.\nThis artifact supplies copy only; it does not claim a QR code was generated.`,
+        },
+        {
+          kind: 'visual_briefs',
+          title: `${title} visual creative briefs`,
+          body: visualNames.map((name, index) => `${index + 1}. ${name}: communicate ${title} for ${audience}; use only approved brand assets and claims.`).join('\n'),
+        },
+        {
+          kind: 'launch_checklist',
+          title: `${title} launch checklist`,
+          body: [
+            'Confirm the audience, problem, positioning, offer, price, channels, and target date.',
+            'Review every generated artifact for accuracy and brand fit.',
+            'Validate destination links, tracking, consent, and required disclosures.',
+            'Approve final assets and complete every required launch task.',
+          ].join('\n'),
+        },
       ],
     });
   }

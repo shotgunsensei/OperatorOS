@@ -153,6 +153,14 @@ async function cleanupUser(pg: Client, userId: string) {
       [userId],
     );
     for (const t of owned.rows) {
+      try { await pg.query(`delete from launchkit_exports where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from launchkit_artifacts where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from launchkit_tasks where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from launchkit_milestones where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from launchkit_phases where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from launchkit_generations where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from launchkit_launches where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from shared_activity_events where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from module_call_logs where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from module_study_sessions where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from module_automations where tenant_id = $1`, [t.id]); } catch {}
@@ -229,42 +237,41 @@ async function exerciseShell(page: Page, slug: Slug) {
       break;
     }
     case 'studyforge-ai': {
-      // Load sample populates the textarea + word count without hitting
-      // the AI provider; generate then POSTs to /sessions. The mock
-      // provider returns a deterministic card array fallback so the list
-      // renders without an OPENAI_API_KEY. After generation we click the
-      // first card's reveal toggle and assert the answer paragraph
-      // mounts — proves the recall-session interaction round-trips.
-      await page.getByTestId('button-studyforge-load-sample').click();
-      await page.getByTestId('button-studyforge-generate').click();
+      const suffix = Date.now().toString(36);
+      await page.getByTestId('input-studyforge-subject-name').fill(`Biology ${suffix}`);
+      await page.getByTestId('button-studyforge-subject-create').click();
+      await page.getByTestId('input-studyforge-source-title').fill(`Cell notes ${suffix}`);
+      await page.getByTestId('textarea-studyforge-source-body').fill(
+        'Mitochondria generate ATP through oxidative phosphorylation. Cells use ATP as an energy carrier.',
+      );
+      await page.getByTestId('button-studyforge-source-create').click();
+      await page.getByTestId('select-studyforge-generation-source').selectOption({ label: `Cell notes ${suffix}` });
+      await page.getByTestId('input-studyforge-generation-title').fill(`Cell deck ${suffix}`);
+      await page.getByTestId('button-studyforge-generation-create').click();
       await expect(page.getByTestId('list-studyforge-cards'))
         .toBeVisible({ timeout: 15_000 });
       const firstCard = page.locator('[data-testid^="card-studyforge-"]').first();
       await expect(firstCard).toBeVisible({ timeout: 15_000 });
-      // Resolve the dynamic card id off the rendered card so we can
-      // target its matching toggle + answer testids.
       const firstCardId = await firstCard.evaluate((el) =>
         (el.getAttribute('data-testid') ?? '').replace(/^card-studyforge-/, ''),
       );
       expect(firstCardId, 'expected a generated card id').toBeTruthy();
-      // Pre-toggle: the answer must NOT be in the DOM (hidden state).
-      await expect(page.getByTestId(`text-studyforge-answer-${firstCardId}`))
-        .toHaveCount(0);
-      await page.getByTestId(`button-studyforge-toggle-${firstCardId}`).click();
-      // Post-toggle: the answer paragraph is rendered.
       await expect(page.getByTestId(`text-studyforge-answer-${firstCardId}`))
         .toBeVisible({ timeout: 5_000 });
       break;
     }
     case 'ninja-launch-kit': {
-      // Pick a stack, name it, scaffold. The API persists a `queued`
-      // scaffold row and returns it — the shell mounts the scaffold panel.
-      await page.getByTestId('button-launchkit-pick-next-fastify').click();
-      await page.getByTestId('input-launchkit-name').fill('task73-scaffold');
-      await page.getByTestId('button-launchkit-scaffold').click();
-      await expect(page.getByTestId('panel-launchkit-scaffold'))
+      const suffix = Date.now().toString(36);
+      await page.getByTestId('input-launchkit-title').fill(`Task73 launch ${suffix}`);
+      await page.getByTestId('input-launchkit-product-type').fill('service');
+      await page.getByTestId('select-launchkit-template').selectOption('it-support-msp');
+      await page.getByTestId('input-launchkit-audience').fill('MSP owners');
+      await page.getByTestId('input-launchkit-problem').fill('Scattered launch execution');
+      await page.getByTestId('input-launchkit-offer').fill('A focused launch package');
+      await page.getByTestId('button-launchkit-create').click();
+      await expect(page.getByText(`Task73 launch ${suffix}`, { exact: true }).first())
         .toBeVisible({ timeout: 10_000 });
-      await expect(page.getByTestId('list-launchkit-scaffold-files'))
+      await expect(page.getByTestId('text-launchkit-readiness'))
         .toBeVisible({ timeout: 10_000 });
       break;
     }

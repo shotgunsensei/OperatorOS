@@ -27,10 +27,11 @@ new ADR explicitly supersedes it.
 | ADR-0020 | Ninja Pool Hall approves Free Shoot, CPU, and hot-seat play; physical simulation remains local, server rules persist explicitly unverified results, and the unauthenticated relay is excluded. | Accepted | `docs/adr/ADR-0020-ninja-pool-hall-local-result-trust-boundary.md` |
 | ADR-0021 | BrandForgeOS owns a tenant-scoped creative workspace and provider-backed generation; OperatorOS retains identity, tenant, billing, entitlement, usage and provider authority, while random analytics and fake integrations are excluded. | Accepted | `docs/adr/ADR-0021-brandforgeos-creative-workspace-boundary.md` |
 | ADR-0022 | SnapProofOS owns tenant-scoped evidence cases, private captures, append-only custody, review and defensible reports; OperatorOS retains identity, tenant, entitlement, upload, audit and integration authority, while public raw URLs and legacy share links are excluded. | Accepted | `docs/adr/ADR-0022-snapproofos-evidence-integrity-boundary.md` |
+| ADR-0023 | StudyForge AI owns tenant-scoped sources and reviewed learning workflows; OperatorOS retains identity, tenant, entitlement, billing, provider and usage authority, and unverifiable source attribution is rejected. | Accepted | `docs/adr/ADR-0023-studyforge-learning-and-ai-boundary.md` |
+| ADR-0024 | Ninja Launch Kit owns time-bounded tenant launch execution, reviewed artifacts and evidence-based readiness; OperatorOS and BrandForgeOS retain their platform and reusable-brand authority. | Accepted | `docs/adr/ADR-0024-ninja-launch-kit-product-and-readiness-boundary.md` |
 
 ## Required future ADRs
 
-- Ninja Launch Kit source/product alignment (Phase 11D).
 - CallCommand AI versus OutCall product boundary (Phases 11E/12B).
 - Ninjamation canonical source or newly specified product boundary (Phase 12A).
 
