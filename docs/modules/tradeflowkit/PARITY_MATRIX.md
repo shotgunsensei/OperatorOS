@@ -6,8 +6,9 @@
 - Upstream reference commit: `6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55`
 - Quarantined evidence: `apps/modules/tradeflowkit/source`
 - Source/local consolidation result: state 4 candidate
-- State 5 result: blocked; cumulative candidate is not deployed and the public
-  OperatorOS release gate remains 31/48
+- State 5 result: blocked; the public OperatorOS read-only release gate passes
+  48/48, while authenticated module workflow, provider, and data-cutover gates
+  remain open
 
 ## Provenance
 

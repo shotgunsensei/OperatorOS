@@ -9,7 +9,7 @@
 
 | Application/module | Current state | State 5 | Blocking evidence |
 | --- | ---: | --- | --- |
-| OperatorOS platform | n/a | NOT ACCEPTED | Public 31/48; Phase 15 candidate not deployed |
+| OperatorOS platform | n/a | NOT ACCEPTED | Public read-only gate passes 48/48 on exact deployed merge; authenticated acceptance remains open |
 | TradeFlowKit | 4 | NOT CERTIFIED | Deployed CRUD/persistence/SSO and approved data cutover not run |
 | PulseDesk | 4 | NOT CERTIFIED | Deployed healthcare-operations workflow and privacy-reviewed cutover not run |
 | TechDeck | 4 | NOT CERTIFIED | Deployed managed-operations workflow/provider/cutover not run |

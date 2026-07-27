@@ -1,18 +1,18 @@
 # OperatorOS Phase 15 production acceptance report
 
 - Evidence date: 2026-07-27
-- Candidate branch: `codex/phase-15-deployed-acceptance`
-- Decision: **RELEASE STOPPED**
+- Candidate branch: `codex/phase-15-deployed-acceptance-fix2`
+- Decision: **PUBLIC GATE PASSED; RELEASE STOPPED PENDING AUTHENTICATED ACCEPTANCE**
 - State 5 certifications issued: **0**
 
 ## Executive result
 
-The OperatorOS ecosystem is not accepted for production release. The current
-public deployment passed 31 of 48 hardened read-only checks. The first Phase 15
-deployment attempt failed during Replit's automatic package installation,
-before the repository build, runtime supervisor, or database release ran.
-Consequently, authenticated end-to-end module workflows and production data
-cutover were not attempted.
+The OperatorOS ecosystem is not yet accepted for production release. The
+current deployment identifies exact merge
+`c249a75396104e7aabd773e564be6a95ada56467`, build
+`2eb701089a539d9e6da5af80`, and passes the contract-corrected 48/48 public
+read-only gate. Authenticated end-to-end module workflows and production data
+cutover have not been attempted.
 
 ## Deployment iteration 1
 
@@ -29,56 +29,62 @@ cutover were not attempted.
 | Runtime/database effect | None; build did not start |
 | Rollback | Not required; prior deployment remained active |
 
+## Deployment iteration 2
+
+| Field | Evidence |
+| --- | --- |
+| Git revision | `c249a75396104e7aabd773e564be6a95ada56467` |
+| Runtime build ID | `2eb701089a539d9e6da5af80` |
+| Readiness | 200; database healthy; auth, SSO encryption, registry, worker, and release identity configured |
+| Initial verifier | 32/48 after deployment; implementation behavior was correct but three verifier assumptions were stale |
+| Verifier correction | Root authorization uses `/login`; transaction cookies use authoritative `operatoros_sso_*` names; Replit-reserved `/healthz` is checked through the same Fastify snapshot at `/api/health` |
+| Focused regression | 8/8 middleware and production-verifier contracts pass |
+| Public result | 48/48, no authentication or mutation |
+| Production build | Pass after workspace typecheck |
+
 ## Current public read-only result
 
 `corepack pnpm verify:production` ran on 2026-07-27 without authentication or
-mutation: **31 passed, 17 failed, 48 total**.
+mutation: **48 passed, 0 failed, 48 total**.
 
 Passed:
 
+- API health/readiness and exact release identity.
 - Authentication response headers.
 - All 17 public host diagnostics.
+- Root/app plus all 13 module PKCE authorization transactions, including
+  state, nonce, S256, safe return, and host-only secure transaction cookies.
 - All 13 registered module callbacks.
 - OutCall's fail-closed callback boundary.
 
-Failed:
-
-- `https://operatoros.net/healthz` returned 404.
-- API readiness did not expose the required release commit and build ID.
-- Anonymous apex `/app` did not produce the registered PKCE authorization
-  request.
-- The app host and all 13 module authorization responses lacked the expected
-  state, nonce, and PKCE verifier transaction cookies.
-
-This remains evidence of the older public runtime, not acceptance of the Phase
-15 candidate.
+No public read-only check failed. This does not replace authenticated
+acceptance.
 
 ## Acceptance sequence status
 
 | Area | Result | Evidence/blocker |
 | --- | --- | --- |
-| Unauthenticated OperatorOS entry | FAIL | Apex health/auth behavior does not match the candidate |
-| Configured test-user authentication | NOT RUN | Public deployment gate failed |
-| Entitled My Apps filtering | NOT RUN | Authenticated gate unavailable |
+| Unauthenticated OperatorOS entry | PASS | 48/48 public gate on exact release |
+| Configured test-user authentication | BLOCKED | No test-user credentials are configured in the acceptance environment |
+| Entitled My Apps filtering | NOT RUN | Requires configured test user |
 | TradeFlowKit CRUD/persistence | NOT RUN DEPLOYED | Local state-4 evidence only |
 | PulseDesk CRUD/persistence | NOT RUN DEPLOYED | Local state-4 evidence only |
 | TechDeck CRUD/persistence | NOT RUN DEPLOYED | Local state-4 evidence only |
 | TorqueShed diagnostics/Assist/ledger/community/marketplace | NOT RUN DEPLOYED | Module remains state 3 |
-| Return navigation/deep links/refresh | NOT RUN DEPLOYED | Candidate not running publicly |
-| Coordinated logout/expired session | NOT RUN DEPLOYED | Candidate not running publicly |
-| Disabled entitlement | NOT RUN DEPLOYED | Candidate not running publicly |
-| Second-tenant isolation | NOT RUN DEPLOYED | Candidate not running publicly |
-| Unauthorized direct API calls | NOT RUN DEPLOYED | Candidate not running publicly |
+| Return navigation/deep links/refresh | NOT RUN AUTHENTICATED | Requires configured test user |
+| Coordinated logout/expired session | NOT RUN AUTHENTICATED | Requires configured test user |
+| Disabled entitlement | NOT RUN AUTHENTICATED | Requires configured test user/tenant |
+| Second-tenant isolation | NOT RUN AUTHENTICATED | Requires two configured test tenants |
+| Unauthorized direct API calls | NOT RUN AUTHENTICATED | Requires configured sessions |
 | Production build | PASS LOCALLY | Fresh Phase 15 production build completed |
-| Health/readiness | FAIL PUBLICLY | Apex health is 404; candidate release identity not deployed |
+| Health/readiness | PASS PUBLICLY | API health and exact readiness identity pass |
 | Backup/restore | PASS LOCALLY, NOT RUN PRODUCTION | Phase 14 disposable rehearsal only |
 | Provider acceptance | NOT RUN | Live Stripe/Twilio/OpenAI/scanner configuration is human-gated |
 
 ## Release closure requirements
 
-The next exact candidate must be deployed through `.replit`, expose its full
-commit and build ID in `/readyz`, and pass 48/48 before authenticated testing.
-Then run the complete acceptance sequence with configured test users and two
+The exact deployed candidate passes 48/48. Next, run the complete acceptance
+sequence with configured test users and two
 tenants, preserve request/response/log evidence for every failure, and re-run
 related regressions after each correction. Production backup, database apply,
 provider use, promotion, and rollback remain explicit human gates.

@@ -17,7 +17,7 @@ function secureHeaders() {
     'cache-control': 'private, no-store',
     'referrer-policy': 'no-referrer',
   });
-  for (const name of ['os_sso_state', 'os_sso_nonce', 'os_sso_verifier']) {
+  for (const name of ['operatoros_sso_state', 'operatoros_sso_nonce', 'operatoros_sso_verifier']) {
     headers.append('set-cookie', `${name}=opaque; Path=/; HttpOnly; Secure; SameSite=Lax`);
   }
   return headers;
@@ -69,4 +69,25 @@ test('diagnostic validator requires production exact host/origin and host-only c
     hostRole: 'root',
     publicOrigin: 'https://operatoros.net',
   }, 'operatoros.net', 'root'), []);
+});
+
+test('public verifier follows canonical root health and authorization entries', async () => {
+  const requested: string[] = [];
+  const registry = await verifier.loadRegistry();
+  const fetchImpl = async (input: string | URL | Request) => {
+    const url = String(input);
+    requested.push(url);
+    if (url.endsWith('/api/health')) {
+      return Response.json({ status: 'healthy', service: 'operatoros-api' });
+    }
+    throw new Error(`stop after root health: ${url}`);
+  };
+
+  await verifier.verifyProductionRuntime({ fetchImpl, registry });
+  assert.equal(requested[0], 'https://operatoros.net/api/health');
+
+  const source = await import('node:fs/promises').then(({ readFile }) =>
+    readFile(resolve(__dirname, '../../../scripts/verify-production-runtime.mjs'), 'utf8'));
+  assert.match(source, /entry\.slug === 'operatoros'[\s\S]*https:\/\/operatoros\.net\/login/);
+  assert.doesNotMatch(source, /\['os_sso_state', 'os_sso_nonce', 'os_sso_verifier'\]/);
 });

@@ -35,7 +35,8 @@ separate destructive operation and follows `docs/DATABASE_BACKUP_RESTORE.md`;
 it requires explicit human approval and must not be inferred from an
 application rollback.
 
-After rollback, verify prior `/healthz` and `/readyz`, run the public verifier,
+After rollback, verify public root `/api/health` and `/readyz`, run the public
+verifier,
 perform a read-only tenant/data reconciliation, and preserve deployment,
 request, response, and server-log evidence in the production acceptance
 report.
