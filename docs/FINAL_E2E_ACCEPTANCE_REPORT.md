@@ -5,6 +5,40 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## Phase 11B follow-up
+
+The SnapProofOS Phase 11B source/local candidate was verified on 2026-07-26
+against disposable PostgreSQL 16 and compiled production artifacts. It
+provides tenant-scoped evidence cases, private note/file capture,
+signature/MIME/scan/hash controls, member submission and tenant-admin review,
+findings, append-only comments and hash-linked custody, immutable reports, real
+JSON/CSV exports with provenance, retention/legal hold/archive, persisted
+dashboard metrics and canonical responsive deep links. Child identity,
+organizations, billing, public share/file URLs, fake exports and arbitrary
+integrations remain excluded under ADR-0022.
+
+Fresh evidence includes 17/17 focused contracts, the complete clean API
+aggregate at 787 pass/0 fail/0 skip, deterministic no-apply import, workspace
+typecheck, clean and idempotent 24-step release, production build/preflight,
+and compiled health/readiness. The production-host browser matrix passes 6/6
+without retry. Its SnapProofOS scenario exercises private attachment upload and
+scan state, evidence/case/report decisions, finding and internal note,
+custody-chain continuity, approved export download, legal hold, mobile
+navigation, My Apps return, global logout, direct deep-link reauthentication,
+refresh and persistence.
+
+The first browser run completed the workflow but its final status locator
+matched both list and detail labels. After scoping the assertion, the focused
+case passed 1/1 and the full matrix passed 6/6. An immediate repeated matrix
+then reached the intentional per-process registration limit accumulated by
+earlier disposable identities; restarting only the local test API cleared the
+bucket. No security control was weakened.
+
+This follow-up does not change the ecosystem report's **NOT ACCEPTED** verdict
+or claim state 5. The candidate is not deployed, and no production backup,
+database apply, source-data reconciliation, provider traffic or cutover was
+authorized.
+
 ## Phase 11A follow-up
 
 The BrandForgeOS Phase 11A source/local candidate was verified on 2026-07-26

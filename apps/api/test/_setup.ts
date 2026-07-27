@@ -85,6 +85,8 @@ export async function ensureSchemaReady() {
   await ensureBrandForgeOsTables();
   const { ensureSharedServiceTables } = await import('../src/lib/shared-services-db-init.js');
   await ensureSharedServiceTables();
+  const { ensureSnapProofOsTables } = await import('../src/lib/snapproofos-db-init.js');
+  await ensureSnapProofOsTables();
   await ensureTestPlans();
 }
 
@@ -160,6 +162,19 @@ export async function cleanupUser(userId: string) {
     // company tenants the test forgot to clean). Cascade child rows first.
     const owned = await db.select().from(tenants).where(eq(tenants.ownerUserId, userId));
     for (const t of owned) {
+      try {
+        await db.transaction(async tx => {
+          await tx.execute(sql`SET LOCAL operatoros.tenant_hard_delete = 'on'`);
+          await tx.execute(sql`DELETE FROM snapproof_exports WHERE tenant_id = ${t.id}`);
+          await tx.execute(sql`DELETE FROM snapproof_custody_events WHERE tenant_id = ${t.id}`);
+          await tx.execute(sql`DELETE FROM snapproof_comments WHERE tenant_id = ${t.id}`);
+          await tx.execute(sql`DELETE FROM snapproof_findings WHERE tenant_id = ${t.id}`);
+          await tx.execute(sql`DELETE FROM snapproof_reports WHERE tenant_id = ${t.id}`);
+          await tx.execute(sql`DELETE FROM snapproof_evidence_items WHERE tenant_id = ${t.id}`);
+          await tx.execute(sql`DELETE FROM snapproof_cases WHERE tenant_id = ${t.id}`);
+          await tx.execute(sql`DELETE FROM snapproof_settings WHERE tenant_id = ${t.id}`);
+        });
+      } catch {}
       // Shared-service tables deliberately use restrictive foreign keys so
       // tests exercise the same deletion ordering required by production
       // retention workflows. Remove tenant-scoped leaves before the tenant.

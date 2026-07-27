@@ -12,8 +12,8 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 23);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 23);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 24);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 24);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'free_account_app_backfill');
   assert.ok(
@@ -66,6 +66,11 @@ test('database release plan is explicit, ordered, additive, and reusable by star
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'ninja_pool_hall_tables'),
     'BrandForgeOS tables must follow the previously accepted module foundations',
   );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'snapproofos_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'shared_service_tables'),
+    'SnapProofOS evidence tables must follow the shared private attachment service',
+  );
 
   const api = read('apps/api/src/index.ts');
   const releaseSource = read('apps/api/src/lib/database-release.ts');
@@ -103,6 +108,10 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.brandforge_brands'\)/);
   assert.match(releaseSource, /to_regclass\('public\.brandforge_campaigns'\)/);
   assert.match(releaseSource, /to_regclass\('public\.brandforge_generations'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.snapproof_cases'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.snapproof_evidence_items'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.snapproof_custody_events'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.snapproof_reports'\)/);
   assert.match(releaseSource, /to_regclass\('public\.operatoros_token_purchase_intents'\)/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
 });

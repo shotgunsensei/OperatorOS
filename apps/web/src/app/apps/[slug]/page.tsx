@@ -24,6 +24,7 @@ import WorkflowModuleShell from '@/components/module-shells/WorkflowModuleShell'
 import TorqueShedWorkspace from '@/components/module-shells/TorqueShedWorkspace';
 import FaultlineLabWorkspace from '@/components/module-shells/FaultlineLabWorkspace';
 import BrandForgeWorkspace from '@/components/module-shells/BrandForgeWorkspace';
+import SnapProofWorkspace from '@/components/module-shells/SnapProofWorkspace';
 import OperatorOSEcosystemHeader from '@/components/module-shells/OperatorOSEcosystemHeader';
 import { useModuleDeepLinkTarget } from './ModuleDeepLinkTarget';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
@@ -57,7 +58,7 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string }>>
   'torqueshed':       TorqueShedWorkspace,
   'faultlinelab':     FaultlineLabWorkspace,
   'brandforgeos':     BrandForgeWorkspace,
-  'snapproofos':      () => <WorkflowModuleShell moduleSlug="snapproofos" />,
+  'snapproofos':      SnapProofWorkspace,
 };
 
 function InternalAppContent() {

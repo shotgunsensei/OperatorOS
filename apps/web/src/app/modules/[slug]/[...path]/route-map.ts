@@ -113,6 +113,18 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/ai-workflows': { sectionId: 'brandforgeos-ai', label: 'AI Workflows' },
     '/settings': { sectionId: 'brandforgeos-settings', label: 'Settings' },
   },
+  snapproofos: {
+    '/dashboard': { sectionId: 'snapproofos-dashboard', label: 'Dashboard' },
+    '/cases': { sectionId: 'snapproofos-cases', label: 'Evidence Cases' },
+    '/evidence': { sectionId: 'snapproofos-evidence', label: 'Evidence' },
+    '/review': { sectionId: 'snapproofos-review', label: 'Review Queue' },
+    '/findings': { sectionId: 'snapproofos-findings', label: 'Findings' },
+    '/reports': { sectionId: 'snapproofos-reports', label: 'Reports' },
+    '/exports': { sectionId: 'snapproofos-reports', label: 'Defensible Exports' },
+    '/custody': { sectionId: 'snapproofos-custody', label: 'Chain of Custody' },
+    '/retention': { sectionId: 'snapproofos-retention', label: 'Retention' },
+    '/settings': { sectionId: 'snapproofos-settings', label: 'Settings' },
+  },
 };
 
 const SAFE_PATH_SEGMENT = /^[a-z0-9-]+$/;
@@ -173,6 +185,12 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'copy-assets') return { sectionId: 'brandforgeos-copy', label: 'Copy Asset' };
     if (resource === 'calendar-items') return { sectionId: 'brandforgeos-calendar', label: 'Calendar Item' };
     if (resource === 'generations') return { sectionId: 'brandforgeos-ai', label: 'Generation Result' };
+  }
+  if (slug === 'snapproofos' && pathSegments.length === 2) {
+    const [resource] = pathSegments;
+    if (resource === 'cases') return { sectionId: 'snapproofos-cases', label: 'Evidence Case' };
+    if (resource === 'evidence') return { sectionId: 'snapproofos-evidence', label: 'Evidence Item' };
+    if (resource === 'reports') return { sectionId: 'snapproofos-reports', label: 'Report' };
   }
   return null;
 }
