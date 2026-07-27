@@ -29,7 +29,7 @@ Status: **candidate only; not released**
 
 ## Known release blockers
 
-- The current public deployment is 32/48 and does not expose the candidate
+- The current public deployment is 31/48 and does not expose the candidate
   authorization transaction behavior.
 - Deployment iteration 1 failed before build; the local fix requires a new
   reviewed deployment.

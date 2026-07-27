@@ -25,9 +25,10 @@
 
 ## Current verdict
 
-Phase 15 has not accepted a production release. The fresh public verifier
-passed 32/48 checks and failed apex health, apex PKCE authorization, and the
-app plus all 13 module transaction-cookie checks. Deployment
+Phase 15 has not accepted a production release. The fresh hardened public
+verifier passed 31/48 checks and failed apex health, release identity in API
+readiness, apex PKCE authorization, and the app plus all 13 module
+transaction-cookie checks. Deployment
 `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd` / build
 `c49eeb9c-5f0b-40b3-9f31-44813446124c` then failed before the repository build
 command because Replit's automatic `npm install` rejected pnpm-only scoped

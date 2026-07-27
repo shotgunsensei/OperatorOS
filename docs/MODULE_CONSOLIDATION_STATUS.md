@@ -102,10 +102,11 @@ or standalone-data cutover.
 
 The reviewed candidate passes the local production-host SSO matrix 2/2, but it
 has not been promoted to the public target. The read-only public production
-verification currently passes 32/48 checks: API readiness, all 17 module
-diagnostics, all 13 enabled callback routes, and OutCall fail-closed behavior
-pass; apex `/healthz` and anonymous host-only SSO transaction-cookie checks
-still reflect the older deployed release. Per explicit owner direction, later
+verification currently passes 31/48 checks: auth response headers, all 17
+module diagnostics, all 13 enabled callback routes, and OutCall fail-closed
+behavior pass; API readiness lacks release identity, while apex `/healthz` and
+anonymous host-only SSO transaction-cookie checks still reflect the older
+deployed release. Per explicit owner direction, later
 source branches may proceed; every promotion and production-ready claim remains
 blocked until the cumulative candidate is deployed and the public gate passes
 in full.

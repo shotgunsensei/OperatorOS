@@ -8,7 +8,7 @@
 ## Executive result
 
 The OperatorOS ecosystem is not accepted for production release. The current
-public deployment passed 32 of 48 read-only checks. The first Phase 15
+public deployment passed 31 of 48 hardened read-only checks. The first Phase 15
 deployment attempt failed during Replit's automatic package installation,
 before the repository build, runtime supervisor, or database release ran.
 Consequently, authenticated end-to-end module workflows and production data
@@ -25,18 +25,18 @@ cutover were not attempted.
 | Responsible repository | `OperatorOS` |
 | Root cause | Root `package.json` duplicated pnpm-only `parent>child` override selectors; npm parsed them as invalid package/tag names |
 | Fix | Removed npm-invalid duplicate selectors from the root manifest, retained them in `pnpm-workspace.yaml`, and used npm `$name` references for direct Vite/ws overrides |
-| Regression | npm install dry-run, frozen pnpm install, zero-vulnerability audit, 4/4 focused contracts, workspace typecheck, and production build pass |
+| Regression | npm install dry-run, frozen pnpm install, zero-vulnerability audit, 5/5 focused contracts, workspace typecheck, and production build pass |
 | Runtime/database effect | None; build did not start |
 | Rollback | Not required; prior deployment remained active |
 
 ## Current public read-only result
 
 `corepack pnpm verify:production` ran on 2026-07-27 without authentication or
-mutation: **32 passed, 16 failed, 48 total**.
+mutation: **31 passed, 17 failed, 48 total**.
 
 Passed:
 
-- API readiness and authentication response headers.
+- Authentication response headers.
 - All 17 public host diagnostics.
 - All 13 registered module callbacks.
 - OutCall's fail-closed callback boundary.
@@ -44,6 +44,7 @@ Passed:
 Failed:
 
 - `https://operatoros.net/healthz` returned 404.
+- API readiness did not expose the required release commit and build ID.
 - Anonymous apex `/app` did not produce the registered PKCE authorization
   request.
 - The app host and all 13 module authorization responses lacked the expected

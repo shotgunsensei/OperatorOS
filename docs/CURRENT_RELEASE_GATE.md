@@ -6,7 +6,7 @@
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
 - Platform and Phases 2-14 source/local gate: **PARTIAL; local hardening gates pass, live-provider and deployed gates remain open**
-- Public deployment gate: **FAIL (32/48)**
+- Public deployment gate: **FAIL (31/48)**
 - Latest deployment attempt: **FAILED BEFORE BUILD** — deployment
   `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd`, build
   `c49eeb9c-5f0b-40b3-9f31-44813446124c`
@@ -135,7 +135,7 @@ and migration parity remain controlled by the module parity index.
 | Phase 2 browser workflow | PASS LOCALLY | 1/1 on compiled artifacts; CRUD, refresh persistence, same organization ID across three modules, and no script-readable auth |
 | Full API regression | PASS | Fresh untouched-schema aggregate on the exact Phase 12B source passed 839/839 with 0 failures, 0 skips and 0 todo |
 | Replit automatic npm preinstall | PASS LOCALLY AFTER DEFECT FIX | npm dry-run exits 0; pnpm-only scoped overrides remain in `pnpm-workspace.yaml` |
-| Public read-only runtime verifier | FAIL | 32/48 on 2026-07-27; no authentication and no mutation |
+| Public read-only runtime verifier | FAIL | 31/48 on 2026-07-27 after release-identity hardening; no authentication and no mutation |
 | Formatting/lint | NOT DEFINED | Repository has no supported formatting or lint script; no pass is claimed |
 
 ## Public deployment blocker

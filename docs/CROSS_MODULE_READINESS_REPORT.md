@@ -135,9 +135,9 @@ or cutover was authorized.
   stay disabled until its configuration and signed webhook/callback tests pass.
 - A disposable PostgreSQL backup/restore rehearsal is recorded and passed.
 - The reviewed Phase 15 release candidate has not been deployed to the public
-  target. The fresh read-only public gate passed 32/48 checks: API readiness,
-  all 17 module diagnostics, all 13 callback routes, and OutCall fail-closed
-  behavior passed;
+  target. The fresh hardened read-only public gate passed 31/48 checks: auth
+  response headers, all 17 module diagnostics, all 13 callback routes, and
+  OutCall fail-closed behavior passed; API readiness lacks release identity;
   apex health and anonymous host-only SSO transaction-cookie checks still
   reflect the older public release and block promotion.
 
@@ -187,5 +187,5 @@ validated through the consolidated OperatorOS build, database suite, shared
 API, and host-routed browser matrix. Every module remains explicitly not
 production-ready until deployed-target health and browser gates pass. Phase 1
 and Phase 2 source/local acceptance are complete, but the public target remains blocked
-at 32/48 checks until this candidate is deployed and the authenticated
+at 31/48 checks until this candidate is deployed and the authenticated
 deployed-target gate is rerun.

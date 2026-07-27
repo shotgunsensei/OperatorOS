@@ -7,7 +7,7 @@
 - Quarantined evidence: `apps/modules/tradeflowkit/source`
 - Source/local consolidation result: state 4 candidate
 - State 5 result: blocked; cumulative candidate is not deployed and the public
-  OperatorOS release gate remains 32/48
+  OperatorOS release gate remains 31/48
 
 ## Provenance
 
