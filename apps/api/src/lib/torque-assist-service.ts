@@ -54,6 +54,10 @@ function balanceCaseSql() {
     ELSE -units END),0)::bigint`;
 }
 
+async function lockTorqueBalance(executor: Executor, userId: string): Promise<void> {
+  await executor.execute(sql`SELECT id FROM users WHERE id=${userId} FOR UPDATE`);
+}
+
 export async function torqueTokenBalance(
   input: {
     tenantId: string;
@@ -442,9 +446,7 @@ export async function runTorqueAssist(input: {
         subjectId: input.userId,
         limit: TORQUE_ASSIST_USER_LIMIT_PER_MINUTE,
       });
-      await tx.execute(
-        sql`SELECT pg_advisory_xact_lock(hashtext(${`${input.tenantId}:${input.userId}:${module.id}`}))`,
-      );
+      await lockTorqueBalance(tx, input.userId);
       const balance = await torqueTokenBalance(
         { tenantId: input.tenantId, userId: input.userId, moduleId: module.id },
         tx,
@@ -530,9 +532,7 @@ export async function runTorqueAssist(input: {
     const actualUnits = Math.max(1, Math.floor(completion.tokenCount));
     const acceptedStatus = result.status === 'follow_up_required' ? 'follow_up' : 'complete';
     const final = await db.transaction(async (tx) => {
-      await tx.execute(
-        sql`SELECT pg_advisory_xact_lock(hashtext(${`${input.tenantId}:${input.userId}:${module.id}`}))`,
-      );
+      await lockTorqueBalance(tx, input.userId);
       const balance = await torqueTokenBalance(
         { tenantId: input.tenantId, userId: input.userId, moduleId: module.id },
         tx,

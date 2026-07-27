@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 27 ordered step identifiers without secrets
+`db:plan` is read-only and prints 29 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -229,6 +229,29 @@ TechDeck production schema or standalone-data apply, take a fresh provider
 snapshot and logical backup, verify the checksum, rehearse restore into a new
 database, and require the matching 18-step release plus count/reference and
 browser reconciliation. No Phase 5 apply or cutover has been authorized.
+
+## Phase 14 backup/restore rehearsal
+
+On 2026-07-27 a disposable PostgreSQL 16 source containing only synthetic test
+data was archived in custom format and restored into a newly created database.
+No archive left the local container and no provider traffic was enabled.
+
+| Field | Recorded value |
+| --- | --- |
+| Candidate | Uncommitted `codex/phase-14-hardening` source based on Phase 13 commit `960c6f7` |
+| Backup format | PostgreSQL custom archive; 2,019 TOC lines |
+| Size | 1,061,361 bytes |
+| SHA-256 | `7f9e35dfb6f06c6617cbe6016d14e7486dd92d8b64a2c5c7b373ddd451e0e918` |
+| Public tables | Source/restored 228 |
+| Foreign keys | Source/restored 712 |
+| Unvalidated constraints | Source/restored 0 |
+| Core vector after release | Exact match: `7 users | 7 tenants | 8 memberships | 13 modules | 21 tenant modules | 0 tenant entitlements | 0 SSO handoffs | 8 admin audit rows` |
+| Release on source/restored | PASS; current 29-step release verified both targets |
+| Restored runtime | Compiled API `/healthz` 200 and `/readyz` 200; database/auth/SSO/module registry/worker healthy |
+| Provider traffic | None; Stripe, email, Twilio, OpenAI and scanners disabled |
+
+This is current local restore evidence, not authorization to back up, restore,
+or switch a production database.
 
 ## Production recovery
 

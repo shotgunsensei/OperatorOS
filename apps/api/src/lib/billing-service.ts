@@ -741,7 +741,9 @@ export async function processWebhookEvent(event: { type: string; data: { object:
         const { schedulePropagationForUser } = await import('./entitlement-propagation.js');
         schedulePropagationForUser(userId, { reason: `stripe:${type}` });
       } catch (err) {
-        console.warn('[billing-service] entitlement propagate import failed:', err);
+        console.warn('[billing-service] entitlement propagation unavailable', {
+          code: typeof err === 'object' && err ? (err as { code?: unknown }).code ?? 'unknown' : 'unknown',
+        });
       }
     } else {
       console.warn(`[billing-service] could not resolve userId for ${type}; skipping entitlement push`);
@@ -789,7 +791,7 @@ async function handleCheckoutCompleted(session: any): Promise<WebhookProcessResu
     metadata: { planName: plan.name, planSlug, via: 'stripe_checkout' },
   });
 
-  console.log(`[billing-service] Checkout completed: user=${userId} plan=${planSlug}`);
+  console.log(`[billing-service] Checkout completed: plan=${planSlug}`);
   return { handled: true, action: 'checkout_completed', shouldPropagate: true };
 }
 
@@ -876,13 +878,13 @@ async function handleSubscriptionCreated(subscription: any): Promise<WebhookProc
       currentPeriodStart: new Date(subscription.current_period_start * 1000),
       currentPeriodEnd: new Date(subscription.current_period_end * 1000),
     }).where(eq(subscriptions.id, existingSub.id));
-    console.log(`[billing-service] Subscription created (synced): user=${userId} stripe_sub=${stripeSubId}`);
+    console.log('[billing-service] Subscription created and synchronized');
     return { handled: true, action: 'subscription_created', shouldPropagate: true };
   }
 
   console.warn(
-    `[billing-service] subscription.created arrived before local row for user=${userId} ` +
-    `stripe_sub=${stripeSubId}; skipping propagation (will run once checkout webhook lands).`,
+    '[billing-service] subscription.created arrived before its local row; ' +
+    'skipping propagation until checkout synchronization completes.',
   );
   return { handled: true, action: 'subscription_created_deferred', shouldPropagate: false };
 }
@@ -896,7 +898,7 @@ async function handleSubscriptionUpdated(subscription: any): Promise<WebhookProc
     .where(eq(subscriptions.stripeSubscriptionId, stripeSubId)).limit(1);
 
   if (!existingSub) {
-    console.log(`[billing-service] No local subscription for stripe_sub=${stripeSubId}`);
+    console.log('[billing-service] No local subscription matched the update');
     return { handled: false, error: 'No matching local subscription' };
   }
 
@@ -916,7 +918,7 @@ async function handleSubscriptionUpdated(subscription: any): Promise<WebhookProc
     updatedAt: new Date(),
   }).where(eq(subscriptions.id, existingSub.id));
 
-  console.log(`[billing-service] Subscription updated: stripe_sub=${stripeSubId} status=${status}`);
+  console.log(`[billing-service] Subscription updated: status=${status}`);
   return { handled: true, action: 'subscription_updated' };
 }
 
@@ -949,7 +951,7 @@ async function handleSubscriptionDeleted(subscription: any): Promise<WebhookProc
     entityType: 'subscription', metadata: { via: 'stripe' },
   });
 
-  console.log(`[billing-service] Subscription deleted: stripe_sub=${stripeSubId}`);
+  console.log('[billing-service] Subscription deleted');
   return { handled: true, action: 'subscription_deleted' };
 }
 
@@ -966,7 +968,7 @@ async function handlePaymentFailed(invoice: any): Promise<WebhookProcessResult> 
     status: 'past_due', updatedAt: new Date(),
   }).where(eq(subscriptions.id, existingSub.id));
 
-  console.log(`[billing-service] Payment failed: stripe_sub=${stripeSubId}`);
+  console.log('[billing-service] Payment failed');
   return { handled: true, action: 'payment_failed' };
 }
 
@@ -983,7 +985,7 @@ async function handleInvoicePaid(invoice: any): Promise<WebhookProcessResult> {
     status: 'active', updatedAt: new Date(),
   }).where(eq(subscriptions.id, existingSub.id));
 
-  console.log(`[billing-service] Invoice paid: stripe_sub=${stripeSubId}`);
+  console.log('[billing-service] Invoice paid');
   return { handled: true, action: 'invoice_paid' };
 }
 

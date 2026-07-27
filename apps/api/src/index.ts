@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { LogController } from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import { eq, desc, inArray, and, isNull, sql } from 'drizzle-orm';
@@ -21,7 +21,7 @@ import {
 } from '../../../apps/runner-gateway/src/provisioner.js';
 import { isCommandAllowed, clampTimeout, truncateOutput } from '../../../apps/runner-gateway/src/safety.js';
 import cookie from '@fastify/cookie';
-import { db } from './db.js';
+import { closeDatabasePool, db } from './db.js';
 import { workspaces, runners, tasks, taskEvents, toolTraces, publishRuns, users } from './schema.js';
 import { serveUI } from './ui.js';
 import {
@@ -120,7 +120,7 @@ const app = Fastify({
   // Default request logs include the raw URL. Keep them disabled so an
   // accidentally supplied code/token query cannot enter log storage; the
   // sanitized onResponse record below logs only the route template.
-  disableRequestLogging: true,
+  logController: new LogController({ disableRequestLogging: true }),
   logger: {
     level: process.env.LOG_LEVEL || 'info',
     redact: {
@@ -144,6 +144,16 @@ const app = Fastify({
 
 app.addHook('onRequest', async (request, reply) => {
   reply.header('X-Request-Id', request.id);
+  reply.header('X-Content-Type-Options', 'nosniff');
+  reply.header('X-Frame-Options', 'DENY');
+  reply.header('Referrer-Policy', 'no-referrer');
+  reply.header(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+  );
+  if (isProductionEnv()) {
+    reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
 });
 
 app.addHook('onResponse', async (request, reply) => {
@@ -253,6 +263,7 @@ startSsoTokenCleanup();
 startSharedServiceWorker();
 app.addHook('onClose', async () => {
   await stopSharedServiceWorker();
+  await closeDatabasePool();
 });
 
 const streamSubscribers = new Map<string, Set<import('ws').WebSocket>>();

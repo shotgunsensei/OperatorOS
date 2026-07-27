@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { resolveRepositoryRoot } from './repository-root.js';
 import { MODULE_CATALOG } from '../../../../packages/sdk/src/catalog.js';
 import { planBrandForgeOsImport } from './brandforgeos-import.js';
 import { planCallCommandImport } from './callcommand-import.js';
@@ -19,7 +20,7 @@ import { planTechDeckImport } from './techdeck-import.js';
 import { planTorqueShedImport } from './torqueshed-import.js';
 import { planTradeFlowKitImport } from './tradeflowkit-import.js';
 
-const repoRoot = resolve(process.cwd());
+const repoRoot = resolveRepositoryRoot();
 
 export const PROHIBITED_MIGRATION_AUTHORITY = Object.freeze([
   'passwords and password hashes',

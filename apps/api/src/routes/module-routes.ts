@@ -167,9 +167,15 @@ async function auditSso(opts: {
   ip: string;
   level?: 'info' | 'warn';
 }) {
+  const consoleDetails = Object.fromEntries(
+    Object.entries(opts.details).filter(([key]) => ![
+      'authorization', 'code', 'cookie', 'cookies', 'jti', 'password',
+      'secret', 'sessionToken', 'token',
+    ].includes(key)),
+  );
   // Envelope fields go LAST so callers can't overwrite them via `details`.
   const line = '[AUDIT sso] ' + JSON.stringify({
-    ...opts.details,
+    ...consoleDetails,
     ts: new Date().toISOString(),
     action: opts.action,
     userId: opts.userId,

@@ -27,6 +27,13 @@ States: **1 Registered**, **2 Source imported**, **3 Authority conformed**,
 
 ## Cross-cutting gaps
 
+- Phase 14 local hardening records zero known dependency vulnerabilities,
+  shared response headers, bounded database shutdown, fail-closed disabled
+  billing webhooks, threat coverage, all-module tenant/role negative evidence,
+  production build, load baselines, and a current backup/restore rehearsal.
+  It does not change any module consolidation state: deployed SSO/workflow,
+  live-provider, monitoring, successful upload/scanner, and authorized cutover
+  gates remain open.
 - Phase 13 now provides a deterministic 13/13 master dry-run, exact catalog and
   release-step coverage, prohibited-authority policy, per-module mappings,
   reconciliation contracts, conflict policy, write-freeze instructions, and

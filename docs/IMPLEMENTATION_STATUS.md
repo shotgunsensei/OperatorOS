@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-27
-- Phase: **13 migration-program source/local rehearsal complete; every production cutover remains blocked**
+- Phase: **14 hardening source/local candidate; deployment and live-provider gates remain blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -20,10 +20,64 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/phase-13-migration-cutover-program`
+- Execution branch: `codex/phase-14-hardening`
 - Release gate: **closed**
 
 ## Current verdict
+
+Phase 14 removed every known dependency vulnerability from the reviewed pnpm
+graph, added shared API/web security headers, bounded and validated the
+PostgreSQL pool, closed it during Fastify shutdown, and changed disabled Stripe
+webhooks from a false `200 received` acknowledgement to fail-closed
+`503 STRIPE_NOT_CONFIGURED`. Platform plus all 13 module threat models are now
+present, and the loopback-only load harness covers health, readiness, rejected
+webhooks, authenticated sessions, launcher reads, and upload authorization.
+
+The isolated tenant/role security batch passed every exercised scenario after
+one wrapper-aware append-only assertion was corrected and rerun with its
+related Torque ledger regression. The final clean API aggregate passed 846 of
+852 tests with zero failures; six browser-HTTP cases were explicitly skipped
+because the API command does not attach a Next server. Typecheck,
+zero-vulnerability audit, patched Next.js 15.5.22 production build, core
+production preflight, read-only 29-step release plan, 600-request loopback load
+gate, disposable custom-format backup/restore, post-release schema and row
+reconciliation, restored `/healthz`, and restored `/readyz` pass.
+
+This is not a production-ready declaration. No cumulative revision was
+deployed; public exact-host SSO/navigation/logout/persistence, successful
+maximum-size upload/scanner behavior, valid live Stripe/Twilio/provider
+callbacks, Linux signal-drain recovery, and monitoring alerts remain Phase 15
+release gates. Full evidence and accepted risks are in
+`docs/security/PHASE14_HARDENING_REPORT.md`.
+
+### Phase 14 verification record
+
+Commands were run from `C:\Dev\OperatorOS` on 2026-07-27. Database-backed tests,
+release, load, and restore work used separate disposable PostgreSQL databases.
+Test-only credentials and archives were not committed.
+
+```powershell
+corepack pnpm install --frozen-lockfile --ignore-scripts
+corepack pnpm audit --audit-level low
+corepack pnpm typecheck
+# Focused Phase 14 contract and cross-module tenant/role/auth/provider tests
+$env:INTERNAL_API_URL='http://127.0.0.1:5001'; corepack pnpm build:production
+$env:OPERATOROS_DATABASE_RELEASE_MODE='apply'; corepack pnpm db:apply
+node scripts/phase14-load-baseline.mjs
+# pg_dump custom archive, pg_restore into new DB, vector comparison, release reapply
+```
+
+Results currently recorded: Phase 14 contract 7/7; security batch 61/62 on its
+first clean run plus 4/4 failed/related rerun; final empty-database aggregate
+852 total, 846 pass, zero fail, six explicit browser-HTTP skips; final audit
+zero known vulnerabilities; typecheck, core production preflight, read-only
+29-step release plan, and production build pass; six load scenarios each
+100/100 with slowest p95 67.07 ms; 228 tables, 712 foreign keys, zero
+unvalidated constraints, and exact core row vectors after restore/reapply;
+restored health/readiness 200. The repository has no lint command, so no lint
+result is claimed.
+
+## Phase 13 historical verdict
 
 Phase 13 adds one executable migration manifest and deterministic dry-run
 program for all 13 active catalog modules. Every manifest pins or explicitly

@@ -2,6 +2,24 @@
 const isMobileBuild = process.env.MOBILE_BUILD === '1';
 const isDev = process.env.NODE_ENV !== 'production';
 
+const SHARED_SECURITY_HEADERS = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+  },
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=31536000; includeSubDomains',
+  },
+  {
+    key: 'Content-Security-Policy',
+    value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+  },
+];
+
 function resolveApiUrl() {
   const internalApiUrl = process.env.INTERNAL_API_URL;
   const publicApiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -57,6 +75,14 @@ const nextConfig = {
     images: { unoptimized: true },
   } : {}),
   ...(!isMobileBuild ? {
+    async headers() {
+      return [
+        {
+          source: '/:path*',
+          headers: SHARED_SECURITY_HEADERS,
+        },
+      ];
+    },
     async rewrites() {
       const apiUrl = resolveApiUrl();
       return {

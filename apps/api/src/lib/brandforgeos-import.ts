@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { resolveRepositoryRoot } from './repository-root.js';
 
 export const BRANDFORGEOS_SOURCE_COMMIT = '5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e';
 export const BRANDFORGEOS_SOURCE_MANIFEST_SHA256 = '42c12b77fd134a1a25c2295dc08d346fd1ed4efb5ad95ca7272f1f51c9aa1df4';
 
-const repoRoot = resolve(process.cwd());
+const repoRoot = resolveRepositoryRoot();
 const sourceRoot = resolve(repoRoot, 'apps/modules/brandforgeos/source');
 const evidenceFiles = [
   ['lib/db/src/schema/brands.ts', '93cefd2242f779de4d8e74c0fc16d4c78f5b2446b23febd786697c67f63b1d96'],
