@@ -54,6 +54,11 @@ const snapshots = [
     commit: 'd49434e1d641d62cc141591c7208539a7afbf11e',
     remote: 'https://github.com/shotgunsensei/Call-Command-AI.git',
   },
+  {
+    slug: 'ninjamation',
+    commit: 'cca75338d04ed35b89f28d614eb51559735aa32f',
+    remote: 'https://github.com/shotgunsensei/AutomationPacks.git',
+  },
 ] as const;
 
 interface SnapshotManifest {

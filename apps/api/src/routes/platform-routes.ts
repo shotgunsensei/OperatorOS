@@ -96,6 +96,13 @@ async function existingCallCommandTables(executor: SqlExecutor): Promise<Set<str
   return new Set(result.rows.map((row) => String(row.tablename)));
 }
 
+async function existingNinjamationTables(executor: SqlExecutor): Promise<Set<string>> {
+  const result = await executor.execute(sql`SELECT tablename
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = current_schema() AND tablename LIKE 'ninjamation_%'`);
+  return new Set(result.rows.map((row) => String(row.tablename)));
+}
+
 // Gate 2 status taxonomy: 'live' (legacy) and 'active' both signify a
 // shipping module; 'hidden' suppresses from public catalog while keeping
 // data; 'deprecated' marks for retirement (still launchable for legacy
@@ -580,6 +587,12 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           if (callCommandTables.has('callcommand_transfer_targets')) await tx.execute(sql`DELETE FROM callcommand_transfer_targets WHERE tenant_id = ${id}`);
           if (callCommandTables.has('callcommand_profiles')) await tx.execute(sql`DELETE FROM callcommand_profiles WHERE tenant_id = ${id}`);
           if (callCommandTables.has('callcommand_channels')) await tx.execute(sql`DELETE FROM callcommand_channels WHERE tenant_id = ${id}`);
+          const ninjamationTables = await existingNinjamationTables(tx);
+          if (ninjamationTables.has('ninjamation_generations')) await tx.execute(sql`DELETE FROM ninjamation_generations WHERE tenant_id = ${id}`);
+          if (ninjamationTables.has('ninjamation_downloads')) await tx.execute(sql`DELETE FROM ninjamation_downloads WHERE tenant_id = ${id}`);
+          if (ninjamationTables.has('ninjamation_reviews')) await tx.execute(sql`DELETE FROM ninjamation_reviews WHERE tenant_id = ${id}`);
+          if (ninjamationTables.has('ninjamation_script_versions')) await tx.execute(sql`DELETE FROM ninjamation_script_versions WHERE tenant_id = ${id}`);
+          if (ninjamationTables.has('ninjamation_scripts')) await tx.execute(sql`DELETE FROM ninjamation_scripts WHERE tenant_id = ${id}`);
           await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.tenantId, id));
           await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.tenantId, id));
           await tx.delete(moduleAutomations).where(eq(moduleAutomations.tenantId, id));
@@ -2163,6 +2176,15 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           if (callCommandTables.has('callcommand_suppressions')) await tx.execute(sql`UPDATE callcommand_suppressions SET recorded_by_user_id=NULL WHERE recorded_by_user_id=${id}`);
           if (callCommandTables.has('callcommand_calls')) await tx.execute(sql`UPDATE callcommand_calls SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
           if (callCommandTables.has('callcommand_followups')) await tx.execute(sql`UPDATE callcommand_followups SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
+          const ninjamationTables = await existingNinjamationTables(tx);
+          if (ninjamationTables.has('ninjamation_generations')) await tx.execute(sql`UPDATE ninjamation_generations SET user_id=NULL WHERE user_id=${id}`);
+          if (ninjamationTables.has('ninjamation_downloads')) await tx.execute(sql`UPDATE ninjamation_downloads SET downloaded_by_user_id=NULL WHERE downloaded_by_user_id=${id}`);
+          if (ninjamationTables.has('ninjamation_reviews')) await tx.execute(sql`UPDATE ninjamation_reviews SET reviewer_user_id=NULL WHERE reviewer_user_id=${id}`);
+          if (ninjamationTables.has('ninjamation_script_versions')) await tx.execute(sql`UPDATE ninjamation_script_versions SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
+          if (ninjamationTables.has('ninjamation_scripts')) await tx.execute(sql`UPDATE ninjamation_scripts SET
+            created_by_user_id=CASE WHEN created_by_user_id=${id} THEN NULL ELSE created_by_user_id END,
+            approved_by_user_id=CASE WHEN approved_by_user_id=${id} THEN NULL ELSE approved_by_user_id END
+            WHERE created_by_user_id=${id} OR approved_by_user_id=${id}`);
           await tx.delete(techdeckTickets).where(eq(techdeckTickets.createdByUserId, id));
           await tx.delete(ninjaPoolMatchEvents).where(eq(ninjaPoolMatchEvents.userId, id));
           await tx.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.userId, id));

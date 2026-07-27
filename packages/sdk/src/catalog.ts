@@ -246,7 +246,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'ninjamation',
     name: 'Ninjamation',
-    description: 'AI-assisted cross-app workflow automation',
+    description: 'Reviewed PC automation script library and AI draft generator',
     category: 'ai',
     commercialType: 'addon',
     canonicalBaseUrl: 'https://ninjamation.operatoros.net',

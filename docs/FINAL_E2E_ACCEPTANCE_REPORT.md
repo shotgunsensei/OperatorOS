@@ -5,6 +5,51 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## Phase 12A follow-up
+
+The Ninjamation Phase 12A source/local candidate was verified on 2026-07-27
+against disposable PostgreSQL 16 and compiled production artifacts. Source
+archaeology pins the Replit-synced AutomationPacks application commit
+`cca75338d04ed35b89f28d614eb51559735aa32f` and catalog commit
+`ca0e55fd086f6751a43964927166bfa69db012b6`. AutoWorkFlowHub is discontinued
+and explicitly excluded. ADR-0026 defines Ninjamation as a reviewed PC
+automation script library and forbids OperatorOS/server/browser script
+execution.
+
+The active module provides tenant-scoped script authoring, immutable versions
+and hashes, server static analysis, review submission, tenant-admin
+approve/reject/retire decisions, approved-current-version-only audited
+downloads, shared AI-generated drafts with idempotent usage, a responsive
+workspace and canonical deep links. Child identity, passwords, billing,
+administration, GitHub sync and arbitrary execution are not imported.
+
+Fresh evidence includes focused domain/import/static contracts; 4/4
+PostgreSQL persistence, authorization, tenant-isolation, version, approval,
+download and AI-usage workflows; the complete untouched-database API
+aggregate at 836 pass, 0 fail and 0 skip; workspace typecheck; clean and
+idempotent 28-step release; production build/core preflight; and compiled
+direct/web-proxied health and readiness. The canonical-host browser matrix
+passes 9/9 in 1.9 minutes and silently launches all twelve enabled modules.
+The separate compiled-artifact first-screen suite passes 2/2 in 9.3 seconds:
+it creates a safe PowerShell draft, confirms clean static analysis, submits
+and approves it with admin authority, downloads an actual `.ps1` artifact,
+and proves a non-entitled tenant sees the denial card.
+
+Acceptance also repaired a stale launchpad journey test: registration now
+creates a valid personal tenant with free-account entitlements, so the test
+must mirror the real invite page by switching to the accepted tenant before
+asserting that tenant's exact My Apps grants. The corrected scenario passes
+inside the 836/836 aggregate. Two first-screen attempts were excluded because
+their harness used an HTTP origin for a Secure cookie and then sent raw
+`/v1/*` requests to the Next-only TLS proxy. The final rerun used separate
+same-host TLS proxies for Fastify and Next; no cookie, host, or rate-limit
+control was weakened.
+
+This follow-up does not change the ecosystem report's **NOT ACCEPTED** verdict
+or claim state 5. The candidate is not deployed, no production backup or
+database apply occurred, no source-data import/cutover was authorized, and no
+script execution capability is claimed.
+
 ## Phase 11E follow-up
 
 The CallCommand AI Phase 11E source/local candidate was verified on 2026-07-27

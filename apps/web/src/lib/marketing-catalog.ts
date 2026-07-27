@@ -43,7 +43,7 @@ const SOURCE: readonly MarketingCatalogSource[] = [
   { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                planMin: 'elite',   ord: 9,  defaultStatus: 'live' },
   { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Plan, review, and prove launch campaigns are ready', planMin: 'elite', ord: 10, defaultStatus: 'live' },
   { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'AI phone agent + call automation',           planMin: 'elite',   ord: 11, defaultStatus: 'live' },
-  { slug: 'ninjamation',      name: 'Ninjamation',      description: 'AI-assisted cross-app workflow automation',  planMin: 'elite',   ord: 12, defaultStatus: 'live' },
+  { slug: 'ninjamation',      name: 'Ninjamation',      description: 'Reviewed PC automation scripts + AI drafts', planMin: 'elite',   ord: 12, defaultStatus: 'live' },
 ];
 
 export type MarketingStatus = 'Available' | 'Coming Soon' | 'Beta' | 'Locked';
@@ -81,7 +81,7 @@ const OUTCOMES: Record<string, string> = {
   'studyforge-ai':    'Turn operational knowledge into repeatable training sessions.',
   'ninja-launch-kit': 'Stand up launch assets and internal tools without rebuilding the stack.',
   'callcommand-ai':   'Route phone work through an AI-assisted call operations layer.',
-  'ninjamation':      'Connect modules and automate cross-app handoffs.',
+  'ninjamation':      'Author, review, and download tenant-owned PC automation scripts.',
 };
 
 const AUDIENCES: Record<string, string> = {
@@ -96,7 +96,7 @@ const AUDIENCES: Record<string, string> = {
   'studyforge-ai':    'Training teams and operators',
   'ninja-launch-kit': 'Operators shipping internal tools',
   'callcommand-ai':   'Teams with high-volume calls',
-  'ninjamation':      'Automation-heavy operators',
+  'ninjamation':      'IT operators building repeatable PC automation',
 };
 
 const SOLVES: Record<string, string> = {
@@ -111,7 +111,7 @@ const SOLVES: Record<string, string> = {
   'studyforge-ai':    'Training material that is hard to reuse, test, or operationalize.',
   'ninja-launch-kit': 'Slow setup work before a new product or internal tool can ship.',
   'callcommand-ai':   'Missed calls and repetitive phone workflows draining operator time.',
-  'ninjamation':      'Manual handoffs between tools that should already know what changed.',
+  'ninjamation':      'Unreviewed one-off scripts with no version, approval, or download trail.',
 };
 
 export const PACKAGE_LABELS: Record<MarketingPackageType, string> = {

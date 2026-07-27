@@ -75,6 +75,9 @@ test('core module deep links resolve only to live native shell sections', () => 
   assert.equal(resolveCoreModuleDeepLink('ninja-pool-hall', ['matches', 'match-123'])?.sectionId, 'ninja-pool-hall-shell');
   assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['unknown']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['settings'])?.sectionId, 'techdeck-settings');
+  assert.equal(resolveCoreModuleDeepLink('ninjamation', ['scripts'])?.sectionId, 'ninjamation-scripts');
+  assert.equal(resolveCoreModuleDeepLink('ninjamation', ['scripts', 'script-123'])?.sectionId, 'ninjamation-editor');
+  assert.equal(resolveCoreModuleDeepLink('ninjamation', ['execute']), null);
 });
 
 test('pending, nested, malformed, and non-core module paths fail closed', () => {
@@ -118,6 +121,7 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
   const techDeckOps = readRepoFile('apps/web/src/components/module-shells/TechDeckOperations.tsx');
   const pulseDeskShell = readRepoFile('apps/web/src/components/module-shells/PulseDeskShell.tsx');
   const faultlineLabWorkspace = readRepoFile('apps/web/src/components/module-shells/FaultlineLabWorkspace.tsx');
+  const ninjamationShell = readRepoFile('apps/web/src/components/module-shells/NinjamationShell.tsx');
 
   assert.match(catchAllPage, /resolveCoreModuleDeepLink/);
   assert.match(catchAllPage, /initialSectionId=\{target\.sectionId\}/);
@@ -161,6 +165,12 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
     [faultlineLabWorkspace, 'faultlinelab-progress'],
     [faultlineLabWorkspace, 'faultlinelab-authoring'],
     [faultlineLabWorkspace, 'faultlinelab-analytics'],
+    [ninjamationShell, 'ninjamation-dashboard'],
+    [ninjamationShell, 'ninjamation-scripts'],
+    [ninjamationShell, 'ninjamation-editor'],
+    [ninjamationShell, 'ninjamation-review'],
+    [ninjamationShell, 'ninjamation-generations'],
+    [ninjamationShell, 'ninjamation-downloads'],
   ] as const) {
     assert.ok(source.includes(`id="${targetId}"`), `missing focus target ${targetId}`);
   }

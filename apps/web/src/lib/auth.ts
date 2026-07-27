@@ -31,11 +31,17 @@ async function apiFetch(path: string, options: RequestInit = {}) {
   return data;
 }
 
-async function apiDownload(path: string): Promise<Blob> {
+async function apiDownload(path: string, options: RequestInit = {}): Promise<Blob> {
   const tenantId = getActiveTenantId();
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string> || {}),
+  };
   if (tenantId) headers['X-Tenant-Id'] = tenantId;
-  const res = await fetch(`${API_BASE}${path}`, { headers, credentials: 'include' });
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers,
+    credentials: 'include',
+  });
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: 'Download failed' }));
     throw { status: res.status, ...data };
@@ -1911,20 +1917,63 @@ export const moduleShellApi = {
     }),
   },
   ninjamation: {
-    list: () => apiFetch('/modules/ninjamation/automations'),
-    activate: (input: {
-      templateId: string;
+    workspace: () => apiFetch('/modules/ninjamation/workspace'),
+    detail: (id: string) =>
+      apiFetch(`/modules/ninjamation/scripts/${encodeURIComponent(id)}`),
+    create: (input: {
       name: string;
-      trigger: string;
-      action: string;
-      modules: string[];
+      description?: string;
+      language: 'powershell' | 'python' | 'batch' | 'bash';
+      category?: string;
+      riskTier?: 'low' | 'medium' | 'high';
+      content: string;
     }) =>
-      apiFetch('/modules/ninjamation/automations', {
+      apiFetch('/modules/ninjamation/scripts', {
         method: 'POST',
         body: JSON.stringify(input),
       }),
-    deactivate: (id: string) =>
-      apiFetch(`/modules/ninjamation/automations/${id}`, { method: 'DELETE' }),
+    update: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninjamation/scripts/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    submitReview: (id: string, expectedVersion: number, note?: string) =>
+      apiFetch(`/modules/ninjamation/scripts/${encodeURIComponent(id)}/review`, {
+        method: 'POST',
+        body: JSON.stringify({ expectedVersion, note }),
+      }),
+    approve: (id: string, expectedVersion: number, note?: string) =>
+      apiFetch(`/modules/ninjamation/scripts/${encodeURIComponent(id)}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({ expectedVersion, note }),
+      }),
+    reject: (id: string, expectedVersion: number, note?: string) =>
+      apiFetch(`/modules/ninjamation/scripts/${encodeURIComponent(id)}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ expectedVersion, note }),
+      }),
+    retire: (id: string, expectedVersion: number, note?: string) =>
+      apiFetch(`/modules/ninjamation/scripts/${encodeURIComponent(id)}/retire`, {
+        method: 'POST',
+        body: JSON.stringify({ expectedVersion, note }),
+      }),
+    generate: (input: {
+      idempotencyKey: string;
+      prompt: string;
+      name?: string;
+      description?: string;
+      language: 'powershell' | 'python' | 'batch' | 'bash';
+      category?: string;
+      riskTier?: 'low' | 'medium' | 'high';
+    }) =>
+      apiFetch('/modules/ninjamation/generations', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    download: (id: string) =>
+      apiDownload(`/modules/ninjamation/scripts/${encodeURIComponent(id)}/downloads`, {
+        method: 'POST',
+      }),
   },
   launchkit: {
     templates: () => apiFetch('/modules/ninja-launch-kit/templates'),

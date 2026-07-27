@@ -100,6 +100,8 @@ export class MockAiProvider implements AiProvider {
           ? this.generateStudyForgeResponse(request.userPrompt)
           : toolType === 'ninja_launch_kit'
             ? this.generateNinjaLaunchKitResponse(request.userPrompt)
+            : toolType === 'ninjamation'
+              ? this.generateNinjamationResponse(request.userPrompt)
       : this.generateMockResponse(toolType, request.userPrompt);
 
     return {
@@ -120,6 +122,7 @@ export class MockAiProvider implements AiProvider {
     if (systemPrompt.includes('OPERATOROS_BRANDFORGE_V1')) return 'brandforge';
     if (systemPrompt.includes('OPERATOROS_STUDYFORGE_V1')) return 'studyforge';
     if (systemPrompt.includes('OPERATOROS_NINJA_LAUNCH_KIT_V1')) return 'ninja_launch_kit';
+    if (systemPrompt.includes('OPERATOROS_NINJAMATION_V1')) return 'ninjamation';
     if (systemPrompt.includes('summarize')) return 'summarizer';
     if (systemPrompt.includes('break down') || systemPrompt.includes('task')) return 'task_breakdown';
     if (systemPrompt.includes('action plan') || systemPrompt.includes('project plan')) return 'project_planner';
@@ -275,6 +278,65 @@ export class MockAiProvider implements AiProvider {
           ].join('\n'),
         },
       ],
+    });
+  }
+
+  private generateNinjamationResponse(userPrompt: string): string {
+    let input: Record<string, unknown> = {};
+    try {
+      input = JSON.parse(userPrompt) as Record<string, unknown>;
+    } catch {
+      input = {};
+    }
+    const language = String(input.language ?? 'powershell');
+    const requestedName = String(input.requestedName ?? '').trim();
+    const prompt = String(input.prompt ?? 'Perform a documented local maintenance task')
+      .replaceAll(/\s+/g, ' ')
+      .slice(0, 180);
+    const name = requestedName || `Safe ${language} automation`;
+    const contentByLanguage: Record<string, string> = {
+      powershell: [
+        '[CmdletBinding(SupportsShouldProcess)]',
+        'param([Parameter(Mandatory)][string]$TargetPath)',
+        '$ErrorActionPreference = "Stop"',
+        'if (-not (Test-Path -LiteralPath $TargetPath)) { throw "Target path does not exist." }',
+        `Write-Output "Planned task: ${prompt.replaceAll('"', "'")}"`,
+        'Get-Item -LiteralPath $TargetPath | Select-Object FullName, Length, LastWriteTime',
+      ].join('\n'),
+      python: [
+        'from pathlib import Path',
+        'import argparse',
+        '',
+        'parser = argparse.ArgumentParser()',
+        'parser.add_argument("target_path")',
+        'args = parser.parse_args()',
+        'target = Path(args.target_path).expanduser().resolve()',
+        'if not target.exists():',
+        '    raise FileNotFoundError("Target path does not exist.")',
+        `print("Planned task: ${prompt.replaceAll('"', "'")}")`,
+        'print(target)',
+      ].join('\n'),
+      batch: [
+        '@echo off',
+        'setlocal EnableExtensions DisableDelayedExpansion',
+        'if "%~1"=="" (echo Usage: %~nx0 TARGET_PATH& exit /b 2)',
+        'if not exist "%~1" (echo Target path does not exist.& exit /b 3)',
+        `echo Planned task: ${prompt.replaceAll(/[&|<>^]/g, '')}`,
+        'dir /a "%~1"',
+      ].join('\n'),
+      bash: [
+        '#!/usr/bin/env bash',
+        'set -euo pipefail',
+        'target_path="${1:?Usage: script TARGET_PATH}"',
+        '[[ -e "$target_path" ]] || { echo "Target path does not exist." >&2; exit 3; }',
+        `printf '%s\\n' 'Planned task: ${prompt.replaceAll("'", '')}'`,
+        'ls -ld -- "$target_path"',
+      ].join('\n'),
+    };
+    return JSON.stringify({
+      name,
+      description: `Defensive ${language} draft for: ${prompt}`,
+      content: contentByLanguage[language] ?? contentByLanguage.powershell,
     });
   }
 

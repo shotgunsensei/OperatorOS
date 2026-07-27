@@ -157,6 +157,14 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/calls': { sectionId: 'callcommand-calls', label: 'Call Records' },
     '/operations': { sectionId: 'callcommand-operations', label: 'Controlled Calling' },
   },
+  ninjamation: {
+    '/dashboard': { sectionId: 'ninjamation-dashboard', label: 'Script Dashboard' },
+    '/scripts': { sectionId: 'ninjamation-scripts', label: 'Script Library' },
+    '/editor': { sectionId: 'ninjamation-editor', label: 'Script Editor' },
+    '/review': { sectionId: 'ninjamation-review', label: 'Review Queue' },
+    '/generations': { sectionId: 'ninjamation-generations', label: 'AI Draft Generator' },
+    '/downloads': { sectionId: 'ninjamation-downloads', label: 'Download Audit' },
+  },
 };
 
 const SAFE_PATH_SEGMENT = /^[a-z0-9-]+$/;
@@ -243,6 +251,12 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'calls') return { sectionId: 'callcommand-calls', label: 'Call Record' };
     if (resource === 'channels' || resource === 'profiles') return { sectionId: 'callcommand-configuration', label: 'Call Configuration' };
     if (resource === 'consents' || resource === 'suppressions') return { sectionId: 'callcommand-consent', label: 'Consent Record' };
+  }
+  if (slug === 'ninjamation' && pathSegments.length === 2) {
+    const [resource] = pathSegments;
+    if (resource === 'scripts') return { sectionId: 'ninjamation-editor', label: 'Script Record' };
+    if (resource === 'generations') return { sectionId: 'ninjamation-generations', label: 'Generation Record' };
+    if (resource === 'downloads') return { sectionId: 'ninjamation-downloads', label: 'Download Record' };
   }
   return null;
 }
