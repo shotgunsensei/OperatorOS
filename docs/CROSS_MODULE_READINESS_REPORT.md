@@ -14,7 +14,7 @@ tests all pass in the target deployment.
 
 | Module | Real shared-runtime workload | Auth/tenant enforcement | Build | DB tests | Live health | Browser E2E | Readiness |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| OperatorOS | Identity, tenant, entitlement, billing, audit, launcher | Local SSO/RBAC/tenant tests pass | Pass | Pass | Local pass; deployed target not run | Local production-host matrix 8/8; deployed target not run | **Not production-ready** |
+| OperatorOS | Identity, tenant, entitlement, billing, audit, launcher | Local SSO/RBAC/tenant tests pass | Pass | Pass | Local pass; deployed target not run | Local production-host matrix 9/9; deployed target not run | **Not production-ready** |
 | TradeFlowKit | Source/local state 4 candidate: lead conversion; shared Directory customers; numbered jobs/tasks/dependencies; quotes/public decisions; idempotent invoices; partial manual/test-provider payments; portal/documents; messaging; settings; real analytics; CSV export | Server guards, versions, idempotency, persistence/restart, viewer denial, Directory mapping, and cross-tenant tests pass | Pass | Pass | Compiled shared runtime and public route pass locally; deployed target not run | TradeFlowKit rows pass in refreshed acceptance and SSO 2/2 passes; deployed workflow/cutover not run | **Not production-ready** |
 | PulseDesk | Source/local state 4 candidate: PHI-minimized Directory clients/facilities/requesters; departments; operational assets; numbered tickets; queue/team assignment; notes/replies; shared attachments; time/SLA; vendor, supply and facility coordination; knowledge, views, configuration, dashboards and deep links | Server guards, capability limits, versions, idempotency, privacy validation, internal-note isolation, restart persistence, Directory mapping and cross-tenant tests pass | Pass | Pass | Compiled 19-step shared runtime and anonymous deep-link smoke pass locally; deployed target not run | Local production-host SSO/return/logout evidence recorded below; deployed workflow/privacy/cutover not run | **Not production-ready** |
 | TechDeck | Source/local state 4 candidate: Directory-linked tickets/comments/time; configuration inventory; network/IPAM; lifecycle; versioned documentation/runbooks/backlinks; private attachments; evidence; reports; deep links | Server guards, versions, site/client pairing, managed-client Directory profile, document transitions, secret-field rejection, audit, viewer denial, and cross-tenant tests pass | Pass | Pass | Compiled 18-step shared runtime and anonymous deep-link smoke pass locally; deployed target not run | Production-host SSO 2/2 and TechDeck deep-link/refresh/Back/local logout pass locally; deployed workflow/provider/cutover not run | **Not production-ready** |
@@ -25,21 +25,23 @@ tests all pass in the target deployment.
 | SnapProofOS | Phase 11B source/local state-4 candidate: evidence cases; private note/file capture; signature/MIME/scan/hash controls; review; findings; append-only comments and custody; immutable reports; real exports; retention/legal hold/archive; dedicated deep links | Trusted session tenant/module scope, viewer denial, tenant-admin decisions, cross-tenant non-enumeration, optimistic versions, composite tenant FKs and append-only triggers pass | Pass | 17/17 focused tests, clean aggregate 787/787 and clean/idempotent 24-step release pass | Compiled 24-step runtime and direct/web-proxied health/readiness pass locally; deployed target not run | Production-host matrix 6/6 covers private upload, review, custody, export, retention, mobile, return, global logout, direct deep-link reauthentication, refresh and persistence; deployed workflow not run | **Not production-ready** |
 | StudyForge AI | Phase 11C source/local state-4 candidate: subjects; private note/document sources; source-grounded AI decks/quizzes/plans; editable lifecycle; server grading; attempts; spaced repetition; plan completion; real exports and deep links | Trusted session tenant/module scope, viewer denial, cross-tenant non-enumeration, exact-excerpt citation checks, versions, publication locks, strict upload validation, idempotency and hard-delete cleanup pass | Pass | 14/14 focused tests, clean aggregate 801/801 and clean/idempotent 25-step release pass | Compiled 25-step runtime and direct/web-proxied health/readiness pass locally; deployed target not run | Production-host matrix 7/7 covers private sources, grounded generation, review/publish, grading, progress, usage, export, mobile, return, global logout, direct deep-link reauthentication, refresh and persistence; deployed workflow not run | **Not production-ready** |
 | Ninja Launch Kit | Phase 11D source/local state-4 candidate: launch workspaces; phases/milestones/dependent tasks; reviewed artifacts; private assets; server readiness; shared AI/usage/activity; audited exports and canonical deep links | Trusted session tenant/module scope, viewer denial, cross-tenant non-enumeration, active-member references, optimistic versions, dependency/cycle checks, lifecycle locks, idempotency, upload scanning and hard-delete cleanup pass | Pass | Focused contracts and 4/4 PostgreSQL workflows, clean aggregate 816/816 and clean/idempotent 26-step release pass | Compiled 26-step runtime and direct/web-proxied health/readiness pass locally; deployed target not run | Production-host matrix 8/8 covers create, tasks, AI draft, review/approval, 100% readiness, launch, export, mobile, return, global logout, direct deep-link reauthentication, refresh and persistence; deployed workflow not run | **Not production-ready** |
+| CallCommand AI | Phase 11E source/local state-4 candidate: channels; bounded receptionist/intake profiles; review-only transfer targets; purpose-specific outbound consent; suppression; signed inbound DTMF intake; persistent calls/events/dispositions; reviewed follow-up drafts; real analytics and canonical deep links | Trusted session tenant/module scope, viewer denial, second-tenant non-enumeration, globally unique inbound lines, consent/suppression transaction checks, rate/idempotency controls, signed/replay-safe callbacks, masked data and recording activation/URL exclusion pass | Pass | Focused static contracts, 5/5 tenant/authorization/consent/disposition/persistence and 4/4 signed callback/inbound/replay/privacy workflows, clean aggregate 825/825 and clean/idempotent 27-step release pass | Compiled 27-step runtime and direct/web-proxied health/readiness pass locally with Twilio correctly disabled; deployed target not run | Production-host matrix 9/9 covers configuration, consent, test-provider call/event/disposition/follow-up persistence, suppression denial, deep refresh, mobile, return, global logout and direct deep-link reauthentication; deployed/live-provider workflow not run | **Not production-ready** |
 
 ## Final E2E acceptance update
 
-Phase 11D refreshes the local production-host matrix to 8/8. The new Ninja
-Launch Kit scenario proves persistent launch creation, required task
-completion, deterministic local AI drafting, explicit artifact review and
-approval, 100% server-computed readiness, launch transition, audited export,
-mobile navigation, My Apps return, global logout, direct deep-link
-reauthentication, refresh and persistence. A first run exposed an acceptance
-synchronization race that advanced several artifacts only to review; the UI
-now exposes task pressed state and the test waits for each persisted
-transition. The focused scenario then passed 1/1 and the clean-process full
-matrix passed 8/8. This local evidence does not change the release verdict:
-the cumulative revision is not deployed and no production data apply, live
-provider traffic or cutover was authorized.
+Phase 11E refreshes the local production-host matrix to 9/9. The new
+CallCommand scenario proves persistent channel/profile configuration,
+purpose-specific consent, a completed explicit test-adapter call with safe
+events and no external contact, operator disposition, review-only follow-up,
+recording activation/URL exclusion, do-not-call suppression, mobile
+navigation, My Apps return, global logout, direct deep-link reauthentication,
+refresh and persistence. Acceptance exposed a
+real Fastify response-lifecycle defect after the correct suppression 409; all
+validation exits now return the sent reply explicitly. The corrected focused
+scenario and full matrix passed on the final compiled revision. This local
+evidence does not change the release verdict: the cumulative revision is not
+deployed and no production data apply, live Twilio traffic or cutover was
+authorized.
 
 The full 35-step production-host browser sequence was executed locally on
 2026-07-16. It emitted 28 passing evidence records and 10 failures. Shared SSO,

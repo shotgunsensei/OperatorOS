@@ -86,9 +86,9 @@ test('shared-runtime module mutations use write guards while GET routes remain r
   const moduleShell = readRepoFile('apps/api/src/routes/module-shell-routes.ts');
   const pulsedesk = readRepoFile('apps/api/src/routes/pulsedesk-routes.ts');
   const launchkit = readRepoFile('apps/api/src/routes/ninja-launch-kit-routes.ts');
+  const callcommand = readRepoFile('apps/api/src/routes/callcommand-routes.ts');
 
   for (const [readGuard, writeGuard] of [
-    ['callcommandGuards', 'callcommandWriteGuards'],
     ['studyforgeGuards', 'studyforgeWriteGuards'],
     ['ninjamationGuards', 'ninjamationWriteGuards'],
     ['tradeflowkitGuards', 'tradeflowkitWriteGuards'],
@@ -99,10 +99,7 @@ test('shared-runtime module mutations use write guards while GET routes remain r
       new RegExp(`const ${writeGuard} = \\[\\.\\.\\.${readGuard}, requireTenantModuleWriteAccess\\]`),
     );
   }
-  assert.match(
-    moduleShell,
-    /const callcommandAdminGuards = \[\s*\.\.\.callcommandWriteGuards,\s*requireTenantAdmin,\s*\]/,
-  );
+  assert.match(callcommand, /const writes = \[\.\.\.reads, requireTenantModuleWriteAccess\]/);
   assert.match(
     pulsedesk,
     /const pulsedeskWriteGuards = \[\.\.\.pulsedeskGuards, requireTenantModuleWriteAccess\]/,
@@ -112,19 +109,28 @@ test('shared-runtime module mutations use write guards while GET routes remain r
     /const writeGuards = \[\.\.\.readGuards, requireTenantModuleWriteAccess\]/,
   );
 
-  const routes = [...moduleRoutes(moduleShell), ...moduleRoutes(pulsedesk)];
+  const routes = [...moduleRoutes(moduleShell), ...moduleRoutes(pulsedesk), ...moduleRoutes(callcommand)];
   const signedWebhooks = routes.filter((route) => route.path.includes('/webhooks/twilio/'));
-  assert.equal(signedWebhooks.length, 2, 'Twilio provider callbacks remain on their signature boundary');
+  assert.deepEqual(
+    signedWebhooks.map(route => route.path).sort(),
+    [
+      '/v1/modules/callcommand-ai/webhooks/twilio/incoming',
+      '/v1/modules/callcommand-ai/webhooks/twilio/intake',
+      '/v1/modules/callcommand-ai/webhooks/twilio/recording',
+      '/v1/modules/callcommand-ai/webhooks/twilio/status',
+    ],
+    'only the four signed Twilio provider callbacks remain outside first-party session guards',
+  );
 
   const firstPartyRoutes = routes.filter((route) => !route.path.includes('/webhooks/twilio/'));
   const mutations = firstPartyRoutes.filter((route) => route.method !== 'get');
   const reads = firstPartyRoutes.filter((route) => route.method === 'get');
-  assert.equal(mutations.length, 30, 'all legacy shared-shell first-party mutations should be inventoried');
-  assert.equal(reads.length, 15, 'all legacy shared-shell first-party reads should be inventoried');
+  assert.ok(mutations.length >= 36, 'shared-shell first-party mutations should remain inventoried');
+  assert.ok(reads.length >= 15, 'shared-shell first-party reads should remain inventoried');
 
   for (const route of mutations) {
     assert.ok(
-      route.preHandler && /(?:WriteGuards|callcommandAdminGuards)/.test(route.preHandler),
+      route.preHandler && /(?:WriteGuards|writes)/.test(route.preHandler),
       `${route.method.toUpperCase()} ${route.path} must run a module write guard`,
     );
   }

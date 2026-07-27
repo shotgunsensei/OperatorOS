@@ -1,9 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { createHash } from 'node:crypto';
 import { db } from '../db.js';
 import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import {
-  moduleCallLogs,
   moduleStudySessions,
   moduleAutomations,
   moduleWorkflowItems,
@@ -24,7 +22,6 @@ import {
   directorySites,
   directoryOrganizationContacts,
   activityFeed,
-  modules,
 } from '../schema.js';
 import {
   requireTenantAdmin,
@@ -32,21 +29,7 @@ import {
   requireTenantModuleAccess,
   requireTenantModuleWriteAccess,
 } from '../lib/tenant-auth.js';
-import {
-  isTelephonyConfigured,
-  getTelephonyInfo,
-  placeTwilioCall,
-  mapTwilioStatus,
-  verifyTwilioSignature,
-  fetchTwilioTranscription,
-  summarizeTranscript,
-} from '../lib/telephony.js';
 import { getAiProvider } from '../lib/ai-provider.js';
-import {
-  receiveVerifiedWebhook,
-  registerSharedWebhookHandler,
-} from '../lib/shared-webhooks.js';
-import { checkRateLimit } from '../lib/rate-limiter.js';
 import {
   parseTradeFlowKitLeadCreate,
   parseTradeFlowKitLeadListQuery,
@@ -89,26 +72,17 @@ import { registerFaultlineLabRoutes } from './faultlinelab-routes.js';
 import { registerBrandForgeOsRoutes } from './brandforgeos-routes.js';
 import { registerStudyForgeRoutes } from './studyforge-routes.js';
 import { registerNinjaLaunchKitRoutes } from './ninja-launch-kit-routes.js';
-
-// Task #91 — per-tenant + per-user budget for outbound calls. Each placed
-// call burns real Twilio minutes, so we cap dial attempts to a small
-// number per window. The limit is keyed by tenant+user so one noisy user
-// in a tenant can't starve their teammates, and one tenant can't burn
-// another tenant's quota.
-const CALL_RATE_MAX = 5;
-const CALL_RATE_WINDOW_MS = 5 * 60_000;
+import { registerCallCommandRoutes } from './callcommand-routes.js';
 
 // Per-module guard chains. `requireTenantMember` confirms the caller belongs
 // to the active tenant; `requireTenantModuleAccess(slug)` then enforces that
 // the tenant has the module enabled AND the user has a non-`none` grant for
 // it. Both are required: skipping the second would let any tenant member
 // read/write another module's data even if their access was revoked.
-const callcommandGuards = [requireTenantMember, requireTenantModuleAccess('callcommand-ai')];
 const studyforgeGuards = [requireTenantMember, requireTenantModuleAccess('studyforge-ai')];
 const ninjamationGuards = [requireTenantMember, requireTenantModuleAccess('ninjamation')];
 const tradeflowkitGuards = [requireTenantMember, requireTenantModuleAccess('tradeflowkit')];
 const techdeckGuards = [requireTenantMember, requireTenantModuleAccess('techdeck')];
-const callcommandWriteGuards = [...callcommandGuards, requireTenantModuleWriteAccess];
 const studyforgeWriteGuards = [...studyforgeGuards, requireTenantModuleWriteAccess];
 const ninjamationWriteGuards = [...ninjamationGuards, requireTenantModuleWriteAccess];
 const tradeflowkitWriteGuards = [...tradeflowkitGuards, requireTenantModuleWriteAccess];
@@ -122,7 +96,6 @@ const techdeckWriteGuards = [...techdeckGuards, requireTenantModuleWriteAccess];
 // is scoped to the active tenant exposed via `request.tenantContext`.
 // ---------------------------------------------------------------------------
 
-const PERSONAS = new Set(['receptionist', 'qualifier', 'collector']);
 
 const WORKFLOW_MODULES = {
   torqueshed: {
@@ -210,27 +183,6 @@ function parseWorkflowItemInput(
 function sendWorkflowValidation(reply: FastifyReply, err: unknown) {
   const code = err instanceof Error ? err.message : 'WORKFLOW_BODY_INVALID';
   return reply.code(400).send({ error: 'Invalid workflow record', code });
-}
-
-function normalisePhone(raw: string): string | null {
-  if (typeof raw !== 'string') return null;
-  const digits = raw.replace(/[^\d+]/g, '');
-  // Accept 8–15 digits, optional leading '+'. Matches the shell's UI hints
-  // without committing to a specific national format.
-  if (!/^\+?\d{8,15}$/.test(digits)) return null;
-  return digits;
-}
-
-function personaSummary(persona: string, callerName: string): string {
-  switch (persona) {
-    case 'receptionist':
-      return `Greeted ${callerName}, captured intent, and routed the request to the team inbox.`;
-    case 'qualifier':
-      return `Qualified ${callerName} against the lead checklist and logged a discovery summary.`;
-    case 'collector':
-    default:
-      return `Reminded ${callerName} of the outstanding balance and scheduled a follow-up.`;
-  }
 }
 
 function handleTechDeckValidation(reply: FastifyReply, err: unknown): boolean {
@@ -434,131 +386,8 @@ function slugify(s: string): string {
   );
 }
 
-// Backoff schedule (ms) for transcript polling. Twilio transcription is
-// best-effort; bumping past ~5 minutes total without a result is our
-// signal to fall back to a non-canned summary.
-const TRANSCRIPT_BACKOFF_MS = [10_000, 20_000, 30_000, 60_000, 120_000];
-
-async function finalizeTranscript(
-  callId: string,
-  recordingSid: string,
-  persona: string,
-  callerName: string,
-  log: { warn: (...args: any[]) => void; info: (...args: any[]) => void },
-) {
-  for (let i = 0; i < TRANSCRIPT_BACKOFF_MS.length; i++) {
-    await new Promise((r) => setTimeout(r, TRANSCRIPT_BACKOFF_MS[i]));
-    let transcript: string | null = null;
-    try {
-      transcript = await fetchTwilioTranscription(recordingSid);
-    } catch (err) {
-      log.warn({ err, recordingSid, attempt: i + 1 }, 'Twilio transcript fetch failed; will retry');
-      continue;
-    }
-    if (!transcript) continue;
-    let summary: string;
-    try {
-      summary = await summarizeTranscript(transcript, persona, callerName);
-    } catch (err) {
-      log.warn({ err, callId }, 'AI summary failed; storing raw transcript only');
-      summary = transcript.slice(0, 500);
-    }
-    // Monotonic transition: only flip a still-pending row to `ready`. If
-    // another poller already finalised (ready) or the fallback already
-    // ran (unavailable), do not clobber that state.
-    const finalised = await db
-      .update(moduleCallLogs)
-      .set({ transcript, summary, transcriptStatus: 'ready', updatedAt: new Date() })
-      .where(and(
-        eq(moduleCallLogs.id, callId),
-        eq(moduleCallLogs.transcriptStatus, 'pending'),
-      ))
-      .returning({ id: moduleCallLogs.id });
-    if (finalised.length === 0) {
-      log.info({ callId, attempt: i + 1 }, 'Transcript finalise skipped; row no longer pending');
-    } else {
-      log.info({ callId, attempt: i + 1 }, 'Transcript finalised');
-    }
-    return;
-  }
-  // Transcription never landed — leave a clear, grounded fallback so the
-  // shell doesn't display a stale canned blurb or an empty summary.
-  //
-  // Task #94 — idempotency: gate the status transition on the row NOT
-  // already being `unavailable`. Twilio recording webhooks can retry, and
-  // a stuck poller could in principle fire more than once for the same
-  // call; using `RETURNING` lets us tell whether this invocation was the
-  // one that actually flipped the row, so the activity_feed entry is
-  // written at most once per call.
-  const transitioned = await db
-    .update(moduleCallLogs)
-    .set({
-      summary: `Call with ${callerName} completed but Twilio did not return a transcript within the polling window.`,
-      transcriptStatus: 'unavailable',
-      updatedAt: new Date(),
-    })
-    .where(and(
-      eq(moduleCallLogs.id, callId),
-      eq(moduleCallLogs.transcriptStatus, 'pending'),
-    ))
-    .returning({
-      userId: moduleCallLogs.userId,
-      tenantId: moduleCallLogs.tenantId,
-      phone: moduleCallLogs.phone,
-    });
-  if (transitioned.length === 0) {
-    log.info({ callId, recordingSid }, 'Transcript fallback skipped; row no longer pending');
-    return;
-  }
-  log.warn({ callId, recordingSid }, 'Transcript never produced; wrote fallback summary');
-
-  // Proactively notify the user who placed the call. Until now the only
-  // signal was a summary swap on the row, which the user only sees if
-  // they happen to be looking at the CallCommand shell. Writing an
-  // `activity_feed` row makes the bell/inbox surface it so they know to
-  // retry or check the recording.
-  try {
-    const row = transitioned[0];
-    await db.insert(activityFeed).values({
-      userId: row.userId,
-      tenantId: row.tenantId,
-      action: 'call_transcript_unavailable',
-      entityType: 'module_call_log',
-      entityId: callId,
-      metadata: {
-        phone: row.phone,
-        callerName,
-        persona,
-        reason: 'transcript_polling_timeout',
-      },
-    });
-  } catch (err) {
-    // Activity feed is best-effort — never let it mask the fallback summary.
-    log.warn({ err, callId }, 'Failed to write activity_feed entry for transcript fallback');
-  }
-}
-
 export async function registerModuleShellRoutes(app: FastifyInstance) {
-  registerSharedWebhookHandler('callcommand.twilio.status.v1', async context => {
-    const callId = String(context.payload.callId || '');
-    const sid = String(context.payload.sid || '');
-    const status = String(context.payload.status || '');
-    const [row] = await db.select().from(moduleCallLogs)
-      .where(and(eq(moduleCallLogs.id, callId), eq(moduleCallLogs.tenantId, context.tenantId)))
-      .limit(1);
-    if (!row) throw Object.assign(new Error('Call row is no longer available'), { code: 'CALL_ROW_NOT_FOUND' });
-    const mapped = mapTwilioStatus(status);
-    const patch: Record<string, unknown> = {
-      status: mapped,
-      updatedAt: new Date(),
-      ...(row.providerSid ? {} : { providerSid: sid }),
-    };
-    if (mapped === 'failed' && context.payload.errorCode) {
-      patch.errorMessage = `Twilio error ${String(context.payload.errorCode)}: ${String(context.payload.errorMessage || '')}`.slice(0, 500);
-    }
-    await db.update(moduleCallLogs).set(patch)
-      .where(and(eq(moduleCallLogs.id, row.id), eq(moduleCallLogs.tenantId, context.tenantId)));
-  });
+  await registerCallCommandRoutes(app);
   await registerPulseDeskRoutes(app);
   await registerPulseDeskServiceDeskRoutes(app);
   await registerNinjaPoolHallRoutes(app);
@@ -1795,386 +1624,6 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       return { ok: true };
     });
   }
-
-  // ===== CallCommand AI ===================================================
-  // Task #89 — surface the telephony config source so the shell can show
-  // either "connected via Replit", "using env vars", or a one-click
-  // "Connect Twilio" affordance when nothing is wired up.
-  app.get(
-    '/v1/modules/callcommand-ai/telephony/status',
-    { preHandler: [...callcommandGuards] },
-    async () => {
-      return await getTelephonyInfo();
-    },
-  );
-
-  // Task #89 — one-click connect flow. The Replit connector proxy is the
-  // privileged path to wire up Twilio without pasting credentials, but
-  // the actual OAuth handshake lives in the Replit workspace UI (the
-  // agent-side `proposeIntegration` tool drives a drawer there). This
-  // endpoint returns the canonical URL the admin should open to complete
-  // the binding, plus the connector id so the workspace can deep-link
-  // straight to Twilio. The shell opens that URL in a new tab and
-  // re-polls `/telephony/status` when focus returns.
-  //
-  // We don't try to invoke `proposeIntegration` server-side: it is an
-  // agent control-flow operation, not an HTTP endpoint, and would not be
-  // reachable for a tenant admin who is not running the Replit agent.
-  // Falling back to a clearly-labelled URL keeps the affordance honest.
-  // Admin-only: pasting credentials, or initiating a connector OAuth
-  // hand-off, is a privileged tenant config change. We gate on
-  // `requireTenantAdmin` in addition to the standard member +
-  // module-access checks so tenant `member` users cannot kick off the
-  // flow even if they have CallCommand access.
-  const callcommandAdminGuards = [
-    ...callcommandWriteGuards,
-    requireTenantAdmin,
-  ];
-
-  // Twilio connector ID (the Replit-managed `ccfg_*` identifier from the
-  // connectors registry). Surfaced in the connect response so the shell
-  // can deep-link straight to the OAuth drawer for this connector
-  // instead of dropping the admin on a generic integrations index.
-  const TWILIO_CONNECTOR_ID = 'ccfg_twilio_01K69QJTED9YTJFE2SJ7E4SY08';
-
-  app.post(
-    '/v1/modules/callcommand-ai/telephony/connect',
-    { preHandler: callcommandAdminGuards },
-    async (_request, reply) => {
-      const info = await getTelephonyInfo();
-      if (info.configured) {
-        return reply.code(409).send({
-          error: 'Telephony already configured',
-          code: 'TELEPHONY_ALREADY_CONFIGURED',
-          source: info.source,
-        });
-      }
-      if (!info.connectorAvailable) {
-        // Self-hosted install with no Replit connector proxy. Tell the
-        // caller to use the env-var path — the shell already shows the
-        // four required vars in this branch.
-        return reply.code(409).send({
-          error: 'Replit connector unavailable in this environment',
-          code: 'CONNECTOR_UNAVAILABLE',
-        });
-      }
-
-      // Drive Replit's connector OAuth setup directly. The integrations
-      // setup URL (`?integration=<ccfg_id>` on the workspace) opens the
-      // same drawer that the agent-side `proposeIntegration` callback
-      // would have opened, so the admin gets a one-click handshake
-      // instead of a manual "find Twilio in the integrations list"
-      // workflow. We fall back to the connector setup URL on the
-      // connectors-v2 host if REPL_OWNER/REPL_SLUG aren't set.
-      const owner = process.env.REPL_OWNER;
-      const slug = process.env.REPL_SLUG;
-      const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-      const url = owner && slug
-        ? `https://replit.com/@${encodeURIComponent(owner)}/${encodeURIComponent(slug)}?integration=${TWILIO_CONNECTOR_ID}`
-        : `https://${hostname}/setup?connector_id=${TWILIO_CONNECTOR_ID}`;
-
-      return {
-        connectorId: TWILIO_CONNECTOR_ID,
-        connectorName: 'twilio',
-        url,
-        instructions:
-          'A new tab will open the Replit Twilio connector setup. After you finish OAuth, this banner will turn green within ~60 seconds.',
-      };
-    },
-  );
-
-  app.get(
-    '/v1/modules/callcommand-ai/calls',
-    { preHandler: [...callcommandGuards] },
-    async (request) => {
-      const ctx = (request as any).tenantContext;
-      const calls = await db
-        .select()
-        .from(moduleCallLogs)
-        .where(eq(moduleCallLogs.tenantId, ctx.tenantId))
-        .orderBy(desc(moduleCallLogs.createdAt))
-        .limit(20);
-      return { calls };
-    },
-  );
-
-  app.post(
-    '/v1/modules/callcommand-ai/calls',
-    { preHandler: [...callcommandWriteGuards] },
-    async (request, reply) => {
-      const user = (request as any).user;
-      const ctx = (request as any).tenantContext;
-      const { phone, name, persona } = (request.body as any) ?? {};
-
-      // Rate limit BEFORE input validation so a flood of malformed payloads
-      // still gets shut down, but AFTER the tenant guards so unauthenticated
-      // traffic can't pollute the bucket for legitimate tenants.
-      const rateKey = `callcommand:place:${ctx.tenantId}:${user.id}`;
-      if (!checkRateLimit(rateKey, CALL_RATE_MAX, CALL_RATE_WINDOW_MS)) {
-        return reply.code(429).send({
-          error: `Too many calls placed. Limit is ${CALL_RATE_MAX} every ${CALL_RATE_WINDOW_MS / 60_000} minutes.`,
-          code: 'CALL_RATE_LIMITED',
-        });
-      }
-
-      const tel = normalisePhone(phone);
-      if (!tel) {
-        return reply.code(400).send({ error: 'Invalid phone number', code: 'INVALID_PHONE' });
-      }
-      if (typeof persona !== 'string' || !PERSONAS.has(persona)) {
-        return reply.code(400).send({ error: 'Invalid persona', code: 'INVALID_PERSONA' });
-      }
-      const callerName =
-        typeof name === 'string' && name.trim().length > 0
-          ? name.trim().slice(0, 120)
-          : 'Unknown caller';
-
-      // Task #75 — handoff to Twilio when configured.
-      //
-      // We insert the row in `queued` state FIRST so the provider webhook
-      // (which can race the API response back) always has a row to update,
-      // then attempt to dial. On dial failure we flip the row to `failed`
-      // and surface the provider error to the caller.
-      if (!(await isTelephonyConfigured())) {
-        // Dev/test fallback so the shell remains usable when no telephony
-        // provider is wired up. The row is still persisted but clearly
-        // marked as a stub via `provider='stub'`.
-        const [row] = await db
-          .insert(moduleCallLogs)
-          .values({
-            tenantId: ctx.tenantId,
-            userId: user.id,
-            phone: tel,
-            callerName,
-            persona,
-            status: 'completed',
-            provider: 'stub',
-            summary: personaSummary(persona, callerName),
-          })
-          .returning();
-        return reply.code(201).send(row);
-      }
-
-      const [row] = await db
-        .insert(moduleCallLogs)
-        .values({
-          tenantId: ctx.tenantId,
-          userId: user.id,
-          phone: tel,
-          callerName,
-          persona,
-          status: 'queued',
-          provider: 'twilio',
-        })
-        .returning();
-
-      try {
-        const placed = await placeTwilioCall({
-          to: tel,
-          persona,
-          callerName,
-          callRowId: row.id,
-        });
-        const [updated] = await db
-          .update(moduleCallLogs)
-          .set({
-            providerSid: placed.sid,
-            status: placed.status,
-            updatedAt: new Date(),
-          })
-          .where(eq(moduleCallLogs.id, row.id))
-          .returning();
-        return reply.code(201).send(updated);
-      } catch (err: any) {
-        const message = err?.message?.slice(0, 500) ?? 'Telephony provider error';
-        const [updated] = await db
-          .update(moduleCallLogs)
-          .set({ status: 'failed', errorMessage: message, updatedAt: new Date() })
-          .where(eq(moduleCallLogs.id, row.id))
-          .returning();
-        request.log.error({ err, callId: row.id }, 'Twilio dial failed');
-        return reply.code(502).send({
-          error: 'Telephony provider failed',
-          code: 'TELEPHONY_FAILED',
-          message,
-          call: updated,
-        });
-      }
-    },
-  );
-
-  // Single-call read for the shell's polling loop. Tenant-scoped so callers
-  // can only fetch calls belonging to their active tenant.
-  app.get(
-    '/v1/modules/callcommand-ai/calls/:id',
-    { preHandler: [...callcommandGuards] },
-    async (request, reply) => {
-      const { id } = request.params as { id: string };
-      const ctx = (request as any).tenantContext;
-      const [row] = await db
-        .select()
-        .from(moduleCallLogs)
-        .where(and(eq(moduleCallLogs.id, id), eq(moduleCallLogs.tenantId, ctx.tenantId)))
-        .limit(1);
-      if (!row) return reply.code(404).send({ error: 'Call not found' });
-      return row;
-    },
-  );
-
-  // ----- Twilio status / recording webhooks --------------------------------
-  // These endpoints are intentionally NOT behind tenant guards: Twilio calls
-  // them server-to-server and has no JWT. Authenticity is established via
-  // the X-Twilio-Signature header (HMAC of URL + form body using our auth
-  // token). The webhook handlers reject any request whose signature does
-  // not verify; they fail closed when telephony env vars are missing.
-  //
-  // Reconstruct the URL Twilio actually signed. Behind Replit's reverse
-  // proxy `request.protocol`/`request.headers.host` can disagree with the
-  // public-facing URL Twilio called, which would cause valid signatures to
-  // be rejected. Prefer the canonical `TWILIO_PUBLIC_BASE_URL`/`APP_URL`
-  // env var if set, falling back to the request-derived URL for dev.
-  function canonicalWebhookUrl(request: any): string {
-    const base = process.env.TWILIO_PUBLIC_BASE_URL || process.env.APP_URL;
-    if (base) {
-      try { return new URL(request.url, base).toString(); } catch { /* fall through */ }
-    }
-    return `${request.protocol}://${request.headers.host}${request.url}`;
-  }
-
-  // Resolve the call row by Twilio CallSid, falling back to the `call_id`
-  // query param we attach to every status/recording callback URL. The
-  // fallback closes a small race where an `initiated` status webhook can
-  // arrive before the POST handler has written `providerSid` back.
-  async function findCallRow(sid: string | undefined, callId: string | undefined) {
-    if (sid) {
-      const [row] = await db
-        .select()
-        .from(moduleCallLogs)
-        .where(eq(moduleCallLogs.providerSid, sid))
-        .limit(1);
-      if (row) return row;
-    }
-    if (callId) {
-      const [row] = await db
-        .select()
-        .from(moduleCallLogs)
-        .where(eq(moduleCallLogs.id, callId))
-        .limit(1);
-      if (row) return row;
-    }
-    return null;
-  }
-
-  app.post('/v1/modules/callcommand-ai/webhooks/twilio/status', async (request, reply) => {
-    const body = (request.body as Record<string, string>) ?? {};
-    const sig = request.headers['x-twilio-signature'] as string | undefined;
-    if (!(await verifyTwilioSignature(canonicalWebhookUrl(request), body, sig))) {
-      return reply.code(403).send({ error: 'Invalid signature' });
-    }
-    const sid = body.CallSid;
-    const status = body.CallStatus;
-    const callId = (request.query as any)?.call_id as string | undefined;
-    if (!sid || !status) return reply.code(400).send({ error: 'Missing CallSid/CallStatus' });
-
-    const row = await findCallRow(sid, callId);
-    if (!row) return reply.code(404).send({ error: 'Call not found' });
-
-    const [moduleRow] = await db.select({ id: modules.id }).from(modules)
-      .where(eq(modules.slug, 'callcommand-ai')).limit(1);
-    if (!moduleRow) return reply.code(503).send({ error: 'Module registry unavailable' });
-    const rawBody = (request as any).rawBody as Buffer | undefined
-      ?? Buffer.from(new URLSearchParams(Object.entries(body).sort(([a], [b]) => a.localeCompare(b))).toString(), 'utf8');
-    const bodyHash = createHash('sha256').update(rawBody).digest('hex');
-    const eventId = `${sid}:status:${body.SequenceNumber || bodyHash.slice(0, 24)}`;
-    const receipt = await receiveVerifiedWebhook({
-      tenantId: row.tenantId,
-      moduleId: moduleRow.id,
-      provider: 'twilio',
-      providerEventId: eventId,
-      eventType: `call.status.${status}`,
-      handlerKey: 'callcommand.twilio.status.v1',
-      rawBody,
-      safePayload: {
-        callId: row.id,
-        sid,
-        status,
-        errorCode: body.ErrorCode || null,
-        errorMessage: body.ErrorMessage || null,
-      },
-      correlationId: request.id,
-    });
-    if (receipt.status !== 'processed') {
-      return reply.code(503).send({ error: 'Webhook accepted for retry', code: 'WEBHOOK_RETRY_PENDING' });
-    }
-    return { ok: true, duplicate: receipt.duplicate };
-  });
-
-  app.post('/v1/modules/callcommand-ai/webhooks/twilio/recording', async (request, reply) => {
-    const body = (request.body as Record<string, string>) ?? {};
-    const sig = request.headers['x-twilio-signature'] as string | undefined;
-    if (!(await verifyTwilioSignature(canonicalWebhookUrl(request), body, sig))) {
-      return reply.code(403).send({ error: 'Invalid signature' });
-    }
-    const sid = body.CallSid;
-    const recordingSid = body.RecordingSid;
-    const recordingUrl = body.RecordingUrl;
-    const callId = (request.query as any)?.call_id as string | undefined;
-    if (!sid) return reply.code(400).send({ error: 'Missing CallSid' });
-
-    const row = await findCallRow(sid, callId);
-    if (!row) return reply.code(404).send({ error: 'Call not found' });
-
-    // Persist the recording URL immediately so the shell can offer playback
-    // even while we wait for transcription. Transcript + summary are
-    // finalised asynchronously below because Twilio's transcription is
-    // produced after the recording webhook fires (often 30s+ later).
-    await db
-      .update(moduleCallLogs)
-      .set({
-        recordingUrl: recordingUrl ?? row.recordingUrl,
-        updatedAt: new Date(),
-      })
-      .where(eq(moduleCallLogs.id, row.id));
-
-    if (recordingSid) {
-      // Fire-and-forget retry chain. Twilio's transcription pipeline is
-      // best-effort and asynchronous, so we poll a handful of times with
-      // exponential backoff (~10s, 30s, 60s, 120s, 240s). If a transcript
-      // never lands we still write a sensible fallback summary so the row
-      // doesn't end as an unexplained `completed` blank.
-      void finalizeTranscript(row.id, recordingSid, row.persona, row.callerName, request.log);
-    } else {
-      // No recording was produced (e.g. caller hung up immediately). Leave
-      // a clear fallback summary so the row isn't silently empty.
-      // Task #94 — also mark transcript_status='unavailable' so the shell
-      // surfaces the same badge it shows when polling times out; no
-      // recording means no transcript will ever land. Monotonic guard
-      // (`transcript_status='pending'`) prevents a retried no-recording
-      // webhook from clobbering a row that has since become `ready`.
-      if (!row.summary) {
-        await db
-          .update(moduleCallLogs)
-          .set({
-            summary: `Call with ${row.callerName} completed but no recording was produced.`,
-            transcriptStatus: 'unavailable',
-            updatedAt: new Date(),
-          })
-          .where(and(
-            eq(moduleCallLogs.id, row.id),
-            eq(moduleCallLogs.transcriptStatus, 'pending'),
-          ));
-      } else {
-        await db
-          .update(moduleCallLogs)
-          .set({ transcriptStatus: 'unavailable', updatedAt: new Date() })
-          .where(and(
-            eq(moduleCallLogs.id, row.id),
-            eq(moduleCallLogs.transcriptStatus, 'pending'),
-          ));
-      }
-    }
-    return { ok: true };
-  });
 
   // ===== StudyForge AI ====================================================
   app.get(

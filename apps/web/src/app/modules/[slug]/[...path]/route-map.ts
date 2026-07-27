@@ -148,6 +148,15 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/readiness': { sectionId: 'launchkit-readiness', label: 'Launch Readiness' },
     '/exports': { sectionId: 'launchkit-exports', label: 'Exports' },
   },
+  'callcommand-ai': {
+    '/dashboard': { sectionId: 'callcommand-calls', label: 'Call Dashboard' },
+    '/channels': { sectionId: 'callcommand-configuration', label: 'Channels' },
+    '/profiles': { sectionId: 'callcommand-configuration', label: 'Reception Profiles' },
+    '/consent': { sectionId: 'callcommand-consent', label: 'Consent Ledger' },
+    '/suppressions': { sectionId: 'callcommand-consent', label: 'Suppression Controls' },
+    '/calls': { sectionId: 'callcommand-calls', label: 'Call Records' },
+    '/operations': { sectionId: 'callcommand-operations', label: 'Controlled Calling' },
+  },
 };
 
 const SAFE_PATH_SEGMENT = /^[a-z0-9-]+$/;
@@ -228,6 +237,12 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'launches') return { sectionId: 'launchkit-launches', label: 'Launch Workspace' };
     if (resource === 'tasks' || resource === 'milestones' || resource === 'phases') return { sectionId: 'launchkit-plan', label: 'Launch Plan Record' };
     if (resource === 'artifacts') return { sectionId: 'launchkit-artifacts', label: 'Campaign Artifact' };
+  }
+  if (slug === 'callcommand-ai' && pathSegments.length === 2) {
+    const [resource] = pathSegments;
+    if (resource === 'calls') return { sectionId: 'callcommand-calls', label: 'Call Record' };
+    if (resource === 'channels' || resource === 'profiles') return { sectionId: 'callcommand-configuration', label: 'Call Configuration' };
+    if (resource === 'consents' || resource === 'suppressions') return { sectionId: 'callcommand-consent', label: 'Consent Record' };
   }
   return null;
 }

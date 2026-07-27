@@ -1,274 +1,231 @@
-/**
- * Task #90 — End-to-end coverage for the Twilio webhook path that drives a
- * CallCommand AI row through `queued → ringing → completed` and lands a
- * transcript + AI-generated summary on the row after the recording
- * callback. Also asserts that forged signatures are rejected with 403.
- *
- * The route in `module-shell-routes.ts` verifies `X-Twilio-Signature` by
- * recomputing `HMAC-SHA1(url + sortedFormFields)` with the Twilio auth
- * token, so we set the telephony env vars before importing anything that
- * reads them and reuse the same algorithm to forge a valid signature on
- * the test side.
- *
- * `finalizeTranscript` is fire-and-forget with multi-second backoffs, so
- * the test monkey-patches `setTimeout` to fire on the next tick for the
- * duration of the recording-webhook assertions. Without this the suite
- * would block ~10s waiting for the first transcript poll.
- */
-
-// IMPORTANT: telephony.ts reads these env vars on each call, but
-// `verifyTwilioSignature` fails closed when they are missing. Setting
-// them before route registration matches what production looks like.
+process.env.SESSION_SECRET ||= 'operatoros-callcommand-signed-webhook-test-v2';
+process.env.NODE_ENV = 'test';
+process.env.APP_ENV = 'test';
 process.env.TWILIO_ACCOUNT_SID = 'ACtest_account_sid';
 process.env.TWILIO_AUTH_TOKEN = 'test-auth-token-deadbeef';
 process.env.TWILIO_FROM_NUMBER = '+15555550100';
 process.env.TWILIO_PUBLIC_BASE_URL = 'http://localhost:3001';
-// Force the test AI provider so `summarizeTranscript()` is deterministic
-// even on dev machines that have OPENAI_API_KEY set. Without this, the
-// summary assertions would depend on a live OpenAI response.
-delete process.env.OPENAI_API_KEY;
 
-import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { after, before, test } from 'node:test';
+import cookie from '@fastify/cookie';
+import Fastify from 'fastify';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '../src/db.js';
-import {
-  modules, moduleCallLogs, tenants, tenantUsers, tenantModules,
-} from '../src/schema.js';
-import {
-  ensureSchemaReady, createTestUser, cleanupModule, cleanupUser, uniqueId,
-} from './_setup.js';
+import { modules, tenantModules } from '../src/schema.js';
+import { ensureCallCommandTables } from '../src/lib/callcommand-db-init.js';
+import { phoneFingerprint } from '../src/lib/callcommand.js';
+import { clearTelephonyCache } from '../src/lib/telephony.js';
+import { cleanupModule, cleanupUser, createTestModule, createTestUser, ensureSchemaReady } from './_setup.js';
 
-const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN!;
-const BASE_URL = process.env.TWILIO_PUBLIC_BASE_URL!;
+const BASE = process.env.TWILIO_PUBLIC_BASE_URL!;
+const SID = `CA${'a'.repeat(30)}`;
+const INBOUND_SID = `CA${'c'.repeat(30)}`;
+const RECORDING_SID = `RE${'b'.repeat(30)}`;
+let app: ReturnType<typeof Fastify>;
+let user: Awaited<ReturnType<typeof createTestUser>>;
+let moduleRow: typeof modules.$inferSelect;
+let createdModule = false;
+let callId = '';
+let channelId = '';
 
-let app: any;
-let user: any;
-let tenant: any;
-let moduleRow: any;
-let insertedModule = false;
-let callRow: any;
-const PROVIDER_SID = 'CA' + 'a'.repeat(30);
-
-function signTwilio(url: string, params: Record<string, string>): string {
-  const keys = Object.keys(params).sort();
+function sign(url: string, body: Record<string, string>) {
   let data = url;
-  for (const k of keys) data += k + params[k];
-  return createHmac('sha1', TWILIO_TOKEN).update(data, 'utf8').digest('base64');
+  for (const key of Object.keys(body).sort()) data += key + body[key];
+  return createHmac('sha1', process.env.TWILIO_AUTH_TOKEN!).update(data).digest('base64');
+}
+
+async function call() {
+  const result = await db.execute(sql`SELECT * FROM callcommand_calls WHERE id=${callId} LIMIT 1`);
+  return result.rows[0] as Record<string, any>;
 }
 
 before(async () => {
   await ensureSchemaReady();
-  // The module-shell tables (in particular `module_call_logs.provider*`
-  // columns) ship with their own DDL helper that boot calls separately
-  // from the SaaS/tenant DDL bundled in `ensureSchemaReady()`.
-  const { ensureModuleShellTables } = await import('../src/lib/saas-db-init.js');
-  await ensureModuleShellTables();
+  await ensureCallCommandTables();
   user = await createTestUser();
-
-  // Tenant + membership that the caller belongs to.
-  const slug = uniqueId('cc-webhook');
-  [tenant] = await db.insert(tenants).values({
-    name: 'CallCommand Test', slug, type: 'company', status: 'active',
-    ownerUserId: user.id,
-  }).returning();
-  await db.insert(tenantUsers).values({
-    tenantId: tenant.id, userId: user.id, role: 'owner', status: 'active',
-  });
-
-  // Reuse the seeded callcommand-ai module row (seedModules() will have
-  // inserted it on boot); fall back to inserting a minimal stand-in if
-  // the suite is running against a fresh DB where seeding hasn't fired
-  // for some reason.
-  const existing = await db.select().from(modules).where(eq(modules.slug, 'callcommand-ai')).limit(1);
-  if (existing.length > 0) {
-    moduleRow = existing[0];
-  } else {
-    [moduleRow] = await db.insert(modules).values({
-      slug: 'callcommand-ai', name: 'CallCommand AI', description: 'fixture',
-      baseUrl: 'https://callcommand-ai.operatoros.net', status: 'live', planMin: 'elite', ord: 0,
-    }).returning();
-    insertedModule = true;
-  }
-
-  // Enable the module for this tenant with allowAllMembers so the caller
-  // passes `requireTenantModuleAccess('callcommand-ai')`.
+  const [existing] = await db.select().from(modules).where(eq(modules.slug, 'callcommand-ai')).limit(1);
+  moduleRow = existing ?? await createTestModule('callcommand-ai');
+  createdModule = !existing;
   await db.insert(tenantModules).values({
-    tenantId: tenant.id, moduleId: moduleRow.id, status: 'enabled', allowAllMembers: true,
+    tenantId: user.currentTenantId, moduleId: moduleRow.id, status: 'enabled', source: 'admin', allowAllMembers: true,
   });
-
-  // Seed the queued call row the webhooks will mutate. Note the
-  // providerSid + matching tenantId so `findCallRow(sid, …)` resolves it.
-  [callRow] = await db.insert(moduleCallLogs).values({
-    tenantId: tenant.id, userId: user.id,
-    phone: '+15555550199', callerName: 'Test Caller', persona: 'receptionist',
-    status: 'queued', provider: 'twilio', providerSid: PROVIDER_SID,
-  }).returning();
-
-  const Fastify = (await import('fastify')).default;
-  const cookie = (await import('@fastify/cookie')).default;
-  const { registerModuleShellRoutes } = await import('../src/routes/module-shell-routes.js');
+  const channel = await db.execute(sql`INSERT INTO callcommand_channels
+    (tenant_id,created_by_user_id,name,phone_e164,timezone,consent_script,recording_enabled)
+    VALUES (${user.currentTenantId},${user.id},'Signed callback line','+15550002222','UTC','Consent required.',FALSE) RETURNING id`);
+  channelId = String(channel.rows[0].id);
+  const profile = await db.execute(sql`INSERT INTO callcommand_profiles
+    (tenant_id,created_by_user_id,name,mode,greeting) VALUES (${user.currentTenantId},${user.id},'Intake','intake','Hello') RETURNING id`);
+  const fingerprint = phoneFingerprint('+15551234567');
+  const consent = await db.execute(sql`INSERT INTO callcommand_consents
+    (tenant_id,recorded_by_user_id,phone_fingerprint,phone_masked,phone_e164,purpose,source,evidence)
+    VALUES (${user.currentTenantId},${user.id},${fingerprint},'+15••••4567','+15551234567','support','test','Signed callback fixture') RETURNING id`);
+  const inserted = await db.execute(sql`INSERT INTO callcommand_calls
+    (tenant_id,created_by_user_id,channel_id,profile_id,consent_id,phone_fingerprint,phone_masked,phone_e164,purpose,provider,provider_call_sid,status,idempotency_key,recording_status)
+    VALUES (${user.currentTenantId},${user.id},${channelId},${String(profile.rows[0].id)},${String(consent.rows[0].id)},
+      ${fingerprint},'+15••••4567','+15551234567','support','twilio',${SID},'queued','signed-webhook-fixture','disabled') RETURNING id`);
+  callId = String(inserted.rows[0].id);
+  clearTelephonyCache();
   app = Fastify();
   await app.register(cookie);
-  await registerModuleShellRoutes(app);
+  const { registerCallCommandRoutes } = await import('../src/routes/callcommand-routes.js');
+  await registerCallCommandRoutes(app);
   await app.ready();
 });
 
 after(async () => {
   if (app) await app.close();
-  try { await db.delete(moduleCallLogs).where(eq(moduleCallLogs.tenantId, tenant.id)); } catch {}
-  try { await db.delete(tenantModules).where(eq(tenantModules.tenantId, tenant.id)); } catch {}
-  try { await db.delete(tenantUsers).where(eq(tenantUsers.tenantId, tenant.id)); } catch {}
-  try { await db.delete(tenants).where(eq(tenants.id, tenant.id)); } catch {}
-  if (user) await cleanupUser(user.id);
-  if (insertedModule && moduleRow?.id) await cleanupModule(moduleRow.id);
+  if (user) {
+    await db.execute(sql`DELETE FROM callcommand_events WHERE tenant_id=${user.currentTenantId}`);
+    await db.execute(sql`DELETE FROM callcommand_calls WHERE tenant_id=${user.currentTenantId}`);
+    await db.execute(sql`DELETE FROM callcommand_consents WHERE tenant_id=${user.currentTenantId}`);
+    await db.execute(sql`DELETE FROM callcommand_profiles WHERE tenant_id=${user.currentTenantId}`);
+    await db.execute(sql`DELETE FROM callcommand_channels WHERE tenant_id=${user.currentTenantId}`);
+    await db.execute(sql`DELETE FROM shared_webhook_receipts WHERE tenant_id=${user.currentTenantId} AND module_id=${moduleRow.id}`);
+    await db.delete(tenantModules).where(eq(tenantModules.tenantId, user.currentTenantId));
+    await cleanupUser(user.id);
+  }
+  if (createdModule && moduleRow) await cleanupModule(moduleRow.id);
 });
 
-async function reloadCall() {
-  const [row] = await db.select().from(moduleCallLogs)
-    .where(eq(moduleCallLogs.id, callRow.id)).limit(1);
-  return row;
-}
-
-test('signed status webhook transitions queued → ringing → completed', async () => {
-  // ringing
-  {
-    const url = `${BASE_URL}/v1/modules/callcommand-ai/webhooks/twilio/status`;
-    const body = { CallSid: PROVIDER_SID, CallStatus: 'ringing' };
-    const r = await app.inject({
-      method: 'POST',
-      url: '/v1/modules/callcommand-ai/webhooks/twilio/status',
-      headers: { 'x-twilio-signature': signTwilio(url, body), 'content-type': 'application/json' },
-      payload: body,
-    });
-    assert.equal(r.statusCode, 200);
-    assert.deepEqual(r.json(), { ok: true, duplicate: false });
-    assert.equal((await reloadCall()).status, 'ringing');
-
-    const duplicate = await app.inject({
-      method: 'POST',
-      url: '/v1/modules/callcommand-ai/webhooks/twilio/status',
-      headers: { 'x-twilio-signature': signTwilio(url, body), 'content-type': 'application/json' },
-      payload: body,
-    });
-    assert.equal(duplicate.statusCode, 200);
-    assert.deepEqual(duplicate.json(), { ok: true, duplicate: true });
-  }
-
-  // in-progress (still maps to 'ringing' in our model) → completed
-  {
-    const url = `${BASE_URL}/v1/modules/callcommand-ai/webhooks/twilio/status`;
-    const body = { CallSid: PROVIDER_SID, CallStatus: 'completed' };
-    const r = await app.inject({
-      method: 'POST',
-      url: '/v1/modules/callcommand-ai/webhooks/twilio/status',
-      headers: { 'x-twilio-signature': signTwilio(url, body), 'content-type': 'application/json' },
-      payload: body,
-    });
-    assert.equal(r.statusCode, 200);
-    assert.equal((await reloadCall()).status, 'completed');
-  }
-});
-
-test('forged signatures on status webhook are rejected with 403', async () => {
-  const body = { CallSid: PROVIDER_SID, CallStatus: 'completed' };
-  const r = await app.inject({
-    method: 'POST',
-    url: '/v1/modules/callcommand-ai/webhooks/twilio/status',
-    headers: { 'x-twilio-signature': 'definitely-not-a-real-signature', 'content-type': 'application/json' },
-    payload: body,
+test('signed status callbacks transition once and replay safely', async () => {
+  const url = `${BASE}/v1/modules/callcommand-ai/webhooks/twilio/status`;
+  const body = { CallSid: SID, CallStatus: 'completed', SequenceNumber: '1' };
+  const first = await app.inject({
+    method: 'POST', url: '/v1/modules/callcommand-ai/webhooks/twilio/status',
+    headers: { 'x-twilio-signature': sign(url, body), 'content-type': 'application/json' }, payload: body,
   });
-  assert.equal(r.statusCode, 403);
-  assert.match(JSON.stringify(r.json()), /Invalid signature/);
+  assert.equal(first.statusCode, 200, first.body);
+  assert.equal(first.json().duplicate, false);
+  assert.equal((await call()).status, 'completed');
+  const replay = await app.inject({
+    method: 'POST', url: '/v1/modules/callcommand-ai/webhooks/twilio/status',
+    headers: { 'x-twilio-signature': sign(url, body), 'content-type': 'application/json' }, payload: body,
+  });
+  assert.equal(replay.statusCode, 200, replay.body);
+  assert.equal(replay.json().duplicate, true);
+  const events = await db.execute(sql`SELECT id FROM callcommand_events WHERE call_id=${callId} AND event_type='provider.status.completed'`);
+  assert.equal(events.rows.length, 1);
 });
 
-test('recording webhook persists recording url + transcript + AI summary', async () => {
-  // The recording webhook fires `finalizeTranscript` as a background task
-  // that sleeps on `setTimeout` between Twilio transcription polls.
-  // Speed those sleeps up so the test doesn't block ~10s on first poll.
-  const realSetTimeout = global.setTimeout;
-  const realFetch = global.fetch;
-  (global as any).setTimeout = (fn: any, _ms?: number, ...rest: any[]) =>
-    realSetTimeout(fn, 0, ...rest);
+test('forged status callback fails closed', async () => {
+  const response = await app.inject({
+    method: 'POST', url: '/v1/modules/callcommand-ai/webhooks/twilio/status',
+    headers: { 'x-twilio-signature': 'forged', 'content-type': 'application/json' },
+    payload: { CallSid: SID, CallStatus: 'completed' },
+  });
+  assert.equal(response.statusCode, 403, response.body);
+});
 
-  const RECORDING_SID = 'REbeefbeefbeefbeefbeefbeefbeefbeef';
-  const RECORDING_URL = 'https://api.twilio.com/2010-04-01/Recordings/' + RECORDING_SID;
-  const TRANSCRIPT = 'Hello this is Test Caller calling about my appointment. Please call me back at five five five oh one nine nine.';
-
-  // Stub global fetch so `fetchTwilioTranscription` returns immediately
-  // instead of actually hitting Twilio.
-  let twilioCalls = 0;
-  (global as any).fetch = async (input: any, init?: any) => {
-    const u = typeof input === 'string' ? input : (input?.url ?? '');
-    if (u.includes(`/Recordings/${RECORDING_SID}/Transcriptions.json`)) {
-      twilioCalls++;
-      return new Response(
-        JSON.stringify({ transcriptions: [{ transcription_text: TRANSCRIPT }] }),
-        { status: 200, headers: { 'content-type': 'application/json' } },
-      );
-    }
-    return realFetch(input, init);
+test('signed inbound DTMF intake persists once without consent, recording, or transcript data', async () => {
+  const incomingPath = '/v1/modules/callcommand-ai/webhooks/twilio/incoming';
+  const incomingUrl = `${BASE}${incomingPath}`;
+  const incomingBody = {
+    CallSid: INBOUND_SID,
+    From: '+15557654321',
+    To: '+15550002222',
   };
+  const first = await app.inject({
+    method: 'POST',
+    url: incomingPath,
+    headers: {
+      'x-twilio-signature': sign(incomingUrl, incomingBody),
+      'content-type': 'application/json',
+    },
+    payload: incomingBody,
+  });
+  assert.equal(first.statusCode, 200, first.body);
+  assert.match(first.headers['content-type'] || '', /text\/xml/);
+  assert.match(first.body, /Signed callback line|Hello/);
+  assert.match(first.body, /input="dtmf"/);
+  assert.doesNotMatch(first.body, /\+15557654321/);
+  const replay = await app.inject({
+    method: 'POST',
+    url: incomingPath,
+    headers: {
+      'x-twilio-signature': sign(incomingUrl, incomingBody),
+      'content-type': 'application/json',
+    },
+    payload: incomingBody,
+  });
+  assert.equal(replay.statusCode, 200, replay.body);
+  const inboundRows = await db.execute(sql`SELECT * FROM callcommand_calls
+    WHERE tenant_id=${user.currentTenantId} AND provider_call_sid=${INBOUND_SID}`);
+  assert.equal(inboundRows.rows.length, 1);
+  const inbound = inboundRows.rows[0] as Record<string, any>;
+  assert.equal(inbound.channel_id, channelId);
+  assert.equal(inbound.direction, 'inbound');
+  assert.equal(inbound.consent_id, null);
+  assert.equal(inbound.recording_status, 'disabled');
+  assert.equal(inbound.transcript, null);
+  const incomingEvents = await db.execute(sql`SELECT id FROM callcommand_events
+    WHERE call_id=${String(inbound.id)} AND event_type='provider.inbound.received'`);
+  assert.equal(incomingEvents.rows.length, 1);
 
-  try {
-    const url = `${BASE_URL}/v1/modules/callcommand-ai/webhooks/twilio/recording`;
-    const body = {
-      CallSid: PROVIDER_SID,
-      RecordingSid: RECORDING_SID,
-      RecordingUrl: RECORDING_URL,
-    };
-    const r = await app.inject({
-      method: 'POST',
-      url: '/v1/modules/callcommand-ai/webhooks/twilio/recording',
-      headers: { 'x-twilio-signature': signTwilio(url, body), 'content-type': 'application/json' },
-      payload: body,
-    });
-    assert.equal(r.statusCode, 200);
-    assert.deepEqual(r.json(), { ok: true });
-
-    // recordingUrl is persisted synchronously by the handler.
-    let row = await reloadCall();
-    assert.equal(row.recordingUrl, RECORDING_URL, 'recording url should be saved immediately');
-
-    // Wait for the fire-and-forget finalisation to land transcript + summary.
-    // We zeroed out the setTimeout delays, so the chain resolves in a handful
-    // of microtasks; poll briefly to absorb any scheduler jitter.
-    const deadline = Date.now() + 5000;
-    while (Date.now() < deadline) {
-      row = await reloadCall();
-      if (row.transcript && row.summary) break;
-      await new Promise((res) => realSetTimeout(res, 25));
-    }
-    assert.equal(row.transcript, TRANSCRIPT, 'transcript should be persisted after Twilio fetch');
-    assert.ok(row.summary && row.summary.length > 0, 'AI summary should be persisted');
-    // The test AI provider returns deterministic text; ensure we did NOT
-    // fall back to the "Twilio did not return a transcript" canned blurb.
-    assert.doesNotMatch(row.summary!, /did not return a transcript/i);
-    // Summary must come from the AI provider, NOT be a copy of the raw
-    // transcript — that's the difference between the happy path and the
-    // "AI summary failed; storing raw transcript only" fallback branch.
-    assert.notEqual(row.summary, TRANSCRIPT, 'summary should be AI-generated, not a copy of the transcript');
-    assert.ok(twilioCalls >= 1, 'fetchTwilioTranscription should have been hit at least once');
-  } finally {
-    (global as any).setTimeout = realSetTimeout;
-    (global as any).fetch = realFetch;
-  }
+  const intakePath = `/v1/modules/callcommand-ai/webhooks/twilio/intake?call_id=${encodeURIComponent(String(inbound.id))}`;
+  const intakeUrl = `${BASE}${intakePath}`;
+  const intakeBody = { CallSid: INBOUND_SID, Digits: '2' };
+  const intake = await app.inject({
+    method: 'POST',
+    url: intakePath,
+    headers: {
+      'x-twilio-signature': sign(intakeUrl, intakeBody),
+      'content-type': 'application/json',
+    },
+    payload: intakeBody,
+  });
+  assert.equal(intake.statusCode, 200, intake.body);
+  const intakeReplay = await app.inject({
+    method: 'POST',
+    url: intakePath,
+    headers: {
+      'x-twilio-signature': sign(intakeUrl, intakeBody),
+      'content-type': 'application/json',
+    },
+    payload: intakeBody,
+  });
+  assert.equal(intakeReplay.statusCode, 200, intakeReplay.body);
+  const completed = await db.execute(sql`SELECT purpose,status,disposition,recording_status,transcript
+    FROM callcommand_calls WHERE id=${String(inbound.id)}`);
+  assert.equal(completed.rows[0].purpose, 'appointment');
+  assert.equal(completed.rows[0].status, 'completed');
+  assert.equal(completed.rows[0].disposition, 'follow_up_required');
+  assert.equal(completed.rows[0].recording_status, 'disabled');
+  assert.equal(completed.rows[0].transcript, null);
+  const intakeEvents = await db.execute(sql`SELECT id FROM callcommand_events
+    WHERE call_id=${String(inbound.id)} AND event_type='provider.inbound.intake_completed'`);
+  assert.equal(intakeEvents.rows.length, 1);
 });
 
-test('forged signatures on recording webhook are rejected with 403', async () => {
+test('recording callback is replay-audited but cannot activate recording storage', async () => {
+  const url = `${BASE}/v1/modules/callcommand-ai/webhooks/twilio/recording`;
   const body = {
-    CallSid: PROVIDER_SID,
-    RecordingSid: 'REbadbadbadbadbadbadbadbadbadbadbad',
-    RecordingUrl: 'https://example.test/r.mp3',
+    CallSid: SID,
+    RecordingSid: RECORDING_SID,
+    RecordingUrl: `https://api.twilio.test/recordings/${RECORDING_SID}`,
   };
-  const r = await app.inject({
-    method: 'POST',
-    url: '/v1/modules/callcommand-ai/webhooks/twilio/recording',
-    headers: { 'x-twilio-signature': 'nope', 'content-type': 'application/json' },
-    payload: body,
+  const response = await app.inject({
+    method: 'POST', url: '/v1/modules/callcommand-ai/webhooks/twilio/recording',
+    headers: { 'x-twilio-signature': sign(url, body), 'content-type': 'application/json' }, payload: body,
   });
-  assert.equal(r.statusCode, 403);
-  assert.match(JSON.stringify(r.json()), /Invalid signature/);
+  assert.equal(response.statusCode, 200, response.body);
+  assert.equal(response.json().duplicate, false);
+  const replay = await app.inject({
+    method: 'POST', url: '/v1/modules/callcommand-ai/webhooks/twilio/recording',
+    headers: { 'x-twilio-signature': sign(url, body), 'content-type': 'application/json' }, payload: body,
+  });
+  assert.equal(replay.statusCode, 200, replay.body);
+  assert.equal(replay.json().duplicate, true);
+  const row = await call();
+  assert.equal(row.recording_sid, null);
+  assert.equal(row.recording_status, 'disabled');
+  assert.equal('recording_url' in row, false);
+  const event = await db.execute(sql`SELECT safe_payload FROM callcommand_events WHERE call_id=${callId} AND event_type='provider.recording.rejected'`);
+  assert.equal(event.rows.length, 1);
+  assert.deepEqual(event.rows[0].safe_payload, {
+    provider: 'twilio',
+    accepted: false,
+    reason: 'recording_disabled',
+  });
 });
-

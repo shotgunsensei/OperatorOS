@@ -134,7 +134,7 @@ test('TechDeck ticket list filters are bounded', () => {
 test('TechDeck ticket routes enforce module access, tenant masking, and server-owned lifecycle state', () => {
   const routes = readRepoFile('apps/api/src/routes/module-shell-routes.ts');
   const start = routes.indexOf('// ===== TechDeck: technician ticket queue');
-  const end = routes.indexOf('// ===== CallCommand AI', start);
+  const end = routes.indexOf('// ===== StudyForge AI', start);
   assert.ok(start >= 0 && end > start, 'TechDeck ticket route block should be present');
   const block = routes.slice(start, end);
 
@@ -175,7 +175,7 @@ test('TechDeck assignment and audit logic rejects foreign targets without leakin
   assert.match(routes, /ctx\.viaPlatformRole \|\| ctx\.role === 'owner' \|\| ctx\.role === 'admin'/);
 
   const start = routes.indexOf('// ===== TechDeck: technician ticket queue');
-  const end = routes.indexOf('// ===== CallCommand AI', start);
+  const end = routes.indexOf('// ===== StudyForge AI', start);
   const block = routes.slice(start, end);
   assert.ok((block.match(/db\.transaction/g) ?? []).length >= 4);
   assert.ok((block.match(/entityType: 'techdeck_ticket'/g) ?? []).length >= 4);

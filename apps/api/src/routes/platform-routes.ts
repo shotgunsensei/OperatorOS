@@ -89,6 +89,13 @@ async function existingLaunchKitTables(executor: SqlExecutor): Promise<Set<strin
   return new Set(result.rows.map((row) => String(row.tablename)));
 }
 
+async function existingCallCommandTables(executor: SqlExecutor): Promise<Set<string>> {
+  const result = await executor.execute(sql`SELECT tablename
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = current_schema() AND tablename LIKE 'callcommand_%'`);
+  return new Set(result.rows.map((row) => String(row.tablename)));
+}
+
 // Gate 2 status taxonomy: 'live' (legacy) and 'active' both signify a
 // shipping module; 'hidden' suppresses from public catalog while keeping
 // data; 'deprecated' marks for retirement (still launchable for legacy
@@ -564,6 +571,15 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           if (launchKitTables.has('launchkit_phases')) await tx.execute(sql`DELETE FROM launchkit_phases WHERE tenant_id = ${id}`);
           if (launchKitTables.has('launchkit_generations')) await tx.execute(sql`DELETE FROM launchkit_generations WHERE tenant_id = ${id}`);
           if (launchKitTables.has('launchkit_launches')) await tx.execute(sql`DELETE FROM launchkit_launches WHERE tenant_id = ${id}`);
+          const callCommandTables = await existingCallCommandTables(tx);
+          if (callCommandTables.has('callcommand_followups')) await tx.execute(sql`DELETE FROM callcommand_followups WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_events')) await tx.execute(sql`DELETE FROM callcommand_events WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_calls')) await tx.execute(sql`DELETE FROM callcommand_calls WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_suppressions')) await tx.execute(sql`DELETE FROM callcommand_suppressions WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_consents')) await tx.execute(sql`DELETE FROM callcommand_consents WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_transfer_targets')) await tx.execute(sql`DELETE FROM callcommand_transfer_targets WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_profiles')) await tx.execute(sql`DELETE FROM callcommand_profiles WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_channels')) await tx.execute(sql`DELETE FROM callcommand_channels WHERE tenant_id = ${id}`);
           await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.tenantId, id));
           await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.tenantId, id));
           await tx.delete(moduleAutomations).where(eq(moduleAutomations.tenantId, id));
@@ -2139,6 +2155,14 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
             created_by_user_id=CASE WHEN created_by_user_id=${id} THEN NULL ELSE created_by_user_id END,
             owner_user_id=CASE WHEN owner_user_id=${id} THEN NULL ELSE owner_user_id END
             WHERE created_by_user_id=${id} OR owner_user_id=${id}`);
+          const callCommandTables = await existingCallCommandTables(tx);
+          if (callCommandTables.has('callcommand_channels')) await tx.execute(sql`UPDATE callcommand_channels SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
+          if (callCommandTables.has('callcommand_profiles')) await tx.execute(sql`UPDATE callcommand_profiles SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
+          if (callCommandTables.has('callcommand_transfer_targets')) await tx.execute(sql`UPDATE callcommand_transfer_targets SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
+          if (callCommandTables.has('callcommand_consents')) await tx.execute(sql`UPDATE callcommand_consents SET recorded_by_user_id=NULL WHERE recorded_by_user_id=${id}`);
+          if (callCommandTables.has('callcommand_suppressions')) await tx.execute(sql`UPDATE callcommand_suppressions SET recorded_by_user_id=NULL WHERE recorded_by_user_id=${id}`);
+          if (callCommandTables.has('callcommand_calls')) await tx.execute(sql`UPDATE callcommand_calls SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
+          if (callCommandTables.has('callcommand_followups')) await tx.execute(sql`UPDATE callcommand_followups SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
           await tx.delete(techdeckTickets).where(eq(techdeckTickets.createdByUserId, id));
           await tx.delete(ninjaPoolMatchEvents).where(eq(ninjaPoolMatchEvents.userId, id));
           await tx.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.userId, id));

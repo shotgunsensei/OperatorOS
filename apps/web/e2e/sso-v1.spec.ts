@@ -143,6 +143,14 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
   if (!identity) return;
   const { userId, tenantId } = identity;
   const tenantTables = [
+    'callcommand_followups',
+    'callcommand_events',
+    'callcommand_calls',
+    'callcommand_suppressions',
+    'callcommand_consents',
+    'callcommand_transfer_targets',
+    'callcommand_profiles',
+    'callcommand_channels',
     'launchkit_exports',
     'launchkit_artifacts',
     'launchkit_tasks',
@@ -1054,6 +1062,135 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.getByText(launchTitle, { exact: true }).first()).toBeVisible();
     await expect(modulePage.getByTestId('text-launchkit-readiness')).toHaveText('100%');
     await assertHostOnlySession(modulePage.context(), 'ninjalaunchkit.operatoros.net');
+    await assertNoBrowserCredentialStorage(modulePage);
+    assertNoCredentialQuery(modulePage.url());
+  });
+
+  test('CallCommand AI enforces consent, persists a test-provider call, blocks suppression, and survives deep-link reauthentication', async ({ page, request }) => {
+    test.setTimeout(180_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+    const suffix = Date.now().toString(36);
+    const contactName = `Phase 11E caller ${suffix}`;
+    const phone = `+1555${String(Date.now()).slice(-7)}`;
+
+    await page.goto(`${ROOT}/app`);
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await page.getByTestId('nav-my-apps').click();
+    await expect(page.getByTestId('page-my-apps')).toBeVisible();
+
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByTestId('button-launch-callcommand-ai').click();
+    const modulePage = await popupPromise;
+    await expect(modulePage.getByTestId('shell-callcommand-ai')).toBeVisible({ timeout: 30_000 });
+    await expect(modulePage.getByTestId('banner-callcommand-provider')).toContainText('Local test adapter');
+    assertNoCredentialQuery(modulePage.url());
+
+    await modulePage.getByTestId('button-callcommand-create-channel').click();
+    await expect(modulePage.locator('#callcommand-configuration')).toContainText('Primary support line');
+    await modulePage.getByTestId('button-callcommand-create-profile').click();
+    await expect(modulePage.locator('#callcommand-configuration')).toContainText('Support intake');
+    await modulePage.getByTestId('input-callcommand-phone').fill(phone);
+    await modulePage.getByTestId('input-callcommand-name').fill(contactName);
+    await modulePage.getByTestId('select-callcommand-purpose').selectOption('support');
+    await modulePage.getByTestId('input-callcommand-consent-evidence').fill(
+      'Customer requested this support callback through the authenticated OperatorOS acceptance workflow.',
+    );
+    await modulePage.getByTestId('button-callcommand-grant-consent').click();
+    await expect(modulePage.getByTestId('text-callcommand-consent-active')).toBeVisible();
+
+    const callResponse = modulePage.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === '/api/modules/callcommand-ai/calls'
+      && response.status() === 201);
+    await modulePage.getByTestId('button-callcommand-place-test-call').click();
+    const call = await (await callResponse).json() as { id: string };
+    const callUrl = `https://callcommand-ai.operatoros.net/calls/${call.id}`;
+    const callRow = modulePage.getByTestId(`row-callcommand-call-${call.id}`);
+    await expect(callRow).toBeVisible();
+    await expect(callRow.getByTestId('status-callcommand-completed')).toBeVisible();
+    await expect(callRow).toContainText('without contacting an external number');
+    await modulePage.getByTestId('select-callcommand-disposition').selectOption('follow_up_required');
+    await modulePage.getByTestId('input-callcommand-disposition-note').fill(
+      'Confirm the support window before any additional contact.',
+    );
+    await modulePage.getByTestId('button-callcommand-save-disposition').click();
+    await expect(modulePage.getByTestId(`text-callcommand-disposition-${call.id}`)).toContainText('follow up required');
+    await modulePage.getByTestId('select-callcommand-followup-channel').selectOption('task');
+    await modulePage.getByTestId('input-callcommand-followup-body').fill(
+      'Confirm the support window before any additional contact.',
+    );
+    await modulePage.getByTestId('button-callcommand-save-followup').click();
+    await expect(modulePage.getByTestId('list-callcommand-followups')).toContainText(
+      'Confirm the support window before any additional contact.',
+    );
+
+    const persisted = await pg.query<{
+      calls: string; events: string; consents: string; followups: string; recording_urls: string;
+    }>(
+      `select
+        (select count(*) from callcommand_calls where tenant_id=$1 and id=$2 and provider='test' and status='completed' and disposition='follow_up_required')::text as calls,
+        (select count(*) from callcommand_events where tenant_id=$1 and call_id=$2)::text as events,
+        (select count(*) from callcommand_consents where tenant_id=$1 and purpose='support' and revoked_at is null)::text as consents,
+        (select count(*) from callcommand_followups where tenant_id=$1 and call_id=$2 and channel='task' and status='draft')::text as followups,
+        (select count(*) from information_schema.columns where table_name='callcommand_calls' and column_name='recording_url')::text as recording_urls`,
+      [identity.tenantId, call.id],
+    );
+    expect(Number(persisted.rows[0].calls)).toBe(1);
+    expect(Number(persisted.rows[0].events)).toBe(3);
+    expect(Number(persisted.rows[0].consents)).toBe(1);
+    expect(Number(persisted.rows[0].followups)).toBe(1);
+    expect(Number(persisted.rows[0].recording_urls)).toBe(0);
+
+    await modulePage.getByTestId('button-callcommand-suppress').click();
+    await modulePage.getByTestId('button-callcommand-place-test-call').click();
+    await expect(modulePage.getByTestId('text-callcommand-error')).toContainText('do-not-call');
+
+    await modulePage.goto(callUrl);
+    await expect(modulePage).toHaveURL(callUrl);
+    await modulePage.reload();
+    await expect(modulePage.getByTestId(`row-callcommand-call-${call.id}`)).toBeVisible();
+    await expect(modulePage.getByTestId(`text-callcommand-disposition-${call.id}`)).toContainText('follow up required');
+    await expect(modulePage.getByTestId('list-callcommand-followups')).toContainText(
+      'Confirm the support window before any additional contact.',
+    );
+    await modulePage.setViewportSize({ width: 390, height: 844 });
+    await expect(modulePage.locator('#callcommand-calls')).toBeVisible();
+    await assertHostOnlySession(modulePage.context(), 'callcommand-ai.operatoros.net');
+
+    await Promise.all([
+      modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      modulePage.getByRole('link', { name: 'My Apps' }).first().click(),
+    ]);
+    await expect(modulePage.getByTestId('page-my-apps')).toBeVisible();
+    const logoutAll = await modulePage.evaluate(async () => {
+      const response = await fetch('/api/auth/logout-all', {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      });
+      return { status: response.status, body: await response.text() };
+    });
+    expect(logoutAll.status, logoutAll.body).toBe(200);
+
+    await modulePage.goto(callUrl);
+    await expect(modulePage).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await modulePage.getByTestId('input-email').fill(identity.email);
+    await modulePage.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      modulePage.waitForURL(callUrl, { timeout: 30_000 }),
+      modulePage.getByTestId('button-login').click(),
+    ]);
+    await expect(modulePage.getByTestId(`row-callcommand-call-${call.id}`)).toBeVisible();
+    await expect(modulePage.getByTestId(`text-callcommand-disposition-${call.id}`)).toContainText('follow up required');
+    await expect(modulePage.getByTestId('list-callcommand-followups')).toContainText(
+      'Confirm the support window before any additional contact.',
+    );
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
   });

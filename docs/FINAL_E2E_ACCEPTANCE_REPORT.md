@@ -5,6 +5,54 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## Phase 11E follow-up
+
+The CallCommand AI Phase 11E source/local candidate was verified on 2026-07-27
+against disposable PostgreSQL 16 and compiled production artifacts. It
+provides tenant-scoped channels, bounded receptionist/intake profiles,
+review-only transfer targets, purpose-specific outbound consent, do-not-call
+suppression, signed inbound DTMF intake, persistent calls, safe events,
+operator dispositions, reviewed follow-up drafts, record-derived analytics,
+signed replay-safe Twilio callbacks, forced-off recording privacy and
+canonical responsive deep links. ADR-0025 assigns contacts to Shared Directory
+and excludes child identity/billing/admin, fake delivery, transfer execution,
+recording/transcription/AI summaries, incomplete SIP providers, raw provider
+payload retention, public recording URLs and bulk/cold/predictive/autonomous
+dialing; OutCall remains disabled.
+
+Fresh evidence includes focused static/domain/import contracts, 5/5
+tenant/authorization/consent/disposition/persistence PostgreSQL workflows,
+4/4 signed callback/inbound/replay/recording-privacy workflows, the complete
+clean API aggregate at 825 pass, 0 fail and 0 skip, deterministic no-apply
+import, workspace
+typecheck, clean and idempotent 27-step release, production build/core
+preflight, and compiled direct/web-proxied health and readiness. The final
+production-host browser matrix passes 9/9 in 1.8 minutes. Its CallCommand
+scenario persists channel/profile configuration and consent, completes an
+explicit test-adapter call with no external contact, verifies an operator
+disposition, three persisted safe events, a review-only follow-up draft and no
+recording URL schema, blocks the suppressed number,
+refreshes the call deep link, checks mobile navigation, returns through My
+Apps, globally logs out, directly reauthenticates to the call deep link and
+confirms persistence.
+
+The focused browser run captured a real failure after suppression: the API
+sent the intended 409 response but the route did not return the sent Fastify
+reply, so a second response attempt terminated the process. Every
+CallCommand validation exit now returns the reply explicitly. A stale wording
+assertion was corrected to the UI's actual safety statement. A separate
+environment-only attempt was excluded after a stale local API process
+reclaimed port 5001 and caused browser registration and Playwright's database
+assertions to use different disposable databases. The stale listener was
+terminated and the stack was aligned before the corrected focused workflow
+passed 1/1 in 12.3 seconds, followed by the full 9/9 regression in 1.8
+minutes.
+
+This follow-up does not change the ecosystem report's **NOT ACCEPTED** verdict
+or claim State 5. The candidate is not deployed, and no production backup,
+database apply, source-data reconciliation, live Twilio traffic, recording
+jurisdiction approval or cutover was authorized.
+
 ## Phase 11D follow-up
 
 The Ninja Launch Kit Phase 11D source/local candidate was verified on

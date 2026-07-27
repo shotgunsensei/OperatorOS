@@ -26,6 +26,7 @@ import { ensureBrandForgeOsTables } from './brandforgeos-db-init.js';
 import { ensureSnapProofOsTables } from './snapproofos-db-init.js';
 import { ensureStudyForgeTables } from './studyforge-db-init.js';
 import { ensureNinjaLaunchKitTables } from './ninja-launch-kit-db-init.js';
+import { ensureCallCommandTables } from './callcommand-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -54,6 +55,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   snapproofos_tables: ensureSnapProofOsTables,
   studyforge_tables: ensureStudyForgeTables,
   ninja_launch_kit_tables: ensureNinjaLaunchKitTables,
+  callcommand_tables: ensureCallCommandTables,
   plans_and_admin: seedPlansAndAdmin,
   launch_fix_pre_seed: launchFixPreSeed,
   platform_components: seedPlatformComponents,
@@ -117,6 +119,10 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.launchkit_tasks') IS NOT NULL AS launchkit_tasks,
       to_regclass('public.launchkit_artifacts') IS NOT NULL AS launchkit_artifacts,
       to_regclass('public.launchkit_exports') IS NOT NULL AS launchkit_exports,
+      to_regclass('public.callcommand_channels') IS NOT NULL AS callcommand_channels,
+      to_regclass('public.callcommand_consents') IS NOT NULL AS callcommand_consents,
+      to_regclass('public.callcommand_calls') IS NOT NULL AS callcommand_calls,
+      to_regclass('public.callcommand_events') IS NOT NULL AS callcommand_events,
       to_regclass('public.operatoros_token_purchase_intents') IS NOT NULL AS operatoros_token_purchase_intents,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);
