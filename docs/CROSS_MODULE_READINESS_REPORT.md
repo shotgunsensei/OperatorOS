@@ -134,9 +134,10 @@ or cutover was authorized.
 - Optional providers are not module readiness claims. Provider-backed UI must
   stay disabled until its configuration and signed webhook/callback tests pass.
 - A disposable PostgreSQL backup/restore rehearsal is recorded and passed.
-- The reviewed release candidate has not been deployed to the public target.
-  The read-only public gate passed 32/47 checks: API readiness, all 17 module
-  diagnostics, all 12 callback routes, and OutCall fail-closed behavior passed;
+- The reviewed Phase 15 release candidate has not been deployed to the public
+  target. The fresh hardened read-only public gate passed 31/48 checks: auth
+  response headers, all 17 module diagnostics, all 13 callback routes, and
+  OutCall fail-closed behavior passed; API readiness lacks release identity;
   apex health and anonymous host-only SSO transaction-cookie checks still
   reflect the older public release and block promotion.
 
@@ -161,7 +162,7 @@ or cutover was authorized.
 - Post-fix focused ecosystem/navigation suite: 15/15 passed; targeted
   database-backed tenant/module RBAC suite: 8/8 passed.
 - Production-host HTTPS Playwright SSO matrix: 2/2 passed locally across the
-  canonical app host and all 12 enabled module hosts, including direct
+  canonical app host and all 13 enabled module hosts, including direct
   deep-link return, silent PulseDesk sibling launch, clean URLs, host-only
   cookies, local logout, and global revocation. The fresh Phase 6 run passed in
   3.9 minutes.
@@ -186,5 +187,5 @@ validated through the consolidated OperatorOS build, database suite, shared
 API, and host-routed browser matrix. Every module remains explicitly not
 production-ready until deployed-target health and browser gates pass. Phase 1
 and Phase 2 source/local acceptance are complete, but the public target remains blocked
-at 32/47 checks until this candidate is deployed and the authenticated
+at 31/48 checks until this candidate is deployed and the authenticated
 deployed-target gate is rerun.

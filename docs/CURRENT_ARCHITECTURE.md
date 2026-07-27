@@ -169,7 +169,7 @@ Child migrations and `drizzle-kit push` are not supported deployment paths.
    environment. Run provider-specific profiles only for features being enabled.
 4. Build with `corepack pnpm build:production`.
 5. Start only through `node scripts/start-unified-runtime.mjs`.
-6. Require `/healthz`, `/readyz`, the public 47-check verifier, and the
+6. Require `/healthz`, `/readyz`, the public 48-check verifier, and the
    production-host browser SSO gate before accepting the release.
 7. Roll traffic back if identity, tenant isolation, entitlement, SSO, audit,
    persistence, or readiness checks fail.

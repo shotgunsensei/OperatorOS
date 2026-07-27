@@ -8,6 +8,13 @@ export interface HealthResponse {
   version: string;
   timestamp: string;
   uptime: number;
+  release?: {
+    status: 'identified' | 'unavailable';
+    commit?: string;
+    buildId?: string;
+    builtAt?: string;
+    lockfileSha256?: string;
+  };
 }
 
 export interface Workspace {

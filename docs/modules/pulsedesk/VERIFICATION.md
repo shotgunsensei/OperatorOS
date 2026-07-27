@@ -63,6 +63,6 @@ versioned importer fixture contains only an explicit excluded test sentinel.
 The approved PulseDesk product, privacy controls, migration planner and local
 production artifacts meet source/local consolidation state 4. State 5 remains
 blocked until the exact reviewed cumulative revision is deployed, the public
-47/47 verifier passes, authenticated deployed PulseDesk workflow/privacy/
+48/48 verifier passes, authenticated deployed PulseDesk workflow/privacy/
 second-tenant/provider checks pass, and a human authorizes and reconciles the
 privacy-reviewed export, apply and cutover in `CUTOVER_PLAN.md`.

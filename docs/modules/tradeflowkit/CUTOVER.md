@@ -6,7 +6,7 @@ Status: not authorized and not scheduled.
 
 1. Merge the reviewed cumulative branch and deploy that exact commit through
    the canonical `.replit` supervisor path.
-2. Pass public 47/47 platform verification, deployed exact-host SSO, return,
+2. Pass public 48/48 platform verification, deployed exact-host SSO, return,
    refresh, local/global logout, entitlement denial, and tenant isolation.
 3. Decide whether production customer payment processing is disabled at
    launch or backed by an approved centralized adapter. Test mode is forbidden

@@ -89,7 +89,7 @@ No critical or high exploitable issue is knowingly accepted.
 
 ## 5. Release blockers
 
-- No reviewed cumulative revision is deployed; public 47-check verification,
+- No reviewed cumulative revision is deployed; public 48-check verification,
   exact-host SSO, deep-link/return, refresh, logout, and persistence acceptance
   must run on the deployed commit.
 - Live Stripe, Twilio, email, OpenAI, scanner/blob, and module-specific provider
