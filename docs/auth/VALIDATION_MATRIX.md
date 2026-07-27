@@ -2,7 +2,7 @@
 
 - Refreshed: 2026-07-27
 - Source/local result: **PASS**
-- Public deployed result: **FAIL (31/48)**
+- Public deployed result: **PASS (48/48 read-only gate)**
 - Overall production gate: **CLOSED**
 
 All platform and module callbacks use the exact `*.operatoros.net` registry.
@@ -35,7 +35,7 @@ CORS origins, session domains, or return targets.
 | OutCall module boundary | PASS LOCALLY | Exact callback and host-only session pass; non-entitled tenant is denied; live provider remains fail closed |
 | Tenant isolation and authorization | PASS | Clean aggregate suite includes cross-tenant denial, viewer write denial, and module-session sealing |
 | Structured safe observability | PASS | Request/correlation context is logged without raw codes, cookies, secrets, or passwords |
-| Health/readiness | PASS LOCALLY | Public API returns 200 but fails the hardened readiness contract because release identity is absent; apex `/healthz` returns 404 |
+| Health/readiness | PASS | Public `/api/health` and `/readyz` return the API snapshot and exact release identity; Replit reserves raw `/healthz` before the app |
 
 ## Fresh evidence
 
@@ -75,26 +75,24 @@ Local HTTPS probes also returned:
 `corepack pnpm verify:production` ran without authentication or mutation on
 2026-07-27:
 
-- 31/48 passed.
-- Auth security headers, all 17 host diagnostics, all 13 enabled callback
-  routes, and OutCall's fail-closed callback passed.
-- API readiness failed because the deployed runtime does not expose the
-  required release identity.
-- Apex `/healthz` returned 404.
-- Apex `/app` did not emit the registered PKCE request.
-- App plus all 13 enabled modules did not set the three candidate host-only
-  transaction cookies on anonymous authorization.
+- 48/48 passed against merge `c249a75396104e7aabd773e564be6a95ada56467`,
+  build `2eb701089a539d9e6da5af80`.
+- API health/readiness and release identity, auth security headers, all 17
+  host diagnostics, root/app plus all 13 enabled PKCE authorization responses,
+  every callback route, and OutCall's fail-closed callback passed.
+- The verifier now follows the authoritative contracts: root `/login`,
+  `operatoros_sso_*` transaction cookies, and the Fastify health snapshot
+  through `/api/health` because Replit reserves raw `/healthz`.
 
-The public signature shows that the reviewed Phase 1 source is not deployed.
-Do not add a parent-domain cookie, accept a legacy callback, or relax the
-verifier. Deploy the scoped candidate, then require 48/48 and repeat the
-authenticated browser matrix on the exact deployed revision.
+This closes the unauthenticated public deployment gate without weakening
+cookies, callbacks, redirects, or health semantics. The authenticated browser
+matrix remains required on the exact deployed revision.
 
 ## Remaining deployed acceptance
 
 After authorized deployment, run and record:
 
-1. Public read-only verifier: 48/48, including exact release identity.
+1. **PASS:** Public read-only verifier 48/48, including exact release identity.
 2. Real configured test-user login and entitled My Apps filtering.
 3. Direct and launcher-based entry for the primary modules.
 4. Deep-link return, refresh, expired session, disabled entitlement, local
@@ -103,5 +101,5 @@ After authorized deployment, run and record:
 6. Persistent module workflows only when their parity phase reaches its own
    completion gate.
 
-Until then, SSO v1 is accepted in source/local runtime but not accepted as the
-current public production release.
+Until the remaining steps pass, SSO v1 has public contract evidence but the
+production release and State 5 certifications remain unaccepted.

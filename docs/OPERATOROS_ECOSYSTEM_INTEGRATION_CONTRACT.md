@@ -102,7 +102,10 @@ authorization.
 
 ## Health and observability contracts
 
-- `/healthz` is a non-secret liveness response.
+- Fastify `/healthz` is the private/native non-secret liveness response.
+  Replit reserves raw public `/healthz` before the application, so the
+  canonical public root-host liveness probe is `/api/health`, which rewrites
+  to the same Fastify health snapshot.
 - `/readyz` checks database connectivity, auth configuration, SSO code
   encryption in production, and the module registry. It reports optional
   Stripe, email, Twilio, and OpenAI integrations as configured or disabled

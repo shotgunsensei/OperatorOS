@@ -25,10 +25,12 @@
 
 ## Current verdict
 
-Phase 15 has not accepted a production release. The fresh hardened public
-verifier passed 31/48 checks and failed apex health, release identity in API
-readiness, apex PKCE authorization, and the app plus all 13 module
-transaction-cookie checks. Deployment
+Phase 15 has not accepted a production release, but the public deployment gate
+now passes. Merge `c249a75396104e7aabd773e564be6a95ada56467` is live as build
+`2eb701089a539d9e6da5af80`; readiness identifies that exact revision, and the
+contract-corrected public verifier passes 48/48. The earlier 31/48 result used
+stale root-entry, transaction-cookie-name, and Replit health-path assumptions.
+Deployment
 `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd` / build
 `c49eeb9c-5f0b-40b3-9f31-44813446124c` then failed before the repository build
 command because Replit's automatic `npm install` rejected pnpm-only scoped
@@ -41,8 +43,8 @@ vulnerabilities; the Phase 15 release/preinstall contract passed 4/4;
 workspace typecheck passed; and `build:production` produced API, runner, SDK,
 and Next artifacts. The build now generates a non-secret release manifest and
 production readiness fails closed unless the exact 40-character commit and
-24-character build ID are available. Redeployment, 48/48 public verification,
-authenticated workflows, live-provider acceptance, production backup/apply,
+24-character build ID are available. Authenticated workflows, configured
+test-user/two-tenant inputs, live-provider acceptance, production backup/apply,
 and rollback rehearsal remain open. No module state changed.
 
 ## Phase 14 source/local verdict
@@ -1009,9 +1011,10 @@ acceptance. Those gates remain explicit blockers.
 
 ## Open release blockers
 
-1. Human-authorized deployment of the reviewed cumulative revision.
-2. Public 48/48 runtime verification and authenticated deployed browser
-   acceptance on that exact revision.
+1. **Complete:** human-authorized deployment of the reviewed cumulative
+   revision.
+2. Public 48/48 runtime verification is complete; authenticated deployed
+   browser acceptance remains open on that exact revision.
 3. Production provider preflight for every feature intended to be live;
    disabled or test provider behavior is not delivery evidence.
 4. TradeFlowKit state 5 requires deployed revenue-workflow/public-document

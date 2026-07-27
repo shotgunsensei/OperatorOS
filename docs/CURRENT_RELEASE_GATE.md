@@ -1,13 +1,13 @@
 # OperatorOS current release gate
 
 - Evidence date: 2026-07-27
-- Candidate branch: `codex/phase-15-deployed-acceptance`
+- Candidate branch: `codex/phase-15-deployed-acceptance-fix2`
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
 - Platform and Phases 2-14 source/local gate: **PARTIAL; local hardening gates pass, live-provider and deployed gates remain open**
-- Public deployment gate: **FAIL (31/48)**
-- Latest deployment attempt: **FAILED BEFORE BUILD** — deployment
+- Public deployment gate: **PASS (48/48) on deployed merge `c249a75396104e7aabd773e564be6a95ada56467`, build `2eb701089a539d9e6da5af80`**
+- First deployment attempt: **FAILED BEFORE BUILD** — deployment
   `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd`, build
   `c49eeb9c-5f0b-40b3-9f31-44813446124c`
 - Overall release decision: **CLOSED — do not promote**
@@ -99,10 +99,16 @@ references. A fresh `npm install --ignore-scripts --package-lock=false
 production build pass locally. No runtime or database change occurred in the
 failed deployment.
 
-The current public hosts still serve an older release. The release gate remains
-closed until a human deploys the reviewed Phase 15 commit and the public
-verifier reaches 48/48 plus authenticated browser acceptance on that exact
-revision.
+The reviewed Phase 15 merge is now deployed. A contract-corrected verifier
+passes 48/48 against its exact readiness identity. The earlier 31/48 result was
+verifier drift: it probed the legacy apex `/app` redirect instead of root
+`/login`, expected obsolete short transaction-cookie names rather than the
+authoritative `operatoros_sso_*` names, and used Replit's provider-reserved
+`/healthz` path instead of the same API health snapshot exposed through
+`/api/health`.
+
+The overall release gate remains closed until authenticated browser acceptance
+passes on this exact revision.
 
 No module is declared production-ready by this platform gate. Real workflow
 and migration parity remain controlled by the module parity index.
@@ -135,34 +141,28 @@ and migration parity remain controlled by the module parity index.
 | Phase 2 browser workflow | PASS LOCALLY | 1/1 on compiled artifacts; CRUD, refresh persistence, same organization ID across three modules, and no script-readable auth |
 | Full API regression | PASS | Fresh untouched-schema aggregate on the exact Phase 12B source passed 839/839 with 0 failures, 0 skips and 0 todo |
 | Replit automatic npm preinstall | PASS LOCALLY AFTER DEFECT FIX | npm dry-run exits 0; pnpm-only scoped overrides remain in `pnpm-workspace.yaml` |
-| Public read-only runtime verifier | FAIL | 31/48 on 2026-07-27 after release-identity hardening; no authentication and no mutation |
+| Public read-only runtime verifier | PASS | 48/48 on 2026-07-27 against merge `c249a753`, build `2eb701089a539d9e6da5af80`; no authentication and no mutation |
 | Formatting/lint | NOT DEFINED | Repository has no supported formatting or lint script; no pass is claimed |
 
-## Public deployment blocker
+## Public deployment result
 
-The 2026-07-27 read-only verifier confirmed TLS/host attachment, API
-readiness, all 17 public diagnostics, every enabled callback route, and
-OutCall's fail-closed callback. It failed these release-critical checks:
-
-- `https://operatoros.net/healthz` returned 404.
-- The apex `/app` path did not emit the registered PKCE authorization request.
-- The app host and all 13 enabled module launch redirects lacked the three
-  host-only SSO transaction cookies expected from the candidate release.
-
-This signature is consistent with the reviewed source not being deployed. It
-is not fixed by changing DNS, widening cookies, adding legacy redirects, or
-weakening the verifier.
+The 2026-07-27 contract-corrected read-only verifier passes API health and
+readiness with exact release identity, auth security headers, all 17 public
+diagnostics, root/app and all 13 module PKCE/state/nonce/host-only-cookie
+authorization responses, every registered callback, and OutCall's fail-closed
+callback. No cookie Domain, legacy callback, credential URL, or redirect
+allowlist was widened.
 
 ## Human deployment closure
 
-1. Review and deploy the scoped cumulative revision through the `.replit` autoscale
-   build/run path.
+1. **Complete:** deploy the scoped cumulative revision through the `.replit`
+   autoscale build/run path.
 2. Validate the real production secrets with
    `corepack pnpm preflight:production -- --core`; enable provider profiles only
    when the corresponding feature is meant to be live.
 3. Confirm the provider-managed backup is current before the database release.
-4. Run `corepack pnpm verify:production` and require 48/48, including exact
-   release commit/build identity from readiness.
+4. **Complete:** run `corepack pnpm verify:production` and require 48/48,
+   including exact release commit/build identity from readiness.
 5. Run authenticated browser SSO, direct deep-link, return navigation, refresh,
    local logout, global logout, expired session, disabled entitlement, second
    tenant isolation, and unauthorized API checks on the deployed revision.

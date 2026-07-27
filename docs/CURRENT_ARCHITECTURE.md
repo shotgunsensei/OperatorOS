@@ -149,14 +149,16 @@ Child migrations and `drizzle-kit push` are not supported deployment paths.
 
 ## Health and observability
 
-- `/healthz` reports process health and service version.
+- Fastify `/healthz` reports process health and service version. Replit
+  reserves raw public `/healthz`; production probes use root `/api/health`,
+  which reaches the same Fastify snapshot through the supported API rewrite.
 - `/readyz` fails closed unless the database, session signing, SSO code
   encryption, module registry, and shared service worker are ready. Optional
   providers report configured or disabled state explicitly without values.
 - Structured request completion logs include request ID and bounded
   user/tenant/module context. SSO decisions include correlation IDs without
   raw codes, cookies, passwords, secrets, or authorization headers.
-- `scripts/verify-production-runtime.mjs` performs 47 unauthenticated,
+- `scripts/verify-production-runtime.mjs` performs 48 unauthenticated,
   read-only checks across health, readiness, diagnostics, PKCE redirects,
   callback reachability, and OutCall's exact enabled callback boundary.
 
@@ -169,7 +171,8 @@ Child migrations and `drizzle-kit push` are not supported deployment paths.
    environment. Run provider-specific profiles only for features being enabled.
 4. Build with `corepack pnpm build:production`.
 5. Start only through `node scripts/start-unified-runtime.mjs`.
-6. Require `/healthz`, `/readyz`, the public 48-check verifier, and the
+6. Require public root `/api/health`, `/readyz`, the public 48-check verifier,
+   and the
    production-host browser SSO gate before accepting the release.
 7. Roll traffic back if identity, tenant isolation, entitlement, SSO, audit,
    persistence, or readiness checks fail.

@@ -29,8 +29,8 @@ Status: **candidate only; not released**
 
 ## Known release blockers
 
-- The current public deployment is 31/48 and does not expose the candidate
-  authorization transaction behavior.
+- The current public deployment passes the contract-corrected 48/48 read-only
+  gate on merge `c249a753`, build `2eb701089a539d9e6da5af80`.
 - Deployment iteration 1 failed before build; the local fix requires a new
   reviewed deployment.
 - Authenticated all-module workflows, two-tenant negatives, global logout,

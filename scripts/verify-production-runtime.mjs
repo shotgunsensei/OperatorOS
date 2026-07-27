@@ -5,6 +5,11 @@ import { fileURLToPath } from 'node:url';
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REGISTRY_PATH = resolve(SCRIPT_DIR, '../config/operatoros-module-registry.json');
 const AUTH_ORIGIN = 'https://auth.operatoros.net';
+const TRANSACTION_COOKIE_NAMES = [
+  'operatoros_sso_state',
+  'operatoros_sso_nonce',
+  'operatoros_sso_verifier',
+];
 const FORBIDDEN_QUERY_KEYS = new Set([
   'token',
   'jwt',
@@ -88,7 +93,7 @@ export function validateAuthorizationRedirect(location, registration, headers = 
   if (cookies.some((cookie) => /(?:^|;)\s*Domain=/i.test(cookie))) {
     issues.push('transaction cookies must not set Domain');
   }
-  for (const cookieName of ['os_sso_state', 'os_sso_nonce', 'os_sso_verifier']) {
+  for (const cookieName of TRANSACTION_COOKIE_NAMES) {
     const cookie = cookies.find((candidate) => candidate.startsWith(`${cookieName}=`));
     if (!cookie) {
       issues.push(`${cookieName} cookie is missing`);
@@ -164,7 +169,11 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry } = 
 
   const results = [];
   await runCheck(results, 'platform root health', async () => {
-    const response = await request(fetchImpl, 'https://operatoros.net/healthz');
+    // Replit's Google front end reserves `/healthz` and returns its own 404
+    // before the application. `/api/health` traverses the public root-host
+    // proxy to the same Fastify health snapshot without bypassing the deployed
+    // topology.
+    const response = await request(fetchImpl, 'https://operatoros.net/api/health');
     requireStatus(response, [200], 'root health');
     const body = await jsonOrNull(response);
     if (body?.status !== 'healthy' || body?.service !== 'operatoros-api') {
@@ -222,7 +231,9 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry } = 
     ...modules.filter((entry) => entry.enabled),
   ];
   for (const entry of launchRegistrations) {
-    const launchUrl = entry.slug === 'operatoros' ? 'https://operatoros.net/app' : entry.productionBaseUrl;
+    const launchUrl = entry.slug === 'operatoros'
+      ? 'https://operatoros.net/login'
+      : entry.productionBaseUrl;
     await runCheck(results, `${entry.slug} anonymous authorization`, async () => {
       const response = await request(fetchImpl, launchUrl);
       requireStatus(response, [302, 303, 307, 308], `${entry.slug} anonymous authorization`);

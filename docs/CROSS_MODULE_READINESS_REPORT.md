@@ -46,9 +46,9 @@ draft, reports the server static-analysis result, submits it for review,
 requires tenant-admin approval, and records a real `.ps1` download. The denied
 case proves a non-entitled tenant cannot mount the shell. The app offers code
 for reviewed download only; it does not execute scripts in OperatorOS or the
-browser. This local evidence does not change the release verdict: the
-cumulative revision is not deployed and no standalone-data apply or cutover
-was authorized.
+browser. The cumulative revision is now deployed and passes the public 48/48
+gate, but this local module evidence does not prove authenticated deployed
+acceptance, and no standalone-data apply or cutover was authorized.
 
 Phase 11E refreshed the local production-host matrix to 9/9. The new
 CallCommand scenario proves persistent channel/profile configuration,
@@ -134,12 +134,11 @@ or cutover was authorized.
 - Optional providers are not module readiness claims. Provider-backed UI must
   stay disabled until its configuration and signed webhook/callback tests pass.
 - A disposable PostgreSQL backup/restore rehearsal is recorded and passed.
-- The reviewed Phase 15 release candidate has not been deployed to the public
-  target. The fresh hardened read-only public gate passed 31/48 checks: auth
-  response headers, all 17 module diagnostics, all 13 callback routes, and
-  OutCall fail-closed behavior passed; API readiness lacks release identity;
-  apex health and anonymous host-only SSO transaction-cookie checks still
-  reflect the older public release and block promotion.
+- The reviewed Phase 15 merge is deployed to the public target. The
+  contract-corrected read-only gate passes 48/48 against exact merge
+  `c249a753`, build `2eb701089a539d9e6da5af80`. Authenticated workflow,
+  persistence, tenant, authorization, logout, provider, backup/cutover, and
+  State 5 gates remain open.
 
 ## Verification evidence
 
@@ -187,5 +186,5 @@ validated through the consolidated OperatorOS build, database suite, shared
 API, and host-routed browser matrix. Every module remains explicitly not
 production-ready until deployed-target health and browser gates pass. Phase 1
 and Phase 2 source/local acceptance are complete, but the public target remains blocked
-at 31/48 checks until this candidate is deployed and the authenticated
-deployed-target gate is rerun.
+at 48/48 read-only checks; the authenticated deployed-target gate still needs
+configured test-user and two-tenant inputs.
