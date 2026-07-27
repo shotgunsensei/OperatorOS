@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-27
-- Phase: **12B OutCall source/local bounded candidate; live-provider, deployment, and ecosystem release gates blocked**
+- Phase: **13 migration-program source/local rehearsal complete; every production cutover remains blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -20,10 +20,63 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/phase-12b-outcall-rebuild`
+- Execution branch: `codex/phase-13-migration-cutover-program`
 - Release gate: **closed**
 
 ## Current verdict
+
+Phase 13 adds one executable migration manifest and deterministic dry-run
+program for all 13 active catalog modules. Every manifest pins or explicitly
+accounts for source provenance, export/version policy, target release step,
+identity/tenant/business/media/provider mappings, excluded authority,
+reconciliation dimensions, conflict handling, rollback, write freeze, and
+production blockers. The orchestrator executes each planner twice, compares
+SHA-256 fingerprints, and has no database write or apply path.
+
+The local rehearsal passes 13/13 with fingerprint
+`8fd07dc44810acfecf0cc652e2607e0f060c2939e49cf802e59348dc27773d17`.
+The final focused migration set passes 30/30. A new empty isolated PostgreSQL
+aggregate passes 844/844 with zero fail/skip; the ordered 29-step release
+applies on a separate isolated database and reapplies idempotently; workspace
+typecheck, release plan, diff check, and production build pass. SnapProofOS now
+has a dry-run CLI, TorqueShed has the missing root dry-run command, and OutCall
+has an explicit zero-row/no-repository contract instead of invented source
+data.
+
+This is not a production cutover. No real standalone export was applied, no
+source or production system was mutated, no backup/restore or production-scale
+performance rehearsal was performed, no standalone write lock was enabled, and
+no DNS, deployment, traffic, archive, or decommission action was authorized.
+Every module reports `productionCutoverReady: false`. Production work requires
+the human-gated approval packet and runbook in `docs/migrations/`.
+
+### Phase 13 verification record
+
+Commands were run from `C:\Dev\OperatorOS` on 2026-07-27. API tests used a new
+empty disposable PostgreSQL database; database release testing used a separate
+isolated database. Test-only credentials are omitted.
+
+```powershell
+corepack pnpm migration:rehearse
+corepack pnpm --dir apps/api test
+corepack pnpm typecheck
+corepack pnpm db:plan
+$env:OPERATOROS_DATABASE_RELEASE_MODE='apply'; corepack pnpm db:apply
+$env:INTERNAL_API_URL='http://127.0.0.1:5001'; corepack pnpm build:production
+```
+
+Results: compiled master rehearsal 13/13; final focused migration/import
+contracts 30/30; empty-database aggregate 844/844 in 252,202 ms before the
+final compiled-path portability correction, followed by the green 30/30
+affected suite and API build; 29-step release apply in
+10,807 ms and idempotent reapply in 2,739 ms; typecheck, release plan, diff
+check, and production build pass. The repository defines no lint/format
+script, so neither is claimed. Local/staging browser E2E was not rerun because
+Phase 13 changes only offline dry-run migration tooling and documentation; the
+Phase 12B compiled 9/9 plus 2/2 evidence remains historical, not fresh Phase 13
+deployment evidence.
+
+## Phase 12B historical verdict
 
 Phase 12B rebuilds OutCall from the recovered ten-phase prompt set because no
 canonical standalone repository was available. ADR-0027 establishes a
