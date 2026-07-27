@@ -1,9 +1,9 @@
 # BrandForgeOS Phase 11A parity matrix
 
-Assessment date: 2026-07-23
+Assessment date: 2026-07-26
 
-Candidate status: implementation and local verification in progress. This
-document does not claim consolidation state 5 or production readiness.
+Candidate status: source/local consolidation state 4 complete. This document
+does not claim consolidation state 5 or production readiness.
 
 ## Provenance
 
@@ -39,3 +39,17 @@ reconciliation, a clean ordered release, production build/start, health,
 canonical deep-link refresh, SSO return/logout, and local production-host
 browser acceptance. State 5 additionally requires the exact revision deployed
 and accepted on the target environment with an authorized data cutover record.
+
+## Verified local evidence
+
+- 28/28 focused domain, import, shared-service, persistent workflow,
+  tenant/role, idempotency, usage and hard-delete tests pass.
+- The prior complete API aggregate passed 768 with 0 failures and 6 deliberate
+  live-HTTP skips out of 774.
+- The ordered 23-step release applied to a clean disposable PostgreSQL
+  database; typecheck, production build, compiled health and readiness pass.
+- The production-host Playwright matrix passes 5/5, including the dedicated
+  persistent BrandForgeOS workflow, exact-host SSO, My Apps return, canonical
+  deep-link refresh, global logout, reauthentication and persistence.
+- The deterministic importer is read-only and reports no authorized data
+  apply. Deployment, production backup/apply and cutover remain human gates.

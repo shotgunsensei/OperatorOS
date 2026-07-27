@@ -89,8 +89,10 @@ function runtimeIsProduction(explicit?: string | null): boolean {
     return v === 'production' || v === 'prod';
   }
   if (typeof process === 'undefined') return false;
-  const v = (process.env.APP_ENV || process.env.NODE_ENV || '').toLowerCase();
-  return v === 'production' || v === 'prod';
+  const values = [process.env.APP_ENV, process.env.NODE_ENV]
+    .filter((value): value is string => typeof value === 'string')
+    .map((value) => value.toLowerCase());
+  return values.some((value) => value === 'production' || value === 'prod');
 }
 
 export function getSessionCookieOptions(input: SessionCookieOptionsInput = {}): SessionCookieOptions {

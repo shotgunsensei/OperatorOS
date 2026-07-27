@@ -5,6 +5,38 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## Phase 11A follow-up
+
+The BrandForgeOS Phase 11A source/local candidate was verified on 2026-07-26
+against disposable PostgreSQL 16 and compiled production artifacts. It
+provides versioned brand kits and personas, campaign/copy/calendar lifecycle,
+persisted dashboard metrics, real JSON/CSV exports, and OperatorOS-owned AI
+generation with redaction, idempotency, shared usage and activity. Child
+identity, billing, credits, admin mutation, random analytics, fake
+integrations and template purchasing remain excluded under ADR-0021.
+
+Fresh evidence includes 28/28 focused contracts and PostgreSQL workflows, the
+prior 774-test aggregate with 768 pass/0 fail/6 intentional live-HTTP skips,
+the deterministic no-apply import, workspace typecheck, clean 23-step release,
+production build, and compiled health/readiness. The production-host browser
+matrix passes 5/5. Its BrandForgeOS scenario persists a brand, persona,
+campaign, copy asset, calendar item and metrics; exercises the deterministic
+test AI adapter and records usage exactly once; refreshes canonical deep
+routes; returns through My Apps; globally logs out; reauthenticates; and
+confirms persistence.
+
+The first closure run correctly exposed an insecure mixed-environment cookie
+decision and cross-scenario loopback rate-limit exhaustion. Session cookies
+now fail secure when either runtime signal is production, and each browser
+scenario receives a distinct client identity only at the local trusted test
+proxy. Production auth limits were not weakened. Cookie/proxy tests pass 9/9,
+and the full browser matrix then passed without retries.
+
+This follow-up does not change the ecosystem report's **NOT ACCEPTED** verdict
+or claim state 5. The candidate is not deployed, and no production backup,
+database apply, source-data reconciliation, provider traffic or cutover was
+authorized.
+
 ## Phase 10B follow-up
 
 The Ninja Pool Hall Phase 10B source/local candidate was verified on

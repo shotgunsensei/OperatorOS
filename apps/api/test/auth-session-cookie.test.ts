@@ -58,6 +58,25 @@ test('session cookie options are secure and host-only in production', () => {
   });
 });
 
+test('session cookies fail safe when either runtime signal is production', () => {
+  const originalAppEnv = process.env.APP_ENV;
+  const originalNodeEnv = process.env.NODE_ENV;
+  try {
+    process.env.APP_ENV = 'test';
+    process.env.NODE_ENV = 'production';
+    assert.equal(getSessionCookieOptions().secure, true);
+
+    process.env.APP_ENV = 'production';
+    process.env.NODE_ENV = 'test';
+    assert.equal(getSessionCookieOptions().secure, true);
+  } finally {
+    if (originalAppEnv === undefined) delete process.env.APP_ENV;
+    else process.env.APP_ENV = originalAppEnv;
+    if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalNodeEnv;
+  }
+});
+
 test('tenant and entitlement helpers fail closed unless context or entitlement is present', () => {
   const request = { user: { id: 'user-3', email: 'operator@example.com', platformRole: 'user' } };
 

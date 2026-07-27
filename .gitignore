@@ -17,3 +17,4 @@ apps/web/android/local.properties
 *.keystore
 *.jks
 test-results/
+playwright-report/

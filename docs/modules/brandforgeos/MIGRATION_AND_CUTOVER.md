@@ -13,6 +13,11 @@ an owner-approved export, immutable tenant/user mapping, duplicate policy,
 reference/count reconciliation, file/provider exclusions, backup, rollback,
 and a separate human gate.
 
+The 2026-07-26 local closure reran the dry-run against the pinned
+`5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e` snapshot and confirmed
+`ready: true` with `applySupported: false`. No standalone records, production
+backup, release apply, provider traffic, or traffic cutover were attempted.
+
 ## Authorized cutover checklist
 
 1. Identify the reviewed commit and PostgreSQL version.
