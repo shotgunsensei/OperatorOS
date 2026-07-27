@@ -85,12 +85,12 @@ test('module write guard rejects viewer and permits write-capable grants', async
 test('shared-runtime module mutations use write guards while GET routes remain read-only gated', () => {
   const moduleShell = readRepoFile('apps/api/src/routes/module-shell-routes.ts');
   const pulsedesk = readRepoFile('apps/api/src/routes/pulsedesk-routes.ts');
+  const launchkit = readRepoFile('apps/api/src/routes/ninja-launch-kit-routes.ts');
 
   for (const [readGuard, writeGuard] of [
     ['callcommandGuards', 'callcommandWriteGuards'],
     ['studyforgeGuards', 'studyforgeWriteGuards'],
     ['ninjamationGuards', 'ninjamationWriteGuards'],
-    ['launchkitGuards', 'launchkitWriteGuards'],
     ['tradeflowkitGuards', 'tradeflowkitWriteGuards'],
     ['techdeckGuards', 'techdeckWriteGuards'],
   ]) {
@@ -107,6 +107,10 @@ test('shared-runtime module mutations use write guards while GET routes remain r
     pulsedesk,
     /const pulsedeskWriteGuards = \[\.\.\.pulsedeskGuards, requireTenantModuleWriteAccess\]/,
   );
+  assert.match(
+    launchkit,
+    /const writeGuards = \[\.\.\.readGuards, requireTenantModuleWriteAccess\]/,
+  );
 
   const routes = [...moduleRoutes(moduleShell), ...moduleRoutes(pulsedesk)];
   const signedWebhooks = routes.filter((route) => route.path.includes('/webhooks/twilio/'));
@@ -115,8 +119,8 @@ test('shared-runtime module mutations use write guards while GET routes remain r
   const firstPartyRoutes = routes.filter((route) => !route.path.includes('/webhooks/twilio/'));
   const mutations = firstPartyRoutes.filter((route) => route.method !== 'get');
   const reads = firstPartyRoutes.filter((route) => route.method === 'get');
-  assert.equal(mutations.length, 31, 'all active first-party module mutations should be inventoried');
-  assert.equal(reads.length, 16, 'all active first-party module reads should be inventoried');
+  assert.equal(mutations.length, 30, 'all legacy shared-shell first-party mutations should be inventoried');
+  assert.equal(reads.length, 15, 'all legacy shared-shell first-party reads should be inventoried');
 
   for (const route of mutations) {
     assert.ok(
@@ -130,6 +134,23 @@ test('shared-runtime module mutations use write guards while GET routes remain r
       route.preHandler,
       /WriteGuards|requireTenantModuleWriteAccess/,
       `GET ${route.path} must remain available to viewer grants`,
+    );
+  }
+
+  const launchKitRoutes = moduleRoutes(launchkit);
+  assert.ok(launchKitRoutes.length >= 12, 'dedicated Ninja Launch Kit routes should be inventoried');
+  for (const route of launchKitRoutes.filter((item) => item.method !== 'get')) {
+    assert.match(
+      route.preHandler ?? '',
+      /writeGuards/,
+      `${route.method.toUpperCase()} ${route.path} must enforce the dedicated write guard`,
+    );
+  }
+  for (const route of launchKitRoutes.filter((item) => item.method === 'get')) {
+    assert.match(
+      route.preHandler ?? '',
+      /readGuards/,
+      `GET ${route.path} must remain viewer-readable through the dedicated read guard`,
     );
   }
 });

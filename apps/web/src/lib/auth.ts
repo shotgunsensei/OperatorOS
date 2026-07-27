@@ -1909,14 +1909,56 @@ export const moduleShellApi = {
       apiFetch(`/modules/ninjamation/automations/${id}`, { method: 'DELETE' }),
   },
   launchkit: {
-    list: () => apiFetch('/modules/ninja-launch-kit/scaffolds'),
-    scaffold: (input: {
-      stackId: string;
-      stackName: string;
-      files: string[];
-      name?: string;
-    }) =>
-      apiFetch('/modules/ninja-launch-kit/scaffolds', {
+    templates: () => apiFetch('/modules/ninja-launch-kit/templates'),
+    workspace: () => apiFetch('/modules/ninja-launch-kit/workspace'),
+    detail: (id: string) => apiFetch(`/modules/ninja-launch-kit/launches/${encodeURIComponent(id)}`),
+    create: (input: Record<string, unknown>) =>
+      apiFetch('/modules/ninja-launch-kit/launches', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    update: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/launches/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    createTask: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/launches/${encodeURIComponent(id)}/tasks`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    updatePhase: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/phases/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    updateMilestone: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/milestones/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    updateTask: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/tasks/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    updateArtifact: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/artifacts/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    generate: (id: string, idempotencyKey: string) =>
+      apiFetch(`/modules/ninja-launch-kit/launches/${encodeURIComponent(id)}/generations`, {
+        method: 'POST',
+        body: JSON.stringify({ idempotencyKey }),
+      }),
+    export: (id: string, format: 'json' | 'markdown' | 'csv') =>
+      apiFetch(`/modules/ninja-launch-kit/launches/${encodeURIComponent(id)}/exports`, {
+        method: 'POST',
+        body: JSON.stringify({ format }),
+      }),
+    addAsset: (id: string, input: { originalName: string; mimeType: string; contentBase64: string }) =>
+      apiFetch(`/modules/ninja-launch-kit/launches/${encodeURIComponent(id)}/assets`, {
         method: 'POST',
         body: JSON.stringify(input),
       }),

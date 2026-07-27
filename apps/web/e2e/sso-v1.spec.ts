@@ -143,6 +143,13 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
   if (!identity) return;
   const { userId, tenantId } = identity;
   const tenantTables = [
+    'launchkit_exports',
+    'launchkit_artifacts',
+    'launchkit_tasks',
+    'launchkit_milestones',
+    'launchkit_phases',
+    'launchkit_generations',
+    'launchkit_launches',
     'studyforge_card_progress',
     'studyforge_quiz_attempts',
     'studyforge_cards',
@@ -911,6 +918,142 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage).toHaveURL(deckUrl);
     await expect(modulePage.getByRole('heading', { name: deckTitle })).toBeVisible();
     await assertHostOnlySession(modulePage.context(), 'studyforge-ai.operatoros.net');
+    await assertNoBrowserCredentialStorage(modulePage);
+    assertNoCredentialQuery(modulePage.url());
+  });
+
+  test('Ninja Launch Kit persists reviewed launch execution, evidence readiness, exports, and deep-link reauthentication', async ({ page, request }) => {
+    test.setTimeout(210_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+    const suffix = Date.now().toString(36);
+    const launchTitle = `Phase 11D operator launch ${suffix}`;
+
+    await page.goto(`${ROOT}/app`);
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await page.getByTestId('nav-my-apps').click();
+    await expect(page.getByTestId('page-my-apps')).toBeVisible();
+
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByTestId('button-launch-ninja-launch-kit').click();
+    const modulePage = await popupPromise;
+    await expect(modulePage.getByTestId('shell-ninja-launch-kit')).toBeVisible({ timeout: 30_000 });
+    await expect(modulePage.locator('#launchkit-dashboard')).toBeVisible();
+    assertNoCredentialQuery(modulePage.url());
+
+    await modulePage.getByTestId('input-launchkit-title').fill(launchTitle);
+    await modulePage.getByTestId('input-launchkit-product-type').fill('SaaS service');
+    await modulePage.getByTestId('select-launchkit-template').selectOption('it-support-msp');
+    await modulePage.getByTestId('input-launchkit-audience').fill('MSP owners');
+    await modulePage.getByTestId('input-launchkit-problem').fill('Disconnected operational products');
+    await modulePage.getByLabel('Positioning').fill('One coherent OperatorOS launch');
+    await modulePage.getByTestId('input-launchkit-offer').fill('Operator platform launch package');
+    await modulePage.getByLabel('Price').fill('149');
+    await modulePage.getByLabel('Target date').fill('2026-09-01');
+    const createResponse = modulePage.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === '/api/modules/ninja-launch-kit/launches'
+      && response.status() === 201);
+    await modulePage.getByTestId('button-launchkit-create').click();
+    const created = await (await createResponse).json() as { launch: { id: string } };
+    const launchId = created.launch.id;
+    const launchUrl = `https://ninjalaunchkit.operatoros.net/launches/${launchId}`;
+    await expect(modulePage.getByText(launchTitle, { exact: true }).first()).toBeVisible();
+    await expect(modulePage.getByTestId('text-launchkit-readiness')).not.toHaveText('100%');
+
+    const taskButtons = modulePage.locator('[data-testid^="button-launchkit-task-"]');
+    await expect(taskButtons).toHaveCount(6);
+    for (let index = 0; index < 6; index += 1) {
+      const taskButton = taskButtons.nth(index);
+      await taskButton.click();
+      await expect(taskButton).toHaveAttribute('aria-pressed', 'true');
+    }
+
+    const generationResponse = modulePage.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === `/api/modules/ninja-launch-kit/launches/${launchId}/generations`
+      && response.status() === 201);
+    await modulePage.getByTestId('button-launchkit-generate').click();
+    await generationResponse;
+    const artifactButtons = modulePage.locator('[data-testid^="button-launchkit-artifact-"]');
+    await expect(artifactButtons).toHaveCount(8);
+    for (let index = 0; index < 8; index += 1) {
+      const artifactButton = artifactButtons.nth(index);
+      await artifactButton.click();
+      await expect(artifactButton).toHaveText('Approve');
+      await artifactButton.click();
+      await expect(artifactButton).toHaveText('Return to draft');
+    }
+    await expect(modulePage.getByTestId('text-launchkit-readiness')).toHaveText('100%');
+    await modulePage.getByTestId('button-launchkit-mark-launched').click();
+    await expect(modulePage.getByText(/SaaS service · launched/)).toBeVisible();
+
+    const downloadPromise = modulePage.waitForEvent('download');
+    await modulePage.getByTestId('button-launchkit-export-markdown').click();
+    const download = await downloadPromise;
+    expect(await download.suggestedFilename()).toMatch(/\.md$/);
+    await expect(modulePage.getByTestId('text-launchkit-export-hash')).toContainText(/[0-9a-f]{64}/);
+
+    const persisted = await pg.query<{
+      launches: string; tasks: string; artifacts: string; generations: string; exports: string; usage: string;
+    }>(
+      `select
+        (select count(*) from launchkit_launches where tenant_id=$1 and id=$2 and status='launched')::text as launches,
+        (select count(*) from launchkit_tasks where tenant_id=$1 and launch_id=$2 and required=true and status='complete')::text as tasks,
+        (select count(*) from launchkit_artifacts where tenant_id=$1 and launch_id=$2 and required=true and status='approved')::text as artifacts,
+        (select count(*) from launchkit_generations where tenant_id=$1 and launch_id=$2)::text as generations,
+        (select count(*) from launchkit_exports where tenant_id=$1 and launch_id=$2)::text as exports,
+        (select count(*) from shared_usage_events u join modules m on m.id=u.module_id
+          where u.tenant_id=$1 and m.slug='ninja-launch-kit' and u.operation='launchkit.ai_generation')::text as usage`,
+      [identity.tenantId, launchId],
+    );
+    expect(Number(persisted.rows[0].launches)).toBe(1);
+    expect(Number(persisted.rows[0].tasks)).toBe(6);
+    expect(Number(persisted.rows[0].artifacts)).toBe(8);
+    expect(Number(persisted.rows[0].generations)).toBe(1);
+    expect(Number(persisted.rows[0].exports)).toBe(1);
+    expect(Number(persisted.rows[0].usage)).toBe(1);
+
+    await modulePage.goto(launchUrl);
+    await expect(modulePage).toHaveURL(launchUrl);
+    await modulePage.reload();
+    await expect(modulePage.getByText(launchTitle, { exact: true }).first()).toBeVisible();
+    await modulePage.setViewportSize({ width: 390, height: 844 });
+    await expect(modulePage.getByTestId('button-launchkit-mark-launched')).toBeVisible();
+
+    await Promise.all([
+      modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      modulePage.getByRole('link', { name: 'My Apps' }).first().click(),
+    ]);
+    await expect(modulePage.getByTestId('page-my-apps')).toBeVisible();
+    const logoutAll = await modulePage.evaluate(async () => {
+      const response = await fetch('/api/auth/logout-all', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return { status: response.status, body: await response.text() };
+    });
+    expect(logoutAll.status, logoutAll.body).toBe(200);
+
+    await modulePage.goto(launchUrl);
+    await expect(modulePage).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await modulePage.getByTestId('input-email').fill(identity.email);
+    await modulePage.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      modulePage.waitForURL(launchUrl, { timeout: 30_000 }),
+      modulePage.getByTestId('button-login').click(),
+    ]);
+    await expect(modulePage.getByText(launchTitle, { exact: true }).first()).toBeVisible();
+    await expect(modulePage.getByTestId('text-launchkit-readiness')).toHaveText('100%');
+    await assertHostOnlySession(modulePage.context(), 'ninjalaunchkit.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
   });

@@ -97,7 +97,7 @@ export const COMPANION_MODULES: readonly ModuleCatalogItem[] = [
   { key: 'snapproofos', name: 'SnapProofOS', description: 'Evidence, proof, and validation workflows.' },
   { key: 'brandforgeos', name: 'BrandForgeOS', description: 'Brand and campaign production workspace.' },
   { key: 'studyforge-ai', name: 'StudyForge AI', description: 'AI-assisted study and team training.' },
-  { key: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Launch planning and internal tool scaffolding.' },
+  { key: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Launch planning, reviewed campaign assets, readiness, and audited exports.' },
   { key: 'callcommand-ai', name: 'CallCommand AI', description: 'AI phone operations and call automation.' },
   { key: 'ninjamation', name: 'Ninjamation', description: 'AI-assisted cross-app workflow automation.' },
 ] as const;

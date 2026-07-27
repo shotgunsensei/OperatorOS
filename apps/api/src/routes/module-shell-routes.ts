@@ -6,7 +6,6 @@ import {
   moduleCallLogs,
   moduleStudySessions,
   moduleAutomations,
-  moduleScaffolds,
   moduleWorkflowItems,
   techdeckTicketSequences,
   techdeckTickets,
@@ -89,6 +88,7 @@ import { registerTorqueShedSocialRoutes } from './torqueshed-social-routes.js';
 import { registerFaultlineLabRoutes } from './faultlinelab-routes.js';
 import { registerBrandForgeOsRoutes } from './brandforgeos-routes.js';
 import { registerStudyForgeRoutes } from './studyforge-routes.js';
+import { registerNinjaLaunchKitRoutes } from './ninja-launch-kit-routes.js';
 
 // Task #91 — per-tenant + per-user budget for outbound calls. Each placed
 // call burns real Twilio minutes, so we cap dial attempts to a small
@@ -106,13 +106,11 @@ const CALL_RATE_WINDOW_MS = 5 * 60_000;
 const callcommandGuards = [requireTenantMember, requireTenantModuleAccess('callcommand-ai')];
 const studyforgeGuards = [requireTenantMember, requireTenantModuleAccess('studyforge-ai')];
 const ninjamationGuards = [requireTenantMember, requireTenantModuleAccess('ninjamation')];
-const launchkitGuards = [requireTenantMember, requireTenantModuleAccess('ninja-launch-kit')];
 const tradeflowkitGuards = [requireTenantMember, requireTenantModuleAccess('tradeflowkit')];
 const techdeckGuards = [requireTenantMember, requireTenantModuleAccess('techdeck')];
 const callcommandWriteGuards = [...callcommandGuards, requireTenantModuleWriteAccess];
 const studyforgeWriteGuards = [...studyforgeGuards, requireTenantModuleWriteAccess];
 const ninjamationWriteGuards = [...ninjamationGuards, requireTenantModuleWriteAccess];
-const launchkitWriteGuards = [...launchkitGuards, requireTenantModuleWriteAccess];
 const tradeflowkitWriteGuards = [...tradeflowkitGuards, requireTenantModuleWriteAccess];
 const techdeckWriteGuards = [...techdeckGuards, requireTenantModuleWriteAccess];
 
@@ -125,7 +123,6 @@ const techdeckWriteGuards = [...techdeckGuards, requireTenantModuleWriteAccess];
 // ---------------------------------------------------------------------------
 
 const PERSONAS = new Set(['receptionist', 'qualifier', 'collector']);
-const STACKS = new Set(['next-fastify', 'fastapi-react', 'express-htmx']);
 
 const WORKFLOW_MODULES = {
   torqueshed: {
@@ -573,6 +570,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerFaultlineLabRoutes(app);
   await registerBrandForgeOsRoutes(app);
   await registerStudyForgeRoutes(app);
+  await registerNinjaLaunchKitRoutes(app);
 
   // ===== TradeFlowKit: lead and revenue compatibility routes ==============
   //
@@ -2368,78 +2366,4 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     },
   );
 
-  // ===== Ninja Launch Kit =================================================
-  app.get(
-    '/v1/modules/ninja-launch-kit/scaffolds',
-    { preHandler: [...launchkitGuards] },
-    async (request) => {
-      const user = (request as any).user;
-      const ctx = (request as any).tenantContext;
-      const scaffolds = await db
-        .select()
-        .from(moduleScaffolds)
-        .where(
-          and(
-            eq(moduleScaffolds.tenantId, ctx.tenantId),
-            eq(moduleScaffolds.userId, user.id),
-          ),
-        )
-        .orderBy(desc(moduleScaffolds.createdAt))
-        .limit(20);
-      return { scaffolds };
-    },
-  );
-
-  app.post(
-    '/v1/modules/ninja-launch-kit/scaffolds',
-    { preHandler: [...launchkitWriteGuards] },
-    async (request, reply) => {
-      const user = (request as any).user;
-      const ctx = (request as any).tenantContext;
-      const {
-        stackId,
-        stackName,
-        files,
-        name,
-      } = (request.body as any) ?? {};
-      if (typeof stackId !== 'string' || !STACKS.has(stackId)) {
-        return reply.code(400).send({ error: 'Invalid stack', code: 'INVALID_STACK' });
-      }
-      if (!Array.isArray(files) || files.length === 0) {
-        return reply.code(400).send({ error: 'files required', code: 'FILES_REQUIRED' });
-      }
-      const fileList = files
-        .filter((f): f is string => typeof f === 'string' && f.length > 0)
-        .slice(0, 256);
-      const slug = slugify(typeof name === 'string' ? name : stackName ?? stackId);
-
-      // Status is `queued` because the actual provisioning belongs to the
-      // workspace runner pipeline; this row is the durable handoff record
-      // the runner will pick up. The shell shows the queued state until a
-      // future task flips it to `ready`.
-      const [row] = await db
-        .insert(moduleScaffolds)
-        .values({
-          tenantId: ctx.tenantId,
-          userId: user.id,
-          slug,
-          stackId,
-          stackName: typeof stackName === 'string' ? stackName.slice(0, 120) : stackId,
-          files: fileList,
-          status: 'queued',
-        })
-        .returning();
-
-      await db.insert(activityFeed).values({
-        userId: user.id,
-        tenantId: ctx.tenantId,
-        action: 'queued',
-        entityType: 'scaffold',
-        entityId: row.id,
-        metadata: { stackId, slug, fileCount: fileList.length },
-      });
-
-      return reply.code(201).send(row);
-    },
-  );
 }

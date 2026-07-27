@@ -82,6 +82,13 @@ async function existingStudyForgeTables(executor: SqlExecutor): Promise<Set<stri
   return new Set(result.rows.map((row) => String(row.tablename)));
 }
 
+async function existingLaunchKitTables(executor: SqlExecutor): Promise<Set<string>> {
+  const result = await executor.execute(sql`SELECT tablename
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = current_schema() AND tablename LIKE 'launchkit_%'`);
+  return new Set(result.rows.map((row) => String(row.tablename)));
+}
+
 // Gate 2 status taxonomy: 'live' (legacy) and 'active' both signify a
 // shipping module; 'hidden' suppresses from public catalog while keeping
 // data; 'deprecated' marks for retirement (still launchable for legacy
@@ -549,6 +556,14 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           if (studyForgeTables.has('studyforge_generations')) await tx.execute(sql`DELETE FROM studyforge_generations WHERE tenant_id = ${id}`);
           if (studyForgeTables.has('studyforge_sources')) await tx.execute(sql`DELETE FROM studyforge_sources WHERE tenant_id = ${id}`);
           if (studyForgeTables.has('studyforge_subjects')) await tx.execute(sql`DELETE FROM studyforge_subjects WHERE tenant_id = ${id}`);
+          const launchKitTables = await existingLaunchKitTables(tx);
+          if (launchKitTables.has('launchkit_exports')) await tx.execute(sql`DELETE FROM launchkit_exports WHERE tenant_id = ${id}`);
+          if (launchKitTables.has('launchkit_artifacts')) await tx.execute(sql`DELETE FROM launchkit_artifacts WHERE tenant_id = ${id}`);
+          if (launchKitTables.has('launchkit_tasks')) await tx.execute(sql`DELETE FROM launchkit_tasks WHERE tenant_id = ${id}`);
+          if (launchKitTables.has('launchkit_milestones')) await tx.execute(sql`DELETE FROM launchkit_milestones WHERE tenant_id = ${id}`);
+          if (launchKitTables.has('launchkit_phases')) await tx.execute(sql`DELETE FROM launchkit_phases WHERE tenant_id = ${id}`);
+          if (launchKitTables.has('launchkit_generations')) await tx.execute(sql`DELETE FROM launchkit_generations WHERE tenant_id = ${id}`);
+          if (launchKitTables.has('launchkit_launches')) await tx.execute(sql`DELETE FROM launchkit_launches WHERE tenant_id = ${id}`);
           await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.tenantId, id));
           await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.tenantId, id));
           await tx.delete(moduleAutomations).where(eq(moduleAutomations.tenantId, id));
@@ -2114,6 +2129,16 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           if (studyForgeTables.has('studyforge_decks')) await tx.execute(sql`UPDATE studyforge_decks SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
           if (studyForgeTables.has('studyforge_quizzes')) await tx.execute(sql`UPDATE studyforge_quizzes SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
           if (studyForgeTables.has('studyforge_plans')) await tx.execute(sql`UPDATE studyforge_plans SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          const launchKitTables = await existingLaunchKitTables(tx);
+          if (launchKitTables.has('launchkit_generations')) await tx.execute(sql`UPDATE launchkit_generations SET user_id = NULL WHERE user_id = ${id}`);
+          if (launchKitTables.has('launchkit_artifacts')) await tx.execute(sql`UPDATE launchkit_artifacts SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          if (launchKitTables.has('launchkit_exports')) await tx.execute(sql`UPDATE launchkit_exports SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          if (launchKitTables.has('launchkit_tasks')) await tx.execute(sql`UPDATE launchkit_tasks SET owner_user_id = NULL WHERE owner_user_id = ${id}`);
+          if (launchKitTables.has('launchkit_milestones')) await tx.execute(sql`UPDATE launchkit_milestones SET owner_user_id = NULL WHERE owner_user_id = ${id}`);
+          if (launchKitTables.has('launchkit_launches')) await tx.execute(sql`UPDATE launchkit_launches SET
+            created_by_user_id=CASE WHEN created_by_user_id=${id} THEN NULL ELSE created_by_user_id END,
+            owner_user_id=CASE WHEN owner_user_id=${id} THEN NULL ELSE owner_user_id END
+            WHERE created_by_user_id=${id} OR owner_user_id=${id}`);
           await tx.delete(techdeckTickets).where(eq(techdeckTickets.createdByUserId, id));
           await tx.delete(ninjaPoolMatchEvents).where(eq(ninjaPoolMatchEvents.userId, id));
           await tx.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.userId, id));

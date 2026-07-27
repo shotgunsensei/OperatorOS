@@ -5,6 +5,44 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## Phase 11D follow-up
+
+The Ninja Launch Kit Phase 11D source/local candidate was verified on
+2026-07-27 against disposable PostgreSQL 16 and compiled production artifacts.
+It provides tenant-scoped launch workspaces, phases, milestones, dependent
+tasks, versioned reviewed artifacts, private shared assets, server-computed
+readiness, OperatorOS-owned AI/idempotency/usage/activity, audited
+JSON/Markdown/CSV exports and canonical responsive deep links. ADR-0024 keeps
+reusable brand and ongoing-campaign authority in BrandForgeOS and excludes
+child identity/billing/admin, duplicate credentials, legacy URL-token SSO,
+simulated analytics and unsupported integrations.
+
+Fresh evidence includes the focused domain/import/database/static contracts
+and 4/4 PostgreSQL workflows, the complete clean API aggregate at 816 pass,
+0 fail and 0 skip, deterministic no-apply import, workspace typecheck, clean
+and idempotent 26-step release, production build/core preflight, and compiled
+direct/web-proxied health and readiness. The final production-host browser
+matrix passes 8/8 in 1.7 minutes. Its Ninja Launch Kit scenario persists a
+launch, completes the required plan, generates draft campaign artifacts with
+the deterministic local adapter, explicitly reviews and approves them,
+reaches 100% server readiness, marks the launch live, downloads a real audited
+export, checks mobile navigation, returns through My Apps, globally logs out,
+directly reauthenticates to the launch deep link, refreshes and confirms
+persistence.
+
+The first browser run reached only 80% because rapid test clicks did not wait
+for each server-reloaded review state. The UI now exposes task completion as
+pressed state and the test waits for every task and artifact transition. The
+focused failed scenario passed 1/1, followed by the full 8/8 regression.
+Repeated local registrations then reached the intentional in-memory rate
+limit; only the disposable API process was restarted before the authoritative
+clean-process matrix. No production limit or security control was weakened.
+
+This follow-up does not change the ecosystem report's **NOT ACCEPTED** verdict
+or claim State 5. The candidate is not deployed, and no production backup,
+database apply, source-data reconciliation, live provider traffic or cutover
+was authorized.
+
 ## Phase 11C follow-up
 
 The StudyForge AI Phase 11C source/local candidate was verified on 2026-07-27

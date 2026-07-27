@@ -16,6 +16,7 @@
     "import:ninja-pool-hall:dry-run": "tsx apps/api/src/scripts/ninja-pool-hall-import.ts --dry-run",
     "import:brandforgeos:dry-run": "tsx apps/api/src/scripts/brandforgeos-import.ts --dry-run",
     "import:studyforge:dry-run": "tsx apps/api/src/scripts/studyforge-import.ts --dry-run",
+    "import:ninja-launch-kit:dry-run": "tsx apps/api/src/scripts/ninja-launch-kit-import.ts --dry-run",
     "dev": "pnpm -r --parallel --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web dev",
     "dev:api": "pnpm --dir apps/api dev",
     "dev:runner": "pnpm --dir apps/runner-gateway dev",

@@ -153,6 +153,14 @@ async function cleanupUser(pg: Client, userId: string) {
       [userId],
     );
     for (const t of owned.rows) {
+      try { await pg.query(`delete from launchkit_exports where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from launchkit_artifacts where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from launchkit_tasks where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from launchkit_milestones where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from launchkit_phases where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from launchkit_generations where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from launchkit_launches where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from shared_activity_events where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from module_call_logs where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from module_study_sessions where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from module_automations where tenant_id = $1`, [t.id]); } catch {}
@@ -253,14 +261,17 @@ async function exerciseShell(page: Page, slug: Slug) {
       break;
     }
     case 'ninja-launch-kit': {
-      // Pick a stack, name it, scaffold. The API persists a `queued`
-      // scaffold row and returns it — the shell mounts the scaffold panel.
-      await page.getByTestId('button-launchkit-pick-next-fastify').click();
-      await page.getByTestId('input-launchkit-name').fill('task73-scaffold');
-      await page.getByTestId('button-launchkit-scaffold').click();
-      await expect(page.getByTestId('panel-launchkit-scaffold'))
+      const suffix = Date.now().toString(36);
+      await page.getByTestId('input-launchkit-title').fill(`Task73 launch ${suffix}`);
+      await page.getByTestId('input-launchkit-product-type').fill('service');
+      await page.getByTestId('select-launchkit-template').selectOption('it-support-msp');
+      await page.getByTestId('input-launchkit-audience').fill('MSP owners');
+      await page.getByTestId('input-launchkit-problem').fill('Scattered launch execution');
+      await page.getByTestId('input-launchkit-offer').fill('A focused launch package');
+      await page.getByTestId('button-launchkit-create').click();
+      await expect(page.getByText(`Task73 launch ${suffix}`, { exact: true }).first())
         .toBeVisible({ timeout: 10_000 });
-      await expect(page.getByTestId('list-launchkit-scaffold-files'))
+      await expect(page.getByTestId('text-launchkit-readiness'))
         .toBeVisible({ timeout: 10_000 });
       break;
     }

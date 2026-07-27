@@ -138,6 +138,16 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/progress': { sectionId: 'studyforge-analytics', label: 'Progress' },
     '/analytics': { sectionId: 'studyforge-analytics', label: 'Analytics' },
   },
+  'ninja-launch-kit': {
+    '/dashboard': { sectionId: 'launchkit-dashboard', label: 'Launch Dashboard' },
+    '/launches': { sectionId: 'launchkit-launches', label: 'Launch Workspaces' },
+    '/builder': { sectionId: 'launchkit-builder', label: 'Launch Brief' },
+    '/templates': { sectionId: 'launchkit-templates', label: 'Launch Templates' },
+    '/plan': { sectionId: 'launchkit-plan', label: 'Launch Plan' },
+    '/artifacts': { sectionId: 'launchkit-artifacts', label: 'Campaign Artifacts' },
+    '/readiness': { sectionId: 'launchkit-readiness', label: 'Launch Readiness' },
+    '/exports': { sectionId: 'launchkit-exports', label: 'Exports' },
+  },
 };
 
 const SAFE_PATH_SEGMENT = /^[a-z0-9-]+$/;
@@ -212,6 +222,12 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'decks' || resource === 'cards') return { sectionId: 'studyforge-decks', label: 'Flashcard Deck' };
     if (resource === 'quizzes') return { sectionId: 'studyforge-quizzes', label: 'Quiz' };
     if (resource === 'plans') return { sectionId: 'studyforge-plans', label: 'Study Plan' };
+  }
+  if (slug === 'ninja-launch-kit' && pathSegments.length === 2) {
+    const [resource] = pathSegments;
+    if (resource === 'launches') return { sectionId: 'launchkit-launches', label: 'Launch Workspace' };
+    if (resource === 'tasks' || resource === 'milestones' || resource === 'phases') return { sectionId: 'launchkit-plan', label: 'Launch Plan Record' };
+    if (resource === 'artifacts') return { sectionId: 'launchkit-artifacts', label: 'Campaign Artifact' };
   }
   return null;
 }
