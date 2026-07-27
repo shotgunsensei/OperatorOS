@@ -73,6 +73,15 @@ import { SSO_TOKEN_TTL_SECONDS } from '../../../../packages/sso/index.js';
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────
 
+type SqlExecutor = Pick<typeof db, 'execute'>;
+
+async function existingStudyForgeTables(executor: SqlExecutor): Promise<Set<string>> {
+  const result = await executor.execute(sql`SELECT tablename
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = current_schema() AND tablename LIKE 'studyforge_%'`);
+  return new Set(result.rows.map((row) => String(row.tablename)));
+}
+
 // Gate 2 status taxonomy: 'live' (legacy) and 'active' both signify a
 // shipping module; 'hidden' suppresses from public catalog while keeping
 // data; 'deprecated' marks for retirement (still launchable for legacy
@@ -528,6 +537,18 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           await tx.execute(sql`DELETE FROM snapproof_evidence_items WHERE tenant_id = ${id}`);
           await tx.execute(sql`DELETE FROM snapproof_cases WHERE tenant_id = ${id}`);
           await tx.execute(sql`DELETE FROM snapproof_settings WHERE tenant_id = ${id}`);
+          const studyForgeTables = await existingStudyForgeTables(tx);
+          if (studyForgeTables.has('studyforge_card_progress')) await tx.execute(sql`DELETE FROM studyforge_card_progress WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_quiz_attempts')) await tx.execute(sql`DELETE FROM studyforge_quiz_attempts WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_cards')) await tx.execute(sql`DELETE FROM studyforge_cards WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_questions')) await tx.execute(sql`DELETE FROM studyforge_questions WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_plan_sessions')) await tx.execute(sql`DELETE FROM studyforge_plan_sessions WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_decks')) await tx.execute(sql`DELETE FROM studyforge_decks WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_quizzes')) await tx.execute(sql`DELETE FROM studyforge_quizzes WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_plans')) await tx.execute(sql`DELETE FROM studyforge_plans WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_generations')) await tx.execute(sql`DELETE FROM studyforge_generations WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_sources')) await tx.execute(sql`DELETE FROM studyforge_sources WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_subjects')) await tx.execute(sql`DELETE FROM studyforge_subjects WHERE tenant_id = ${id}`);
           await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.tenantId, id));
           await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.tenantId, id));
           await tx.delete(moduleAutomations).where(eq(moduleAutomations.tenantId, id));
@@ -2083,6 +2104,16 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           await tx.delete(moduleAutomations).where(eq(moduleAutomations.userId, id));
           await tx.delete(moduleScaffolds).where(eq(moduleScaffolds.userId, id));
           await tx.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.createdByUserId, id));
+          const studyForgeTables = await existingStudyForgeTables(tx);
+          if (studyForgeTables.has('studyforge_card_progress')) await tx.execute(sql`DELETE FROM studyforge_card_progress WHERE user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_quiz_attempts')) await tx.execute(sql`UPDATE studyforge_quiz_attempts SET user_id = NULL WHERE user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_plan_sessions')) await tx.execute(sql`UPDATE studyforge_plan_sessions SET completed_by_user_id = NULL WHERE completed_by_user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_generations')) await tx.execute(sql`UPDATE studyforge_generations SET user_id = NULL WHERE user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_subjects')) await tx.execute(sql`UPDATE studyforge_subjects SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_sources')) await tx.execute(sql`UPDATE studyforge_sources SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_decks')) await tx.execute(sql`UPDATE studyforge_decks SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_quizzes')) await tx.execute(sql`UPDATE studyforge_quizzes SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_plans')) await tx.execute(sql`UPDATE studyforge_plans SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
           await tx.delete(techdeckTickets).where(eq(techdeckTickets.createdByUserId, id));
           await tx.delete(ninjaPoolMatchEvents).where(eq(ninjaPoolMatchEvents.userId, id));
           await tx.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.userId, id));

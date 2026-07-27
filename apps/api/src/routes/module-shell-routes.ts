@@ -88,6 +88,7 @@ import { registerTorqueAssistRoutes } from './torque-assist-routes.js';
 import { registerTorqueShedSocialRoutes } from './torqueshed-social-routes.js';
 import { registerFaultlineLabRoutes } from './faultlinelab-routes.js';
 import { registerBrandForgeOsRoutes } from './brandforgeos-routes.js';
+import { registerStudyForgeRoutes } from './studyforge-routes.js';
 
 // Task #91 — per-tenant + per-user budget for outbound calls. Each placed
 // call burns real Twilio minutes, so we cap dial attempts to a small
@@ -571,6 +572,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerTorqueShedSocialRoutes(app);
   await registerFaultlineLabRoutes(app);
   await registerBrandForgeOsRoutes(app);
+  await registerStudyForgeRoutes(app);
 
   // ===== TradeFlowKit: lead and revenue compatibility routes ==============
   //

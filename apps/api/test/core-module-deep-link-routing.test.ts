@@ -96,6 +96,11 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('snapproofos', ['evidence', 'evidence-123'])?.sectionId, 'snapproofos-evidence');
   assert.equal(resolveCoreModuleDeepLink('snapproofos', ['reports', 'report-123'])?.sectionId, 'snapproofos-reports');
   assert.equal(resolveCoreModuleDeepLink('snapproofos', ['unknown']), null);
+  assert.equal(resolveCoreModuleDeepLink('studyforge-ai', ['dashboard'])?.sectionId, 'studyforge-dashboard');
+  assert.equal(resolveCoreModuleDeepLink('studyforge-ai', ['sources', 'source-123'])?.sectionId, 'studyforge-sources');
+  assert.equal(resolveCoreModuleDeepLink('studyforge-ai', ['decks', 'deck-123'])?.sectionId, 'studyforge-decks');
+  assert.equal(resolveCoreModuleDeepLink('studyforge-ai', ['quizzes', 'quiz-123'])?.sectionId, 'studyforge-quizzes');
+  assert.equal(resolveCoreModuleDeepLink('studyforge-ai', ['unknown']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['Tickets']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['..']), null);
   assert.equal(resolveCoreModuleDeepLink('techdeck', []), null);

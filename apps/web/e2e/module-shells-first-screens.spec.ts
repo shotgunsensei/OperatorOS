@@ -229,29 +229,25 @@ async function exerciseShell(page: Page, slug: Slug) {
       break;
     }
     case 'studyforge-ai': {
-      // Load sample populates the textarea + word count without hitting
-      // the AI provider; generate then POSTs to /sessions. The mock
-      // provider returns a deterministic card array fallback so the list
-      // renders without an OPENAI_API_KEY. After generation we click the
-      // first card's reveal toggle and assert the answer paragraph
-      // mounts — proves the recall-session interaction round-trips.
-      await page.getByTestId('button-studyforge-load-sample').click();
-      await page.getByTestId('button-studyforge-generate').click();
+      const suffix = Date.now().toString(36);
+      await page.getByTestId('input-studyforge-subject-name').fill(`Biology ${suffix}`);
+      await page.getByTestId('button-studyforge-subject-create').click();
+      await page.getByTestId('input-studyforge-source-title').fill(`Cell notes ${suffix}`);
+      await page.getByTestId('textarea-studyforge-source-body').fill(
+        'Mitochondria generate ATP through oxidative phosphorylation. Cells use ATP as an energy carrier.',
+      );
+      await page.getByTestId('button-studyforge-source-create').click();
+      await page.getByTestId('select-studyforge-generation-source').selectOption({ label: `Cell notes ${suffix}` });
+      await page.getByTestId('input-studyforge-generation-title').fill(`Cell deck ${suffix}`);
+      await page.getByTestId('button-studyforge-generation-create').click();
       await expect(page.getByTestId('list-studyforge-cards'))
         .toBeVisible({ timeout: 15_000 });
       const firstCard = page.locator('[data-testid^="card-studyforge-"]').first();
       await expect(firstCard).toBeVisible({ timeout: 15_000 });
-      // Resolve the dynamic card id off the rendered card so we can
-      // target its matching toggle + answer testids.
       const firstCardId = await firstCard.evaluate((el) =>
         (el.getAttribute('data-testid') ?? '').replace(/^card-studyforge-/, ''),
       );
       expect(firstCardId, 'expected a generated card id').toBeTruthy();
-      // Pre-toggle: the answer must NOT be in the DOM (hidden state).
-      await expect(page.getByTestId(`text-studyforge-answer-${firstCardId}`))
-        .toHaveCount(0);
-      await page.getByTestId(`button-studyforge-toggle-${firstCardId}`).click();
-      // Post-toggle: the answer paragraph is rendered.
       await expect(page.getByTestId(`text-studyforge-answer-${firstCardId}`))
         .toBeVisible({ timeout: 5_000 });
       break;

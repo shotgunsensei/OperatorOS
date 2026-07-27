@@ -125,6 +125,19 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/retention': { sectionId: 'snapproofos-retention', label: 'Retention' },
     '/settings': { sectionId: 'snapproofos-settings', label: 'Settings' },
   },
+  'studyforge-ai': {
+    '/dashboard': { sectionId: 'studyforge-dashboard', label: 'Dashboard' },
+    '/subjects': { sectionId: 'studyforge-subjects', label: 'Subjects and Courses' },
+    '/courses': { sectionId: 'studyforge-subjects', label: 'Subjects and Courses' },
+    '/sources': { sectionId: 'studyforge-sources', label: 'Authorized Sources' },
+    '/studio': { sectionId: 'studyforge-studio', label: 'AI Studio' },
+    '/decks': { sectionId: 'studyforge-decks', label: 'Flashcard Decks' },
+    '/flashcards': { sectionId: 'studyforge-decks', label: 'Flashcard Decks' },
+    '/quizzes': { sectionId: 'studyforge-quizzes', label: 'Quizzes' },
+    '/plans': { sectionId: 'studyforge-plans', label: 'Study Plans' },
+    '/progress': { sectionId: 'studyforge-analytics', label: 'Progress' },
+    '/analytics': { sectionId: 'studyforge-analytics', label: 'Analytics' },
+  },
 };
 
 const SAFE_PATH_SEGMENT = /^[a-z0-9-]+$/;
@@ -191,6 +204,14 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'cases') return { sectionId: 'snapproofos-cases', label: 'Evidence Case' };
     if (resource === 'evidence') return { sectionId: 'snapproofos-evidence', label: 'Evidence Item' };
     if (resource === 'reports') return { sectionId: 'snapproofos-reports', label: 'Report' };
+  }
+  if (slug === 'studyforge-ai' && pathSegments.length === 2) {
+    const [resource] = pathSegments;
+    if (resource === 'subjects' || resource === 'courses') return { sectionId: 'studyforge-subjects', label: 'Subject' };
+    if (resource === 'sources') return { sectionId: 'studyforge-sources', label: 'Source' };
+    if (resource === 'decks' || resource === 'cards') return { sectionId: 'studyforge-decks', label: 'Flashcard Deck' };
+    if (resource === 'quizzes') return { sectionId: 'studyforge-quizzes', label: 'Quiz' };
+    if (resource === 'plans') return { sectionId: 'studyforge-plans', label: 'Study Plan' };
   }
   return null;
 }

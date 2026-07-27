@@ -24,6 +24,7 @@ import { ensureFaultlineLabTables } from './faultlinelab-db-init.js';
 import { ensureNinjaPoolHallTables } from './ninja-pool-hall-db-init.js';
 import { ensureBrandForgeOsTables } from './brandforgeos-db-init.js';
 import { ensureSnapProofOsTables } from './snapproofos-db-init.js';
+import { ensureStudyForgeTables } from './studyforge-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -50,6 +51,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   brandforgeos_tables: ensureBrandForgeOsTables,
   shared_service_tables: ensureSharedServiceTables,
   snapproofos_tables: ensureSnapProofOsTables,
+  studyforge_tables: ensureStudyForgeTables,
   plans_and_admin: seedPlansAndAdmin,
   launch_fix_pre_seed: launchFixPreSeed,
   platform_components: seedPlatformComponents,
@@ -102,6 +104,13 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.snapproof_evidence_items') IS NOT NULL AS snapproof_evidence_items,
       to_regclass('public.snapproof_custody_events') IS NOT NULL AS snapproof_custody_events,
       to_regclass('public.snapproof_reports') IS NOT NULL AS snapproof_reports,
+      to_regclass('public.studyforge_subjects') IS NOT NULL AS studyforge_subjects,
+      to_regclass('public.studyforge_sources') IS NOT NULL AS studyforge_sources,
+      to_regclass('public.studyforge_decks') IS NOT NULL AS studyforge_decks,
+      to_regclass('public.studyforge_cards') IS NOT NULL AS studyforge_cards,
+      to_regclass('public.studyforge_quizzes') IS NOT NULL AS studyforge_quizzes,
+      to_regclass('public.studyforge_plans') IS NOT NULL AS studyforge_plans,
+      to_regclass('public.studyforge_card_progress') IS NOT NULL AS studyforge_card_progress,
       to_regclass('public.operatoros_token_purchase_intents') IS NOT NULL AS operatoros_token_purchase_intents,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);

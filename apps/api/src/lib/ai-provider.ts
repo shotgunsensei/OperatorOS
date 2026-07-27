@@ -96,6 +96,8 @@ export class MockAiProvider implements AiProvider {
       ? this.generateTorqueAssistResponse(request.userPrompt)
       : toolType === 'brandforge'
         ? this.generateBrandForgeResponse(request.userPrompt)
+        : toolType === 'studyforge'
+          ? this.generateStudyForgeResponse(request.userPrompt)
       : this.generateMockResponse(toolType, request.userPrompt);
 
     return {
@@ -114,6 +116,7 @@ export class MockAiProvider implements AiProvider {
   private detectToolType(systemPrompt: string): string {
     if (systemPrompt.includes('OPERATOROS_TORQUE_ASSIST_V1')) return 'torque_assist';
     if (systemPrompt.includes('OPERATOROS_BRANDFORGE_V1')) return 'brandforge';
+    if (systemPrompt.includes('OPERATOROS_STUDYFORGE_V1')) return 'studyforge';
     if (systemPrompt.includes('summarize')) return 'summarizer';
     if (systemPrompt.includes('break down') || systemPrompt.includes('task')) return 'task_breakdown';
     if (systemPrompt.includes('action plan') || systemPrompt.includes('project plan')) return 'project_planner';
@@ -157,6 +160,50 @@ export class MockAiProvider implements AiProvider {
         { name: 'Operator field guide', objective: prompt, channels: ['Content', 'Email'], description: 'Teach the workflow and connect it to the offer.' },
         { name: 'Focused retargeting', objective: prompt, channels: ['Ads', 'Social'], description: 'Re-engage high-intent visitors with one direct CTA.' },
       ],
+    });
+  }
+
+  private generateStudyForgeResponse(userPrompt: string): string {
+    let input: Record<string, unknown> = {};
+    try {
+      input = JSON.parse(userPrompt) as Record<string, unknown>;
+    } catch {
+      input = {};
+    }
+    const source = String(input.source ?? '').trim();
+    const type = String(input.type ?? 'deck');
+    const sentences = source
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => sentence.trim())
+      .filter((sentence) => sentence.length >= 8)
+      .slice(0, 5);
+    const evidence = sentences.length ? sentences : [source.slice(0, 500)];
+    if (type === 'quiz') {
+      return JSON.stringify({
+        questions: evidence.slice(0, 3).map((excerpt, index) => ({
+          question: `Which statement is supported by source passage ${index + 1}?`,
+          choices: [excerpt, 'This option is not stated in the supplied source.'],
+          correctIndex: 0,
+          explanation: 'The first choice is the exact learner-supplied source passage.',
+          sourceExcerpt: excerpt,
+        })),
+      });
+    }
+    if (type === 'study_plan') {
+      return JSON.stringify({
+        sessions: evidence.slice(0, 5).map((excerpt, index) => ({
+          title: `Source review ${index + 1}`,
+          focus: `Review and recall: ${excerpt}`,
+          estimatedMinutes: 20,
+        })),
+      });
+    }
+    return JSON.stringify({
+      cards: evidence.map((excerpt, index) => ({
+        question: `What does source passage ${index + 1} state?`,
+        answer: excerpt,
+        sourceExcerpt: excerpt,
+      })),
     });
   }
 
