@@ -23,7 +23,7 @@ Current central registry ids include:
 - `ninja-launch-kit`
 - `callcommand-ai`
 - `ninjamation`
-- `outcall` (planned)
+- `outcall` (active add-on; live provider separately gated)
 
 Subdomain labels may differ from slugs. For example, `ninjalaunchkit.operatoros.net`
 maps to the `ninja-launch-kit` module slug. Slugs remain the entitlement authority.

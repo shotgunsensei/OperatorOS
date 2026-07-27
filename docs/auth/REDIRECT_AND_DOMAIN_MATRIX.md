@@ -18,7 +18,7 @@
 | Ninja Launch Kit | add-on, enabled | `https://ninjalaunchkit.operatoros.net` | `https://ninjalaunchkit.operatoros.net/sso` | `/` | exact host; module + tenant |
 | CallCommand AI | add-on, enabled | `https://callcommand-ai.operatoros.net` | `https://callcommand-ai.operatoros.net/sso` | `/` | exact host; module + tenant |
 | Ninjamation | add-on, enabled | `https://ninjamation.operatoros.net` | `https://ninjamation.operatoros.net/sso` | `/` | exact host; module + tenant |
-| OutCall | add-on, planned/disabled | `https://outcall.operatoros.net` | reserved: `https://outcall.operatoros.net/sso` | disabled | no session; issue/exchange denied |
+| OutCall | add-on, enabled; live provider gated | `https://outcall.operatoros.net` | `https://outcall.operatoros.net/sso` | `/` | exact host; module + tenant |
 
 No wildcard callback, parent-domain session cookie, production localhost
 callback, unregistered Replit preview callback, or default

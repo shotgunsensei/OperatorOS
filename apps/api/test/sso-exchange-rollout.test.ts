@@ -36,7 +36,7 @@ test('all production modules use the code path by default', () => {
       assert.equal(moduleSupportsExchangeCode(slug), true, `${slug} supports opaque-code SSO`);
     }
     assert.equal(moduleSupportsExchangeCode('PulseDesk'), true);
-    assert.equal(moduleSupportsExchangeCode('outcall'), false, 'planned module stays off by default');
+    assert.equal(moduleSupportsExchangeCode('outcall'), true, 'OutCall uses opaque-code SSO by default');
   });
 });
 

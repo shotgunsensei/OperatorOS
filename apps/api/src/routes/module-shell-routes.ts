@@ -73,6 +73,7 @@ import { registerStudyForgeRoutes } from './studyforge-routes.js';
 import { registerNinjaLaunchKitRoutes } from './ninja-launch-kit-routes.js';
 import { registerCallCommandRoutes } from './callcommand-routes.js';
 import { registerNinjamationRoutes } from './ninjamation-routes.js';
+import { registerOutCallRoutes } from './outcall-routes.js';
 
 // Per-module guard chains. `requireTenantMember` confirms the caller belongs
 // to the active tenant; `requireTenantModuleAccess(slug)` then enforces that
@@ -399,6 +400,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerStudyForgeRoutes(app);
   await registerNinjaLaunchKitRoutes(app);
   await registerNinjamationRoutes(app);
+  await registerOutCallRoutes(app);
 
   // ===== TradeFlowKit: lead and revenue compatibility routes ==============
   //

@@ -35,7 +35,8 @@
     "operatoros:studyforge-ai",
     "operatoros:ninja-launch-kit",
     "operatoros:callcommand-ai",
-    "operatoros:ninjamation"
+    "operatoros:ninjamation",
+    "operatoros:outcall"
   ],
-  "plannedClients": ["operatoros:outcall"]
+  "plannedClients": []
 }

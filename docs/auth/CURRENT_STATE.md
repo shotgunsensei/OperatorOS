@@ -20,10 +20,10 @@ The repository also had two hub issuers (`/v1/sso/issue` and `/v1/modules/:slug/
 ## Consolidated source state
 
 The active source architecture is one Next/Fastify deployment serving the four
-platform hosts and all twelve enabled module clients. Each product retains its
-exact hostname and product boundary, but it is not a separately executed
-application. OutCall's hostname is attached and its metadata is reserved, but
-the module remains planned/disabled.
+platform hosts and all thirteen enabled module clients. Each product retains
+its exact hostname and product boundary, but it is not a separately executed
+application. OutCall is active for its bounded Phase 12B shared-runtime
+workload; live provider operations remain fail closed.
 
 Each module host creates its own state/nonce/PKCE transaction, central auth
 issues one sealed 60-second single-use code, and the shared `/sso` callback
@@ -39,7 +39,7 @@ and therefore establishes both the independent auth-host session and the
 requested platform-host session before any module launch.
 
 A local production-host Playwright gate now verifies this topology over HTTPS:
-one credential entry, root callback, silent launches for all twelve enabled
+one credential entry, root callback, silent launches for all thirteen enabled
 modules, independent Secure/HttpOnly/SameSite=Lax host-only cookies, no bearer
 in URLs or browser storage, clean reloads, direct deep-link return, browser Back
 without a central-auth loop, sibling-tab SSO, host-only local logout, and global
@@ -102,8 +102,8 @@ public Replit host cannot mint or upgrade a broad platform session.
 - Legacy module handoff: HS256 JWT, 90 seconds, shared `MODULE_SSO_SECRET`.
 - Opaque handoff: AES-256-GCM sealed `{jti,aud,clientId,redirectUri,returnTo,state,nonce,codeChallenge}` plus atomic `consumed_at` update.
 - Contract v1 transport: opaque 60-second single-use code only for the platform
-  client and all twelve enabled module clients. JWT query transport is disabled
-  in the active unified runtime; OutCall remains planned/disabled.
+  client and all thirteen enabled module clients. JWT query transport is disabled
+  in the active unified runtime.
 - Password reset tokens remain separate one-time account-recovery credentials.
 
 ## Callback and redirect inventory
@@ -113,9 +113,8 @@ public Replit host cannot mint or upgrade a broad platform session.
 - TradeFlowKit: `/sso` callback, final local `/dashboard`.
 - TechDeck: `/sso` callback, final local `/`.
 - PulseDesk: `/sso` callback, final local `/dashboard`.
-- Every other enabled module uses its exact registered host plus `/sso`; the
-  registry is the exhaustive callback inventory. OutCall's callback is
-  reserved but authorization/exchange remain disabled.
+- Every other enabled module, including OutCall, uses its exact registered host
+  plus `/sso`; the registry is the exhaustive callback inventory.
 - The old redirect allowlist was host-family based through `sanitizeReturnTo`; contract v1 uses exact registered callback URIs and local relative return paths.
 
 ## Deployed pre-repair baseline captured 2026-07-13

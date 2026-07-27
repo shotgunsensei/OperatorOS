@@ -1,6 +1,6 @@
 /**
- * Task #73 — Playwright coverage for the four polished module first-screens
- * (CallCommand AI, Ninjamation, StudyForge AI, Ninja Launch Kit) end-to-end
+ * Playwright coverage for five polished module first-screens
+ * (CallCommand AI, Ninjamation, OutCall, StudyForge AI, Ninja Launch Kit) end-to-end
  * for an Elite-plan tenant member, plus:
  *   - the "Back to My Apps" link is present on every shell route
  *   - a non-entitled tenant member sees the `app-shell-not-accessible`
@@ -25,7 +25,7 @@ import { Client } from 'pg';
 const API = process.env.E2E_API_URL ?? 'http://localhost:5001';
 const WEB = process.env.E2E_WEB_URL ?? 'http://localhost:5000';
 
-const SHELL_SLUGS = ['callcommand-ai', 'ninjamation', 'studyforge-ai', 'ninja-launch-kit'] as const;
+const SHELL_SLUGS = ['callcommand-ai', 'ninjamation', 'outcall', 'studyforge-ai', 'ninja-launch-kit'] as const;
 
 type Slug = typeof SHELL_SLUGS[number];
 
@@ -95,7 +95,7 @@ async function registerUser(api: APIRequestContext, tag: string): Promise<SeedRe
   return { userId: user.id, tenantId, email };
 }
 
-/** Plant an Elite subscription + tenant_modules rows for the four shell
+/** Plant an Elite subscription + tenant_modules rows for the five shell
  *  slugs so the tenant unlocks them via plan inclusion AND the per-tenant
  *  `requireTenantModuleAccess` pre-handler (which only consults
  *  tenant_modules) passes. Using `allow_all_members=true` mirrors the way
@@ -170,6 +170,12 @@ async function cleanupUser(pg: Client, userId: string) {
       try { await pg.query(`delete from ninjamation_reviews where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from ninjamation_script_versions where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from ninjamation_scripts where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from outcall_events where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from shared_jobs where tenant_id = $1 and module_id=(select id from modules where slug='outcall')`, [t.id]); } catch {}
+      try { await pg.query(`delete from outcall_call_requests where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from outcall_triggers where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from outcall_profiles where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from outcall_settings where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from shared_activity_events where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from module_call_logs where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from module_study_sessions where tenant_id = $1`, [t.id]); } catch {}
@@ -237,6 +243,21 @@ async function exerciseShell(page: Page, slug: Slug) {
       expect(download.suggestedFilename()).toMatch(/\.ps1$/);
       break;
     }
+    case 'outcall': {
+      await page.getByTestId('button-outcall-accept-safety').click();
+      await page.getByTestId('input-outcall-phone').fill('+15551234568');
+      await page.getByTestId('button-outcall-verify-phone').click();
+      await expect(page.locator('#outcall-readiness')).toContainText('Verified +15');
+      await page.getByTestId('input-outcall-profile-name').fill(`Neutral exit ${Date.now()}`);
+      await page.getByTestId('input-outcall-profile-message').fill('Please stay on the line while I share an update.');
+      await page.getByTestId('button-outcall-create-profile').click();
+      await page.getByTestId('input-outcall-trigger').fill(`feed the cat ${Date.now()}`);
+      await page.getByTestId('button-outcall-create-trigger').click();
+      await page.getByTestId('button-outcall-schedule').click();
+      await expect(page.locator('#outcall-schedule')).toContainText(/scheduled|completed/, { timeout: 10_000 });
+      await expect(page.locator('#outcall-schedule')).not.toContainText('15551234568');
+      break;
+    }
     case 'studyforge-ai': {
       const suffix = Date.now().toString(36);
       await page.getByTestId('input-studyforge-subject-name').fill(`Biology ${suffix}`);
@@ -297,7 +318,7 @@ test.describe('Module first-screens (Task #73)', () => {
     await pg.end().catch(() => undefined);
   });
 
-  test('Elite-plan tenant member can use all four module first-screens', async ({ page }) => {
+  test('Elite-plan tenant member can use all five module first-screens', async ({ page }) => {
     const elite = await registerUser(page.context().request, 'elite');
     seededUserIds.push(elite.userId);
     await seedEliteAccess(pg, elite.userId, elite.tenantId);

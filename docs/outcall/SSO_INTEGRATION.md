@@ -1,10 +1,10 @@
 # OutCall SSO Integration
 
-OutCall is registered at `https://outcall.operatoros.net` but remains planned
-and disabled until a real workload, tenant-scoped workflow, and verification
-suite exist. It is not purchasable or launchable.
+OutCall is an active source/local add-on at `https://outcall.operatoros.net`.
+Its workload, tenant-scoped persistence, entitlement guards, and test-adapter
+verification suite exist. This is not deployed or live-provider readiness.
 
-When implementation begins, OutCall must use OperatorOS SSO contract v1:
+OutCall uses OperatorOS SSO contract v1:
 
 1. Register `operatoros:outcall` with the exact `/sso` callback and `/logout`
    URI already present in the central registry.

@@ -63,7 +63,7 @@ test('only commercial add-ons declare add-on Stripe environment keys', () => {
 
   const outcall = MODULE_CATALOG.find(module => module.slug === 'outcall');
   assert.equal(outcall?.commercialType, 'addon');
-  assert.equal(outcall?.defaultStatus, 'coming_soon');
+  assert.equal(outcall?.defaultStatus, 'live');
 });
 
 test('billing service rejects canonical core/free modules as individual add-ons', () => {
@@ -86,7 +86,7 @@ test('admin-created modules require an explicit add-on classification', () => {
   );
 });
 
-test('admin readiness checks only active catalog add-ons and excludes planned OutCall', () => {
+test('admin readiness checks only active catalog add-ons', () => {
   const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
   const platformRoutes = fs.readFileSync(
     path.join(repoRoot, 'apps/api/src/routes/platform-routes.ts'),

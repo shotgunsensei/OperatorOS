@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-27
-- Phase: **12A Ninjamation source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
+- Phase: **12B OutCall source/local bounded candidate; live-provider, deployment, and ecosystem release gates blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -20,10 +20,72 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/phase-12a-ninjamation-completion`
+- Execution branch: `codex/phase-12b-outcall-rebuild`
 - Release gate: **closed**
 
 ## Current verdict
+
+Phase 12B rebuilds OutCall from the recovered ten-phase prompt set because no
+canonical standalone repository was available. ADR-0027 establishes a
+distinct personal-safety boundary: OutCall provides discreet verified-self
+exit assistance and is not CallCommand AI, emergency dispatch, monitoring, or
+a 911 replacement. The active shared-runtime slice persists safety
+acknowledgment, globally owned verified phone identity, tenant profiles,
+private exact-match triggers, immediate/delayed requests, safe event history,
+shared jobs, activity, and exactly-once usage under OperatorOS identity,
+tenant, role, entitlement, and billing authority.
+
+Phone values and trigger phrases are AES-256-GCM protected with independent
+HMAC lookup fingerprints. The server ignores client destination authority and
+can schedule only the authenticated user's verified number. Viewer writes,
+client tenant overrides, unsafe impersonation scripts, cross-user phone
+claims, cross-tenant reads, replayed idempotency keys, raw trigger disclosure,
+recording, and arbitrary destination calls are rejected. The deterministic
+provider requires `APP_ENV=test`, `NODE_ENV=test`, and
+`OUTCALL_TEST_ADAPTER=enabled`; live Twilio verification/SMS/voice/DTMF and
+signed callbacks remain unimplemented and fail closed.
+
+Fresh local evidence includes 3/3 OutCall PostgreSQL workflows, 34/34 focused
+registry/release/preflight/SSO contracts, a clean and idempotent 29-step
+release, workspace typecheck, production build, core plus OutCall production
+preflight, compiled direct and web-proxied health/readiness, a 9/9
+production-host browser matrix across all thirteen enabled module hosts, and
+a 2/2 compiled first-screen suite. The OutCall browser workflow accepts the
+safety contract, verifies a test-owned number without external contact,
+persists a neutral profile and encrypted private trigger, schedules a
+verified-self call through the shared worker, masks the number in history,
+and denies a non-entitled tenant.
+
+Phase 12B is not production-ready or state 5. No live Twilio flow, signed
+provider callback, SMS trigger ingestion, deployed target, backup, production
+database apply, or public traffic cutover was authorized. Trusted contacts,
+check-ins, duress mode, location, and arbitrary destinations are visibly
+disabled rather than presented as functional.
+
+### Phase 12B verification record
+
+Commands were run from `C:\Dev\OperatorOS` on 2026-07-27 against disposable
+PostgreSQL 16 data and compiled artifacts. Test-only credentials are omitted.
+
+```powershell
+corepack pnpm typecheck
+corepack pnpm --dir apps/api test
+$env:OPERATOROS_DATABASE_RELEASE_MODE='apply'; corepack pnpm db:apply
+$env:INTERNAL_API_URL='http://localhost:5001'; corepack pnpm build:production
+corepack pnpm preflight:production -- --core --outcall-ready
+$env:E2E_PRODUCTION_HOSTS='1'; corepack pnpm --dir apps/web test:e2e:sso
+corepack pnpm --dir apps/web exec playwright test e2e/module-shells-first-screens.spec.ts
+```
+
+Results: focused OutCall DB 3/3; focused static contracts 34/34; clean release
+apply 11.823 seconds and idempotent reapply 1.571 seconds; typecheck, build,
+core/OutCall preflight, direct health, readiness, and web-proxied health pass;
+clean untouched-schema aggregate 839/839 in 266,910 ms with zero fail/skip;
+production-host matrix 9/9 in 2.1 minutes; compiled first-screen suite 2/2 in
+11.7 seconds. The repository defines no lint or formatting script, so neither
+is claimed.
+
+## Phase 12A historical verdict
 
 Phase 12A replaces Ninjamation's inferred cross-app workflow shell with the
 commit-pinned AutomationPacks product boundary: reviewed PC automation

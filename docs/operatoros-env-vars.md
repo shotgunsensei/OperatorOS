@@ -92,7 +92,7 @@ production preflight requires every exact canonical URL.
 | `TRADEFLOWKIT_URL`     | tradeflowkit          | —                                                                                   |
 | `STUDYFORGE_AI_URL`    | studyforge-ai         | falls back to `/apps/studyforge-ai`                                                 |
 | `NINJA_LAUNCH_KIT_URL` | ninja-launch-kit      | falls back to `/apps/ninja-launch-kit`                                              |
-| `OUTCALL_URL`          | outcall               | canonical `https://outcall.operatoros.net`; module remains planned until activation |
+| `OUTCALL_URL`          | outcall               | canonical `https://outcall.operatoros.net`; live provider readiness is separate |
 
 ## AI
 
@@ -117,7 +117,7 @@ the legacy generic `APP_URL` in production.
 Use `corepack pnpm preflight:production --all` in the production environment
 to validate the core, revenue, email, telephony, and AI configuration without
 printing secret values. Core validation requires every canonical module URL
-above to equal its exact `*.operatoros.net` origin, including disabled OutCall's
+above to equal its exact `*.operatoros.net` origin, including OutCall's
 controlled host. Individual provider readiness flags are documented in
 `docs/MODULE_ENV_MIGRATION.md`.
 

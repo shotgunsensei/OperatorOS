@@ -1,11 +1,11 @@
 # OperatorOS current release gate
 
 - Evidence date: 2026-07-27
-- Candidate branch: `codex/phase-12a-ninjamation-completion`
+- Candidate branch: `codex/phase-12b-outcall-rebuild`
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
-- Platform and Phases 2-12A source/local gate: **PARTIAL; Phase 12A state-4 scoped gates and clean ecosystem aggregate pass, deployed gates remain open**
+- Platform and Phases 2-12B source/local gate: **PARTIAL; Phase 12B bounded scoped gates and clean ecosystem aggregate pass, live-provider and deployed gates remain open**
 - Public deployment gate: **FAIL (32/47)**
 - Overall release decision: **CLOSED — do not promote**
 
@@ -75,6 +75,17 @@ Ninjamation stays below state 5 until the exact revision is deployed and an
 authorized source-data reconciliation/cutover and deployed workflow acceptance
 pass.
 
+Phase 12B reconstructs OutCall from the owner's recovered prompt set as a
+distinct verified-self personal-safety exit-assistance workload. It persists
+safety acceptance, global verified-phone ownership, neutral profiles,
+encrypted private triggers, verified-destination immediate/delayed requests,
+safe events, shared jobs/activity and exactly-once usage. The clean aggregate
+passes 839/839, the clean/idempotent release contains 29 steps, compiled
+health/readiness passes, the production-host matrix passes 9/9 across all 13
+enabled modules, and the first-screen suite passes 2/2. Live Twilio
+verification/SMS/voice/DTMF/callbacks, export/deletion UI and deployed
+acceptance remain incomplete, so OutCall is not state 4/5 or production-ready.
+
 The candidate was not deployed because deployment/publishing was not
 authorized. The current public hosts still serve an older release. The release
 gate remains closed until a human deploys the reviewed commit and the public
@@ -91,14 +102,14 @@ and migration parity remain controlled by the module parity index.
 | Frozen dependency contract | PASS FROM PHASE 0 | Pinned pnpm `10.34.5`; lockfile unchanged by Phase 1 |
 | Production environment contract | PASS | Machine-readable contract plus 7 preflight tests; core CLI preflight passed with exact canonical values and non-secret local test credentials |
 | Unsafe configuration rejection | PASS | Rejects missing/short secrets, legacy `APP_URL`, parent `COOKIE_DOMAIN`, public unified-runtime API URL, unsafe commands, legacy SSO rollback, wildcard/insecure/credentialed/loopback CORS, and drifted module hosts |
-| Database release plan | PASS | `db:plan` emits 28 ordered, additive, secret-free steps; Phase 12A clean apply and idempotent reapply passed on disposable PostgreSQL 16, including `ninjamation_tables` |
+| Database release plan | PASS | `db:plan` emits 29 ordered, additive, secret-free steps; Phase 12B clean apply and idempotent reapply passed on disposable PostgreSQL 16, including `outcall_tables` |
 | Backup/restore rehearsal | PASS LOCALLY | Phase 4 custom dump restored in 3.570 s; source/restore matched 94 public tables, 17 TradeFlowKit, 9 Directory, and 10 shared-service tables |
 | Restored data/constraints | PASS | Restored release apply passed; dump SHA-256 `d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82` |
 | Production build | PASS | Installed workspace toolchain produced SDK, API, runner gateway, and Next artifacts after API/runner/web typechecks; Next 14.2.35 generated 20 static page entries. The exact Replit wrapper remains pinned to pnpm 10.34.5. |
-| Compiled production supervisor | PASS | Compiled 28-step release ran idempotently, Fastify and the shared worker reached readiness on 5001, and compiled Next reached ready on isolated public port 5100 after a transient port-5000 collision; no `tsx` production runtime |
+| Compiled production supervisor | PASS | Compiled 29-step release ran idempotently, Fastify and the shared worker reached readiness on 5001, and compiled Next reached ready on isolated public port 5100; no `tsx` production runtime |
 | Local canonical-host health | PASS | HTTPS apex `/healthz` returned 200 with `operatoros-api`; API `/readyz` returned 200 with database/auth/SSO/registry configured |
 | Local public URL diagnostics | PASS | TechDeck diagnostic resolved forwarded exact host, HTTPS origin, module role, and host-only cookie mode |
-| Production-host SSO browser gate | PASS LOCALLY | Fresh Phase 12A matrix passed 9/9 in 1.9 minutes without retry across root/app/auth and all 12 enabled modules. PKCE/state/nonce, exact callbacks, host-only cookies, return/Back/refresh, silent launches, local/global logout, plus persistent FaultlineLab, BrandForgeOS, StudyForge AI, Ninja Launch Kit, CallCommand AI, SnapProofOS and Ninja Pool Hall workflows passed. Separate first-screen workflows pass 2/2, including Ninjamation create/review/approve/download and non-entitled denial |
+| Production-host SSO browser gate | PASS LOCALLY | Fresh Phase 12B matrix passed 9/9 in 2.1 minutes across root/app/auth and all 13 enabled modules. PKCE/state/nonce, exact callbacks, Secure host-only cookies, return/Back/refresh, silent launches, local/global logout and persistent module workflows passed. Separate first-screen workflows pass 2/2, including OutCall verified-self no-contact scheduling and non-entitled denial |
 | Focused Phase 1 tests | PASS | 11/11 database-release, preflight, and supervisor contract tests |
 | Focused Phase 2 tests | PASS | 9/9 directory, UI, deep-link, and release-contract tests |
 | Focused Phase 3 tests | PASS | 24/24 shared-service, route, retention, lease-recovery, release, webhook, and provider-state tests on a clean database |
@@ -108,8 +119,9 @@ and migration parity remain controlled by the module parity index.
 | Focused Phase 11B tests | PASS | 17/17 domain/import/database/release/deep-link contracts including private attachment controls, review authority, tenant isolation, viewer denial, append-only custody, report/export, retention and canonical routes |
 | Focused Phase 11E tests | PASS | Static domain/import/release/deep-link contracts plus 5/5 tenant/authorization/consent/disposition/persistence and 4/4 signed callback/inbound/replay/recording-privacy PostgreSQL workflows |
 | Focused Phase 12A tests | PASS | Domain/import/static/release/deep-link contracts plus 4/4 tenant/authorization/version/analysis/approval/download/AI-usage PostgreSQL workflows |
+| Focused Phase 12B tests | PASS | 3/3 OutCall tenant/authorization/encryption/verified-destination/idempotency/usage workflows plus 34/34 registry/release/preflight/SSO contracts |
 | Phase 2 browser workflow | PASS LOCALLY | 1/1 on compiled artifacts; CRUD, refresh persistence, same organization ID across three modules, and no script-readable auth |
-| Full API regression | PASS | Fresh untouched-database aggregate on the exact Phase 12A source passed 836/836 with 0 failures, 0 skips and 0 todo |
+| Full API regression | PASS | Fresh untouched-schema aggregate on the exact Phase 12B source passed 839/839 with 0 failures, 0 skips and 0 todo |
 | Public read-only runtime verifier | FAIL | 32/47 on 2026-07-18; no authentication and no mutation |
 | Formatting/lint | NOT DEFINED | Repository has no supported formatting or lint script; no pass is claimed |
 

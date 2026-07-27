@@ -28,6 +28,7 @@ import { ensureStudyForgeTables } from './studyforge-db-init.js';
 import { ensureNinjaLaunchKitTables } from './ninja-launch-kit-db-init.js';
 import { ensureCallCommandTables } from './callcommand-db-init.js';
 import { ensureNinjamationTables } from './ninjamation-db-init.js';
+import { ensureOutCallTables } from './outcall-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -58,6 +59,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   ninja_launch_kit_tables: ensureNinjaLaunchKitTables,
   callcommand_tables: ensureCallCommandTables,
   ninjamation_tables: ensureNinjamationTables,
+  outcall_tables: ensureOutCallTables,
   plans_and_admin: seedPlansAndAdmin,
   launch_fix_pre_seed: launchFixPreSeed,
   platform_components: seedPlatformComponents,
@@ -130,6 +132,12 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.ninjamation_reviews') IS NOT NULL AS ninjamation_reviews,
       to_regclass('public.ninjamation_downloads') IS NOT NULL AS ninjamation_downloads,
       to_regclass('public.ninjamation_generations') IS NOT NULL AS ninjamation_generations,
+      to_regclass('public.outcall_settings') IS NOT NULL AS outcall_settings,
+      to_regclass('public.outcall_phone_owners') IS NOT NULL AS outcall_phone_owners,
+      to_regclass('public.outcall_profiles') IS NOT NULL AS outcall_profiles,
+      to_regclass('public.outcall_triggers') IS NOT NULL AS outcall_triggers,
+      to_regclass('public.outcall_call_requests') IS NOT NULL AS outcall_call_requests,
+      to_regclass('public.outcall_events') IS NOT NULL AS outcall_events,
       to_regclass('public.operatoros_token_purchase_intents') IS NOT NULL AS operatoros_token_purchase_intents,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);

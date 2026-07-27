@@ -5,6 +5,37 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## Phase 12B follow-up
+
+OutCall was reconstructed from the owner's recovered ten-phase prompt set
+because no canonical standalone repository could be located. ADR-0027 defines
+it as discreet verified-self exit assistance under OperatorOS authority, not
+CallCommand AI, emergency dispatch, monitoring, or a 911 replacement.
+
+The bounded shared-runtime slice persists safety acknowledgment, global
+verified-phone ownership, tenant profiles, encrypted private triggers,
+immediate/delayed requests, safe history, shared jobs, activity and
+exactly-once usage. The server selects only the authenticated user's verified
+number; client destinations, tenant overrides, viewer mutation, foreign phone
+claims, cross-tenant reads, unsafe impersonation text, recording and replayed
+idempotency are rejected.
+
+Local evidence on 2026-07-27 includes 3/3 OutCall PostgreSQL workflows, 34/34
+focused contracts, a clean aggregate at 839/839, a clean/idempotent 29-step
+release, typecheck, production build, core plus OutCall preflight, compiled direct/web-proxied
+health/readiness, the 9/9 production-host matrix across all thirteen modules,
+and the 2/2 first-screen suite. The deterministic OutCall browser case accepts
+the safety contract, verifies a test-owned number, creates a neutral profile
+and private trigger, schedules a verified-self request through the shared
+worker, masks the number in history, and denies a non-entitled tenant. No
+external call occurs.
+
+This does not change the ecosystem report's **NOT ACCEPTED** verdict. Live
+Twilio Verify/SMS/voice/DTMF and signed callback handling, deployed acceptance,
+and a user-facing export/deletion workflow remain incomplete. Trusted
+contacts, check-ins, duress, location, arbitrary destinations, recording and
+emergency-service behavior are disabled or excluded.
+
 ## Phase 12A follow-up
 
 The Ninjamation Phase 12A source/local candidate was verified on 2026-07-27

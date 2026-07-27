@@ -1,8 +1,8 @@
 # OutCall Go-Live Checklist
 
-The Phase 1 classification is **NOT READY**. The shared registry must remain
-`planned` until every applicable item below has evidence attached to the launch
-audit.
+The Phase 12B classification is **NOT READY**. Source/local access may remain
+active with provider operations fail-closed, but public promotion and a
+production-ready label require evidence for every applicable item below.
 
 ## OperatorOS integration
 

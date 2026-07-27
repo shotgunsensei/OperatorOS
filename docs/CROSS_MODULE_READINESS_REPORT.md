@@ -27,11 +27,12 @@ tests all pass in the target deployment.
 | Ninja Launch Kit | Phase 11D source/local state-4 candidate: launch workspaces; phases/milestones/dependent tasks; reviewed artifacts; private assets; server readiness; shared AI/usage/activity; audited exports and canonical deep links | Trusted session tenant/module scope, viewer denial, cross-tenant non-enumeration, active-member references, optimistic versions, dependency/cycle checks, lifecycle locks, idempotency, upload scanning and hard-delete cleanup pass | Pass | Focused contracts and 4/4 PostgreSQL workflows, clean aggregate 816/816 and clean/idempotent 26-step release pass | Compiled 26-step runtime and direct/web-proxied health/readiness pass locally; deployed target not run | Production-host matrix 8/8 covers create, tasks, AI draft, review/approval, 100% readiness, launch, export, mobile, return, global logout, direct deep-link reauthentication, refresh and persistence; deployed workflow not run | **Not production-ready** |
 | CallCommand AI | Phase 11E source/local state-4 candidate: channels; bounded receptionist/intake profiles; review-only transfer targets; purpose-specific outbound consent; suppression; signed inbound DTMF intake; persistent calls/events/dispositions; reviewed follow-up drafts; real analytics and canonical deep links | Trusted session tenant/module scope, viewer denial, second-tenant non-enumeration, globally unique inbound lines, consent/suppression transaction checks, rate/idempotency controls, signed/replay-safe callbacks, masked data and recording activation/URL exclusion pass | Pass | Focused static contracts, 5/5 tenant/authorization/consent/disposition/persistence and 4/4 signed callback/inbound/replay/privacy workflows, clean aggregate 825/825 and clean/idempotent 27-step release pass | Compiled 27-step runtime and direct/web-proxied health/readiness pass locally with Twilio correctly disabled; deployed target not run | Production-host matrix 9/9 covers configuration, consent, test-provider call/event/disposition/follow-up persistence, suppression denial, deep refresh, mobile, return, global logout and direct deep-link reauthentication; deployed/live-provider workflow not run | **Not production-ready** |
 | Ninjamation | Phase 12A source/local state-4 candidate: reviewed PC automation script library; immutable versions/hashes; static analysis; admin approval; audited approved downloads; shared AI drafts; canonical deep links; no server/browser execution | Trusted session tenant/module scope, viewer denial, client-tenant override rejection, cross-tenant non-enumeration, optimistic versions, critical-finding approval block, admin-only decisions, current-approved-version download and idempotent usage pass | Pass | Focused contracts plus 4/4 PostgreSQL workflows, clean aggregate 836/836 and clean/idempotent 28-step release pass | Compiled 28-step runtime and direct/web-proxied health/readiness pass locally; OpenAI correctly disabled in the production-mode health proof; deployed target not run | Production-host matrix 9/9 launches Ninjamation through shared SSO; first-screen suite 2/2 performs safe draft, clean analysis, review, approval, real `.ps1` download and non-entitled denial on compiled artifacts; deployed workflow not run | **Not production-ready** |
+| OutCall | Phase 12B bounded source/local candidate: safety acknowledgment; verified-self phone ownership; neutral rescue profiles; encrypted private triggers; immediate/delayed requests; safe history; shared jobs, activity and exactly-once usage; no emergency-service claim | Trusted session user/tenant/module scope, viewer denial, client-tenant override rejection, global phone ownership, cross-tenant non-enumeration, idempotency, encryption/HMAC lookup, safe-message validation and verified-destination enforcement pass | Pass | 3/3 PostgreSQL workflows, clean aggregate 839/839, and clean/idempotent 29-step release pass | Compiled direct and web-proxied health/readiness pass locally; Twilio correctly disabled; deployed target not run | Production-host matrix 9/9 launches all 13 modules; first-screen suite 2/2 persists the no-external-contact OutCall test workflow and non-entitled denial | **Not production-ready** |
 
 ## Final E2E acceptance update
 
-Phase 12A keeps the local production-host matrix green at 9/9 across all
-twelve enabled modules and adds a separate compiled-artifact first-screen
+Phase 12B keeps the local production-host matrix green at 9/9 across all
+thirteen enabled modules and keeps the compiled-artifact first-screen
 suite at 2/2. Ninjamation's workflow creates and persists a safe PowerShell
 draft, reports the server static-analysis result, submits it for review,
 requires tenant-admin approval, and records a real `.ps1` download. The denied
@@ -54,6 +55,13 @@ scenario and full matrix passed on the final compiled revision. This local
 evidence does not change the release verdict: the cumulative revision is not
 deployed and no production data apply, live Twilio traffic or cutover was
 authorized.
+
+The same first-screen suite now covers OutCall's safety acknowledgment,
+test-only phone verification, neutral profile, encrypted private trigger,
+verified-self schedule/history, number masking, and non-entitled denial.
+No external call occurs. Live Twilio verification, SMS ingestion, voice/DTMF,
+signed callbacks, trusted contacts, check-ins, duress, and location remain
+disabled and block production readiness.
 
 The full 35-step production-host browser sequence was executed locally on
 2026-07-16. It emitted 28 passing evidence records and 10 failures. Shared SSO,

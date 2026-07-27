@@ -270,7 +270,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['OUTCALL_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_OUTCALL'],
     internal: false,
-    defaultStatus: 'coming_soon',
+    defaultStatus: 'live',
     component: 'operations-deck',
   },
 ] as const;

@@ -12,7 +12,7 @@ parent billing webhook, the HTTP process and worker, and application/database.
 
 | Threat                             | Required controls                                                                                                                                                       |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Stolen/replayed SSO handoff        | Short expiry, fixed issuer/audience, HS256 allowlist, one-time persisted `jti`, current account/tenant/entitlement recheck, secure child session.                       |
+| Stolen/replayed SSO handoff        | Exact callback, opaque 60-second single-use code, state, nonce, PKCE S256, current account/tenant/entitlement recheck, and host-only session.                         |
 | Cross-tenant or IDOR access        | Session-derived user/tenant, repository-layer ownership predicates, masked 404s, negative authorization tests.                                                          |
 | SMS/voice webhook forgery          | Twilio signature on exact canonical URL and original parameters, receiving-number allowlist, unique provider ids, fail closed.                                          |
 | Duplicate or concurrent delivery   | Unique MessageSid/CallSid/event constraints, transactional state changes, execution keys, `SKIP LOCKED`, provider idempotency and reconciliation.                       |
@@ -35,7 +35,7 @@ replace 911. A user-provided script cannot override these invariants. Location
 tracking is outside the MVP. Provider failure must never be represented as a
 successful rescue or stopped escalation.
 
-## Phase 1 open risks
+## Phase 12B open risks
 
 - The existing parent `.replit` contains user-environment values and should be
   audited/rotated outside this module before production; secrets must move to
@@ -43,6 +43,9 @@ successful rescue or stopped escalation.
 - The existing CallCommand Twilio helper includes recording/transcription paths;
   it cannot be reused without removing those defaults and adding OutCall-specific
   canonical URL and messaging validation.
-- Root deployment is Autoscale and cannot host the durable OutCall worker.
-- No OutCall runtime, migrations, provider validation, abuse controls, or
-  security tests exist yet. The registry therefore remains planned.
+- The shared runtime and PostgreSQL worker now own durable test-adapter calls,
+  but restart/concurrency and deployed-host evidence must be repeated on the
+  reviewed release.
+- Live Twilio Verify, SMS/Voice signatures, callbacks, DTMF, rate/spend/country
+  controls and real-number acceptance do not exist yet. Provider operations
+  remain fail-closed and the module is not production-ready.

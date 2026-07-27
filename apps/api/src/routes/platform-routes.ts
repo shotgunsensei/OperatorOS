@@ -103,6 +103,13 @@ async function existingNinjamationTables(executor: SqlExecutor): Promise<Set<str
   return new Set(result.rows.map((row) => String(row.tablename)));
 }
 
+async function existingOutCallTables(executor: SqlExecutor): Promise<Set<string>> {
+  const result = await executor.execute(sql`SELECT tablename
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = current_schema() AND tablename LIKE 'outcall_%'`);
+  return new Set(result.rows.map((row) => String(row.tablename)));
+}
+
 // Gate 2 status taxonomy: 'live' (legacy) and 'active' both signify a
 // shipping module; 'hidden' suppresses from public catalog while keeping
 // data; 'deprecated' marks for retirement (still launchable for legacy
@@ -593,6 +600,12 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           if (ninjamationTables.has('ninjamation_reviews')) await tx.execute(sql`DELETE FROM ninjamation_reviews WHERE tenant_id = ${id}`);
           if (ninjamationTables.has('ninjamation_script_versions')) await tx.execute(sql`DELETE FROM ninjamation_script_versions WHERE tenant_id = ${id}`);
           if (ninjamationTables.has('ninjamation_scripts')) await tx.execute(sql`DELETE FROM ninjamation_scripts WHERE tenant_id = ${id}`);
+          const outCallTables = await existingOutCallTables(tx);
+          if (outCallTables.has('outcall_events')) await tx.execute(sql`DELETE FROM outcall_events WHERE tenant_id = ${id}`);
+          if (outCallTables.has('outcall_call_requests')) await tx.execute(sql`DELETE FROM outcall_call_requests WHERE tenant_id = ${id}`);
+          if (outCallTables.has('outcall_triggers')) await tx.execute(sql`DELETE FROM outcall_triggers WHERE tenant_id = ${id}`);
+          if (outCallTables.has('outcall_profiles')) await tx.execute(sql`DELETE FROM outcall_profiles WHERE tenant_id = ${id}`);
+          if (outCallTables.has('outcall_settings')) await tx.execute(sql`DELETE FROM outcall_settings WHERE tenant_id = ${id}`);
           await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.tenantId, id));
           await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.tenantId, id));
           await tx.delete(moduleAutomations).where(eq(moduleAutomations.tenantId, id));
@@ -2185,6 +2198,16 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
             created_by_user_id=CASE WHEN created_by_user_id=${id} THEN NULL ELSE created_by_user_id END,
             approved_by_user_id=CASE WHEN approved_by_user_id=${id} THEN NULL ELSE approved_by_user_id END
             WHERE created_by_user_id=${id} OR approved_by_user_id=${id}`);
+          const outCallTables = await existingOutCallTables(tx);
+          if (outCallTables.has('outcall_events')) await tx.execute(sql`
+            DELETE FROM outcall_events WHERE call_request_id IN (
+              SELECT id FROM outcall_call_requests WHERE user_id=${id}
+            )`);
+          if (outCallTables.has('outcall_call_requests')) await tx.execute(sql`DELETE FROM outcall_call_requests WHERE user_id=${id}`);
+          if (outCallTables.has('outcall_triggers')) await tx.execute(sql`DELETE FROM outcall_triggers WHERE user_id=${id}`);
+          if (outCallTables.has('outcall_profiles')) await tx.execute(sql`DELETE FROM outcall_profiles WHERE user_id=${id}`);
+          if (outCallTables.has('outcall_settings')) await tx.execute(sql`DELETE FROM outcall_settings WHERE user_id=${id}`);
+          if (outCallTables.has('outcall_phone_owners')) await tx.execute(sql`DELETE FROM outcall_phone_owners WHERE user_id=${id}`);
           await tx.delete(techdeckTickets).where(eq(techdeckTickets.createdByUserId, id));
           await tx.delete(ninjaPoolMatchEvents).where(eq(ninjaPoolMatchEvents.userId, id));
           await tx.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.userId, id));

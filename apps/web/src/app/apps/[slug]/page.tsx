@@ -16,6 +16,7 @@ import StudyForgeShell from '@/components/module-shells/StudyForgeShell';
 import NinjaLaunchKitShell from '@/components/module-shells/NinjaLaunchKitShell';
 import CallCommandShell from '@/components/module-shells/CallCommandShell';
 import NinjamationShell from '@/components/module-shells/NinjamationShell';
+import OutCallShell from '@/components/module-shells/OutCallShell';
 import TechDeckShell from '@/components/module-shells/TechDeckShell';
 import PulseDeskShell from '@/components/module-shells/PulseDeskShell';
 import TradeFlowKitShell from '@/components/module-shells/TradeFlowKitShell';
@@ -54,6 +55,7 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string }>>
   'ninja-launch-kit': NinjaLaunchKitShell,
   'callcommand-ai':   CallCommandShell,
   'ninjamation':      NinjamationShell,
+  'outcall':          OutCallShell,
   'ninja-pool-hall':  NinjaPoolHallShell,
   'torqueshed':       TorqueShedWorkspace,
   'faultlinelab':     FaultlineLabWorkspace,

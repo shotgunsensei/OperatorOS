@@ -61,7 +61,7 @@ started or migrated against the OperatorOS database.
 | `ninjalaunchkit.operatoros.net` | Ninja Launch Kit module | Enabled |
 | `callcommand-ai.operatoros.net` | CallCommand AI module | Enabled |
 | `ninjamation.operatoros.net` | Ninjamation module | Enabled host; parity unresolved |
-| `outcall.operatoros.net` | Reserved OutCall module host | Disabled/fail-closed |
+| `outcall.operatoros.net` | OutCall module | Enabled bounded workload; live provider fail-closed |
 
 The machine-readable URL and environment authority is
 `config/production-environment.contract.json`. Standalone branded domains and
@@ -158,7 +158,7 @@ Child migrations and `drizzle-kit push` are not supported deployment paths.
   raw codes, cookies, passwords, secrets, or authorization headers.
 - `scripts/verify-production-runtime.mjs` performs 47 unauthenticated,
   read-only checks across health, readiness, diagnostics, PKCE redirects,
-  callback reachability, and OutCall's disabled boundary.
+  callback reachability, and OutCall's exact enabled callback boundary.
 
 ## Configuration and release order
 
