@@ -31,6 +31,14 @@ tests all pass in the target deployment.
 
 ## Final E2E acceptance update
 
+Phase 13 adds a successful 13/13 deterministic migration-planner rehearsal,
+but changes no module production-readiness row. No real source export,
+production backup/restore, source write lock, data apply, deployed smoke, DNS,
+traffic switch, archive, or decommission action occurred. The final data
+acceptance matrix is in
+`docs/migrations/FINAL_DATA_ACCEPTANCE_MATRIX.md`; all 13 production cutovers
+remain blocked.
+
 Phase 12B keeps the local production-host matrix green at 9/9 across all
 thirteen enabled modules and keeps the compiled-artifact first-screen
 suite at 2/2. Ninjamation's workflow creates and persists a safe PowerShell

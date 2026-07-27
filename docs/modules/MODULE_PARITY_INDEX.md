@@ -27,6 +27,11 @@ States: **1 Registered**, **2 Source imported**, **3 Authority conformed**,
 
 ## Cross-cutting gaps
 
+- Phase 13 now provides a deterministic 13/13 master dry-run, exact catalog and
+  release-step coverage, prohibited-authority policy, per-module mappings,
+  reconciliation contracts, conflict policy, write-freeze instructions, and
+  rollback runbooks. It is source/local evidence only: 0/13 modules have an
+  authorized real export apply or production cutover.
 - TradeFlowKit, TechDeck and PulseDesk provenance is commit-pinned. Future
   parity work must recover or explicitly baseline the remaining standalone
   sources before accepting their state-4 scope.

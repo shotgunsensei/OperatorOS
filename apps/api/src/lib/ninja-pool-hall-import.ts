@@ -1,11 +1,10 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 export const NINJA_POOL_HALL_SOURCE_COMMIT = '62439c4018ec551ce2891800351200c8ab2cb9e7';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
+const repoRoot = resolve(process.cwd());
 const sourceRoot = resolve(repoRoot, 'apps/modules/ninja-pool-hall/source');
 const promotedRoot = resolve(repoRoot, 'apps/web/src/lib/ninja-pool-hall');
 const promotedFiles = ['physics.ts', 'types.ts', 'rules.ts', 'bot.ts', 'audio.ts'] as const;
