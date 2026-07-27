@@ -37,7 +37,7 @@ be assumed to carry into the deployment.
 - [ ] All thirteen canonical module URL variables in
       `docs/operatoros-env-vars.md` are present in the Publishing environment
       and exactly match their `*.operatoros.net` origins. This includes
-      `OUTCALL_URL` even though OutCall remains disabled.
+      `OUTCALL_URL`; its live provider gate is validated separately.
 - [ ] `INTERNAL_API_URL=http://localhost:5001` is server-only and never appears
       in a public redirect.
 - [ ] `TRUST_PROXY=true` is set only because the deployment is behind Replit's
@@ -102,7 +102,7 @@ It derives the host matrix from `config/operatoros-module-registry.json` and
 checks 17-host diagnostics, platform health/readiness, all enabled anonymous
 PKCE authorization requests, all enabled callback routes, security headers,
 host-only transaction-cookie attributes, forbidden credential query names,
-and OutCall's fail-closed callback. It does not authenticate, mutate data, or
+and OutCall's exact callback. It does not authenticate, mutate data, or
 print authorization values. Continue with the authenticated browser checks
 below after it passes.
 
@@ -115,7 +115,7 @@ Open each host in a fresh (logged-out) browser and confirm:
 - [ ] `https://auth.operatoros.net` — renders the login surface.
 - [ ] Every enabled module host enters the same protected module lane. Its auth
       request carries the registered client/callback plus state, nonce, and
-      S256 challenge; OutCall remains a controlled planned/disabled surface.
+      S256 challenge; OutCall uses the same exact-host contract.
 - [ ] After signing in on the auth host, you are returned to the **original**
       subdomain you started from (module/app), not stranded on auth.
 - [ ] A controlled Host-header integration test confirms an unknown
@@ -132,12 +132,12 @@ Open each host in a fresh (logged-out) browser and confirm:
 
 ## 5. Cross-subdomain SSO
 
-- [ ] Launch each of the twelve enabled modules through OperatorOS and confirm
+- [ ] Launch each of the thirteen enabled modules through OperatorOS and confirm
       an opaque, single-use `/sso?code=<opaque>&state=<binding>` establishes
       that module's host-only, module-and-tenant-bound session without leaving
       the code in browser history.
-- [ ] Confirm OutCall remains a controlled planned/disabled surface and cannot
-      issue or exchange a code or create a session.
+- [ ] Confirm OutCall can issue/exchange only for an entitled tenant and that
+      its live provider remains fail closed until separately configured.
 - [ ] Confirm the auth request contains state, nonce, and
       `code_challenge_method=S256`, while the PKCE verifier remains HttpOnly on
       the originating host.

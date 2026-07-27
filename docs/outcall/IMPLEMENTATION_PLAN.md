@@ -4,16 +4,28 @@
 
 - Discover parent architecture and integration contracts.
 - Reserve `apps/modules/outcall` and add a data-only adapter.
-- Register OutCall in the shared catalog/ecosystem as planned.
+- Initially reserve OutCall in the shared catalog/ecosystem pending the Phase
+  12B product decision.
 - Decide on shared PostgreSQL and a single Replit Reserved VM.
 - Document SSO, data model, security, environment, deployment, and launch gates.
 
-## Phase 2 — identity, authorization, and onboarding
+## Phase 12B source/local increment — implemented
 
-Implement SSO consume and PostgreSQL-backed child sessions, entitlement refresh,
-tenant-scoped repository helpers, resumable onboarding, privacy mode, and Twilio
-Verify. Add negative SSO/cross-user/cross-tenant/suspension/replay tests and an
-onboarding Playwright flow. Do not activate the module.
+- ADR-0027 resolves the distinct/merge/cancel decision: OutCall is distinct.
+- OperatorOS opaque-code SSO, entitlement, tenant, write-role, shared jobs,
+  activity and append-only usage are reused.
+- Safety acknowledgement, globally owned verified phone, encrypted private
+  triggers, rescue profiles, verified-self scheduling, cancellation and
+  history are persistent.
+- The call adapter is test-only and requires all three explicit test gates.
+- Live provider, trusted contacts, check-ins, duress and location remain
+  fail-closed or absent, never presented as working.
+
+## Next provider increment — identity verification and inbound messaging
+
+Complete Twilio Verify, signed inbound SMS, deterministic trigger parsing,
+rate/circuit controls, status callbacks, DTMF and real-number acceptance. Do
+not enable live calls merely because local test-adapter acceptance passes.
 
 ## Phase 3 — inbound messaging
 

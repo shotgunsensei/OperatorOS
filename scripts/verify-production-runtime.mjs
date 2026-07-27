@@ -231,22 +231,6 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry } = 
     });
   }
 
-  const outcall = modules.find((entry) => entry.slug === 'outcall');
-  await runCheck(results, 'outcall disabled callback boundary', async () => {
-    if (!outcall || outcall.enabled !== false) throw new Error('OutCall must remain disabled in the registry');
-    const response = await request(fetchImpl, `${outcall.exactRedirectUris[0]}?code=probe&state=probe`);
-    requireStatus(response, [302, 303, 307, 308], 'OutCall callback');
-    requireSecurityHeaders(response, 'OutCall callback');
-    const location = new URL(response.headers.get('location') || '');
-    if (location.origin !== 'https://operatoros.net' || location.pathname !== '/app') {
-      throw new Error('OutCall callback did not fail closed to the canonical app');
-    }
-    if (location.searchParams.has('code') || location.searchParams.has('state')) {
-      throw new Error('OutCall callback forwarded untrusted code/state');
-    }
-    return 'disabled/fail-closed';
-  });
-
   const passed = results.filter((result) => result.ok).length;
   return { ok: passed === results.length, passed, failed: results.length - passed, total: results.length, results };
 }

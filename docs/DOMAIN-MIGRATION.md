@@ -4,8 +4,8 @@ Status: canonical domains already attached in Replit as of 2026-07-13. There
 is no pending DNS migration in this repository.
 
 OperatorOS now treats these addresses as the canonical attached hostnames. The
-four platform hosts and twelve enabled module hosts are active application and
-SSO surfaces; OutCall is attached only as a reserved hostname:
+four platform hosts and thirteen enabled module hosts are active application
+and SSO surfaces:
 
 - Platform: `operatoros.net`, `app.operatoros.net`, `auth.operatoros.net`, and
   `api.operatoros.net`
@@ -16,11 +16,11 @@ SSO surfaces; OutCall is attached only as a reserved hostname:
 - Enabled add-ons: `brandforgeos.operatoros.net`, `snapproofos.operatoros.net`,
   `studyforge-ai.operatoros.net`, `ninjalaunchkit.operatoros.net`,
   `callcommand-ai.operatoros.net`, and `ninjamation.operatoros.net`
-- Planned/reserved add-on: `outcall.operatoros.net`
+- Bounded active add-on: `outcall.operatoros.net`
 
-OutCall remains registered but planned/disabled. Its attached hostname and
-reserved callback metadata do not make it an active SSO client, launchable,
-purchasable, or entitled.
+OutCall is an active SSO client and launchable only through OperatorOS
+entitlement. Its live Twilio provider path remains disabled until the signed
+provider workflow and deployed acceptance gates pass.
 
 The Replit default alias `operator-os.replit.app` may reach the deployment, but
 it is not a canonical OperatorOS application origin, registered SSO callback,

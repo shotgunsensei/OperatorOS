@@ -1975,6 +1975,35 @@ export const moduleShellApi = {
         method: 'POST',
       }),
   },
+  outcall: {
+    workspace: () => apiFetch('/modules/outcall/workspace'),
+    acceptSafety: () => apiFetch('/modules/outcall/onboarding/accept-safety', {
+      method: 'POST',
+      body: JSON.stringify({ accepted: true }),
+    }),
+    verifyPhone: (phone: string, verificationCode: string) =>
+      apiFetch('/modules/outcall/phone-verification', {
+        method: 'POST',
+        body: JSON.stringify({ phone, verificationCode }),
+      }),
+    createProfile: (input: { name: string; message: string }) =>
+      apiFetch('/modules/outcall/profiles', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    createTrigger: (input: { phrase: string; neutralReply: string; delaySeconds: number }) =>
+      apiFetch('/modules/outcall/triggers', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    schedule: (input: { profileId: string; runAt?: string; idempotencyKey: string }) =>
+      apiFetch('/modules/outcall/calls', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    cancel: (id: string) =>
+      apiFetch(`/modules/outcall/calls/${encodeURIComponent(id)}/cancel`, { method: 'POST' }),
+  },
   launchkit: {
     templates: () => apiFetch('/modules/ninja-launch-kit/templates'),
     workspace: () => apiFetch('/modules/ninja-launch-kit/workspace'),

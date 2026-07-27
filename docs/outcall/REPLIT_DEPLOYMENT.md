@@ -1,14 +1,15 @@
 # OutCall Replit Deployment
 
-Status: target design; no production deployment is activated in Phase 1.
+Status: shared-runtime target design; no Phase 12B production deployment is
+claimed.
 
 ## Topology
 
-Create one Replit app from this repository, rooted/build-scoped to
-`apps/modules/outcall/source`, and publish it as a Reserved VM. The production
-entrypoint will run one Node supervisor containing the HTTP server and durable
-worker/reconciliation loops. Bind to `0.0.0.0:${PORT}`. Do not use Autoscale for
-the MVP worker and do not depend on the development workspace.
+Deploy through the repository's existing `.replit` and
+`scripts/start-unified-runtime.mjs` contract. Never start or build
+`apps/modules/outcall/source`; it is read-only evidence. The compiled Fastify
+API, Next web app, and shared PostgreSQL service worker run under the existing
+supervisor. A separate OutCall deployment requires a later workload ADR.
 
 Provision Replit managed PostgreSQL only if it is the same approved OperatorOS
 production database or an approved network path to that shared database. The
@@ -17,25 +18,25 @@ permissions. `DATABASE_URL` is the only database connection variable required.
 
 ## Build and start contract
 
-The Phase 2 runtime should provide:
+The shared runtime provides:
 
-- `pnpm install --frozen-lockfile`
-- `pnpm build` for server/UI artifacts
-- `pnpm start` for the supervised HTTP and worker process
-- `pnpm migrate` as an explicit, locked release step
-- `pnpm reconcile` as an idempotent maintenance entrypoint
+- `corepack pnpm install --frozen-lockfile`
+- `corepack pnpm build:production`
+- `corepack pnpm db:plan` and the guarded `corepack pnpm db:apply`
+- `node scripts/start-unified-runtime.mjs`
 
-The Reserved VM health check targets `GET /api/outcall/health`; readiness uses
-`GET /api/outcall/readiness` and validates database connectivity, schema
-compatibility, required configuration, and a fresh worker heartbeat without
-returning internal details.
+Platform health targets `/healthz`; `/readyz` validates the shared database,
+auth, registry and runtime. The privacy-safe module probe is
+`GET /api/modules/outcall/health`. The `--outcall-ready` preflight is the
+provider/configuration gate.
 
 ## Domain and provider routing
 
 After publishing, add `outcall.operatoros.net` in Replit Domains and copy the
 exact Replit-provided DNS record to the OperatorOS DNS provider. Do not guess
-the target. Verify DNS and TLS before configuring production callbacks. Stable
-production endpoints will be:
+the target. Verify DNS and TLS before configuring production callbacks. These
+planned endpoints must not be configured in Twilio until their signed
+implementations and controlled acceptance tests exist:
 
 - `POST https://outcall.operatoros.net/api/outcall/webhooks/twilio/sms`
 - `POST https://outcall.operatoros.net/api/outcall/webhooks/twilio/sms/status`
@@ -51,8 +52,8 @@ or forwarding header. Production must not trust `replit.dev` preview URLs.
 1. Back up/export the database and record the deployed commit.
 2. Acquire a PostgreSQL migration advisory lock and apply backward-compatible
    migrations before switching traffic.
-3. Deploy with the module still planned/disabled; verify health, readiness,
-   worker heartbeat, SSO, and provider test mode.
+3. Deploy with live provider operations fail-closed; verify health, readiness,
+   worker heartbeat, SSO, tenant isolation and the explicit provider state.
 4. Configure domain and provider callbacks, then grant a limited beta tenant.
 5. Activate registry status only in a separate reviewed release.
 

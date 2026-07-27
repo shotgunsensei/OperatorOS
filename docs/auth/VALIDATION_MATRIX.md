@@ -32,7 +32,7 @@ CORS origins, session domains, or return targets.
 | Browser refresh | PASS | Every enabled module shell survived reload under its host session |
 | Back navigation / loop prevention | PASS | Browser Back did not restart central authentication |
 | Silent sibling launch | PASS | PulseDesk reused the existing auth-host session without second credential entry |
-| Disabled module boundary | PASS | OutCall callback fails closed to the canonical app; module remains disabled |
+| OutCall module boundary | PASS LOCALLY | Exact callback and host-only session pass; non-entitled tenant is denied; live provider remains fail closed |
 | Tenant isolation and authorization | PASS | Clean aggregate suite includes cross-tenant denial, viewer write denial, and module-session sealing |
 | Structured safe observability | PASS | Request/correlation context is logged without raw codes, cookies, secrets, or passwords |
 | Health/readiness | PASS LOCALLY | Public API readiness passes, but apex `/healthz` returns 404 |

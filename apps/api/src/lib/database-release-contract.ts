@@ -25,6 +25,7 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'ninja_launch_kit_tables', kind: 'ddl' },
   { id: 'callcommand_tables', kind: 'ddl' },
   { id: 'ninjamation_tables', kind: 'ddl' },
+  { id: 'outcall_tables', kind: 'ddl' },
   { id: 'plans_and_admin', kind: 'seed' },
   { id: 'launch_fix_pre_seed', kind: 'repair' },
   { id: 'platform_components', kind: 'seed' },

@@ -41,9 +41,10 @@ exclusions. Raw source servers remain outside the executable pnpm workspace.
 2. Identify or create the canonical Ninjamation repository, add it as a Codex
    project, and provide its path. The current OperatorOS-native MVP remains the
    only observed implementation.
-3. Keep OutCall planned/disabled until its product repository exists. When a
-   real workload is approved, create/add that repository and import it with
-   `scripts/import-module-snapshot.ps1` before activation.
+3. OutCall has no recovered canonical repository. ADR-0027 and the owner's
+   recovered prompt set are the approved Phase 12B product boundary; the
+   OperatorOS-native workload is authoritative unless a future source archive
+   is explicitly reconciled.
 
 Adding a folder to Codex does not publish it, attach a domain, or activate its
 database migrations. All canonical Replit subdomains are already attached;

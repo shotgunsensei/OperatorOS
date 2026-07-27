@@ -21,6 +21,7 @@ const SHELL_TEST_IDS: Record<string, string> = {
   'ninja-launch-kit': 'shell-ninja-launch-kit',
   'callcommand-ai': 'shell-callcommand-ai',
   ninjamation: 'shell-ninjamation',
+  outcall: 'shell-outcall',
 };
 
 type BrowserModule = {
@@ -51,8 +52,8 @@ const ENABLED_MODULES: BrowserModule[] = deploymentRegistry
     };
   });
 
-if (ENABLED_MODULES.length !== 12) {
-  throw new Error(`Expected 12 enabled OperatorOS modules, found ${ENABLED_MODULES.length}`);
+if (ENABLED_MODULES.length !== 13) {
+  throw new Error(`Expected 13 enabled OperatorOS modules, found ${ENABLED_MODULES.length}`);
 }
 
 const PUBLIC_AUTH_HEADERS = {
@@ -143,6 +144,11 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
   if (!identity) return;
   const { userId, tenantId } = identity;
   const tenantTables = [
+    'outcall_events',
+    'outcall_call_requests',
+    'outcall_triggers',
+    'outcall_profiles',
+    'outcall_settings',
     'callcommand_followups',
     'callcommand_events',
     'callcommand_calls',
@@ -251,6 +257,7 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
     throw error;
   }
   for (const [sql, params] of [
+    [`delete from outcall_phone_owners where user_id = $1`, [userId]],
     [`delete from sso_handoff_tokens where user_id = $1`, [userId]],
     [`delete from subscriptions where user_id = $1`, [userId]],
     [`delete from activity_feed where user_id = $1`, [userId]],
@@ -337,7 +344,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await pg.end().catch(() => undefined);
   });
 
-  test('one credential entry establishes the canonical app host then silently launches all twelve enabled modules', async ({ page, request }) => {
+  test('one credential entry establishes the canonical app host then silently launches all thirteen enabled modules', async ({ page, request }) => {
     test.setTimeout(180_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);

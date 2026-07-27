@@ -16,9 +16,9 @@ const registry = JSON.parse(readFileSync(resolve(repoRoot, 'config/operatoros-mo
 
 test('production-host browser matrix is registry-derived for every enabled module', () => {
   const enabled = registry.filter(entry => entry.moduleId !== 'operatoros' && entry.enabled);
-  assert.equal(enabled.length, 12);
+  assert.equal(enabled.length, 13);
   assert.match(spec, /config\/operatoros-module-registry\.json/);
-  assert.match(spec, /ENABLED_MODULES\.length !== 12/);
+  assert.match(spec, /ENABLED_MODULES\.length !== 13/);
   assert.doesNotMatch(spec, /const CORE_MODULES/);
   for (const module of enabled) {
     const escapedSlug = module.slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

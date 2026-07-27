@@ -47,7 +47,7 @@ test('core preflight requires every exact OperatorOS module subdomain', () => {
 
 test('production preflight defaults to core and rejects unsafe authority configuration', () => {
   assert.deepEqual(preflight.resolveProfiles([]), ['core']);
-  assert.deepEqual(preflight.resolveProfiles(['--', '--all']), ['core', 'revenue', 'email', 'callcommand', 'ai']);
+  assert.deepEqual(preflight.resolveProfiles(['--', '--all']), ['core', 'revenue', 'email', 'callcommand', 'outcall', 'ai']);
   assert.equal(preflight.evaluateProductionEnvironment(coreEnv).ok, true);
 
   const unsafe = preflight.evaluateProductionEnvironment({
@@ -112,13 +112,19 @@ test('all readiness profiles pass with live shared-runtime providers', () => {
     TWILIO_AUTH_TOKEN: 'test-placeholder',
     TWILIO_FROM_NUMBER: '+15555550100',
     TWILIO_PUBLIC_BASE_URL: 'https://callcommand-ai.operatoros.net',
+    OUTCALL_PUBLIC_URL: 'https://outcall.operatoros.net',
+    OUTCALL_FIELD_ENCRYPTION_KEY: 'outcall-field-encryption-test-key-32-plus',
+    OUTCALL_LOOKUP_HMAC_KEY: 'outcall-lookup-hmac-test-key-32-plus',
+    TWILIO_VERIFY_SERVICE_SID: 'VAtestplaceholder',
+    TWILIO_PHONE_NUMBER: '+15555550101',
     OPENAI_API_KEY: 'sk-test-placeholder',
   };
   const profiles = preflight.resolveProfiles(['--all']);
   const report = preflight.evaluateProductionEnvironment(env, profiles);
   assert.equal(report.ok, true);
-  assert.equal(report.profiles.length, 5);
+  assert.equal(report.profiles.length, 6);
   assert.match(preflight.formatReport(report), /PASS callcommand/);
+  assert.match(preflight.formatReport(report), /PASS outcall/);
 });
 
 test('preflight output contains names and messages but never secret values', () => {

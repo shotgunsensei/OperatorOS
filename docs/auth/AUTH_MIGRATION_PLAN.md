@@ -34,13 +34,14 @@ The repository retains legacy verification helpers, consume aliases, and
 imported standalone adapters for a bounded rollback window. Production leaves
 legacy consume routes unmounted unless `ALLOW_LEGACY_SSO_ROLLBACK=true` is set
 for a time-boxed emergency rollback. They are not active runtime authorities.
-The platform browser client and all twelve enabled module clients use one
+The platform browser client and all thirteen enabled module clients use one
 shared `/sso` page and a same-origin server exchange. Every exchange validates
 exact host, state, nonce, PKCE, single-use persistence, and user status. Module
 exchanges additionally validate tenant status/membership, global module state,
 and entitlement before setting a module-and-tenant-bound host-only
 `operatoros_session`; the platform client receives a host-only platform
-session without tenant or module claims. OutCall remains planned/disabled.
+session without tenant or module claims. OutCall uses the same contract for its
+bounded Phase 12B workload.
 
 The previously documented source blocker is resolved: the unified deployment
 now contains the callback and server-side exchange. The 2026-07-13 live probes

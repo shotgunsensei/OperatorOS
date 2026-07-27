@@ -9,13 +9,14 @@ export const PRODUCTION_ENVIRONMENT_CONTRACT = Object.freeze(
   JSON.parse(readFileSync(CONTRACT_PATH, 'utf8')),
 );
 
-const PROFILE_ORDER = ['core', 'revenue', 'email', 'callcommand', 'ai'];
+const PROFILE_ORDER = ['core', 'revenue', 'email', 'callcommand', 'outcall', 'ai'];
 
 const PROFILE_FLAGS = new Map([
   ['--core', 'core'],
   ['--revenue-ready', 'revenue'],
   ['--email-ready', 'email'],
   ['--callcommand-ready', 'callcommand'],
+  ['--outcall-ready', 'outcall'],
   ['--ai-ready', 'ai'],
 ]);
 
@@ -185,6 +186,37 @@ function checkCallCommand(env, issues) {
   }
 }
 
+function checkOutCall(env, issues) {
+  if (env.OUTCALL_PUBLIC_URL !== 'https://outcall.operatoros.net') {
+    addIssue(issues, 'outcall', 'OUTCALL_PUBLIC_URL', 'must equal https://outcall.operatoros.net');
+  }
+  requirePresent(env, issues, 'outcall', [
+    'OUTCALL_FIELD_ENCRYPTION_KEY',
+    'OUTCALL_LOOKUP_HMAC_KEY',
+    'TWILIO_ACCOUNT_SID',
+    'TWILIO_AUTH_TOKEN',
+    'TWILIO_VERIFY_SERVICE_SID',
+    'TWILIO_PHONE_NUMBER',
+  ]);
+  for (const name of ['OUTCALL_FIELD_ENCRYPTION_KEY', 'OUTCALL_LOOKUP_HMAC_KEY']) {
+    if (isPresent(env, name) && env[name].length < 32) {
+      addIssue(issues, 'outcall', name, 'must contain at least 32 characters');
+    }
+  }
+  if (isPresent(env, 'TWILIO_ACCOUNT_SID') && !env.TWILIO_ACCOUNT_SID.startsWith('AC')) {
+    addIssue(issues, 'outcall', 'TWILIO_ACCOUNT_SID', 'must be a Twilio Account SID');
+  }
+  if (isPresent(env, 'TWILIO_VERIFY_SERVICE_SID') && !env.TWILIO_VERIFY_SERVICE_SID.startsWith('VA')) {
+    addIssue(issues, 'outcall', 'TWILIO_VERIFY_SERVICE_SID', 'must be a Twilio Verify Service SID');
+  }
+  if (isPresent(env, 'TWILIO_PHONE_NUMBER') && !/^\+[1-9]\d{7,14}$/.test(env.TWILIO_PHONE_NUMBER)) {
+    addIssue(issues, 'outcall', 'TWILIO_PHONE_NUMBER', 'must be an E.164 phone number');
+  }
+  if (['1', 'true', 'enabled'].includes(String(env.OUTCALL_TEST_ADAPTER).toLowerCase())) {
+    addIssue(issues, 'outcall', 'OUTCALL_TEST_ADAPTER', 'must be disabled in production');
+  }
+}
+
 function checkAi(env, issues) {
   requirePresent(env, issues, 'ai', ['OPENAI_API_KEY']);
 }
@@ -194,6 +226,7 @@ const CHECKS = {
   revenue: checkRevenue,
   email: checkEmail,
   callcommand: checkCallCommand,
+  outcall: checkOutCall,
   ai: checkAi,
 };
 

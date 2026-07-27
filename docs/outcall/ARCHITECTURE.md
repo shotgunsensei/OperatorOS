@@ -1,6 +1,8 @@
 # OutCall Architecture
 
-Status: Phase 1 architecture decision. OutCall is registered but not activated.
+Status: Phase 12B source/local implementation. ADR-0027 defines OutCall as a
+distinct verified-self exit-assistance and personal-safety add-on. Live
+provider and deployed production acceptance remain closed.
 
 ## Repository discovery
 
@@ -43,16 +45,17 @@ OutCall's durable worker requirement makes autoscale unsuitable.
 
 ## Placement decision
 
-OutCall belongs at `apps/modules/outcall`, with runtime source under
-`apps/modules/outcall/source` and a thin OperatorOS adapter at the module root.
-This follows the existing TechDeck, PulseDesk, and TradeFlowKit convention.
-OutCall is added to `MODULE_CATALOG` as an external, `planned` Operations Deck
-module. The catalog derives its database seed, entitlement key `outcall`, host,
-app card, and navigation behavior; no parallel product list is introduced.
+The recovered prompts replace the missing standalone repository as product
+specification evidence; they are not executed source. Active runtime code lives
+in the canonical shared boundaries: `apps/api/src/lib/outcall*.ts`,
+`apps/api/src/routes/outcall-routes.ts`, and
+`apps/web/src/components/module-shells/OutCallShell.tsx`.
+`apps/modules/outcall/source` remains non-executable migration evidence.
 
 ## Runtime topology
 
-Use one Replit Reserved VM for the MVP. One supervised Node application owns:
+Use the current host-aware OperatorOS Replit runtime and shared service worker.
+One supervised release owns:
 
 1. Public HTTP/API and Twilio webhook handling.
 2. A separately cancellable scheduler/worker loop.
@@ -128,5 +131,7 @@ provider interaction. Keeping these separate makes retries and billing auditable
 Root scripts provide build and typecheck, while API tests use Node's test runner.
 There is no root lint, format, or test script and no checked-in GitHub Actions
 workflow discovered. Replit configuration, deployment logs, Fastify logging,
-and central audit are the current operational mechanisms. Phase 2 should add
-OutCall-specific unit/integration/e2e scripts before runtime activation.
+and central audit are the current operational mechanisms. Phase 12B adds
+focused contract/database tests and includes OutCall in the production-host
+SSO and first-screen browser matrices. Live provider and deployed-host
+evidence remain required before a production-ready claim.

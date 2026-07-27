@@ -18,7 +18,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
   Kit intentionally uses `ninjalaunchkit.operatoros.net`. These Replit-attached
   subdomains are the production destinations, not an interim migration layer.
   Standalone branded domains are legacy references only. OutCall's subdomain
-  is attached/reserved but remains planned and disabled.
+  is active for the bounded shared-runtime Phase 12B workload.
 - Module code owns only its product UI, tenant-scoped workflows, module data,
   and operational integrations.
 - A module may become a separately deployed workload only when its runtime or
@@ -42,7 +42,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 | Ninja Launch Kit | `ninja-launch-kit` | `ninjalaunchkit.operatoros.net` | add-on | Clean `C:\Dev\Ninja-Launch-Kit` and snapshot at `30bd1abc05846926e97bc7b26c5b7d6625e8f161` | Phase 11D source/local state-4 candidate: tenant-scoped launches, phases, milestones, task dependencies, reviewed campaign artifacts, private shared assets, server-computed readiness, OperatorOS-owned AI/idempotency/usage/activity, audited JSON/Markdown/CSV exports, responsive workspace and canonical deep links. ADR-0024 separates launch execution from BrandForgeOS brand/campaign authority and excludes child identity/billing/admin, legacy URL-token SSO and simulated claims. Clean 26-step release, aggregate 816/816, compiled health/readiness and production-host matrix 8/8 pass locally; deployed acceptance and authorized data reconciliation/cutover still block state 5 |
 | CallCommand AI | `callcommand-ai` | `callcommand-ai.operatoros.net` | add-on | Clean `C:\Dev\Call-Command-AI` and snapshot at `d49434e1d641d62cc141591c7208539a7afbf11e` | Phase 11E source/local state-4 candidate: tenant channels, bounded receptionist/intake profiles, review-only transfer targets, purpose-specific outbound consent, do-not-call suppression, signed inbound DTMF intake, persistent calls/safe events, operator dispositions, reviewed follow-up drafts and record-derived analytics; explicit test-only adapter; fail-closed Twilio provider; replay-safe callbacks; forced-off recording with no SID/URL activation; responsive workspace and canonical deep links. ADR-0025 assigns contacts to Shared Directory and excludes child authority/billing, fake delivery, transfer execution, recording/transcription/AI summaries, incomplete SIP providers and bulk/cold/predictive/autonomous dialing; OutCall remains disabled. Clean 27-step release, aggregate 825/825, compiled health/readiness and production-host matrix 9/9 pass locally; deployed/live-provider acceptance and authorized reconciliation/cutover still block state 5 |
 | Ninjamation | `ninjamation` | `ninjamation.operatoros.net` | add-on | Replit-synced AutomationPacks source at `C:\Dev\Ninjamation`, application commit `cca75338d04ed35b89f28d614eb51559735aa32f`, catalog commit `ca0e55fd086f6751a43964927166bfa69db012b6`; 263 tracked/184 retained files, 2,855,775 bytes, zero high-confidence secret findings | Phase 12A source/local state-4 candidate: tenant-scoped PC automation script authoring; immutable versions; server static analysis; review submission; tenant-admin approve/reject/retire; approved-current-version-only downloads with immutable audit; shared AI drafts with idempotent usage; responsive workspace and canonical deep links. ADR-0026 forbids OperatorOS/browser script execution and excludes child identity/billing/admin/sync. AutoWorkFlowHub is discontinued and excluded. Clean/idempotent 28-step release, aggregate 836/836, compiled health/readiness, production-host matrix 9/9 and first-screen workflows 2/2 pass locally; deployment and authorized reconciliation/cutover still block state 5 |
-| OutCall | `outcall` | `outcall.operatoros.net` | add-on | No saved Codex project/source path observed | Planned/disabled placeholder; not purchasable or launchable |
+| OutCall | `outcall` | `outcall.operatoros.net` | add-on | No canonical source repository recovered; product contract reconstructed from the owner's ten-phase prompt set | Phase 12B bounded source/local candidate: verified-self personal-safety exit assistance with safety acknowledgment, encrypted verified phone and triggers, neutral profiles, immediate/delayed requests, persistent safe history, shared jobs/activity/usage and canonical deep links. ADR-0027 keeps it distinct from CallCommand and excludes emergency dispatch, impersonation, recording, location, arbitrary destinations and unfinished extensions. Deterministic no-contact browser workflow passes; live Twilio verification/SMS/voice/DTMF/callbacks and deployed acceptance remain gated |
 
 ## Current verification boundary
 
@@ -110,9 +110,9 @@ source branches may proceed; every promotion and production-ready claim remains
 blocked until the cumulative candidate is deployed and the public gate passes
 in full.
 
-The production-host Playwright gate also passes locally against a disposable
+The current production-host Playwright gate also passes locally against a disposable
 PostgreSQL database and HTTPS host-preserving proxy: one central credential
-entry establishes the apex session, then all twelve enabled modules launch
+entry establishes the apex session, then all thirteen enabled modules launch
 silently with independent host-only sessions, survive reload, keep credentials
 out of URLs/storage, and honor global revocation. The fresh Phase 6 2/2 run
 completed in 3.9 minutes and passed direct deep-link return, browser Back
@@ -122,13 +122,13 @@ workflows and returns a module-scoped recovery state for unsupported paths.
 This raises confidence in the shared runtime but does not change the honest
 workflow-parity labels in the inventory above.
 
-The four formerly generic enabled modules now execute native shared-runtime
+The formerly generic enabled modules now execute native shared-runtime
 workflows as well. A 5/5 isolated-PostgreSQL contract proves TorqueShed,
 FaultlineLab, BrandForgeOS, and SnapProofOS create, list, update, and soft-delete
 tenant records; reject stale writes; isolate a second tenant; and permit module
-viewers to read while denying their writes. Together with the eight existing
-shells, all twelve enabled modules now have an OperatorOS-owned functional
-surface. OutCall remains the deliberate planned/disabled exception.
+viewers to read while denying their writes. All thirteen enabled modules now
+have an OperatorOS-owned functional surface. OutCall's surface is intentionally
+bounded and keeps all live provider operations fail closed.
 
 TradeFlowKit now runs its approved revenue and field-service workflow inside
 OperatorOS. Lead conversion creates or reuses shared Directory identities and

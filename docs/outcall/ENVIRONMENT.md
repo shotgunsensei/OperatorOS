@@ -34,11 +34,13 @@ The parent owns `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`; do not copy the
 into the child unless a reviewed topology makes it unavoidable. The parent also
 uses `STRIPE_PRICE_ADDON_OUTCALL` when OutCall is commercially activated.
 
-OutCall requires independent, versioned `FIELD_ENCRYPTION_KEY`,
-`PHONE_LOOKUP_HMAC_KEY`, `AUDIT_LOG_HMAC_KEY`, `INTERNAL_JOB_SECRET`, and
-`CRON_SECRET`. Production startup fails closed for absent, malformed, reused, or
-known development values. Document old key versions during rotation; never
-overwrite ciphertext keys without a migration.
+The active shared-runtime implementation requires independent, versioned
+`OUTCALL_FIELD_ENCRYPTION_KEY` and `OUTCALL_LOOKUP_HMAC_KEY`. The
+`--outcall-ready` production preflight also requires the canonical
+`OUTCALL_PUBLIC_URL`, Twilio account/auth/Verify configuration, and the
+OutCall-owned E.164 number. `OUTCALL_TEST_ADAPTER` must be absent in production.
+Production routes fail closed for absent protection values. Document old key
+versions during rotation; never overwrite ciphertext keys without a migration.
 
 ## Safe public variables
 
