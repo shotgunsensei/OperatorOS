@@ -44,7 +44,7 @@ PHI-minimized department escalation queue.
 
 Phase 6 may reach source/local state 4 after the approved rows above are
 implemented and verified on an isolated database. State 5 additionally
-requires deployment of the reviewed cumulative revision, the public 47/47
+requires deployment of the reviewed cumulative revision, the public 48/48
 gate, authenticated deployed PulseDesk workflow/deep-link/logout/privacy
 acceptance, provider decisions, and an approved standalone-data apply and
 cutover. No local result waives those gates.

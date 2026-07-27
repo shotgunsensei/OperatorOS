@@ -7,7 +7,7 @@
 - Quarantined evidence: `apps/modules/tradeflowkit/source`
 - Source/local consolidation result: state 4 candidate
 - State 5 result: blocked; cumulative candidate is not deployed and the public
-  OperatorOS release gate remains 32/47
+  OperatorOS release gate remains 32/48
 
 ## Provenance
 
@@ -99,7 +99,7 @@ out of 693 in 346.8 seconds.
 The source/local implementation is a state 4 candidate because approved
 workflows are implemented and the excluded legacy surfaces have accepted ADR
 dispositions. It is not state 5. State 5 requires the cumulative revision to
-be deployed, public 47/47 verification, authenticated deployed TradeFlowKit
+be deployed, public 48/48 verification, authenticated deployed TradeFlowKit
 browser workflow, public-document smoke, real production provider acceptance
 for any provider enabled at launch, and cutover reconciliation on an approved
 export.

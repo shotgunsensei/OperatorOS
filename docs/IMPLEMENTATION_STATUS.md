@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-27
-- Phase: **14 hardening source/local candidate; deployment and live-provider gates remain blocked**
+- Phase: **15 deployed acceptance in progress; release stopped**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -20,10 +20,31 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/phase-14-hardening`
+- Execution branch: `codex/phase-15-deployed-acceptance`
 - Release gate: **closed**
 
 ## Current verdict
+
+Phase 15 has not accepted a production release. The fresh public verifier
+passed 32/48 checks and failed apex health, apex PKCE authorization, and the
+app plus all 13 module transaction-cookie checks. Deployment
+`0a34bd3d-5706-434d-87ee-fffd3bf6e5cd` / build
+`c49eeb9c-5f0b-40b3-9f31-44813446124c` then failed before the repository build
+command because Replit's automatic `npm install` rejected pnpm-only scoped
+override selectors in root `package.json`. The npm-facing manifest was made
+compatible without removing the authoritative pnpm security overrides.
+
+Fresh local regression on 2026-07-27: npm install dry-run passed; frozen pnpm
+install passed; `pnpm audit --audit-level low` reported no known
+vulnerabilities; the Phase 15 release/preinstall contract passed 4/4;
+workspace typecheck passed; and `build:production` produced API, runner, SDK,
+and Next artifacts. The build now generates a non-secret release manifest and
+production readiness fails closed unless the exact 40-character commit and
+24-character build ID are available. Redeployment, 48/48 public verification,
+authenticated workflows, live-provider acceptance, production backup/apply,
+and rollback rehearsal remain open. No module state changed.
+
+## Phase 14 source/local verdict
 
 Phase 14 removed every known dependency vulnerability from the reviewed pnpm
 graph, added shared API/web security headers, bounded and validated the
@@ -988,7 +1009,7 @@ acceptance. Those gates remain explicit blockers.
 ## Open release blockers
 
 1. Human-authorized deployment of the reviewed cumulative revision.
-2. Public 47/47 runtime verification and authenticated deployed browser
+2. Public 48/48 runtime verification and authenticated deployed browser
    acceptance on that exact revision.
 3. Production provider preflight for every feature intended to be live;
    disabled or test provider behavior is not delivery evidence.

@@ -45,7 +45,7 @@ documentation, lifecycle, and import behavior.
 
 Phase 5 may reach source/local state 4 when the approved target rows above are
 implemented and locally verified. State 5 still requires deployment of the
-cumulative revision, public 47/47 verification, authenticated deployed
+cumulative revision, public 48/48 verification, authenticated deployed
 TechDeck workflow/deep-link/logout evidence, production attachment/provider
 decisions, and an approved standalone-data cutover. No local result waives
 those gates.

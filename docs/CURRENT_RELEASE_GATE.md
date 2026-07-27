@@ -1,12 +1,15 @@
 # OperatorOS current release gate
 
 - Evidence date: 2026-07-27
-- Candidate branch: `codex/phase-12b-outcall-rebuild`
+- Candidate branch: `codex/phase-15-deployed-acceptance`
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
-- Platform and Phases 2-12B source/local gate: **PARTIAL; Phase 12B bounded scoped gates and clean ecosystem aggregate pass, live-provider and deployed gates remain open**
-- Public deployment gate: **FAIL (32/47)**
+- Platform and Phases 2-14 source/local gate: **PARTIAL; local hardening gates pass, live-provider and deployed gates remain open**
+- Public deployment gate: **FAIL (32/48)**
+- Latest deployment attempt: **FAILED BEFORE BUILD** — deployment
+  `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd`, build
+  `c49eeb9c-5f0b-40b3-9f31-44813446124c`
 - Overall release decision: **CLOSED — do not promote**
 
 ## Decision
@@ -86,10 +89,19 @@ enabled modules, and the first-screen suite passes 2/2. Live Twilio
 verification/SMS/voice/DTMF/callbacks, export/deletion UI and deployed
 acceptance remain incomplete, so OutCall is not state 4/5 or production-ready.
 
-The candidate was not deployed because deployment/publishing was not
-authorized. The current public hosts still serve an older release. The release
-gate remains closed until a human deploys the reviewed commit and the public
-verifier reaches 47/47 plus authenticated browser acceptance on that exact
+The first Phase 15 deployment attempt did not reach the repository build
+command. Replit's automatic `npm install` rejected pnpm-only `parent>child`
+override selectors in the root `package.json` with `EINVALIDTAGNAME`. The
+selectors remain authoritative in `pnpm-workspace.yaml`; the npm-facing
+duplicates were removed and direct dependency overrides now use npm's `$name`
+references. A fresh `npm install --ignore-scripts --package-lock=false
+--dry-run`, frozen pnpm install, zero-vulnerability audit, typecheck, and
+production build pass locally. No runtime or database change occurred in the
+failed deployment.
+
+The current public hosts still serve an older release. The release gate remains
+closed until a human deploys the reviewed Phase 15 commit and the public
+verifier reaches 48/48 plus authenticated browser acceptance on that exact
 revision.
 
 No module is declared production-ready by this platform gate. Real workflow
@@ -122,18 +134,19 @@ and migration parity remain controlled by the module parity index.
 | Focused Phase 12B tests | PASS | 3/3 OutCall tenant/authorization/encryption/verified-destination/idempotency/usage workflows plus 34/34 registry/release/preflight/SSO contracts |
 | Phase 2 browser workflow | PASS LOCALLY | 1/1 on compiled artifacts; CRUD, refresh persistence, same organization ID across three modules, and no script-readable auth |
 | Full API regression | PASS | Fresh untouched-schema aggregate on the exact Phase 12B source passed 839/839 with 0 failures, 0 skips and 0 todo |
-| Public read-only runtime verifier | FAIL | 32/47 on 2026-07-18; no authentication and no mutation |
+| Replit automatic npm preinstall | PASS LOCALLY AFTER DEFECT FIX | npm dry-run exits 0; pnpm-only scoped overrides remain in `pnpm-workspace.yaml` |
+| Public read-only runtime verifier | FAIL | 32/48 on 2026-07-27; no authentication and no mutation |
 | Formatting/lint | NOT DEFINED | Repository has no supported formatting or lint script; no pass is claimed |
 
 ## Public deployment blocker
 
-The 2026-07-18 read-only verifier confirmed TLS/host attachment, API
+The 2026-07-27 read-only verifier confirmed TLS/host attachment, API
 readiness, all 17 public diagnostics, every enabled callback route, and
 OutCall's fail-closed callback. It failed these release-critical checks:
 
 - `https://operatoros.net/healthz` returned 404.
 - The apex `/app` path did not emit the registered PKCE authorization request.
-- The app host and all 12 enabled module launch redirects lacked the three
+- The app host and all 13 enabled module launch redirects lacked the three
   host-only SSO transaction cookies expected from the candidate release.
 
 This signature is consistent with the reviewed source not being deployed. It
@@ -148,7 +161,8 @@ weakening the verifier.
    `corepack pnpm preflight:production -- --core`; enable provider profiles only
    when the corresponding feature is meant to be live.
 3. Confirm the provider-managed backup is current before the database release.
-4. Run `corepack pnpm verify:production` and require 47/47.
+4. Run `corepack pnpm verify:production` and require 48/48, including exact
+   release commit/build identity from readiness.
 5. Run authenticated browser SSO, direct deep-link, return navigation, refresh,
    local logout, global logout, expired session, disabled entitlement, second
    tenant isolation, and unauthorized API checks on the deployed revision.

@@ -41,7 +41,7 @@ in the table is authoritative.
 ## Remaining state-5 gates
 
 - Review and human-authorized deployment of the cumulative revision.
-- Public 47/47 read-only verification on the exact deployed commit.
+- Public 48/48 read-only verification on the exact deployed commit.
 - Authenticated deployed TechDeck create/update/reload/deep-link/logout and
   second-tenant denial evidence.
 - Approved production attachment/provider decisions.

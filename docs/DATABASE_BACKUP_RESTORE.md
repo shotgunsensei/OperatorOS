@@ -51,7 +51,7 @@ database and switch traffic after validation.
 5. Build with `corepack pnpm build:production`.
 6. Start through `node scripts/start-unified-runtime.mjs`. The supervisor must
    complete the database release and private `/readyz` before Next starts.
-7. Require public `/healthz`, `/readyz`, the 47-check read-only verifier, and
+7. Require public `/healthz`, `/readyz`, the 48-check read-only verifier, and
    authenticated browser acceptance before accepting traffic.
 8. If any identity, tenant, entitlement, audit, persistence, SSO, or readiness
    gate fails, restore/switch according to the recovery procedure below.

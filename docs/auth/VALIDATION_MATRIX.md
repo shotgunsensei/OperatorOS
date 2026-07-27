@@ -1,8 +1,8 @@
 # OperatorOS SSO v1 validation matrix
 
-- Refreshed: 2026-07-17
+- Refreshed: 2026-07-27
 - Source/local result: **PASS**
-- Public deployed result: **FAIL (32/47)**
+- Public deployed result: **FAIL (32/48)**
 - Overall production gate: **CLOSED**
 
 All platform and module callbacks use the exact `*.operatoros.net` registry.
@@ -47,7 +47,7 @@ canonical Host header while mapping the browser to the local runtime.
 
 `E2E_PRODUCTION_HOSTS=1 corepack pnpm --dir apps/web test:e2e:sso` passed 2/2
 in 25.3 seconds. The registry-derived test covered the auth and app hosts plus
-all 12 enabled module hosts. It asserted one credential entry, exact callback,
+all 13 enabled module hosts. It asserted one credential entry, exact callback,
 PKCE/state/nonce, host-only cookies, no credential query/storage leakage,
 reload, direct deep-link return, browser Back, silent sibling launch, local
 logout, and global revocation.
@@ -73,26 +73,26 @@ Local HTTPS probes also returned:
 ### Public read-only verification
 
 `corepack pnpm verify:production` ran without authentication or mutation on
-2026-07-17:
+2026-07-27:
 
-- 32/47 passed.
-- API readiness, auth security headers, all 17 host diagnostics, all 12
+- 32/48 passed.
+- API readiness, auth security headers, all 17 host diagnostics, all 13
   enabled callback routes, and OutCall's fail-closed callback passed.
 - Apex `/healthz` returned 404.
 - Apex `/app` did not emit the registered PKCE request.
-- App plus all 12 enabled modules did not set the three candidate host-only
+- App plus all 13 enabled modules did not set the three candidate host-only
   transaction cookies on anonymous authorization.
 
 The public signature shows that the reviewed Phase 1 source is not deployed.
 Do not add a parent-domain cookie, accept a legacy callback, or relax the
-verifier. Deploy the scoped candidate, then require 47/47 and repeat the
+verifier. Deploy the scoped candidate, then require 48/48 and repeat the
 authenticated browser matrix on the exact deployed revision.
 
 ## Remaining deployed acceptance
 
 After authorized deployment, run and record:
 
-1. Public read-only verifier: 47/47.
+1. Public read-only verifier: 48/48, including exact release identity.
 2. Real configured test-user login and entitled My Apps filtering.
 3. Direct and launcher-based entry for the primary modules.
 4. Deep-link return, refresh, expired session, disabled entitlement, local

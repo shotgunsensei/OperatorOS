@@ -176,10 +176,20 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry } = 
     const response = await request(fetchImpl, 'https://api.operatoros.net/readyz');
     requireStatus(response, [200], 'API readiness');
     const body = await jsonOrNull(response);
-    if (body?.ready !== true || body?.checks?.ssoCodeEncryption !== 'configured') {
-      throw new Error('API readiness did not confirm SSO code encryption');
+    if (
+      body?.ready !== true ||
+      body?.checks?.ssoCodeEncryption !== 'configured' ||
+      body?.checks?.releaseIdentity !== 'configured'
+    ) {
+      throw new Error('API readiness did not confirm SSO encryption and release identity');
     }
-    return 'ready';
+    if (
+      !/^[0-9a-f]{40}$/.test(body?.release?.commit || '') ||
+      !/^[0-9a-f]{24}$/.test(body?.release?.buildId || '')
+    ) {
+      throw new Error('API readiness did not expose a valid commit and build ID');
+    }
+    return `ready ${body.release.commit.slice(0, 12)} build ${body.release.buildId}`;
   });
   await runCheck(results, 'auth response headers', async () => {
     const response = await request(fetchImpl, 'https://auth.operatoros.net/login');

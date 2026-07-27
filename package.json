@@ -29,7 +29,7 @@
     "dev:runner": "pnpm --dir apps/runner-gateway dev",
     "dev:web": "pnpm --dir apps/web dev",
     "build": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web build",
-    "build:production": "pnpm typecheck && pnpm build",
+    "build:production": "node scripts/generate-release-metadata.mjs && pnpm typecheck && pnpm build",
     "start": "pnpm -r --parallel --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web start",
     "typecheck": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web typecheck"
   },
@@ -156,23 +156,7 @@
     "picomatch": "4.0.5",
     "@xmldom/xmldom": ">=0.9.10",
     "ws": "$ws",
-    "vite": "7.3.6",
-    "express>router": ">=2.2.0",
-    "router>path-to-regexp": ">=8.4.0",
-    "recharts>lodash": ">=4.18.0",
-    "@fastify/ajv-compiler>fast-uri": ">=3.1.4",
-    "ajv>fast-uri": ">=3.1.4",
-    "fast-json-stringify>fast-uri": ">=3.1.4",
-    "fastify>find-my-way": ">=9.7.0",
-    "minimatch>brace-expansion": ">=5.0.8",
-    "next>sharp": ">=0.35.0",
-    "next>postcss": ">=8.5.18",
-    "@vitejs/plugin-react>@babel/core": "7.29.6",
-    "express>body-parser": ">=2.3.0",
-    "express>qs": ">=6.15.2",
-    "tsx>esbuild": ">=0.28.1",
-    "vite>esbuild": ">=0.28.1",
-    "@esbuild-kit/core-utils>esbuild": ">=0.25.0"
+    "vite": "$vite"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
