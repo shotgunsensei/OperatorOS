@@ -142,6 +142,11 @@ async function cleanupUser(pg: Client, userId: string) {
   try { await pg.query(`delete from module_call_logs where user_id = $1`, [userId]); } catch {}
   try { await pg.query(`delete from module_study_sessions where user_id = $1`, [userId]); } catch {}
   try { await pg.query(`delete from module_automations where user_id = $1`, [userId]); } catch {}
+  try { await pg.query(`update ninjamation_generations set user_id = null where user_id = $1`, [userId]); } catch {}
+  try { await pg.query(`update ninjamation_downloads set downloaded_by_user_id = null where downloaded_by_user_id = $1`, [userId]); } catch {}
+  try { await pg.query(`update ninjamation_reviews set reviewer_user_id = null where reviewer_user_id = $1`, [userId]); } catch {}
+  try { await pg.query(`update ninjamation_script_versions set created_by_user_id = null where created_by_user_id = $1`, [userId]); } catch {}
+  try { await pg.query(`update ninjamation_scripts set created_by_user_id = null, approved_by_user_id = null where created_by_user_id = $1 or approved_by_user_id = $1`, [userId]); } catch {}
   try { await pg.query(`delete from module_scaffolds where user_id = $1`, [userId]); } catch {}
   try { await pg.query(`delete from activity_feed where user_id = $1`, [userId]); } catch {}
   try { await pg.query(`delete from tenant_user_module_access where user_id = $1`, [userId]); } catch {}
@@ -160,6 +165,11 @@ async function cleanupUser(pg: Client, userId: string) {
       try { await pg.query(`delete from launchkit_phases where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from launchkit_generations where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from launchkit_launches where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from ninjamation_generations where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from ninjamation_downloads where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from ninjamation_reviews where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from ninjamation_script_versions where tenant_id = $1`, [t.id]); } catch {}
+      try { await pg.query(`delete from ninjamation_scripts where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from shared_activity_events where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from module_call_logs where tenant_id = $1`, [t.id]); } catch {}
       try { await pg.query(`delete from module_study_sessions where tenant_id = $1`, [t.id]); } catch {}
@@ -209,20 +219,22 @@ async function exerciseShell(page: Page, slug: Slug) {
       break;
     }
     case 'ninjamation': {
-      // Activate the first deterministic template, then deactivate it.
-      // Activate is idempotent server-side and DELETE removes the
-      // automation row outright, so re-runs won't pile up duplicates and
-      // the deactivate assertion proves the round-trip wiring.
-      const TEMPLATE_ID = 'tradeflow-photo-ticket';
-      await expect(page.getByTestId(`card-ninjamation-template-${TEMPLATE_ID}`))
-        .toBeVisible({ timeout: 10_000 });
-      await page.getByTestId(`button-ninjamation-use-${TEMPLATE_ID}`).click();
-      const activeRow = page.getByTestId(`row-ninjamation-active-${TEMPLATE_ID}`);
-      await expect(activeRow).toBeVisible({ timeout: 10_000 });
-      // Deactivate must remove the active row so the template can be
-      // re-activated later — proves the DELETE handler + UI refresh.
-      await page.getByTestId(`button-ninjamation-deactivate-${TEMPLATE_ID}`).click();
-      await expect(activeRow).toHaveCount(0, { timeout: 10_000 });
+      const suffix = Date.now().toString(36);
+      await page.getByTestId('input-ninjamation-name').fill(`Inventory ${suffix}`);
+      await page.getByTestId('textarea-ninjamation-content').fill(
+        'param([string]$Path)\nGet-ChildItem -LiteralPath $Path -ErrorAction Stop',
+      );
+      await page.getByTestId('button-ninjamation-save').click();
+      await expect(page.getByTestId('text-ninjamation-notice')).toContainText('Draft created');
+      await expect(page.getByTestId('text-ninjamation-analysis-clean')).toBeVisible();
+      await page.getByTestId('button-ninjamation-submit-review').click();
+      await expect(page.getByTestId('button-ninjamation-approve')).toBeVisible();
+      await page.getByTestId('button-ninjamation-approve').click();
+      await expect(page.getByTestId('button-ninjamation-download')).toBeVisible();
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByTestId('button-ninjamation-download').click();
+      const download = await downloadPromise;
+      expect(download.suggestedFilename()).toMatch(/\.ps1$/);
       break;
     }
     case 'studyforge-ai': {

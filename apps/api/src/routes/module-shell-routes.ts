@@ -3,7 +3,6 @@ import { db } from '../db.js';
 import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import {
   moduleStudySessions,
-  moduleAutomations,
   moduleWorkflowItems,
   techdeckTicketSequences,
   techdeckTickets,
@@ -73,6 +72,7 @@ import { registerBrandForgeOsRoutes } from './brandforgeos-routes.js';
 import { registerStudyForgeRoutes } from './studyforge-routes.js';
 import { registerNinjaLaunchKitRoutes } from './ninja-launch-kit-routes.js';
 import { registerCallCommandRoutes } from './callcommand-routes.js';
+import { registerNinjamationRoutes } from './ninjamation-routes.js';
 
 // Per-module guard chains. `requireTenantMember` confirms the caller belongs
 // to the active tenant; `requireTenantModuleAccess(slug)` then enforces that
@@ -80,11 +80,9 @@ import { registerCallCommandRoutes } from './callcommand-routes.js';
 // it. Both are required: skipping the second would let any tenant member
 // read/write another module's data even if their access was revoked.
 const studyforgeGuards = [requireTenantMember, requireTenantModuleAccess('studyforge-ai')];
-const ninjamationGuards = [requireTenantMember, requireTenantModuleAccess('ninjamation')];
 const tradeflowkitGuards = [requireTenantMember, requireTenantModuleAccess('tradeflowkit')];
 const techdeckGuards = [requireTenantMember, requireTenantModuleAccess('techdeck')];
 const studyforgeWriteGuards = [...studyforgeGuards, requireTenantModuleWriteAccess];
-const ninjamationWriteGuards = [...ninjamationGuards, requireTenantModuleWriteAccess];
 const tradeflowkitWriteGuards = [...tradeflowkitGuards, requireTenantModuleWriteAccess];
 const techdeckWriteGuards = [...techdeckGuards, requireTenantModuleWriteAccess];
 
@@ -400,6 +398,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerBrandForgeOsRoutes(app);
   await registerStudyForgeRoutes(app);
   await registerNinjaLaunchKitRoutes(app);
+  await registerNinjamationRoutes(app);
 
   // ===== TradeFlowKit: lead and revenue compatibility routes ==============
   //
@@ -1700,117 +1699,6 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: 'Session not found' });
       }
       await db.delete(moduleStudySessions).where(eq(moduleStudySessions.id, id));
-      return { ok: true };
-    },
-  );
-
-  // ===== Ninjamation ======================================================
-  app.get(
-    '/v1/modules/ninjamation/automations',
-    { preHandler: [...ninjamationGuards] },
-    async (request) => {
-      const ctx = (request as any).tenantContext;
-      const automations = await db
-        .select()
-        .from(moduleAutomations)
-        .where(eq(moduleAutomations.tenantId, ctx.tenantId))
-        .orderBy(desc(moduleAutomations.createdAt));
-      return { automations };
-    },
-  );
-
-  app.post(
-    '/v1/modules/ninjamation/automations',
-    { preHandler: [...ninjamationWriteGuards] },
-    async (request, reply) => {
-      const user = (request as any).user;
-      const ctx = (request as any).tenantContext;
-      const {
-        templateId,
-        name,
-        trigger,
-        action,
-        modules: mods,
-      } = (request.body as any) ?? {};
-      if (
-        typeof templateId !== 'string' ||
-        typeof name !== 'string' ||
-        typeof trigger !== 'string' ||
-        typeof action !== 'string'
-      ) {
-        return reply.code(400).send({ error: 'Missing fields', code: 'MISSING_FIELDS' });
-      }
-      // Idempotent activate: if this template is already active for the
-      // tenant, return the existing row instead of creating a duplicate.
-      const [existing] = await db
-        .select()
-        .from(moduleAutomations)
-        .where(
-          and(
-            eq(moduleAutomations.tenantId, ctx.tenantId),
-            eq(moduleAutomations.templateId, templateId),
-            eq(moduleAutomations.enabled, true),
-          ),
-        )
-        .limit(1);
-      if (existing) return reply.code(200).send(existing);
-
-      const moduleSlugs = Array.isArray(mods)
-        ? mods.filter((m): m is string => typeof m === 'string').slice(0, 16)
-        : [];
-
-      const [row] = await db
-        .insert(moduleAutomations)
-        .values({
-          tenantId: ctx.tenantId,
-          userId: user.id,
-          templateId,
-          name: name.slice(0, 120),
-          trigger: trigger.slice(0, 200),
-          action: action.slice(0, 200),
-          modules: moduleSlugs,
-          enabled: true,
-        })
-        .returning();
-
-      // Surface the activation in the tenant activity feed.
-      await db.insert(activityFeed).values({
-        userId: user.id,
-        tenantId: ctx.tenantId,
-        action: 'activated',
-        entityType: 'automation',
-        entityId: row.id,
-        metadata: { templateId, name: row.name, trigger: row.trigger, action: row.action },
-      });
-
-      return reply.code(201).send(row);
-    },
-  );
-
-  app.delete(
-    '/v1/modules/ninjamation/automations/:id',
-    { preHandler: [...ninjamationWriteGuards] },
-    async (request, reply) => {
-      const { id } = request.params as { id: string };
-      const user = (request as any).user;
-      const ctx = (request as any).tenantContext;
-      const [row] = await db
-        .select()
-        .from(moduleAutomations)
-        .where(eq(moduleAutomations.id, id))
-        .limit(1);
-      if (!row || row.tenantId !== ctx.tenantId) {
-        return reply.code(404).send({ error: 'Automation not found' });
-      }
-      await db.delete(moduleAutomations).where(eq(moduleAutomations.id, id));
-      await db.insert(activityFeed).values({
-        userId: user.id,
-        tenantId: ctx.tenantId,
-        action: 'deactivated',
-        entityType: 'automation',
-        entityId: id,
-        metadata: { templateId: row.templateId, name: row.name },
-      });
       return { ok: true };
     },
   );

@@ -87,10 +87,10 @@ test('shared-runtime module mutations use write guards while GET routes remain r
   const pulsedesk = readRepoFile('apps/api/src/routes/pulsedesk-routes.ts');
   const launchkit = readRepoFile('apps/api/src/routes/ninja-launch-kit-routes.ts');
   const callcommand = readRepoFile('apps/api/src/routes/callcommand-routes.ts');
+  const ninjamation = readRepoFile('apps/api/src/routes/ninjamation-routes.ts');
 
   for (const [readGuard, writeGuard] of [
     ['studyforgeGuards', 'studyforgeWriteGuards'],
-    ['ninjamationGuards', 'ninjamationWriteGuards'],
     ['tradeflowkitGuards', 'tradeflowkitWriteGuards'],
     ['techdeckGuards', 'techdeckWriteGuards'],
   ]) {
@@ -100,6 +100,8 @@ test('shared-runtime module mutations use write guards while GET routes remain r
     );
   }
   assert.match(callcommand, /const writes = \[\.\.\.reads, requireTenantModuleWriteAccess\]/);
+  assert.match(ninjamation, /const writeGuards = \[\.\.\.readGuards, requireTenantModuleWriteAccess\]/);
+  assert.match(ninjamation, /const adminGuards = \[\.\.\.writeGuards, requireTenantAdmin\]/);
   assert.match(
     pulsedesk,
     /const pulsedeskWriteGuards = \[\.\.\.pulsedeskGuards, requireTenantModuleWriteAccess\]/,
@@ -109,7 +111,11 @@ test('shared-runtime module mutations use write guards while GET routes remain r
     /const writeGuards = \[\.\.\.readGuards, requireTenantModuleWriteAccess\]/,
   );
 
-  const routes = [...moduleRoutes(moduleShell), ...moduleRoutes(pulsedesk), ...moduleRoutes(callcommand)];
+  const routes = [
+    ...moduleRoutes(moduleShell),
+    ...moduleRoutes(pulsedesk),
+    ...moduleRoutes(callcommand),
+  ];
   const signedWebhooks = routes.filter((route) => route.path.includes('/webhooks/twilio/'));
   assert.deepEqual(
     signedWebhooks.map(route => route.path).sort(),
@@ -125,8 +131,8 @@ test('shared-runtime module mutations use write guards while GET routes remain r
   const firstPartyRoutes = routes.filter((route) => !route.path.includes('/webhooks/twilio/'));
   const mutations = firstPartyRoutes.filter((route) => route.method !== 'get');
   const reads = firstPartyRoutes.filter((route) => route.method === 'get');
-  assert.ok(mutations.length >= 36, 'shared-shell first-party mutations should remain inventoried');
-  assert.ok(reads.length >= 15, 'shared-shell first-party reads should remain inventoried');
+  assert.ok(mutations.length >= 34, 'shared-shell first-party mutations should remain inventoried');
+  assert.ok(reads.length >= 14, 'shared-shell first-party reads should remain inventoried');
 
   for (const route of mutations) {
     assert.ok(
@@ -153,6 +159,31 @@ test('shared-runtime module mutations use write guards while GET routes remain r
     );
   }
   for (const route of launchKitRoutes.filter((item) => item.method === 'get')) {
+    assert.match(
+      route.preHandler ?? '',
+      /readGuards/,
+      `GET ${route.path} must remain viewer-readable through the dedicated read guard`,
+    );
+  }
+
+  const ninjamationRoutes = moduleRoutes(ninjamation);
+  assert.ok(ninjamationRoutes.length >= 10, 'dedicated Ninjamation routes should be inventoried');
+  for (const route of ninjamationRoutes.filter((item) => item.method !== 'get')) {
+    if (route.path.endsWith('/downloads')) {
+      assert.match(
+        route.preHandler ?? '',
+        /readGuards/,
+        'approved download is intentionally viewer-readable while server records immutable audit evidence',
+      );
+      continue;
+    }
+    assert.match(
+      route.preHandler ?? '',
+      /(?:writeGuards|adminGuards)/,
+      `${route.method.toUpperCase()} ${route.path} must enforce a dedicated write/admin guard`,
+    );
+  }
+  for (const route of ninjamationRoutes.filter((item) => item.method === 'get')) {
     assert.match(
       route.preHandler ?? '',
       /readGuards/,

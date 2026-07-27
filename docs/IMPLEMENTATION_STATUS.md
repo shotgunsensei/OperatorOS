@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-27
-- Phase: **11E CallCommand AI source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
+- Phase: **12A Ninjamation source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -19,10 +19,86 @@
 - Phase 11C source provenance: `a607a9f34442b1d0f6bfffbf0293609529494825`
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
-- Execution branch: `codex/phase-11e-callcommand-ai-completion`
+- Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
+- Execution branch: `codex/phase-12a-ninjamation-completion`
 - Release gate: **closed**
 
 ## Current verdict
+
+Phase 12A replaces Ninjamation's inferred cross-app workflow shell with the
+commit-pinned AutomationPacks product boundary: reviewed PC automation
+scripts. The active OperatorOS workload now provides tenant-scoped
+PowerShell/Python/batch/bash authoring, immutable versions and hashes, server
+static analysis, review submission, tenant-admin approve/reject/retire
+decisions, approved-current-version-only audited downloads, shared AI drafts
+with idempotent usage, responsive states and canonical deep links. It does not
+execute scripts on the server or in the browser.
+
+The Replit-synced application source is pinned at
+`cca75338d04ed35b89f28d614eb51559735aa32f` and its script catalog at
+`ca0e55fd086f6751a43964927166bfa69db012b6`; 263 tracked files, 184 retained
+files and 2,855,775 bytes were inventoried with 79 generated/mock/attached or
+environment artifacts excluded and zero high-confidence secret findings.
+The source runtime remains non-executed. The application branch lacks a
+tracked license while the related catalog branch carries Apache-2.0; no source
+license conclusion or redistribution right is inferred. ADR-0026 excludes
+child identity/passwords, billing/admin, GitHub sync, arbitrary execution and
+the earlier unsupported cross-app workflow claim. AutoWorkFlowHub is
+discontinued and explicitly excluded.
+
+Fresh closure evidence passes focused domain/import/static contracts and 4/4
+PostgreSQL workflows covering authentication/entitlement, viewer denial,
+client tenant override rejection, cross-tenant 404s, immutable versions,
+critical-finding approval blocks, admin approval, exact audited downloads,
+persistent AI drafts, idempotent replay and exactly-once usage. The complete
+API aggregate passes 836/836 with zero fail/skip on a separate untouched
+database. Workspace typecheck, the production build, core preflight, clean
+and idempotent 28-step release, and compiled direct/web-proxied health and
+readiness pass.
+
+The production-host browser matrix passes 9/9 in 1.9 minutes across the
+platform and all twelve enabled modules. The separate first-screen suite
+passes 2/2 in 9.3 seconds on compiled artifacts; Ninjamation creates a safe
+PowerShell draft, displays its clean analysis, submits it for review, requires
+tenant-admin approval, downloads a real `.ps1` file, and denies a
+non-entitled tenant. The corrected launchpad regression now mirrors the real
+invite flow by switching to the accepted tenant before checking its exact My
+Apps grants.
+
+Phase 12A is therefore a source/local state 4 candidate, not state 5 or
+production-ready. This revision has not been deployed. No production backup,
+database mutation, source-data apply, script execution or traffic cutover was
+authorized. Deployed SSO/return/logout/health/workflow acceptance and an
+authorized reconciliation/cutover record remain required.
+
+### Phase 12A verification record
+
+Commands were run from `C:\Dev\OperatorOS` on 2026-07-27. Database-backed
+commands used separate disposable PostgreSQL 16 databases for release,
+aggregate, compiled runtime and browser evidence; test credentials are
+intentionally omitted.
+
+```powershell
+corepack pnpm typecheck
+corepack pnpm --dir apps/api test
+$env:OPERATOROS_DATABASE_RELEASE_MODE='apply'; corepack pnpm db:apply
+$env:INTERNAL_API_URL='http://localhost:5001'; corepack pnpm build:production
+corepack pnpm preflight:production -- --core
+node scripts/start-unified-runtime.mjs
+$env:E2E_PRODUCTION_HOSTS='1'
+corepack pnpm --dir apps/web test:e2e:sso
+corepack pnpm --dir apps/web exec playwright test e2e/module-shells-first-screens.spec.ts
+```
+
+Results: typecheck pass; focused contracts and PostgreSQL workflows pass;
+clean release apply 10.878 seconds and idempotent reapply 1.599 seconds;
+complete API aggregate 836/836 in 306,646 ms with zero fail/skip; production
+build and core preflight pass; compiled direct/web-proxied health and
+readiness pass; production-host matrix 9/9 in 1.9 minutes; first-screen suite
+2/2 in 9.3 seconds. The repository defines no lint or formatting script, so
+neither is claimed.
+
+## Phase 11E historical verdict
 
 Phase 11E replaces CallCommand AI's partial telephony shell with a dedicated,
 persistent consent-first call-operations workspace. Tenant-scoped channels,

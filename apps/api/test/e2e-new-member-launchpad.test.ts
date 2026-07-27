@@ -18,8 +18,10 @@
  *      returns the same generic 202 response for new and existing accounts.
  *   4. New user POST /v1/auth/login and receives a host-only session cookie.
  *   5. New user POST /v1/invites/:token/accept using that cookie.
- *   6. Owner POST .../users/:userId/module-access for grantedMod (level=user).
- *   7. New user GET /v1/me/modules with the cookie from step 4 → asserts
+ *   6. New user switches to the invited tenant, matching the browser invite
+ *      flow before it reloads My Apps.
+ *   7. Owner POST .../users/:userId/module-access for grantedMod (level=user).
+ *   8. New user GET /v1/me/modules with the cookie from step 4 → asserts
  *      exactly {grantedMod} appears (withheldMod absent, otherTenantMod absent).
  */
 import { test, before, after } from 'node:test';
@@ -91,11 +93,13 @@ before(async () => {
   const cookie = (await import('@fastify/cookie')).default;
   const { registerAuthRoutes } = await import('../src/routes/auth-routes.js');
   const { registerTenantAdminRoutes } = await import('../src/routes/tenant-admin-routes.js');
+  const { registerTenantRoutes } = await import('../src/routes/tenant-routes.js');
   const { registerModuleRoutes } = await import('../src/routes/module-routes.js');
   app = Fastify();
   await app.register(cookie);
   await registerAuthRoutes(app);
   await registerTenantAdminRoutes(app);
+  await registerTenantRoutes(app);
   await registerModuleRoutes(app);
   await app.ready();
 });
@@ -174,7 +178,19 @@ test('owner→invite→register→login→accept→launchpad shows only granted 
   ));
   assert.equal(mem.role, 'member');
 
-  // 5. Owner explicitly grants the invitee access to grantedMod.
+  // 5. Mirror the browser invite flow: acceptInvite returns tenantId, then
+  //    tenantApi.switch makes that tenant authoritative before My Apps loads.
+  //    Without this step a newly registered user correctly remains in their
+  //    personal tenant and sees its free-account entitlements.
+  const switchRes = await app.inject({
+    method: 'POST',
+    url: `/v1/tenants/${tenantA.id}/switch`,
+    cookies: { operatoros_session: loginCookie.value },
+  });
+  assert.equal(switchRes.statusCode, 200, `tenant switch: ${switchRes.body}`);
+  assert.equal(switchRes.json().currentTenantId, tenantA.id);
+
+  // 6. Owner explicitly grants the invitee access to grantedMod.
   const grantRes = await app.inject({
     method: 'POST',
     url: `/v1/tenants/${tenantA.id}/users/${inviteeUserId}/module-access`,
@@ -183,7 +199,7 @@ test('owner→invite→register→login→accept→launchpad shows only granted 
   });
   assert.equal(grantRes.statusCode, 200, `grant: ${grantRes.body}`);
 
-  // 6. New user fetches their launchpad with the login cookie.
+  // 7. New user fetches their launchpad with the login cookie.
   const launchRes = await app.inject({
     method: 'GET', url: '/v1/me/modules',
     cookies: { operatoros_session: loginCookie.value },

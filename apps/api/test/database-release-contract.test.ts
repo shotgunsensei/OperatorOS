@@ -12,8 +12,8 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 27);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 27);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 28);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 28);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'free_account_app_backfill');
   assert.ok(
@@ -86,6 +86,11 @@ test('database release plan is explicit, ordered, additive, and reusable by star
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'ninja_launch_kit_tables'),
     'CallCommand tables must follow the prior accepted module foundations',
   );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'ninjamation_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_tables'),
+    'Ninjamation tables must follow the prior accepted module foundations',
+  );
 
   const api = read('apps/api/src/index.ts');
   const releaseSource = read('apps/api/src/lib/database-release.ts');
@@ -135,6 +140,9 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.launchkit_tasks'\)/);
   assert.match(releaseSource, /to_regclass\('public\.launchkit_artifacts'\)/);
   assert.match(releaseSource, /to_regclass\('public\.launchkit_exports'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.ninjamation_scripts'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.ninjamation_script_versions'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.ninjamation_downloads'\)/);
   assert.match(releaseSource, /to_regclass\('public\.operatoros_token_purchase_intents'\)/);
   assert.doesNotMatch(releaseSource, /sso_authorization_codes/);
 });

@@ -1,0 +1,18 @@
+packages:
+  "framer-motion": "For page transitions and interactive micro-animations"
+  "lucide-react": "For UI icons"
+  "react-syntax-highlighter": "For beautiful syntax highlighting of automation scripts"
+  "@types/react-syntax-highlighter": "Type definitions for react-syntax-highlighter"
+
+images:
+  - path: "artifacts/automation-station/public/images/hero-bg.png"
+    description: "Dark mode abstract tech background with glowing cyan and purple circuitry lines, subtle geometric patterns, deep space blue background"
+    aspect_ratio: "16:9"
+  - path: "artifacts/automation-station/public/images/logo.png"
+    description: "Minimalist glowing cyan tech icon logo for an automation platform, dark background"
+    aspect_ratio: "1:1"
+
+notes:
+  - Using Replit Auth for user management via @workspace/replit-auth-web
+  - Using React Query hooks generated in @workspace/api-client-react
+  - Assuming Stripe redirects happen directly via window.location.href to the URL returned by the backend

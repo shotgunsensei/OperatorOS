@@ -34,7 +34,7 @@ slice is not parity.
 | 11C | StudyForge AI state 5 | Phases 2-3 | Source/local state 4 candidate on `codex/phase-11c-studyforge-ai-completion`: tenant-scoped subjects and private sources; source-grounded AI decks/quizzes/plans; editable draft/review/publish workflows; server grading; per-user spaced repetition and session completion; shared usage/idempotency/activity; real exports; deterministic dry-run provenance; clean/idempotent 25-step release; aggregate 801/801; compiled health/readiness; and production-host browser matrix 7/7 pass locally. State 5 remains blocked on deployment and an authorized data reconciliation/cutover record. |
 | 11D | Ninja Launch Kit state 5 after source/product alignment ADR | Phases 2-3 | Source/local state 4 candidate on `codex/phase-11d-ninja-launch-kit-completion`: ADR-0024 resolves the BrandForgeOS boundary; tenant-scoped launches, phases, milestones, dependencies, reviewed artifacts, private assets, server readiness, shared AI/usage/activity, real exports, canonical deep links and deterministic no-apply provenance are implemented. Focused tests, aggregate 816/816, clean/idempotent 26-step release, typecheck/build/preflight/compiled health-readiness, focused browser retest 1/1 and full production-host matrix 8/8 pass locally. State 5 remains blocked on deployment and an authorized data reconciliation/cutover record. |
 | 11E | CallCommand AI state 5 with consent, signed callbacks, and provider controls | Phases 2-3 | Source/local state 4 candidate on `codex/phase-11e-callcommand-ai-completion`: commit-pinned provenance; tenant-scoped channels, profiles, review-only transfer targets, consent/suppression, outbound calls, signed inbound DTMF intake, safe events, operator dispositions, reviewed follow-up drafts and persisted analytics; explicit test-only adapter; fail-closed Twilio boundary; replay-safe callbacks; forced-off recording privacy; deterministic no-apply provenance; clean/idempotent 27-step release; aggregate 825/825; compiled health/readiness; and production-host browser matrix 9/9 pass locally. State 5 remains blocked on deployment, authorized data reconciliation/cutover and approved live-provider acceptance. |
-| 12A | Canonical Ninjamation source/spec decision and state-5 implementation | Phases 2-3 | Pending; source unknown |
+| 12A | Canonical Ninjamation source/spec decision and state-5 implementation | Phases 2-3 | Source/local state 4 candidate on `codex/phase-12a-ninjamation-completion`: AutomationPacks provenance is commit-pinned; AutoWorkFlowHub is explicitly excluded as discontinued; tenant-scoped reviewed automation scripts, immutable versions, static analysis, admin approval, audited downloads, shared AI drafts, canonical deep links and deterministic no-apply provenance are implemented. Clean/idempotent 28-step release, aggregate 836/836, compiled health/readiness, production-host matrix 9/9 and first-screen workflows 2/2 pass locally. Server/browser execution is deliberately absent. State 5 remains blocked on deployment and authorized reconciliation/cutover. |
 | 12B | OutCall distinct/merge/cancel ADR and deliberate implementation or retirement | CallCommand boundary evidence | Pending; disabled |
 | 13 | Repeatable dry-run imports, reconciliation, rollback-safe cutover, and standalone write freeze | Every targeted module parity schema approved | Pending |
 | 14 | Cross-module security, privacy, performance, and reliability hardening | Functional parity and migration tooling | Pending |
@@ -59,9 +59,10 @@ slice is not parity.
 
 The owner explicitly authorized source work to continue through later phases
 on separate branches even while the public deployment gate remains failed.
-Phase 11E's source/local state-4 gate is complete on its scoped closure branch
-pending owner review. The next source phase is Phase 12A, the canonical
-Ninjamation source/spec decision and implementation. That direction
+Phase 12A's source/local state-4 gate is complete on its scoped closure branch
+pending owner review. The next source phase is Phase 12B, the OutCall
+distinct/merge/cancel decision and deliberate implementation or retirement.
+That direction
 permits later source work; it does not authorize deployment,
 production data mutation, promotion, or a production-ready label. Before any
 public promotion, deploy the reviewed cumulative revision through `.replit`,

@@ -30,10 +30,11 @@ new ADR explicitly supersedes it.
 | ADR-0023 | StudyForge AI owns tenant-scoped sources and reviewed learning workflows; OperatorOS retains identity, tenant, entitlement, billing, provider and usage authority, and unverifiable source attribution is rejected. | Accepted | `docs/adr/ADR-0023-studyforge-learning-and-ai-boundary.md` |
 | ADR-0024 | Ninja Launch Kit owns time-bounded tenant launch execution, reviewed artifacts and evidence-based readiness; OperatorOS and BrandForgeOS retain their platform and reusable-brand authority. | Accepted | `docs/adr/ADR-0024-ninja-launch-kit-product-and-readiness-boundary.md` |
 | ADR-0025 | CallCommand AI owns consent-first call operations; OutCall remains disabled, providers fail closed, callbacks are signed/deduplicated, and recording URLs are never exposed. | Accepted | `docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md` |
+| ADR-0026 | Ninjamation owns tenant-scoped PC automation script authoring, immutable versions, static review, admin approval and audited downloads; OperatorOS never executes scripts and AutoWorkFlowHub is excluded. | Accepted | `docs/adr/ADR-0026-ninjamation-script-library-and-execution-boundary.md` |
 
 ## Required future ADRs
 
-- Ninjamation canonical source or newly specified product boundary (Phase 12A).
+- OutCall distinct/merge/cancel decision (Phase 12B).
 
 ADRs must state context, decision, consequences, data/security impact,
 migration/rollback implications, and superseded records.

@@ -27,6 +27,7 @@ import { ensureSnapProofOsTables } from './snapproofos-db-init.js';
 import { ensureStudyForgeTables } from './studyforge-db-init.js';
 import { ensureNinjaLaunchKitTables } from './ninja-launch-kit-db-init.js';
 import { ensureCallCommandTables } from './callcommand-db-init.js';
+import { ensureNinjamationTables } from './ninjamation-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -56,6 +57,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   studyforge_tables: ensureStudyForgeTables,
   ninja_launch_kit_tables: ensureNinjaLaunchKitTables,
   callcommand_tables: ensureCallCommandTables,
+  ninjamation_tables: ensureNinjamationTables,
   plans_and_admin: seedPlansAndAdmin,
   launch_fix_pre_seed: launchFixPreSeed,
   platform_components: seedPlatformComponents,
@@ -123,6 +125,11 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.callcommand_consents') IS NOT NULL AS callcommand_consents,
       to_regclass('public.callcommand_calls') IS NOT NULL AS callcommand_calls,
       to_regclass('public.callcommand_events') IS NOT NULL AS callcommand_events,
+      to_regclass('public.ninjamation_scripts') IS NOT NULL AS ninjamation_scripts,
+      to_regclass('public.ninjamation_script_versions') IS NOT NULL AS ninjamation_script_versions,
+      to_regclass('public.ninjamation_reviews') IS NOT NULL AS ninjamation_reviews,
+      to_regclass('public.ninjamation_downloads') IS NOT NULL AS ninjamation_downloads,
+      to_regclass('public.ninjamation_generations') IS NOT NULL AS ninjamation_generations,
       to_regclass('public.operatoros_token_purchase_intents') IS NOT NULL AS operatoros_token_purchase_intents,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);

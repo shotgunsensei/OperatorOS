@@ -1,0 +1,642 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: Auth
+    description: Browser and mobile authentication endpoints.
+  - name: subscription
+    description: Subscription and billing operations
+  - name: scripts
+    description: Automation script operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /auth/user:
+    get:
+      tags: [Auth]
+      operationId: getCurrentAuthUser
+      summary: Get the currently authenticated user
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Auth status resolved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserEnvelope'
+  /login:
+    get:
+      tags: [Auth]
+      operationId: beginBrowserLogin
+      summary: Start the browser OIDC login flow
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to the OIDC authorization endpoint.
+  /callback:
+    get:
+      tags: [Auth]
+      operationId: handleBrowserLoginCallback
+      summary: Complete the browser OIDC login flow
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: iss
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uri
+      responses:
+        '302':
+          description: Redirect to returnTo path on success.
+  /logout:
+    get:
+      tags: [Auth]
+      operationId: logoutBrowserSession
+      summary: Clear the session and begin OIDC logout
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '302':
+          description: Redirect to the OIDC provider logout URL.
+  /mobile-auth/token-exchange:
+    post:
+      tags: [Auth]
+      operationId: exchangeMobileAuthorizationCode
+      summary: Exchange a mobile OIDC code for a session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileTokenExchangeRequest'
+      responses:
+        '200':
+          description: Session created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileTokenExchangeSuccess'
+        '400':
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /mobile-auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logoutMobileSession
+      summary: Delete a mobile session token
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+      responses:
+        '200':
+          description: Logout processed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutSuccess'
+  /subscription/status:
+    get:
+      tags: [subscription]
+      operationId: getSubscriptionStatus
+      summary: Get current user subscription status
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Subscription status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionStatusResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /subscription/checkout:
+    post:
+      tags: [subscription]
+      operationId: createCheckoutSession
+      summary: Create a Stripe checkout session
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '200':
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /subscription/portal:
+    post:
+      tags: [subscription]
+      operationId: createPortalSession
+      summary: Create a Stripe customer portal session
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Portal session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortalResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /subscription/plans:
+    get:
+      tags: [subscription]
+      operationId: getSubscriptionPlans
+      summary: Get available subscription plans
+      responses:
+        '200':
+          description: Available plans
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlansResponse'
+  /scripts:
+    get:
+      tags: [scripts]
+      operationId: listScripts
+      summary: List automation scripts
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Scripts list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScriptsListResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /scripts/{id}:
+    get:
+      tags: [scripts]
+      operationId: getScript
+      summary: Get a single script by ID
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Script detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScriptDetail'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Script not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /scripts/{id}/download:
+    get:
+      tags: [scripts]
+      operationId: downloadScript
+      summary: Download a script file
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Script file download
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /scripts/formats:
+    get:
+      tags: [scripts]
+      operationId: getScriptFormats
+      summary: Get available script formats and categories
+      responses:
+        '200':
+          description: Formats and categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormatsResponse'
+  /scripts/sync:
+    post:
+      tags: [scripts]
+      operationId: syncScriptsFromGithub
+      summary: Sync scripts from GitHub repository
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /scripts/generate:
+    post:
+      tags: [scripts]
+      operationId: generateScript
+      summary: Generate an automation script using AI
+      description: Pro subscription required. Generates a script based on a natural language description and saves it to the shared library.
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateScriptRequest'
+      responses:
+        '200':
+          description: Script generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateScriptResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: Pro subscription required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+components:
+  parameters:
+    AuthorizationSessionHeader:
+      name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+    SessionCookie:
+      name: sid
+      in: cookie
+      required: false
+      schema:
+        type: string
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    AuthUser:
+      type: object
+      required: [id, email, firstName, lastName, profileImageUrl]
+      properties:
+        id:
+          type: string
+        email:
+          type: [string, 'null']
+          format: email
+        firstName:
+          type: [string, 'null']
+        lastName:
+          type: [string, 'null']
+        profileImageUrl:
+          type: [string, 'null']
+    AuthUserEnvelope:
+      type: object
+      required: [user]
+      properties:
+        user:
+          oneOf:
+            - $ref: '#/components/schemas/AuthUser'
+            - type: 'null'
+    MobileTokenExchangeRequest:
+      type: object
+      required: [code, code_verifier, redirect_uri, state]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        code_verifier:
+          type: string
+          minLength: 1
+        redirect_uri:
+          type: string
+          minLength: 1
+          format: uri
+        state:
+          type: string
+          minLength: 1
+        nonce:
+          type: string
+          minLength: 1
+    MobileTokenExchangeSuccess:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+    LogoutSuccess:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          const: true
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    SubscriptionStatusResponse:
+      type: object
+      required: [hasSubscription, tier]
+      properties:
+        hasSubscription:
+          type: boolean
+        tier:
+          type: [string, 'null']
+        status:
+          type: [string, 'null']
+        currentPeriodEnd:
+          type: [string, 'null']
+        stripeCustomerId:
+          type: [string, 'null']
+    CheckoutRequest:
+      type: object
+      required: [priceId]
+      properties:
+        priceId:
+          type: string
+    CheckoutResponse:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+    PortalResponse:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+    PlansResponse:
+      type: object
+      required: [plans]
+      properties:
+        plans:
+          type: array
+          items:
+            $ref: '#/components/schemas/Plan'
+    Plan:
+      type: object
+      required: [id, name, description, priceId, amount, interval]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        priceId:
+          type: string
+        amount:
+          type: integer
+        interval:
+          type: string
+        features:
+          type: array
+          items:
+            type: string
+    ScriptsListResponse:
+      type: object
+      required: [scripts, total, page, totalPages]
+      properties:
+        scripts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScriptSummary'
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+    ScriptSummary:
+      type: object
+      required: [id, name, description, format, category, source, downloadCount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        format:
+          type: string
+        category:
+          type: string
+        source:
+          type: string
+        downloadCount:
+          type: integer
+        createdAt:
+          type: string
+    ScriptDetail:
+      type: object
+      required: [id, name, description, content, fileName, format, category, source, downloadCount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        content:
+          type: string
+        fileName:
+          type: string
+        format:
+          type: string
+        category:
+          type: string
+        source:
+          type: string
+        downloadCount:
+          type: integer
+        createdAt:
+          type: string
+    FormatsResponse:
+      type: object
+      required: [formats, categories]
+      properties:
+        formats:
+          type: array
+          items:
+            type: string
+        categories:
+          type: array
+          items:
+            type: string
+    SyncResponse:
+      type: object
+      required: [synced, message]
+      properties:
+        synced:
+          type: integer
+        message:
+          type: string
+    GenerateScriptRequest:
+      type: object
+      required: [prompt, format]
+      properties:
+        prompt:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Natural language description of the automation script to generate
+        format:
+          type: string
+          enum: [powershell, python, batch, bash]
+          description: Target script format
+    GenerateScriptResult:
+      type: object
+      required: [script]
+      properties:
+        script:
+          $ref: '#/components/schemas/ScriptDetail'
