@@ -23,6 +23,7 @@ import { ensureTorqueShedTables } from './torqueshed-db-init.js';
 import { ensureFaultlineLabTables } from './faultlinelab-db-init.js';
 import { ensureNinjaPoolHallTables } from './ninja-pool-hall-db-init.js';
 import { ensureBrandForgeOsTables } from './brandforgeos-db-init.js';
+import { ensureSnapProofOsTables } from './snapproofos-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -48,6 +49,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   ninja_pool_hall_tables: ensureNinjaPoolHallTables,
   brandforgeos_tables: ensureBrandForgeOsTables,
   shared_service_tables: ensureSharedServiceTables,
+  snapproofos_tables: ensureSnapProofOsTables,
   plans_and_admin: seedPlansAndAdmin,
   launch_fix_pre_seed: launchFixPreSeed,
   platform_components: seedPlatformComponents,
@@ -96,6 +98,10 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.brandforge_campaigns') IS NOT NULL AS brandforge_campaigns,
       to_regclass('public.brandforge_copy_assets') IS NOT NULL AS brandforge_copy_assets,
       to_regclass('public.brandforge_generations') IS NOT NULL AS brandforge_generations,
+      to_regclass('public.snapproof_cases') IS NOT NULL AS snapproof_cases,
+      to_regclass('public.snapproof_evidence_items') IS NOT NULL AS snapproof_evidence_items,
+      to_regclass('public.snapproof_custody_events') IS NOT NULL AS snapproof_custody_events,
+      to_regclass('public.snapproof_reports') IS NOT NULL AS snapproof_reports,
       to_regclass('public.operatoros_token_purchase_intents') IS NOT NULL AS operatoros_token_purchase_intents,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);

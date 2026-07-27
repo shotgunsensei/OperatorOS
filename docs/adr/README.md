@@ -26,6 +26,7 @@ new ADR explicitly supersedes it.
 | ADR-0019 | FaultlineLab uses immutable versioned challenges, append-only investigation evidence, server-only scoring, and no certificate claim; only four validated source cases are playable. | Accepted | `docs/adr/ADR-0019-faultlinelab-server-scored-challenge-boundary.md` |
 | ADR-0020 | Ninja Pool Hall approves Free Shoot, CPU, and hot-seat play; physical simulation remains local, server rules persist explicitly unverified results, and the unauthenticated relay is excluded. | Accepted | `docs/adr/ADR-0020-ninja-pool-hall-local-result-trust-boundary.md` |
 | ADR-0021 | BrandForgeOS owns a tenant-scoped creative workspace and provider-backed generation; OperatorOS retains identity, tenant, billing, entitlement, usage and provider authority, while random analytics and fake integrations are excluded. | Accepted | `docs/adr/ADR-0021-brandforgeos-creative-workspace-boundary.md` |
+| ADR-0022 | SnapProofOS owns tenant-scoped evidence cases, private captures, append-only custody, review and defensible reports; OperatorOS retains identity, tenant, entitlement, upload, audit and integration authority, while public raw URLs and legacy share links are excluded. | Accepted | `docs/adr/ADR-0022-snapproofos-evidence-integrity-boundary.md` |
 
 ## Required future ADRs
 

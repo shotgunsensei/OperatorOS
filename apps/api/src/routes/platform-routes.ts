@@ -519,6 +519,15 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           //   - module shell tables (Task #72): module_call_logs,
           //     module_study_sessions, module_automations, module_scaffolds,
           //     ninja_pool_practice_sessions
+          await tx.execute(sql`SET LOCAL operatoros.tenant_hard_delete = 'on'`);
+          await tx.execute(sql`DELETE FROM snapproof_exports WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_custody_events WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_comments WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_findings WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_reports WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_evidence_items WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_cases WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_settings WHERE tenant_id = ${id}`);
           await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.tenantId, id));
           await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.tenantId, id));
           await tx.delete(moduleAutomations).where(eq(moduleAutomations.tenantId, id));

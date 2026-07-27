@@ -706,6 +706,55 @@ export interface BrandForgeGeneration {
   createdAt: string;
 }
 
+export interface SnapProofCase {
+  id: string;
+  reference: string;
+  title: string;
+  description: string | null;
+  caseType: string;
+  sourceContext: Record<string, unknown>;
+  status: 'draft' | 'collecting' | 'in_review' | 'approved' | 'rejected' | 'archived';
+  retentionUntil: string | null;
+  legalHold: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  evidenceCount?: number;
+}
+
+export interface SnapProofEvidence {
+  id: string;
+  caseId: string;
+  title: string;
+  evidenceType: 'photo' | 'document' | 'screenshot' | 'log' | 'note';
+  description: string | null;
+  capturedAt: string;
+  sourceType: string;
+  sourceReference: string | null;
+  status: 'captured' | 'in_review' | 'verified' | 'rejected' | 'archived';
+  attachmentId: string | null;
+  attachmentSha256: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  caseReference?: string;
+  caseTitle?: string;
+}
+
+export interface SnapProofReport {
+  id: string;
+  caseId: string;
+  title: string;
+  status: 'draft' | 'in_review' | 'approved' | 'rejected' | 'archived';
+  content: Record<string, unknown>;
+  contentHash: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  caseReference?: string;
+  caseTitle?: string;
+}
+
 export type NativeWorkflowModuleSlug = 'torqueshed' | 'snapproofos';
 
 export interface ModuleWorkflowItem {
@@ -1245,6 +1294,60 @@ export const moduleShellApi = {
       apiFetch('/modules/brandforgeos/generations') as Promise<any>,
     generate: (input: Record<string, unknown>): Promise<{ generation: BrandForgeGeneration }> =>
       apiFetch('/modules/brandforgeos/generations', { method: 'POST', body: JSON.stringify(input) }) as Promise<{ generation: BrandForgeGeneration }>,
+  },
+  snapproofos: {
+    dashboard: (): Promise<{ counts: Record<string, number> }> =>
+      apiFetch('/modules/snapproofos/dashboard') as Promise<any>,
+    listCases: (query = ''): Promise<{ items: SnapProofCase[]; total: number }> =>
+      apiFetch(`/modules/snapproofos/cases${query ? `?${query}` : ''}`) as Promise<any>,
+    getCase: (id: string): Promise<{
+      case: SnapProofCase;
+      evidence: SnapProofEvidence[];
+      findings: Array<Record<string, any>>;
+      comments: Array<Record<string, any>>;
+      reports: SnapProofReport[];
+      attachments: Array<Record<string, any>>;
+    }> => apiFetch(`/modules/snapproofos/cases/${encodeURIComponent(id)}`) as Promise<any>,
+    createCase: (input: Record<string, unknown>): Promise<SnapProofCase> =>
+      apiFetch('/modules/snapproofos/cases', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    updateCase: (id: string, input: Record<string, unknown>): Promise<SnapProofCase> =>
+      apiFetch(`/modules/snapproofos/cases/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<any>,
+    submitCase: (id: string): Promise<SnapProofCase> =>
+      apiFetch(`/modules/snapproofos/cases/${encodeURIComponent(id)}/submit`, { method: 'POST', body: '{}' }) as Promise<any>,
+    decideCase: (id: string, input: Record<string, unknown>): Promise<SnapProofCase> =>
+      apiFetch(`/modules/snapproofos/cases/${encodeURIComponent(id)}/decision`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    archiveCase: (id: string): Promise<SnapProofCase> =>
+      apiFetch(`/modules/snapproofos/cases/${encodeURIComponent(id)}/archive`, { method: 'POST', body: '{}' }) as Promise<any>,
+    setRetention: (id: string, input: Record<string, unknown>): Promise<SnapProofCase> =>
+      apiFetch(`/modules/snapproofos/cases/${encodeURIComponent(id)}/retention`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<any>,
+    listEvidence: (query = ''): Promise<{ items: SnapProofEvidence[]; total: number }> =>
+      apiFetch(`/modules/snapproofos/evidence${query ? `?${query}` : ''}`) as Promise<any>,
+    createEvidence: (caseId: string, input: Record<string, unknown>): Promise<SnapProofEvidence> =>
+      apiFetch(`/modules/snapproofos/cases/${encodeURIComponent(caseId)}/evidence`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    submitEvidence: (id: string): Promise<SnapProofEvidence> =>
+      apiFetch(`/modules/snapproofos/evidence/${encodeURIComponent(id)}/submit`, { method: 'POST', body: '{}' }) as Promise<any>,
+    decideEvidence: (id: string, input: Record<string, unknown>): Promise<SnapProofEvidence> =>
+      apiFetch(`/modules/snapproofos/evidence/${encodeURIComponent(id)}/decision`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    verifyIntegrity: (id: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/evidence/${encodeURIComponent(id)}/integrity`, { method: 'POST', body: '{}' }) as Promise<any>,
+    downloadEvidence: (id: string): Promise<Blob> =>
+      apiDownload(`/modules/snapproofos/evidence/${encodeURIComponent(id)}/download`),
+    createFinding: (caseId: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/cases/${encodeURIComponent(caseId)}/findings`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    createComment: (caseId: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/cases/${encodeURIComponent(caseId)}/comments`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    custody: (caseId: string): Promise<{ events: Array<Record<string, any>> }> =>
+      apiFetch(`/modules/snapproofos/cases/${encodeURIComponent(caseId)}/custody`) as Promise<any>,
+    listReports: (query = ''): Promise<{ items: SnapProofReport[]; total: number }> =>
+      apiFetch(`/modules/snapproofos/reports${query ? `?${query}` : ''}`) as Promise<any>,
+    createReport: (caseId: string, title: string): Promise<SnapProofReport> =>
+      apiFetch(`/modules/snapproofos/cases/${encodeURIComponent(caseId)}/reports`, { method: 'POST', body: JSON.stringify({ title }) }) as Promise<any>,
+    submitReport: (id: string): Promise<SnapProofReport> =>
+      apiFetch(`/modules/snapproofos/reports/${encodeURIComponent(id)}/submit`, { method: 'POST', body: '{}' }) as Promise<any>,
+    decideReport: (id: string, input: Record<string, unknown>): Promise<SnapProofReport> =>
+      apiFetch(`/modules/snapproofos/reports/${encodeURIComponent(id)}/decision`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    downloadReport: (id: string, format: 'json' | 'csv'): Promise<Blob> =>
+      apiDownload(`/modules/snapproofos/reports/${encodeURIComponent(id)}/export?format=${format}`),
   },
   faultlinelab: {
     policy: (): Promise<Record<string, any>> =>

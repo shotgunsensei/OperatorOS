@@ -45,6 +45,7 @@ import { registerEcosystemRoutes } from './routes/ecosystem-routes.js';
 import { registerDiagnosticsRoutes } from './routes/diagnostics-routes.js';
 import { registerDirectoryRoutes } from './routes/directory-routes.js';
 import { registerSharedServiceRoutes } from './routes/shared-service-routes.js';
+import { registerSnapProofOsRoutes } from './routes/snapproofos-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
 import {
   getSharedServiceWorkerStatus,
@@ -241,6 +242,7 @@ await registerEcosystemRoutes(app);
 await registerDiagnosticsRoutes(app);
 await registerDirectoryRoutes(app);
 await registerSharedServiceRoutes(app);
+await registerSnapProofOsRoutes(app);
 
 if (process.env.OPERATOROS_DATABASE_RELEASE_APPLIED === '1') {
   await verifyOperatorOSDatabaseRelease();

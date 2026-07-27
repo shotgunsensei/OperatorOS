@@ -16,7 +16,7 @@ const SHELL_TEST_IDS: Record<string, string> = {
   faultlinelab: 'faultlinelab-module-shell',
   'ninja-pool-hall': 'ninja-pool-hall-shell',
   brandforgeos: 'brandforgeos-workspace',
-  snapproofos: 'snapproofos-module-shell',
+  snapproofos: 'snapproofos-workspace',
   'studyforge-ai': 'shell-studyforge-ai',
   'ninja-launch-kit': 'shell-ninja-launch-kit',
   'callcommand-ai': 'shell-callcommand-ai',
@@ -143,10 +143,18 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
   if (!identity) return;
   const { userId, tenantId } = identity;
   const tenantTables = [
+    'snapproof_exports',
+    'snapproof_custody_events',
+    'snapproof_comments',
+    'snapproof_findings',
+    'snapproof_reports',
+    'snapproof_evidence_items',
     'shared_notifications',
     'shared_outbox_messages',
     'shared_attachment_blobs',
     'shared_attachments',
+    'snapproof_cases',
+    'snapproof_settings',
     'shared_notification_templates',
     'shared_jobs',
     'shared_webhook_receipts',
@@ -200,8 +208,16 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
     'tenant_modules',
     'tenant_users',
   ];
-  for (const table of tenantTables) {
-    try { await pg.query(`delete from ${table} where tenant_id = $1`, [tenantId]); } catch {}
+  await pg.query('begin');
+  try {
+    await pg.query(`set local operatoros.tenant_hard_delete = 'on'`);
+    for (const table of tenantTables) {
+      try { await pg.query(`delete from ${table} where tenant_id = $1`, [tenantId]); } catch {}
+    }
+    await pg.query('commit');
+  } catch (error) {
+    await pg.query('rollback').catch(() => undefined);
+    throw error;
   }
   for (const [sql, params] of [
     [`delete from sso_handoff_tokens where user_id = $1`, [userId]],
@@ -693,6 +709,169 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.reload();
     await expect(modulePage.getByRole('heading', { name: campaignName })).toBeVisible();
     await assertHostOnlySession(modulePage.context(), 'brandforgeos.operatoros.net');
+    await assertNoBrowserCredentialStorage(modulePage);
+    assertNoCredentialQuery(modulePage.url());
+  });
+
+  test('SnapProofOS persists private evidence, server review decisions, custody, retention, and approved exports across global reauthentication', async ({ page, request }) => {
+    test.setTimeout(210_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+    const suffix = Date.now().toString(36);
+    const reference = `SP-${suffix.toUpperCase()}`;
+    const caseTitle = `Phase 11B evidence case ${suffix}`;
+    const noteTitle = `Phase 11B evidence note ${suffix}`;
+    const fileTitle = `Phase 11B private document ${suffix}`;
+    const findingTitle = `Phase 11B verified finding ${suffix}`;
+    const reportTitle = `Phase 11B defensible report ${suffix}`;
+
+    await page.goto(`${ROOT}/app`);
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await page.getByTestId('nav-my-apps').click();
+    await expect(page.getByTestId('page-my-apps')).toBeVisible();
+
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByTestId('button-launch-snapproofos').click();
+    const modulePage = await popupPromise;
+    const workspace = modulePage.getByTestId('snapproofos-workspace');
+    await expect(workspace).toBeVisible({ timeout: 30_000 });
+    await expect(modulePage.locator('#snapproofos-dashboard')).toBeVisible();
+    expect(await workspace.getAttribute('data-evidence')).toBe('persisted-private-evidence-only');
+    assertNoCredentialQuery(modulePage.url());
+
+    await modulePage.getByRole('button', { name: 'Cases', exact: true }).click();
+    await modulePage.getByLabel('Case reference').fill(reference);
+    await modulePage.getByLabel('Title', { exact: true }).fill(caseTitle);
+    await modulePage.getByLabel('Description').fill('A real persisted evidence lifecycle exercised through the production-host proxy.');
+    const caseResponsePromise = modulePage.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === '/api/modules/snapproofos/cases'
+      && response.status() === 201);
+    await modulePage.getByRole('button', { name: 'Create evidence case' }).click();
+    const createdCase = await (await caseResponsePromise).json() as { id: string };
+    expect(createdCase.id).toMatch(/^[a-f0-9-]{36}$/);
+    await expect(modulePage.getByRole('heading', { name: caseTitle })).toBeVisible();
+    const caseUrl = `https://snapproofos.operatoros.net/cases/${createdCase.id}`;
+    await expect(modulePage).toHaveURL(caseUrl);
+
+    await modulePage.getByRole('button', { name: 'Evidence', exact: true }).click();
+    await modulePage.getByLabel('Evidence type').selectOption('note');
+    await modulePage.getByLabel('Title', { exact: true }).fill(noteTitle);
+    await modulePage.getByLabel('Source type').fill('acceptance_test');
+    await modulePage.getByLabel('Description / note').fill('Persisted evidence note created by the Phase 11B production-host browser gate.');
+    await modulePage.getByRole('button', { name: 'Add evidence note' }).click();
+    const noteCard = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: noteTitle }) });
+    await expect(noteCard).toBeVisible();
+
+    await modulePage.getByLabel('Evidence type').selectOption('document');
+    await modulePage.getByLabel('Title', { exact: true }).fill(fileTitle);
+    await modulePage.getByLabel('Source type').fill('acceptance_test');
+    await modulePage.getByLabel('Description / note').fill('Private attachment used to prove signature, scan, hashing, and authorized download behavior.');
+    await modulePage.getByLabel('Private file').setInputFiles({
+      name: 'phase-11b-evidence.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('OperatorOS Phase 11B private evidence payload.'),
+    });
+    await modulePage.getByRole('button', { name: 'Upload evidence' }).click();
+    const fileCard = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: fileTitle }) });
+    await expect(fileCard).toBeVisible();
+    await expect(fileCard.getByText(/SHA-256 [a-f0-9]{64}/)).toBeVisible();
+
+    await expect.poll(async () => {
+      const result = await pg!.query<{ scan_status: string }>(
+        `select a.scan_status
+           from shared_attachments a
+           join snapproof_evidence_items e
+             on e.tenant_id=a.tenant_id and e.attachment_id=a.id
+          where e.tenant_id=$1 and e.case_id=$2 and e.title=$3`,
+        [identity.tenantId, createdCase.id, fileTitle],
+      );
+      return result.rows[0]?.scan_status;
+    }, { timeout: 30_000 }).toMatch(/^(clean|unavailable)$/);
+
+    await modulePage.getByRole('button', { name: 'Findings', exact: true }).click();
+    await modulePage.getByLabel('Finding title').fill(findingTitle);
+    await modulePage.getByLabel('Description').fill('The private evidence hash and review state remain server authoritative.');
+    await modulePage.getByLabel('Severity').selectOption('high');
+    await modulePage.getByRole('button', { name: 'Record finding' }).click();
+    await expect(modulePage.getByText(findingTitle, { exact: true })).toBeVisible();
+    await modulePage.getByLabel('Append-only internal note').fill('Internal reviewer context is append-only and custody linked.');
+    await modulePage.getByRole('button', { name: 'Add internal note' }).click();
+    await expect(modulePage.getByText('Internal reviewer context is append-only and custody linked.')).toBeVisible();
+
+    await modulePage.getByRole('button', { name: 'Evidence', exact: true }).click();
+    await noteCard.getByRole('button', { name: 'Submit for review' }).click();
+    await fileCard.getByRole('button', { name: 'Submit for review' }).click();
+    await modulePage.getByRole('button', { name: 'Review', exact: true }).click();
+    await modulePage.locator('article').filter({ hasText: noteTitle }).getByRole('button', { name: 'Verify' }).click();
+    await modulePage.locator('article').filter({ hasText: fileTitle }).getByRole('button', { name: 'Verify' }).click();
+
+    await modulePage.getByRole('button', { name: 'Cases', exact: true }).click();
+    await modulePage.getByRole('button', { name: 'Submit case for review' }).click();
+    await modulePage.getByRole('button', { name: 'Review', exact: true }).click();
+    await modulePage.getByRole('button', { name: 'Approve case' }).click();
+
+    await modulePage.getByRole('button', { name: 'Reports', exact: true }).click();
+    await modulePage.getByLabel('Report title').fill(reportTitle);
+    await modulePage.getByRole('button', { name: 'Create report snapshot' }).click();
+    const reportCard = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: reportTitle }) });
+    await expect(reportCard).toBeVisible();
+    await reportCard.getByRole('button', { name: 'Submit report' }).click();
+    await modulePage.getByRole('button', { name: 'Review', exact: true }).click();
+    await modulePage.locator('article').filter({ hasText: reportTitle }).getByRole('button', { name: 'Approve report' }).click();
+    await modulePage.getByRole('button', { name: 'Reports', exact: true }).click();
+    await expect(reportCard.getByRole('button', { name: 'JSON' })).toBeVisible();
+    await Promise.all([
+      modulePage.waitForEvent('download'),
+      reportCard.getByRole('button', { name: 'JSON' }).click(),
+    ]);
+
+    await modulePage.getByRole('button', { name: 'Custody', exact: true }).click();
+    await expect(modulePage.getByText('Displayed custody links are continuous')).toBeVisible();
+    await expect(modulePage.getByText('report approved', { exact: true })).toBeVisible();
+
+    await modulePage.getByRole('button', { name: 'Retention', exact: true }).click();
+    await modulePage.getByRole('button', { name: 'Place legal hold' }).click();
+    await expect(modulePage.getByRole('button', { name: 'Release legal hold' })).toBeVisible();
+    await modulePage.setViewportSize({ width: 390, height: 844 });
+    await expect(modulePage.getByRole('navigation', { name: 'SnapProofOS workspace' })).toBeVisible();
+    await expect(modulePage.getByRole('button', { name: 'Cases', exact: true })).toBeVisible();
+
+    await Promise.all([
+      modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      modulePage.getByRole('link', { name: 'My Apps' }).first().click(),
+    ]);
+    await expect(modulePage.getByTestId('page-my-apps')).toBeVisible();
+    const logoutAll = await modulePage.evaluate(async () => {
+      const response = await fetch('/api/auth/logout-all', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return { status: response.status, body: await response.text() };
+    });
+    expect(logoutAll.status, logoutAll.body).toBe(200);
+
+    await modulePage.goto(caseUrl);
+    await expect(modulePage).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await modulePage.getByTestId('input-email').fill(identity.email);
+    await modulePage.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      modulePage.waitForURL(caseUrl, { timeout: 30_000 }),
+      modulePage.getByTestId('button-login').click(),
+    ]);
+    await expect(modulePage.getByRole('heading', { name: caseTitle })).toBeVisible();
+    await expect(modulePage.getByText('approved', { exact: true }).last()).toBeVisible();
+    await modulePage.reload();
+    await expect(modulePage.getByRole('heading', { name: caseTitle })).toBeVisible();
+    await assertHostOnlySession(modulePage.context(), 'snapproofos.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
   });

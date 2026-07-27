@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-26
-- Phase: **11A BrandForgeOS source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
+- Phase: **11B SnapProofOS source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -15,10 +15,63 @@
 - Phase 10B merge base: `b133bfe`
 - Phase 11A implementation commit: `d4f4c16`
 - Phase 11A merge commit: `a471399`
-- Execution branch: `codex/phase-11a-brandforgeos-closure`
+- Phase 11B source provenance: `26bded38c13b5b6361d407462c68052b0c30613d`
+- Execution branch: `codex/phase-11b-snapproofos-completion`
 - Release gate: **closed**
 
 ## Current verdict
+
+Phase 11B provides a dedicated persistent SnapProofOS workspace for
+tenant-scoped evidence cases; private note and file capture; signature/MIME
+validation, shared scanning and SHA-256 integrity recheck; member submission
+and tenant-admin review; findings; append-only internal comments and
+sequence/hash-linked custody; immutable report snapshots; real JSON/CSV exports
+with provenance; retention, legal hold and archive; persisted dashboard
+metrics; responsive mobile navigation; and canonical deep links.
+
+The clean source is pinned at
+`26bded38c13b5b6361d407462c68052b0c30613d`; 336 tracked files, 259 retained
+files and 3,400,008 bytes were inventoried with zero high-confidence secret
+findings. The source runtime remains non-executed. ADR-0022 excludes child
+identity/organizations/billing, public share and file URLs, fake export paths,
+and arbitrary provider integrations. The deterministic import is dry-run only
+and refuses secure-file apply without an authorized byte export and mapping.
+
+Fresh closure evidence passes 17/17 focused domain/import/database/release/
+deep-link contracts, API/runner/web typecheck, the exact production build and
+core preflight, a clean 24-step release plus idempotent reapply, and the
+complete clean API aggregate at 787 pass, 0 fail and 0 skip. The compiled
+readiness-gated supervisor applied the release and started Fastify, the shared
+worker and Next. Direct and web-proxied `/healthz` and `/readyz` returned
+healthy/ready with database, auth, SSO code encryption, registry and worker
+configured.
+
+The full production-host Playwright matrix passes 6/6 locally without retry.
+It proves one central credential and twelve silent module launches. The
+SnapProofOS case creates real persisted records, uploads private bytes, waits
+for scanning, verifies integrity under server reviewer authority, confirms
+custody continuity, creates and approves a report, downloads a real export,
+places a legal hold, checks mobile navigation, returns through My Apps,
+globally logs out, directly reauthenticates to the case deep link, refreshes,
+and confirms persistence.
+
+The first browser run exposed only an ambiguous final test selector after the
+complete workflow succeeded. The selector was scoped, the focused case passed
+1/1, and the complete matrix reran 6/6. A subsequent immediate rerun correctly
+reached the in-memory registration limit from repeated disposable identities;
+restarting only the test API cleared the bucket. No production rate limit was
+weakened.
+
+SnapProofOS is therefore a source/local state 4 candidate, not state 5 or
+production-ready. This revision has not been deployed. No production backup,
+database mutation, source-data apply, provider traffic or traffic cutover was
+authorized. Deployed SSO/return/logout/health/workflow acceptance and an
+approved reconciliation/cutover record remain required.
+
+The historical Phase 11A and earlier sections below remain evidence for their
+dated revisions; this Phase 11B verdict supersedes them as current status.
+
+## Phase 11A historical evidence
 
 Phase 11A provides a dedicated persistent BrandForgeOS workspace for versioned
 brand kits and personas; campaign, copy and calendar lifecycle; recorded
@@ -59,8 +112,8 @@ database mutation, source-data apply, provider traffic or traffic cutover was
 authorized. Deployed SSO/return/logout/health/workflow acceptance and an
 approved reconciliation/cutover record remain required.
 
-The historical implementation sections below remain evidence for their dated
-phases; this Phase 11A verdict supersedes them as current status.
+The remaining historical implementation sections below retain their dated
+Phase 10B and earlier evidence.
 
 ## Phase 10B historical evidence
 
