@@ -11,6 +11,9 @@ meaning in code (e.g. `STRIPE_MODE=live`).
 | Var                                      | Required        | Notes                                                                                                                                             |
 | ---------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`                           | yes             | Postgres connection string.                                                                                                                       |
+| `DATABASE_POOL_MAX`                      | no              | Bounded API pool size, default `10`, allowed `1..50`. Invalid values fail startup.                                                                |
+| `DATABASE_POOL_IDLE_TIMEOUT_MS`          | no              | Idle connection timeout, default `30000`, allowed `1000..300000`.                                                                                |
+| `DATABASE_POOL_CONNECTION_TIMEOUT_MS`    | no              | Connection acquisition timeout, default `10000`, allowed `1000..60000`.                                                                          |
 | `SESSION_SECRET`                         | yes             | JWT signing secret.                                                                                                                               |
 | `SSO_CODE_ENCRYPTION_SECRET`             | yes             | Independent high-entropy 32+ character hub-only key used to seal one-time browser authorization codes.                                           |
 | `INTERNAL_API_URL`                       | yes (web prod)  | Server-only Fastify origin used by Next rewrites; use `http://localhost:5001` in the unified Replit workload.                                      |

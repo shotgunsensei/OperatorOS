@@ -423,8 +423,11 @@ export async function registerBillingRoutes(app: FastifyInstance) {
 
   app.post('/v1/billing/webhook', async (request, reply) => {
     if (!isStripeEnabled()) {
-      console.log('[billing webhook] Stripe not enabled, ignoring webhook');
-      return { received: true, mode: 'local' };
+      request.log.warn('billing_webhook_rejected_stripe_not_configured');
+      return reply.code(503).send({
+        error: 'Stripe webhook processing is not configured',
+        code: 'STRIPE_NOT_CONFIGURED',
+      });
     }
 
     try {
@@ -455,7 +458,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       const { claimedRowId, isDuplicate } = await claimStripeEvent(event, classification);
 
       if (isDuplicate) {
-        console.log(`[billing webhook] ${event.type} (${classification.isAddon ? 'addon' : 'plan'}): duplicate event.id=${event.id}, no-op`);
+        console.log(`[billing webhook] ${event.type} (${classification.isAddon ? 'addon' : 'plan'}): duplicate event, no-op`);
         return { received: true, kind: classification.isAddon ? 'addon' : 'plan', handled: true, action: 'duplicate_ignored' };
       }
 
@@ -480,8 +483,13 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       console.log(`[billing webhook] ${event.type} (${classification.isAddon ? 'addon' : 'plan'}): handled=${result.handled} action=${result.action || 'none'} matched=${classification.matchedAt}`);
       return { received: true, kind: classification.isAddon ? 'addon' : 'plan', ...result };
     } catch (err: any) {
-      console.error('[billing webhook] Error:', err.message);
-      return reply.code(400).send({ error: err.message });
+      console.error('[billing webhook] Verification or processing failed', {
+        code: typeof err?.code === 'string' ? err.code : 'WEBHOOK_REJECTED',
+      });
+      return reply.code(400).send({
+        error: 'Webhook verification or processing failed',
+        code: 'WEBHOOK_REJECTED',
+      });
     }
   });
 }

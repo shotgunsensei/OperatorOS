@@ -92,7 +92,14 @@ function duplicate(message: string, entity: string): DirectoryFailure {
 
 export function rethrowDirectoryDatabaseError(error: unknown, entity: string): never {
   if (error instanceof DirectoryFailure) throw error;
-  if ((error as { code?: string })?.code === '23505') {
+  let current: unknown = error;
+  let code: string | undefined;
+  for (let depth = 0; depth < 5 && current && typeof current === 'object'; depth += 1) {
+    code = (current as { code?: string }).code;
+    if (code) break;
+    current = (current as { cause?: unknown }).cause;
+  }
+  if (code === '23505') {
     throw duplicate(`An active ${entity} with these normalized values already exists`, entity);
   }
   throw error;

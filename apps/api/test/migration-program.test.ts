@@ -89,7 +89,9 @@ test('migration and source-evidence paths resolve from the documented repository
   const pool = readFileSync(resolve(root, 'apps/api/src/lib/ninja-pool-hall-import.ts'), 'utf8');
   const brand = readFileSync(resolve(root, 'apps/api/src/lib/brandforgeos-import.ts'), 'utf8');
   for (const source of [migration, pool, brand]) {
-    assert.match(source, /resolve\(process\.cwd\(\)\)/);
-    assert.doesNotMatch(source, /fileURLToPath\(import\.meta\.url\)/);
+    assert.match(source, /resolveRepositoryRoot\(\)/);
   }
+  const resolver = readFileSync(resolve(root, 'apps/api/src/lib/repository-root.ts'), 'utf8');
+  assert.match(resolver, /findWorkspaceRoot\(process\.cwd\(\)\) \?\? findWorkspaceRoot\(moduleDirectory\)/);
+  assert.match(resolver, /pnpm-workspace\.yaml/);
 });

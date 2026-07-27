@@ -272,7 +272,7 @@ function sanitizeAuditDetails(details: Record<string, unknown>): Record<string, 
   const safe: Record<string, unknown> = {};
   const sensitiveNames = new Set([
     'token', 'authorization', 'cookie', 'cookies', 'code', 'accessToken',
-    'refreshToken', 'idToken', 'sessionToken', 'password', 'secret',
+    'refreshToken', 'idToken', 'sessionToken', 'password', 'secret', 'jti',
   ]);
   for (const [key, value] of Object.entries(details)) {
     if (!sensitiveNames.has(key)) safe[key] = value;

@@ -305,7 +305,10 @@ test('SnapProofOS persists private evidence, review, findings, custody, reports,
   }
   await assert.rejects(
     db.execute(sql`UPDATE snapproof_custody_events SET event_type='case_updated' WHERE tenant_id=${ownerA.currentTenantId} AND case_id=${caseId}`),
-    /append-only/,
+    (error: any) => {
+      const databaseError = error?.cause ?? error;
+      return /append-only/i.test(String(databaseError?.message));
+    },
   );
 });
 

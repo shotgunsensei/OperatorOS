@@ -549,7 +549,10 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
       db.execute(sql`
         UPDATE torqueshed_token_ledger_entries SET units=units+1 WHERE id=${ledgerId}
       `),
-    /append-only/i,
+    (error: any) => {
+      const databaseError = error?.cause ?? error;
+      return /append-only/i.test(String(databaseError?.message));
+    },
   );
 
   setSharedAiProviderAdapterForTests({
