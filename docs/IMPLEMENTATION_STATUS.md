@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-27
-- Phase: **11D Ninja Launch Kit source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
+- Phase: **11E CallCommand AI source/local state 4 candidate; deployed state 5 and ecosystem release gate blocked**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -18,62 +18,108 @@
 - Phase 11B source provenance: `26bded38c13b5b6361d407462c68052b0c30613d`
 - Phase 11C source provenance: `a607a9f34442b1d0f6bfffbf0293609529494825`
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
-- Execution branch: `codex/phase-11d-ninja-launch-kit-completion`
+- Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
+- Execution branch: `codex/phase-11e-callcommand-ai-completion`
 - Release gate: **closed**
 
 ## Current verdict
 
-Phase 11D replaces Ninja Launch Kit's active scaffold with a dedicated
-persistent launch-execution workspace for tenant-scoped launches, phases,
-milestones and dependent tasks; 20 source-aligned templates; versioned
-campaign artifacts with draft/review/approved lifecycle; private scanned
-assets; server-computed readiness and launch gates; OperatorOS-owned AI,
-idempotency, usage and activity; audited JSON/Markdown/CSV exports; responsive
-mobile navigation; and canonical record deep links.
+Phase 11E replaces CallCommand AI's partial telephony shell with a dedicated,
+persistent consent-first call-operations workspace. Tenant-scoped channels,
+bounded receptionist/intake profiles, review-only transfer targets,
+purpose-specific outbound consent, do-not-call suppression, signed inbound
+DTMF intake, calls, safe events, operator dispositions, reviewed follow-up
+drafts and record-derived analytics now run inside OperatorOS identity,
+entitlement, role and tenant authority. Twilio remains the only production
+provider boundary and fails closed when unconfigured.
+The deterministic test adapter requires both `APP_ENV=test` and explicit
+opt-in, never contacts an external number, and never satisfies live-provider
+acceptance.
 
 The clean source is pinned at
-`30bd1abc05846926e97bc7b26c5b7d6625e8f161`; 331 tracked files, 256 retained
-files and 1,173,062 bytes were inventoried with zero high-confidence secret
-findings. The source runtime remains non-executed. ADR-0024 keeps reusable
-brand and ongoing-campaign authority in BrandForgeOS and excludes child
-identity/billing/admin, duplicate credentials, legacy URL-token SSO,
-simulated analytics and unsupported integrations. The deterministic importer
-is commit-pinned, read-only and no-apply.
+`d49434e1d641d62cc141591c7208539a7afbf11e`; 450 tracked files, 369 retained
+files and 4,436,242 bytes were inventoried with zero high-confidence secret
+findings. The source runtime remains non-executed. ADR-0025 keeps bulk, cold,
+predictive and autonomous dialing out of CallCommand, keeps OutCall disabled
+pending Phase 12B, and excludes child identity/billing/admin, raw provider
+payloads, transfer execution, recording/transcription/AI summaries, public
+recording URLs, fake delivery and incomplete SIP providers. Shared Directory
+owns contacts; the deterministic importer is commit-pinned, read-only and
+no-apply.
 
-Fresh closure evidence passes the focused domain/import/database/static
-contracts and 4/4 PostgreSQL workflows, API/runner/web typecheck, the exact
-production build and core preflight, a clean 26-step release plus idempotent
-reapply, and the complete clean API aggregate at 816 pass, 0 fail and 0 skip.
-The compiled readiness-gated supervisor applied all 26 steps and started
-Fastify and Next. Direct and web-proxied `/healthz` and `/readyz` returned 200
-with database, auth, SSO code encryption, registry and shared worker ready.
-Optional Stripe, email, Twilio and OpenAI providers correctly reported
-disabled in the production-runtime proof.
+Fresh closure evidence passes the focused static/domain/import contracts,
+5/5 tenant/authorization/consent/disposition/persistence PostgreSQL checks and
+4/4 signed callback/inbound/replay/recording-privacy checks; workspace
+typecheck; the exact
+production build and core preflight; a clean 27-step release plus idempotent
+reapply; and the complete clean API aggregate at 825 pass, 0 fail and 0 skip.
+The compiled readiness-gated supervisor applied all 27 steps and started
+Fastify, the shared worker and Next on an isolated public port because a
+pre-existing user process owned port 5000. Direct and web-proxied `/healthz`
+and `/readyz` returned 200 with database, auth, SSO code encryption, registry
+and worker ready. Optional Stripe, email, Twilio and OpenAI providers correctly
+reported disabled.
 
-The final production-host Playwright matrix passes 8/8 locally in 1.7 minutes.
-It proves one central credential and twelve silent module launches. The Ninja
-Launch Kit case persists a launch, completes the required plan, generates
-draft artifacts with the deterministic local adapter, explicitly reviews and
-approves all artifacts, reaches 100% server readiness, launches, creates a
-real audited export, checks mobile navigation, returns through My Apps,
-globally logs out, directly reauthenticates to the launch deep link, refreshes
-and confirms persistence.
+The final production-host Playwright matrix passes 9/9 locally in 1.8 minutes.
+It proves one central credential and twelve silent module launches. The
+CallCommand case persists channel/profile configuration, purpose-specific
+consent, a completed test-adapter call, an operator disposition, three safe
+events and a review-only follow-up draft; verifies that no recording URL
+column exists; blocks a suppressed number; refreshes the canonical call deep
+link; checks mobile navigation; returns through My Apps; globally logs out;
+directly reauthenticates to the call deep link; and confirms persistence.
 
-The first browser run reached 80% because rapid acceptance clicks did not wait
-for each server-reloaded review state. Task buttons now expose pressed state
-and the test waits for every persisted task and artifact transition. The
-focused failed case passed 1/1, followed by the complete clean-process 8/8
-matrix. Repeated disposable registrations later reached the intentional
-in-memory limit; only the local test API was restarted. No security control
-was weakened. Two discarded aggregate runs also demonstrated why the harness
-must use a truly empty database: one reused mutable state and one started from
-a seeded release database. The authoritative empty-database run is 816/816.
+Acceptance found and fixed a real Fastify response-lifecycle defect: the
+suppression path correctly emitted 409 but failed to return the sent reply,
+causing a second response attempt and API process termination. All
+CallCommand validation exits now return the reply explicitly. The first
+focused rerun also corrected a stale wording assertion. Final hardening added
+the exact four signed-callback exemptions to the repository-wide mutation
+inventory and made active inbound phone lines globally unique so a dialed
+number cannot ambiguously resolve two tenants. The corrected focused scenario
+and complete 9/9 matrix were rerun on final artifacts.
+An earlier acceptance attempt was excluded because a stale local API process
+reclaimed port 5001 and pointed browser registration at a different disposable
+database. The stale listener was identified by PID and start time, terminated,
+and the focused plus full matrices were rerun on one aligned compiled stack.
 
-Ninja Launch Kit is therefore a source/local state 4 candidate, not state 5 or
+CallCommand AI is therefore a source/local state 4 candidate, not state 5 or
 production-ready. This revision has not been deployed. No production backup,
-database mutation, source-data apply, live provider traffic or traffic cutover
-was authorized. Deployed SSO/return/logout/health/workflow acceptance and an
-approved reconciliation/cutover record remain required.
+database mutation, source-data apply, live Twilio traffic or traffic cutover
+was authorized. Deployed SSO/return/logout/health/workflow acceptance,
+approved live-provider callback/recording-jurisdiction evidence and an
+authorized reconciliation/cutover record remain required.
+
+### Phase 11E verification record
+
+Commands were run from `C:\Dev\OperatorOS` on 2026-07-27. Database-backed
+commands used isolated PostgreSQL 16 databases only; test secrets and
+credentials are intentionally omitted.
+
+```powershell
+corepack pnpm typecheck
+corepack pnpm --dir apps/api test
+corepack pnpm db:plan
+$env:OPERATOROS_DATABASE_RELEASE_MODE='apply'; corepack pnpm db:apply
+$env:INTERNAL_API_URL='http://localhost:5001'; corepack pnpm build:production
+corepack pnpm preflight:production -- --core
+node scripts/start-unified-runtime.mjs
+$env:E2E_PRODUCTION_HOSTS='1'
+corepack pnpm --dir apps/web test:e2e:sso
+```
+
+Results: typecheck pass; focused static contracts pass; PostgreSQL workflows
+5/5 and 4/4; release plan 27 steps; clean apply 12.402 seconds; idempotent
+reapply 2.356 seconds; production build and core preflight pass; compiled
+direct/web-proxied health and readiness pass; focused browser 1/1 in 12.3
+seconds; full browser matrix 9/9 in 1.8 minutes; complete API aggregate
+825/825 with zero fail/skip. The repository defines no lint or formatting
+script, so neither is claimed.
+
+## Phase 11D historical evidence
+
+Phase 11D's Ninja Launch Kit source/local state-4 evidence remains recorded in
+its parity matrix, ADR-0024 and the final E2E follow-up.
 
 ## Phase 11C historical evidence
 

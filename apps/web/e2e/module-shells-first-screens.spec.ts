@@ -191,32 +191,21 @@ async function exerciseShell(page: Page, slug: Slug) {
 
   switch (slug) {
     case 'callcommand-ai': {
-      // Telephony is unconfigured in dev — the POST handler synthesises a
-      // stub call row with `provider='stub'` and progresses it from
-      // `queued` to `completed` synchronously. We assert the row appears
-      // AND carries the completed status pill, so a regression that
-      // dropped the status field (or stalled at queued) would fail here.
-      // We deliberately accept either the terminal `completed` pill or a
-      // brief intermediate `queued` pill that then transitions, to keep
-      // the assertion robust against either ordering of the synchronous
-      // stub progression.
+      await page.getByTestId('button-callcommand-create-channel').click();
+      await expect(page.locator('#callcommand-configuration')).toContainText('Primary support line');
+      await page.getByTestId('button-callcommand-create-profile').click();
+      await expect(page.locator('#callcommand-configuration')).toContainText('Support intake');
       await page.getByTestId('input-callcommand-phone').fill('+15551234567');
       await page.getByTestId('input-callcommand-name').fill('Task73 Caller');
-      await page.getByTestId('button-callcommand-place-test-call').click();
-      await expect(page.getByTestId('list-callcommand-calls')).toBeVisible({ timeout: 10_000 });
-      const firstRow = page.locator('[data-testid^="row-callcommand-call-"]').first();
-      await expect(firstRow).toBeVisible({ timeout: 10_000 });
-      // Status progression: when telephony IS configured the row enters
-      // `queued` and later flips to `completed`; in the stub path the
-      // row lands in `completed` synchronously. Soft-check for the
-      // intermediate `queued` pill (so the transition is exercised when
-      // present) and then require the terminal `completed` pill — the
-      // latter is the firm assertion that proves status semantics.
-      await firstRow.getByTestId('status-callcommand-queued')
-        .waitFor({ state: 'visible', timeout: 1_500 })
-        .catch(() => undefined);
-      await expect(firstRow.getByTestId('status-callcommand-completed'))
-        .toBeVisible({ timeout: 15_000 });
+      await page.getByTestId('button-callcommand-grant-consent').click();
+      await expect(page.getByTestId('text-callcommand-consent-active')).toBeVisible();
+      if ((await page.getByTestId('banner-callcommand-provider').textContent())?.includes('Local test adapter')) {
+        await page.getByTestId('button-callcommand-place-test-call').click();
+        await expect(page.getByTestId('list-callcommand-calls')).toBeVisible({ timeout: 10_000 });
+        await expect(page.locator('[data-testid^="row-callcommand-call-"]').first().getByTestId('status-callcommand-completed')).toBeVisible();
+      } else {
+        await expect(page.getByTestId('banner-callcommand-provider')).toContainText('fail closed');
+      }
       break;
     }
     case 'ninjamation': {

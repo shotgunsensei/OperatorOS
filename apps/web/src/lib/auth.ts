@@ -1788,16 +1788,34 @@ export const moduleShellApi = {
       apiFetch(`/modules/tradeflowkit/leads/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   },
   callcommand: {
-    list: () => apiFetch('/modules/callcommand-ai/calls'),
+    workspace: () => apiFetch('/modules/callcommand-ai/workspace'),
     get: (id: string) => apiFetch(`/modules/callcommand-ai/calls/${id}`),
-    place: (input: { phone: string; name: string; persona: string }) =>
+    createChannel: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/channels', { method: 'POST', body: JSON.stringify(input) }),
+    createProfile: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/profiles', { method: 'POST', body: JSON.stringify(input) }),
+    createTransferTarget: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/transfer-targets', { method: 'POST', body: JSON.stringify(input) }),
+    grantConsent: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/consents', { method: 'POST', body: JSON.stringify(input) }),
+    suppress: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/suppressions', { method: 'POST', body: JSON.stringify(input) }),
+    place: (input: Record<string, unknown>) =>
       apiFetch('/modules/callcommand-ai/calls', {
         method: 'POST',
         body: JSON.stringify(input),
       }),
+    draftFollowup: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/calls/${encodeURIComponent(id)}/followups`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    setDisposition: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/calls/${encodeURIComponent(id)}/disposition`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
     telephonyStatus: () => apiFetch('/modules/callcommand-ai/telephony/status'),
-    telephonyConnect: () =>
-      apiFetch('/modules/callcommand-ai/telephony/connect', { method: 'POST' }),
   },
   studyforge: {
     list: () => apiFetch('/modules/studyforge-ai/sessions'),

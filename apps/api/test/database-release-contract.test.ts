@@ -12,8 +12,8 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 26);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 26);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 27);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 27);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'free_account_app_backfill');
   assert.ok(
@@ -80,6 +80,11 @@ test('database release plan is explicit, ordered, additive, and reusable by star
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'ninja_launch_kit_tables')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'studyforge_tables'),
     'Ninja Launch Kit tables must follow shared services and prior accepted modules',
+  );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'ninja_launch_kit_tables'),
+    'CallCommand tables must follow the prior accepted module foundations',
   );
 
   const api = read('apps/api/src/index.ts');

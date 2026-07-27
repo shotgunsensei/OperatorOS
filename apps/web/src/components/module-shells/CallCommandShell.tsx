@@ -1,626 +1,285 @@
 'use client';
 
-/**
- * Task #72 — first-screen for CallCommand AI, backed by the API.
- * Task #75 — when a real telephony provider (Twilio) is configured the
- * server returns a `queued`/`ringing` row immediately and emits status
- * updates via webhook. We poll non-terminal calls every few seconds so
- * the shell shows the live progression and the final AI-generated
- * summary once the recording lands.
- */
-
-import React, { useEffect, useRef, useState } from 'react';
-import { Phone, PhoneCall, CheckCircle2, Clock, AlertTriangle, Link2, Plug, MicOff } from 'lucide-react';
-import {
-  semantic, space, fontSize, radius, cardStyle,
-} from '@/lib/design-tokens';
-import { ShellLiveBadge, ShellLaunchButton } from './ShellChrome';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Ban, CheckCircle2, Headphones, PhoneCall, Plus, Radio, ShieldCheck } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
+import { semantic, space, radius, fontSize } from '@/lib/design-tokens';
+import { ShellLaunchButton, ShellLiveBadge } from './ShellChrome';
 
-type CallStatus = 'queued' | 'ringing' | 'completed' | 'failed';
-type TranscriptStatus = 'pending' | 'ready' | 'unavailable';
-interface TestCall {
-  id: string;
-  phone: string;
-  callerName: string;
-  persona: string;
-  status: CallStatus;
-  summary?: string | null;
-  transcript?: string | null;
-  transcriptStatus?: TranscriptStatus | null;
-  recordingUrl?: string | null;
-  errorMessage?: string | null;
-  provider?: string | null;
-  createdAt: string;
-}
-
-interface CallListResponse { calls: TestCall[] }
-
-interface ConnectResponse {
-  url: string;
-  connectorId: string;
-  connectorName: string;
-  instructions: string;
-}
-
-const TERMINAL: Record<CallStatus, boolean> = {
-  queued: false, ringing: false, completed: true, failed: true,
+type Row = Record<string, any>;
+type Workspace = {
+  summary: { calls: number; completed: number; failed: number; last24Hours: number };
+  channels: Row[];
+  profiles: Row[];
+  transferTargets: Row[];
+  consents: Row[];
+  suppressions: Row[];
+  calls: Row[];
+  followups: Row[];
+  provider: { configured: boolean; provider: string; source: string | null; testAdapter: boolean };
 };
 
-const PERSONAS = [
-  { value: 'receptionist', label: 'Receptionist — books appointments' },
-  { value: 'qualifier',    label: 'Lead qualifier — discovery questions' },
-  { value: 'collector',    label: 'Payment reminder — friendly tone' },
-];
-
-// Task #89 — telephony config descriptor returned by the API. `source`
-// tells the shell whether credentials came from the Replit connector or
-// fall-back env vars; `connectorAvailable` indicates whether the one-click
-// connector flow is even reachable from this environment (self-hosted
-// installs running outside Replit lack the connector proxy).
-interface TelephonyStatus {
-  configured: boolean;
-  provider: 'twilio';
-  source: 'connector' | 'env' | null;
-  connectorAvailable: boolean;
-  // Task #96 — active Twilio identity so admins can confirm which line
-  // will be used before placing a real test call. `accountSid` is masked
-  // server-side (e.g. `AC••••1234`); `fromNumber` is the E.164 the call
-  // will originate from. Both are null when not configured.
-  fromNumber: string | null;
-  accountSid: string | null;
-}
+const card: React.CSSProperties = {
+  background: semantic.bgPanel,
+  border: `1px solid ${semantic.border}`,
+  borderRadius: radius.md,
+  padding: space.lg,
+};
+const input: React.CSSProperties = {
+  width: '100%', boxSizing: 'border-box', background: semantic.bg, color: semantic.text,
+  border: `1px solid ${semantic.border}`, borderRadius: radius.sm, padding: '9px 10px',
+};
+const button: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+  border: 0, borderRadius: radius.sm, padding: '9px 13px', color: '#fff',
+  background: semantic.accent, fontWeight: 700, cursor: 'pointer',
+};
 
 export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
-  const [phone, setPhone] = useState('');
-  const [name, setName] = useState('');
-  const [persona, setPersona] = useState(PERSONAS[0].value);
-  const [error, setError] = useState<string | null>(null);
-  const [calls, setCalls] = useState<TestCall[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [telephony, setTelephony] = useState<TelephonyStatus | null>(null);
-  const [connectPending, setConnectPending] = useState(false);
-  const [connectInfo, setConnectInfo] = useState<ConnectResponse | null>(null);
-  const [connectError, setConnectError] = useState<string | null>(null);
-  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [data, setData] = useState<Workspace | null>(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState('');
+  const [phone, setPhone] = useState('+15551234567');
+  const [subject, setSubject] = useState('Acceptance caller');
+  const [purpose, setPurpose] = useState('support');
+  const [consentEvidence, setConsentEvidence] = useState('Customer requested a support callback in the authenticated portal.');
+  const [selectedCallId, setSelectedCallId] = useState('');
+  const [disposition, setDisposition] = useState('follow_up_required');
+  const [dispositionNote, setDispositionNote] = useState('');
+  const [followupChannel, setFollowupChannel] = useState('task');
+  const [followupBody, setFollowupBody] = useState('');
 
-  // Re-fetch only the telephony status — used after a successful connect
-  // flow and when the window regains focus (the admin likely just
-  // finished the OAuth handshake in another tab).
-  async function refreshTelephonyStatus() {
+  const refresh = useCallback(async () => {
     try {
-      const res = (await moduleShellApi.callcommand.telephonyStatus()) as TelephonyStatus;
-      setTelephony(res);
-      return res;
-    } catch {
-      return null;
+      setData(await moduleShellApi.callcommand.workspace() as Workspace);
+      setError('');
+    } catch (caught: any) {
+      setError(caught?.error || caught?.message || 'Call workspace could not be loaded.');
     }
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all([
-      moduleShellApi.callcommand.list() as Promise<CallListResponse>,
-      moduleShellApi.callcommand.telephonyStatus().catch(() => null) as Promise<TelephonyStatus | null>,
-    ])
-      .then(([listRes, statusRes]) => {
-        if (cancelled) return;
-        setCalls(listRes?.calls ?? []);
-        if (statusRes) setTelephony(statusRes);
-      })
-      .catch((err) => { if (!cancelled) setError(err?.message || 'Failed to load calls'); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
   }, []);
+  useEffect(() => { void refresh(); }, [refresh]);
 
-  // When focus returns to the tab, the admin may have just finished
-  // adding the Twilio connector in Replit. Re-poll the status so the
-  // banner flips green without requiring a manual refresh.
-  useEffect(() => {
-    if (telephony?.configured) return;
-    function onFocus() { void refreshTelephonyStatus(); }
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
-  }, [telephony?.configured]);
+  const activeChannel = useMemo(() => data?.channels.find(row => row.status === 'active'), [data]);
+  const activeProfile = useMemo(() => data?.profiles.find(row => row.status === 'active'), [data]);
+  const matchingConsent = useMemo(
+    () => data?.consents.find(row => row.purpose === purpose && !row.revokedAt),
+    [data, purpose],
+  );
+  const selectedCall = useMemo(
+    () => data?.calls.find(row => row.id === selectedCallId) ?? data?.calls[0],
+    [data, selectedCallId],
+  );
+  const selectedFollowups = useMemo(
+    () => data?.followups.filter(row => row.callId === selectedCall?.id) ?? [],
+    [data, selectedCall],
+  );
 
-  async function handleConnectTwilio() {
-    if (connectPending) return;
-    setConnectPending(true);
-    setConnectError(null);
-    try {
-      const res = (await moduleShellApi.callcommand.telephonyConnect()) as ConnectResponse;
-      setConnectInfo(res);
-      // Open the workspace in a new tab so the admin can drive the
-      // Replit integration drawer. We deliberately do not block on it —
-      // the focus listener above will pick up the new status when the
-      // admin tabs back.
-      const { openExternal } = await import('@/lib/launch');
-      await openExternal(res.url);
-    } catch (err: unknown) {
-      const e = err as { code?: string; error?: string; message?: string };
-      if (e?.code === 'CONNECTOR_UNAVAILABLE') {
-        setConnectError('The Replit connector is not reachable from this environment — use environment variables instead.');
-      } else if (e?.code === 'TELEPHONY_ALREADY_CONFIGURED') {
-        // Race: someone else configured it between the status poll and
-        // the click. Refresh to reflect reality.
-        await refreshTelephonyStatus();
-      } else {
-        setConnectError(e?.error || e?.message || 'Could not start the connect flow.');
-      }
-    } finally {
-      setConnectPending(false);
-    }
+  async function act(name: string, work: () => Promise<unknown>) {
+    if (busy) return;
+    setBusy(name);
+    setError('');
+    try { await work(); await refresh(); }
+    catch (caught: any) { setError(caught?.error || caught?.message || 'Request failed.'); }
+    finally { setBusy(''); }
   }
 
-  // Poll every 3s for any non-terminal call. We only refresh those rows so
-  // a long backlog of completed calls does not generate needless traffic.
-  useEffect(() => {
-    const pending = calls.filter((c) => !TERMINAL[c.status]);
-    if (pending.length === 0) {
-      if (pollTimer.current) { clearInterval(pollTimer.current); pollTimer.current = null; }
-      return;
-    }
-    if (pollTimer.current) return;
-    pollTimer.current = setInterval(async () => {
-      try {
-        const updates = await Promise.all(
-          pending.map((c) => moduleShellApi.callcommand.get(c.id).catch(() => null)),
-        );
-        setCalls((prev) =>
-          prev.map((row) => {
-            const fresh = updates.find((u: any) => u && u.id === row.id);
-            return fresh ? (fresh as TestCall) : row;
-          }),
-        );
-      } catch { /* swallow — next tick will retry */ }
-    }, 3000);
-    return () => {
-      if (pollTimer.current) { clearInterval(pollTimer.current); pollTimer.current = null; }
-    };
-  }, [calls]);
-
-  async function placeCall(e: React.FormEvent) {
-    e.preventDefault();
-    if (submitting) return;
-    setError(null);
-    setSubmitting(true);
-    try {
-      const row: TestCall = await moduleShellApi.callcommand.place({ phone, name, persona });
-      setCalls((prev) => [row, ...prev].slice(0, 20));
-      setPhone('');
-      setName('');
-    } catch (err: any) {
-      // apiFetch throws a plain object: `{ status, error, code, ... }`.
-      const code: string = err?.code ?? '';
-      const fallback: string = err?.error || err?.message || 'Could not place call';
-      if (code === 'INVALID_PHONE') {
-        setError('Enter a phone number with country code (e.g. +14155550123).');
-      } else if (code === 'INVALID_PERSONA') {
-        setError('Pick one of the agent personas above.');
-      } else if (code === 'CALL_RATE_LIMITED') {
-        setError(
-          err?.error ||
-            'You have placed too many test calls in a short window. Wait a few minutes before trying again.',
-        );
-      } else if (code === 'TELEPHONY_FAILED') {
-        setError(
-          err?.message
-            ? `Telephony provider rejected the call: ${err.message}`
-            : 'The telephony provider rejected the call. Check your Twilio number and credentials.',
-        );
-        // The server still persisted a `failed` row; refresh the list so it shows.
-        try {
-          const res: any = await moduleShellApi.callcommand.list();
-          setCalls(res.calls ?? []);
-        } catch { /* ignore */ }
-      } else {
-        setError(fallback);
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const providerLabel = data?.provider.testAdapter
+    ? 'Local test adapter · no external contact'
+    : data?.provider.configured
+      ? `Twilio connected${data.provider.source ? ` · ${data.provider.source}` : ''}`
+      : 'Provider disabled · calls fail closed';
 
   return (
-    <div style={{ padding: space.xxl, maxWidth: 960, margin: '0 auto' }} data-testid="shell-callcommand-ai">
-      <header style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: space.xl }}>
-        <Phone size={28} color={semantic.accent} />
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, color: '#fff' }}>CallCommand AI</h1>
-            <ShellLiveBadge />
-          </div>
-          <p style={{ color: semantic.textMuted, margin: '4px 0 0', fontSize: fontSize.body }}>
-            Place a sandboxed test call to confirm scripts and routing before going live.
-          </p>
+    <main data-testid="shell-callcommand-ai" style={{ padding: space.xxl, maxWidth: 1180, margin: '0 auto', color: semantic.text }}>
+      <header style={{ display: 'flex', flexWrap: 'wrap', gap: space.md, alignItems: 'center', marginBottom: space.xl }}>
+        <div style={{ width: 48, height: 48, borderRadius: 14, display: 'grid', placeItems: 'center', background: 'linear-gradient(145deg,#14532d,#22c55e)' }}>
+          <Headphones size={24} color="#fff" />
         </div>
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <h1 style={{ margin: 0, fontSize: 27 }}>CallCommand AI</h1><ShellLiveBadge />
+          </div>
+          <p style={{ margin: '4px 0 0', color: semantic.textMuted }}>Consent-first call intake, routing, follow-up, and provider operations.</p>
+        </div>
+        <ShellLaunchButton baseUrl={baseUrl} testId="link-launch-callcommand-ai" label="Open call console" />
       </header>
 
-      <TelephonyBanner
-        status={telephony}
-        connectPending={connectPending}
-        connectInfo={connectInfo}
-        connectError={connectError}
-        onConnect={handleConnectTwilio}
-      />
+      <section data-testid="banner-callcommand-provider" style={{ ...card, display: 'flex', gap: 10, alignItems: 'center', marginBottom: space.lg,
+        borderColor: data?.provider.configured || data?.provider.testAdapter ? `${semantic.accentSuccess}66` : `${semantic.accentWarning}66` }}>
+        <Radio size={16} color={data?.provider.configured || data?.provider.testAdapter ? semantic.accentSuccess : semantic.accentWarning} />
+        <strong>{providerLabel}</strong>
+        <span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>Test mode is accepted only when APP_ENV=test.</span>
+      </section>
 
-      <form onSubmit={placeCall} style={{ ...cardStyle, display: 'grid', gap: space.md, marginTop: space.md }}>
-        <h2 style={{ margin: 0, fontSize: fontSize.lg, fontWeight: 600, color: '#fff' }}>
-          Place a test call
-        </h2>
+      {error && <div data-testid="text-callcommand-error" role="alert" style={{ ...card, color: semantic.accentDanger, marginBottom: space.lg }}>{error}</div>}
 
-        <div style={{ display: 'grid', gap: space.sm, gridTemplateColumns: '1fr 1fr' }}>
-          <Field label="Phone number">
-            <input
-              data-testid="input-callcommand-phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+1 415 555 0123"
-              style={inputStyle}
-            />
-          </Field>
-          <Field label="Caller name (optional)">
-            <input
-              data-testid="input-callcommand-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Jane Doe"
-              style={inputStyle}
-            />
-          </Field>
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: space.md, marginBottom: space.lg }}>
+        {[
+          ['Calls', data?.summary.calls ?? 0],
+          ['Completed', data?.summary.completed ?? 0],
+          ['Failed', data?.summary.failed ?? 0],
+          ['Last 24 hours', data?.summary.last24Hours ?? 0],
+        ].map(([label, value]) => <div key={String(label)} style={card}><div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{label}</div><div style={{ fontSize: 25, fontWeight: 800 }}>{value}</div></div>)}
+      </section>
+
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: space.lg }}>
+        <div id="callcommand-configuration" style={card}>
+          <h2 style={{ marginTop: 0, fontSize: 18 }}>1. Call configuration</h2>
+          <p style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>Channels own consent language and recording defaults. Profiles own bounded intake behavior.</p>
+          {!activeChannel ? (
+            <button data-testid="button-callcommand-create-channel" style={button} disabled={!!busy}
+              onClick={() => act('channel', () => moduleShellApi.callcommand.createChannel({
+                name: 'Primary support line', phone: '+15550001111', timezone: 'America/New_York',
+                consentScript: 'This call may be recorded only with your consent. You may ask us to stop at any time.',
+                recordingEnabled: false,
+              }))}><Plus size={14}/> Create secure channel</button>
+          ) : <ConfigRow icon={<PhoneCall size={15}/>} title={activeChannel.name} detail={`${activeChannel.phoneE164 || 'Configured number'} · recordings ${activeChannel.recordingEnabled ? 'enabled' : 'off'}`} />}
+          <div style={{ height: 10 }} />
+          {!activeProfile ? (
+            <button data-testid="button-callcommand-create-profile" style={button} disabled={!!busy}
+              onClick={() => act('profile', () => moduleShellApi.callcommand.createProfile({
+                name: 'Support intake', mode: 'intake',
+                greeting: 'Thanks for calling. I can capture your support request and route it to the team.',
+                intakeFields: ['name', 'company', 'callback reason', 'urgency'],
+              }))}><Plus size={14}/> Create intake profile</button>
+          ) : <ConfigRow icon={<ShieldCheck size={15}/>} title={activeProfile.name} detail={`${activeProfile.mode} · ${(activeProfile.intakeFields || []).length} intake fields`} />}
         </div>
 
-        <Field label="Agent persona">
-          <select
-            data-testid="select-callcommand-persona"
-            value={persona}
-            onChange={(e) => setPersona(e.target.value)}
-            style={inputStyle}
-          >
-            {PERSONAS.map((p) => (
-              <option key={p.value} value={p.value}>{p.label}</option>
-            ))}
-          </select>
-        </Field>
+        <form id="callcommand-consent" style={card} onSubmit={event => {
+          event.preventDefault();
+          void act('consent', () => moduleShellApi.callcommand.grantConsent({
+            phone, subjectName: subject, purpose, source: 'authenticated_portal', evidence: consentEvidence,
+          }));
+        }}>
+          <h2 style={{ marginTop: 0, fontSize: 18 }}>2. Consent ledger</h2>
+          <Field label="E.164 phone"><input data-testid="input-callcommand-phone" style={input} value={phone} onChange={e => setPhone(e.target.value)} /></Field>
+          <Field label="Contact name"><input data-testid="input-callcommand-name" style={input} value={subject} onChange={e => setSubject(e.target.value)} /></Field>
+          <Field label="Purpose"><select data-testid="select-callcommand-purpose" style={input} value={purpose} onChange={e => setPurpose(e.target.value)}>
+            <option value="support">Support</option><option value="service_callback">Service callback</option><option value="appointment">Appointment</option>
+          </select></Field>
+          <Field label="Evidence"><textarea data-testid="input-callcommand-consent-evidence" style={{ ...input, minHeight: 74 }} value={consentEvidence} onChange={e => setConsentEvidence(e.target.value)} /></Field>
+          <button data-testid="button-callcommand-grant-consent" style={button} disabled={!!busy}><ShieldCheck size={14}/> Record consent</button>
+          {matchingConsent && <p data-testid="text-callcommand-consent-active" style={{ color: semantic.accentSuccess, marginBottom: 0 }}><CheckCircle2 size={14} style={{ verticalAlign: -2 }}/> Active {purpose} consent is recorded.</p>}
+        </form>
 
-        {error && (
-          <div data-testid="text-callcommand-error" style={{ color: semantic.accentDanger, fontSize: fontSize.sm, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <AlertTriangle size={14} /> {error}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
-          <button
-            type="submit"
-            disabled={submitting}
-            data-testid="button-callcommand-place-test-call"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '10px 18px', borderRadius: radius.sm, border: 'none',
-              background: submitting ? 'rgba(139,148,158,0.4)' : semantic.accent,
-              color: '#fff', cursor: submitting ? 'wait' : 'pointer',
-              fontWeight: 600, fontSize: fontSize.body,
-            }}
-          >
-            <PhoneCall size={14} /> {submitting ? 'Placing call…' : 'Place test call'}
+        <form id="callcommand-operations" style={card} onSubmit={event => {
+          event.preventDefault();
+          if (!activeChannel || !activeProfile) return setError('Create a channel and profile first.');
+          void act('call', () => moduleShellApi.callcommand.place({
+            phone, subjectName: subject, purpose, channelId: activeChannel.id, profileId: activeProfile.id,
+            idempotencyKey: `ui-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          }));
+        }}>
+          <h2 style={{ marginTop: 0, fontSize: 18 }}>3. Controlled call</h2>
+          <p style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>The server rechecks consent, suppression, entitlement, provider state, and rate limits before dialing.</p>
+          <button data-testid="button-callcommand-place-test-call" style={button} disabled={!!busy || !activeChannel || !activeProfile || !matchingConsent}>
+            <PhoneCall size={14}/> {data?.provider.testAdapter ? 'Run provider test' : 'Place authorized call'}
           </button>
-          <ShellLaunchButton baseUrl={baseUrl} testId="link-launch-callcommand-ai" label="Open the call console" />
-        </div>
-      </form>
+          {!matchingConsent && <p style={{ color: semantic.accentWarning, fontSize: fontSize.sm }}>Record matching consent before a call can be requested.</p>}
+          <button type="button" data-testid="button-callcommand-suppress" style={{ ...button, background: semantic.accentDanger, marginLeft: 8 }} disabled={!!busy}
+            onClick={() => act('suppress', () => moduleShellApi.callcommand.suppress({ phone, reason: 'Contact requested no further calls.' }))}>
+            <Ban size={14}/> Suppress number
+          </button>
+        </form>
+      </section>
 
-      <section style={{ marginTop: space.xl }}>
-        <h2 style={{ margin: 0, fontSize: fontSize.lg, fontWeight: 600, color: '#fff', marginBottom: space.md }}>
-          Recent test calls
-        </h2>
-        {loading ? (
-          <div data-testid="text-callcommand-loading" style={{ ...cardStyle, color: semantic.textMuted }}>
-            Loading recent calls…
-          </div>
-        ) : calls.length === 0 ? (
-          <div
-            data-testid="text-callcommand-empty"
-            style={{ ...cardStyle, color: semantic.textMuted, fontSize: fontSize.body }}
-          >
-            No test calls yet — place one above to see how the agent handles it.
-          </div>
+      <section id="callcommand-calls" style={{ marginTop: space.xl }}>
+        <h2 style={{ fontSize: 19 }}>Recent calls</h2>
+        {!data ? <div style={card}>Loading persisted call data…</div> : data.calls.length === 0 ? (
+          <div data-testid="text-callcommand-empty" style={{ ...card, color: semantic.textMuted }}>No calls yet. Configure a channel and profile, record consent, then run the accepted provider workflow.</div>
         ) : (
-          <ul data-testid="list-callcommand-calls" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: space.sm }}>
-            {calls.map((c) => (
-              <li key={c.id} data-testid={`row-callcommand-call-${c.id}`} style={{ ...cardStyle }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <StatusPill status={c.status} />
-                  <div style={{ color: '#fff', fontWeight: 600 }}>{c.phone}</div>
-                  <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-                    {c.callerName} · {PERSONAS.find((p) => p.value === c.persona)?.label ?? c.persona}
-                  </div>
-                </div>
-                {/* Task #94 — when Twilio never produced a transcript,
-                    surface a dedicated badge so users notice the gap
-                    instead of skimming past a quiet summary swap. We key
-                    the badge off the backend's explicit
-                    `transcript_status='unavailable'` signal so a row
-                    that is still in-flight (status='completed' but
-                    transcript polling not finished) does NOT mislabel
-                    itself. */}
-                {c.transcriptStatus === 'unavailable' && (
-                  <div
-                    data-testid={`badge-callcommand-transcript-unavailable-${c.id}`}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      marginTop: space.sm,
-                      padding: '3px 10px', borderRadius: 999,
-                      background: `${semantic.accentWarning}1a`,
-                      border: `1px solid ${semantic.accentWarning}55`,
-                      color: semantic.accentWarning,
-                      fontSize: 11, fontWeight: 600,
-                      textTransform: 'uppercase', letterSpacing: 0.4,
-                    }}
-                  >
-                    <MicOff size={12} /> Transcript unavailable
-                  </div>
-                )}
-                {c.summary && (
-                  <p
-                    data-testid={`text-callcommand-summary-${c.id}`}
-                    style={{ margin: `${space.sm}px 0 0`, color: semantic.textMuted, fontSize: fontSize.sm }}
-                  >
-                    {c.summary}
-                  </p>
-                )}
-                {c.errorMessage && (
-                  <p
-                    data-testid={`text-callcommand-error-${c.id}`}
-                    style={{ margin: `${space.sm}px 0 0`, color: semantic.accentDanger, fontSize: fontSize.sm }}
-                  >
-                    {c.errorMessage}
-                  </p>
-                )}
-                {c.recordingUrl && (
-                  <a
-                    data-testid={`link-callcommand-recording-${c.id}`}
-                    href={c.recordingUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      import('@/lib/launch').then(({ openExternal }) => openExternal(c.recordingUrl!));
-                    }}
-                    style={{ display: 'inline-block', marginTop: space.sm, color: semantic.accent, fontSize: fontSize.sm }}
-                  >
-                    Recording ↗
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div data-testid="list-callcommand-calls" style={{ display: 'grid', gap: space.sm }}>
+            {data.calls.map(call => <article data-testid={`row-callcommand-call-${call.id}`} key={call.id} style={{ ...card, display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 12, alignItems: 'center' }}>
+              <Status status={call.status}/>
+              <div><strong>{call.subjectName || call.phoneMasked}</strong><div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{call.phoneMasked} · {call.direction} · {call.purpose} · {call.provider}</div>{call.summary && <div style={{ marginTop: 6 }}>{call.summary}</div>}{call.disposition && <div data-testid={`text-callcommand-disposition-${call.id}`} style={{ marginTop: 6, color: semantic.accentSuccess }}>Disposition: {call.disposition.replaceAll('_', ' ')}</div>}</div>
+              <span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>Recording: {call.recordingStatus}</span>
+            </article>)}
+          </div>
         )}
       </section>
-    </div>
-  );
-}
 
-/**
- * Task #89 — surface the telephony config state at the top of the shell.
- * Three modes:
- *   • Not configured + connector available → "Connect Twilio" button that
- *     reveals one-click setup instructions.
- *   • Not configured + connector unavailable (self-hosted) → guidance to
- *     paste the four env vars.
- *   • Configured → a green status pill labelled with the active source
- *     so admins can tell at a glance whether they are on the connector or
- *     legacy env-var path.
- */
-function TelephonyBanner({
-  status,
-  connectPending,
-  connectInfo,
-  connectError,
-  onConnect,
-}: {
-  status: TelephonyStatus | null;
-  connectPending: boolean;
-  connectInfo: ConnectResponse | null;
-  connectError: string | null;
-  onConnect: () => void;
-}) {
-  if (!status) return null;
+      {data && data.calls.length > 0 && (
+        <section id="callcommand-review" style={{ marginTop: space.xl, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: space.lg }}>
+          <form style={card} onSubmit={event => {
+            event.preventDefault();
+            if (!selectedCall) return;
+            void act('disposition', () => moduleShellApi.callcommand.setDisposition(selectedCall.id, {
+              disposition,
+              note: dispositionNote || null,
+            }));
+          }}>
+            <h2 style={{ marginTop: 0, fontSize: 18 }}>4. Operator disposition</h2>
+            <p style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>Review a persisted call and record its operational outcome. Notes remain tenant-private.</p>
+            <Field label="Call">
+              <select data-testid="select-callcommand-review-call" style={input} value={selectedCall?.id ?? ''} onChange={event => setSelectedCallId(event.target.value)}>
+                {data.calls.map(call => <option key={call.id} value={call.id}>{call.subjectName || call.phoneMasked} · {call.purpose}</option>)}
+              </select>
+            </Field>
+            <Field label="Disposition">
+              <select data-testid="select-callcommand-disposition" style={input} value={disposition} onChange={event => setDisposition(event.target.value)}>
+                <option value="resolved">Resolved</option>
+                <option value="follow_up_required">Follow-up required</option>
+                <option value="transferred">Transferred</option>
+                <option value="no_action">No action</option>
+                <option value="unreachable">Unreachable</option>
+              </select>
+            </Field>
+            <Field label="Private note">
+              <textarea data-testid="input-callcommand-disposition-note" style={{ ...input, minHeight: 74 }} maxLength={500} value={dispositionNote} onChange={event => setDispositionNote(event.target.value)} />
+            </Field>
+            <button data-testid="button-callcommand-save-disposition" style={button} disabled={!!busy || !selectedCall}><CheckCircle2 size={14}/> Save disposition</button>
+          </form>
 
-  if (status.configured) {
-    const label = status.source === 'connector'
-      ? 'Twilio connected via Replit integration'
-      : 'Twilio connected via environment variables';
-    // Task #96 — surface the active from-number (and masked account SID
-    // when available) beneath the source label so admins can confirm
-    // which Twilio line CallCommand will dial from before placing a real
-    // test call. Tenants with multiple Twilio numbers (sandbox vs prod,
-    // region-specific) need this to avoid placing test calls on the
-    // wrong line.
-    const identityParts: string[] = [];
-    if (status.fromNumber) identityParts.push(`From ${status.fromNumber}`);
-    if (status.accountSid) identityParts.push(status.accountSid);
-    const identityLabel = identityParts.join(' · ');
-    return (
-      <div
-        data-testid="banner-telephony-connected"
-        style={{
-          ...cardStyle,
-          display: 'grid', gap: 2,
-          background: 'rgba(46,160,67,0.08)',
-          border: `1px solid ${semantic.accentSuccess}44`,
-          color: semantic.accentSuccess,
-          fontSize: fontSize.sm, fontWeight: 600,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
-          <CheckCircle2 size={14} />
-          <span data-testid={`text-telephony-source-${status.source ?? 'unknown'}`}>{label}</span>
-        </div>
-        {identityLabel && (
-          <span
-            data-testid="text-telephony-identity"
-            style={{
-              marginLeft: 14 + space.sm,
-              fontWeight: 500,
-              fontSize: fontSize.xs,
-              color: semantic.textMuted,
-              fontVariantNumeric: 'tabular-nums',
-            }}
-          >
-            {identityLabel}
-          </span>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      data-testid="banner-telephony-disconnected"
-      style={{
-        ...cardStyle,
-        background: 'rgba(244,182,68,0.08)',
-        border: `1px solid ${semantic.accentWarning}55`,
-        color: semantic.text,
-        display: 'grid', gap: space.sm,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: space.sm }}>
-        <Plug size={16} color={semantic.accentWarning} />
-        <div style={{ flex: 1, fontSize: fontSize.sm, color: semantic.textMuted }}>
-          Twilio is not connected — test calls will be simulated with a stub
-          response instead of dialing a real number.
-        </div>
-        {status.connectorAvailable ? (
-          <button
-            type="button"
-            data-testid="button-connect-twilio"
-            onClick={onConnect}
-            disabled={connectPending}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '6px 12px', borderRadius: radius.sm, border: 'none',
-              background: connectPending ? 'rgba(139,148,158,0.4)' : semantic.accent,
-              color: '#fff', cursor: connectPending ? 'wait' : 'pointer',
-              fontWeight: 600, fontSize: fontSize.sm,
-            }}
-          >
-            <Link2 size={14} /> {connectPending ? 'Opening…' : 'Connect Twilio'}
-          </button>
-        ) : null}
-      </div>
-
-      {connectError && (
-        <div
-          data-testid="text-connect-twilio-error"
-          style={{ color: semantic.accentDanger, fontSize: fontSize.sm }}
-        >
-          {connectError}
-        </div>
+          <form style={card} onSubmit={event => {
+            event.preventDefault();
+            if (!selectedCall) return;
+            void act('followup', async () => {
+              await moduleShellApi.callcommand.draftFollowup(selectedCall.id, {
+                channel: followupChannel,
+                body: followupBody,
+              });
+              setFollowupBody('');
+            });
+          }}>
+            <h2 style={{ marginTop: 0, fontSize: 18 }}>5. Reviewed follow-up</h2>
+            <p style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>Draft only. CallCommand does not send a message or execute a task until a reviewed delivery contract is approved.</p>
+            <Field label="Channel">
+              <select data-testid="select-callcommand-followup-channel" style={input} value={followupChannel} onChange={event => setFollowupChannel(event.target.value)}>
+                <option value="task">Operator task</option>
+                <option value="sms">SMS draft</option>
+                <option value="email">Email draft</option>
+              </select>
+            </Field>
+            <Field label="Draft">
+              <textarea data-testid="input-callcommand-followup-body" style={{ ...input, minHeight: 100 }} maxLength={2000} value={followupBody} onChange={event => setFollowupBody(event.target.value)} />
+            </Field>
+            <button data-testid="button-callcommand-save-followup" style={button} disabled={!!busy || !selectedCall || !followupBody.trim()}><Plus size={14}/> Save review draft</button>
+            <div data-testid="list-callcommand-followups" style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+              {selectedFollowups.length === 0 ? <span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>No follow-up drafts for this call.</span> : selectedFollowups.map(item => (
+                <div key={item.id} style={{ borderTop: `1px solid ${semantic.border}`, paddingTop: 8 }}>
+                  <strong>{item.channel} · {item.status}</strong>
+                  <div style={{ color: semantic.textMuted, overflowWrap: 'anywhere' }}>{item.body}</div>
+                </div>
+              ))}
+            </div>
+          </form>
+        </section>
       )}
-
-      {connectInfo && (
-        <div
-          data-testid="panel-connect-twilio-info"
-          style={{
-            background: semantic.bg,
-            border: `1px solid ${semantic.border}`,
-            borderRadius: radius.sm,
-            padding: space.md,
-            color: semantic.textMuted,
-            fontSize: fontSize.sm,
-            lineHeight: 1.55,
-          }}
-        >
-          <div style={{ color: '#fff', fontWeight: 600, marginBottom: 6 }}>
-            Finish the connection in Replit
-          </div>
-          <p style={{ margin: '0 0 6px' }}>{connectInfo.instructions}</p>
-          <a
-            href={connectInfo.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-testid="link-connect-twilio-workspace"
-            onClick={(e) => {
-              e.preventDefault();
-              import('@/lib/launch').then(({ openExternal }) => openExternal(connectInfo.url));
-            }}
-            style={{ color: semantic.accent }}
-          >
-            Open the Replit workspace ↗
-          </a>
-        </div>
-      )}
-
-      {!status.connectorAvailable && (
-        <div
-          data-testid="panel-connect-twilio-envvars"
-          style={{
-            background: semantic.bg,
-            border: `1px solid ${semantic.border}`,
-            borderRadius: radius.sm,
-            padding: space.md,
-            color: semantic.textMuted,
-            fontSize: fontSize.sm,
-            lineHeight: 1.55,
-          }}
-        >
-          <div style={{ color: '#fff', fontWeight: 600, marginBottom: 6 }}>
-            Configure Twilio via environment variables
-          </div>
-          <p style={{ margin: '0 0 6px' }}>
-            The Replit connector proxy is not available in this environment.
-            Set the following secrets and restart the API:
-          </p>
-          <ul style={{ margin: 0, paddingLeft: 20 }}>
-            <li><code>TWILIO_ACCOUNT_SID</code></li>
-            <li><code>TWILIO_AUTH_TOKEN</code></li>
-            <li><code>TWILIO_FROM_NUMBER</code></li>
-            <li><code>TWILIO_PUBLIC_BASE_URL</code> (or <code>APP_URL</code>)</li>
-          </ul>
-        </div>
-      )}
-    </div>
+    </main>
   );
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label style={{ display: 'grid', gap: 4, fontSize: fontSize.sm, color: semantic.textMuted }}>
-      {label}
-      {children}
-    </label>
-  );
+  return <label style={{ display: 'grid', gap: 5, marginBottom: 10, color: semantic.textMuted, fontSize: fontSize.sm }}>{label}{children}</label>;
 }
-
-function StatusPill({ status }: { status: CallStatus }) {
-  const map = {
-    queued:    { label: 'Queued',    color: semantic.accentInfo,    icon: <Clock size={12} /> },
-    ringing:   { label: 'Ringing',   color: semantic.accentWarning, icon: <PhoneCall size={12} /> },
-    completed: { label: 'Completed', color: semantic.accentSuccess, icon: <CheckCircle2 size={12} /> },
-    failed:    { label: 'Failed',    color: semantic.accentDanger,  icon: <AlertTriangle size={12} /> },
-  }[status];
-  return (
-    <span
-      data-testid={`status-callcommand-${status}`}
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4,
-        padding: '2px 8px', borderRadius: 999,
-        border: `1px solid ${map.color}55`, color: map.color,
-        fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4,
-      }}
-    >
-      {map.icon} {map.label}
-    </span>
-  );
+function ConfigRow({ icon, title, detail }: { icon: React.ReactNode; title: string; detail: string }) {
+  return <div style={{ display: 'flex', gap: 9, alignItems: 'center', padding: 10, border: `1px solid ${semantic.border}`, borderRadius: radius.sm }}>
+    {icon}<div><strong>{title}</strong><div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{detail}</div></div>
+  </div>;
 }
-
-const inputStyle: React.CSSProperties = {
-  background: semantic.bg,
-  color: semantic.text,
-  border: `1px solid ${semantic.border}`,
-  borderRadius: radius.sm,
-  padding: '8px 10px',
-  fontSize: fontSize.body,
-  outline: 'none',
-};
+function Status({ status }: { status: string }) {
+  const ok = status === 'completed';
+  return <span data-testid={`status-callcommand-${status}`} style={{ padding: '4px 8px', borderRadius: 999, fontSize: 11, fontWeight: 800,
+    color: ok ? semantic.accentSuccess : status === 'failed' ? semantic.accentDanger : semantic.accentWarning,
+    border: `1px solid ${ok ? semantic.accentSuccess : status === 'failed' ? semantic.accentDanger : semantic.accentWarning}55` }}>{status}</span>;
+}

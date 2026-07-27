@@ -29,10 +29,10 @@ new ADR explicitly supersedes it.
 | ADR-0022 | SnapProofOS owns tenant-scoped evidence cases, private captures, append-only custody, review and defensible reports; OperatorOS retains identity, tenant, entitlement, upload, audit and integration authority, while public raw URLs and legacy share links are excluded. | Accepted | `docs/adr/ADR-0022-snapproofos-evidence-integrity-boundary.md` |
 | ADR-0023 | StudyForge AI owns tenant-scoped sources and reviewed learning workflows; OperatorOS retains identity, tenant, entitlement, billing, provider and usage authority, and unverifiable source attribution is rejected. | Accepted | `docs/adr/ADR-0023-studyforge-learning-and-ai-boundary.md` |
 | ADR-0024 | Ninja Launch Kit owns time-bounded tenant launch execution, reviewed artifacts and evidence-based readiness; OperatorOS and BrandForgeOS retain their platform and reusable-brand authority. | Accepted | `docs/adr/ADR-0024-ninja-launch-kit-product-and-readiness-boundary.md` |
+| ADR-0025 | CallCommand AI owns consent-first call operations; OutCall remains disabled, providers fail closed, callbacks are signed/deduplicated, and recording URLs are never exposed. | Accepted | `docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md` |
 
 ## Required future ADRs
 
-- CallCommand AI versus OutCall product boundary (Phases 11E/12B).
 - Ninjamation canonical source or newly specified product boundary (Phase 12A).
 
 ADRs must state context, decision, consequences, data/security impact,

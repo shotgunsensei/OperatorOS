@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 24 ordered step identifiers without secrets
+`db:plan` is read-only and prints 27 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -133,6 +133,22 @@ production operation. No production snapshot, logical dump, restore, apply,
 traffic switch, or source-data import occurred. Before deployment, execute the
 full backup and restore procedure above against an authorized isolated target
 and record the exact deployed revision and backup evidence.
+
+## Phase 11E additive release rehearsal
+
+On 2026-07-27 the reviewed 27-step manifest, including
+`callcommand_tables`, was applied to a clean disposable PostgreSQL 16
+database and immediately applied again. The clean apply completed in 10.169
+seconds and the idempotent reapply in 1.618 seconds. The compiled unified
+supervisor repeated all 27 steps before declaring Fastify, the shared worker
+and Next ready; direct and web-proxied `/healthz` and `/readyz` then passed.
+
+This was an additive schema/release rehearsal, not a production backup or
+restore. No production data, standalone CallCommand export, provider traffic,
+recording, source-data apply or traffic switch was authorized. Before
+deployment, execute the full backup/restore procedure against an approved
+isolated target and record the exact revision, consent/suppression
+reconciliation and provider-jurisdiction review.
 
 ## Phase 2 schema-apply rehearsal
 

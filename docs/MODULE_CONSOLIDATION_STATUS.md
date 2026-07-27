@@ -40,24 +40,25 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 | SnapProofOS | `snapproofos` | `snapproofos.operatoros.net` | add-on | Clean `C:\Dev\snapproof` and snapshot at `26bded38c13b5b6361d407462c68052b0c30613d` | Phase 11B source/local state-4 candidate: tenant-scoped evidence cases; private note/file capture with signature/MIME validation, shared scan and SHA-256 recheck; member submit/admin review; findings; append-only comments and hash-linked custody; immutable reports; real JSON/CSV exports; retention/legal hold/archive; persisted dashboard and canonical deep links. ADR-0022 excludes child identity/billing, public share/file URLs, fake exports and arbitrary integrations. Clean 24-step release, aggregate 787/787, compiled health/readiness and production-host matrix 6/6 pass locally; deployed acceptance and authorized data reconciliation/cutover still block state 5 |
 | StudyForge AI | `studyforge-ai` | `studyforge-ai.operatoros.net` | add-on | Clean `C:\Dev\Study-Forge` and snapshot at `a607a9f34442b1d0f6bfffbf0293609529494825` | Phase 11C source/local state-4 candidate: tenant-scoped subjects and private note/document sources; source-grounded AI decks, quizzes and plans; editable draft/review/publish lifecycle; server grading; per-user spaced repetition/session completion; shared usage/idempotency/activity; real exports and canonical deep links. ADR-0023 excludes child identity/billing/admin, ungrounded publication and fake analytics. Clean 25-step release, aggregate 801/801, compiled health/readiness and production-host matrix 7/7 pass locally; deployed acceptance and authorized data reconciliation/cutover still block state 5 |
 | Ninja Launch Kit | `ninja-launch-kit` | `ninjalaunchkit.operatoros.net` | add-on | Clean `C:\Dev\Ninja-Launch-Kit` and snapshot at `30bd1abc05846926e97bc7b26c5b7d6625e8f161` | Phase 11D source/local state-4 candidate: tenant-scoped launches, phases, milestones, task dependencies, reviewed campaign artifacts, private shared assets, server-computed readiness, OperatorOS-owned AI/idempotency/usage/activity, audited JSON/Markdown/CSV exports, responsive workspace and canonical deep links. ADR-0024 separates launch execution from BrandForgeOS brand/campaign authority and excludes child identity/billing/admin, legacy URL-token SSO and simulated claims. Clean 26-step release, aggregate 816/816, compiled health/readiness and production-host matrix 8/8 pass locally; deployed acceptance and authorized data reconciliation/cutover still block state 5 |
-| CallCommand AI | `callcommand-ai` | `callcommand-ai.operatoros.net` | add-on | `C:\Dev\Call-Command-AI` | Commit-pinned source snapshot + partial tenant-gated telephony MVP; advanced workflow parity pending |
+| CallCommand AI | `callcommand-ai` | `callcommand-ai.operatoros.net` | add-on | Clean `C:\Dev\Call-Command-AI` and snapshot at `d49434e1d641d62cc141591c7208539a7afbf11e` | Phase 11E source/local state-4 candidate: tenant channels, bounded receptionist/intake profiles, review-only transfer targets, purpose-specific outbound consent, do-not-call suppression, signed inbound DTMF intake, persistent calls/safe events, operator dispositions, reviewed follow-up drafts and record-derived analytics; explicit test-only adapter; fail-closed Twilio provider; replay-safe callbacks; forced-off recording with no SID/URL activation; responsive workspace and canonical deep links. ADR-0025 assigns contacts to Shared Directory and excludes child authority/billing, fake delivery, transfer execution, recording/transcription/AI summaries, incomplete SIP providers and bulk/cold/predictive/autonomous dialing; OutCall remains disabled. Clean 27-step release, aggregate 825/825, compiled health/readiness and production-host matrix 9/9 pass locally; deployed/live-provider acceptance and authorized reconciliation/cutover still block state 5 |
 | Ninjamation | `ninjamation` | `ninjamation.operatoros.net` | add-on | No saved Codex project/source path observed | Tenant-gated native MVP shell/API; canonical source decision pending |
 | OutCall | `outcall` | `outcall.operatoros.net` | add-on | No saved Codex project/source path observed | Planned/disabled placeholder; not purchasable or launchable |
 
 ## Current verification boundary
 
-Phase 11D adds the ordered `ninja_launch_kit_tables` release step and replaces
-the active scaffold with a dedicated tenant-scoped launch-execution workspace.
-Fresh closure evidence passes the focused domain/import/database/static
-contracts and four PostgreSQL workflows, the clean aggregate 816/816,
+Phase 11E adds the ordered `callcommand_tables` release step and replaces the
+partial shell with a dedicated tenant-scoped consent-first call-operations
+workspace. Fresh closure evidence passes focused domain/import/static checks,
+5/5 tenant/authorization/consent/disposition/persistence PostgreSQL checks,
+4/4 signed callback/inbound/replay/recording-privacy checks, the clean aggregate 825/825,
 workspace typecheck, production build/core preflight, clean and idempotent
-26-step release, compiled direct and web-proxied `/healthz` and `/readyz`, and
-the complete production-host browser matrix 8/8. The matrix proves all twelve
-silent launches plus Ninja Launch Kit creation, task completion, deterministic
-local AI drafting, explicit review/approval, 100% server readiness, launch,
-audited export, mobile navigation, return, global logout, direct deep-link
-reauthentication, refresh and persistence. This is local/source evidence; no
-public deployment, live provider traffic or data cutover is inferred.
+27-step release, compiled direct and web-proxied `/healthz` and `/readyz`, and
+the complete production-host browser matrix 9/9. The matrix proves all twelve
+silent launches plus configuration, consent, suppression, persistent
+test-adapter call/events, deep refresh, mobile navigation, return, global
+logout and deep-link reauthentication. Production Twilio remains disabled and
+fail-closed in this proof. This is local/source evidence; no public deployment,
+live provider traffic or data cutover is inferred.
 
 The shared source passes the API, runner, and web typechecks and the exact
 production build shape with `INTERNAL_API_URL=http://localhost:5001`.

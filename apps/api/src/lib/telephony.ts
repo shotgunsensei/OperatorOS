@@ -181,6 +181,7 @@ export interface PlaceCallInput {
   persona: string;
   callerName: string;
   callRowId: string;
+  recordingEnabled?: boolean;
 }
 
 export interface PlaceCallResult {
@@ -248,10 +249,14 @@ export async function placeTwilioCall(input: PlaceCallInput): Promise<PlaceCallR
   for (const ev of ['initiated', 'ringing', 'answered', 'completed']) {
     form.append('StatusCallbackEvent', ev);
   }
-  form.set('Record', 'true');
-  form.set('RecordingStatusCallback', recordingCallback);
-  form.set('RecordingStatusCallbackMethod', 'POST');
-  form.set('RecordingStatusCallbackEvent', 'completed');
+  if (input.recordingEnabled) {
+    form.set('Record', 'true');
+    form.set('RecordingStatusCallback', recordingCallback);
+    form.set('RecordingStatusCallbackMethod', 'POST');
+    form.set('RecordingStatusCallbackEvent', 'completed');
+  } else {
+    form.set('Record', 'false');
+  }
 
   const auth = Buffer.from(`${cfg.accountSid}:${cfg.authToken}`).toString('base64');
   const res = await fetch(

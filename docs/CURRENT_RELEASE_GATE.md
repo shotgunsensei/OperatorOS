@@ -1,11 +1,11 @@
 # OperatorOS current release gate
 
-- Evidence date: 2026-07-26
-- Candidate branch: `codex/phase-11b-snapproofos-completion`
+- Evidence date: 2026-07-27
+- Candidate branch: `codex/phase-11e-callcommand-ai-completion`
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
-- Platform and Phases 2-11B source/local gate: **PARTIAL; Phase 11B state-4 scoped gates and clean ecosystem aggregate pass, deployed gates remain open**
+- Platform and Phases 2-11E source/local gate: **PARTIAL; Phase 11E state-4 scoped gates and clean ecosystem aggregate pass, deployed gates remain open**
 - Public deployment gate: **FAIL (32/47)**
 - Overall release decision: **CLOSED — do not promote**
 
@@ -46,17 +46,20 @@ SSO pass. Remote action and secret values remain deliberately absent. TechDeck
 stays below state 5 until deployed workflow/provider acceptance and an
 authorized standalone-data cutover pass.
 
-Phase 11B recovered SnapProofOS provenance and delivered its approved evidence
-integrity workflow as a source/local state 4 candidate. Private attachment
-capture, scanning and hashing; server review; findings; append-only comments
-and hash-linked custody; immutable report snapshots; real exports; retention,
-legal hold, archive and canonical deep links now run inside OperatorOS
-authority. Focused contracts pass 17/17, the clean aggregate passes 787/787,
-the clean/idempotent release contains 24 steps, compiled health/readiness
-passes, and the production-host matrix passes 6/6 locally. Public sharing,
-child authority, fake exports and unreviewed integrations remain excluded.
-SnapProofOS stays below state 5 until the exact revision is deployed and an
-authorized source-data reconciliation/cutover and deployed acceptance pass.
+Phase 11E recovered CallCommand AI provenance and delivered its approved
+consent-first call-operations workflow as a source/local state 4 candidate.
+Tenant configuration, consent, suppression, persistent calls/safe events,
+signed inbound DTMF intake, operator dispositions, reviewed follow-up drafts,
+real analytics, a test-only adapter, fail-closed Twilio placement, signed
+replay-safe callbacks, recording privacy and canonical deep links now run
+inside OperatorOS authority. Focused static and PostgreSQL workflows pass, the
+clean aggregate passes 825/825, the
+clean/idempotent release contains 27 steps, compiled health/readiness passes,
+and the production-host matrix passes 9/9 locally. Bulk/cold/predictive
+dialing, child authority, fake delivery and incomplete providers remain
+excluded. CallCommand stays below state 5 until the exact revision is
+deployed and authorized source-data reconciliation/cutover, live-provider and
+deployed acceptance pass.
 
 The candidate was not deployed because deployment/publishing was not
 authorized. The current public hosts still serve an older release. The release
@@ -74,14 +77,14 @@ and migration parity remain controlled by the module parity index.
 | Frozen dependency contract | PASS FROM PHASE 0 | Pinned pnpm `10.34.5`; lockfile unchanged by Phase 1 |
 | Production environment contract | PASS | Machine-readable contract plus 7 preflight tests; core CLI preflight passed with exact canonical values and non-secret local test credentials |
 | Unsafe configuration rejection | PASS | Rejects missing/short secrets, legacy `APP_URL`, parent `COOKIE_DOMAIN`, public unified-runtime API URL, unsafe commands, legacy SSO rollback, wildcard/insecure/credentialed/loopback CORS, and drifted module hosts |
-| Database release plan | PASS | `db:plan` emits 24 ordered, additive, secret-free steps; Phase 11B clean apply and idempotent reapply passed on disposable PostgreSQL 16, including `snapproofos_tables` after shared services |
+| Database release plan | PASS | `db:plan` emits 27 ordered, additive, secret-free steps; Phase 11E clean apply and idempotent reapply passed on disposable PostgreSQL 16, including `callcommand_tables` |
 | Backup/restore rehearsal | PASS LOCALLY | Phase 4 custom dump restored in 3.570 s; source/restore matched 94 public tables, 17 TradeFlowKit, 9 Directory, and 10 shared-service tables |
 | Restored data/constraints | PASS | Restored release apply passed; dump SHA-256 `d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82` |
 | Production build | PASS | Installed workspace toolchain produced SDK, API, runner gateway, and Next artifacts after API/runner/web typechecks; Next 14.2.35 generated 20 static page entries. The exact Replit wrapper remains pinned to pnpm 10.34.5. |
-| Compiled production supervisor | PASS | Compiled 24-step release ran idempotently, Fastify and the shared worker reached readiness on 5001, and compiled Next reached ready on the isolated public test port; no `tsx` production runtime |
+| Compiled production supervisor | PASS | Compiled 27-step release ran idempotently, Fastify and the shared worker reached readiness on 5001, and compiled Next reached ready on the isolated public test port; no `tsx` production runtime |
 | Local canonical-host health | PASS | HTTPS apex `/healthz` returned 200 with `operatoros-api`; API `/readyz` returned 200 with database/auth/SSO/registry configured |
 | Local public URL diagnostics | PASS | TechDeck diagnostic resolved forwarded exact host, HTTPS origin, module role, and host-only cookie mode |
-| Production-host SSO browser gate | PASS LOCALLY | Fresh Phase 11B matrix passed 6/6 in 1.3 minutes without retry across root/app/auth and all 12 enabled modules. PKCE/state/nonce, exact callbacks, host-only cookies, return/Back/refresh, silent sibling launch, local/global logout, plus persistent FaultlineLab, BrandForgeOS, SnapProofOS and Ninja Pool Hall workflows passed |
+| Production-host SSO browser gate | PASS LOCALLY | Fresh Phase 11E matrix passed 9/9 in 1.8 minutes without retry across root/app/auth and all 12 enabled modules. PKCE/state/nonce, exact callbacks, host-only cookies, return/Back/refresh, silent launches, local/global logout, plus persistent FaultlineLab, BrandForgeOS, StudyForge AI, Ninja Launch Kit, CallCommand AI, SnapProofOS and Ninja Pool Hall workflows passed |
 | Focused Phase 1 tests | PASS | 11/11 database-release, preflight, and supervisor contract tests |
 | Focused Phase 2 tests | PASS | 9/9 directory, UI, deep-link, and release-contract tests |
 | Focused Phase 3 tests | PASS | 24/24 shared-service, route, retention, lease-recovery, release, webhook, and provider-state tests on a clean database |
@@ -89,8 +92,9 @@ and migration parity remain controlled by the module parity index.
 | Focused Phase 5 tests | PASS | TechDeck 16/16 plus new Phase 5 5/5 for managed operations, network/IPAM, lifecycle, documentation/evidence/report/time workflow, roles, isolation, importer, release, and deep links |
 | Focused Phase 10A tests | PASS | 11/11 domain/import/static/deep-link/release contracts plus fresh 5/5 shell/deep-link contracts and 1/1 isolated PostgreSQL workflow for persistence, tenant isolation, viewer denial, scoring, assignments, immutability and restart |
 | Focused Phase 11B tests | PASS | 17/17 domain/import/database/release/deep-link contracts including private attachment controls, review authority, tenant isolation, viewer denial, append-only custody, report/export, retention and canonical routes |
+| Focused Phase 11E tests | PASS | Static domain/import/release/deep-link contracts plus 5/5 tenant/authorization/consent/disposition/persistence and 4/4 signed callback/inbound/replay/recording-privacy PostgreSQL workflows |
 | Phase 2 browser workflow | PASS LOCALLY | 1/1 on compiled artifacts; CRUD, refresh persistence, same organization ID across three modules, and no script-readable auth |
-| Full API regression | PASS | Fresh isolated aggregate on the exact Phase 11B source passed 787/787 with 0 failures, 0 skips and 0 todo in 239.9 seconds |
+| Full API regression | PASS | Fresh isolated aggregate on the exact Phase 11E source passed 825/825 with 0 failures, 0 skips and 0 todo |
 | Public read-only runtime verifier | FAIL | 32/47 on 2026-07-18; no authentication and no mutation |
 | Formatting/lint | NOT DEFINED | Repository has no supported formatting or lint script; no pass is claimed |
 
