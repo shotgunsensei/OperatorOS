@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { db } from '../db.js';
-import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNull, ne, or, sql } from 'drizzle-orm';
 import {
   modules,
   moduleStudySessions,
@@ -40,6 +40,7 @@ import {
 import {
   parseCustomerCreate,
   parseCustomerImport,
+  parseCustomerUpdate,
   parseDocumentArchive,
   parseInvoiceCreate,
   parseInvoiceFromQuote,
@@ -762,6 +763,262 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       return outcome.customer;
     });
     return reply.code(201).send(customer);
+  });
+
+  app.patch('/v1/modules/tradeflowkit/customers/:id', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    const ctx = (request as any).tenantContext as { tenantId: string };
+    const user = (request as any).user as { id: string };
+    const { id } = request.params as { id: string };
+    let input;
+    try { input = parseCustomerUpdate(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+
+    try {
+      const outcome = await db.transaction(async tx => {
+        const [current] = await tx.select().from(tradeflowkitCustomers).where(and(
+          eq(tradeflowkitCustomers.id, id),
+          eq(tradeflowkitCustomers.tenantId, ctx.tenantId),
+          isNull(tradeflowkitCustomers.deletedAt),
+        )).limit(1);
+        if (!current) return { kind: 'not_found' as const };
+        if (current.version !== input.expectedVersion) {
+          return { kind: 'version_conflict' as const, currentVersion: current.version };
+        }
+
+        const normalizedName = normalizeTradeFlowKitCustomerName(input.name);
+        if (current.organizationId) {
+          const [duplicateOrganization] = await tx.select({ id: directoryOrganizations.id }).from(directoryOrganizations).where(and(
+            eq(directoryOrganizations.tenantId, ctx.tenantId),
+            eq(directoryOrganizations.normalizedName, normalizedName),
+            ne(directoryOrganizations.id, current.organizationId),
+            isNull(directoryOrganizations.archivedAt),
+          )).limit(1);
+          if (duplicateOrganization) return { kind: 'duplicate_name' as const };
+        }
+
+        const [updated] = await tx.update(tradeflowkitCustomers).set({
+          name: input.name,
+          phone: input.phone,
+          email: input.email,
+          address: input.address,
+          notes: input.notes,
+          updatedAt: new Date(),
+          version: sql`${tradeflowkitCustomers.version} + 1`,
+        }).where(and(
+          eq(tradeflowkitCustomers.id, id),
+          eq(tradeflowkitCustomers.tenantId, ctx.tenantId),
+          eq(tradeflowkitCustomers.version, input.expectedVersion),
+          isNull(tradeflowkitCustomers.deletedAt),
+        )).returning();
+        if (!updated) return { kind: 'version_conflict' as const, currentVersion: current.version };
+
+        if (current.organizationId) {
+          const [organization] = await tx.select().from(directoryOrganizations).where(and(
+            eq(directoryOrganizations.id, current.organizationId),
+            eq(directoryOrganizations.tenantId, ctx.tenantId),
+            isNull(directoryOrganizations.archivedAt),
+          )).limit(1);
+          if (!organization) throw new Error('TRADEFLOWKIT_DIRECTORY_ORGANIZATION_NOT_FOUND');
+          const [updatedOrganization] = await tx.update(directoryOrganizations).set({
+            name: input.name,
+            normalizedName,
+            notes: input.notes,
+            updatedByUserId: user.id,
+            updatedAt: new Date(),
+            version: sql`${directoryOrganizations.version} + 1`,
+          }).where(and(
+            eq(directoryOrganizations.id, organization.id),
+            eq(directoryOrganizations.tenantId, ctx.tenantId),
+            eq(directoryOrganizations.version, organization.version),
+            isNull(directoryOrganizations.archivedAt),
+          )).returning();
+          if (!updatedOrganization) throw new Error('TRADEFLOWKIT_DIRECTORY_VERSION_CONFLICT');
+        }
+
+        let primaryContactId = current.primaryContactId;
+        if (primaryContactId) {
+          const [contact] = await tx.select().from(directoryContacts).where(and(
+            eq(directoryContacts.id, primaryContactId),
+            eq(directoryContacts.tenantId, ctx.tenantId),
+            isNull(directoryContacts.archivedAt),
+          )).limit(1);
+          if (contact) {
+            const parts = input.name.trim().split(/\s+/);
+            const [updatedContact] = await tx.update(directoryContacts).set({
+              firstName: parts.shift() || input.name,
+              lastName: parts.join(' '),
+              normalizedName,
+              email: input.email,
+              normalizedEmail: input.email?.toLocaleLowerCase('en-US') ?? null,
+              phone: input.phone,
+              updatedByUserId: user.id,
+              updatedAt: new Date(),
+              version: sql`${directoryContacts.version} + 1`,
+            }).where(and(
+              eq(directoryContacts.id, contact.id),
+              eq(directoryContacts.tenantId, ctx.tenantId),
+              eq(directoryContacts.version, contact.version),
+              isNull(directoryContacts.archivedAt),
+            )).returning();
+            if (!updatedContact) throw new Error('TRADEFLOWKIT_DIRECTORY_VERSION_CONFLICT');
+          }
+        } else if (input.email || input.phone) {
+          const parts = input.name.trim().split(/\s+/);
+          const [createdContact] = await tx.insert(directoryContacts).values({
+            tenantId: ctx.tenantId,
+            firstName: parts.shift() || input.name,
+            lastName: parts.join(' '),
+            normalizedName,
+            email: input.email,
+            normalizedEmail: input.email?.toLocaleLowerCase('en-US') ?? null,
+            phone: input.phone,
+            createdByUserId: user.id,
+            updatedByUserId: user.id,
+          }).onConflictDoNothing().returning();
+          primaryContactId = createdContact?.id ?? null;
+          if (!primaryContactId && input.email) {
+            const [existingContact] = await tx.select({ id: directoryContacts.id }).from(directoryContacts).where(and(
+              eq(directoryContacts.tenantId, ctx.tenantId),
+              eq(directoryContacts.normalizedEmail, input.email.toLocaleLowerCase('en-US')),
+              isNull(directoryContacts.archivedAt),
+            )).limit(1);
+            primaryContactId = existingContact?.id ?? null;
+          }
+          if (!primaryContactId) throw new Error('TRADEFLOWKIT_DIRECTORY_CONTACT_NOT_CREATED');
+          if (current.organizationId) {
+            await tx.insert(directoryOrganizationContacts).values({
+              tenantId: ctx.tenantId,
+              organizationId: current.organizationId,
+              contactId: primaryContactId,
+              role: 'primary',
+              isPrimary: true,
+              createdByUserId: user.id,
+            }).onConflictDoNothing();
+          }
+          const [linkedCustomer] = await tx.update(tradeflowkitCustomers).set({ primaryContactId }).where(and(
+            eq(tradeflowkitCustomers.id, id),
+            eq(tradeflowkitCustomers.tenantId, ctx.tenantId),
+            eq(tradeflowkitCustomers.version, input.expectedVersion + 1),
+            isNull(tradeflowkitCustomers.deletedAt),
+          )).returning({ id: tradeflowkitCustomers.id });
+          if (!linkedCustomer) throw new Error('TRADEFLOWKIT_DIRECTORY_VERSION_CONFLICT');
+          updated.primaryContactId = primaryContactId;
+        }
+
+        await tx.insert(activityFeed).values({
+          tenantId: ctx.tenantId,
+          userId: user.id,
+          action: 'updated',
+          entityType: 'tradeflowkit_customer',
+          entityId: id,
+          metadata: { changedFields: ['name', 'email', 'phone', 'address', 'notes'] },
+        });
+        return { kind: 'updated' as const, customer: updated };
+      });
+
+      if (outcome.kind === 'not_found') return reply.code(404).send({ error: 'Customer not found', code: 'CUSTOMER_NOT_FOUND' });
+      if (outcome.kind === 'version_conflict') {
+        return reply.code(409).send({
+          error: 'Customer changed; reload and retry',
+          code: 'CUSTOMER_VERSION_CONFLICT',
+          currentVersion: outcome.currentVersion,
+        });
+      }
+      if (outcome.kind === 'duplicate_name') {
+        return reply.code(409).send({ error: 'An active customer already uses that name', code: 'CUSTOMER_NAME_CONFLICT' });
+      }
+      return outcome.customer;
+    } catch (error) {
+      const databaseCode = (error as { code?: string; cause?: { code?: string } })?.code
+        ?? (error as { cause?: { code?: string } })?.cause?.code;
+      const message = error instanceof Error ? error.message : '';
+      if (databaseCode === '23505') {
+        return reply.code(409).send({ error: 'Customer details conflict with an active Directory record', code: 'CUSTOMER_DIRECTORY_CONFLICT' });
+      }
+      if (message === 'TRADEFLOWKIT_DIRECTORY_ORGANIZATION_NOT_FOUND') {
+        return reply.code(409).send({ error: 'The linked Directory organization is unavailable', code: 'CUSTOMER_DIRECTORY_MISSING' });
+      }
+      if (message === 'TRADEFLOWKIT_DIRECTORY_VERSION_CONFLICT') {
+        return reply.code(409).send({ error: 'The linked Directory record changed; reload and retry', code: 'CUSTOMER_DIRECTORY_VERSION_CONFLICT' });
+      }
+      if (message === 'TRADEFLOWKIT_DIRECTORY_CONTACT_NOT_CREATED') {
+        return reply.code(409).send({ error: 'The linked Directory contact could not be created', code: 'CUSTOMER_DIRECTORY_CONTACT_CONFLICT' });
+      }
+      throw error;
+    }
+  });
+
+  app.delete('/v1/modules/tradeflowkit/customers/:id', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    const ctx = (request as any).tenantContext as { tenantId: string };
+    const user = (request as any).user as { id: string };
+    const { id } = request.params as { id: string };
+    let input;
+    try { input = parseDocumentArchive(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+
+    const outcome = await db.transaction(async tx => {
+      const [current] = await tx.select().from(tradeflowkitCustomers).where(and(
+        eq(tradeflowkitCustomers.id, id),
+        eq(tradeflowkitCustomers.tenantId, ctx.tenantId),
+        isNull(tradeflowkitCustomers.deletedAt),
+      )).limit(1);
+      if (!current) return { kind: 'not_found' as const };
+      if (current.version !== input.expectedVersion) {
+        return { kind: 'version_conflict' as const, currentVersion: current.version };
+      }
+      const [activeJobs, activeQuotes, activeInvoices] = await Promise.all([
+        tx.select({ id: tradeflowkitJobs.id }).from(tradeflowkitJobs).where(and(
+          eq(tradeflowkitJobs.tenantId, ctx.tenantId),
+          eq(tradeflowkitJobs.customerId, id),
+          isNull(tradeflowkitJobs.deletedAt),
+        )).limit(1),
+        tx.select({ id: tradeflowkitQuotes.id }).from(tradeflowkitQuotes).where(and(
+          eq(tradeflowkitQuotes.tenantId, ctx.tenantId),
+          eq(tradeflowkitQuotes.customerId, id),
+          isNull(tradeflowkitQuotes.deletedAt),
+        )).limit(1),
+        tx.select({ id: tradeflowkitInvoices.id }).from(tradeflowkitInvoices).where(and(
+          eq(tradeflowkitInvoices.tenantId, ctx.tenantId),
+          eq(tradeflowkitInvoices.customerId, id),
+          isNull(tradeflowkitInvoices.deletedAt),
+        )).limit(1),
+      ]);
+      if (activeJobs.length || activeQuotes.length || activeInvoices.length) return { kind: 'active_history' as const };
+      const [archived] = await tx.update(tradeflowkitCustomers).set({
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+        version: sql`${tradeflowkitCustomers.version} + 1`,
+      }).where(and(
+        eq(tradeflowkitCustomers.id, id),
+        eq(tradeflowkitCustomers.tenantId, ctx.tenantId),
+        eq(tradeflowkitCustomers.version, input.expectedVersion),
+        isNull(tradeflowkitCustomers.deletedAt),
+      )).returning();
+      if (!archived) return { kind: 'version_conflict' as const, currentVersion: current.version };
+      await tx.insert(activityFeed).values({
+        tenantId: ctx.tenantId,
+        userId: user.id,
+        action: 'archived',
+        entityType: 'tradeflowkit_customer',
+        entityId: id,
+        metadata: { organizationId: current.organizationId },
+      });
+      return { kind: 'archived' as const, customer: archived };
+    });
+
+    if (outcome.kind === 'not_found') return reply.code(404).send({ error: 'Customer not found', code: 'CUSTOMER_NOT_FOUND' });
+    if (outcome.kind === 'version_conflict') {
+      return reply.code(409).send({
+        error: 'Customer changed; reload and retry',
+        code: 'CUSTOMER_VERSION_CONFLICT',
+        currentVersion: outcome.currentVersion,
+      });
+    }
+    if (outcome.kind === 'active_history') {
+      return reply.code(409).send({
+        error: 'Archive active jobs, quotes, and invoices before archiving this customer',
+        code: 'CUSTOMER_HAS_ACTIVE_HISTORY',
+      });
+    }
+    return { ok: true, customer: outcome.customer };
   });
 
   app.post('/v1/modules/tradeflowkit/customers/import', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {

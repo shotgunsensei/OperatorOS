@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
+  directoryContacts,
+  directoryOrganizations,
   tenantModules,
   tenantUserModuleAccess,
   tenantUsers,
@@ -239,9 +241,8 @@ test('workflow studio is tenant isolated, admin governed, versioned, persistent,
   assert.equal(activity.statusCode, 200, activity.body);
   assert.ok(activity.json().items.some((event: any) => event.action === 'workflow_transition'));
 
-  await app.close();
-  app = await createApp(true);
-  const afterRestart = await app.inject({
+  const workflowRestartApp = await createApp(true);
+  const afterRestart = await workflowRestartApp.inject({
     method: 'GET',
     url: '/v1/modules/tradeflowkit/workflows',
     headers: headers(ownerA, tenant),
@@ -250,17 +251,198 @@ test('workflow studio is tenant isolated, admin governed, versioned, persistent,
   assert.equal(afterRestart.json().find((item: any) => item.id === workflow.id).stages.length, 4);
   assert.equal(afterRestart.json().filter((item: any) => item.isDefault).length, 1);
 
-  const archivedTask = await app.inject({
+  const archivedTask = await workflowRestartApp.inject({
     method: 'DELETE',
     url: `/v1/modules/tradeflowkit/tasks/${task.id}`,
     headers: headers(ownerA, tenant),
     payload: { expectedVersion: task.version },
   });
   assert.equal(archivedTask.statusCode, 200, archivedTask.body);
-  const archivedTaskRead = await app.inject({
+  const archivedTaskRead = await workflowRestartApp.inject({
     method: 'GET',
     url: `/v1/modules/tradeflowkit/tasks/${task.id}`,
     headers: headers(ownerA, tenant),
   });
   assert.equal(archivedTaskRead.statusCode, 404, archivedTaskRead.body);
+  await workflowRestartApp.close();
+});
+
+test('customer, job, and task records support tenant-safe edit, restart persistence, and dependency-ordered archive', async () => {
+  const tenant = ownerA.currentTenantId;
+
+  const customerResponse = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/tradeflowkit/customers',
+    headers: headers(ownerA, tenant),
+    payload: {
+      name: 'Functional Parity Test Client',
+      address: '100 Original Avenue',
+      notes: 'Created without contact details for core CRUD proof.',
+    },
+  });
+  assert.equal(customerResponse.statusCode, 201, customerResponse.body);
+  const customer = customerResponse.json();
+
+  const viewerUpdate = await app.inject({
+    method: 'PATCH',
+    url: `/v1/modules/tradeflowkit/customers/${customer.id}`,
+    headers: headers(viewer, tenant),
+    payload: { ...customer, expectedVersion: customer.version, name: 'Denied update' },
+  });
+  assert.equal(viewerUpdate.statusCode, 403, viewerUpdate.body);
+
+  const foreignUpdate = await app.inject({
+    method: 'PATCH',
+    url: `/v1/modules/tradeflowkit/customers/${customer.id}`,
+    headers: headers(ownerB, ownerB.currentTenantId),
+    payload: { expectedVersion: customer.version, name: 'Foreign update' },
+  });
+  assert.equal(foreignUpdate.statusCode, 404, foreignUpdate.body);
+  assert.equal(foreignUpdate.json().code, 'CUSTOMER_NOT_FOUND');
+
+  const customerUpdate = await app.inject({
+    method: 'PATCH',
+    url: `/v1/modules/tradeflowkit/customers/${customer.id}`,
+    headers: headers(ownerA, tenant),
+    payload: {
+      expectedVersion: customer.version,
+      name: 'Functional Parity Test Client Updated',
+      email: 'service@functional-parity.test',
+      phone: '+15555550200',
+      address: '200 Updated Boulevard',
+      notes: 'Customer edit persisted.',
+    },
+  });
+  assert.equal(customerUpdate.statusCode, 200, customerUpdate.body);
+  const updatedCustomer = customerUpdate.json();
+  assert.equal(updatedCustomer.version, customer.version + 1);
+  assert.equal(updatedCustomer.address, '200 Updated Boulevard');
+
+  const [organization] = await db.select().from(directoryOrganizations).where(eq(directoryOrganizations.id, customer.organizationId)).limit(1);
+  assert.equal(customer.primaryContactId, null);
+  assert.ok(updatedCustomer.primaryContactId);
+  const [contact] = await db.select().from(directoryContacts).where(eq(directoryContacts.id, updatedCustomer.primaryContactId)).limit(1);
+  assert.equal(organization.name, 'Functional Parity Test Client Updated');
+  assert.equal(contact.email, 'service@functional-parity.test');
+  assert.equal(contact.phone, '+15555550200');
+
+  const staleCustomerUpdate = await app.inject({
+    method: 'PATCH',
+    url: `/v1/modules/tradeflowkit/customers/${customer.id}`,
+    headers: headers(ownerA, tenant),
+    payload: { expectedVersion: customer.version, name: 'Stale edit' },
+  });
+  assert.equal(staleCustomerUpdate.statusCode, 409, staleCustomerUpdate.body);
+  assert.equal(staleCustomerUpdate.json().code, 'CUSTOMER_VERSION_CONFLICT');
+
+  const jobResponse = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/tradeflowkit/jobs',
+    headers: headers(ownerA, tenant),
+    payload: { customerId: customer.id, title: 'Functional parity project', priority: 'normal' },
+  });
+  assert.equal(jobResponse.statusCode, 201, jobResponse.body);
+  const job = jobResponse.json();
+  const jobUpdate = await app.inject({
+    method: 'PATCH',
+    url: `/v1/modules/tradeflowkit/jobs/${job.id}`,
+    headers: headers(ownerA, tenant),
+    payload: {
+      expectedVersion: job.version,
+      title: 'Functional parity project updated',
+      description: 'Edited field-work scope.',
+      status: 'scheduled',
+      priority: 'high',
+    },
+  });
+  assert.equal(jobUpdate.statusCode, 200, jobUpdate.body);
+  const updatedJob = jobUpdate.json();
+  assert.equal(updatedJob.version, job.version + 1);
+  assert.equal(updatedJob.status, 'scheduled');
+
+  const taskResponse = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/tradeflowkit/jobs/${job.id}/tasks`,
+    headers: headers(ownerA, tenant),
+    payload: { title: 'Initial work step', description: 'Original task scope.', priority: 'normal' },
+  });
+  assert.equal(taskResponse.statusCode, 201, taskResponse.body);
+  const task = taskResponse.json();
+  const taskUpdate = await app.inject({
+    method: 'PATCH',
+    url: `/v1/modules/tradeflowkit/tasks/${task.id}`,
+    headers: headers(ownerA, tenant),
+    payload: {
+      expectedVersion: task.version,
+      title: 'Updated work step',
+      description: 'Edited task scope.',
+      status: 'in_progress',
+      priority: 'urgent',
+      dueAt: '2030-01-15',
+    },
+  });
+  assert.equal(taskUpdate.statusCode, 200, taskUpdate.body);
+  const updatedTask = taskUpdate.json();
+  assert.equal(updatedTask.version, task.version + 1);
+  assert.equal(updatedTask.status, 'in_progress');
+
+  const blockedCustomerArchive = await app.inject({
+    method: 'DELETE',
+    url: `/v1/modules/tradeflowkit/customers/${customer.id}`,
+    headers: headers(ownerA, tenant),
+    payload: { expectedVersion: updatedCustomer.version },
+  });
+  assert.equal(blockedCustomerArchive.statusCode, 409, blockedCustomerArchive.body);
+  assert.equal(blockedCustomerArchive.json().code, 'CUSTOMER_HAS_ACTIVE_HISTORY');
+
+  const blockedJobArchive = await app.inject({
+    method: 'DELETE',
+    url: `/v1/modules/tradeflowkit/jobs/${job.id}`,
+    headers: headers(ownerA, tenant),
+    payload: { expectedVersion: updatedJob.version },
+  });
+  assert.equal(blockedJobArchive.statusCode, 409, blockedJobArchive.body);
+  assert.equal(blockedJobArchive.json().code, 'JOB_HAS_ACTIVE_HISTORY');
+
+  const crudRestartApp = await createApp(true);
+  const persistedJob = await crudRestartApp.inject({
+    method: 'GET',
+    url: `/v1/modules/tradeflowkit/jobs/${job.id}`,
+    headers: headers(ownerA, tenant),
+  });
+  assert.equal(persistedJob.statusCode, 200, persistedJob.body);
+  assert.equal(persistedJob.json().job.title, 'Functional parity project updated');
+  const persistedTask = await crudRestartApp.inject({
+    method: 'GET',
+    url: `/v1/modules/tradeflowkit/tasks/${task.id}`,
+    headers: headers(ownerA, tenant),
+  });
+  assert.equal(persistedTask.statusCode, 200, persistedTask.body);
+  assert.equal(persistedTask.json().title, 'Updated work step');
+  await crudRestartApp.close();
+
+  const taskArchive = await app.inject({
+    method: 'DELETE',
+    url: `/v1/modules/tradeflowkit/tasks/${task.id}`,
+    headers: headers(ownerA, tenant),
+    payload: { expectedVersion: updatedTask.version },
+  });
+  assert.equal(taskArchive.statusCode, 200, taskArchive.body);
+  const jobArchive = await app.inject({
+    method: 'DELETE',
+    url: `/v1/modules/tradeflowkit/jobs/${job.id}`,
+    headers: headers(ownerA, tenant),
+    payload: { expectedVersion: updatedJob.version },
+  });
+  assert.equal(jobArchive.statusCode, 200, jobArchive.body);
+  const customerArchive = await app.inject({
+    method: 'DELETE',
+    url: `/v1/modules/tradeflowkit/customers/${customer.id}`,
+    headers: headers(ownerA, tenant),
+    payload: { expectedVersion: updatedCustomer.version },
+  });
+  assert.equal(customerArchive.statusCode, 200, customerArchive.body);
+
+  const [directoryAfterArchive] = await db.select().from(directoryOrganizations).where(eq(directoryOrganizations.id, customer.organizationId)).limit(1);
+  assert.equal(directoryAfterArchive.archivedAt, null, 'archiving the module customer must not archive the shared Directory organization');
 });

@@ -63,12 +63,12 @@ Status values: **complete**, **partial / Phase 16 gap**, **excluded by ADR**,
 | Lead conversion `/leads/:id/convert` | Convert action and job deep link; `POST /leads/:id/convert` | transaction creates/reuses Directory org/contact, customer, numbered job, conversion links | duplicate conversion + tenant test | complete |
 | Public lead forms/source adapters | none | none | ADR-0011 consent/abuse decision | excluded by ADR |
 | AI scoring/qualification | none | none | deterministic-scope decision | excluded by ADR |
-| Customers CRUD/import/bulk, `/customers/:id` | revenue flow + shared Business Directory; bounded browser-parsed CSV import via `POST /customers/import` | atomic Directory organization/contact reconciliation plus linked `tradeflowkit_customers`; shared idempotency claim/replay; tenant advisory lock; normalized duplicate suppression; deterministic source fingerprint | customer-import PostgreSQL/static tests + directory E2E | complete for single create and bounded import; destructive bulk delete/restore excluded by ADR-0011 |
-| Jobs CRUD, schedule, assignment, events | operations board; `POST /jobs`, `GET/PATCH /jobs/:id` | numbered/versioned `tradeflowkit_jobs`, activity | state-5 workflow and restart | complete |
+| Customers CRUD/import/bulk, `/customers/:id` | revenue flow record editor/deep link plus shared Business Directory; `POST/PATCH/DELETE /customers/:id`; bounded browser-parsed CSV import via `POST /customers/import` | versioned customer writes atomically reconcile the linked Directory organization/primary contact; dependency-guarded customer archive leaves shared Directory identity active; import retains shared idempotency, tenant advisory lock, normalized duplicate suppression, and deterministic source fingerprint | core CRUD PostgreSQL + exact-host E2E; customer-import PostgreSQL/static tests + directory E2E | complete for single-record create/read/update/archive and bounded import; destructive bulk delete/restore excluded by ADR-0011 |
+| Jobs CRUD, schedule, assignment, events | operations board with full editor/deep link; `POST /jobs`, `GET/PATCH/DELETE /jobs/:id` | numbered/versioned `tradeflowkit_jobs`, dependency-guarded soft archive, activity | core CRUD exact-host/API restart workflow | complete |
 | Recurring jobs and bulk destructive actions | none | none | ADR-0011 scheduling/retention decision | excluded by ADR |
 | Workflow templates, stages, and job transitions | Workflow Studio; workflow CRUD/stage APIs; `POST /jobs/:id/workflow-transition` | `tradeflowkit_workflows`, `tradeflowkit_workflow_stages`, job stage FK, activity | Phase 16 work-management integration test | complete for ADR-0028 governed scope |
-| Team task workspace | team list/search/detail/status/archive UI and APIs; job-scoped create/dependencies/comments | `tradeflowkit_tasks`, `tradeflowkit_task_dependencies`, comments, activity | Phase 16 work-management integration test | complete for job-scoped ADR-0010 model; standalone task creation remains a recorded Phase 16 gap |
-| Job work steps (Phase 4 requirement) | task board; `POST /jobs/:id/tasks`, `PATCH /tasks/:id`, dependency API | `tradeflowkit_tasks`, `tradeflowkit_task_dependencies` | dependencies, completion, stale version, restart | complete |
+| Team task workspace | team list/search/detail plus full edit/status/archive UI and exact task deep-link selection; job-scoped create/dependencies/comments | `tradeflowkit_tasks`, `tradeflowkit_task_dependencies`, comments, activity | core CRUD exact-host/API restart workflow | complete for job-scoped ADR-0010 model; standalone task creation remains a recorded Phase 16 gap |
+| Job work steps (Phase 4 requirement) | task board; `POST /jobs/:id/tasks`, `PATCH/DELETE /tasks/:id`, dependency API | `tradeflowkit_tasks`, `tradeflowkit_task_dependencies` | dependencies, full record edit, archive ordering, stale version, restart | complete |
 | Project endpoint requested by old acceptance probe | `/projects` intentionally absent | no project table | 404 acceptance probe | excluded by ADR-0010 |
 | Job/record notes | comments UI-ready APIs | `tradeflowkit_comments` + activity | state-5 workflow | complete |
 | Tags | `GET/POST /tags`, assignment API | `tradeflowkit_tags`, assignments | expanded state-5 workflow + full API suite | complete |
@@ -113,7 +113,18 @@ tests do not execute that quarantined server. Active coverage is provided by:
 - `shared-service-routes.test.ts` and other Phase 3 shared-service tests
 - `core-module-deep-link-routing.test.ts`
 - `tradeflowkit-customer-import.spec.ts`
+- `tradeflowkit-core-crud.spec.ts`
 - `sso-v1.spec.ts` and `operatoros-final-acceptance.spec.ts`
+
+Fresh core CRUD evidence on 2026-07-28 includes a 2/2 focused PostgreSQL
+workflow, workspace typecheck, production build, readiness-gated compiled
+runtime, and 1/1 exact-host Chrome workflow in 16.4 seconds. The API workflow
+proves viewer denial, cross-tenant non-enumeration, stale-version rejection,
+Directory reconciliation, restart persistence, dependency-blocked archives,
+and safe task → job → customer archive ordering. The browser workflow proves
+the same customer/job/task create-edit-deep-link path, refresh, My Apps return,
+module reopen, and archive controls on the production artifacts. Customer
+archive intentionally preserves the shared Directory organization.
 
 Fresh customer-import evidence on 2026-07-28 includes 5/5 focused
 PostgreSQL/static checks, the clean API aggregate at 866 pass, zero fail, and
@@ -148,6 +159,8 @@ contains 57 explicit gaps. Workflow Studio, team job-task views, job
 transitions, activity, direct invoice creation, versioned quote/invoice draft
 editing, guarded archive, idempotent quote-to-job, schema readiness, and
 focused persistence/isolation coverage are now real active increments.
+Single-record customer/job/task create, edit, exact deep-link selection, and
+dependency-safe archive are also active and exact-host verified.
 Bounded customer CSV import now validates in both browser and server,
 atomically reconciles Directory identities, suppresses normalized duplicates,
 replays exact requests, rejects changed-body key reuse, and persists imported

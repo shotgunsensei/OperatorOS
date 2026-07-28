@@ -55,6 +55,14 @@ export function parseCustomerCreate(raw: unknown) {
 
 export type TradeFlowKitCustomerInput = ReturnType<typeof parseCustomerCreate>;
 
+export function parseCustomerUpdate(raw: unknown) {
+  const body = object(raw);
+  return {
+    ...parseCustomerCreate(body),
+    expectedVersion: version(body.expectedVersion),
+  };
+}
+
 export function parseCustomerImport(raw: unknown) {
   const body = object(raw);
   if (!Array.isArray(body.customers) || body.customers.length < 1 || body.customers.length > 100) {

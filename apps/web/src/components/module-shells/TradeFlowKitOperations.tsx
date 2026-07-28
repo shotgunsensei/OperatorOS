@@ -1,7 +1,7 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Circle, Clock3, ListChecks, Loader2, Plus, RefreshCw, Search, Settings2, Wrench } from 'lucide-react';
+import { AlertTriangle, Archive, CheckCircle2, Circle, Clock3, ListChecks, Loader2, Pencil, Plus, RefreshCw, Save, Search, Settings2, Wrench, X } from 'lucide-react';
 import {
   moduleShellApi,
   type TradeFlowKitJob,
@@ -42,8 +42,10 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
       const next = await moduleShellApi.tradeflowkit.operations({ search: search || undefined, status: status || undefined });
       setData(next);
       const nestedJobId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/jobs\/([a-z0-9-]+)$/i)?.[1] || '';
+      const nestedTaskId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/tasks\/([a-z0-9-]+)$/i)?.[1] || '';
+      const taskJobId = next.tasks.find(task => task.id === nestedTaskId)?.jobId || '';
       setSelectedJobId(current => {
-        const candidate = nestedJobId || current;
+        const candidate = nestedJobId || taskJobId || current;
         return next.jobs.some(job => job.id === candidate) ? candidate : next.jobs[0]?.id || '';
       });
       if (canManage) {
@@ -57,6 +59,7 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
 
   const selectedJob = data.jobs.find(job => job.id === selectedJobId) ?? null;
   const tasks = useMemo(() => data.tasks.filter(task => task.jobId === selectedJobId), [data.tasks, selectedJobId]);
+  const deepTaskId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/tasks\/([a-z0-9-]+)$/i)?.[1] || '';
 
   async function run(operation: () => Promise<unknown>) {
     setPending(true); setError(null); setConflict(false);
@@ -74,10 +77,6 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
       await moduleShellApi.tradeflowkit.createTask(selectedJob.id, { title: taskTitle, priority: taskPriority, sortOrder: tasks.length });
       setTaskTitle('');
     });
-  }
-
-  function setTaskStatus(task: TradeFlowKitTask, nextStatus: TradeFlowKitTask['status']) {
-    void run(() => moduleShellApi.tradeflowkit.updateTask(task.id, { expectedVersion: task.version, status: nextStatus }));
   }
 
   function saveSettings(event: FormEvent) {
@@ -129,9 +128,9 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
             </aside>
             <div className="tfk-task-board">
               {selectedJob && <>
-                <div className="tfk-task-title"><div><span>{formatJobNumber(selectedJob, settings)}</span><h3>{selectedJob.title}</h3><p>{selectedJob.status.replaceAll('_', ' ')} · {selectedJob.priority} priority · v{selectedJob.version}</p></div><a href={`/modules/tradeflowkit/jobs/${selectedJob.id}`}>Record deep link</a></div>
-                <form onSubmit={addTask} className="tfk-task-form"><input required value={taskTitle} onChange={event => setTaskTitle(event.target.value)} placeholder="Add a job task" maxLength={200} /><select aria-label="Task priority" value={taskPriority} onChange={event => setTaskPriority(event.target.value)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select><button disabled={pending || !taskTitle.trim()}><Plus size={15} /> Add task</button></form>
-                {tasks.length === 0 ? <div className="tfk-task-empty"><ListChecks size={18} /> No tasks yet. Add the first work step above.</div> : <div className="tfk-task-list">{tasks.map(task => <TaskRow key={task.id} task={task} pending={pending} onStatus={setTaskStatus} />)}</div>}
+                <JobEditor job={selectedJob} settings={settings} pending={pending} canManage={canManage} activeTaskCount={tasks.length} run={run} />
+                {canManage && <form onSubmit={addTask} className="tfk-task-form"><input aria-label="New task title" required value={taskTitle} onChange={event => setTaskTitle(event.target.value)} placeholder="Add a job task" maxLength={200} /><select aria-label="Task priority" value={taskPriority} onChange={event => setTaskPriority(event.target.value)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select><button disabled={pending || !taskTitle.trim()}><Plus size={15} /> Add task</button></form>}
+                {tasks.length === 0 ? <div className="tfk-task-empty"><ListChecks size={18} /> No tasks yet. Add the first work step above.</div> : <div className="tfk-task-list">{tasks.map(task => <TaskRow key={task.id} task={task} selected={task.id === deepTaskId} pending={pending} canManage={canManage} run={run} />)}</div>}
               </>}
             </div>
           </div>}
@@ -151,9 +150,88 @@ function JobButton({ job, active, onClick, settings }: { job: TradeFlowKitJob; a
   return <button type="button" className={active ? 'active' : ''} onClick={onClick}><span>{formatJobNumber(job, settings)}</span><strong>{job.title}</strong><small>{job.status.replaceAll('_', ' ')} · {job.priority}</small></button>;
 }
 
-function TaskRow({ task, pending, onStatus }: { task: TradeFlowKitTask; pending: boolean; onStatus: (task: TradeFlowKitTask, status: TradeFlowKitTask['status']) => void }) {
+function JobEditor({ job, settings, pending, canManage, activeTaskCount, run }: {
+  job: TradeFlowKitJob; settings: TradeFlowKitSettings | null; pending: boolean; canManage: boolean;
+  activeTaskCount: number; run: (operation: () => Promise<unknown>) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(job.title);
+  const [description, setDescription] = useState(job.description ?? '');
+  const [status, setStatus] = useState(job.status);
+  const [priority, setPriority] = useState(job.priority);
+
+  useEffect(() => {
+    setTitle(job.title);
+    setDescription(job.description ?? '');
+    setStatus(job.status);
+    setPriority(job.priority);
+  }, [job]);
+
+  if (editing) {
+    return <form className="tfk-record-editor" data-testid={`tradeflowkit-job-editor-${job.id}`} onSubmit={event => {
+      event.preventDefault();
+      void run(async () => {
+        await moduleShellApi.tradeflowkit.updateJob(job.id, { expectedVersion: job.version, title, description, status, priority });
+        setEditing(false);
+      });
+    }}>
+      <div className="tfk-editor-grid">
+        <label>Job title<input required minLength={2} maxLength={200} value={title} onChange={event => setTitle(event.target.value)} /></label>
+        <label>Status<select value={status} onChange={event => setStatus(event.target.value)}><option value="lead">Lead</option><option value="quoted">Quoted</option><option value="scheduled">Scheduled</option><option value="in_progress">In progress</option><option value="done">Done</option><option value="invoiced">Invoiced</option><option value="paid">Paid</option><option value="canceled">Canceled</option></select></label>
+        <label>Priority<select value={priority} onChange={event => setPriority(event.target.value)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
+      </div>
+      <label>Description<textarea maxLength={4000} rows={3} value={description} onChange={event => setDescription(event.target.value)} /></label>
+      <div className="tfk-record-actions"><button type="button" className="secondary" disabled={pending} onClick={() => setEditing(false)}><X size={14} /> Cancel</button><button disabled={pending || title.trim().length < 2}><Save size={14} /> Save job · v{job.version}</button></div>
+    </form>;
+  }
+
+  return <div className="tfk-task-title" data-testid={`tradeflowkit-job-${job.id}`}><div><span>{formatJobNumber(job, settings)}</span><h3>{job.title}</h3><p>{job.status.replaceAll('_', ' ')} · {job.priority} priority · v{job.version}</p>{job.description && <p className="tfk-record-description">{job.description}</p>}</div><div className="tfk-record-actions"><a href={`/modules/tradeflowkit/jobs/${job.id}`}>Record deep link</a>{canManage && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={14} /> Edit</button>}{canManage && <button type="button" className="danger" disabled={pending} onClick={() => {
+    if (window.confirm(`Archive this job? ${activeTaskCount ? 'Archive its active tasks first.' : 'It will leave the active workspace.'}`)) void run(() => moduleShellApi.tradeflowkit.archiveJob(job.id, job.version));
+  }}><Archive size={14} /> Archive</button>}</div></div>;
+}
+
+function TaskRow({ task, selected, pending, canManage, run }: {
+  task: TradeFlowKitTask; selected: boolean; pending: boolean; canManage: boolean;
+  run: (operation: () => Promise<unknown>) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description ?? '');
+  const [status, setStatus] = useState<TradeFlowKitTask['status']>(task.status);
+  const [priority, setPriority] = useState<TradeFlowKitTask['priority']>(task.priority);
+  const [dueAt, setDueAt] = useState(task.dueAt ? task.dueAt.slice(0, 10) : '');
+
+  useEffect(() => {
+    setTitle(task.title);
+    setDescription(task.description ?? '');
+    setStatus(task.status);
+    setPriority(task.priority);
+    setDueAt(task.dueAt ? task.dueAt.slice(0, 10) : '');
+  }, [task]);
+
   const Icon = task.status === 'completed' ? CheckCircle2 : task.status === 'in_progress' ? Clock3 : Circle;
-  return <article className={`tfk-task tfk-task-${task.status}`} data-testid={`tradeflowkit-task-${task.id}`}><Icon size={18} /><div><strong>{task.title}</strong><span>{task.priority} priority{task.dueAt ? ` · due ${new Date(task.dueAt).toLocaleDateString()}` : ''} · v{task.version}</span></div><select aria-label={`Status for ${task.title}`} value={task.status} disabled={pending} onChange={event => onStatus(task, event.target.value as TradeFlowKitTask['status'])}><option value="todo">To do</option><option value="in_progress">In progress</option><option value="blocked">Blocked</option><option value="completed">Completed</option><option value="canceled">Canceled</option></select></article>;
+  if (editing) {
+    return <form className={`tfk-record-editor ${selected ? 'selected' : ''}`} data-testid={`tradeflowkit-task-editor-${task.id}`} onSubmit={event => {
+      event.preventDefault();
+      void run(async () => {
+        await moduleShellApi.tradeflowkit.updateTask(task.id, { expectedVersion: task.version, title, description, status, priority, dueAt: dueAt || undefined });
+        setEditing(false);
+      });
+    }}>
+      <div className="tfk-editor-grid task">
+        <label>Task title<input required minLength={2} maxLength={200} value={title} onChange={event => setTitle(event.target.value)} /></label>
+        <label>Status<select value={status} onChange={event => setStatus(event.target.value as TradeFlowKitTask['status'])}><option value="todo">To do</option><option value="in_progress">In progress</option><option value="blocked">Blocked</option><option value="completed">Completed</option><option value="canceled">Canceled</option></select></label>
+        <label>Priority<select value={priority} onChange={event => setPriority(event.target.value as TradeFlowKitTask['priority'])}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
+        <label>Due date<input type="date" value={dueAt} onChange={event => setDueAt(event.target.value)} /></label>
+      </div>
+      <label>Description<textarea maxLength={4000} rows={2} value={description} onChange={event => setDescription(event.target.value)} /></label>
+      <div className="tfk-record-actions"><button type="button" className="secondary" disabled={pending} onClick={() => setEditing(false)}><X size={14} /> Cancel</button><button disabled={pending || title.trim().length < 2}><Save size={14} /> Save task · v{task.version}</button></div>
+    </form>;
+  }
+
+  return <article className={`tfk-task tfk-task-${task.status} ${selected ? 'selected' : ''}`} id={`tradeflowkit-task-${task.id}`} data-testid={`tradeflowkit-task-${task.id}`}><Icon size={18} /><div><strong>{task.title}</strong><span>{task.priority} priority{task.dueAt ? ` · due ${new Date(task.dueAt).toLocaleDateString()}` : ''} · v{task.version}</span>{task.description && <span>{task.description}</span>}</div><div className="tfk-record-actions"><a href={`/modules/tradeflowkit/tasks/${task.id}`}>Deep link</a>{canManage && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={13} /> Edit</button>}{canManage && <button type="button" className="danger" disabled={pending} onClick={() => {
+    if (window.confirm('Archive this task? It will leave the active job board.')) void run(() => moduleShellApi.tradeflowkit.archiveTask(task.id, task.version));
+  }}><Archive size={13} /> Archive</button>}</div></article>;
 }
 
 const css = `
@@ -182,13 +260,15 @@ const css = `
   .tfk-ops-layout aside span,.tfk-task-title span { color:#047857; font-size:10px; font-weight:900; text-transform:uppercase; }
   .tfk-ops-layout aside small { color:#6d847c; text-transform:capitalize; }
   .tfk-task-board { border:1px solid rgba(22,101,52,.14); border-radius:9px; padding:14px; background:#fbfefc; }
-  .tfk-task-title { display:flex; justify-content:space-between; gap:12px; align-items:start; }.tfk-task-title h3 { margin:3px 0; }.tfk-task-title p { margin:0; color:#587067; font-size:12px; text-transform:capitalize; }.tfk-task-title a { font-size:12px; color:#0369a1; }
+  .tfk-task-title { display:flex; justify-content:space-between; gap:12px; align-items:start; }.tfk-task-title h3 { margin:3px 0; }.tfk-task-title p { margin:0; color:#587067; font-size:12px; text-transform:capitalize; }.tfk-task-title .tfk-record-description { margin-top:6px; max-width:620px; text-transform:none; }.tfk-task-title a { font-size:12px; color:#0369a1; }
   .tfk-task-form { display:grid; grid-template-columns:minmax(0,1fr) 130px auto; gap:8px; margin-top:13px; }
-  .tfk-task-list { display:grid; gap:7px; margin-top:12px; }.tfk-task { display:grid; grid-template-columns:auto minmax(0,1fr) 145px; gap:9px; align-items:center; background:white; border:1px solid rgba(22,101,52,.13); border-radius:7px; padding:10px; }.tfk-task > div { display:grid; gap:2px; }.tfk-task span { color:#6d847c; font-size:11px; }.tfk-task-completed strong { text-decoration:line-through; color:#6d847c; }.tfk-task-completed svg { color:#059669; }
+  .tfk-task-list { display:grid; gap:7px; margin-top:12px; }.tfk-task { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:9px; align-items:center; background:white; border:1px solid rgba(22,101,52,.13); border-radius:7px; padding:10px; }.tfk-task.selected,.tfk-record-editor.selected { border-color:#059669; box-shadow:inset 3px 0 #059669; background:#f0fdf4; }.tfk-task > div { display:grid; gap:2px; }.tfk-task span { color:#6d847c; font-size:11px; }.tfk-task-completed strong { text-decoration:line-through; color:#6d847c; }.tfk-task-completed > svg { color:#059669; }
+  .tfk-record-actions { display:flex; gap:6px; align-items:center; justify-content:flex-end; flex-wrap:wrap; }.tfk-record-actions a { color:#0369a1; font-size:11px; font-weight:800; }.tfk-record-actions button { border:0; border-radius:6px; padding:7px 9px; background:#047857; color:white; font-weight:800; display:inline-flex; gap:5px; align-items:center; cursor:pointer; }.tfk-record-actions button.edit { background:#b7791f; }.tfk-record-actions button.danger { background:#dc2626; }.tfk-record-actions button.secondary { background:#64748b; }
+  .tfk-record-editor { border:1px solid rgba(22,101,52,.18); border-radius:8px; background:white; padding:11px; display:grid; gap:9px; }.tfk-record-editor label { color:#587067; font-size:11px; font-weight:700; display:grid; gap:4px; }.tfk-record-editor textarea { box-sizing:border-box; width:100%; border:1px solid rgba(22,101,52,.2); border-radius:7px; padding:9px 10px; background:white; color:#10231d; font:inherit; font-size:13px; resize:vertical; }.tfk-editor-grid { display:grid; grid-template-columns:minmax(200px,2fr) minmax(130px,1fr) minmax(120px,1fr); gap:8px; }.tfk-editor-grid.task { grid-template-columns:minmax(180px,2fr) repeat(3,minmax(115px,1fr)); }
   .tfk-task-empty,.tfk-ops-state { min-height:90px; display:flex; align-items:center; justify-content:center; gap:9px; color:#587067; border:1px dashed rgba(22,101,52,.2); border-radius:7px; margin-top:12px; }.tfk-ops-state div { display:grid; gap:3px; }.tfk-ops-state span { font-size:12px; }
   .tfk-settings { border-top:1px solid rgba(22,101,52,.14); padding-top:15px; display:grid; grid-template-columns:1.4fr repeat(3,minmax(100px,1fr)); gap:9px; align-items:end; }.tfk-settings > div { display:flex; gap:8px; align-items:start; }.tfk-settings > div div { display:grid; }.tfk-settings > div span,.tfk-settings label { color:#587067; font-size:11px; }.tfk-settings label { display:grid; gap:4px; }.tfk-settings button { grid-column:4; }
   .spin { animation:tfk-ops-spin 1s linear infinite; } @keyframes tfk-ops-spin { to { transform:rotate(360deg); } }
   .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }
   @media(max-width:960px){.tfk-ops-metrics{grid-template-columns:repeat(3,1fr)}.tfk-settings{grid-template-columns:repeat(2,1fr)}.tfk-settings>div{grid-column:1/-1}.tfk-settings button{grid-column:auto}}
-  @media(max-width:700px){.tfk-ops-head{display:grid}.tfk-ops-toolbar,.tfk-ops-layout{grid-template-columns:1fr}.tfk-ops-layout aside{display:flex;overflow:auto}.tfk-ops-layout aside button{min-width:190px}.tfk-task-form{grid-template-columns:1fr}.tfk-task{grid-template-columns:auto minmax(0,1fr)}.tfk-task select{grid-column:2}.tfk-settings{grid-template-columns:1fr}.tfk-ops-metrics{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:700px){.tfk-ops-head{display:grid}.tfk-ops-toolbar,.tfk-ops-layout{grid-template-columns:1fr}.tfk-ops-layout aside{display:flex;overflow:auto}.tfk-ops-layout aside button{min-width:190px}.tfk-task-title{display:grid}.tfk-task-form,.tfk-editor-grid,.tfk-editor-grid.task{grid-template-columns:1fr}.tfk-task{grid-template-columns:auto minmax(0,1fr)}.tfk-task>.tfk-record-actions{grid-column:1/-1}.tfk-settings{grid-template-columns:1fr}.tfk-ops-metrics{grid-template-columns:repeat(2,1fr)}}
 `;
