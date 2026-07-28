@@ -873,6 +873,16 @@ export interface FaultlineAssignment {
 
 export interface TradeFlowKitLineItem { description: string; quantity: number; unitPriceCents: number }
 export interface TradeFlowKitCustomer { id: string; name: string; phone: string | null; email: string | null; version: number }
+export interface TradeFlowKitCustomerImportRow {
+  name: string; phone?: string; email?: string; address?: string; notes?: string;
+}
+export interface TradeFlowKitCustomerImportResult {
+  imported: number;
+  skipped: number;
+  errors: Array<{ row: number; code: string; field?: string }>;
+  skippedRows: Array<{ row: number; reason: 'duplicate_name' | 'duplicate_email' | 'duplicate_phone' | 'duplicate_source' }>;
+  customers: Array<{ id: string }>;
+}
 export interface TradeFlowKitJob { id: string; customerId: string; number: number | null; title: string; status: string; priority: string; version: number; workflowStageId?: string | null; scheduledStart?: string | null; updatedAt?: string }
 export interface TradeFlowKitTask {
   id: string; jobId: string; title: string; description: string | null;
@@ -1742,8 +1752,14 @@ export const moduleShellApi = {
   tradeflowkit: {
     revenue: (): Promise<TradeFlowKitRevenueResponse> =>
       apiFetch('/modules/tradeflowkit/revenue') as Promise<TradeFlowKitRevenueResponse>,
-    createCustomer: (input: { name: string; phone?: string; email?: string }): Promise<TradeFlowKitCustomer> =>
+    createCustomer: (input: TradeFlowKitCustomerImportRow): Promise<TradeFlowKitCustomer> =>
       apiFetch('/modules/tradeflowkit/customers', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitCustomer>,
+    importCustomers: (customers: TradeFlowKitCustomerImportRow[], idempotencyKey: string): Promise<TradeFlowKitCustomerImportResult> =>
+      apiFetch('/modules/tradeflowkit/customers/import', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify({ customers }),
+      }) as Promise<TradeFlowKitCustomerImportResult>,
     createJob: (input: { customerId: string; title: string; priority?: string }): Promise<TradeFlowKitJob> =>
       apiFetch('/modules/tradeflowkit/jobs', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitJob>,
     createQuote: (input: {

@@ -1,7 +1,9 @@
+import { createHash } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { db } from '../db.js';
 import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import {
+  modules,
   moduleStudySessions,
   moduleWorkflowItems,
   techdeckTicketSequences,
@@ -37,6 +39,7 @@ import {
 } from '../lib/tradeflowkit-leads.js';
 import {
   parseCustomerCreate,
+  parseCustomerImport,
   parseDocumentArchive,
   parseInvoiceCreate,
   parseInvoiceFromQuote,
@@ -48,6 +51,7 @@ import {
   parseQuoteUpdate,
   parseTransition,
   TradeFlowKitRevenueValidationError,
+  type TradeFlowKitCustomerInput,
 } from '../lib/tradeflowkit-revenue.js';
 import {
   parseTechDeckTicketCreate,
@@ -64,6 +68,10 @@ import {
   TechDeckOpsValidationError,
 } from '../lib/techdeck-ops.js';
 import { getTenantMembership, resolveTenantModuleAccess } from '../lib/tenant-entitlements.js';
+import {
+  beginIdempotentOperation,
+  completeIdempotentOperation,
+} from '../lib/shared-usage-activity.js';
 import { registerPulseDeskRoutes } from './pulsedesk-routes.js';
 import { registerPulseDeskServiceDeskRoutes } from './pulsedesk-service-desk-routes.js';
 import { registerNinjaPoolHallRoutes } from './ninja-pool-hall-routes.js';
@@ -390,6 +398,114 @@ function slugify(s: string): string {
   );
 }
 
+type TradeFlowKitTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+function normalizeTradeFlowKitCustomerName(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
+}
+
+function normalizeTradeFlowKitCustomerPhone(value: string | null): string | null {
+  const normalized = value?.replace(/\D/g, '') ?? '';
+  return normalized.length >= 7 ? normalized : null;
+}
+
+function tradeFlowKitCustomerImportSourceId(input: TradeFlowKitCustomerInput): string {
+  const fingerprint = createHash('sha256').update(JSON.stringify({
+    name: normalizeTradeFlowKitCustomerName(input.name),
+    email: input.email?.toLocaleLowerCase('en-US') ?? null,
+    phone: normalizeTradeFlowKitCustomerPhone(input.phone),
+    address: input.address?.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US') ?? null,
+  })).digest('hex');
+  return `customer-import:${fingerprint}`;
+}
+
+async function createLinkedTradeFlowKitCustomer(
+  tx: TradeFlowKitTransaction,
+  actor: { tenantId: string; userId: string },
+  input: TradeFlowKitCustomerInput,
+  options: { sourceId?: string; deduplicateOrganization?: boolean; action?: 'created' | 'imported' } = {},
+) {
+  const normalizedName = normalizeTradeFlowKitCustomerName(input.name);
+  let [organization] = await tx.select().from(directoryOrganizations).where(and(
+    eq(directoryOrganizations.tenantId, actor.tenantId),
+    eq(directoryOrganizations.normalizedName, normalizedName),
+    isNull(directoryOrganizations.archivedAt),
+  )).limit(1);
+  if (!organization) {
+    [organization] = await tx.insert(directoryOrganizations).values({
+      tenantId: actor.tenantId, name: input.name, normalizedName, type: 'customer', status: 'active',
+      notes: input.notes, createdByUserId: actor.userId, updatedByUserId: actor.userId,
+    }).onConflictDoNothing().returning();
+    if (!organization) {
+      [organization] = await tx.select().from(directoryOrganizations).where(and(
+        eq(directoryOrganizations.tenantId, actor.tenantId),
+        eq(directoryOrganizations.normalizedName, normalizedName),
+        isNull(directoryOrganizations.archivedAt),
+      )).limit(1);
+    }
+  }
+  if (!organization) throw new Error('Directory organization could not be resolved');
+
+  if (options.deduplicateOrganization) {
+    const [existing] = await tx.select().from(tradeflowkitCustomers).where(and(
+      eq(tradeflowkitCustomers.tenantId, actor.tenantId),
+      eq(tradeflowkitCustomers.organizationId, organization.id),
+    )).limit(1);
+    if (existing) return { kind: 'duplicate' as const, customer: existing };
+  }
+
+  let primaryContactId: string | null = null;
+  if (input.email || input.phone) {
+    const parts = input.name.trim().split(/\s+/);
+    const [createdContact] = await tx.insert(directoryContacts).values({
+      tenantId: actor.tenantId, firstName: parts.shift() || input.name, lastName: parts.join(' '), normalizedName,
+      email: input.email, normalizedEmail: input.email?.toLowerCase() ?? null, phone: input.phone,
+      createdByUserId: actor.userId, updatedByUserId: actor.userId,
+    }).onConflictDoNothing().returning();
+    if (createdContact) primaryContactId = createdContact.id;
+    else if (input.email) {
+      const [existingContact] = await tx.select({ id: directoryContacts.id }).from(directoryContacts).where(and(
+        eq(directoryContacts.tenantId, actor.tenantId),
+        eq(directoryContacts.normalizedEmail, input.email.toLowerCase()),
+        isNull(directoryContacts.archivedAt),
+      )).limit(1);
+      primaryContactId = existingContact?.id ?? null;
+    }
+    if (primaryContactId) {
+      await tx.insert(directoryOrganizationContacts).values({
+        tenantId: actor.tenantId, organizationId: organization.id, contactId: primaryContactId,
+        role: 'primary', isPrimary: true, createdByUserId: actor.userId,
+      }).onConflictDoNothing();
+    }
+  }
+
+  const values = {
+    ...input, tenantId: actor.tenantId, createdByUserId: actor.userId,
+    organizationId: organization.id, primaryContactId, sourceId: options.sourceId,
+  };
+  const [created] = options.sourceId
+    ? await tx.insert(tradeflowkitCustomers).values(values).onConflictDoNothing().returning()
+    : await tx.insert(tradeflowkitCustomers).values(values).returning();
+  if (!created) {
+    const [duplicate] = await tx.select().from(tradeflowkitCustomers).where(and(
+      eq(tradeflowkitCustomers.tenantId, actor.tenantId),
+      eq(tradeflowkitCustomers.sourceId, options.sourceId!),
+    )).limit(1);
+    if (!duplicate) throw new Error('Imported customer could not be resolved');
+    return { kind: 'duplicate' as const, customer: duplicate };
+  }
+  await tx.insert(activityFeed).values({
+    tenantId: actor.tenantId, userId: actor.userId, action: options.action ?? 'created',
+    entityType: 'tradeflowkit_customer', entityId: created.id,
+    metadata: {
+      name: created.name,
+      organizationId: organization.id,
+      source: options.sourceId ? 'customer_import' : 'manual',
+    },
+  });
+  return { kind: 'created' as const, customer: created };
+}
+
 export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerCallCommandRoutes(app);
   await registerPulseDeskRoutes(app);
@@ -638,58 +754,150 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     const ctx = (request as any).tenantContext;
     const user = (request as any).user;
     const customer = await db.transaction(async (tx) => {
-      const normalizedName = input.name.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
-      let [organization] = await tx.select().from(directoryOrganizations).where(and(
-        eq(directoryOrganizations.tenantId, ctx.tenantId), eq(directoryOrganizations.normalizedName, normalizedName),
-        isNull(directoryOrganizations.archivedAt),
-      )).limit(1);
-      if (!organization) {
-        [organization] = await tx.insert(directoryOrganizations).values({
-          tenantId: ctx.tenantId, name: input.name, normalizedName, type: 'customer', status: 'active',
-          notes: input.notes, createdByUserId: user.id, updatedByUserId: user.id,
-        }).onConflictDoNothing().returning();
-        if (!organization) {
-          [organization] = await tx.select().from(directoryOrganizations).where(and(
-            eq(directoryOrganizations.tenantId, ctx.tenantId), eq(directoryOrganizations.normalizedName, normalizedName),
-            isNull(directoryOrganizations.archivedAt),
-          )).limit(1);
-        }
-      }
-      if (!organization) throw new Error('Directory organization could not be resolved');
-      let primaryContactId: string | null = null;
-      if (input.email || input.phone) {
-        const parts = input.name.trim().split(/\s+/);
-        const [createdContact] = await tx.insert(directoryContacts).values({
-          tenantId: ctx.tenantId, firstName: parts.shift() || input.name, lastName: parts.join(' '), normalizedName,
-          email: input.email, normalizedEmail: input.email?.toLowerCase() ?? null, phone: input.phone,
-          createdByUserId: user.id, updatedByUserId: user.id,
-        }).onConflictDoNothing().returning();
-        if (createdContact) primaryContactId = createdContact.id;
-        else if (input.email) {
-          const [existingContact] = await tx.select({ id: directoryContacts.id }).from(directoryContacts).where(and(
-            eq(directoryContacts.tenantId, ctx.tenantId), eq(directoryContacts.normalizedEmail, input.email.toLowerCase()), isNull(directoryContacts.archivedAt),
-          )).limit(1);
-          primaryContactId = existingContact?.id ?? null;
-        }
-        if (primaryContactId) {
-          await tx.insert(directoryOrganizationContacts).values({
-            tenantId: ctx.tenantId, organizationId: organization.id, contactId: primaryContactId,
-            role: 'primary', isPrimary: true, createdByUserId: user.id,
-          }).onConflictDoNothing();
-        }
-      }
-      const [created] = await tx.insert(tradeflowkitCustomers).values({
-        ...input, tenantId: ctx.tenantId, createdByUserId: user.id,
-        organizationId: organization.id, primaryContactId,
-      }).returning();
-      await tx.insert(activityFeed).values({
-        tenantId: ctx.tenantId, userId: user.id, action: 'created',
-        entityType: 'tradeflowkit_customer', entityId: created.id,
-        metadata: { name: created.name, organizationId: organization.id },
-      });
-      return created;
+      const outcome = await createLinkedTradeFlowKitCustomer(
+        tx,
+        { tenantId: ctx.tenantId, userId: user.id },
+        input,
+      );
+      return outcome.customer;
     });
     return reply.code(201).send(customer);
+  });
+
+  app.post('/v1/modules/tradeflowkit/customers/import', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    const rawIdempotencyKey = request.headers['idempotency-key'];
+    const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey.trim() : '';
+    if (!/^[A-Za-z0-9._:-]{8,160}$/.test(idempotencyKey)) {
+      return reply.code(400).send({
+        error: 'A valid Idempotency-Key header is required',
+        code: 'IDEMPOTENCY_KEY_REQUIRED',
+        field: 'Idempotency-Key',
+      });
+    }
+    let input;
+    try { input = parseCustomerImport(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const [moduleRow] = await db.select({ id: modules.id }).from(modules)
+      .where(eq(modules.slug, 'tradeflowkit'))
+      .limit(1);
+    if (!moduleRow) {
+      return reply.code(503).send({
+        error: 'TradeFlowKit module registry is unavailable',
+        code: 'TRADEFLOWKIT_MODULE_UNAVAILABLE',
+      });
+    }
+    const result = await db.transaction(async (tx) => {
+      // Serialize imports for one tenant so concurrent uploads cannot both
+      // pass the same duplicate snapshot before either commits.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'tradeflowkit_customer_import:' + ctx.tenantId}))`);
+      const idempotency = await beginIdempotentOperation({
+        tenantId: ctx.tenantId,
+        moduleId: moduleRow.id,
+        scope: 'tradeflowkit-customer-import',
+        idempotencyKey,
+        request: request.body,
+        leaseMs: 60_000,
+      }, tx);
+      if (idempotency.state === 'replay') {
+        return { kind: 'response' as const, response: idempotency.responseJson };
+      }
+      if (idempotency.state === 'conflict') return { kind: 'conflict' as const };
+      if (idempotency.state === 'in_progress') return { kind: 'in_progress' as const };
+
+      const existing = await tx.select({
+        name: tradeflowkitCustomers.name,
+        email: tradeflowkitCustomers.email,
+        phone: tradeflowkitCustomers.phone,
+      }).from(tradeflowkitCustomers).where(eq(tradeflowkitCustomers.tenantId, ctx.tenantId));
+      const names = new Set(existing.map(row => normalizeTradeFlowKitCustomerName(row.name)));
+      const emails = new Set(existing.map(row => row.email?.toLocaleLowerCase('en-US')).filter((value): value is string => !!value));
+      const phones = new Set(existing.map(row => normalizeTradeFlowKitCustomerPhone(row.phone)).filter((value): value is string => !!value));
+      const importedCustomers: Array<typeof tradeflowkitCustomers.$inferSelect> = [];
+      const skipped: Array<{ row: number; reason: 'duplicate_name' | 'duplicate_email' | 'duplicate_phone' | 'duplicate_source' }> = [];
+
+      for (const customerInput of input.customers) {
+        const { row, ...customer } = customerInput;
+        const name = normalizeTradeFlowKitCustomerName(customer.name);
+        const email = customer.email?.toLocaleLowerCase('en-US') ?? null;
+        const phone = normalizeTradeFlowKitCustomerPhone(customer.phone);
+        const duplicateReason = names.has(name) ? 'duplicate_name'
+          : email && emails.has(email) ? 'duplicate_email'
+            : phone && phones.has(phone) ? 'duplicate_phone'
+              : null;
+        if (duplicateReason) {
+          skipped.push({ row, reason: duplicateReason });
+          continue;
+        }
+        const outcome = await createLinkedTradeFlowKitCustomer(
+          tx,
+          { tenantId: ctx.tenantId, userId: user.id },
+          customer,
+          {
+            sourceId: tradeFlowKitCustomerImportSourceId(customer),
+            deduplicateOrganization: true,
+            action: 'imported',
+          },
+        );
+        if (outcome.kind === 'duplicate') {
+          skipped.push({ row, reason: 'duplicate_source' });
+          continue;
+        }
+        importedCustomers.push(outcome.customer);
+        names.add(name);
+        if (email) emails.add(email);
+        if (phone) phones.add(phone);
+      }
+
+      const response = {
+        imported: importedCustomers.length,
+        skipped: skipped.length,
+        errors: input.errors,
+        skippedRows: skipped,
+        customers: importedCustomers.map(customer => ({ id: customer.id })),
+      };
+      await tx.insert(activityFeed).values({
+        tenantId: ctx.tenantId,
+        userId: user.id,
+        action: 'import_completed',
+        entityType: 'tradeflowkit_customer_import',
+        metadata: {
+          idempotencyKey,
+          requestSha256: idempotency.requestSha256,
+          totalRows: input.totalRows,
+          imported: importedCustomers.length,
+          skipped: skipped.length,
+          errors: input.errors.length,
+          validationErrors: input.errors,
+          skippedRows: skipped,
+          importedCustomerIds: importedCustomers.map(customer => customer.id),
+        },
+      });
+      await completeIdempotentOperation({
+        tenantId: ctx.tenantId,
+        id: idempotency.id,
+        leaseExpiresAt: idempotency.leaseExpiresAt,
+        responseStatus: 200,
+        responseJson: response,
+      }, tx);
+      return {
+        kind: 'response' as const,
+        response,
+      };
+    });
+    if (result.kind === 'conflict') {
+      return reply.code(409).send({
+        error: 'Idempotency-Key was already used with a different customer import',
+        code: 'IDEMPOTENCY_KEY_REUSE',
+      });
+    }
+    if (result.kind === 'in_progress') {
+      return reply.code(409).send({
+        error: 'Customer import is already in progress',
+        code: 'IDEMPOTENCY_IN_PROGRESS',
+      });
+    }
+    return reply.code(200).send(result.response);
   });
 
   app.post('/v1/modules/tradeflowkit/jobs', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {

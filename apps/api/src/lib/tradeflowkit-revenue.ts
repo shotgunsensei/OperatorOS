@@ -53,6 +53,27 @@ export function parseCustomerCreate(raw: unknown) {
   };
 }
 
+export type TradeFlowKitCustomerInput = ReturnType<typeof parseCustomerCreate>;
+
+export function parseCustomerImport(raw: unknown) {
+  const body = object(raw);
+  if (!Array.isArray(body.customers) || body.customers.length < 1 || body.customers.length > 100) {
+    throw new TradeFlowKitRevenueValidationError('CUSTOMER_IMPORT_ROWS_INVALID', 'customers');
+  }
+  const customers: Array<TradeFlowKitCustomerInput & { row: number }> = [];
+  const errors: Array<{ row: number; code: string; field?: string }> = [];
+  body.customers.forEach((entry, index) => {
+    const row = index + 2;
+    try {
+      customers.push({ ...parseCustomerCreate(entry), row });
+    } catch (error) {
+      if (!(error instanceof TradeFlowKitRevenueValidationError)) throw error;
+      errors.push({ row, code: error.code, ...(error.field ? { field: error.field } : {}) });
+    }
+  });
+  return { customers, errors, totalRows: body.customers.length };
+}
+
 export function parseJobCreate(raw: unknown) {
   const body = object(raw);
   const priority = body.priority ?? 'normal';

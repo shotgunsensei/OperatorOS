@@ -78,6 +78,10 @@ const documentMutationEvidence = [
   'apps/api/test/tradeflowkit-document-mutations.test.ts',
   'apps/api/test/tradeflowkit-revenue-ui-static.test.ts',
 ];
+const customerImportEvidence = [
+  'apps/api/test/tradeflowkit-customer-import.test.ts',
+  'apps/api/test/tradeflowkit-revenue-ui-static.test.ts',
+];
 const directoryEvidence = [
   'apps/api/test/business-directory.test.ts',
   'apps/web/e2e/business-directory.spec.ts',
@@ -408,8 +412,23 @@ function classifyApi(method, path) {
     );
   }
   if (path.startsWith('/api/customers')) {
-    if (path.includes('/import') || path.includes('/bulk-')) {
-      return outcome(GAP, 'customer_bulk_import', [], [], 'Bulk/import behavior needs bounded validation, idempotency, and reconciliation.');
+    if (path === '/api/customers/import' && upperMethod === 'POST') {
+      return outcome(
+        ACTIVE,
+        'customer_import',
+        ['apps/api/src/routes/module-shell-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx'],
+        customerImportEvidence,
+        'Bounded CSV-to-JSON import is replay safe, tenant scoped, validated, audited, and reconciled with shared Directory records.',
+      );
+    }
+    if (path === '/api/customers/bulk-delete' || path === '/api/customers/bulk-restore') {
+      return outcome(
+        RETIRED_SECURITY,
+        'customer_bulk_destructive',
+        ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md'],
+        customerImportEvidence,
+        'Legacy bulk destructive customer mutation remains prohibited by ADR-0011; bounded import is available without exposing these controls.',
+      );
     }
     return outcome(
       ACTIVE,

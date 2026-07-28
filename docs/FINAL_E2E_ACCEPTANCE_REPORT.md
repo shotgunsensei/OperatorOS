@@ -11,9 +11,9 @@ TradeFlowKit was re-baselined against clean restored source commit
 `37aa67f1da804fc3ac56f36e50e01362077d7a26` rather than treating the earlier
 approved-scope snapshot as full-product parity. The executable source ledger
 inventories 35 pages, 194 API routes, 40 tables, and 8 provider/config
-references with zero unclassified items. After the Workflow Studio and
-revenue-document increments, 102 items are active, 53 use shared OperatorOS
-replacements, and 60 remain explicit Phase 16 gaps.
+references with zero unclassified items. After the Workflow Studio,
+revenue-document, and customer-import increments, 103 items are active, 53 use
+shared OperatorOS replacements, and 57 remain explicit Phase 16 gaps.
 
 The current revenue increment adds persistent direct invoice creation;
 optimistically versioned, multi-line draft editing for quotes and invoices;
@@ -24,18 +24,39 @@ write activity. Viewers see a read-only UI and are independently denied by the
 API. Accepted quotes and financial-history-bearing invoices cannot be
 rewritten or destructively archived.
 
-Local evidence on 2026-07-28 includes 4/4 focused PostgreSQL/static checks; a
-clean API aggregate at 868 total, 862 pass, zero fail, and six intentional
+The customer-import increment adds a responsive `.csv` flow bounded to 256 KB,
+100 rows, and five declared fields. The browser parses the file and sends JSON;
+the server revalidates each row, requires a bounded idempotency key, serializes
+same-tenant imports, suppresses normalized/fingerprint duplicates, and
+atomically reconciles shared Directory organizations/contacts with
+TradeFlowKit customers. The shared OperatorOS idempotency service stores only
+the bounded result shape, not contact fields. Tests prove viewer denial,
+second-tenant isolation, safe audit/activity metadata, exact
+same-key/same-body original-result replay, `409 IDEMPOTENCY_KEY_REUSE` on body
+drift, and database persistence after API shutdown. Legacy customer bulk
+delete/restore is explicitly retired under ADR-0011.
+
+Local evidence on 2026-07-28 includes 5/5 focused PostgreSQL/static checks; a
+clean API aggregate at 872 total, 866 pass, zero fail, and six intentional
 HTTP-only skips; workspace typecheck; production build; the compiled 29-step
 release; `200` health/readiness; and an exact-host Chrome workflow. That
-workflow completed PKCE login, customer/quote creation, two-line quote edit,
-quote send/accept, one quote-linked job, quote-derived invoice, direct invoice
-create/edit/archive, `/quotes` refresh persistence, return to OperatorOS,
-secure host-only cookie/no-credential-storage checks, and a 390-pixel
-no-overflow check.
+current customer-import workflow passes 1/1: it completed exact-path PKCE
+login, imported two valid customers plus shared Directory identities, rendered
+one invalid-row diagnostic, survived `/quotes` refresh, and re-imported the
+same logical rows under a fresh key with zero new writes. It returned to My
+Apps and passed a 390-pixel no-overflow check. Prior cumulative browser
+evidence also covers customer/quote creation, two-line quote editing,
+send/accept, quote-to-job/invoice, direct invoice create/edit/archive, secure
+host-only cookies, and no credential storage.
+
+The first rebuilt browser attempt completed its product assertions but failed
+fixture teardown on the new `shared_idempotency_keys` tenant FK. The
+tenant-scoped cleanup was repaired, the scenario passed 1/1 in 8.5 seconds,
+and a count-only check confirmed no synthetic import-gate identity remained.
+The clean rebuilt runtime and core production preflight both pass.
 
 This follow-up does not change the ecosystem **NOT ACCEPTED** verdict or claim
-TradeFlowKit state 5. Sixty parity gaps remain, and deployed authenticated
+TradeFlowKit state 5. Fifty-seven parity gaps remain, and deployed authenticated
 acceptance, live providers, an approved real export/apply/reconciliation,
 rollback rehearsal, and production cutover have not occurred.
 
