@@ -372,7 +372,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
             )}
 
             {hasTenantContext && adapter.tenantId && (
-              <TradeFlowKitRevenueFlow key={`revenue-${adapter.tenantId}`} tenantKey={adapter.tenantId} />
+              <TradeFlowKitRevenueFlow key={`revenue-${adapter.tenantId}`} tenantKey={adapter.tenantId} canManage={canManageModule} />
             )}
 
             {hasTenantContext && adapter.tenantId && (

@@ -37,10 +37,15 @@ import {
 } from '../lib/tradeflowkit-leads.js';
 import {
   parseCustomerCreate,
+  parseDocumentArchive,
+  parseInvoiceCreate,
   parseInvoiceFromQuote,
+  parseInvoiceUpdate,
   parseJobCreate,
   parsePayment,
   parseQuoteCreate,
+  parseQuoteToJob,
+  parseQuoteUpdate,
   parseTransition,
   TradeFlowKitRevenueValidationError,
 } from '../lib/tradeflowkit-revenue.js';
@@ -750,6 +755,154 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     return reply.code(201).send(quote);
   });
 
+  app.patch('/v1/modules/tradeflowkit/quotes/:id', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    let input;
+    try { input = parseQuoteUpdate(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const { id } = request.params as { id: string };
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const [current] = await db.select().from(tradeflowkitQuotes).where(and(
+      eq(tradeflowkitQuotes.id, id), eq(tradeflowkitQuotes.tenantId, ctx.tenantId), isNull(tradeflowkitQuotes.deletedAt),
+    )).limit(1);
+    if (!current) return reply.code(404).send({ error: 'Quote not found', code: 'QUOTE_NOT_FOUND' });
+    if (current.status !== 'draft') {
+      return reply.code(409).send({ error: 'Only draft quotes can be edited', code: 'QUOTE_NOT_EDITABLE' });
+    }
+    const [customer] = await db.select({ id: tradeflowkitCustomers.id }).from(tradeflowkitCustomers).where(and(
+      eq(tradeflowkitCustomers.id, input.customerId), eq(tradeflowkitCustomers.tenantId, ctx.tenantId), isNull(tradeflowkitCustomers.deletedAt),
+    )).limit(1);
+    if (!customer) return reply.code(404).send({ error: 'Customer not found', code: 'CUSTOMER_NOT_FOUND' });
+    if (input.jobId) {
+      const [job] = await db.select({ id: tradeflowkitJobs.id }).from(tradeflowkitJobs).where(and(
+        eq(tradeflowkitJobs.id, input.jobId), eq(tradeflowkitJobs.tenantId, ctx.tenantId),
+        eq(tradeflowkitJobs.customerId, input.customerId), isNull(tradeflowkitJobs.deletedAt),
+      )).limit(1);
+      if (!job) return reply.code(404).send({ error: 'Job not found for customer', code: 'JOB_NOT_FOUND' });
+    }
+    const updated = await db.transaction(async (tx) => {
+      const [row] = await tx.update(tradeflowkitQuotes).set({
+        customerId: input.customerId, jobId: input.jobId, lineItems: input.lineItems,
+        subtotalCents: input.subtotalCents, taxRateBps: input.taxRateBps, taxCents: input.taxCents,
+        discountCents: input.discountCents, totalCents: input.totalCents,
+        notes: input.notes, expiresAt: input.expiresAt,
+        version: sql`${tradeflowkitQuotes.version} + 1`, updatedAt: new Date(),
+      }).where(and(
+        eq(tradeflowkitQuotes.id, id), eq(tradeflowkitQuotes.tenantId, ctx.tenantId),
+        eq(tradeflowkitQuotes.version, input.expectedVersion), eq(tradeflowkitQuotes.status, 'draft'),
+        isNull(tradeflowkitQuotes.deletedAt),
+      )).returning();
+      if (!row) return null;
+      await tx.delete(tradeflowkitQuoteItems).where(and(
+        eq(tradeflowkitQuoteItems.tenantId, ctx.tenantId), eq(tradeflowkitQuoteItems.quoteId, id),
+      ));
+      await tx.insert(tradeflowkitQuoteItems).values(input.lineItems.map((item, index) => ({
+        tenantId: ctx.tenantId, quoteId: id, lineNumber: index + 1,
+        description: item.description, quantityMilli: item.quantity * 1000,
+        unitPriceCents: item.unitPriceCents, lineTotalCents: item.quantity * item.unitPriceCents,
+      })));
+      await tx.insert(activityFeed).values({
+        tenantId: ctx.tenantId, userId: user.id, action: 'updated',
+        entityType: 'tradeflowkit_quote', entityId: id,
+        metadata: { previousTotalCents: current.totalCents, totalCents: row.totalCents, version: row.version },
+      });
+      return row;
+    });
+    if (!updated) return reply.code(409).send({ error: 'Quote changed; reload and retry', code: 'QUOTE_VERSION_CONFLICT' });
+    return updated;
+  });
+
+  app.delete('/v1/modules/tradeflowkit/quotes/:id', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    let input;
+    try { input = parseDocumentArchive(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const { id } = request.params as { id: string };
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const [current] = await db.select().from(tradeflowkitQuotes).where(and(
+      eq(tradeflowkitQuotes.id, id), eq(tradeflowkitQuotes.tenantId, ctx.tenantId), isNull(tradeflowkitQuotes.deletedAt),
+    )).limit(1);
+    if (!current) return reply.code(404).send({ error: 'Quote not found', code: 'QUOTE_NOT_FOUND' });
+    if (!['draft', 'declined', 'expired', 'void'].includes(current.status)) {
+      return reply.code(409).send({ error: 'Active quotes cannot be archived', code: 'QUOTE_NOT_ARCHIVABLE' });
+    }
+    const [linkedInvoice] = await db.select({ id: tradeflowkitInvoices.id }).from(tradeflowkitInvoices).where(and(
+      eq(tradeflowkitInvoices.tenantId, ctx.tenantId), eq(tradeflowkitInvoices.sourceQuoteId, id),
+      isNull(tradeflowkitInvoices.deletedAt),
+    )).limit(1);
+    if (linkedInvoice) {
+      return reply.code(409).send({ error: 'Quote has an active invoice', code: 'QUOTE_HAS_ACTIVE_INVOICE' });
+    }
+    const [archived] = await db.transaction(async (tx) => {
+      const rows = await tx.update(tradeflowkitQuotes).set({
+        deletedAt: new Date(), version: sql`${tradeflowkitQuotes.version} + 1`, updatedAt: new Date(),
+      }).where(and(
+        eq(tradeflowkitQuotes.id, id), eq(tradeflowkitQuotes.tenantId, ctx.tenantId),
+        eq(tradeflowkitQuotes.version, input.expectedVersion), eq(tradeflowkitQuotes.status, current.status),
+        isNull(tradeflowkitQuotes.deletedAt),
+      )).returning();
+      if (!rows[0]) return [];
+      await tx.insert(activityFeed).values({
+        tenantId: ctx.tenantId, userId: user.id, action: 'archived',
+        entityType: 'tradeflowkit_quote', entityId: id, metadata: { status: current.status },
+      });
+      return rows;
+    });
+    if (!archived) return reply.code(409).send({ error: 'Quote changed; reload and retry', code: 'QUOTE_VERSION_CONFLICT' });
+    return { ok: true, quote: archived };
+  });
+
+  app.post('/v1/modules/tradeflowkit/quotes/:id/job', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    let input;
+    try { input = parseQuoteToJob(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const { id } = request.params as { id: string };
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const outcome = await db.transaction(async (tx) => {
+      await tx.execute(sql`
+        SELECT id FROM tradeflowkit_quotes
+        WHERE id = ${id} AND tenant_id = ${ctx.tenantId} AND deleted_at IS NULL
+        FOR UPDATE
+      `);
+      const [quote] = await tx.select().from(tradeflowkitQuotes).where(and(
+        eq(tradeflowkitQuotes.id, id), eq(tradeflowkitQuotes.tenantId, ctx.tenantId), isNull(tradeflowkitQuotes.deletedAt),
+      )).limit(1);
+      if (!quote) return { kind: 'not_found' as const };
+      if (quote.jobId) {
+        const [existingJob] = await tx.select().from(tradeflowkitJobs).where(and(
+          eq(tradeflowkitJobs.id, quote.jobId), eq(tradeflowkitJobs.tenantId, ctx.tenantId), isNull(tradeflowkitJobs.deletedAt),
+        )).limit(1);
+        return existingJob
+          ? { kind: 'existing' as const, job: existingJob }
+          : { kind: 'missing_job' as const };
+      }
+      if (quote.status !== 'accepted') return { kind: 'not_accepted' as const };
+      if (quote.version !== input.expectedVersion) return { kind: 'version_conflict' as const };
+      const number = await allocateTradeFlowKitNumber(tx, ctx.tenantId, 'job');
+      const [job] = await tx.insert(tradeflowkitJobs).values({
+        tenantId: ctx.tenantId, customerId: quote.customerId, createdByUserId: user.id, number,
+        title: input.title ?? `Job from Quote #${quote.number ?? quote.id.slice(0, 8).toUpperCase()}`,
+        description: quote.notes, status: 'quoted', priority: 'normal',
+      }).returning();
+      const [linked] = await tx.update(tradeflowkitQuotes).set({
+        jobId: job.id, version: sql`${tradeflowkitQuotes.version} + 1`, updatedAt: new Date(),
+      }).where(and(
+        eq(tradeflowkitQuotes.id, id), eq(tradeflowkitQuotes.tenantId, ctx.tenantId),
+        eq(tradeflowkitQuotes.version, input.expectedVersion), isNull(tradeflowkitQuotes.deletedAt),
+      )).returning();
+      if (!linked) throw new Error('QUOTE_VERSION_CONFLICT');
+      await tx.insert(activityFeed).values({
+        tenantId: ctx.tenantId, userId: user.id, action: 'created_from_quote',
+        entityType: 'tradeflowkit_job', entityId: job.id,
+        metadata: { quoteId: id, customerId: quote.customerId, number },
+      });
+      return { kind: 'created' as const, job };
+    });
+    if (outcome.kind === 'not_found') return reply.code(404).send({ error: 'Quote not found', code: 'QUOTE_NOT_FOUND' });
+    if (outcome.kind === 'not_accepted') return reply.code(409).send({ error: 'Only accepted quotes can become jobs', code: 'QUOTE_NOT_ACCEPTED' });
+    if (outcome.kind === 'version_conflict') return reply.code(409).send({ error: 'Quote changed; reload and retry', code: 'QUOTE_VERSION_CONFLICT' });
+    if (outcome.kind === 'missing_job') return reply.code(409).send({ error: 'Linked job is unavailable', code: 'QUOTE_JOB_UNAVAILABLE' });
+    return reply.code(outcome.kind === 'created' ? 201 : 200).send(outcome.job);
+  });
+
   app.post('/v1/modules/tradeflowkit/quotes/:id/transition', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
     let input;
     try { input = parseTransition(request.body, ['sent', 'accepted', 'declined']); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
@@ -825,6 +978,145 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       return created;
     });
     return reply.code(201).send(invoice);
+  });
+
+  app.post('/v1/modules/tradeflowkit/invoices', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    let input;
+    try { input = parseInvoiceCreate(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const [customer] = await db.select({ id: tradeflowkitCustomers.id }).from(tradeflowkitCustomers).where(and(
+      eq(tradeflowkitCustomers.id, input.customerId), eq(tradeflowkitCustomers.tenantId, ctx.tenantId), isNull(tradeflowkitCustomers.deletedAt),
+    )).limit(1);
+    if (!customer) return reply.code(404).send({ error: 'Customer not found', code: 'CUSTOMER_NOT_FOUND' });
+    if (input.jobId) {
+      const [job] = await db.select({ id: tradeflowkitJobs.id }).from(tradeflowkitJobs).where(and(
+        eq(tradeflowkitJobs.id, input.jobId), eq(tradeflowkitJobs.tenantId, ctx.tenantId),
+        eq(tradeflowkitJobs.customerId, input.customerId), isNull(tradeflowkitJobs.deletedAt),
+      )).limit(1);
+      if (!job) return reply.code(404).send({ error: 'Job not found for customer', code: 'JOB_NOT_FOUND' });
+    }
+    const invoice = await db.transaction(async (tx) => {
+      const number = await allocateTradeFlowKitNumber(tx, ctx.tenantId, 'invoice');
+      const [created] = await tx.insert(tradeflowkitInvoices).values({
+        tenantId: ctx.tenantId, customerId: input.customerId, jobId: input.jobId,
+        createdByUserId: user.id, number, lineItems: input.lineItems,
+        subtotalCents: input.subtotalCents, taxRateBps: input.taxRateBps, taxCents: input.taxCents,
+        discountCents: input.discountCents, totalCents: input.totalCents,
+        paidCents: 0, balanceCents: input.totalCents, notes: input.notes, dueDate: input.dueDate,
+      }).returning();
+      await tx.insert(tradeflowkitInvoiceItems).values(input.lineItems.map((item, index) => ({
+        tenantId: ctx.tenantId, invoiceId: created.id, lineNumber: index + 1,
+        description: item.description, quantityMilli: item.quantity * 1000,
+        unitPriceCents: item.unitPriceCents, lineTotalCents: item.quantity * item.unitPriceCents,
+      })));
+      if (input.jobId) {
+        await tx.update(tradeflowkitJobs).set({
+          status: 'invoiced', updatedAt: new Date(), version: sql`${tradeflowkitJobs.version} + 1`,
+        }).where(and(
+          eq(tradeflowkitJobs.id, input.jobId), eq(tradeflowkitJobs.tenantId, ctx.tenantId), isNull(tradeflowkitJobs.deletedAt),
+        ));
+      }
+      await tx.insert(activityFeed).values({
+        tenantId: ctx.tenantId, userId: user.id, action: 'created',
+        entityType: 'tradeflowkit_invoice', entityId: created.id,
+        metadata: { customerId: created.customerId, jobId: created.jobId, totalCents: created.totalCents, number },
+      });
+      return created;
+    });
+    return reply.code(201).send(invoice);
+  });
+
+  app.patch('/v1/modules/tradeflowkit/invoices/:id', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    let input;
+    try { input = parseInvoiceUpdate(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const { id } = request.params as { id: string };
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const [current] = await db.select().from(tradeflowkitInvoices).where(and(
+      eq(tradeflowkitInvoices.id, id), eq(tradeflowkitInvoices.tenantId, ctx.tenantId), isNull(tradeflowkitInvoices.deletedAt),
+    )).limit(1);
+    if (!current) return reply.code(404).send({ error: 'Invoice not found', code: 'INVOICE_NOT_FOUND' });
+    if (current.status !== 'draft' || current.paidCents !== 0) {
+      return reply.code(409).send({ error: 'Only unpaid draft invoices can be edited', code: 'INVOICE_NOT_EDITABLE' });
+    }
+    const [customer] = await db.select({ id: tradeflowkitCustomers.id }).from(tradeflowkitCustomers).where(and(
+      eq(tradeflowkitCustomers.id, input.customerId), eq(tradeflowkitCustomers.tenantId, ctx.tenantId), isNull(tradeflowkitCustomers.deletedAt),
+    )).limit(1);
+    if (!customer) return reply.code(404).send({ error: 'Customer not found', code: 'CUSTOMER_NOT_FOUND' });
+    if (input.jobId) {
+      const [job] = await db.select({ id: tradeflowkitJobs.id }).from(tradeflowkitJobs).where(and(
+        eq(tradeflowkitJobs.id, input.jobId), eq(tradeflowkitJobs.tenantId, ctx.tenantId),
+        eq(tradeflowkitJobs.customerId, input.customerId), isNull(tradeflowkitJobs.deletedAt),
+      )).limit(1);
+      if (!job) return reply.code(404).send({ error: 'Job not found for customer', code: 'JOB_NOT_FOUND' });
+    }
+    const updated = await db.transaction(async (tx) => {
+      const [row] = await tx.update(tradeflowkitInvoices).set({
+        customerId: input.customerId, jobId: input.jobId, lineItems: input.lineItems,
+        subtotalCents: input.subtotalCents, taxRateBps: input.taxRateBps, taxCents: input.taxCents,
+        discountCents: input.discountCents, totalCents: input.totalCents, balanceCents: input.totalCents,
+        notes: input.notes, dueDate: input.dueDate,
+        version: sql`${tradeflowkitInvoices.version} + 1`, updatedAt: new Date(),
+      }).where(and(
+        eq(tradeflowkitInvoices.id, id), eq(tradeflowkitInvoices.tenantId, ctx.tenantId),
+        eq(tradeflowkitInvoices.version, input.expectedVersion), eq(tradeflowkitInvoices.status, 'draft'),
+        eq(tradeflowkitInvoices.paidCents, 0), isNull(tradeflowkitInvoices.deletedAt),
+      )).returning();
+      if (!row) return null;
+      await tx.delete(tradeflowkitInvoiceItems).where(and(
+        eq(tradeflowkitInvoiceItems.tenantId, ctx.tenantId), eq(tradeflowkitInvoiceItems.invoiceId, id),
+      ));
+      await tx.insert(tradeflowkitInvoiceItems).values(input.lineItems.map((item, index) => ({
+        tenantId: ctx.tenantId, invoiceId: id, lineNumber: index + 1,
+        description: item.description, quantityMilli: item.quantity * 1000,
+        unitPriceCents: item.unitPriceCents, lineTotalCents: item.quantity * item.unitPriceCents,
+      })));
+      await tx.insert(activityFeed).values({
+        tenantId: ctx.tenantId, userId: user.id, action: 'updated',
+        entityType: 'tradeflowkit_invoice', entityId: id,
+        metadata: { previousTotalCents: current.totalCents, totalCents: row.totalCents, version: row.version },
+      });
+      return row;
+    });
+    if (!updated) return reply.code(409).send({ error: 'Invoice changed; reload and retry', code: 'INVOICE_VERSION_CONFLICT' });
+    return updated;
+  });
+
+  app.delete('/v1/modules/tradeflowkit/invoices/:id', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    let input;
+    try { input = parseDocumentArchive(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const { id } = request.params as { id: string };
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const [current] = await db.select().from(tradeflowkitInvoices).where(and(
+      eq(tradeflowkitInvoices.id, id), eq(tradeflowkitInvoices.tenantId, ctx.tenantId), isNull(tradeflowkitInvoices.deletedAt),
+    )).limit(1);
+    if (!current) return reply.code(404).send({ error: 'Invoice not found', code: 'INVOICE_NOT_FOUND' });
+    if (!['draft', 'void'].includes(current.status) || current.paidCents !== 0) {
+      return reply.code(409).send({ error: 'Only unpaid draft or void invoices can be archived', code: 'INVOICE_NOT_ARCHIVABLE' });
+    }
+    const [payment] = await db.select({ id: tradeflowkitPayments.id }).from(tradeflowkitPayments).where(and(
+      eq(tradeflowkitPayments.tenantId, ctx.tenantId), eq(tradeflowkitPayments.invoiceId, id),
+    )).limit(1);
+    if (payment) return reply.code(409).send({ error: 'Invoice has payment history', code: 'INVOICE_HAS_PAYMENTS' });
+    const [archived] = await db.transaction(async (tx) => {
+      const rows = await tx.update(tradeflowkitInvoices).set({
+        deletedAt: new Date(), version: sql`${tradeflowkitInvoices.version} + 1`, updatedAt: new Date(),
+      }).where(and(
+        eq(tradeflowkitInvoices.id, id), eq(tradeflowkitInvoices.tenantId, ctx.tenantId),
+        eq(tradeflowkitInvoices.version, input.expectedVersion), eq(tradeflowkitInvoices.status, current.status),
+        eq(tradeflowkitInvoices.paidCents, 0), isNull(tradeflowkitInvoices.deletedAt),
+      )).returning();
+      if (!rows[0]) return [];
+      await tx.insert(activityFeed).values({
+        tenantId: ctx.tenantId, userId: user.id, action: 'archived',
+        entityType: 'tradeflowkit_invoice', entityId: id, metadata: { status: current.status },
+      });
+      return rows;
+    });
+    if (!archived) return reply.code(409).send({ error: 'Invoice changed; reload and retry', code: 'INVOICE_VERSION_CONFLICT' });
+    return { ok: true, invoice: archived };
   });
 
   app.post('/v1/modules/tradeflowkit/invoices/:id/transition', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {

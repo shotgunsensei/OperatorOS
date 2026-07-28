@@ -128,6 +128,44 @@ export function parseQuoteCreate(raw: unknown) {
   };
 }
 
+export function parseQuoteUpdate(raw: unknown) {
+  const body = object(raw);
+  return {
+    ...parseQuoteCreate(body),
+    expectedVersion: version(body.expectedVersion),
+  };
+}
+
+export function parseInvoiceCreate(raw: unknown) {
+  const body = object(raw);
+  const document = parseQuoteCreate(body);
+  return {
+    ...document,
+    dueDate: date(body.dueDate, 'dueDate'),
+  };
+}
+
+export function parseInvoiceUpdate(raw: unknown) {
+  const body = object(raw);
+  return {
+    ...parseInvoiceCreate(body),
+    expectedVersion: version(body.expectedVersion),
+  };
+}
+
+export function parseDocumentArchive(raw: unknown) {
+  const body = object(raw);
+  return { expectedVersion: version(body.expectedVersion) };
+}
+
+export function parseQuoteToJob(raw: unknown) {
+  const body = object(raw);
+  return {
+    expectedVersion: version(body.expectedVersion),
+    title: text(body.title, 'title', 200),
+  };
+}
+
 export function parseTransition(raw: unknown, allowed: readonly string[]) {
   const body = object(raw);
   const status = text(body.status, 'status', 30, true)!;

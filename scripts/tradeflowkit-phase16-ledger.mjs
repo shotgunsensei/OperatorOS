@@ -74,6 +74,10 @@ const workflowEvidence = [
   'apps/api/test/tradeflowkit-state5-workflow.test.ts',
   'apps/api/test/tradeflowkit-revenue-flow.test.ts',
 ];
+const documentMutationEvidence = [
+  'apps/api/test/tradeflowkit-document-mutations.test.ts',
+  'apps/api/test/tradeflowkit-revenue-ui-static.test.ts',
+];
 const directoryEvidence = [
   'apps/api/test/business-directory.test.ts',
   'apps/web/e2e/business-directory.spec.ts',
@@ -429,10 +433,22 @@ function classifyApi(method, path) {
   }
   if (path.startsWith('/api/quotes')) {
     if ((upperMethod === 'PATCH' || upperMethod === 'DELETE') && path === '/api/quotes/:id') {
-      return outcome(GAP, 'quote_edit_archive', [], [], 'Equivalent quote edit/archive behavior is not yet active.');
+      return outcome(
+        ACTIVE,
+        'quote_edit_archive',
+        ['apps/api/src/routes/module-shell-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx'],
+        documentMutationEvidence,
+        'Versioned draft editing and guarded soft archive reconcile normalized line items in one tenant-scoped transaction.',
+      );
     }
     if (path.includes('/convert-to-job')) {
-      return outcome(GAP, 'quote_to_job', [], [], 'Quote-to-job conversion is not yet exposed as an idempotent active contract.');
+      return outcome(
+        ACTIVE,
+        'quote_to_job',
+        ['apps/api/src/routes/module-shell-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx'],
+        documentMutationEvidence,
+        'Accepted quote conversion locks the quote and returns the single linked persistent job on retries.',
+      );
     }
     return outcome(
       ACTIVE,
@@ -443,13 +459,20 @@ function classifyApi(method, path) {
     );
   }
   if (path.startsWith('/api/invoices')) {
+    if (path.includes('/import') || path.includes('/bulk-')) {
+      return outcome(GAP, 'invoice_import_bulk', [], [], 'Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation.');
+    }
     if (
-      path.includes('/import') ||
-      path.includes('/bulk-') ||
       (path === '/api/invoices' && upperMethod === 'POST') ||
       (path === '/api/invoices/:id' && ['PATCH', 'DELETE'].includes(upperMethod))
     ) {
-      return outcome(GAP, 'invoice_direct_edit_bulk', [], [], 'Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent.');
+      return outcome(
+        ACTIVE,
+        'invoice_direct_edit_archive',
+        ['apps/api/src/routes/module-shell-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx'],
+        documentMutationEvidence,
+        'Direct creation, versioned draft editing, and history-safe soft archive are active with normalized line-item reconciliation.',
+      );
     }
     return outcome(
       ACTIVE,

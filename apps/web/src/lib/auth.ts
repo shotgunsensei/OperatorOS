@@ -1089,12 +1089,13 @@ export interface TradeFlowKitOperationsResponse {
   pagination: { limit: number; offset: number; returned: number };
 }
 export interface TradeFlowKitQuote {
-  id: string; customerId: string; jobId: string | null; status: string; lineItems: TradeFlowKitLineItem[];
-  subtotalCents: number; taxRateBps: number; taxCents: number; discountCents: number; totalCents: number; version: number;
+  id: string; number: number | null; customerId: string; jobId: string | null; status: string; lineItems: TradeFlowKitLineItem[];
+  subtotalCents: number; taxRateBps: number; taxCents: number; discountCents: number; totalCents: number;
+  notes: string | null; expiresAt: string | null; version: number;
 }
 export interface TradeFlowKitInvoice extends TradeFlowKitQuote {
   sourceQuoteId: string | null; dueDate: string | null; paidAt: string | null;
-  paymentMethod: string | null; paymentReference: string | null;
+  paidCents: number; balanceCents: number; paymentMethod: string | null; paymentReference: string | null;
 }
 export interface TradeFlowKitRevenueResponse {
   customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[];
@@ -1745,12 +1746,36 @@ export const moduleShellApi = {
       apiFetch('/modules/tradeflowkit/customers', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitCustomer>,
     createJob: (input: { customerId: string; title: string; priority?: string }): Promise<TradeFlowKitJob> =>
       apiFetch('/modules/tradeflowkit/jobs', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitJob>,
-    createQuote: (input: { customerId: string; jobId?: string; lineItems: TradeFlowKitLineItem[]; taxRateBps?: number; discountCents?: number }): Promise<TradeFlowKitQuote> =>
+    createQuote: (input: {
+      customerId: string; jobId?: string; lineItems: TradeFlowKitLineItem[]; taxRateBps?: number;
+      discountCents?: number; notes?: string; expiresAt?: string;
+    }): Promise<TradeFlowKitQuote> =>
       apiFetch('/modules/tradeflowkit/quotes', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitQuote>,
+    updateQuote: (id: string, input: {
+      expectedVersion: number; customerId: string; jobId?: string; lineItems: TradeFlowKitLineItem[];
+      taxRateBps?: number; discountCents?: number; notes?: string; expiresAt?: string;
+    }): Promise<TradeFlowKitQuote> =>
+      apiFetch(`/modules/tradeflowkit/quotes/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TradeFlowKitQuote>,
+    archiveQuote: (id: string, expectedVersion: number): Promise<{ ok: true; quote: TradeFlowKitQuote }> =>
+      apiFetch(`/modules/tradeflowkit/quotes/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true; quote: TradeFlowKitQuote }>,
+    quoteToJob: (id: string, expectedVersion: number, title?: string): Promise<TradeFlowKitJob> =>
+      apiFetch(`/modules/tradeflowkit/quotes/${encodeURIComponent(id)}/job`, { method: 'POST', body: JSON.stringify({ expectedVersion, title }) }) as Promise<TradeFlowKitJob>,
     transitionQuote: (id: string, expectedVersion: number, status: string): Promise<TradeFlowKitQuote> =>
       apiFetch(`/modules/tradeflowkit/quotes/${encodeURIComponent(id)}/transition`, { method: 'POST', body: JSON.stringify({ expectedVersion, status }) }) as Promise<TradeFlowKitQuote>,
     invoiceQuote: (id: string, expectedVersion: number): Promise<TradeFlowKitInvoice> =>
       apiFetch(`/modules/tradeflowkit/quotes/${encodeURIComponent(id)}/invoice`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<TradeFlowKitInvoice>,
+    createInvoice: (input: {
+      customerId: string; jobId?: string; lineItems: TradeFlowKitLineItem[]; taxRateBps?: number;
+      discountCents?: number; notes?: string; dueDate?: string;
+    }): Promise<TradeFlowKitInvoice> =>
+      apiFetch('/modules/tradeflowkit/invoices', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitInvoice>,
+    updateInvoice: (id: string, input: {
+      expectedVersion: number; customerId: string; jobId?: string; lineItems: TradeFlowKitLineItem[];
+      taxRateBps?: number; discountCents?: number; notes?: string; dueDate?: string;
+    }): Promise<TradeFlowKitInvoice> =>
+      apiFetch(`/modules/tradeflowkit/invoices/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TradeFlowKitInvoice>,
+    archiveInvoice: (id: string, expectedVersion: number): Promise<{ ok: true; invoice: TradeFlowKitInvoice }> =>
+      apiFetch(`/modules/tradeflowkit/invoices/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true; invoice: TradeFlowKitInvoice }>,
     transitionInvoice: (id: string, expectedVersion: number, status: string): Promise<TradeFlowKitInvoice> =>
       apiFetch(`/modules/tradeflowkit/invoices/${encodeURIComponent(id)}/transition`, { method: 'POST', body: JSON.stringify({ expectedVersion, status }) }) as Promise<TradeFlowKitInvoice>,
     payInvoice: (id: string, expectedVersion: number, paymentMethod: string, paymentReference?: string): Promise<TradeFlowKitInvoice> =>

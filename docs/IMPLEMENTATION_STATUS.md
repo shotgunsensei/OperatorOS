@@ -20,7 +20,7 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/phase-16a-tradeflowkit-parity`
+- Execution branch: `codex/phase-16a-tradeflowkit-revenue-parity`
 - Release gate: **closed**
 
 ## Current verdict
@@ -30,9 +30,9 @@ has been re-baselined against clean restored source commit
 `37aa67f1da804fc3ac56f36e50e01362077d7a26`. The generated source ledger pins
 the reviewed files and classifies 35 client pages, 194 API routes, 40 tables,
 and 8 provider/config references with zero unclassified items. After the first
-real implementation increment, 96 items are active, 53 use shared OperatorOS
+second real implementation increment, 102 items are active, 53 use shared OperatorOS
 authority, 39 are retired for security, 23 are retired by product boundary,
-and 66 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
+and 60 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
 4 remains valid but is not full-product parity.
 
 Workflow Studio is now persistent rather than a shell: tenant-admin governed
@@ -43,6 +43,19 @@ priority is accepted through the API and database. Focused PostgreSQL coverage
 proves role denial, second-tenant isolation/non-enumeration, stale-write
 rejection, restart persistence, default uniqueness, and real job/task
 integration.
+
+The second increment closes six restored-source revenue routes with real
+shared-runtime behavior: direct invoice creation; versioned, full-document
+draft editing for quotes and invoices; history-safe soft archive for both; and
+row-locked idempotent quote-to-job conversion. Parent rows and normalized line
+items reconcile in one tenant-scoped transaction. Accepted quotes and
+sent/paid invoices cannot be rewritten or destructively archived. The
+responsive UI exposes multi-line editors and direct invoice creation to module
+operators while viewer access remains read-only; the server independently
+enforces write authority. Focused PostgreSQL/static coverage passes 4/4 for
+stale-write rejection, viewer denial, second-tenant non-enumeration,
+line-item reconciliation, safe financial history, idempotent replay, and
+persistence through API shutdown plus a fresh database connection.
 
 Phase 16A also adds a read-only, organization-scoped standalone snapshot tool
 and a version 1 guarded atomic apply path for core customers, Directory
@@ -66,7 +79,8 @@ non-customer fixtures. External providers were disabled.
 
 ```powershell
 corepack pnpm typecheck
-# Focused Node test invocation for the eight Phase 16A/related files
+# Focused document-mutation PostgreSQL/static tests
+# Full API suite against a new isolated database
 corepack pnpm verify:tradeflowkit:phase16
 corepack pnpm --dir apps/api test
 corepack pnpm db:plan
@@ -81,25 +95,39 @@ node scripts/start-unified-runtime.mjs
 git diff --check
 ```
 
-Results: workspace typecheck passes; the focused database/static regression
-passes 21/21 with zero failures/skips; the final clean API aggregate reports
-864 tests, 858 pass, zero fail, and six intentional HTTP-only/browser skips in
-271.8 seconds; the 29-step release plan passes; and the production build
+Results: workspace typecheck passes; the current document-mutation
+database/static regression passes 4/4 with zero failures/skips; the final
+clean API aggregate reports 868 tests, 862 pass, zero fail, and six
+intentional HTTP-only/browser skips in 351.6 seconds; the 29-step release plan
+passes; and the production build
 passes for API, runner gateway, SDK, and the 20-page Next application. The
 release applies and verifies twice consecutively, including the one-time
 priority-constraint upgrade without recreating the upgraded constraint. The
 source ledger reports 35 pages, 194 API routes, 40 tables, 8 providers, zero
-unclassified items, and 66 explicit gaps; `git diff --check` passes with
+unclassified items, and 60 explicit gaps; `git diff --check` passes with
 line-ending warnings only. The Replit-equivalent supervisor reapplies all 29
 release steps on the isolated database, starts the built Fastify and Next
 artifacts, and returns `200` from API `/healthz`, API `/readyz`, and the web
 root. Readiness reports database, auth, SSO-code encryption, module registry,
 shared-service worker, and release identity healthy/configured. Unauthenticated
-exact-host TradeFlowKit `/dashboard` and `/tasks/:id` deep links return one
+exact-host TradeFlowKit `/dashboard`, `/tasks/:id`, and `/quotes` deep links return one
 `307` to the canonical OperatorOS login contract with relative post-login
 return encoded into `next`, PKCE S256, state, nonce, host-only secure HTTP-only
 SameSite=Lax handoff cookies, and no session/access token in the URL. The
 supervisor then stops without lingering listeners on ports 5000/5001.
+
+The current increment also passed a real Chrome production-host workflow
+against the compiled local artifacts: exact-host PKCE login; customer and
+quote creation; two-line quote edit with server-recomputed money; quote
+send/accept; one idempotently linked job; quote-derived invoice; direct invoice
+create/edit/archive; deep-route refresh persistence; canonical return to
+OperatorOS; host-only Secure/HttpOnly/SameSite=Lax cookies; no browser
+credential storage; and a 390-pixel viewport with no horizontal overflow.
+The first clean-runtime attempt omitted the required temporary
+`ADMIN_PASSWORD` and the database release failed closed before service start.
+The idempotent rerun supplied a process-only disposable bootstrap password,
+completed the release, and passed health/readiness and browser acceptance. No
+credential was written to the repository.
 
 The first aggregate attempt omitted `SESSION_SECRET` and failed three boot
 tests as invalid command configuration. A subsequent detached wrapper allowed
@@ -110,9 +138,9 @@ plus typecheck/build command. That focused contract reran 2/2 before the final
 new-database aggregate passed. Test and build invocations required a
 process-only Windows sandbox shim because Node 24's `os.userInfo()` returned
 `uv_os_get_passwd ENOMEM`; the shim was removed and is not a repository
-change. Deployed browser acceptance, authenticated SSO/CRUD browser coverage,
-real standalone export/cutover, and rollback rehearsal remain pending for this
-Phase 16 revision.
+change. Deployed browser acceptance, real standalone export/cutover, live
+provider acceptance, and rollback rehearsal remain pending for this Phase 16
+revision.
 
 Phase 15 has not accepted a production release, but the public deployment gate
 now passes. Merge `c249a75396104e7aabd773e564be6a95ada56467` is live as build

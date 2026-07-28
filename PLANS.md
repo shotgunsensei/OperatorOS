@@ -39,6 +39,7 @@ slice is not parity.
 | 13 | Repeatable dry-run imports, reconciliation, rollback-safe cutover, and standalone write freeze | Every targeted module parity schema approved | Source/local rehearsal complete; production exports, backup/restore, write freeze, apply, deployed acceptance, and cutover remain human-gated |
 | 14 | Cross-module security, privacy, performance, and reliability hardening | Functional parity and migration tooling | Local candidate: zero known dependency vulnerabilities; shared headers/bounded DB shutdown/fail-closed disabled billing; threat models; tenant/role negatives; production build; loopback load baseline; and disposable backup/restore pass. Deployment/provider/monitoring gates remain blocked for Phase 15. |
 | 15 | Deployed acceptance, release decision, and state-5 certification matrix | All required prior gates | In progress; merge `c249a753` is deployed as build `2eb701089a539d9e6da5af80` and the contract-corrected public verifier passes 48/48. Authenticated test-user, persistence, tenant, authorization, logout, provider, backup/cutover, and State 5 gates remain open. |
+| 16A | Re-baseline TradeFlowKit against the restored full product and close recorded parity gaps | Phase 15 release evidence plus restored-source provenance | In progress. The executable source ledger has zero unclassified items and 60 explicit gaps after two real increments: Workflow Studio/team work management and persistent revenue-document mutations. No real standalone export, production apply, deployment, or state-5 promotion is authorized. |
 
 ## Phase execution rules
 
@@ -57,16 +58,16 @@ slice is not parity.
 
 ## Immediate next gate
 
-The owner explicitly authorized source work to continue through later phases
-on separate branches even while the public deployment gate remains failed.
-Phase 12B is complete as a bounded source/local candidate on its scoped source
-branch. ADR-0027 resolves OutCall
-as a distinct verified-self personal-safety module rather than a CallCommand
-mode or retired product. This direction permits later source work; it does not authorize deployment,
-production data mutation, promotion, or a production-ready label. Before any
-public promotion, deploy the reviewed cumulative revision through `.replit`,
-require 48/48 from the read-only verifier, and run authenticated deployed SSO,
-return, persistence, deep-link, refresh, entitlement, tenant-isolation,
-authorization, logout, provider, backup/restore, and module acceptance. Record
-the exact deployed commit in `docs/CURRENT_RELEASE_GATE.md` and never weaken
-the contract to make it pass.
+Continue Phase 16A from the zero-unclassified restored TradeFlowKit ledger.
+Prioritize complete persistent customer workflows over migration scaffolding:
+each closed route must have tenant predicates, server authorization, optimistic
+concurrency or idempotency as appropriate, real responsive UI, audit evidence,
+and isolated PostgreSQL coverage. Keep every unimplemented source surface as
+an explicit gap. This direction does not authorize deployment, production data
+mutation, promotion, or a production-ready label. Before any public promotion,
+deploy the reviewed cumulative revision through `.replit`, require 48/48 from
+the read-only verifier, and run authenticated deployed SSO, return,
+persistence, deep-link, refresh, entitlement, tenant-isolation, authorization,
+logout, provider, backup/restore, and module acceptance. Record the exact
+deployed commit in `docs/CURRENT_RELEASE_GATE.md` and never weaken the contract
+to make it pass.
