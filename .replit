@@ -59,7 +59,7 @@ waitForPort = 5000
 NODE_ENV = "production"
 OPERATOROS_BASE_URL = "https://operatoros.net"
 OPERATOROS_APPS_URL = "https://app.operatoros.net/"
-STRIPE_MODE = "live"
+STRIPE_MODE = "test"
 APP_ENV = "production"
 TRUST_PROXY = "true"
 INTERNAL_API_URL = "http://localhost:5001"
@@ -78,6 +78,8 @@ CALLCOMMAND_AI_URL = "https://callcommand-ai.operatoros.net"
 TWILIO_PUBLIC_BASE_URL = "https://callcommand-ai.operatoros.net"
 NINJAMATION_URL = "https://ninjamation.operatoros.net"
 OUTCALL_URL = "https://outcall.operatoros.net"
+API_PORT = "5001"
+PORT = "5000"
 # Host attachment only. OutCall remains catalog `coming_soon` / registry
 # `planned` and cannot launch or be purchased until explicitly activated.
 

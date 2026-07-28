@@ -1,0 +1,90 @@
+Proceed as follows:
+
+1. DATABASE_URL
+Do not create a new database or replace the existing production database.
+
+First check Publishing → Edit Commands and Secrets for a DATABASE_URL entry. If
+it is synced from the Replit-managed database, preserve it unchanged.
+
+If DATABASE_URL is absent there, open the Replit Database tool and attach/sync
+the existing OperatorOS production database to the published app. Do not create
+a second database, copy a child-module DATABASE_URL, or expose the connection
+string in chat or logs.
+
+Afterward, validate presence using the names-only core preflight and /readyz.
+
+2. MODULE_SSO_SECRET
+Delete MODULE_SSO_SECRET from Secrets.
+
+There is no approved emergency rollback. The current production release uses
+SSO v1 with SSO_CODE_ENCRYPTION_SECRET. Keep
+ALLOW_LEGACY_SSO_ROLLBACK absent or false.
+
+3. STRIPE_MODE
+Delete STRIPE_MODE from Secrets so it cannot shadow deployment configuration.
+
+Set the single non-secret production configuration value to:
+
+STRIPE_MODE=test
+
+Keep it in test mode until the complete Stripe sandbox checkout, signed webhook,
+idempotency, entitlement, cancellation, and tenant-isolation flow passes.
+Switching to live requires a separate approved Batch 6 cutover.
+
+4. Duplicate URL secrets
+Delete the secret copies of:
+
+- NINJA_LAUNCH_KIT_URL
+- STUDYFORGE_AI_URL
+- OPERATOROS_APPS_URL
+
+Preserve their already-correct non-secret production configuration values.
+Also remove any other duplicate URL secret you identified only when its exact
+canonical non-secret production value is already present.
+
+5. Ports
+Add these as non-secret production configuration:
+
+PORT=5000
+API_PORT=5001
+
+6. OPERATOROS_SERVICE_TOKEN
+Do not delete this one blindly yet.
+
+Perform a names-only check for any active out-of-process module consumer,
+registered entitlement webhook, or external introspection client that still
+uses OPERATOROS_SERVICE_TOKEN. Do not inspect or print the token.
+
+If no external consumer exists, delete it because all currently hosted modules
+operate in the unified runtime. If an external consumer exists, report only
+the module/client name, registered endpoint host, and purpose so the dependency
+can be reviewed before removal.
+
+7. Existing legacy add-on Price IDs
+Leave these in place temporarily:
+
+- STRIPE_PRICE_ADDON_NINJA_LAUNCH_KIT
+- STRIPE_PRICE_ADDON_STUDYFORGE_AI
+
+Do not use them in the initial stack-configurator sandbox test and do not create
+additional per-module Prices. Mark them for a billing-path audit to determine
+whether individual add-on checkout is intentionally exposed. Their presence
+does not make either module or payment path production-ready.
+
+After completing the changes, run:
+
+corepack pnpm preflight:production -- --core
+
+Report only PASS/FAIL and affected variable names. Never display environment
+values.
+
+If core passes, verify:
+
+- /healthz
+- /readyz
+- database ready
+- auth ready
+- SSO encryption ready
+- registry ready
+
+Then reply CORE ADDED with the names-only results.
