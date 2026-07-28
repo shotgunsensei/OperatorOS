@@ -1,81 +1,166 @@
-# TradeFlowKit migration plan
+# TradeFlowKit migration and cutover plan
 
-Status: repeatable dry-run tooling implemented; no production export applied.
+Status: Phase 16A version 1 snapshot, dry-run, and guarded atomic apply are
+implemented. The apply path has passed a synthetic isolated-PostgreSQL
+rehearsal. No real standalone export, production apply, traffic switch, or
+source archive has been authorized or performed.
 
-## Input contract
+## Version 1 scope
 
-Export standalone tables to one JSON object using arrays named after the
-standalone schema: `customers`, `jobs`, `jobEvents`, `quotes`, `quoteItems`,
-`invoices`, `invoiceItems`, `leads`, `leadActivities`, `leadFollowupTasks`,
-`orgAutomations`, and `reminderLog`. `exportVersion` must be `1`.
+The version 1 path transfers one frozen standalone organization into one
+existing, entitled OperatorOS tenant:
 
-Authority arrays may be present for reconciliation but are never mapped:
-`orgs`, `users`, `memberships`, `sessions`, `subscriptions`, and
-`processedStripeEvents`. Do not include secrets in an export. The planner
-does not echo source records or those authority values.
+- customers into a shared Directory organization plus
+  `tradeflowkit_customers`;
+- jobs, quotes/items, invoices/items, and leads;
+- paid invoice state into a reconciled historical `tradeflowkit_payments` row
+  without copying Stripe identifiers;
+- lead follow-up tasks only when their lead has an imported job;
+- job, lead, and reminder history into sanitized `activity_feed` records;
+- source IDs and per-record SHA-256 values into
+  `tradeflowkit_migration_refs`.
 
-## Dry run
+It does not import passwords, MFA material, sessions, users, memberships,
+roles, subscriptions, entitlements, Stripe state, public/portal tokens,
+provider identifiers, raw provider/event payloads, or message bodies.
+Standalone recurring jobs/invoices and automation configuration fail closed.
+Workflow templates/stages, restored general work tasks, contacts, and the
+remaining Phase 16 source-ledger gaps require a later export/apply version;
+therefore version 1 is not a complete product cutover by itself.
 
-From the repository root:
+## Read-only source snapshot
+
+Use a dedicated read-only PostgreSQL credential supplied through the secret
+manager. The exporter starts a repeatable-read, read-only transaction, uses
+parameterized organization predicates, selects only approved columns, refuses
+to overwrite a file, and refuses to write inside the OperatorOS repository.
+The export contains customer/business data and must be encrypted and access
+controlled.
 
 ```powershell
-corepack pnpm import:tradeflowkit:dry-run -- --input C:\approved\tradeflowkit-export.json
+$env:OPERATOROS_TRADEFLOWKIT_EXPORT_MODE='read-only'
+$env:TRADEFLOWKIT_SOURCE_DATABASE_URL='<secret-manager-value>'
+corepack pnpm export:tradeflowkit:snapshot -- `
+  --source-org-id '<approved-legacy-org-id>' `
+  --source-commit '37aa67f1da804fc3ac56f36e50e01362077d7a26' `
+  --output 'C:\secure-exports\tradeflowkit-export-v1.json'
+Remove-Item Env:TRADEFLOWKIT_SOURCE_DATABASE_URL
 ```
 
-The command is read-only and exits `0` only when the export is structurally
-valid, source IDs are unique, parent references resolve, money/quantity values
-are bounded, and reconciliation completes. Exit `2` means the plan was
-generated with blocking data errors. Any invocation without `--dry-run` fails
-closed.
+Never paste the source URL or export contents into chat, CI logs, issues, or a
+Git worktree. The script reports only the output path and table counts.
 
-The repository fixture
-`apps/api/test/fixtures/tradeflowkit-export-v1.json` exercises the actual CLI.
-Its Phase 4 run produced stable export fingerprint
-`7a8a3d0d064d25c496ef56bffc30048dd30cd91171465741622faedd736ec3de`,
-9 migration references, zero missing references/errors, 240,000-cent quote and
-invoice subtotals, and 259,200 paid invoice cents.
+## Deterministic dry run
 
-The plan records:
+```powershell
+corepack pnpm import:tradeflowkit:dry-run -- `
+  --input 'C:\secure-exports\tradeflowkit-export-v1.json'
+```
 
-- a stable SHA-256 fingerprint of the full export;
-- stable per-record fingerprints and source ID -> target-table mappings;
-- source and planned target counts;
+The command is database-free and exits `0` only when source IDs are unique,
+references resolve, quantities/money are bounded, and reconciliation
+completes. Exit `2` means blocking data errors. `exportedAt` is intentionally
+excluded from the source fingerprint, so unchanged row snapshots produce the
+same reviewed SHA-256. Version 1 also binds snapshot and apply to restored
+source commit `37aa67f1da804fc3ac56f36e50e01362077d7a26`.
+
+Run the dry run twice against the frozen file and record:
+
+- exact source fingerprint;
+- source/planned target counts;
 - excluded authority counts;
 - quote and invoice subtotal cents and paid-invoice cents;
 - resolved/missing customer and job references;
-- warnings and apply readiness.
+- warnings and errors.
 
-## Target mapping
+Do not hand-edit the frozen export. Correct the source or introduce a reviewed
+transform version.
 
-| Standalone | OperatorOS |
-| --- | --- |
-| customer | Directory organization/contact/site + `tradeflowkit_customers` |
-| job | `tradeflowkit_jobs` |
-| quote/item | `tradeflowkit_quotes` / `tradeflowkit_quote_items` |
-| invoice/item | `tradeflowkit_invoices` / `tradeflowkit_invoice_items` |
-| paid invoice state | invoice balance plus `tradeflowkit_payments` |
-| lead | `tradeflowkit_leads` |
-| job/lead/reminder event | shared activity event |
-| follow-up task | job-scoped `tradeflowkit_tasks` after approved parent mapping |
-| automation | shared leased job only after approved scheduling semantics |
+## Identity and tenant mapping
 
-Applied imports must store source IDs in module `source_id` columns and/or
-`tradeflowkit_migration_refs`; those tables have tenant-scoped uniqueness and
-fingerprints for repeatability. The current CLI deliberately stops at dry run.
-Database apply requires a separately reviewed implementation/cutover action
-because the user authorized source phases, not production data mutation.
+The target tenant ID, source organization ID, and actor user ID are command
+arguments, never read from source business rows. Every business row must carry
+the exact approved source organization ID. The actor must be an active owner
+or admin of the target tenant, and the tenant must have TradeFlowKit enabled.
 
-## Reconciliation gate
+If a source row names a creator or assignee, supply an external JSON mapping:
 
-Before cutover, require two identical dry-run outputs for the same frozen
-export, zero errors, zero missing references, count agreement for every
-approved table, integer-cent quote/invoice/paid totals matching independent
-SQL, and a signed record of the export fingerprint. Resolve discrepancies in
-the standalone system or an explicit transformation version; do not hand-edit
-the target.
+```json
+{
+  "legacy-user-id": "existing-operatoros-user-id"
+}
+```
+
+Every target user must already belong to the target tenant. Missing or foreign
+user mappings fail the transaction; the importer never creates identities or
+silently broadens authority.
+
+## Isolated apply rehearsal
+
+First restore a production-like backup to an isolated target with every
+provider disabled. Run the current OperatorOS database release, record the
+backup artifact/checksum as the backup reference, and apply:
+
+```powershell
+$env:APP_ENV='test'
+$env:OPERATOROS_TRADEFLOWKIT_IMPORT_MODE='apply'
+$env:DATABASE_URL='<isolated-target-secret>'
+corepack pnpm import:tradeflowkit:apply -- `
+  --input 'C:\secure-exports\tradeflowkit-export-v1.json' `
+  --tenant-id '<approved-operatoros-tenant-id>' `
+  --source-org-id '<approved-legacy-org-id>' `
+  --actor-user-id '<operatoros-owner-or-admin-id>' `
+  --user-map 'C:\secure-exports\tradeflowkit-user-map.json' `
+  --expect-source-fingerprint '<reviewed-sha256>' `
+  --backup-reference '<backup-id-and-checksum>'
+```
+
+Version 1 is capped at 25,000 business rows and applies inside one database
+transaction protected by a tenant-specific advisory lock. A failure rolls
+back every row. Re-running the same frozen export reuses exact migration
+references; a changed record fingerprint or missing target fails closed.
+Directory name collisions require an explicit reviewed merge policy.
+
+The committed audit contains only tenant/actor IDs, fingerprint, backup
+reference, version, safe counts, and reconciliation totals. It never contains
+source records, credentials, provider tokens, or message content.
+
+## Production gate
+
+Production use additionally requires all of the following:
+
+- explicit owner approval for the exact tenant, users, file fingerprint, and
+  maintenance window;
+- verified provider snapshot plus logical backup and restore rehearsal;
+- deployed revision acceptance, SSO, authorization, tenant isolation,
+  persistence, deep-link, logout, health, and related browser E2E;
+- exact independent source totals and post-apply target reconciliation;
+- a written decision for every version 1 exclusion and every remaining Phase
+  16 ledger gap.
+
+Only the authorized operator may then set:
+
+```powershell
+$env:APP_ENV='production'
+$env:OPERATOROS_TRADEFLOWKIT_IMPORT_MODE='apply'
+$env:OPERATOROS_TRADEFLOWKIT_PRODUCTION_CUTOVER='approved'
+# Use the same apply command and append:
+--confirm-production-cutover
+```
+
+This repository work does not constitute that approval.
 
 ## Rollback
 
-Back up the OperatorOS database before apply. Restore the pre-import dump into
-a new database, run release verification, compare the critical row vector,
-and switch traffic. Do not delete or overwrite production rows in place.
+The transaction rolls back automatically on any apply or reconciliation
+failure. After a successful commit, rollback is restore-and-switch:
+
+1. preserve the failed/current target for evidence;
+2. restore the recorded pre-import custom-format backup into a new database;
+3. verify its checksum, critical authority/module row vectors, release
+   contract, `/healthz`, and `/readyz`;
+4. switch traffic only after identity, tenant, entitlement, billing, audit,
+   and TradeFlowKit checks pass.
+
+Do not delete imported rows in place or run a destructive down migration. Use
+the shared procedure in `docs/DATABASE_BACKUP_RESTORE.md`.

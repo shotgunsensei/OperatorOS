@@ -5,6 +5,7 @@ type JsonRecord = Record<string, unknown>;
 export interface TradeFlowKitStandaloneExport {
   exportVersion?: number;
   exportedAt?: string;
+  sourceCommit?: string;
   orgs?: JsonRecord[];
   users?: JsonRecord[];
   memberships?: JsonRecord[];
@@ -139,7 +140,10 @@ export function planTradeFlowKitImport(raw: unknown): TradeFlowKitImportPlan {
   ] as const;
   const tables = Object.fromEntries(tableNames.map(name => [name, records(input[name], name, errors)])) as Record<typeof tableNames[number], JsonRecord[]>;
   const sourceCounts = Object.fromEntries(tableNames.map(name => [name, tables[name].length]));
-  const sourceFingerprint = fingerprint(input);
+  // Export time is operational metadata, not business state. Excluding it
+  // keeps repeated snapshots of unchanged source rows fingerprint-identical.
+  const { exportedAt: _exportedAt, ...fingerprintedInput } = input;
+  const sourceFingerprint = fingerprint(fingerprintedInput);
 
   const ids = new Map<string, Set<string>>();
   for (const table of tableNames) {

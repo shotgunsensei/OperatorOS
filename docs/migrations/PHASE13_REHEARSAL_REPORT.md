@@ -30,3 +30,8 @@ customer/source data. Every module remains blocked from production cutover by
 the module-specific export, ownership, backup/restore, deployed acceptance,
 privacy/provider, or content-review gates recorded in the master manifest.
 The repository has no lint/format script, so neither check is claimed.
+
+Historical note: Phase 16A subsequently added a separately gated,
+TradeFlowKit-only version 1 apply implementation and synthetic disposable
+database rehearsal. That later work does not change this Phase 13 report or
+authorize a real export/production cutover.

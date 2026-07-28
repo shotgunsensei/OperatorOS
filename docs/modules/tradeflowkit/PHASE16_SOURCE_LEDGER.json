@@ -1,0 +1,4551 @@
+{
+  "schemaVersion": 1,
+  "moduleSlug": "tradeflowkit",
+  "capturedAtUtc": "2026-07-28T16:24:45.333Z",
+  "source": {
+    "repository": "https://github.com/shotgunsensei/TradeFlowKit.git",
+    "commit": "37aa67f1da804fc3ac56f36e50e01362077d7a26",
+    "branch": "codex/restore-production-app",
+    "worktreeDirty": false,
+    "originalOperatorOsBaselineCommit": "6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55",
+    "restoredDeltaCommits": [
+      "60b9e6d",
+      "8e25ba3",
+      "37aa67f"
+    ],
+    "trackedFileCount": 541
+  },
+  "inventory": {
+    "pages": [
+      {
+        "key": "/",
+        "path": "/",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/access-denied",
+        "path": "/access-denied",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "shared_replacement",
+        "domain": "platform_authority",
+        "targetPointers": [
+          "apps/web/src/app/app/apps/page.tsx",
+          "apps/web/src/app/app/platform/page.tsx"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS owns subscriptions, platform administration, and access denial."
+      },
+      {
+        "key": "/activity",
+        "path": "/activity",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "restored_operations",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "The consolidated work-management surface provides persisted workflows, job tasks, and tenant activity."
+      },
+      {
+        "key": "/admin",
+        "path": "/admin",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "shared_replacement",
+        "domain": "platform_authority",
+        "targetPointers": [
+          "apps/web/src/app/app/apps/page.tsx",
+          "apps/web/src/app/app/platform/page.tsx"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS owns subscriptions, platform administration, and access denial."
+      },
+      {
+        "key": "/analytics",
+        "path": "/analytics",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/call-recovery",
+        "path": "/call-recovery",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "Call Recovery belongs to the CallCommand/OutCall consent and provider boundary."
+      },
+      {
+        "key": "/contacts",
+        "path": "/contacts",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "shared_replacement",
+        "domain": "business_directory",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/BusinessDirectory.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts"
+        ],
+        "note": "Shared Directory provides the tenant contact workspace."
+      },
+      {
+        "key": "/customers",
+        "path": "/customers",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/customers/:id",
+        "path": "/customers/:id",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/dashboard",
+        "path": "/dashboard",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/delete-account",
+        "path": "/delete-account",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "shared_replacement",
+        "domain": "platform_navigation",
+        "targetPointers": [
+          "apps/web/src/app/privacy/page.tsx",
+          "apps/web/src/app/terms/page.tsx"
+        ],
+        "evidence": [
+          "apps/web/e2e/operatoros-final-acceptance.spec.ts"
+        ],
+        "note": "The platform owns legal, account, and ecosystem guidance surfaces."
+      },
+      {
+        "key": "/guide",
+        "path": "/guide",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "shared_replacement",
+        "domain": "platform_navigation",
+        "targetPointers": [
+          "apps/web/src/app/privacy/page.tsx",
+          "apps/web/src/app/terms/page.tsx"
+        ],
+        "evidence": [
+          "apps/web/e2e/operatoros-final-acceptance.spec.ts"
+        ],
+        "note": "The platform owns legal, account, and ecosystem guidance surfaces."
+      },
+      {
+        "key": "/invoices",
+        "path": "/invoices",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/invoices/:id",
+        "path": "/invoices/:id",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/invoices/:id/edit",
+        "path": "/invoices/:id/edit",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/invoices/:id/pay",
+        "path": "/invoices/:id/pay",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/invoices/new",
+        "path": "/invoices/new",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/jobs",
+        "path": "/jobs",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/jobs/:id",
+        "path": "/jobs/:id",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/leads",
+        "path": "/leads",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/leads/demo",
+        "path": "/leads/demo",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/portal/:token",
+        "path": "/portal/:token",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/privacy",
+        "path": "/privacy",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "shared_replacement",
+        "domain": "platform_navigation",
+        "targetPointers": [
+          "apps/web/src/app/privacy/page.tsx",
+          "apps/web/src/app/terms/page.tsx"
+        ],
+        "evidence": [
+          "apps/web/e2e/operatoros-final-acceptance.spec.ts"
+        ],
+        "note": "The platform owns legal, account, and ecosystem guidance surfaces."
+      },
+      {
+        "key": "/quotes",
+        "path": "/quotes",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/quotes/:id",
+        "path": "/quotes/:id",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/quotes/:id/edit",
+        "path": "/quotes/:id/edit",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/quotes/:id/view",
+        "path": "/quotes/:id/view",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/quotes/new",
+        "path": "/quotes/new",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/settings",
+        "path": "/settings",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitShell.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The shared runtime has a persistent equivalent, subject to endpoint-level gaps below."
+      },
+      {
+        "key": "/sms-consent",
+        "path": "/sms-consent",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "shared_replacement",
+        "domain": "platform_navigation",
+        "targetPointers": [
+          "apps/web/src/app/privacy/page.tsx",
+          "apps/web/src/app/terms/page.tsx"
+        ],
+        "evidence": [
+          "apps/web/e2e/operatoros-final-acceptance.spec.ts"
+        ],
+        "note": "The platform owns legal, account, and ecosystem guidance surfaces."
+      },
+      {
+        "key": "/subscription",
+        "path": "/subscription",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "shared_replacement",
+        "domain": "platform_authority",
+        "targetPointers": [
+          "apps/web/src/app/app/apps/page.tsx",
+          "apps/web/src/app/app/platform/page.tsx"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS owns subscriptions, platform administration, and access denial."
+      },
+      {
+        "key": "/tasks",
+        "path": "/tasks",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "restored_operations",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "The consolidated work-management surface provides persisted workflows, job tasks, and tenant activity."
+      },
+      {
+        "key": "/terms",
+        "path": "/terms",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "shared_replacement",
+        "domain": "platform_navigation",
+        "targetPointers": [
+          "apps/web/src/app/privacy/page.tsx",
+          "apps/web/src/app/terms/page.tsx"
+        ],
+        "evidence": [
+          "apps/web/e2e/operatoros-final-acceptance.spec.ts"
+        ],
+        "note": "The platform owns legal, account, and ecosystem guidance surfaces."
+      },
+      {
+        "key": "/trash",
+        "path": "/trash",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "phase16_gap",
+        "domain": "retention",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Archive/restore needs a truthful retained-record UI; permanent purge stays prohibited."
+      },
+      {
+        "key": "/workflows",
+        "path": "/workflows",
+        "sourcePointer": "client/src/App.tsx",
+        "disposition": "active",
+        "domain": "restored_operations",
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "The consolidated work-management surface provides persisted workflows, job tasks, and tenant activity."
+      }
+    ],
+    "apiRoutes": [
+      {
+        "key": "DELETE /api/admin/orgs/:id",
+        "method": "DELETE",
+        "path": "/api/admin/orgs/:id",
+        "sourcePointer": "server/routes/admin.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "DELETE /api/admin/orgs/:orgId/members/:userId",
+        "method": "DELETE",
+        "path": "/api/admin/orgs/:orgId/members/:userId",
+        "sourcePointer": "server/routes/admin.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "DELETE /api/auth/delete-account",
+        "method": "DELETE",
+        "path": "/api/auth/delete-account",
+        "sourcePointer": "server/routes/auth.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "DELETE /api/customers/:id",
+        "method": "DELETE",
+        "path": "/api/customers/:id",
+        "sourcePointer": "server/routes/customers.ts",
+        "disposition": "active",
+        "domain": "customers",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/api/src/routes/module-shell-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Customer CRUD and customer-linked operations use shared Directory plus TradeFlowKit profiles."
+      },
+      {
+        "key": "DELETE /api/invoices/:id",
+        "method": "DELETE",
+        "path": "/api/invoices/:id",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "phase16_gap",
+        "domain": "invoice_direct_edit_bulk",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+      },
+      {
+        "key": "DELETE /api/jobs/:id",
+        "method": "DELETE",
+        "path": "/api/jobs/:id",
+        "sourcePointer": "server/routes/jobs.ts",
+        "disposition": "active",
+        "domain": "jobs",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Tenant-scoped, numbered, versioned jobs and job tasks are active."
+      },
+      {
+        "key": "DELETE /api/leads/:id",
+        "method": "DELETE",
+        "path": "/api/leads/:id",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-shared-runtime-leads.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Manual tenant-scoped lead CRUD, activity, and idempotent conversion are active."
+      },
+      {
+        "key": "DELETE /api/memberships/:userId",
+        "method": "DELETE",
+        "path": "/api/memberships/:userId",
+        "sourcePointer": "server/routes/orgs.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "DELETE /api/operations/companies/:id",
+        "method": "DELETE",
+        "path": "/api/operations/companies/:id",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "business_directory",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/web/src/components/module-shells/BusinessDirectory.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts"
+        ],
+        "note": "Shared Directory owns tenant organizations and contacts."
+      },
+      {
+        "key": "DELETE /api/operations/contacts/:id",
+        "method": "DELETE",
+        "path": "/api/operations/contacts/:id",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "business_directory",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/web/src/components/module-shells/BusinessDirectory.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts"
+        ],
+        "note": "Shared Directory owns tenant organizations and contacts."
+      },
+      {
+        "key": "DELETE /api/operations/saved-views/:id",
+        "method": "DELETE",
+        "path": "/api/operations/saved-views/:id",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "phase16_gap",
+        "domain": "saved_views",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Durable tenant/user saved views are not yet active."
+      },
+      {
+        "key": "DELETE /api/quotes/:id",
+        "method": "DELETE",
+        "path": "/api/quotes/:id",
+        "sourcePointer": "server/routes/quotes.ts",
+        "disposition": "phase16_gap",
+        "domain": "quote_edit_archive",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Equivalent quote edit/archive behavior is not yet active."
+      },
+      {
+        "key": "DELETE /api/stripe/connect",
+        "method": "DELETE",
+        "path": "/api/stripe/connect",
+        "sourcePointer": "server/routes/stripeConnect.ts",
+        "disposition": "phase16_gap",
+        "domain": "business_payments",
+        "targetPointers": [
+          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract."
+      },
+      {
+        "key": "DELETE /api/trash/customers/:id",
+        "method": "DELETE",
+        "path": "/api/trash/customers/:id",
+        "sourcePointer": "server/routes/trash.ts",
+        "disposition": "retired_security",
+        "domain": "retention",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Permanent module-local purge is prohibited."
+      },
+      {
+        "key": "DELETE /api/trash/invoices/:id",
+        "method": "DELETE",
+        "path": "/api/trash/invoices/:id",
+        "sourcePointer": "server/routes/trash.ts",
+        "disposition": "retired_security",
+        "domain": "retention",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Permanent module-local purge is prohibited."
+      },
+      {
+        "key": "DELETE /api/trash/jobs/:id",
+        "method": "DELETE",
+        "path": "/api/trash/jobs/:id",
+        "sourcePointer": "server/routes/trash.ts",
+        "disposition": "retired_security",
+        "domain": "retention",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Permanent module-local purge is prohibited."
+      },
+      {
+        "key": "DELETE /api/work/tasks/:id",
+        "method": "DELETE",
+        "path": "/api/work/tasks/:id",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "restored_tasks",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Team list/detail/update/archive/comment/dependency behavior is active for canonical job-scoped tasks."
+      },
+      {
+        "key": "DELETE /api/work/workflows/:id",
+        "method": "DELETE",
+        "path": "/api/work/workflows/:id",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "restored_workflows",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Tenant-scoped workflow templates, stages, optimistic mutation, archive, and job transitions are active."
+      },
+      {
+        "key": "GET /.well-known/assetlinks.json",
+        "method": "GET",
+        "path": "/.well-known/assetlinks.json",
+        "sourcePointer": "server/routes/wellKnown.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "standalone_mobile_shell",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "The standalone Android/PWA association is not part of the host-routed OperatorOS module."
+      },
+      {
+        "key": "GET /api/admin/orgs",
+        "method": "GET",
+        "path": "/api/admin/orgs",
+        "sourcePointer": "server/routes/admin.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "GET /api/admin/orgs/:id/members",
+        "method": "GET",
+        "path": "/api/admin/orgs/:id/members",
+        "sourcePointer": "server/routes/admin.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "GET /api/admin/users",
+        "method": "GET",
+        "path": "/api/admin/users",
+        "sourcePointer": "server/routes/admin.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "GET /api/analytics/customers",
+        "method": "GET",
+        "path": "/api/analytics/customers",
+        "sourcePointer": "server/routes/analytics.ts",
+        "disposition": "active",
+        "domain": "analytics",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/lib/tradeflowkit-revenue.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Metrics are computed from tenant-scoped persisted records."
+      },
+      {
+        "key": "GET /api/analytics/invoices",
+        "method": "GET",
+        "path": "/api/analytics/invoices",
+        "sourcePointer": "server/routes/analytics.ts",
+        "disposition": "active",
+        "domain": "analytics",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/lib/tradeflowkit-revenue.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Metrics are computed from tenant-scoped persisted records."
+      },
+      {
+        "key": "GET /api/analytics/jobs",
+        "method": "GET",
+        "path": "/api/analytics/jobs",
+        "sourcePointer": "server/routes/analytics.ts",
+        "disposition": "active",
+        "domain": "analytics",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/lib/tradeflowkit-revenue.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Metrics are computed from tenant-scoped persisted records."
+      },
+      {
+        "key": "GET /api/analytics/quotes",
+        "method": "GET",
+        "path": "/api/analytics/quotes",
+        "sourcePointer": "server/routes/analytics.ts",
+        "disposition": "active",
+        "domain": "analytics",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/lib/tradeflowkit-revenue.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Metrics are computed from tenant-scoped persisted records."
+      },
+      {
+        "key": "GET /api/audit-log",
+        "method": "GET",
+        "path": "/api/audit-log",
+        "sourcePointer": "server/routes/auditLog.ts",
+        "disposition": "shared_replacement",
+        "domain": "audit",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/audit.ts"
+        ],
+        "evidence": [
+          "apps/api/test/audit.test.ts"
+        ],
+        "note": "Platform audit is the canonical append-only audit source."
+      },
+      {
+        "key": "GET /api/audit-log/export.csv",
+        "method": "GET",
+        "path": "/api/audit-log/export.csv",
+        "sourcePointer": "server/routes/auditLog.ts",
+        "disposition": "shared_replacement",
+        "domain": "audit",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/audit.ts"
+        ],
+        "evidence": [
+          "apps/api/test/audit.test.ts"
+        ],
+        "note": "Platform audit is the canonical append-only audit source."
+      },
+      {
+        "key": "GET /api/auth/2fa/status",
+        "method": "GET",
+        "path": "/api/auth/2fa/status",
+        "sourcePointer": "server/routes/twoFactor.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "GET /api/auth/me",
+        "method": "GET",
+        "path": "/api/auth/me",
+        "sourcePointer": "server/routes/auth.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "GET /api/automations",
+        "method": "GET",
+        "path": "/api/automations",
+        "sourcePointer": "server/routes/automations.ts",
+        "disposition": "phase16_gap",
+        "domain": "durable_scheduling",
+        "targetPointers": [
+          "apps/api/src/lib/shared-service-db-init.ts"
+        ],
+        "evidence": [],
+        "note": "Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics."
+      },
+      {
+        "key": "GET /api/call-recovery/missed-calls",
+        "method": "GET",
+        "path": "/api/call-recovery/missed-calls",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "GET /api/call-recovery/missed-calls/:id/messages",
+        "method": "GET",
+        "path": "/api/call-recovery/missed-calls/:id/messages",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "GET /api/call-recovery/plans",
+        "method": "GET",
+        "path": "/api/call-recovery/plans",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "GET /api/call-recovery/settings",
+        "method": "GET",
+        "path": "/api/call-recovery/settings",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "GET /api/call-recovery/stats",
+        "method": "GET",
+        "path": "/api/call-recovery/stats",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "GET /api/call-recovery/subscription",
+        "method": "GET",
+        "path": "/api/call-recovery/subscription",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "GET /api/call-recovery/verify-checkout",
+        "method": "GET",
+        "path": "/api/call-recovery/verify-checkout",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "GET /api/customers",
+        "method": "GET",
+        "path": "/api/customers",
+        "sourcePointer": "server/routes/customers.ts",
+        "disposition": "active",
+        "domain": "customers",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/api/src/routes/module-shell-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Customer CRUD and customer-linked operations use shared Directory plus TradeFlowKit profiles."
+      },
+      {
+        "key": "GET /api/customers/:id",
+        "method": "GET",
+        "path": "/api/customers/:id",
+        "sourcePointer": "server/routes/customers.ts",
+        "disposition": "active",
+        "domain": "customers",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/api/src/routes/module-shell-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Customer CRUD and customer-linked operations use shared Directory plus TradeFlowKit profiles."
+      },
+      {
+        "key": "GET /api/customers/:id/invoices",
+        "method": "GET",
+        "path": "/api/customers/:id/invoices",
+        "sourcePointer": "server/routes/customers.ts",
+        "disposition": "active",
+        "domain": "customers",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/api/src/routes/module-shell-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Customer CRUD and customer-linked operations use shared Directory plus TradeFlowKit profiles."
+      },
+      {
+        "key": "GET /api/customers/:id/jobs",
+        "method": "GET",
+        "path": "/api/customers/:id/jobs",
+        "sourcePointer": "server/routes/customers.ts",
+        "disposition": "active",
+        "domain": "customers",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/api/src/routes/module-shell-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Customer CRUD and customer-linked operations use shared Directory plus TradeFlowKit profiles."
+      },
+      {
+        "key": "GET /api/customers/:id/reminders",
+        "method": "GET",
+        "path": "/api/customers/:id/reminders",
+        "sourcePointer": "server/routes/customers.ts",
+        "disposition": "active",
+        "domain": "customers",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/api/src/routes/module-shell-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Customer CRUD and customer-linked operations use shared Directory plus TradeFlowKit profiles."
+      },
+      {
+        "key": "GET /api/dashboard",
+        "method": "GET",
+        "path": "/api/dashboard",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "active",
+        "domain": "analytics",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/lib/tradeflowkit-revenue.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Metrics are computed from tenant-scoped persisted records."
+      },
+      {
+        "key": "GET /api/exports/quickbooks/iif",
+        "method": "GET",
+        "path": "/api/exports/quickbooks/iif",
+        "sourcePointer": "server/routes/exports.ts",
+        "disposition": "phase16_gap",
+        "domain": "accounting_exports",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Canonical CSV exists; vendor-specific mappings still need a versioned integration contract."
+      },
+      {
+        "key": "GET /api/exports/status",
+        "method": "GET",
+        "path": "/api/exports/status",
+        "sourcePointer": "server/routes/exports.ts",
+        "disposition": "active",
+        "domain": "canonical_exports",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Tenant-scoped canonical CSV exports are active."
+      },
+      {
+        "key": "GET /api/exports/xero/customers.csv",
+        "method": "GET",
+        "path": "/api/exports/xero/customers.csv",
+        "sourcePointer": "server/routes/exports.ts",
+        "disposition": "phase16_gap",
+        "domain": "accounting_exports",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Canonical CSV exists; vendor-specific mappings still need a versioned integration contract."
+      },
+      {
+        "key": "GET /api/exports/xero/invoices.csv",
+        "method": "GET",
+        "path": "/api/exports/xero/invoices.csv",
+        "sourcePointer": "server/routes/exports.ts",
+        "disposition": "phase16_gap",
+        "domain": "accounting_exports",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Canonical CSV exists; vendor-specific mappings still need a versioned integration contract."
+      },
+      {
+        "key": "GET /api/exports/xero/payments.csv",
+        "method": "GET",
+        "path": "/api/exports/xero/payments.csv",
+        "sourcePointer": "server/routes/exports.ts",
+        "disposition": "phase16_gap",
+        "domain": "accounting_exports",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Canonical CSV exists; vendor-specific mappings still need a versioned integration contract."
+      },
+      {
+        "key": "GET /api/invite-codes",
+        "method": "GET",
+        "path": "/api/invite-codes",
+        "sourcePointer": "server/routes/orgs.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "GET /api/invoices",
+        "method": "GET",
+        "path": "/api/invoices",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "active",
+        "domain": "invoices_payments",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Invoice projection, status, manual partial payment, public view, and messages are active."
+      },
+      {
+        "key": "GET /api/invoices/:id",
+        "method": "GET",
+        "path": "/api/invoices/:id",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "active",
+        "domain": "invoices_payments",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Invoice projection, status, manual partial payment, public view, and messages are active."
+      },
+      {
+        "key": "GET /api/invoices/:id/public",
+        "method": "GET",
+        "path": "/api/invoices/:id/public",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "active",
+        "domain": "invoices_payments",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Invoice projection, status, manual partial payment, public view, and messages are active."
+      },
+      {
+        "key": "GET /api/invoices/export/quickbooks",
+        "method": "GET",
+        "path": "/api/invoices/export/quickbooks",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "phase16_gap",
+        "domain": "accounting_exports",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Canonical CSV exists; vendor-specific mappings still need a versioned integration contract."
+      },
+      {
+        "key": "GET /api/jobs",
+        "method": "GET",
+        "path": "/api/jobs",
+        "sourcePointer": "server/routes/jobs.ts",
+        "disposition": "active",
+        "domain": "jobs",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Tenant-scoped, numbered, versioned jobs and job tasks are active."
+      },
+      {
+        "key": "GET /api/jobs/:id",
+        "method": "GET",
+        "path": "/api/jobs/:id",
+        "sourcePointer": "server/routes/jobs.ts",
+        "disposition": "active",
+        "domain": "jobs",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Tenant-scoped, numbered, versioned jobs and job tasks are active."
+      },
+      {
+        "key": "GET /api/jobs/:id/events",
+        "method": "GET",
+        "path": "/api/jobs/:id/events",
+        "sourcePointer": "server/routes/jobs.ts",
+        "disposition": "active",
+        "domain": "jobs",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Tenant-scoped, numbered, versioned jobs and job tasks are active."
+      },
+      {
+        "key": "GET /api/jobs/:id/series",
+        "method": "GET",
+        "path": "/api/jobs/:id/series",
+        "sourcePointer": "server/routes/jobs.ts",
+        "disposition": "phase16_gap",
+        "domain": "durable_scheduling",
+        "targetPointers": [
+          "apps/api/src/lib/shared-service-db-init.ts"
+        ],
+        "evidence": [],
+        "note": "Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics."
+      },
+      {
+        "key": "GET /api/leads",
+        "method": "GET",
+        "path": "/api/leads",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-shared-runtime-leads.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Manual tenant-scoped lead CRUD, activity, and idempotent conversion are active."
+      },
+      {
+        "key": "GET /api/leads/:id",
+        "method": "GET",
+        "path": "/api/leads/:id",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-shared-runtime-leads.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Manual tenant-scoped lead CRUD, activity, and idempotent conversion are active."
+      },
+      {
+        "key": "GET /api/leads/:id/activities",
+        "method": "GET",
+        "path": "/api/leads/:id/activities",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-shared-runtime-leads.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Manual tenant-scoped lead CRUD, activity, and idempotent conversion are active."
+      },
+      {
+        "key": "GET /api/leads/:id/followups",
+        "method": "GET",
+        "path": "/api/leads/:id/followups",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "phase16_gap",
+        "domain": "lead_operations_extensions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+      },
+      {
+        "key": "GET /api/leads/health",
+        "method": "GET",
+        "path": "/api/leads/health",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-shared-runtime-leads.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Manual tenant-scoped lead CRUD, activity, and idempotent conversion are active."
+      },
+      {
+        "key": "GET /api/leads/module-status",
+        "method": "GET",
+        "path": "/api/leads/module-status",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-shared-runtime-leads.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Manual tenant-scoped lead CRUD, activity, and idempotent conversion are active."
+      },
+      {
+        "key": "GET /api/leads/operator-dashboard",
+        "method": "GET",
+        "path": "/api/leads/operator-dashboard",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-shared-runtime-leads.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Manual tenant-scoped lead CRUD, activity, and idempotent conversion are active."
+      },
+      {
+        "key": "GET /api/leads/production-readiness",
+        "method": "GET",
+        "path": "/api/leads/production-readiness",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "automated_lead_decisions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Unreviewed AI scoring may not silently make customer decisions."
+      },
+      {
+        "key": "GET /api/leads/provider-status",
+        "method": "GET",
+        "path": "/api/leads/provider-status",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "automated_lead_decisions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Unreviewed AI scoring may not silently make customer decisions."
+      },
+      {
+        "key": "GET /api/leads/settings",
+        "method": "GET",
+        "path": "/api/leads/settings",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "phase16_gap",
+        "domain": "lead_operations_extensions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+      },
+      {
+        "key": "GET /api/leads/source-adapters",
+        "method": "GET",
+        "path": "/api/leads/source-adapters",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "phase16_gap",
+        "domain": "public_lead_intake",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls."
+      },
+      {
+        "key": "GET /api/leads/source-events",
+        "method": "GET",
+        "path": "/api/leads/source-events",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "phase16_gap",
+        "domain": "lead_operations_extensions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+      },
+      {
+        "key": "GET /api/leads/stats",
+        "method": "GET",
+        "path": "/api/leads/stats",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-shared-runtime-leads.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Manual tenant-scoped lead CRUD, activity, and idempotent conversion are active."
+      },
+      {
+        "key": "GET /api/leads/trade-templates",
+        "method": "GET",
+        "path": "/api/leads/trade-templates",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-shared-runtime-leads.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Manual tenant-scoped lead CRUD, activity, and idempotent conversion are active."
+      },
+      {
+        "key": "GET /api/memberships",
+        "method": "GET",
+        "path": "/api/memberships",
+        "sourcePointer": "server/routes/orgs.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "GET /api/operations/companies",
+        "method": "GET",
+        "path": "/api/operations/companies",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "business_directory",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/web/src/components/module-shells/BusinessDirectory.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts"
+        ],
+        "note": "Shared Directory owns tenant organizations and contacts."
+      },
+      {
+        "key": "GET /api/operations/contacts",
+        "method": "GET",
+        "path": "/api/operations/contacts",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "business_directory",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/web/src/components/module-shells/BusinessDirectory.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts"
+        ],
+        "note": "Shared Directory owns tenant organizations and contacts."
+      },
+      {
+        "key": "GET /api/operations/notifications",
+        "method": "GET",
+        "path": "/api/operations/notifications",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Canonical comments, tags, attachments, activity, notification, and audit services cover this collaboration domain."
+      },
+      {
+        "key": "GET /api/operations/resources/:entityType/:entityId",
+        "method": "GET",
+        "path": "/api/operations/resources/:entityType/:entityId",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Canonical comments, tags, attachments, activity, notification, and audit services cover this collaboration domain."
+      },
+      {
+        "key": "GET /api/operations/saved-views",
+        "method": "GET",
+        "path": "/api/operations/saved-views",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "phase16_gap",
+        "domain": "saved_views",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Durable tenant/user saved views are not yet active."
+      },
+      {
+        "key": "GET /api/operations/tags",
+        "method": "GET",
+        "path": "/api/operations/tags",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Canonical comments, tags, attachments, activity, notification, and audit services cover this collaboration domain."
+      },
+      {
+        "key": "GET /api/operatoros/organizations",
+        "method": "GET",
+        "path": "/api/operatoros/organizations",
+        "sourcePointer": "server/routes/operatoros.ts",
+        "disposition": "shared_replacement",
+        "domain": "platform_integration",
+        "targetPointers": [
+          "apps/api/src/routes/modules.ts",
+          "apps/api/src/routes/tenant-entitlement-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "The consolidated runtime calls OperatorOS authority directly and does not synchronize a second module authority."
+      },
+      {
+        "key": "GET /api/plan-info",
+        "method": "GET",
+        "path": "/api/plan-info",
+        "sourcePointer": "server/routes/orgs.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "GET /api/portal/:token",
+        "method": "GET",
+        "path": "/api/portal/:token",
+        "sourcePointer": "server/routes/portal.ts",
+        "disposition": "active",
+        "domain": "customer_portal",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/app/public/tradeflowkit/[documentType]/[token]/page.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Hashed, bounded, non-cacheable public customer documents are active."
+      },
+      {
+        "key": "GET /api/quotes",
+        "method": "GET",
+        "path": "/api/quotes",
+        "sourcePointer": "server/routes/quotes.ts",
+        "disposition": "active",
+        "domain": "quotes",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Quote creation, decisions, public projection, and idempotent invoice conversion are active."
+      },
+      {
+        "key": "GET /api/quotes/:id",
+        "method": "GET",
+        "path": "/api/quotes/:id",
+        "sourcePointer": "server/routes/quotes.ts",
+        "disposition": "active",
+        "domain": "quotes",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Quote creation, decisions, public projection, and idempotent invoice conversion are active."
+      },
+      {
+        "key": "GET /api/quotes/:id/public",
+        "method": "GET",
+        "path": "/api/quotes/:id/public",
+        "sourcePointer": "server/routes/quotes.ts",
+        "disposition": "active",
+        "domain": "quotes",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Quote creation, decisions, public projection, and idempotent invoice conversion are active."
+      },
+      {
+        "key": "GET /api/reminder-logs",
+        "method": "GET",
+        "path": "/api/reminder-logs",
+        "sourcePointer": "server/routes/automations.ts",
+        "disposition": "phase16_gap",
+        "domain": "durable_scheduling",
+        "targetPointers": [
+          "apps/api/src/lib/shared-service-db-init.ts"
+        ],
+        "evidence": [],
+        "note": "Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics."
+      },
+      {
+        "key": "GET /api/review-requests",
+        "method": "GET",
+        "path": "/api/review-requests",
+        "sourcePointer": "server/routes/reviewRequests.ts",
+        "disposition": "shared_replacement",
+        "domain": "outbound_communications",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Shared notification, outbox, activity, and audit services replace the legacy table."
+      },
+      {
+        "key": "GET /api/review-requests/job/:jobId",
+        "method": "GET",
+        "path": "/api/review-requests/job/:jobId",
+        "sourcePointer": "server/routes/reviewRequests.ts",
+        "disposition": "shared_replacement",
+        "domain": "outbound_communications",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Shared notification, outbox, activity, and audit services replace the legacy table."
+      },
+      {
+        "key": "GET /api/review-requests/stats",
+        "method": "GET",
+        "path": "/api/review-requests/stats",
+        "sourcePointer": "server/routes/reviewRequests.ts",
+        "disposition": "shared_replacement",
+        "domain": "outbound_communications",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Shared notification, outbox, activity, and audit services replace the legacy table."
+      },
+      {
+        "key": "GET /api/search",
+        "method": "GET",
+        "path": "/api/search",
+        "sourcePointer": "server/routes/search.ts",
+        "disposition": "phase16_gap",
+        "domain": "global_search",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/module-shell-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Bounded per-surface filters exist; equivalent cross-entity search is not yet active."
+      },
+      {
+        "key": "GET /api/stripe/connect/authorize",
+        "method": "GET",
+        "path": "/api/stripe/connect/authorize",
+        "sourcePointer": "server/routes/stripeConnect.ts",
+        "disposition": "phase16_gap",
+        "domain": "business_payments",
+        "targetPointers": [
+          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract."
+      },
+      {
+        "key": "GET /api/stripe/connect/callback",
+        "method": "GET",
+        "path": "/api/stripe/connect/callback",
+        "sourcePointer": "server/routes/stripeConnect.ts",
+        "disposition": "phase16_gap",
+        "domain": "business_payments",
+        "targetPointers": [
+          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract."
+      },
+      {
+        "key": "GET /api/stripe/plans",
+        "method": "GET",
+        "path": "/api/stripe/plans",
+        "sourcePointer": "server/routes/subscriptions.ts",
+        "disposition": "shared_replacement",
+        "domain": "platform_billing",
+        "targetPointers": [
+          "apps/api/src/routes/billing.ts",
+          "apps/api/src/routes/module-marketplace-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/billing.test.ts",
+          "apps/api/test/marketplace-routes.test.ts"
+        ],
+        "note": "OperatorOS owns platform subscriptions, add-ons, and module entitlements."
+      },
+      {
+        "key": "GET /api/stripe/publishable-key",
+        "method": "GET",
+        "path": "/api/stripe/publishable-key",
+        "sourcePointer": "server/routes/subscriptions.ts",
+        "disposition": "shared_replacement",
+        "domain": "platform_billing",
+        "targetPointers": [
+          "apps/api/src/routes/billing.ts",
+          "apps/api/src/routes/module-marketplace-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/billing.test.ts",
+          "apps/api/test/marketplace-routes.test.ts"
+        ],
+        "note": "OperatorOS owns platform subscriptions, add-ons, and module entitlements."
+      },
+      {
+        "key": "GET /api/trash",
+        "method": "GET",
+        "path": "/api/trash",
+        "sourcePointer": "server/routes/trash.ts",
+        "disposition": "phase16_gap",
+        "domain": "retention",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Archive restore/list behavior needs a complete active UI and API."
+      },
+      {
+        "key": "GET /api/work/activity",
+        "method": "GET",
+        "path": "/api/work/activity",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Canonical comments, tags, attachments, activity, notification, and audit services cover this collaboration domain."
+      },
+      {
+        "key": "GET /api/work/summary",
+        "method": "GET",
+        "path": "/api/work/summary",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "operations_dashboard",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/module-shell-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "The active operations and revenue projections provide persisted tenant-scoped summary metrics."
+      },
+      {
+        "key": "GET /api/work/tasks",
+        "method": "GET",
+        "path": "/api/work/tasks",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "restored_tasks",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Team list/detail/update/archive/comment/dependency behavior is active for canonical job-scoped tasks."
+      },
+      {
+        "key": "GET /api/work/tasks/:id",
+        "method": "GET",
+        "path": "/api/work/tasks/:id",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "restored_tasks",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Team list/detail/update/archive/comment/dependency behavior is active for canonical job-scoped tasks."
+      },
+      {
+        "key": "GET /api/work/workflows",
+        "method": "GET",
+        "path": "/api/work/workflows",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "restored_workflows",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Tenant-scoped workflow templates, stages, optimistic mutation, archive, and job transitions are active."
+      },
+      {
+        "key": "GET /sso",
+        "method": "GET",
+        "path": "/sso",
+        "sourcePointer": "server/routes/sso.ts",
+        "disposition": "shared_replacement",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "PATCH /api/admin/orgs/:id",
+        "method": "PATCH",
+        "path": "/api/admin/orgs/:id",
+        "sourcePointer": "server/routes/admin.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "PATCH /api/auth/profile",
+        "method": "PATCH",
+        "path": "/api/auth/profile",
+        "sourcePointer": "server/routes/auth.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "PATCH /api/call-recovery/missed-calls/:id/recover",
+        "method": "PATCH",
+        "path": "/api/call-recovery/missed-calls/:id/recover",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "PATCH /api/call-recovery/settings",
+        "method": "PATCH",
+        "path": "/api/call-recovery/settings",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "PATCH /api/customers/:id",
+        "method": "PATCH",
+        "path": "/api/customers/:id",
+        "sourcePointer": "server/routes/customers.ts",
+        "disposition": "active",
+        "domain": "customers",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/api/src/routes/module-shell-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Customer CRUD and customer-linked operations use shared Directory plus TradeFlowKit profiles."
+      },
+      {
+        "key": "PATCH /api/invoices/:id",
+        "method": "PATCH",
+        "path": "/api/invoices/:id",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "phase16_gap",
+        "domain": "invoice_direct_edit_bulk",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+      },
+      {
+        "key": "PATCH /api/jobs/:id",
+        "method": "PATCH",
+        "path": "/api/jobs/:id",
+        "sourcePointer": "server/routes/jobs.ts",
+        "disposition": "active",
+        "domain": "jobs",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Tenant-scoped, numbered, versioned jobs and job tasks are active."
+      },
+      {
+        "key": "PATCH /api/leads/:id",
+        "method": "PATCH",
+        "path": "/api/leads/:id",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-shared-runtime-leads.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Manual tenant-scoped lead CRUD, activity, and idempotent conversion are active."
+      },
+      {
+        "key": "PATCH /api/leads/capture-form/:id",
+        "method": "PATCH",
+        "path": "/api/leads/capture-form/:id",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "phase16_gap",
+        "domain": "public_lead_intake",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls."
+      },
+      {
+        "key": "PATCH /api/leads/settings",
+        "method": "PATCH",
+        "path": "/api/leads/settings",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "phase16_gap",
+        "domain": "lead_operations_extensions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+      },
+      {
+        "key": "PATCH /api/memberships/:userId/role",
+        "method": "PATCH",
+        "path": "/api/memberships/:userId/role",
+        "sourcePointer": "server/routes/orgs.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "PATCH /api/operations/companies/:id",
+        "method": "PATCH",
+        "path": "/api/operations/companies/:id",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "business_directory",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/web/src/components/module-shells/BusinessDirectory.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts"
+        ],
+        "note": "Shared Directory owns tenant organizations and contacts."
+      },
+      {
+        "key": "PATCH /api/operations/contacts/:id",
+        "method": "PATCH",
+        "path": "/api/operations/contacts/:id",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "business_directory",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/web/src/components/module-shells/BusinessDirectory.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts"
+        ],
+        "note": "Shared Directory owns tenant organizations and contacts."
+      },
+      {
+        "key": "PATCH /api/operations/notifications/:id/read",
+        "method": "PATCH",
+        "path": "/api/operations/notifications/:id/read",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Canonical comments, tags, attachments, activity, notification, and audit services cover this collaboration domain."
+      },
+      {
+        "key": "PATCH /api/orgs/:id",
+        "method": "PATCH",
+        "path": "/api/orgs/:id",
+        "sourcePointer": "server/routes/orgs.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "PATCH /api/orgs/:id/operatoros-link",
+        "method": "PATCH",
+        "path": "/api/orgs/:id/operatoros-link",
+        "sourcePointer": "server/routes/orgs.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "PATCH /api/quotes/:id",
+        "method": "PATCH",
+        "path": "/api/quotes/:id",
+        "sourcePointer": "server/routes/quotes.ts",
+        "disposition": "phase16_gap",
+        "domain": "quote_edit_archive",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Equivalent quote edit/archive behavior is not yet active."
+      },
+      {
+        "key": "PATCH /api/work/stages/:id",
+        "method": "PATCH",
+        "path": "/api/work/stages/:id",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "restored_workflows",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Tenant-scoped workflow templates, stages, optimistic mutation, archive, and job transitions are active."
+      },
+      {
+        "key": "PATCH /api/work/tasks/:id",
+        "method": "PATCH",
+        "path": "/api/work/tasks/:id",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "restored_tasks",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Team list/detail/update/archive/comment/dependency behavior is active for canonical job-scoped tasks."
+      },
+      {
+        "key": "PATCH /api/work/workflows/:id",
+        "method": "PATCH",
+        "path": "/api/work/workflows/:id",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "restored_workflows",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Tenant-scoped workflow templates, stages, optimistic mutation, archive, and job transitions are active."
+      },
+      {
+        "key": "POST /api/auth/2fa/disable",
+        "method": "POST",
+        "path": "/api/auth/2fa/disable",
+        "sourcePointer": "server/routes/twoFactor.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "POST /api/auth/2fa/regenerate-codes",
+        "method": "POST",
+        "path": "/api/auth/2fa/regenerate-codes",
+        "sourcePointer": "server/routes/twoFactor.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "POST /api/auth/2fa/setup",
+        "method": "POST",
+        "path": "/api/auth/2fa/setup",
+        "sourcePointer": "server/routes/twoFactor.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "POST /api/auth/2fa/verify",
+        "method": "POST",
+        "path": "/api/auth/2fa/verify",
+        "sourcePointer": "server/routes/twoFactor.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "POST /api/auth/change-password",
+        "method": "POST",
+        "path": "/api/auth/change-password",
+        "sourcePointer": "server/routes/auth.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "POST /api/auth/login",
+        "method": "POST",
+        "path": "/api/auth/login",
+        "sourcePointer": "server/routes/auth.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "POST /api/auth/login/2fa",
+        "method": "POST",
+        "path": "/api/auth/login/2fa",
+        "sourcePointer": "server/routes/twoFactor.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "POST /api/auth/logout",
+        "method": "POST",
+        "path": "/api/auth/logout",
+        "sourcePointer": "server/routes/auth.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "POST /api/auth/register",
+        "method": "POST",
+        "path": "/api/auth/register",
+        "sourcePointer": "server/routes/auth.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "POST /api/auth/switch-org",
+        "method": "POST",
+        "path": "/api/auth/switch-org",
+        "sourcePointer": "server/routes/auth.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "POST /api/automations",
+        "method": "POST",
+        "path": "/api/automations",
+        "sourcePointer": "server/routes/automations.ts",
+        "disposition": "phase16_gap",
+        "domain": "durable_scheduling",
+        "targetPointers": [
+          "apps/api/src/lib/shared-service-db-init.ts"
+        ],
+        "evidence": [],
+        "note": "Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics."
+      },
+      {
+        "key": "POST /api/call-recovery/checkout",
+        "method": "POST",
+        "path": "/api/call-recovery/checkout",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "POST /api/call-recovery/configure",
+        "method": "POST",
+        "path": "/api/call-recovery/configure",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "POST /api/call-recovery/handle-subscription-change",
+        "method": "POST",
+        "path": "/api/call-recovery/handle-subscription-change",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "POST /api/call-recovery/portal",
+        "method": "POST",
+        "path": "/api/call-recovery/portal",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "POST /api/call-recovery/webhook/missed-call",
+        "method": "POST",
+        "path": "/api/call-recovery/webhook/missed-call",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "POST /api/call-recovery/webhook/sms",
+        "method": "POST",
+        "path": "/api/call-recovery/webhook/sms",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [
+          "apps/api/test/callcommand-state5-workflow.test.ts"
+        ],
+        "note": "This capability is owned by CallCommand/OutCall, not TradeFlowKit."
+      },
+      {
+        "key": "POST /api/customers",
+        "method": "POST",
+        "path": "/api/customers",
+        "sourcePointer": "server/routes/customers.ts",
+        "disposition": "active",
+        "domain": "customers",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/api/src/routes/module-shell-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Customer CRUD and customer-linked operations use shared Directory plus TradeFlowKit profiles."
+      },
+      {
+        "key": "POST /api/customers/bulk-delete",
+        "method": "POST",
+        "path": "/api/customers/bulk-delete",
+        "sourcePointer": "server/routes/customers.ts",
+        "disposition": "phase16_gap",
+        "domain": "customer_bulk_import",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+      },
+      {
+        "key": "POST /api/customers/bulk-restore",
+        "method": "POST",
+        "path": "/api/customers/bulk-restore",
+        "sourcePointer": "server/routes/customers.ts",
+        "disposition": "phase16_gap",
+        "domain": "customer_bulk_import",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+      },
+      {
+        "key": "POST /api/customers/import",
+        "method": "POST",
+        "path": "/api/customers/import",
+        "sourcePointer": "server/routes/customers.ts",
+        "disposition": "phase16_gap",
+        "domain": "customer_bulk_import",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+      },
+      {
+        "key": "POST /api/invite-codes",
+        "method": "POST",
+        "path": "/api/invite-codes",
+        "sourcePointer": "server/routes/orgs.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "POST /api/invoices",
+        "method": "POST",
+        "path": "/api/invoices",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "phase16_gap",
+        "domain": "invoice_direct_edit_bulk",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+      },
+      {
+        "key": "POST /api/invoices/:id/payment-link",
+        "method": "POST",
+        "path": "/api/invoices/:id/payment-link",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "phase16_gap",
+        "domain": "business_payments",
+        "targetPointers": [
+          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract."
+      },
+      {
+        "key": "POST /api/invoices/:id/send-email",
+        "method": "POST",
+        "path": "/api/invoices/:id/send-email",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "active",
+        "domain": "invoices_payments",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Invoice projection, status, manual partial payment, public view, and messages are active."
+      },
+      {
+        "key": "POST /api/invoices/:id/send-payment-email",
+        "method": "POST",
+        "path": "/api/invoices/:id/send-payment-email",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "active",
+        "domain": "invoices_payments",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Invoice projection, status, manual partial payment, public view, and messages are active."
+      },
+      {
+        "key": "POST /api/invoices/bulk-delete",
+        "method": "POST",
+        "path": "/api/invoices/bulk-delete",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "phase16_gap",
+        "domain": "invoice_direct_edit_bulk",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+      },
+      {
+        "key": "POST /api/invoices/bulk-mark-paid",
+        "method": "POST",
+        "path": "/api/invoices/bulk-mark-paid",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "phase16_gap",
+        "domain": "invoice_direct_edit_bulk",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+      },
+      {
+        "key": "POST /api/invoices/bulk-restore",
+        "method": "POST",
+        "path": "/api/invoices/bulk-restore",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "phase16_gap",
+        "domain": "invoice_direct_edit_bulk",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+      },
+      {
+        "key": "POST /api/invoices/import",
+        "method": "POST",
+        "path": "/api/invoices/import",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "phase16_gap",
+        "domain": "invoice_direct_edit_bulk",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+      },
+      {
+        "key": "POST /api/jobs",
+        "method": "POST",
+        "path": "/api/jobs",
+        "sourcePointer": "server/routes/jobs.ts",
+        "disposition": "active",
+        "domain": "jobs",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Tenant-scoped, numbered, versioned jobs and job tasks are active."
+      },
+      {
+        "key": "POST /api/jobs/bulk-delete",
+        "method": "POST",
+        "path": "/api/jobs/bulk-delete",
+        "sourcePointer": "server/routes/jobs.ts",
+        "disposition": "phase16_gap",
+        "domain": "job_bulk_import",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+      },
+      {
+        "key": "POST /api/jobs/bulk-restore",
+        "method": "POST",
+        "path": "/api/jobs/bulk-restore",
+        "sourcePointer": "server/routes/jobs.ts",
+        "disposition": "phase16_gap",
+        "domain": "job_bulk_import",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+      },
+      {
+        "key": "POST /api/jobs/bulk-status",
+        "method": "POST",
+        "path": "/api/jobs/bulk-status",
+        "sourcePointer": "server/routes/jobs.ts",
+        "disposition": "phase16_gap",
+        "domain": "job_bulk_import",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+      },
+      {
+        "key": "POST /api/jobs/import",
+        "method": "POST",
+        "path": "/api/jobs/import",
+        "sourcePointer": "server/routes/jobs.ts",
+        "disposition": "phase16_gap",
+        "domain": "job_bulk_import",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+      },
+      {
+        "key": "POST /api/leads",
+        "method": "POST",
+        "path": "/api/leads",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-shared-runtime-leads.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Manual tenant-scoped lead CRUD, activity, and idempotent conversion are active."
+      },
+      {
+        "key": "POST /api/leads/:id/activities",
+        "method": "POST",
+        "path": "/api/leads/:id/activities",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-shared-runtime-leads.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Manual tenant-scoped lead CRUD, activity, and idempotent conversion are active."
+      },
+      {
+        "key": "POST /api/leads/:id/convert",
+        "method": "POST",
+        "path": "/api/leads/:id/convert",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-shared-runtime-leads.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Manual tenant-scoped lead CRUD, activity, and idempotent conversion are active."
+      },
+      {
+        "key": "POST /api/leads/:id/score",
+        "method": "POST",
+        "path": "/api/leads/:id/score",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "automated_lead_decisions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Unreviewed AI scoring may not silently make customer decisions."
+      },
+      {
+        "key": "POST /api/leads/:id/send-email",
+        "method": "POST",
+        "path": "/api/leads/:id/send-email",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "phase16_gap",
+        "domain": "lead_operations_extensions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+      },
+      {
+        "key": "POST /api/leads/:id/send-sms",
+        "method": "POST",
+        "path": "/api/leads/:id/send-sms",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "phase16_gap",
+        "domain": "lead_operations_extensions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+      },
+      {
+        "key": "POST /api/leads/settings/apply-template",
+        "method": "POST",
+        "path": "/api/leads/settings/apply-template",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "phase16_gap",
+        "domain": "lead_operations_extensions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+      },
+      {
+        "key": "POST /api/leads/test-message",
+        "method": "POST",
+        "path": "/api/leads/test-message",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "phase16_gap",
+        "domain": "lead_operations_extensions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+      },
+      {
+        "key": "POST /api/operations/companies",
+        "method": "POST",
+        "path": "/api/operations/companies",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "business_directory",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/web/src/components/module-shells/BusinessDirectory.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts"
+        ],
+        "note": "Shared Directory owns tenant organizations and contacts."
+      },
+      {
+        "key": "POST /api/operations/contacts",
+        "method": "POST",
+        "path": "/api/operations/contacts",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "business_directory",
+        "targetPointers": [
+          "apps/api/src/routes/directory-routes.ts",
+          "apps/web/src/components/module-shells/BusinessDirectory.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts"
+        ],
+        "note": "Shared Directory owns tenant organizations and contacts."
+      },
+      {
+        "key": "POST /api/operations/notifications/read-all",
+        "method": "POST",
+        "path": "/api/operations/notifications/read-all",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Canonical comments, tags, attachments, activity, notification, and audit services cover this collaboration domain."
+      },
+      {
+        "key": "POST /api/operations/resources/:entityType/:entityId/${resource}",
+        "method": "POST",
+        "path": "/api/operations/resources/:entityType/:entityId/${resource}",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Canonical comments, tags, attachments, activity, notification, and audit services cover this collaboration domain."
+      },
+      {
+        "key": "POST /api/operations/resources/:entityType/:entityId/attachments",
+        "method": "POST",
+        "path": "/api/operations/resources/:entityType/:entityId/attachments",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Canonical comments, tags, attachments, activity, notification, and audit services cover this collaboration domain."
+      },
+      {
+        "key": "POST /api/operations/resources/:entityType/:entityId/tags",
+        "method": "POST",
+        "path": "/api/operations/resources/:entityType/:entityId/tags",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Canonical comments, tags, attachments, activity, notification, and audit services cover this collaboration domain."
+      },
+      {
+        "key": "POST /api/operations/saved-views",
+        "method": "POST",
+        "path": "/api/operations/saved-views",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "phase16_gap",
+        "domain": "saved_views",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Durable tenant/user saved views are not yet active."
+      },
+      {
+        "key": "POST /api/operations/tags",
+        "method": "POST",
+        "path": "/api/operations/tags",
+        "sourcePointer": "server/routes/operationsData.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Canonical comments, tags, attachments, activity, notification, and audit services cover this collaboration domain."
+      },
+      {
+        "key": "POST /api/operatoros/entitlements/sync",
+        "method": "POST",
+        "path": "/api/operatoros/entitlements/sync",
+        "sourcePointer": "server/routes/entitlements.ts",
+        "disposition": "shared_replacement",
+        "domain": "platform_integration",
+        "targetPointers": [
+          "apps/api/src/routes/modules.ts",
+          "apps/api/src/routes/tenant-entitlement-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "The consolidated runtime calls OperatorOS authority directly and does not synchronize a second module authority."
+      },
+      {
+        "key": "POST /api/orgs",
+        "method": "POST",
+        "path": "/api/orgs",
+        "sourcePointer": "server/routes/orgs.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "POST /api/orgs/join",
+        "method": "POST",
+        "path": "/api/orgs/join",
+        "sourcePointer": "server/routes/orgs.ts",
+        "disposition": "retired_security",
+        "domain": "identity_tenant_authority",
+        "targetPointers": [
+          "apps/api/src/routes/auth.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS is the only identity, session, tenant, membership, and platform-role authority."
+      },
+      {
+        "key": "POST /api/public/lead-capture/:publicToken",
+        "method": "POST",
+        "path": "/api/public/lead-capture/:publicToken",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "phase16_gap",
+        "domain": "public_lead_intake",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls."
+      },
+      {
+        "key": "POST /api/public/lead-source/:publicToken/:adapterKey",
+        "method": "POST",
+        "path": "/api/public/lead-source/:publicToken/:adapterKey",
+        "sourcePointer": "server/routes/leads.ts",
+        "disposition": "phase16_gap",
+        "domain": "public_lead_intake",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls."
+      },
+      {
+        "key": "POST /api/quotes",
+        "method": "POST",
+        "path": "/api/quotes",
+        "sourcePointer": "server/routes/quotes.ts",
+        "disposition": "active",
+        "domain": "quotes",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Quote creation, decisions, public projection, and idempotent invoice conversion are active."
+      },
+      {
+        "key": "POST /api/quotes/:id/convert-to-invoice",
+        "method": "POST",
+        "path": "/api/quotes/:id/convert-to-invoice",
+        "sourcePointer": "server/routes/quotes.ts",
+        "disposition": "active",
+        "domain": "quotes",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Quote creation, decisions, public projection, and idempotent invoice conversion are active."
+      },
+      {
+        "key": "POST /api/quotes/:id/convert-to-job",
+        "method": "POST",
+        "path": "/api/quotes/:id/convert-to-job",
+        "sourcePointer": "server/routes/quotes.ts",
+        "disposition": "phase16_gap",
+        "domain": "quote_to_job",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Quote-to-job conversion is not yet exposed as an idempotent active contract."
+      },
+      {
+        "key": "POST /api/quotes/:id/send-email",
+        "method": "POST",
+        "path": "/api/quotes/:id/send-email",
+        "sourcePointer": "server/routes/quotes.ts",
+        "disposition": "active",
+        "domain": "quotes",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Quote creation, decisions, public projection, and idempotent invoice conversion are active."
+      },
+      {
+        "key": "POST /api/review-requests",
+        "method": "POST",
+        "path": "/api/review-requests",
+        "sourcePointer": "server/routes/reviewRequests.ts",
+        "disposition": "shared_replacement",
+        "domain": "outbound_communications",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Shared notification, outbox, activity, and audit services replace the legacy table."
+      },
+      {
+        "key": "POST /api/stripe/create-checkout",
+        "method": "POST",
+        "path": "/api/stripe/create-checkout",
+        "sourcePointer": "server/routes/subscriptions.ts",
+        "disposition": "shared_replacement",
+        "domain": "platform_billing",
+        "targetPointers": [
+          "apps/api/src/routes/billing.ts",
+          "apps/api/src/routes/module-marketplace-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/billing.test.ts",
+          "apps/api/test/marketplace-routes.test.ts"
+        ],
+        "note": "OperatorOS owns platform subscriptions, add-ons, and module entitlements."
+      },
+      {
+        "key": "POST /api/stripe/create-portal",
+        "method": "POST",
+        "path": "/api/stripe/create-portal",
+        "sourcePointer": "server/routes/subscriptions.ts",
+        "disposition": "shared_replacement",
+        "domain": "platform_billing",
+        "targetPointers": [
+          "apps/api/src/routes/billing.ts",
+          "apps/api/src/routes/module-marketplace-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/billing.test.ts",
+          "apps/api/test/marketplace-routes.test.ts"
+        ],
+        "note": "OperatorOS owns platform subscriptions, add-ons, and module entitlements."
+      },
+      {
+        "key": "POST /api/stripe/webhook",
+        "method": "POST",
+        "path": "/api/stripe/webhook",
+        "sourcePointer": "server/index.ts",
+        "disposition": "shared_replacement",
+        "domain": "platform_billing",
+        "targetPointers": [
+          "apps/api/src/routes/billing.ts",
+          "apps/api/src/routes/module-marketplace-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/billing.test.ts",
+          "apps/api/test/marketplace-routes.test.ts"
+        ],
+        "note": "OperatorOS owns platform subscriptions, add-ons, and module entitlements."
+      },
+      {
+        "key": "POST /api/trash/customers/:id/restore",
+        "method": "POST",
+        "path": "/api/trash/customers/:id/restore",
+        "sourcePointer": "server/routes/trash.ts",
+        "disposition": "phase16_gap",
+        "domain": "retention",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Archive restore/list behavior needs a complete active UI and API."
+      },
+      {
+        "key": "POST /api/trash/invoices/:id/restore",
+        "method": "POST",
+        "path": "/api/trash/invoices/:id/restore",
+        "sourcePointer": "server/routes/trash.ts",
+        "disposition": "phase16_gap",
+        "domain": "retention",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Archive restore/list behavior needs a complete active UI and API."
+      },
+      {
+        "key": "POST /api/trash/jobs/:id/restore",
+        "method": "POST",
+        "path": "/api/trash/jobs/:id/restore",
+        "sourcePointer": "server/routes/trash.ts",
+        "disposition": "phase16_gap",
+        "domain": "retention",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Archive restore/list behavior needs a complete active UI and API."
+      },
+      {
+        "key": "POST /api/work/jobs/:id/transition",
+        "method": "POST",
+        "path": "/api/work/jobs/:id/transition",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "restored_workflows",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Tenant-scoped workflow templates, stages, optimistic mutation, archive, and job transitions are active."
+      },
+      {
+        "key": "POST /api/work/tasks",
+        "method": "POST",
+        "path": "/api/work/tasks",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "phase16_gap",
+        "domain": "standalone_tasks",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Canonical creation remains job-scoped under ADR-0010; source standalone-task creation needs an explicit superseding product decision."
+      },
+      {
+        "key": "POST /api/work/tasks/:id/comments",
+        "method": "POST",
+        "path": "/api/work/tasks/:id/comments",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "restored_tasks",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Team list/detail/update/archive/comment/dependency behavior is active for canonical job-scoped tasks."
+      },
+      {
+        "key": "POST /api/work/tasks/:id/dependencies",
+        "method": "POST",
+        "path": "/api/work/tasks/:id/dependencies",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "restored_tasks",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Team list/detail/update/archive/comment/dependency behavior is active for canonical job-scoped tasks."
+      },
+      {
+        "key": "POST /api/work/workflows",
+        "method": "POST",
+        "path": "/api/work/workflows",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "restored_workflows",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Tenant-scoped workflow templates, stages, optimistic mutation, archive, and job transitions are active."
+      },
+      {
+        "key": "POST /api/work/workflows/:id/stages",
+        "method": "POST",
+        "path": "/api/work/workflows/:id/stages",
+        "sourcePointer": "server/routes/workManagement.ts",
+        "disposition": "active",
+        "domain": "restored_workflows",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Tenant-scoped workflow templates, stages, optimistic mutation, archive, and job transitions are active."
+      }
+    ],
+    "tables": [
+      {
+        "key": "activity_events",
+        "table": "activity_events",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Shared tenant-scoped platform services replace this collaboration table."
+      },
+      {
+        "key": "ai_messages",
+        "table": "ai_messages",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [],
+        "note": "CallCommand/OutCall owns this capability."
+      },
+      {
+        "key": "audit_log",
+        "table": "audit_log",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "shared_replacement",
+        "domain": "audit",
+        "targetPointers": [
+          "apps/api/src/schema.ts"
+        ],
+        "evidence": [
+          "apps/api/test/audit.test.ts"
+        ],
+        "note": "Platform audit replaces this table."
+      },
+      {
+        "key": "call_recovery_subscriptions",
+        "table": "call_recovery_subscriptions",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [],
+        "note": "CallCommand/OutCall owns this capability."
+      },
+      {
+        "key": "companies",
+        "table": "companies",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "shared_replacement",
+        "domain": "business_directory",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/routes/directory-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts"
+        ],
+        "note": "Shared Directory replaces this tenant business identity data."
+      },
+      {
+        "key": "contacts",
+        "table": "contacts",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "shared_replacement",
+        "domain": "business_directory",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/routes/directory-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/business-directory.test.ts",
+          "apps/web/e2e/business-directory.spec.ts"
+        ],
+        "note": "Shared Directory replaces this tenant business identity data."
+      },
+      {
+        "key": "customers",
+        "table": "customers",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "An active tenant-scoped canonical table or shared replacement exists."
+      },
+      {
+        "key": "entity_attachments",
+        "table": "entity_attachments",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Shared tenant-scoped platform services replace this collaboration table."
+      },
+      {
+        "key": "entity_comments",
+        "table": "entity_comments",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Shared tenant-scoped platform services replace this collaboration table."
+      },
+      {
+        "key": "entity_notes",
+        "table": "entity_notes",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Shared tenant-scoped platform services replace this collaboration table."
+      },
+      {
+        "key": "entity_tags",
+        "table": "entity_tags",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Shared tenant-scoped platform services replace this collaboration table."
+      },
+      {
+        "key": "invite_codes",
+        "table": "invite_codes",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "retired_security",
+        "domain": "platform_authority",
+        "targetPointers": [
+          "apps/api/src/schema.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS owns this authority; standalone rows are excluded from import."
+      },
+      {
+        "key": "invoice_items",
+        "table": "invoice_items",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "An active tenant-scoped canonical table or shared replacement exists."
+      },
+      {
+        "key": "invoices",
+        "table": "invoices",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "An active tenant-scoped canonical table or shared replacement exists."
+      },
+      {
+        "key": "job_events",
+        "table": "job_events",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "An active tenant-scoped canonical table or shared replacement exists."
+      },
+      {
+        "key": "jobs",
+        "table": "jobs",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "An active tenant-scoped canonical table or shared replacement exists."
+      },
+      {
+        "key": "lead_activities",
+        "table": "lead_activities",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "active",
+        "domain": "leads",
+        "targetPointers": [
+          "apps/api/src/schema.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "Canonical activity/audit history preserves lead events."
+      },
+      {
+        "key": "lead_capture_forms",
+        "table": "lead_capture_forms",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "phase16_gap",
+        "domain": "lead_operations_extensions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "The full retained lead extension is not yet equivalent."
+      },
+      {
+        "key": "lead_followup_tasks",
+        "table": "lead_followup_tasks",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "phase16_gap",
+        "domain": "lead_operations_extensions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "The full retained lead extension is not yet equivalent."
+      },
+      {
+        "key": "lead_settings",
+        "table": "lead_settings",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "phase16_gap",
+        "domain": "lead_operations_extensions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "The full retained lead extension is not yet equivalent."
+      },
+      {
+        "key": "lead_source_events",
+        "table": "lead_source_events",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "phase16_gap",
+        "domain": "lead_operations_extensions",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "The full retained lead extension is not yet equivalent."
+      },
+      {
+        "key": "leads",
+        "table": "leads",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "An active tenant-scoped canonical table or shared replacement exists."
+      },
+      {
+        "key": "memberships",
+        "table": "memberships",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "retired_security",
+        "domain": "platform_authority",
+        "targetPointers": [
+          "apps/api/src/schema.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS owns this authority; standalone rows are excluded from import."
+      },
+      {
+        "key": "missed_calls",
+        "table": "missed_calls",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "retired_product_boundary",
+        "domain": "callcommand",
+        "targetPointers": [
+          "docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md"
+        ],
+        "evidence": [],
+        "note": "CallCommand/OutCall owns this capability."
+      },
+      {
+        "key": "notifications",
+        "table": "notifications",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Shared tenant-scoped platform services replace this collaboration table."
+      },
+      {
+        "key": "org_automations",
+        "table": "org_automations",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "phase16_gap",
+        "domain": "durable_scheduling",
+        "targetPointers": [
+          "apps/api/src/lib/shared-service-db-init.ts"
+        ],
+        "evidence": [],
+        "note": "Shared leased-job scheduling semantics are not implemented for this workflow."
+      },
+      {
+        "key": "orgs",
+        "table": "orgs",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "retired_security",
+        "domain": "platform_authority",
+        "targetPointers": [
+          "apps/api/src/schema.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS owns this authority; standalone rows are excluded from import."
+      },
+      {
+        "key": "processed_stripe_events",
+        "table": "processed_stripe_events",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "retired_security",
+        "domain": "platform_authority",
+        "targetPointers": [
+          "apps/api/src/schema.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS owns this authority; standalone rows are excluded from import."
+      },
+      {
+        "key": "quote_items",
+        "table": "quote_items",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "An active tenant-scoped canonical table or shared replacement exists."
+      },
+      {
+        "key": "quotes",
+        "table": "quotes",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "active",
+        "domain": "lead_to_cash",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+        ],
+        "note": "An active tenant-scoped canonical table or shared replacement exists."
+      },
+      {
+        "key": "reminder_log",
+        "table": "reminder_log",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "phase16_gap",
+        "domain": "durable_scheduling",
+        "targetPointers": [
+          "apps/api/src/lib/shared-service-db-init.ts"
+        ],
+        "evidence": [],
+        "note": "Shared leased-job scheduling semantics are not implemented for this workflow."
+      },
+      {
+        "key": "review_requests",
+        "table": "review_requests",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "shared_replacement",
+        "domain": "outbound_communications",
+        "targetPointers": [
+          "apps/api/src/schema.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Shared outbox/activity/audit replaces this table."
+      },
+      {
+        "key": "saved_views",
+        "table": "saved_views",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "phase16_gap",
+        "domain": "saved_views",
+        "targetPointers": [],
+        "evidence": [],
+        "note": "Saved views are not active."
+      },
+      {
+        "key": "tags",
+        "table": "tags",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "shared_replacement",
+        "domain": "shared_collaboration",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Shared tenant-scoped platform services replace this collaboration table."
+      },
+      {
+        "key": "task_dependencies",
+        "table": "task_dependencies",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "active",
+        "domain": "restored_tasks",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Canonical job-scoped tasks and acyclic same-job dependencies provide the accepted work model."
+      },
+      {
+        "key": "user_recovery_codes",
+        "table": "user_recovery_codes",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "retired_security",
+        "domain": "platform_authority",
+        "targetPointers": [
+          "apps/api/src/schema.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS owns this authority; standalone rows are excluded from import."
+      },
+      {
+        "key": "users",
+        "table": "users",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "retired_security",
+        "domain": "platform_authority",
+        "targetPointers": [
+          "apps/api/src/schema.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS owns this authority; standalone rows are excluded from import."
+      },
+      {
+        "key": "work_tasks",
+        "table": "work_tasks",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "active",
+        "domain": "restored_tasks",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Canonical job-scoped tasks and acyclic same-job dependencies provide the accepted work model."
+      },
+      {
+        "key": "workflow_stages",
+        "table": "workflow_stages",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "active",
+        "domain": "restored_workflows",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Tenant-scoped, indexed, versioned workflow template and stage persistence is active."
+      },
+      {
+        "key": "workflow_templates",
+        "table": "workflow_templates",
+        "sourcePointer": "shared/schema.ts",
+        "disposition": "active",
+        "domain": "restored_workflows",
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
+        ],
+        "note": "Tenant-scoped, indexed, versioned workflow template and stage persistence is active."
+      }
+    ],
+    "providers": [
+      {
+        "key": "OPENAI_API_KEY",
+        "name": "OPENAI_API_KEY",
+        "sourcePointer": "server/leadMessaging.ts",
+        "disposition": "phase16_gap",
+        "domain": "external_provider",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+      },
+      {
+        "key": "SENDGRID_API_KEY",
+        "name": "SENDGRID_API_KEY",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "phase16_gap",
+        "domain": "external_provider",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+      },
+      {
+        "key": "SENDGRID_FROM_EMAIL",
+        "name": "SENDGRID_FROM_EMAIL",
+        "sourcePointer": "server/routes/invoices.ts",
+        "disposition": "phase16_gap",
+        "domain": "external_provider",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+      },
+      {
+        "key": "SESSION_SECRET",
+        "name": "SESSION_SECRET",
+        "sourcePointer": "server/routes/callRecovery.ts",
+        "disposition": "shared_replacement",
+        "domain": "platform_integration",
+        "targetPointers": [
+          "apps/api/src/config.ts",
+          "apps/api/src/routes/sso-v1-routes.ts"
+        ],
+        "evidence": [
+          "docs/auth/OPERATOROS_SSO_CONTRACT_V1.md",
+          "apps/api/test/auth.test.ts"
+        ],
+        "note": "OperatorOS owns this platform integration/configuration concern."
+      },
+      {
+        "key": "STRIPE_CLIENT_ID",
+        "name": "STRIPE_CLIENT_ID",
+        "sourcePointer": "server/routes/stripeConnect.ts",
+        "disposition": "phase16_gap",
+        "domain": "business_payments",
+        "targetPointers": [
+          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Platform billing is centralized; module business payments remain provider-gated."
+      },
+      {
+        "key": "TWILIO_ACCOUNT_SID",
+        "name": "TWILIO_ACCOUNT_SID",
+        "sourcePointer": "server/twilioClient.ts",
+        "disposition": "phase16_gap",
+        "domain": "external_provider",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+      },
+      {
+        "key": "TWILIO_AUTH_TOKEN",
+        "name": "TWILIO_AUTH_TOKEN",
+        "sourcePointer": "server/twilioClient.ts",
+        "disposition": "phase16_gap",
+        "domain": "external_provider",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+      },
+      {
+        "key": "TWILIO_PHONE_NUMBER",
+        "name": "TWILIO_PHONE_NUMBER",
+        "sourcePointer": "server/twilioClient.ts",
+        "disposition": "phase16_gap",
+        "domain": "external_provider",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+      }
+    ]
+  },
+  "relevantFileHashes": [
+    {
+      "path": "client/src/App.tsx",
+      "sha256": "9c915642fb7f5e4c7739a5c557aee0762755a4cb21c092fea77174ad65879344"
+    },
+    {
+      "path": "client/src/pages/access-denied.tsx",
+      "sha256": "5e436d6aeabaa5cdd3b3b8218d9a1815952c927e124f72d3f895045213f85593"
+    },
+    {
+      "path": "client/src/pages/activity.tsx",
+      "sha256": "ca4068d4b0bd8b65aefc523883e7336603a86d7ddba87183b61605ae9b01fbf7"
+    },
+    {
+      "path": "client/src/pages/admin.tsx",
+      "sha256": "1804d610c3b6381612d1f0f70fcc334b20ca0603c2c2d8066e2ea64fce170e41"
+    },
+    {
+      "path": "client/src/pages/analytics.tsx",
+      "sha256": "def59161190402cb6d25e6ac924507a2b00993ce2293bb652eae3fd89ea4b278"
+    },
+    {
+      "path": "client/src/pages/auth-page.tsx",
+      "sha256": "e322a6c6a74954e2fff3d0183cac30ac220044e2da8f20810d3fd08b4d156d4f"
+    },
+    {
+      "path": "client/src/pages/call-recovery.tsx",
+      "sha256": "e3a665b4c3b0a96a48b2ece6e7c42885d89d8bfefccc820408d95db7f6b1d25f"
+    },
+    {
+      "path": "client/src/pages/contacts.tsx",
+      "sha256": "fe6c146d106c22e62355625c757dd7c0ad6b2cf1ccc0bddf4e99515d0042cec9"
+    },
+    {
+      "path": "client/src/pages/customer-detail.tsx",
+      "sha256": "95fb26e1f36708a72c0c55be610b413b340163dc686c1d892584c9e8641dfa3c"
+    },
+    {
+      "path": "client/src/pages/customer-portal.tsx",
+      "sha256": "777c504d1394e45afab83eef1eaeee91e176e54b79b070f9acc0266f9c0330a2"
+    },
+    {
+      "path": "client/src/pages/customers.tsx",
+      "sha256": "2d0345c44911f3bfaa6a61f422da905bd057fa24fe8b3f2f1adc69b04aad05c3"
+    },
+    {
+      "path": "client/src/pages/dashboard.tsx",
+      "sha256": "1f90a56f5a20e535b03595751e96e646bd2787127ac817d033798f186b147dce"
+    },
+    {
+      "path": "client/src/pages/delete-account.tsx",
+      "sha256": "13120ee3b9518fc6bcc94e8b0ba5b3b202961d2e8bab9db9db6b822cf8d4b9fc"
+    },
+    {
+      "path": "client/src/pages/guide.tsx",
+      "sha256": "3755abcbca7270339eaac4d1949a383204c6c2240120d32c5afbbc6410cbb8c6"
+    },
+    {
+      "path": "client/src/pages/invoice-detail.tsx",
+      "sha256": "bd4f2caf1c0d0bd7ea2b79d7d22e7a6b9d94d8270ac9727000ebbc63e9b0e4d6"
+    },
+    {
+      "path": "client/src/pages/invoice-form.tsx",
+      "sha256": "d21dd1bd96ffca2e03a5fd377f114aa9dc0d98d60dc5c6762a20b97cfa6d0da6"
+    },
+    {
+      "path": "client/src/pages/invoice-pay.tsx",
+      "sha256": "9b2a84217d89d8f84f004cbea8d7f8c297702a6896500ef7f5657e069f2dbd85"
+    },
+    {
+      "path": "client/src/pages/invoices.tsx",
+      "sha256": "1e007f3a807c94b70c339e4961f206fbb1b9a1c3c1311443b5dee1c385acc2e3"
+    },
+    {
+      "path": "client/src/pages/job-detail.tsx",
+      "sha256": "eaff3114ba25940b27a85fa7f0048a2dd48a2d742ae8c3bebab37168b9a0ab63"
+    },
+    {
+      "path": "client/src/pages/jobs.tsx",
+      "sha256": "810d9da6c2f32956d848689f8cd110363ecdc455923e98709114c161a6a37fce"
+    },
+    {
+      "path": "client/src/pages/leads.tsx",
+      "sha256": "3d635be00406b4cd017eab6e6ce97e5078c7f059d56424de94f507deb63d2187"
+    },
+    {
+      "path": "client/src/pages/not-found.tsx",
+      "sha256": "718a41bd05a163d1db32480aba013f5fe754894e656b6542a8e4b302275b172e"
+    },
+    {
+      "path": "client/src/pages/org-setup.tsx",
+      "sha256": "fb1be082940b470282dbc54391537ec3657738dc5646b788e0f13bbb75916d46"
+    },
+    {
+      "path": "client/src/pages/privacy.tsx",
+      "sha256": "a7b14a732afe4c677b25e5ed20fc793824aa15642271b1e63e2ebbca19c17ba1"
+    },
+    {
+      "path": "client/src/pages/quote-detail.tsx",
+      "sha256": "2d51107d3d4c2e568ff11fde3c02d422a109798d308ecd36c3d010189db088c2"
+    },
+    {
+      "path": "client/src/pages/quote-form.tsx",
+      "sha256": "cff3c0a9fe858f13345d1997d7d59e91d61621ffac0edfc3f760d4059a07ab0b"
+    },
+    {
+      "path": "client/src/pages/quote-view.tsx",
+      "sha256": "0ef1dc5a5861d5bea07c8aae3a0156671af9d6bda0b7b337ba0ae7f4cbc2ec70"
+    },
+    {
+      "path": "client/src/pages/quotes.tsx",
+      "sha256": "481af01eb8575505a73f919e1074cd7fad056e16714cb675fc0f6c2bf5cfbc90"
+    },
+    {
+      "path": "client/src/pages/settings.tsx",
+      "sha256": "3d7542467cf33631db12e99f96f8d77ad27499eed55503e3a8b12e2ce7a202f7"
+    },
+    {
+      "path": "client/src/pages/settings/audit.tsx",
+      "sha256": "c18f798b28c6e81a66b98ae997a08f4759c7b8ef14e514ba9b72d336f2321c31"
+    },
+    {
+      "path": "client/src/pages/settings/automations.tsx",
+      "sha256": "3e301acfb3ba5c0ca494d56c611931cb3fee8931d3b10d24c44f1bbb8f77d2f0"
+    },
+    {
+      "path": "client/src/pages/settings/billing.tsx",
+      "sha256": "9e7176fe79441fa25662b7a89ade073294ff3ca7b3a4423ce8404e7a0497629a"
+    },
+    {
+      "path": "client/src/pages/settings/integrations.tsx",
+      "sha256": "746f84903b3104d76ec2c4e12ca5f06fd818956bcfa291d371e16293139e8886"
+    },
+    {
+      "path": "client/src/pages/settings/organization.tsx",
+      "sha256": "91a2861ac38286e7ff6e9c7f2907e415f804c3cde820bb442518fe37a7ee4813"
+    },
+    {
+      "path": "client/src/pages/settings/payments.tsx",
+      "sha256": "3236ec4c869b7af7026288eee11d953f16932b90fadd8c8907c5affae414f5b7"
+    },
+    {
+      "path": "client/src/pages/settings/profile.tsx",
+      "sha256": "40df574ed44d8bb3a93f9634b032b34f9f78a4f71e32cc3fb67a65853b7beabb"
+    },
+    {
+      "path": "client/src/pages/settings/security.tsx",
+      "sha256": "7db746c7775f9dab89627ea88607119a8a99fd27e6c4b7a5ec96c5f9b8624d8a"
+    },
+    {
+      "path": "client/src/pages/settings/team.tsx",
+      "sha256": "d296e7996b6895d0bd4d4870342f5471fa117bf079d3975fcf07177dbceae245"
+    },
+    {
+      "path": "client/src/pages/sms-consent.tsx",
+      "sha256": "4f5b4c64de8dfd04e1e8b69f8d4fd4c391c767ac54c3f78e8aaa69b569985da6"
+    },
+    {
+      "path": "client/src/pages/subscription.tsx",
+      "sha256": "467709175a2666d09c4a4e94956de3293381093cc0ed985a9cda4f877ecb617e"
+    },
+    {
+      "path": "client/src/pages/tasks.tsx",
+      "sha256": "a964afff4589cbd723144a89fa7776a2807f204cf2a9e0663bdafb9c4b9c9d66"
+    },
+    {
+      "path": "client/src/pages/terms.tsx",
+      "sha256": "124fa53f198b5f25fa6cf7835c3a36b5cf393fad942e55cb38db2ab9786d29df"
+    },
+    {
+      "path": "client/src/pages/trash.tsx",
+      "sha256": "3eb3b091cff8fd61b344967f02317a34899ce73fa8578686f3139097e9895047"
+    },
+    {
+      "path": "client/src/pages/workflows.tsx",
+      "sha256": "5076eaa24402edf6a183dcf7243b9858c39bb774ec559e8dbaf3c1bb77c45c8f"
+    },
+    {
+      "path": "server/routes/admin.ts",
+      "sha256": "f11bf387fe16a118ca0d113360acaf00c2d81806784b12e561aeb87fb7e0ad3f"
+    },
+    {
+      "path": "server/routes/analytics.ts",
+      "sha256": "64be2a20fbf305e58c13ca2753db9a534ca11ed3ab539e772d7780bc4f49a28e"
+    },
+    {
+      "path": "server/routes/auditLog.ts",
+      "sha256": "36515213fe8ebd046a95f1379ed38cc487782ef1512d07920e3f0f3754e0a9b9"
+    },
+    {
+      "path": "server/routes/auth.ts",
+      "sha256": "1c97c92d55b7e05feb1cb49854ec3e0c3e7f4ccf2a9ffd96e3d3f22424d4d0a7"
+    },
+    {
+      "path": "server/routes/automations.ts",
+      "sha256": "fae576acadcce24f878a4d274213769b1d69e71923eb958efe78e2e9070c89f7"
+    },
+    {
+      "path": "server/routes/callRecovery.ts",
+      "sha256": "8fa569b7e31a7af9f9048dc49d75e0a5518107f90dcdaf5bf18279acb302c25a"
+    },
+    {
+      "path": "server/routes/customers.ts",
+      "sha256": "f8cea620c0dfa2ff6d6c10c5992ba507c14e230e494bd249914ea88815b9f4ee"
+    },
+    {
+      "path": "server/routes/entitlements.ts",
+      "sha256": "af2d00f56eeda9da92bff49fe1b8357668fbe3fb801d0e0a595b9ca965917195"
+    },
+    {
+      "path": "server/routes/exports.ts",
+      "sha256": "6a0fc6374b886f10c638405a303d8a0090ae0dee1397228a3127780fee950057"
+    },
+    {
+      "path": "server/routes/index.ts",
+      "sha256": "5173d0496b78e4994da8fe0141c0140ae5ea2fb026af0720fbcf4843102ec180"
+    },
+    {
+      "path": "server/routes/invoices.ts",
+      "sha256": "6d025b3937f5062654eafaeb2775312856ed49332efe6e10708a4923db89be37"
+    },
+    {
+      "path": "server/routes/jobs.ts",
+      "sha256": "4e80b4369135798e138d85ea3cfe0c9fa4f6f3f2b7ea6c6f1f292e704e3b6333"
+    },
+    {
+      "path": "server/routes/leads.ts",
+      "sha256": "91842195c84b3da55240366017d8c43e90711960c5cf0c50f11634b088b6fc96"
+    },
+    {
+      "path": "server/routes/operationsData.ts",
+      "sha256": "2dc10ea40c4ff0fab13fefd4628de2eee6233c71aaaf05ff9bdb4d7b91c8774c"
+    },
+    {
+      "path": "server/routes/operatoros.ts",
+      "sha256": "2afc6af819029a749a10b01e8c244387325418ac31646c6fceae320589286037"
+    },
+    {
+      "path": "server/routes/orgs.ts",
+      "sha256": "e1d6d4cd6f3a493e8a301a79514896d6ec057c0349b1f540a4c86f53efe03f33"
+    },
+    {
+      "path": "server/routes/portal.ts",
+      "sha256": "55c4c3da76f376973c9f08757bceea1b5a21d4aa8990424a782632bf2d695c86"
+    },
+    {
+      "path": "server/routes/quotes.ts",
+      "sha256": "43b325968cbb47fe7f0b1104ba8c8d9f3ef1cd71e3e9d205949b6187fe1ecc27"
+    },
+    {
+      "path": "server/routes/reviewRequests.ts",
+      "sha256": "563bbdb9ebbd2c62c9e90679b9e22be9bd4f532c4851e64afb00475cea349f38"
+    },
+    {
+      "path": "server/routes/search.ts",
+      "sha256": "ae3164d55b616f67a8b205bd6cf4125b978408fb3824d403c2d298d726d24d63"
+    },
+    {
+      "path": "server/routes/sso.ts",
+      "sha256": "295babf312c905631b0bd7028f05d00dab8b059b982ccf423ce8560589ca01fc"
+    },
+    {
+      "path": "server/routes/stripeConnect.ts",
+      "sha256": "1712ce952235bcc855eeab632729437ac8df5b2427a3042d4f4eaf150aacd33f"
+    },
+    {
+      "path": "server/routes/subscriptions.ts",
+      "sha256": "65aa881bfeaf5e0027b4bd09b1aa0f50d1512f69151cbc8008f940b0deb5687c"
+    },
+    {
+      "path": "server/routes/trash.ts",
+      "sha256": "8f774a9b2f9bc31a65cdf4faa6b6459be2cde59986f276e97b4580ccec941f9b"
+    },
+    {
+      "path": "server/routes/twoFactor.ts",
+      "sha256": "7c97ca4c3903946b088ad5a9793b9782390a9c79932bb0fa244253f7717b002b"
+    },
+    {
+      "path": "server/routes/wellKnown.ts",
+      "sha256": "269c4e1ac06d56a8cd42cfcc487bfa920f4139da915f39aaaa67e35acbfdf437"
+    },
+    {
+      "path": "server/routes/workManagement.ts",
+      "sha256": "0900ecaebe0777ff94652e159937fc18dca6ca44ae1fad3c6097ed514f7dfff1"
+    },
+    {
+      "path": "shared/schema.ts",
+      "sha256": "74583b324bb1e71317127e915e3866eea9e3c72e7ac99dac49c1aec94f397dae"
+    }
+  ]
+}

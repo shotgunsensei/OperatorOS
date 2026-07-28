@@ -7,9 +7,12 @@
   "scripts": {
     "preflight:production": "node scripts/production-env-preflight.mjs",
     "verify:production": "node scripts/verify-production-runtime.mjs",
+    "verify:tradeflowkit:phase16": "node scripts/tradeflowkit-phase16-ledger.mjs",
     "db:plan": "tsx apps/api/src/scripts/database-release.ts --plan",
     "db:apply": "tsx apps/api/src/scripts/database-release.ts --apply",
+    "export:tradeflowkit:snapshot": "tsx apps/api/src/scripts/tradeflowkit-export.ts --read-only",
     "import:tradeflowkit:dry-run": "tsx apps/api/src/scripts/tradeflowkit-import.ts --dry-run",
+    "import:tradeflowkit:apply": "tsx apps/api/src/scripts/tradeflowkit-import.ts --apply",
     "import:techdeck:dry-run": "tsx apps/api/src/scripts/techdeck-import.ts --dry-run",
     "import:pulsedesk:dry-run": "tsx apps/api/src/scripts/pulsedesk-import.ts --dry-run",
     "import:torqueshed:dry-run": "tsx apps/api/src/scripts/torqueshed-import.ts --dry-run",

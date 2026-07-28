@@ -72,7 +72,10 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.match(source, /resolve\(process\.cwd\(\), 'apps\/web'\)/);
   assert.doesNotMatch(source, /corepack|spawnPnpm/);
   assert.equal(packageJson.packageManager, 'pnpm@10.34.5');
-  assert.equal(packageJson.scripts['build:production'], 'pnpm typecheck && pnpm build');
+  assert.equal(
+    packageJson.scripts['build:production'],
+    'node scripts/generate-release-metadata.mjs && pnpm typecheck && pnpm build',
+  );
   assert.equal(packageJson.dependencies.pnpm, undefined);
   assert.equal(packageJson.pnpm, undefined);
   assert.match(pnpmWorkspace, /^allowBuilds:\r?\n\s+bufferutil: true\r?\n\s+esbuild: true$/m);

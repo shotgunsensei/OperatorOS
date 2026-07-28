@@ -108,6 +108,8 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.shared_usage_events'\)/);
   assert.match(releaseSource, /to_regclass\('public\.outcall_call_requests'\)/);
   assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_tasks'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_workflows'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_workflow_stages'\)/);
   assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_payments'\)/);
   assert.match(releaseSource, /to_regclass\('public\.techdeck_documents'\)/);
   assert.match(releaseSource, /to_regclass\('public\.techdeck_configuration_relationships'\)/);

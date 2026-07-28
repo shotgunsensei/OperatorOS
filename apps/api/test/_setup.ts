@@ -232,6 +232,8 @@ export async function cleanupUser(userId: string) {
       try { await db.delete(tradeflowkitInvoices).where(eq(tradeflowkitInvoices.tenantId, t.id)); } catch {}
       try { await db.delete(tradeflowkitQuotes).where(eq(tradeflowkitQuotes.tenantId, t.id)); } catch {}
       try { await db.delete(tradeflowkitJobs).where(eq(tradeflowkitJobs.tenantId, t.id)); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_workflow_stages WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM tradeflowkit_workflows WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.delete(tradeflowkitCustomers).where(eq(tradeflowkitCustomers.tenantId, t.id)); } catch {}
       try { await db.execute(sql`DELETE FROM tradeflowkit_customer_profiles WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM directory_tag_assignments WHERE tenant_id = ${t.id}`); } catch {}

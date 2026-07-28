@@ -1,6 +1,6 @@
 # OperatorOS module consolidation status
 
-Baseline refreshed: 2026-07-27
+Baseline refreshed: 2026-07-28
 
 This file is the honest source-of-truth for **source ownership and functional
 migration**. A module being registered, entitled, or reachable on an
@@ -30,7 +30,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 
 | Product | Slug | Canonical host | Commercial class | Source project observed | Current OperatorOS functional state |
 | --- | --- | --- | --- | --- | --- |
-| TradeFlowKit | `tradeflowkit` | `tradeflowkit.operatoros.net` | core | `C:\Dev\TradeFlowKit` at `6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55` | Source/local state 4 candidate: lead conversion into shared Directory customers; numbered jobs and first-class dependent tasks; comments/tags/private attachments/activity; quotes/public decisions; idempotent invoices; partial manual and deterministic test-provider payments; customer portal/documents; shared messaging; settings; real analytics; CSV export; complete local deep links. ADR-0010/0011 resolve projects and excluded authority/unsafe legacy scope; deployed workflow and cutover evidence still block state 5 |
+| TradeFlowKit | `tradeflowkit` | `tradeflowkit.operatoros.net` | core | Original baseline `6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55`; clean restored product evidence `C:\Dev\TradeFlowKit` at `37aa67f1da804fc3ac56f36e50e01362077d7a26` | Approved-scope state 4 remains, but full Phase 16 parity is open: the zero-unclassified source ledger records 66 explicit gaps. Existing revenue/field-service workflows now include real Workflow Studio templates/stages, governed job transitions, team job-task views, activity, and source-valid high priority. A read-only snapshot and guarded atomic v1 core-data apply pass synthetic isolated rehearsal; no real export/production cutover occurred and later import versions are required. Deployed acceptance still blocks state 5 |
 | TorqueShed | `torqueshed` | `torqueshed.operatoros.net` | free | Dirty read-only `C:\Dev\TorqueShed-Codex`: local `68da4548f665`, committed reference `508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75`; immutable snapshot remains `c33ade5...` | Phase 9 source candidate: Phase 7 automotive foundation; Phase 8 server-context safety-ranked Assist and OperatorOS-owned append-only token accounting; Phase 9 persistent Marketplace listings/search/saved/contact/messages/expiry/reports and Community profiles/preferences/follows/blocks/posts/tags/comments/reactions/scanned media/reports/append-only moderation with native UI/deep links. No protection/payment/shipping/reputation claims. State remains 3 because Docker engine failure blocks clean DB/payment/ledger/scanner/moderation/concurrency/workflow/runtime/browser evidence |
 | TechDeck | `techdeck` | `techdeck.operatoros.net` | core | Clean `C:\Dev\Tech-Deck` at `8125f8d89d8d39d60a50c8061a26133a0c917792` | Source/local state 4 candidate: Directory-linked tickets/comments/time; typed configuration inventory; network/IPAM topology; lifecycle; versioned documentation/runbooks/backlinks; shared private attachments; evidence metadata; deterministic reports; persisted dashboards and deep links. ADR-0012/0013/0014 exclude discovery/device mutation, secret values, and remote execution; deployed workflow/provider/cutover evidence still block state 5 |
 | PulseDesk | `pulsedesk` | `pulsedesk.operatoros.net` | core | Clean `C:\Dev\PulseDesk` at `937849471e489ed23db2a263d04160a388402740` | Source/local state 4 candidate: PHI-minimized shared-Directory clients/facilities/requesters; departments; operational assets; numbered tickets; queues/teams/assignments; internal notes/requester replies; shared private attachments; time/SLA; vendor, supply and facility coordination; knowledge/tags/saved views/preferences; dashboards, configuration, bulk actions and ticket deep links. ADR-0015 excludes EHR/clinical records and resolves the TechDeck boundary; deployed workflow and authorized privacy-reviewed cutover evidence still block state 5 |
@@ -143,13 +143,27 @@ links. Customer payments remain explicitly separate from OperatorOS
 subscription/add-on billing authority, and production processing fails closed
 until a reviewed centralized adapter is configured.
 
+Phase 16A re-baselines TradeFlowKit against the newer clean restored source
+commit instead of treating the Phase 4 snapshot as full-product parity. Its
+machine-readable ledger has zero unclassified source items and 66 explicit
+gaps. Workflow templates/stages, governed job transitions, team job-task
+views, activity, and the source-valid high job priority are now real persisted
+increments. The new version 1 migration path can read a scoped legacy snapshot
+and atomically apply bounded core business records to one trusted entitled
+tenant with explicit user mappings, exact fingerprints, migration references,
+audit, replay safety, and money reconciliation. Only synthetic disposable data
+has been applied; no real source export, production data mutation, or cutover
+is claimed.
+
 Phase 3 added the shared-infrastructure foundation used by the Phase 4 state 4
 candidate: job attachments use private authorized
 storage, scan jobs, idempotency, usage/activity, notifications/outbox, and
 transaction-bound platform audit. CallCommand's signed Twilio status callback
 uses the shared verified receipt/deduplication/retry ledger. TradeFlowKit still
-requires deployed workflow/public-document smoke and approved migration
-cutover evidence before state 5.
+requires implementation or explicit disposition of every remaining Phase 16
+gap, a later import version for restored workflows/general tasks/contacts,
+fresh aggregate/build/browser evidence, deployed workflow/public-document
+smoke, and approved real-data cutover evidence before state 5.
 
 TechDeck now runs its approved managed-operations workflows in the shared
 runtime. Directory-linked configuration items model infrastructure,

@@ -26,8 +26,10 @@ corepack pnpm migration:rehearse -- --module tradeflowkit
 ```
 
 It runs every planner twice, verifies deterministic fingerprints, performs no
-database write, and always reports `productionCutoverReady: false`. The command
-has no apply mode. Existing per-module commands remain dry-run only.
+database write, and always reports `productionCutoverReady: false`. The master
+command has no apply mode. Phase 16A adds a separately gated TradeFlowKit
+version 1 atomic apply path; every other module command remains dry-run only,
+and the TradeFlowKit path is not production authorization or full cutover.
 
 ## Program stages
 
@@ -60,7 +62,9 @@ has no apply mode. Existing per-module commands remain dry-run only.
 ## Apply runner requirements
 
 No master apply runner exists yet because no production export or cutover has
-been approved. Any future apply implementation must:
+been approved. Phase 16A's bounded TradeFlowKit version 1 path uses one atomic
+transaction and per-record migration references instead of resumable batches.
+Any future master or larger apply implementation must:
 
 - require an isolated target and a separately approved apply switch;
 - verify the source export SHA-256 and approved manifest version;
