@@ -1,10 +1,12 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Archive, BriefcaseBusiness, FileText, Pencil, Plus, Receipt, Trash2, Users, X, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, Archive, BriefcaseBusiness, FileText, FileUp, Pencil, Plus, Receipt, Trash2, Users, X, type LucideIcon } from 'lucide-react';
 import {
   moduleShellApi,
   type TradeFlowKitCustomer,
+  type TradeFlowKitCustomerImportResult,
+  type TradeFlowKitCustomerImportRow,
   type TradeFlowKitInvoice,
   type TradeFlowKitJob,
   type TradeFlowKitLineItem,
@@ -15,6 +17,55 @@ import {
 const c = { ink: '#10231d', muted: '#587067', panel: '#fff', soft: '#eef8f2', border: 'rgba(22,101,52,.18)', green: '#059669', blue: '#0284c7', red: '#dc2626', gold: '#b7791f' };
 const empty: TradeFlowKitRevenueResponse = { customers: [], jobs: [], quotes: [], invoices: [] };
 const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+const customerImportColumns = ['name', 'email', 'phone', 'address', 'notes'] as const;
+
+function parseCustomerCsv(value: string): TradeFlowKitCustomerImportRow[] {
+  const records: string[][] = [];
+  let record: string[] = [];
+  let field = '';
+  let quoted = false;
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (quoted) {
+      if (character === '"' && value[index + 1] === '"') { field += '"'; index += 1; }
+      else if (character === '"') quoted = false;
+      else field += character;
+    } else if (character === '"') quoted = true;
+    else if (character === ',') { record.push(field); field = ''; }
+    else if (character === '\n') {
+      record.push(field.replace(/\r$/, ''));
+      if (record.some(cell => cell.trim())) records.push(record);
+      record = []; field = '';
+    } else field += character;
+  }
+  if (quoted) throw new Error('The CSV contains an unterminated quoted field.');
+  record.push(field.replace(/\r$/, ''));
+  if (record.some(cell => cell.trim())) records.push(record);
+  if (records.length < 2) throw new Error('The CSV needs a header and at least one customer row.');
+
+  const headers = records[0].map(header => header.replace(/^\uFEFF/, '').trim().toLocaleLowerCase('en-US'));
+  if (!headers.includes('name')) throw new Error('The CSV header must include name.');
+  if (new Set(headers).size !== headers.length) throw new Error('The CSV contains duplicate column headers.');
+  const allowed = new Set<string>(customerImportColumns);
+  const unknown = headers.filter(header => !allowed.has(header));
+  if (unknown.length > 0) throw new Error(`Unsupported CSV column: ${unknown[0]}.`);
+  if (records.length - 1 > 100) throw new Error('Customer imports are limited to 100 rows.');
+
+  return records.slice(1).map((cells, rowIndex) => {
+    if (cells.length > headers.length && cells.slice(headers.length).some(cell => cell.trim())) {
+      throw new Error(`CSV row ${rowIndex + 2} contains data outside the declared columns.`);
+    }
+    const row: Record<string, string> = {};
+    headers.forEach((header, index) => { row[header] = (cells[index] ?? '').trim(); });
+    return {
+      name: row.name,
+      ...(row.email ? { email: row.email } : {}),
+      ...(row.phone ? { phone: row.phone } : {}),
+      ...(row.address ? { address: row.address } : {}),
+      ...(row.notes ? { notes: row.notes } : {}),
+    };
+  });
+}
 
 export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tenantKey: string; canManage: boolean }) {
   const [data, setData] = useState(empty);
@@ -33,6 +84,11 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
   const [documentKind, setDocumentKind] = useState<'quote' | 'invoice'>('quote');
   const [documentNotes, setDocumentNotes] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [customerImportRows, setCustomerImportRows] = useState<TradeFlowKitCustomerImportRow[]>([]);
+  const [customerImportName, setCustomerImportName] = useState('');
+  const [customerImportKey, setCustomerImportKey] = useState('');
+  const [customerImportError, setCustomerImportError] = useState<string | null>(null);
+  const [customerImportResult, setCustomerImportResult] = useState<TradeFlowKitCustomerImportResult | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -64,6 +120,43 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
     void run(async () => {
       const created = await moduleShellApi.tradeflowkit.createCustomer({ name: customerName, email: customerEmail || undefined });
       setCustomerName(''); setCustomerEmail(''); setCustomerId(created.id);
+    });
+  }
+
+  async function selectCustomerImport(file?: File) {
+    setCustomerImportRows([]);
+    setCustomerImportName('');
+    setCustomerImportKey('');
+    setCustomerImportError(null);
+    setCustomerImportResult(null);
+    if (!file) return;
+    if (!file.name.toLocaleLowerCase('en-US').endsWith('.csv')) {
+      setCustomerImportError('Select a .csv file.');
+      return;
+    }
+    if (file.size > 256 * 1024) {
+      setCustomerImportError('Customer CSV files are limited to 256 KB.');
+      return;
+    }
+    try {
+      const rows = parseCustomerCsv(await file.text());
+      setCustomerImportRows(rows);
+      setCustomerImportName(file.name);
+      setCustomerImportKey(`customer-import:${crypto.randomUUID()}`);
+    } catch (nextError) {
+      setCustomerImportError(nextError instanceof Error ? nextError.message : 'Unable to parse the CSV.');
+    }
+  }
+
+  function importCustomers(event: FormEvent) {
+    event.preventDefault();
+    if (customerImportRows.length === 0 || !customerImportKey) return;
+    void run(async () => {
+      const result = await moduleShellApi.tradeflowkit.importCustomers(customerImportRows, customerImportKey);
+      setCustomerImportResult(result);
+      setCustomerImportRows([]);
+      setCustomerImportName('');
+      setCustomerImportKey('');
     });
   }
 
@@ -108,6 +201,19 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
         <>
           {canManage ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
             <form onSubmit={createCustomer} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>1. Customer</strong><input required maxLength={160} placeholder="Customer name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} style={input} /><input type="email" placeholder="Email (optional)" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} style={input} /><button disabled={pending || customerName.trim().length < 2} style={button()}><Plus size={14} /> Add customer</button></form>
+            <form onSubmit={importCustomers} data-testid="tradeflowkit-customer-import" style={{ ...panel, flex: '1 1 240px', display: 'grid', gap: 8 }}>
+              <strong style={{ color: c.ink }}>Import customers</strong>
+              <span style={{ color: c.muted, fontSize: 12 }}>CSV columns: name, email, phone, address, notes. Maximum 100 rows and 256 KB.</span>
+              <label style={{ ...input, position: 'relative', overflow: 'hidden', display: 'flex', gap: 7, alignItems: 'center', cursor: 'pointer' }}><FileUp size={15} /><span>{customerImportName || 'Choose CSV'}</span><input aria-label="Customer CSV file" type="file" accept=".csv,text/csv" onChange={(event) => void selectCustomerImport(event.target.files?.[0])} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} /></label>
+              {customerImportRows.length > 0 && <span style={{ color: c.green, fontSize: 12, fontWeight: 800 }}>{customerImportRows.length} rows ready for server validation.</span>}
+              {customerImportError && <span role="alert" style={{ color: c.red, fontSize: 12 }}>{customerImportError}</span>}
+              {customerImportResult && <div data-testid="tradeflowkit-customer-import-result" style={{ color: c.ink, fontSize: 12 }}>
+                <div>Imported {customerImportResult.imported}; skipped {customerImportResult.skipped}; errors {customerImportResult.errors.length}.</div>
+                {customerImportResult.errors.slice(0, 3).map(importError => <div key={`${importError.row}:${importError.code}`}>Row {importError.row}: {importError.code}{importError.field ? ` (${importError.field})` : ''}</div>)}
+                {customerImportResult.errors.length > 3 && <div>{customerImportResult.errors.length - 3} more validation errors.</div>}
+              </div>}
+              <button disabled={pending || customerImportRows.length === 0} style={button(c.blue)}><FileUp size={14} /> Import validated rows</button>
+            </form>
             <form onSubmit={createJob} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>2. Job</strong><select required value={customerId} onChange={(e) => { setCustomerId(e.target.value); setJobId(''); }} style={input}><option value="">Select customer</option>{data.customers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><input required maxLength={200} placeholder="Job title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} style={input} /><button disabled={pending || !customerId || jobTitle.trim().length < 2} style={button(c.blue)}><Plus size={14} /> Add job</button></form>
             <form onSubmit={createDocument} data-testid="tradeflowkit-document-create-form" style={{ ...panel, flex: '2 1 340px', display: 'grid', gap: 8 }}>
               <strong style={{ color: c.ink }}>3. Revenue document</strong>

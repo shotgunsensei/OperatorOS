@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "moduleSlug": "tradeflowkit",
-  "capturedAtUtc": "2026-07-28T18:11:53.478Z",
+  "capturedAtUtc": "2026-07-28T20:12:36.720Z",
   "source": {
     "repository": "https://github.com/shotgunsensei/TradeFlowKit.git",
     "commit": "37aa67f1da804fc3ac56f36e50e01362077d7a26",
@@ -2783,33 +2783,49 @@
         "method": "POST",
         "path": "/api/customers/bulk-delete",
         "sourcePointer": "server/routes/customers.ts",
-        "disposition": "phase16_gap",
-        "domain": "customer_bulk_import",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+        "disposition": "retired_security",
+        "domain": "customer_bulk_destructive",
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-customer-import.test.ts",
+          "apps/api/test/tradeflowkit-revenue-ui-static.test.ts"
+        ],
+        "note": "Legacy bulk destructive customer mutation remains prohibited by ADR-0011; bounded import is available without exposing these controls."
       },
       {
         "key": "POST /api/customers/bulk-restore",
         "method": "POST",
         "path": "/api/customers/bulk-restore",
         "sourcePointer": "server/routes/customers.ts",
-        "disposition": "phase16_gap",
-        "domain": "customer_bulk_import",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+        "disposition": "retired_security",
+        "domain": "customer_bulk_destructive",
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-customer-import.test.ts",
+          "apps/api/test/tradeflowkit-revenue-ui-static.test.ts"
+        ],
+        "note": "Legacy bulk destructive customer mutation remains prohibited by ADR-0011; bounded import is available without exposing these controls."
       },
       {
         "key": "POST /api/customers/import",
         "method": "POST",
         "path": "/api/customers/import",
         "sourcePointer": "server/routes/customers.ts",
-        "disposition": "phase16_gap",
-        "domain": "customer_bulk_import",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+        "disposition": "active",
+        "domain": "customer_import",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-customer-import.test.ts",
+          "apps/api/test/tradeflowkit-revenue-ui-static.test.ts"
+        ],
+        "note": "Bounded CSV-to-JSON import is replay safe, tenant scoped, validated, audited, and reconciled with shared Directory records."
       },
       {
         "key": "POST /api/invite-codes",

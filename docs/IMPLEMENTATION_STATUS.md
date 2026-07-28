@@ -20,7 +20,7 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/phase-16a-tradeflowkit-revenue-parity`
+- Execution branch: `codex/phase-16a-tradeflowkit-customer-import`
 - Release gate: **closed**
 
 ## Current verdict
@@ -29,10 +29,10 @@ Phase 16A is active and is not a production-ready declaration. TradeFlowKit
 has been re-baselined against clean restored source commit
 `37aa67f1da804fc3ac56f36e50e01362077d7a26`. The generated source ledger pins
 the reviewed files and classifies 35 client pages, 194 API routes, 40 tables,
-and 8 provider/config references with zero unclassified items. After the first
-second real implementation increment, 102 items are active, 53 use shared OperatorOS
-authority, 39 are retired for security, 23 are retired by product boundary,
-and 60 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
+and 8 provider/config references with zero unclassified items. After three
+real implementation increments, 103 items are active, 53 use shared OperatorOS
+authority, 41 are retired for security, 23 are retired by product boundary,
+and 57 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
 4 remains valid but is not full-product parity.
 
 Workflow Studio is now persistent rather than a shell: tenant-admin governed
@@ -57,6 +57,23 @@ stale-write rejection, viewer denial, second-tenant non-enumeration,
 line-item reconciliation, safe financial history, idempotent replay, and
 persistence through API shutdown plus a fresh database connection.
 
+The third increment activates bounded customer CSV import without accepting a
+raw upload on the server. The responsive browser UI parses `.csv` files up to
+256 KB and 100 rows, accepts only `name`, `email`, `phone`, `address`, and
+`notes`, and sends JSON to the authenticated module API. The server requires a
+bounded idempotency key, revalidates every row, serializes same-tenant imports,
+deduplicates normalized name/email/phone plus a deterministic row fingerprint,
+and atomically reconciles Directory organizations/contacts with
+`tradeflowkit_customers`. OperatorOS shared idempotency owns the transactional
+claim and bounded replay response; per-customer and batch activity omit contact
+values.
+Viewer writes fail closed and second tenants remain independent. Repeating the
+same key and body returns the original result without duplicate side effects;
+reusing the key with a changed body fails with `409 IDEMPOTENCY_KEY_REUSE`.
+Imported records survive API shutdown. The legacy bulk-delete and bulk-restore
+routes are retired as prohibited destructive controls under ADR-0011 rather
+than exposed as inactive UI.
+
 Phase 16A also adds a read-only, organization-scoped standalone snapshot tool
 and a version 1 guarded atomic apply path for core customers, Directory
 organizations, jobs, quotes/items, invoices/items, paid-state history, leads,
@@ -79,7 +96,7 @@ non-customer fixtures. External providers were disabled.
 
 ```powershell
 corepack pnpm typecheck
-# Focused document-mutation PostgreSQL/static tests
+# Focused customer-import PostgreSQL/static tests
 # Full API suite against a new isolated database
 corepack pnpm verify:tradeflowkit:phase16
 corepack pnpm --dir apps/api test
@@ -87,24 +104,27 @@ corepack pnpm db:plan
 # With OPERATOROS_DATABASE_RELEASE_MODE=apply against an isolated database:
 corepack pnpm db:apply
 corepack pnpm db:apply
-$env:INTERNAL_API_URL='http://127.0.0.1:5001'
+$env:INTERNAL_API_URL='http://localhost:5001'
 corepack pnpm build:production
+corepack pnpm preflight:production -- --core
 # Core production-contract variables plus isolated Phase 16 database URL
 node scripts/start-unified-runtime.mjs
 # GET API /healthz, API /readyz, web /, and unauthenticated TradeFlowKit host deep links
+$env:E2E_PRODUCTION_HOSTS='1'
+corepack pnpm --dir apps/web exec playwright test e2e/tradeflowkit-customer-import.spec.ts
 git diff --check
 ```
 
-Results: workspace typecheck passes; the current document-mutation
-database/static regression passes 4/4 with zero failures/skips; the final
-clean API aggregate reports 868 tests, 862 pass, zero fail, and six
-intentional HTTP-only/browser skips in 351.6 seconds; the 29-step release plan
-passes; and the production build
+Results: workspace typecheck passes; the current customer-import
+database/static regression passes 5/5 with zero failures/skips; the final
+clean API aggregate reports 872 tests, 866 pass, zero fail, and six
+intentional HTTP-only/browser skips in 311.1 seconds; the 29-step release plan
+and core production preflight pass; and the production build
 passes for API, runner gateway, SDK, and the 20-page Next application. The
 release applies and verifies twice consecutively, including the one-time
 priority-constraint upgrade without recreating the upgraded constraint. The
 source ledger reports 35 pages, 194 API routes, 40 tables, 8 providers, zero
-unclassified items, and 60 explicit gaps; `git diff --check` passes with
+unclassified items, and 57 explicit gaps; `git diff --check` passes with
 line-ending warnings only. The Replit-equivalent supervisor reapplies all 29
 release steps on the isolated database, starts the built Fastify and Next
 artifacts, and returns `200` from API `/healthz`, API `/readyz`, and the web
@@ -116,18 +136,39 @@ return encoded into `next`, PKCE S256, state, nonce, host-only secure HTTP-only
 SameSite=Lax handoff cookies, and no session/access token in the URL. The
 supervisor then stops without lingering listeners on ports 5000/5001.
 
-The current increment also passed a real Chrome production-host workflow
-against the compiled local artifacts: exact-host PKCE login; customer and
-quote creation; two-line quote edit with server-recomputed money; quote
-send/accept; one idempotently linked job; quote-derived invoice; direct invoice
-create/edit/archive; deep-route refresh persistence; canonical return to
-OperatorOS; host-only Secure/HttpOnly/SameSite=Lax cookies; no browser
-credential storage; and a 390-pixel viewport with no horizontal overflow.
+The current customer-import workflow passes 1/1 in real Chrome against the
+compiled local artifacts. It begins at exact-host `/quotes`, completes PKCE
+login with the exact return path, uploads a browser-parsed three-row CSV,
+persists two customers with two Directory organizations/contacts, renders the
+invalid email's row/code/field, survives refresh, and re-imports the same
+logical rows under a fresh request key with zero new customer writes. It also
+returns to canonical My Apps and passes a 390-pixel no-overflow check. The
+prior cumulative revenue workflow
+remains green for customer/quote creation, two-line quote editing,
+send/accept, idempotent quote-to-job, quote-derived invoice, direct invoice
+create/edit/archive, refresh, return, secure host-only cookies, and no browser
+credential storage.
 The first clean-runtime attempt omitted the required temporary
 `ADMIN_PASSWORD` and the database release failed closed before service start.
 The idempotent rerun supplied a process-only disposable bootstrap password,
 completed the release, and passed health/readiness and browser acceptance. No
 credential was written to the repository.
+
+The first two customer-import browser executions completed the product flow
+but correctly failed the acceptance command during synthetic-identity teardown:
+the new test initially omitted the tenant-created settings row and then a
+null-tenant authentication activity row. The cleanup contract was expanded and
+the stranded synthetic identities were removed from the disposable database.
+A later run exposed an overly exact option-count assertion because responsive
+selects render the same persisted customer more than once; it was changed to
+assert presence. After moving replay ownership to shared idempotency, the first
+rebuilt run completed its product assertions but exposed one more missing
+tenant-scoped cleanup row for `shared_idempotency_keys`. That cleanup was
+added; the final unchanged workflow passed 1/1 in 8.5 seconds, and a count-only
+database check confirmed no synthetic import-gate identity remained. One
+rebuild attempt also encountered Windows `EPERM` on the generated
+`apps/web/.next/trace`; after confirming no runtime owned it and removing only
+the generated `.next` directory, the identical source built cleanly.
 
 The first aggregate attempt omitted `SESSION_SECRET` and failed three boot
 tests as invalid command configuration. A subsequent detached wrapper allowed
