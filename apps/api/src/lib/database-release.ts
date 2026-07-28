@@ -81,6 +81,8 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.shared_outbox_messages') IS NOT NULL AS shared_outbox_messages,
       to_regclass('public.shared_usage_events') IS NOT NULL AS shared_usage_events,
       to_regclass('public.tradeflowkit_tasks') IS NOT NULL AS tradeflowkit_tasks,
+      to_regclass('public.tradeflowkit_workflows') IS NOT NULL AS tradeflowkit_workflows,
+      to_regclass('public.tradeflowkit_workflow_stages') IS NOT NULL AS tradeflowkit_workflow_stages,
       to_regclass('public.tradeflowkit_payments') IS NOT NULL AS tradeflowkit_payments,
       to_regclass('public.techdeck_documents') IS NOT NULL AS techdeck_documents,
       to_regclass('public.techdeck_configuration_relationships') IS NOT NULL AS techdeck_configuration_relationships,

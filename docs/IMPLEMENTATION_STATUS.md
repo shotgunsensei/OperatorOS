@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
-- Last updated: 2026-07-27
-- Phase: **15 deployed acceptance in progress; release stopped**
+- Last updated: 2026-07-28
+- Phase: **16A TradeFlowKit full-product parity and cutover in progress**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -20,10 +20,99 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/phase-15-deployed-acceptance`
+- Execution branch: `codex/phase-16a-tradeflowkit-parity`
 - Release gate: **closed**
 
 ## Current verdict
+
+Phase 16A is active and is not a production-ready declaration. TradeFlowKit
+has been re-baselined against clean restored source commit
+`37aa67f1da804fc3ac56f36e50e01362077d7a26`. The generated source ledger pins
+the reviewed files and classifies 35 client pages, 194 API routes, 40 tables,
+and 8 provider/config references with zero unclassified items. After the first
+real implementation increment, 96 items are active, 53 use shared OperatorOS
+authority, 39 are retired for security, 23 are retired by product boundary,
+and 66 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
+4 remains valid but is not full-product parity.
+
+Workflow Studio is now persistent rather than a shell: tenant-admin governed
+workflow templates/stages, default enforcement, optimistic versions, job
+transitions, team job-task views, task detail/archive, and activity are wired
+through the shared API and responsive module UI. Source-valid `high` job
+priority is accepted through the API and database. Focused PostgreSQL coverage
+proves role denial, second-tenant isolation/non-enumeration, stale-write
+rejection, restart persistence, default uniqueness, and real job/task
+integration.
+
+Phase 16A also adds a read-only, organization-scoped standalone snapshot tool
+and a version 1 guarded atomic apply path for core customers, Directory
+organizations, jobs, quotes/items, invoices/items, paid-state history, leads,
+follow-up tasks, and sanitized activity. Apply requires an active tenant
+owner/admin, enabled TradeFlowKit entitlement, explicit source-org/target-user
+mapping, exact reviewed fingerprint, backup reference, bounded record count,
+tenant advisory lock, and explicit environment gates. Per-record migration
+references make identical replay idempotent and source drift fatal; post-apply
+money totals must exactly reconcile before commit. A synthetic isolated
+PostgreSQL apply/replay/security rehearsal passes. No real standalone export,
+production database mutation, deployment, or traffic cutover occurred.
+Workflow/general-task/contact migration and all remaining ledger gaps are
+still open.
+
+### Phase 16A verification record (current increment)
+
+Commands ran on 2026-07-28 from `C:\Dev\OperatorOS`. Database-backed tests used
+isolated disposable `operatoros_phase16a_*` PostgreSQL databases and synthetic
+non-customer fixtures. External providers were disabled.
+
+```powershell
+corepack pnpm typecheck
+# Focused Node test invocation for the eight Phase 16A/related files
+corepack pnpm verify:tradeflowkit:phase16
+corepack pnpm --dir apps/api test
+corepack pnpm db:plan
+# With OPERATOROS_DATABASE_RELEASE_MODE=apply against an isolated database:
+corepack pnpm db:apply
+corepack pnpm db:apply
+$env:INTERNAL_API_URL='http://127.0.0.1:5001'
+corepack pnpm build:production
+# Core production-contract variables plus isolated Phase 16 database URL
+node scripts/start-unified-runtime.mjs
+# GET API /healthz, API /readyz, web /, and unauthenticated TradeFlowKit host deep links
+git diff --check
+```
+
+Results: workspace typecheck passes; the focused database/static regression
+passes 21/21 with zero failures/skips; the final clean API aggregate reports
+864 tests, 858 pass, zero fail, and six intentional HTTP-only/browser skips in
+271.8 seconds; the 29-step release plan passes; and the production build
+passes for API, runner gateway, SDK, and the 20-page Next application. The
+release applies and verifies twice consecutively, including the one-time
+priority-constraint upgrade without recreating the upgraded constraint. The
+source ledger reports 35 pages, 194 API routes, 40 tables, 8 providers, zero
+unclassified items, and 66 explicit gaps; `git diff --check` passes with
+line-ending warnings only. The Replit-equivalent supervisor reapplies all 29
+release steps on the isolated database, starts the built Fastify and Next
+artifacts, and returns `200` from API `/healthz`, API `/readyz`, and the web
+root. Readiness reports database, auth, SSO-code encryption, module registry,
+shared-service worker, and release identity healthy/configured. Unauthenticated
+exact-host TradeFlowKit `/dashboard` and `/tasks/:id` deep links return one
+`307` to the canonical OperatorOS login contract with relative post-login
+return encoded into `next`, PKCE S256, state, nonce, host-only secure HTTP-only
+SameSite=Lax handoff cookies, and no session/access token in the URL. The
+supervisor then stops without lingering listeners on ports 5000/5001.
+
+The first aggregate attempt omitted `SESSION_SECRET` and failed three boot
+tests as invalid command configuration. A subsequent detached wrapper allowed
+overlapping retries to contaminate a disposable database. The first attached
+clean run then found one stale Replit build-script assertion; it expected the
+pre-Phase-15 script and was corrected to the current required release-metadata
+plus typecheck/build command. That focused contract reran 2/2 before the final
+new-database aggregate passed. Test and build invocations required a
+process-only Windows sandbox shim because Node 24's `os.userInfo()` returned
+`uv_os_get_passwd ENOMEM`; the shim was removed and is not a repository
+change. Deployed browser acceptance, authenticated SSO/CRUD browser coverage,
+real standalone export/cutover, and rollback rehearsal remain pending for this
+Phase 16 revision.
 
 Phase 15 has not accepted a production release, but the public deployment gate
 now passes. Merge `c249a75396104e7aabd773e564be6a95ada56467` is live as build

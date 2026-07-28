@@ -188,9 +188,26 @@ test.describe('OperatorOS final ecosystem acceptance', () => {
       const customer = await browserFetch(modulePage, '/api/modules/tradeflowkit/customers', 'POST', { name: 'Acceptance Client', email: primary.email });
       const customerId = (customer.response.body as any)?.id;
       const job = await browserFetch(modulePage, '/api/modules/tradeflowkit/jobs', 'POST', { customerId, title: 'Acceptance Project', priority: 'normal' });
+      const workflow = await browserFetch(modulePage, '/api/modules/tradeflowkit/workflows', 'POST', {
+        name: 'Acceptance delivery',
+        entityType: 'job',
+        isDefault: true,
+        stages: [
+          { name: 'Ready', position: 0, mappedStatus: 'scheduled' },
+          { name: 'Working', position: 1, mappedStatus: 'in_progress' },
+          { name: 'Complete', position: 2, mappedStatus: 'done' },
+        ],
+      });
+      const workflowStageId = (workflow.response.body as any)?.stages?.[0]?.id;
+      const transition = await browserFetch(
+        modulePage,
+        `/api/modules/tradeflowkit/jobs/${(job.response.body as any)?.id}/workflow-transition`,
+        'POST',
+        { workflowStageId, expectedVersion: (job.response.body as any)?.version },
+      );
       const projectProbe = await browserFetch(modulePage, '/api/modules/tradeflowkit/projects', 'POST', { customerId, name: 'Acceptance Project' });
       const taskProbe = await browserFetch(modulePage, `/api/modules/tradeflowkit/jobs/${(job.response.body as any)?.id}/tasks`, 'POST', { title: 'Acceptance Task', priority: 'normal' });
-      record('5', 'TradeFlowKit', customer.status === 201 && job.status === 201 && projectProbe.status === 404 && taskProbe.status === 201 ? 'PASS' : 'FAIL', modulePage.url(), 'Customer, job, and first-class job task persist; the intentionally excluded project endpoint fails closed per the job/task ADR.', taskProbe.status >= 300 ? taskProbe : projectProbe);
+      record('5', 'TradeFlowKit', customer.status === 201 && job.status === 201 && workflow.status === 201 && transition.status === 200 && projectProbe.status === 404 && taskProbe.status === 201 ? 'PASS' : 'FAIL', modulePage.url(), 'Customer, job, governed workflow transition, and first-class job task persist; the intentionally excluded project endpoint fails closed per the job/task ADR.', taskProbe.status >= 300 ? taskProbe : transition.status >= 300 ? transition : projectProbe);
       await returnToApps(modulePage);
       record('6', 'TradeFlowKit', 'PASS', modulePage.url(), 'Shared module navigation returned to canonical My Apps.');
       await page.close(); page = modulePage;

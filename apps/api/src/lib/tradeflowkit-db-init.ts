@@ -38,6 +38,72 @@ export async function ensureTradeFlowKitTables(): Promise<void> {
       ALTER TABLE tradeflowkit_leads ADD CONSTRAINT tfk_leads_version_check CHECK (version >= 1);
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+    CREATE TABLE IF NOT EXISTS tradeflowkit_workflows (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      name TEXT NOT NULL,
+      normalized_name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      entity_type TEXT NOT NULL,
+      is_default BOOLEAN NOT NULL DEFAULT false,
+      created_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      updated_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      archived_at TIMESTAMP,
+      CONSTRAINT uq_tfk_workflows_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT tfk_workflows_entity_type_check CHECK (entity_type IN ('job','task')),
+      CONSTRAINT tfk_workflows_name_check CHECK (char_length(name) BETWEEN 1 AND 120),
+      CONSTRAINT tfk_workflows_version_check CHECK (version >= 1)
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_tfk_workflows_active_name
+      ON tradeflowkit_workflows(tenant_id, entity_type, normalized_name)
+      WHERE archived_at IS NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_tfk_workflows_default
+      ON tradeflowkit_workflows(tenant_id, entity_type)
+      WHERE is_default = true AND archived_at IS NULL;
+    CREATE INDEX IF NOT EXISTS idx_tfk_workflows_tenant_entity
+      ON tradeflowkit_workflows(tenant_id, entity_type, archived_at);
+
+    CREATE TABLE IF NOT EXISTS tradeflowkit_workflow_stages (
+      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      workflow_id VARCHAR(36) NOT NULL,
+      name TEXT NOT NULL,
+      normalized_name TEXT NOT NULL,
+      color VARCHAR(7) NOT NULL DEFAULT '#2563eb',
+      position INTEGER NOT NULL DEFAULT 0,
+      mapped_status TEXT,
+      created_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      updated_by_user_id VARCHAR(36) NOT NULL REFERENCES users(id),
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+      archived_at TIMESTAMP,
+      CONSTRAINT uq_tfk_workflow_stages_tenant_id UNIQUE (tenant_id, id),
+      CONSTRAINT tfk_workflow_stages_workflow_fk FOREIGN KEY (tenant_id, workflow_id)
+        REFERENCES tradeflowkit_workflows(tenant_id, id) ON DELETE CASCADE,
+      CONSTRAINT tfk_workflow_stages_name_check CHECK (char_length(name) BETWEEN 1 AND 80),
+      CONSTRAINT tfk_workflow_stages_color_check CHECK (color ~ '^#[0-9A-Fa-f]{6}$'),
+      CONSTRAINT tfk_workflow_stages_position_check CHECK (position BETWEEN 0 AND 1000),
+      CONSTRAINT tfk_workflow_stages_status_check CHECK (
+        mapped_status IS NULL OR mapped_status IN (
+          'lead','quoted','scheduled','in_progress','done','invoiced','paid','canceled',
+          'todo','blocked','completed'
+        )
+      ),
+      CONSTRAINT tfk_workflow_stages_version_check CHECK (version >= 1)
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_tfk_workflow_stages_active_name
+      ON tradeflowkit_workflow_stages(tenant_id, workflow_id, normalized_name)
+      WHERE archived_at IS NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_tfk_workflow_stages_active_position
+      ON tradeflowkit_workflow_stages(tenant_id, workflow_id, position)
+      WHERE archived_at IS NULL;
+    CREATE INDEX IF NOT EXISTS idx_tfk_workflow_stages_tenant_workflow
+      ON tradeflowkit_workflow_stages(tenant_id, workflow_id, position);
+
     ALTER TABLE tradeflowkit_customers ADD COLUMN IF NOT EXISTS organization_id VARCHAR(36) REFERENCES directory_organizations(id) ON DELETE RESTRICT;
     ALTER TABLE tradeflowkit_customers ADD COLUMN IF NOT EXISTS primary_contact_id VARCHAR(36) REFERENCES directory_contacts(id) ON DELETE SET NULL;
     ALTER TABLE tradeflowkit_customers ADD COLUMN IF NOT EXISTS primary_site_id VARCHAR(36) REFERENCES directory_sites(id) ON DELETE SET NULL;
@@ -66,10 +132,27 @@ export async function ensureTradeFlowKitTables(): Promise<void> {
     ALTER TABLE tradeflowkit_jobs ADD COLUMN IF NOT EXISTS internal_notes TEXT;
     ALTER TABLE tradeflowkit_jobs ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
     ALTER TABLE tradeflowkit_jobs ADD COLUMN IF NOT EXISTS source_id TEXT;
+    ALTER TABLE tradeflowkit_jobs ADD COLUMN IF NOT EXISTS workflow_stage_id VARCHAR(36);
+    DO $$ DECLARE priority_constraint TEXT;
+    BEGIN
+      SELECT pg_get_constraintdef(oid) INTO priority_constraint
+      FROM pg_constraint
+      WHERE conrelid = 'tradeflowkit_jobs'::regclass
+        AND conname = 'tfk_jobs_priority_check';
+      IF priority_constraint IS NULL THEN
+        ALTER TABLE tradeflowkit_jobs ADD CONSTRAINT tfk_jobs_priority_check
+          CHECK (priority IN ('low','normal','high','urgent'));
+      ELSIF priority_constraint NOT LIKE '%''high''%' THEN
+        ALTER TABLE tradeflowkit_jobs DROP CONSTRAINT tfk_jobs_priority_check;
+        ALTER TABLE tradeflowkit_jobs ADD CONSTRAINT tfk_jobs_priority_check
+          CHECK (priority IN ('low','normal','high','urgent'));
+      END IF;
+    END $$;
     CREATE UNIQUE INDEX IF NOT EXISTS uq_tfk_jobs_tenant_id ON tradeflowkit_jobs(tenant_id, id);
     CREATE UNIQUE INDEX IF NOT EXISTS uq_tfk_jobs_tenant_number ON tradeflowkit_jobs(tenant_id, number) WHERE number IS NOT NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS uq_tfk_jobs_tenant_source ON tradeflowkit_jobs(tenant_id, source_id) WHERE source_id IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_tfk_jobs_tenant_assignee ON tradeflowkit_jobs(tenant_id, assigned_to_user_id, status);
+    CREATE INDEX IF NOT EXISTS idx_tfk_jobs_tenant_stage ON tradeflowkit_jobs(tenant_id, workflow_stage_id);
     DO $$ BEGIN
       ALTER TABLE tradeflowkit_jobs ADD CONSTRAINT tfk_jobs_customer_tenant_fk
         FOREIGN KEY (tenant_id, customer_id) REFERENCES tradeflowkit_customers(tenant_id, id);
@@ -77,6 +160,10 @@ export async function ensureTradeFlowKitTables(): Promise<void> {
     DO $$ BEGIN
       ALTER TABLE tradeflowkit_jobs ADD CONSTRAINT tfk_jobs_site_tenant_fk
         FOREIGN KEY (tenant_id, site_id) REFERENCES directory_sites(tenant_id, id);
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+      ALTER TABLE tradeflowkit_jobs ADD CONSTRAINT tfk_jobs_workflow_stage_tenant_fk
+        FOREIGN KEY (tenant_id, workflow_stage_id) REFERENCES tradeflowkit_workflow_stages(tenant_id, id);
     EXCEPTION WHEN duplicate_object THEN NULL; END $$;
     DO $$ BEGIN
       ALTER TABLE tradeflowkit_jobs ADD CONSTRAINT tfk_jobs_version_check CHECK (version >= 1);
@@ -94,6 +181,7 @@ export async function ensureTradeFlowKitTables(): Promise<void> {
       priority TEXT NOT NULL DEFAULT 'normal',
       due_at TIMESTAMP,
       sort_order INTEGER NOT NULL DEFAULT 0,
+      workflow_stage_id VARCHAR(36),
       completed_at TIMESTAMP,
       source_id TEXT,
       version INTEGER NOT NULL DEFAULT 1,
@@ -103,15 +191,23 @@ export async function ensureTradeFlowKitTables(): Promise<void> {
       CONSTRAINT uq_tfk_tasks_tenant_id UNIQUE (tenant_id, id),
       CONSTRAINT tfk_tasks_job_tenant_fk FOREIGN KEY (tenant_id, job_id)
         REFERENCES tradeflowkit_jobs(tenant_id, id) ON DELETE CASCADE,
+      CONSTRAINT tfk_tasks_workflow_stage_tenant_fk FOREIGN KEY (tenant_id, workflow_stage_id)
+        REFERENCES tradeflowkit_workflow_stages(tenant_id, id),
       CONSTRAINT tfk_tasks_status_check CHECK (status IN ('todo','in_progress','blocked','completed','canceled')),
       CONSTRAINT tfk_tasks_priority_check CHECK (priority IN ('low','normal','high','urgent')),
       CONSTRAINT tfk_tasks_version_check CHECK (version >= 1),
       CONSTRAINT tfk_tasks_sort_check CHECK (sort_order >= 0)
     );
+    ALTER TABLE tradeflowkit_tasks ADD COLUMN IF NOT EXISTS workflow_stage_id VARCHAR(36);
     CREATE INDEX IF NOT EXISTS idx_tfk_tasks_tenant_job ON tradeflowkit_tasks(tenant_id, job_id, sort_order);
     CREATE INDEX IF NOT EXISTS idx_tfk_tasks_tenant_assignee ON tradeflowkit_tasks(tenant_id, assigned_to_user_id, status);
     CREATE INDEX IF NOT EXISTS idx_tfk_tasks_tenant_due ON tradeflowkit_tasks(tenant_id, due_at);
+    CREATE INDEX IF NOT EXISTS idx_tfk_tasks_tenant_stage ON tradeflowkit_tasks(tenant_id, workflow_stage_id, status);
     CREATE UNIQUE INDEX IF NOT EXISTS uq_tfk_tasks_tenant_source ON tradeflowkit_tasks(tenant_id, source_id) WHERE source_id IS NOT NULL;
+    DO $$ BEGIN
+      ALTER TABLE tradeflowkit_tasks ADD CONSTRAINT tfk_tasks_workflow_stage_tenant_fk
+        FOREIGN KEY (tenant_id, workflow_stage_id) REFERENCES tradeflowkit_workflow_stages(tenant_id, id);
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
     CREATE TABLE IF NOT EXISTS tradeflowkit_task_dependencies (
       id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),

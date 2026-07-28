@@ -14,6 +14,7 @@ import {
   DollarSign,
   ExternalLink,
   FileText,
+  GitBranch,
   Receipt,
   Settings,
   ShieldCheck,
@@ -29,6 +30,7 @@ import { createTradeFlowKitAdapterContext } from '../../../../../apps/modules/tr
 import TradeFlowKitLeadCenter from './TradeFlowKitLeadCenter';
 import TradeFlowKitRevenueFlow from './TradeFlowKitRevenueFlow';
 import TradeFlowKitOperations from './TradeFlowKitOperations';
+import TradeFlowKitWorkManagement from './TradeFlowKitWorkManagement';
 import BusinessDirectory from './BusinessDirectory';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
@@ -326,7 +328,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
             {workflowShortcuts.map(({ id, label, Icon, tone }) => (
               <a
                 key={id}
-                href={id === 'leads' ? '#tradeflowkit-lead-center' : `#tradeflowkit-${id}`}
+                href={id === 'leads' ? '#tradeflowkit-lead-center' : id === 'tasks' ? '#tradeflowkit-work-management' : `#tradeflowkit-${id}`}
                 style={railLinkStyle}
                 data-testid={`tradeflowkit-sidebar-${id}`}
               >
@@ -334,6 +336,10 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
                 <span>{label}</span>
               </a>
             ))}
+            <a href="#tradeflowkit-work-management" style={railLinkStyle} data-testid="tradeflowkit-sidebar-workflows">
+              <GitBranch size={15} color={colors.violet} />
+              <span>Workflow Studio</span>
+            </a>
             <a href="#tradeflowkit-settings" style={railLinkStyle} data-testid="tradeflowkit-sidebar-settings">
               <Settings size={15} color={colors.gold} />
               <span>Settings</span>
@@ -359,6 +365,10 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
 
             {hasTenantContext && adapter.tenantId && (
               <TradeFlowKitOperations key={`operations-${adapter.tenantId}`} tenantKey={adapter.tenantId} canManage={canManageModule} />
+            )}
+
+            {hasTenantContext && adapter.tenantId && (
+              <TradeFlowKitWorkManagement key={`work-${adapter.tenantId}`} tenantKey={adapter.tenantId} canManage={canManageModule} />
             )}
 
             {hasTenantContext && adapter.tenantId && (
@@ -388,14 +398,14 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               <SectionHeading
                 Icon={CheckCircle2}
                 title="Current State"
-                subtitle="No critical workflow blockers are surfaced by the OperatorOS adapter."
+                subtitle="The active runtime is persistent and authorized; Phase 16 parity work remains explicitly tracked."
               />
               <div style={emptyStateStyle} data-testid="tradeflowkit-empty-state">
                 <DollarSign size={18} color={colors.green} />
                 <div>
-                  <div style={{ fontWeight: 800 }}>Lead and quote-to-payment workflows are running in the shared tenant runtime</div>
+                  <div style={{ fontWeight: 800 }}>Lead-to-cash and governed workflow operations are running in the shared tenant runtime</div>
                   <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                    Customers, jobs, tasks, quotes, public acceptance, invoice conversion, partial payments, comments, attachments, notifications, and analytics preserve tenant scope and audit history. Production customer-payment processing remains configuration-gated; its test adapter is verified.
+                    Customers, jobs, team task views, workflow templates and stages, quotes, public acceptance, invoice conversion, partial payments, comments, attachments, notifications, activity, and analytics preserve tenant scope and audit history. Remaining Phase 16 gaps and production customer-payment processing stay visibly gated until their acceptance evidence exists.
                   </div>
                 </div>
               </div>
@@ -539,7 +549,7 @@ function WorkflowPanel({
       </div>
       <p style={{ color: colors.muted, fontSize: 13, lineHeight: 1.45, margin: '10px 0 0' }}>{summary}</p>
       <div style={{ marginTop: 12, color: colors.green, fontSize: 12, fontWeight: 800 }}>
-        Live in shared runtime
+        {id === 'payments' ? 'Manual payments live · provider processing gated' : 'Live in shared runtime'}
       </div>
     </article>
   );

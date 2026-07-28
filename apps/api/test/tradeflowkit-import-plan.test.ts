@@ -27,8 +27,10 @@ test('TradeFlowKit dry-run importer preserves source mappings, reconciles money,
   };
   const first = planTradeFlowKitImport(source);
   const second = planTradeFlowKitImport(source);
+  const laterSnapshot = planTradeFlowKitImport({ ...source, exportedAt: '2026-07-29T00:00:00.000Z' });
   assert.equal(first.readyToApply, true, first.errors.join('\n'));
   assert.equal(first.sourceFingerprint, second.sourceFingerprint);
+  assert.equal(first.sourceFingerprint, laterSnapshot.sourceFingerprint);
   assert.deepEqual(first.mappings, second.mappings);
   assert.equal(first.reconciliation.quoteSubtotalCents, 240_000);
   assert.equal(first.reconciliation.invoiceSubtotalCents, 240_000);

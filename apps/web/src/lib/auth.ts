@@ -873,12 +873,29 @@ export interface FaultlineAssignment {
 
 export interface TradeFlowKitLineItem { description: string; quantity: number; unitPriceCents: number }
 export interface TradeFlowKitCustomer { id: string; name: string; phone: string | null; email: string | null; version: number }
-export interface TradeFlowKitJob { id: string; customerId: string; number: number | null; title: string; status: string; priority: string; version: number; scheduledStart?: string | null; updatedAt?: string }
+export interface TradeFlowKitJob { id: string; customerId: string; number: number | null; title: string; status: string; priority: string; version: number; workflowStageId?: string | null; scheduledStart?: string | null; updatedAt?: string }
 export interface TradeFlowKitTask {
   id: string; jobId: string; title: string; description: string | null;
   status: 'todo' | 'in_progress' | 'blocked' | 'completed' | 'canceled';
   priority: 'low' | 'normal' | 'high' | 'urgent'; assignedToUserId: string | null;
-  dueAt: string | null; sortOrder: number; completedAt: string | null; version: number;
+  dueAt: string | null; sortOrder: number; workflowStageId?: string | null; completedAt: string | null; version: number;
+  jobTitle?: string; customerId?: string; customerName?: string; stageName?: string | null; stageColor?: string | null;
+}
+export interface TradeFlowKitWorkflowStage {
+  id: string; workflowId: string; name: string; color: string; position: number;
+  mappedStatus: string | null; version: number;
+}
+export interface TradeFlowKitWorkflow {
+  id: string; name: string; description: string; entityType: 'job' | 'task';
+  isDefault: boolean; version: number; stages: TradeFlowKitWorkflowStage[];
+}
+export interface TradeFlowKitTaskList {
+  items: TradeFlowKitTask[];
+  pagination: { total: number; limit: number; offset: number; returned: number };
+}
+export interface TradeFlowKitActivity {
+  id: string; action: string; entityType: string; entityId: string | null;
+  metadata: Record<string, unknown> | null; userId: string; createdAt: string;
 }
 
 export interface TorqueShedVehicle {
@@ -1750,12 +1767,58 @@ export const moduleShellApi = {
     job: (id: string) => apiFetch(`/modules/tradeflowkit/jobs/${encodeURIComponent(id)}`),
     updateJob: (id: string, input: Record<string, unknown>): Promise<TradeFlowKitJob> =>
       apiFetch(`/modules/tradeflowkit/jobs/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TradeFlowKitJob>,
-    createTask: (jobId: string, input: { title: string; description?: string; priority?: string; dueAt?: string; sortOrder?: number }): Promise<TradeFlowKitTask> =>
+    createTask: (jobId: string, input: { title: string; description?: string; priority?: string; dueAt?: string; sortOrder?: number; workflowStageId?: string }): Promise<TradeFlowKitTask> =>
       apiFetch(`/modules/tradeflowkit/jobs/${encodeURIComponent(jobId)}/tasks`, { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitTask>,
     updateTask: (id: string, input: Record<string, unknown>): Promise<TradeFlowKitTask> =>
       apiFetch(`/modules/tradeflowkit/tasks/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TradeFlowKitTask>,
     addTaskDependency: (id: string, dependsOnTaskId: string) =>
       apiFetch(`/modules/tradeflowkit/tasks/${encodeURIComponent(id)}/dependencies`, { method: 'POST', body: JSON.stringify({ dependsOnTaskId }) }),
+    workflows: (entityType?: 'job' | 'task'): Promise<TradeFlowKitWorkflow[]> =>
+      apiFetch(`/modules/tradeflowkit/workflows${entityType ? `?entityType=${entityType}` : ''}`) as Promise<TradeFlowKitWorkflow[]>,
+    createWorkflow: (input: {
+      name: string; description?: string; entityType: 'job' | 'task'; isDefault?: boolean;
+      stages: Array<{ name: string; color?: string; position?: number; mappedStatus?: string | null }>;
+    }): Promise<TradeFlowKitWorkflow> =>
+      apiFetch('/modules/tradeflowkit/workflows', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitWorkflow>,
+    updateWorkflow: (id: string, input: { expectedVersion: number; name?: string; description?: string; isDefault?: boolean }): Promise<TradeFlowKitWorkflow> =>
+      apiFetch(`/modules/tradeflowkit/workflows/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TradeFlowKitWorkflow>,
+    addWorkflowStage: (workflowId: string, input: {
+      expectedWorkflowVersion: number; name: string; color?: string; position?: number; mappedStatus?: string | null;
+    }): Promise<TradeFlowKitWorkflowStage & { workflowVersion: number }> =>
+      apiFetch(`/modules/tradeflowkit/workflows/${encodeURIComponent(workflowId)}/stages`, { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitWorkflowStage & { workflowVersion: number }>,
+    updateWorkflowStage: (id: string, input: {
+      expectedVersion: number; name?: string; color?: string; position?: number; mappedStatus?: string | null;
+    }): Promise<TradeFlowKitWorkflowStage> =>
+      apiFetch(`/modules/tradeflowkit/workflow-stages/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TradeFlowKitWorkflowStage>,
+    archiveWorkflow: (id: string, expectedVersion: number): Promise<{ ok: true }> =>
+      apiFetch(`/modules/tradeflowkit/workflows/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true }>,
+    tasks: (filters?: { scope?: 'mine' | 'team'; status?: string; search?: string; jobId?: string; limit?: number; offset?: number }): Promise<TradeFlowKitTaskList> => {
+      const query = new URLSearchParams();
+      if (filters?.scope) query.set('scope', filters.scope);
+      if (filters?.status) query.set('status', filters.status);
+      if (filters?.search) query.set('search', filters.search);
+      if (filters?.jobId) query.set('jobId', filters.jobId);
+      if (filters?.limit) query.set('limit', String(filters.limit));
+      if (filters?.offset) query.set('offset', String(filters.offset));
+      const suffix = query.size ? `?${query.toString()}` : '';
+      return apiFetch(`/modules/tradeflowkit/tasks${suffix}`) as Promise<TradeFlowKitTaskList>;
+    },
+    task: (id: string) => apiFetch(`/modules/tradeflowkit/tasks/${encodeURIComponent(id)}`),
+    archiveTask: (id: string, expectedVersion: number): Promise<{ ok: true }> =>
+      apiFetch(`/modules/tradeflowkit/tasks/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true }>,
+    activity: (filters?: { entityType?: string; entityId?: string; limit?: number; offset?: number }): Promise<{ items: TradeFlowKitActivity[] }> => {
+      const query = new URLSearchParams();
+      if (filters?.entityType) query.set('entityType', filters.entityType);
+      if (filters?.entityId) query.set('entityId', filters.entityId);
+      if (filters?.limit) query.set('limit', String(filters.limit));
+      if (filters?.offset) query.set('offset', String(filters.offset));
+      const suffix = query.size ? `?${query.toString()}` : '';
+      return apiFetch(`/modules/tradeflowkit/activity${suffix}`) as Promise<{ items: TradeFlowKitActivity[] }>;
+    },
+    transitionJobWorkflow: (id: string, workflowStageId: string, expectedVersion: number): Promise<TradeFlowKitJob> =>
+      apiFetch(`/modules/tradeflowkit/jobs/${encodeURIComponent(id)}/workflow-transition`, {
+        method: 'POST', body: JSON.stringify({ workflowStageId, expectedVersion }),
+      }) as Promise<TradeFlowKitJob>,
     convertLead: (id: string) => apiFetch(`/modules/tradeflowkit/leads/${encodeURIComponent(id)}/convert`, {
       method: 'POST', headers: { 'Idempotency-Key': `lead-convert:${id}` }, body: '{}',
     }),

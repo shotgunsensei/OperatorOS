@@ -2285,6 +2285,51 @@ export const tradeflowkitCustomers = pgTable('tradeflowkit_customers', {
     .where(sql`${t.sourceId} IS NOT NULL`),
 ]);
 
+export const tradeflowkitWorkflows = pgTable('tradeflowkit_workflows', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  name: text('name').notNull(),
+  normalizedName: text('normalized_name').notNull(),
+  description: text('description').notNull().default(''),
+  entityType: text('entity_type', { enum: ['job', 'task'] }).notNull(),
+  isDefault: boolean('is_default').notNull().default(false),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  uniqueIndex('uq_tfk_workflows_active_name').on(t.tenantId, t.entityType, t.normalizedName)
+    .where(sql`${t.archivedAt} IS NULL`),
+  uniqueIndex('uq_tfk_workflows_default').on(t.tenantId, t.entityType)
+    .where(sql`${t.isDefault} = true AND ${t.archivedAt} IS NULL`),
+  index('idx_tfk_workflows_tenant_entity').on(t.tenantId, t.entityType, t.archivedAt),
+]);
+
+export const tradeflowkitWorkflowStages = pgTable('tradeflowkit_workflow_stages', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  workflowId: varchar('workflow_id', { length: 36 }).notNull().references(() => tradeflowkitWorkflows.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  normalizedName: text('normalized_name').notNull(),
+  color: varchar('color', { length: 7 }).notNull().default('#2563eb'),
+  position: integer('position').notNull().default(0),
+  mappedStatus: text('mapped_status'),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  uniqueIndex('uq_tfk_workflow_stages_active_name').on(t.tenantId, t.workflowId, t.normalizedName)
+    .where(sql`${t.archivedAt} IS NULL`),
+  uniqueIndex('uq_tfk_workflow_stages_active_position').on(t.tenantId, t.workflowId, t.position)
+    .where(sql`${t.archivedAt} IS NULL`),
+  index('idx_tfk_workflow_stages_tenant_workflow').on(t.tenantId, t.workflowId, t.position),
+]);
+
 export const tradeflowkitJobs = pgTable('tradeflowkit_jobs', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
@@ -2293,6 +2338,7 @@ export const tradeflowkitJobs = pgTable('tradeflowkit_jobs', {
   number: integer('number'),
   siteId: varchar('site_id', { length: 36 }).references(() => directorySites.id, { onDelete: 'set null' }),
   assignedToUserId: varchar('assigned_to_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  workflowStageId: varchar('workflow_stage_id', { length: 36 }).references(() => tradeflowkitWorkflowStages.id),
   title: text('title').notNull(),
   description: text('description'),
   internalNotes: text('internal_notes'),
@@ -2310,6 +2356,7 @@ export const tradeflowkitJobs = pgTable('tradeflowkit_jobs', {
   index('idx_tfk_jobs_tenant_status').on(t.tenantId, t.status),
   index('idx_tfk_jobs_tenant_customer').on(t.tenantId, t.customerId),
   index('idx_tfk_jobs_tenant_assignee').on(t.tenantId, t.assignedToUserId),
+  index('idx_tfk_jobs_tenant_stage').on(t.tenantId, t.workflowStageId),
   uniqueIndex('uq_tfk_jobs_tenant_number').on(t.tenantId, t.number)
     .where(sql`${t.number} IS NOT NULL`),
   uniqueIndex('uq_tfk_jobs_tenant_source').on(t.tenantId, t.sourceId)
@@ -2328,6 +2375,7 @@ export const tradeflowkitTasks = pgTable('tradeflowkit_tasks', {
   priority: text('priority').notNull().default('normal'),
   dueAt: timestamp('due_at'),
   sortOrder: integer('sort_order').notNull().default(0),
+  workflowStageId: varchar('workflow_stage_id', { length: 36 }).references(() => tradeflowkitWorkflowStages.id),
   completedAt: timestamp('completed_at'),
   sourceId: text('source_id'),
   version: integer('version').notNull().default(1),
@@ -2338,6 +2386,7 @@ export const tradeflowkitTasks = pgTable('tradeflowkit_tasks', {
   index('idx_tfk_tasks_tenant_job').on(t.tenantId, t.jobId, t.sortOrder),
   index('idx_tfk_tasks_tenant_assignee').on(t.tenantId, t.assignedToUserId, t.status),
   index('idx_tfk_tasks_tenant_due').on(t.tenantId, t.dueAt),
+  index('idx_tfk_tasks_tenant_stage').on(t.tenantId, t.workflowStageId, t.status),
   uniqueIndex('uq_tfk_tasks_tenant_source').on(t.tenantId, t.sourceId)
     .where(sql`${t.sourceId} IS NOT NULL`),
 ]);

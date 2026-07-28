@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { and, asc, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
   activityFeed,
@@ -23,6 +23,8 @@ import {
   tradeflowkitTags,
   tradeflowkitTaskDependencies,
   tradeflowkitTasks,
+  tradeflowkitWorkflows,
+  tradeflowkitWorkflowStages,
   tenantUsers,
 } from '../schema.js';
 import {
@@ -41,6 +43,9 @@ const ENTITY_TYPES = new Set(['lead', 'customer', 'job', 'task', 'quote', 'invoi
 const TAG_ENTITY_TYPES = new Set(['lead', 'customer', 'job', 'task', 'quote', 'invoice']);
 const TASK_STATUSES = new Set(['todo', 'in_progress', 'blocked', 'completed', 'canceled']);
 const TASK_PRIORITIES = new Set(['low', 'normal', 'high', 'urgent']);
+const WORKFLOW_ENTITY_TYPES = new Set(['job', 'task']);
+const JOB_STATUSES = new Set(['lead', 'quoted', 'scheduled', 'in_progress', 'done', 'invoiced', 'paid', 'canceled']);
+const WORKFLOW_MAPPED_STATUSES = new Set([...JOB_STATUSES, ...TASK_STATUSES]);
 
 type RequestContext = { tenantId: string };
 type RequestUser = { id: string };
@@ -76,6 +81,12 @@ function integer(value: unknown, field: string, min: number, max: number, requir
     throw new InputError('FIELD_INVALID', field);
   }
   return value as number;
+}
+
+function booleanValue(value: unknown, field: string, fallback = false): boolean {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value !== 'boolean') throw new InputError('FIELD_INVALID', field);
+  return value;
 }
 
 function dateValue(value: unknown, field: string): Date | null {
@@ -139,6 +150,33 @@ function securePublicReply(reply: FastifyReply): void {
 
 function normalizeName(value: string): string {
   return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US');
+}
+
+function workflowColor(value: unknown, field = 'color'): string {
+  const color = stringValue(value, field, 7) ?? '#2563eb';
+  if (!/^#[0-9a-f]{6}$/i.test(color)) throw new InputError('FIELD_INVALID', field);
+  return color.toLowerCase();
+}
+
+function workflowStatus(value: unknown, field = 'mappedStatus'): string | null {
+  const status = stringValue(value, field, 30);
+  if (status && !WORKFLOW_MAPPED_STATUSES.has(status)) throw new InputError('FIELD_INVALID', field);
+  return status;
+}
+
+function workflowStageInput(raw: unknown, position: number) {
+  const value = record(raw);
+  return {
+    name: stringValue(value.name, 'stages.name', 80, true)!,
+    normalizedName: normalizeName(stringValue(value.name, 'stages.name', 80, true)!),
+    color: workflowColor(value.color, 'stages.color'),
+    position: integer(value.position, 'stages.position', 0, 1000) ?? position,
+    mappedStatus: workflowStatus(value.mappedStatus, 'stages.mappedStatus'),
+  };
+}
+
+function mappedStatusAllowed(entityType: 'job' | 'task', status: string | null): boolean {
+  return !status || (entityType === 'job' ? JOB_STATUSES : TASK_STATUSES).has(status);
 }
 
 function csvCell(value: unknown): string {
@@ -233,6 +271,364 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
     };
   });
 
+  app.get('/v1/modules/tradeflowkit/workflows', { preHandler: [...readGuards] }, async (request, reply) => {
+    let entityType: 'job' | 'task' | null;
+    try {
+      const raw = record(request.query ?? {});
+      const value = stringValue(raw.entityType, 'entityType', 20);
+      if (value && !WORKFLOW_ENTITY_TYPES.has(value)) throw new InputError('FIELD_INVALID', 'entityType');
+      entityType = value as 'job' | 'task' | null;
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const workflows = await db.select().from(tradeflowkitWorkflows).where(and(
+      eq(tradeflowkitWorkflows.tenantId, tenant),
+      isNull(tradeflowkitWorkflows.archivedAt),
+      ...(entityType ? [eq(tradeflowkitWorkflows.entityType, entityType)] : []),
+    )).orderBy(desc(tradeflowkitWorkflows.isDefault), asc(tradeflowkitWorkflows.name));
+    const stages = workflows.length > 0
+      ? await db.select().from(tradeflowkitWorkflowStages).where(and(
+        eq(tradeflowkitWorkflowStages.tenantId, tenant),
+        inArray(tradeflowkitWorkflowStages.workflowId, workflows.map(workflow => workflow.id)),
+        isNull(tradeflowkitWorkflowStages.archivedAt),
+      )).orderBy(asc(tradeflowkitWorkflowStages.position))
+      : [];
+    return workflows.map(workflow => ({
+      ...workflow,
+      stages: stages.filter(stage => stage.workflowId === workflow.id),
+    }));
+  });
+
+  app.post('/v1/modules/tradeflowkit/workflows', { preHandler: [...adminGuards] }, async (request, reply) => {
+    let body: {
+      name: string;
+      normalizedName: string;
+      description: string;
+      entityType: 'job' | 'task';
+      isDefault: boolean;
+      stages: ReturnType<typeof workflowStageInput>[];
+    };
+    try {
+      const raw = record(request.body);
+      const name = stringValue(raw.name, 'name', 120, true)!;
+      const entityType = (stringValue(raw.entityType, 'entityType', 20) ?? 'job') as 'job' | 'task';
+      if (!WORKFLOW_ENTITY_TYPES.has(entityType)) throw new InputError('FIELD_INVALID', 'entityType');
+      if (!Array.isArray(raw.stages) || raw.stages.length < 1 || raw.stages.length > 30) {
+        throw new InputError('FIELD_INVALID', 'stages');
+      }
+      const stages = raw.stages.map((stage, index) => workflowStageInput(stage, index));
+      if (new Set(stages.map(stage => stage.normalizedName)).size !== stages.length) {
+        throw new InputError('FIELD_DUPLICATE', 'stages.name');
+      }
+      if (new Set(stages.map(stage => stage.position)).size !== stages.length) {
+        throw new InputError('FIELD_DUPLICATE', 'stages.position');
+      }
+      if (stages.some(stage => !mappedStatusAllowed(entityType, stage.mappedStatus))) {
+        throw new InputError('FIELD_INVALID', 'stages.mappedStatus');
+      }
+      body = {
+        name,
+        normalizedName: normalizeName(name),
+        description: stringValue(raw.description, 'description', 2_000) ?? '',
+        entityType,
+        isDefault: booleanValue(raw.isDefault, 'isDefault'),
+        stages,
+      };
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    try {
+      const result = await db.transaction(async tx => {
+        if (body.isDefault) {
+          await tx.update(tradeflowkitWorkflows).set({
+            isDefault: false,
+            version: sql`${tradeflowkitWorkflows.version} + 1`,
+            updatedAt: new Date(),
+            updatedByUserId: actor,
+          }).where(and(
+            eq(tradeflowkitWorkflows.tenantId, tenant),
+            eq(tradeflowkitWorkflows.entityType, body.entityType),
+            eq(tradeflowkitWorkflows.isDefault, true),
+            isNull(tradeflowkitWorkflows.archivedAt),
+          ));
+        }
+        const [workflow] = await tx.insert(tradeflowkitWorkflows).values({
+          tenantId: tenant,
+          name: body.name,
+          normalizedName: body.normalizedName,
+          description: body.description,
+          entityType: body.entityType,
+          isDefault: body.isDefault,
+          createdByUserId: actor,
+          updatedByUserId: actor,
+        }).returning();
+        const stages = await tx.insert(tradeflowkitWorkflowStages).values(body.stages.map(stage => ({
+          ...stage,
+          tenantId: tenant,
+          workflowId: workflow.id,
+          createdByUserId: actor,
+          updatedByUserId: actor,
+        }))).returning();
+        await audit(tx, {
+          tenantId: tenant,
+          userId: actor,
+          action: 'created',
+          entityType: 'workflow',
+          entityId: workflow.id,
+          metadata: { entityType: body.entityType, stageCount: stages.length },
+        });
+        return { ...workflow, stages };
+      });
+      return reply.code(201).send(result);
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') {
+        return reply.code(409).send({ error: 'Workflow name, default, or stage order already exists', code: 'WORKFLOW_CONFLICT' });
+      }
+      throw error;
+    }
+  });
+
+  app.patch('/v1/modules/tradeflowkit/workflows/:id', { preHandler: [...adminGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    let body: { expectedVersion: number; name: string | null; description: string | null; isDefault: boolean | null };
+    try {
+      const raw = record(request.body);
+      body = {
+        expectedVersion: integer(raw.expectedVersion, 'expectedVersion', 1, 1_000_000, true)!,
+        name: stringValue(raw.name, 'name', 120),
+        description: stringValue(raw.description, 'description', 2_000),
+        isDefault: raw.isDefault === undefined ? null : booleanValue(raw.isDefault, 'isDefault'),
+      };
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    try {
+      const updated = await db.transaction(async tx => {
+        const [current] = await tx.select().from(tradeflowkitWorkflows).where(and(
+          eq(tradeflowkitWorkflows.tenantId, tenant),
+          eq(tradeflowkitWorkflows.id, id),
+          isNull(tradeflowkitWorkflows.archivedAt),
+        )).limit(1);
+        if (!current) return { kind: 'missing' as const };
+        if (current.version !== body.expectedVersion) return { kind: 'conflict' as const };
+        if (body.isDefault === true) {
+          await tx.update(tradeflowkitWorkflows).set({
+            isDefault: false,
+            version: sql`${tradeflowkitWorkflows.version} + 1`,
+            updatedAt: new Date(),
+            updatedByUserId: actor,
+          }).where(and(
+            eq(tradeflowkitWorkflows.tenantId, tenant),
+            eq(tradeflowkitWorkflows.entityType, current.entityType),
+            eq(tradeflowkitWorkflows.isDefault, true),
+            ne(tradeflowkitWorkflows.id, id),
+            isNull(tradeflowkitWorkflows.archivedAt),
+          ));
+        }
+        const patch = {
+          ...(body.name ? { name: body.name, normalizedName: normalizeName(body.name) } : {}),
+          ...(body.description !== null ? { description: body.description } : {}),
+          ...(body.isDefault !== null ? { isDefault: body.isDefault } : {}),
+          version: sql`${tradeflowkitWorkflows.version} + 1`,
+          updatedAt: new Date(),
+          updatedByUserId: actor,
+        };
+        const [workflow] = await tx.update(tradeflowkitWorkflows).set(patch).where(and(
+          eq(tradeflowkitWorkflows.tenantId, tenant),
+          eq(tradeflowkitWorkflows.id, id),
+          eq(tradeflowkitWorkflows.version, body.expectedVersion),
+          isNull(tradeflowkitWorkflows.archivedAt),
+        )).returning();
+        if (!workflow) return { kind: 'conflict' as const };
+        await audit(tx, {
+          tenantId: tenant,
+          userId: actor,
+          action: 'updated',
+          entityType: 'workflow',
+          entityId: id,
+          metadata: { changedFields: Object.keys(patch).filter(key => !['version', 'updatedAt', 'updatedByUserId'].includes(key)) },
+        });
+        return { kind: 'updated' as const, workflow };
+      });
+      if (updated.kind === 'missing') return reply.code(404).send({ error: 'Workflow not found', code: 'WORKFLOW_NOT_FOUND' });
+      if (updated.kind === 'conflict') return reply.code(409).send({ error: 'Workflow changed; reload and retry', code: 'WORKFLOW_VERSION_CONFLICT' });
+      return updated.workflow;
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') {
+        return reply.code(409).send({ error: 'Workflow name or default already exists', code: 'WORKFLOW_CONFLICT' });
+      }
+      throw error;
+    }
+  });
+
+  app.post('/v1/modules/tradeflowkit/workflows/:id/stages', { preHandler: [...adminGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    let body: ReturnType<typeof workflowStageInput> & { expectedWorkflowVersion: number };
+    try {
+      const raw = record(request.body);
+      body = {
+        ...workflowStageInput(raw, 0),
+        expectedWorkflowVersion: integer(raw.expectedWorkflowVersion, 'expectedWorkflowVersion', 1, 1_000_000, true)!,
+      };
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    try {
+      const result = await db.transaction(async tx => {
+        const [workflow] = await tx.select().from(tradeflowkitWorkflows).where(and(
+          eq(tradeflowkitWorkflows.tenantId, tenant),
+          eq(tradeflowkitWorkflows.id, id),
+          isNull(tradeflowkitWorkflows.archivedAt),
+        )).limit(1);
+        if (!workflow) return { kind: 'missing' as const };
+        if (workflow.version !== body.expectedWorkflowVersion) return { kind: 'conflict' as const };
+        if (!mappedStatusAllowed(workflow.entityType, body.mappedStatus)) return { kind: 'invalid_status' as const };
+        const [claimed] = await tx.update(tradeflowkitWorkflows).set({
+          version: sql`${tradeflowkitWorkflows.version} + 1`,
+          updatedAt: new Date(),
+          updatedByUserId: actor,
+        }).where(and(
+          eq(tradeflowkitWorkflows.tenantId, tenant),
+          eq(tradeflowkitWorkflows.id, id),
+          eq(tradeflowkitWorkflows.version, body.expectedWorkflowVersion),
+        )).returning();
+        if (!claimed) return { kind: 'conflict' as const };
+        const [stage] = await tx.insert(tradeflowkitWorkflowStages).values({
+          tenantId: tenant,
+          workflowId: id,
+          name: body.name,
+          normalizedName: body.normalizedName,
+          color: body.color,
+          position: body.position,
+          mappedStatus: body.mappedStatus,
+          createdByUserId: actor,
+          updatedByUserId: actor,
+        }).returning();
+        await audit(tx, { tenantId: tenant, userId: actor, action: 'stage_created', entityType: 'workflow', entityId: id, metadata: { stageId: stage.id } });
+        return { kind: 'created' as const, stage, workflowVersion: claimed.version };
+      });
+      if (result.kind === 'missing') return reply.code(404).send({ error: 'Workflow not found', code: 'WORKFLOW_NOT_FOUND' });
+      if (result.kind === 'conflict') return reply.code(409).send({ error: 'Workflow changed; reload and retry', code: 'WORKFLOW_VERSION_CONFLICT' });
+      if (result.kind === 'invalid_status') return reply.code(400).send({ error: 'Mapped status is invalid for this workflow', code: 'WORKFLOW_STATUS_INVALID' });
+      return reply.code(201).send({ ...result.stage, workflowVersion: result.workflowVersion });
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') {
+        return reply.code(409).send({ error: 'Stage name or position already exists', code: 'WORKFLOW_STAGE_CONFLICT' });
+      }
+      throw error;
+    }
+  });
+
+  app.patch('/v1/modules/tradeflowkit/workflow-stages/:id', { preHandler: [...adminGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    let body: {
+      expectedVersion: number;
+      name: string | null;
+      color: string | null;
+      position: number | null;
+      mappedStatus: string | null;
+      mappedStatusProvided: boolean;
+    };
+    try {
+      const raw = record(request.body);
+      body = {
+        expectedVersion: integer(raw.expectedVersion, 'expectedVersion', 1, 1_000_000, true)!,
+        name: stringValue(raw.name, 'name', 80),
+        color: raw.color === undefined ? null : workflowColor(raw.color),
+        position: integer(raw.position, 'position', 0, 1000),
+        mappedStatus: workflowStatus(raw.mappedStatus),
+        mappedStatusProvided: raw.mappedStatus !== undefined,
+      };
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    const [current] = await db.select({
+      stage: tradeflowkitWorkflowStages,
+      entityType: tradeflowkitWorkflows.entityType,
+    }).from(tradeflowkitWorkflowStages).innerJoin(
+      tradeflowkitWorkflows,
+      and(
+        eq(tradeflowkitWorkflows.tenantId, tradeflowkitWorkflowStages.tenantId),
+        eq(tradeflowkitWorkflows.id, tradeflowkitWorkflowStages.workflowId),
+      ),
+    ).where(and(
+      eq(tradeflowkitWorkflowStages.tenantId, tenant),
+      eq(tradeflowkitWorkflowStages.id, id),
+      isNull(tradeflowkitWorkflowStages.archivedAt),
+      isNull(tradeflowkitWorkflows.archivedAt),
+    )).limit(1);
+    if (!current) return reply.code(404).send({ error: 'Workflow stage not found', code: 'WORKFLOW_STAGE_NOT_FOUND' });
+    if (!mappedStatusAllowed(current.entityType, body.mappedStatus)) {
+      return reply.code(400).send({ error: 'Mapped status is invalid for this workflow', code: 'WORKFLOW_STATUS_INVALID' });
+    }
+    try {
+      const [stage] = await db.transaction(async tx => {
+        const rows = await tx.update(tradeflowkitWorkflowStages).set({
+          ...(body.name ? { name: body.name, normalizedName: normalizeName(body.name) } : {}),
+          ...(body.color ? { color: body.color } : {}),
+          ...(body.position !== null ? { position: body.position } : {}),
+          ...(body.mappedStatusProvided ? { mappedStatus: body.mappedStatus } : {}),
+          version: sql`${tradeflowkitWorkflowStages.version} + 1`,
+          updatedAt: new Date(),
+          updatedByUserId: actor,
+        }).where(and(
+          eq(tradeflowkitWorkflowStages.tenantId, tenant),
+          eq(tradeflowkitWorkflowStages.id, id),
+          eq(tradeflowkitWorkflowStages.version, body.expectedVersion),
+          isNull(tradeflowkitWorkflowStages.archivedAt),
+        )).returning();
+        if (!rows[0]) return [];
+        await audit(tx, { tenantId: tenant, userId: actor, action: 'stage_updated', entityType: 'workflow', entityId: current.stage.workflowId, metadata: { stageId: id } });
+        return rows;
+      });
+      if (!stage) return reply.code(409).send({ error: 'Workflow stage changed; reload and retry', code: 'WORKFLOW_STAGE_VERSION_CONFLICT' });
+      return stage;
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') {
+        return reply.code(409).send({ error: 'Stage name or position already exists', code: 'WORKFLOW_STAGE_CONFLICT' });
+      }
+      throw error;
+    }
+  });
+
+  app.delete('/v1/modules/tradeflowkit/workflows/:id', { preHandler: [...adminGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    let expectedVersion;
+    try { expectedVersion = integer(record(request.body).expectedVersion, 'expectedVersion', 1, 1_000_000, true)!; }
+    catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    const archived = await db.transaction(async tx => {
+      const [workflow] = await tx.update(tradeflowkitWorkflows).set({
+        archivedAt: new Date(),
+        isDefault: false,
+        version: sql`${tradeflowkitWorkflows.version} + 1`,
+        updatedAt: new Date(),
+        updatedByUserId: actor,
+      }).where(and(
+        eq(tradeflowkitWorkflows.tenantId, tenant),
+        eq(tradeflowkitWorkflows.id, id),
+        eq(tradeflowkitWorkflows.version, expectedVersion),
+        isNull(tradeflowkitWorkflows.archivedAt),
+      )).returning();
+      if (!workflow) return null;
+      await tx.update(tradeflowkitWorkflowStages).set({
+        archivedAt: new Date(),
+        version: sql`${tradeflowkitWorkflowStages.version} + 1`,
+        updatedAt: new Date(),
+        updatedByUserId: actor,
+      }).where(and(
+        eq(tradeflowkitWorkflowStages.tenantId, tenant),
+        eq(tradeflowkitWorkflowStages.workflowId, id),
+        isNull(tradeflowkitWorkflowStages.archivedAt),
+      ));
+      await audit(tx, { tenantId: tenant, userId: actor, action: 'archived', entityType: 'workflow', entityId: id });
+      return workflow;
+    });
+    if (!archived) return reply.code(409).send({ error: 'Workflow not found or changed; reload and retry', code: 'WORKFLOW_VERSION_CONFLICT' });
+    return { ok: true };
+  });
+
   app.get('/v1/modules/tradeflowkit/exports/:kind.csv', { preHandler: [...readGuards] }, async (request, reply) => {
     const { kind } = request.params as { kind: string };
     const tenant = tenantId(request);
@@ -252,6 +648,227 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
     return reply.header('Content-Type', 'text/csv; charset=utf-8')
       .header('Content-Disposition', `attachment; filename="tradeflowkit-${kind}.csv"`)
       .header('Cache-Control', 'private, no-store').send(output);
+  });
+
+  app.get('/v1/modules/tradeflowkit/tasks', { preHandler: [...readGuards] }, async (request, reply) => {
+    let query: ReturnType<typeof pageQuery> & { scope: string | null; jobId: string | null };
+    try {
+      const page = pageQuery(request.query);
+      const raw = record(request.query ?? {});
+      query = {
+        ...page,
+        scope: stringValue(raw.scope, 'scope', 20),
+        jobId: stringValue(raw.jobId, 'jobId', 36),
+      };
+      if (query.scope && !['mine', 'team'].includes(query.scope)) throw new InputError('FIELD_INVALID', 'scope');
+      if (query.status && !TASK_STATUSES.has(query.status)) throw new InputError('FIELD_INVALID', 'status');
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const where = and(
+      eq(tradeflowkitTasks.tenantId, tenant),
+      isNull(tradeflowkitTasks.deletedAt),
+      ...(query.scope === 'mine' ? [eq(tradeflowkitTasks.assignedToUserId, userId(request))] : []),
+      ...(query.status ? [eq(tradeflowkitTasks.status, query.status)] : []),
+      ...(query.jobId ? [eq(tradeflowkitTasks.jobId, query.jobId)] : []),
+      ...(query.search ? [or(
+        ilike(tradeflowkitTasks.title, `%${query.search}%`),
+        ilike(tradeflowkitTasks.description, `%${query.search}%`),
+      )!] : []),
+    );
+    const [items, total] = await Promise.all([
+      db.select({
+        id: tradeflowkitTasks.id,
+        tenantId: tradeflowkitTasks.tenantId,
+        jobId: tradeflowkitTasks.jobId,
+        title: tradeflowkitTasks.title,
+        description: tradeflowkitTasks.description,
+        status: tradeflowkitTasks.status,
+        priority: tradeflowkitTasks.priority,
+        assignedToUserId: tradeflowkitTasks.assignedToUserId,
+        dueAt: tradeflowkitTasks.dueAt,
+        sortOrder: tradeflowkitTasks.sortOrder,
+        workflowStageId: tradeflowkitTasks.workflowStageId,
+        completedAt: tradeflowkitTasks.completedAt,
+        version: tradeflowkitTasks.version,
+        createdAt: tradeflowkitTasks.createdAt,
+        updatedAt: tradeflowkitTasks.updatedAt,
+        jobTitle: tradeflowkitJobs.title,
+        customerId: tradeflowkitJobs.customerId,
+        customerName: tradeflowkitCustomers.name,
+        stageName: tradeflowkitWorkflowStages.name,
+        stageColor: tradeflowkitWorkflowStages.color,
+      }).from(tradeflowkitTasks)
+        .innerJoin(tradeflowkitJobs, and(
+          eq(tradeflowkitJobs.tenantId, tradeflowkitTasks.tenantId),
+          eq(tradeflowkitJobs.id, tradeflowkitTasks.jobId),
+          isNull(tradeflowkitJobs.deletedAt),
+        ))
+        .innerJoin(tradeflowkitCustomers, and(
+          eq(tradeflowkitCustomers.tenantId, tradeflowkitJobs.tenantId),
+          eq(tradeflowkitCustomers.id, tradeflowkitJobs.customerId),
+          isNull(tradeflowkitCustomers.deletedAt),
+        ))
+        .leftJoin(tradeflowkitWorkflowStages, and(
+          eq(tradeflowkitWorkflowStages.tenantId, tradeflowkitTasks.tenantId),
+          eq(tradeflowkitWorkflowStages.id, tradeflowkitTasks.workflowStageId),
+          isNull(tradeflowkitWorkflowStages.archivedAt),
+        ))
+        .where(where)
+        .orderBy(sql`${tradeflowkitTasks.dueAt} ASC NULLS LAST`, desc(tradeflowkitTasks.updatedAt))
+        .limit(query.limit)
+        .offset(query.offset),
+      db.execute(sql`SELECT COUNT(*)::int AS count FROM tradeflowkit_tasks WHERE tenant_id = ${tenant} AND deleted_at IS NULL
+        ${query.scope === 'mine' ? sql`AND assigned_to_user_id = ${userId(request)}` : sql``}
+        ${query.status ? sql`AND status = ${query.status}` : sql``}
+        ${query.jobId ? sql`AND job_id = ${query.jobId}` : sql``}
+        ${query.search ? sql`AND (title ILIKE ${`%${query.search}%`} OR description ILIKE ${`%${query.search}%`})` : sql``}`),
+    ]);
+    return {
+      items,
+      pagination: {
+        total: Number(total.rows[0]?.count ?? 0),
+        limit: query.limit,
+        offset: query.offset,
+        returned: items.length,
+      },
+    };
+  });
+
+  app.get('/v1/modules/tradeflowkit/tasks/:id', { preHandler: [...readGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const tenant = tenantId(request);
+    const [task] = await db.select().from(tradeflowkitTasks).where(and(
+      eq(tradeflowkitTasks.tenantId, tenant),
+      eq(tradeflowkitTasks.id, id),
+      isNull(tradeflowkitTasks.deletedAt),
+    )).limit(1);
+    if (!task) return reply.code(404).send({ error: 'Task not found', code: 'TASK_NOT_FOUND' });
+    const [dependencies, comments, activity] = await Promise.all([
+      db.select().from(tradeflowkitTaskDependencies).where(and(
+        eq(tradeflowkitTaskDependencies.tenantId, tenant),
+        eq(tradeflowkitTaskDependencies.taskId, id),
+      )).orderBy(asc(tradeflowkitTaskDependencies.createdAt)),
+      db.select().from(tradeflowkitComments).where(and(
+        eq(tradeflowkitComments.tenantId, tenant),
+        eq(tradeflowkitComments.entityType, 'task'),
+        eq(tradeflowkitComments.entityId, id),
+        isNull(tradeflowkitComments.deletedAt),
+      )).orderBy(desc(tradeflowkitComments.createdAt)),
+      db.select().from(activityFeed).where(and(
+        eq(activityFeed.tenantId, tenant),
+        eq(activityFeed.entityType, 'tradeflowkit_task'),
+        eq(activityFeed.entityId, id),
+      )).orderBy(desc(activityFeed.createdAt)).limit(100),
+    ]);
+    return { ...task, dependencies, comments, activity };
+  });
+
+  app.delete('/v1/modules/tradeflowkit/tasks/:id', { preHandler: [...writeGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    let expectedVersion;
+    try { expectedVersion = integer(record(request.body).expectedVersion, 'expectedVersion', 1, 1_000_000, true)!; }
+    catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    const [archived] = await db.transaction(async tx => {
+      const rows = await tx.update(tradeflowkitTasks).set({
+        deletedAt: new Date(),
+        version: sql`${tradeflowkitTasks.version} + 1`,
+        updatedAt: new Date(),
+      }).where(and(
+        eq(tradeflowkitTasks.tenantId, tenant),
+        eq(tradeflowkitTasks.id, id),
+        eq(tradeflowkitTasks.version, expectedVersion),
+        isNull(tradeflowkitTasks.deletedAt),
+      )).returning();
+      if (!rows[0]) return [];
+      await audit(tx, { tenantId: tenant, userId: actor, action: 'archived', entityType: 'task', entityId: id, metadata: { jobId: rows[0].jobId } });
+      return rows;
+    });
+    if (!archived) return reply.code(409).send({ error: 'Task not found or changed; reload and retry', code: 'TASK_VERSION_CONFLICT' });
+    return { ok: true };
+  });
+
+  app.get('/v1/modules/tradeflowkit/activity', { preHandler: [...readGuards] }, async (request, reply) => {
+    let query: ReturnType<typeof pageQuery> & { entityType: string | null; entityId: string | null };
+    try {
+      const page = pageQuery(request.query);
+      const raw = record(request.query ?? {});
+      query = {
+        ...page,
+        entityType: stringValue(raw.entityType, 'entityType', 40),
+        entityId: stringValue(raw.entityId, 'entityId', 36),
+      };
+      if (query.entityType && !ENTITY_TYPES.has(query.entityType) && query.entityType !== 'workflow') {
+        throw new InputError('FIELD_INVALID', 'entityType');
+      }
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const items = await db.select().from(activityFeed).where(and(
+      eq(activityFeed.tenantId, tenant),
+      ilike(activityFeed.entityType, 'tradeflowkit_%'),
+      ...(query.entityType ? [eq(activityFeed.entityType, `tradeflowkit_${query.entityType}`)] : []),
+      ...(query.entityId ? [eq(activityFeed.entityId, query.entityId)] : []),
+    )).orderBy(desc(activityFeed.createdAt)).limit(query.limit).offset(query.offset);
+    return { items, pagination: { limit: query.limit, offset: query.offset, returned: items.length } };
+  });
+
+  app.post('/v1/modules/tradeflowkit/jobs/:id/workflow-transition', { preHandler: [...writeGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    let body: { workflowStageId: string; expectedVersion: number };
+    try {
+      const raw = record(request.body);
+      body = {
+        workflowStageId: stringValue(raw.workflowStageId, 'workflowStageId', 36, true)!,
+        expectedVersion: integer(raw.expectedVersion, 'expectedVersion', 1, 1_000_000, true)!,
+      };
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const [stage] = await db.select({
+      id: tradeflowkitWorkflowStages.id,
+      name: tradeflowkitWorkflowStages.name,
+      mappedStatus: tradeflowkitWorkflowStages.mappedStatus,
+    }).from(tradeflowkitWorkflowStages).innerJoin(
+      tradeflowkitWorkflows,
+      and(
+        eq(tradeflowkitWorkflows.tenantId, tradeflowkitWorkflowStages.tenantId),
+        eq(tradeflowkitWorkflows.id, tradeflowkitWorkflowStages.workflowId),
+      ),
+    ).where(and(
+      eq(tradeflowkitWorkflowStages.tenantId, tenant),
+      eq(tradeflowkitWorkflowStages.id, body.workflowStageId),
+      isNull(tradeflowkitWorkflowStages.archivedAt),
+      eq(tradeflowkitWorkflows.entityType, 'job'),
+      isNull(tradeflowkitWorkflows.archivedAt),
+    )).limit(1);
+    if (!stage) return reply.code(404).send({ error: 'Workflow stage not found', code: 'WORKFLOW_STAGE_NOT_FOUND' });
+    const actor = userId(request);
+    const [updated] = await db.transaction(async tx => {
+      const rows = await tx.update(tradeflowkitJobs).set({
+        workflowStageId: stage.id,
+        ...(stage.mappedStatus ? { status: stage.mappedStatus } : {}),
+        ...(stage.mappedStatus === 'done' ? { completedAt: new Date() } : {}),
+        version: sql`${tradeflowkitJobs.version} + 1`,
+        updatedAt: new Date(),
+      }).where(and(
+        eq(tradeflowkitJobs.tenantId, tenant),
+        eq(tradeflowkitJobs.id, id),
+        eq(tradeflowkitJobs.version, body.expectedVersion),
+        isNull(tradeflowkitJobs.deletedAt),
+      )).returning();
+      if (!rows[0]) return [];
+      await audit(tx, {
+        tenantId: tenant,
+        userId: actor,
+        action: 'workflow_transition',
+        entityType: 'job',
+        entityId: id,
+        metadata: { workflowStageId: stage.id, stageName: stage.name, mappedStatus: stage.mappedStatus },
+      });
+      return rows;
+    });
+    if (!updated) return reply.code(409).send({ error: 'Job not found or changed; reload and retry', code: 'JOB_VERSION_CONFLICT' });
+    return updated;
   });
 
   app.get('/v1/modules/tradeflowkit/jobs/:id', { preHandler: [...readGuards] }, async (request, reply) => {
@@ -283,7 +900,7 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
       const status = stringValue(raw.status, 'status', 30);
       const priority = stringValue(raw.priority, 'priority', 20);
       if (status && !['lead','quoted','scheduled','in_progress','done','invoiced','paid','canceled'].includes(status)) throw new InputError('STATUS_INVALID', 'status');
-      if (priority && !['low','normal','urgent'].includes(priority)) throw new InputError('PRIORITY_INVALID', 'priority');
+      if (priority && !['low','normal','high','urgent'].includes(priority)) throw new InputError('PRIORITY_INVALID', 'priority');
       body = {
         expectedVersion,
         title: stringValue(raw.title, 'title', 200),
@@ -334,6 +951,7 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
         title: stringValue(raw.title, 'title', 200, true)!,
         description: stringValue(raw.description, 'description', 4_000), priority,
         assignedToUserId: stringValue(raw.assignedToUserId, 'assignedToUserId', 36),
+        workflowStageId: stringValue(raw.workflowStageId, 'workflowStageId', 36),
         dueAt: dateValue(raw.dueAt, 'dueAt'),
         sortOrder: integer(raw.sortOrder, 'sortOrder', 0, 1_000_000) ?? 0,
       };
@@ -343,6 +961,22 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
     if (body.assignedToUserId) {
       const [member] = await db.select({ id: tenantUsers.userId }).from(tenantUsers).where(and(eq(tenantUsers.tenantId, tenant), eq(tenantUsers.userId, body.assignedToUserId))).limit(1);
       if (!member) return reply.code(404).send({ error: 'Assignee not found', code: 'ASSIGNEE_NOT_FOUND' });
+    }
+    if (body.workflowStageId) {
+      const [stage] = await db.select({ id: tradeflowkitWorkflowStages.id }).from(tradeflowkitWorkflowStages).innerJoin(
+        tradeflowkitWorkflows,
+        and(
+          eq(tradeflowkitWorkflows.tenantId, tradeflowkitWorkflowStages.tenantId),
+          eq(tradeflowkitWorkflows.id, tradeflowkitWorkflowStages.workflowId),
+        ),
+      ).where(and(
+        eq(tradeflowkitWorkflowStages.tenantId, tenant),
+        eq(tradeflowkitWorkflowStages.id, body.workflowStageId),
+        isNull(tradeflowkitWorkflowStages.archivedAt),
+        eq(tradeflowkitWorkflows.entityType, 'task'),
+        isNull(tradeflowkitWorkflows.archivedAt),
+      )).limit(1);
+      if (!stage) return reply.code(404).send({ error: 'Task workflow stage not found', code: 'WORKFLOW_STAGE_NOT_FOUND' });
     }
     const task = await db.transaction(async tx => {
       const [created] = await tx.insert(tradeflowkitTasks).values({ ...body, tenantId: tenant, jobId, createdByUserId: userId(request) }).returning();
@@ -368,12 +1002,29 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
         title: stringValue(raw.title, 'title', 200),
         description: stringValue(raw.description, 'description', 4_000),
         assignedToUserId: stringValue(raw.assignedToUserId, 'assignedToUserId', 36),
+        workflowStageId: stringValue(raw.workflowStageId, 'workflowStageId', 36),
         dueAt: dateValue(raw.dueAt, 'dueAt'),
         sortOrder: integer(raw.sortOrder, 'sortOrder', 0, 1_000_000),
       };
     } catch (error) { if (inputFailure(reply, error)) return; throw error; }
     const [current] = await db.select().from(tradeflowkitTasks).where(and(eq(tradeflowkitTasks.id, id), eq(tradeflowkitTasks.tenantId, tenant), isNull(tradeflowkitTasks.deletedAt))).limit(1);
     if (!current) return reply.code(404).send({ error: 'Task not found', code: 'TASK_NOT_FOUND' });
+    if (body.workflowStageId) {
+      const [stage] = await db.select({ id: tradeflowkitWorkflowStages.id }).from(tradeflowkitWorkflowStages).innerJoin(
+        tradeflowkitWorkflows,
+        and(
+          eq(tradeflowkitWorkflows.tenantId, tradeflowkitWorkflowStages.tenantId),
+          eq(tradeflowkitWorkflows.id, tradeflowkitWorkflowStages.workflowId),
+        ),
+      ).where(and(
+        eq(tradeflowkitWorkflowStages.tenantId, tenant),
+        eq(tradeflowkitWorkflowStages.id, body.workflowStageId),
+        isNull(tradeflowkitWorkflowStages.archivedAt),
+        eq(tradeflowkitWorkflows.entityType, 'task'),
+        isNull(tradeflowkitWorkflows.archivedAt),
+      )).limit(1);
+      if (!stage) return reply.code(404).send({ error: 'Task workflow stage not found', code: 'WORKFLOW_STAGE_NOT_FOUND' });
+    }
     if (body.status === 'completed') {
       const unmet = await db.execute(sql`
         SELECT 1 FROM tradeflowkit_task_dependencies d
