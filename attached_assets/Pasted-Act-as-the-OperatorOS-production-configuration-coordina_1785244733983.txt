@@ -1,0 +1,353 @@
+Act as the OperatorOS production configuration coordinator.
+
+Repository:
+OperatorOS unified Replit deployment
+
+Objective:
+Guide me through obtaining and configuring the required production environment
+variables and provider credentials. I will enter every sensitive value directly
+into Replit's Secrets interface. Never ask me to paste secret values into Agent
+chat, Shell commands, source files, .replit, screenshots, or logs.
+
+Before doing anything, read these authoritative files:
+
+- config/production-environment.contract.json
+- .env.example
+- docs/operatoros-env-vars.md
+- docs/MODULE_ENV_MIGRATION.md
+- docs/stripe-setup.md
+- docs/outcall/ENVIRONMENT.md
+- scripts/production-env-preflight.mjs
+- packages/sdk/src/catalog.ts
+- .replit
+
+Rules:
+
+1. Do not modify application code, auth, billing, SSO, tenant handling, or module
+   lifecycle status during this task.
+2. Do not create or commit .env files.
+3. Never run printenv, env, set, or any command that prints environment values.
+4. Never echo, interpolate, serialize, or log a secret.
+5. Report only secret names and whether each is configured, missing, malformed,
+   test-mode, or live-mode.
+6. Do not import credentials from old module repositories.
+7. OperatorOS remains the only identity, session, tenant, entitlement, and
+   platform-billing authority.
+8. Keep test and live provider resources completely separate.
+9. Do not enable a feature merely because credentials exist. A provider is not
+   production-ready until its real callback/webhook workflow passes.
+10. Never enable test adapters in production.
+
+Start by producing a names-only inventory divided into:
+
+- Required core secrets
+- Required non-secret production configuration
+- Stripe sandbox configuration
+- Stripe live configuration
+- Resend configuration
+- Shared OpenAI configuration
+- CallCommand Twilio configuration
+- OutCall future activation configuration
+- Optional or temporary values
+- Forbidden, deprecated, or test-only values
+- Provider families mentioned in old child repositories but not supported by
+  the active shared runtime
+
+For each item show only:
+
+- Environment variable name
+- Secret or non-secret classification
+- Provider/owner
+- Purpose
+- Required condition
+- Expected format or minimum length
+- How I obtain it
+- Whether rotating it invalidates sessions, ciphertext, webhooks, or other data
+
+Then guide me through these batches one at a time.
+
+BATCH 1 — CORE
+
+Ask me to open:
+
+All tools → Secrets
+
+and add:
+
+- DATABASE_URL
+- SESSION_SECRET
+- SSO_CODE_ENCRYPTION_SECRET
+
+DATABASE_URL must be the approved OperatorOS PostgreSQL connection.
+
+SESSION_SECRET must be a unique high-entropy production value of at least
+24 characters. Explain that rotating it invalidates active sessions.
+
+SSO_CODE_ENCRYPTION_SECRET must be an independent high-entropy value of at
+least 32 characters. It must not equal SESSION_SECRET.
+
+If a production admin row must be created or rotated, list ADMIN_PASSWORD as a
+temporary secret. Do not request it in chat. Explain that it should be removed
+after the credential operation is verified.
+
+Also verify these exact non-secret production values are configured:
+
+APP_ENV=production
+NODE_ENV=production
+PORT=5000
+API_PORT=5001
+INTERNAL_API_URL=http://localhost:5001
+OPERATOROS_BASE_URL=https://operatoros.net
+OPERATOROS_APPS_URL=https://app.operatoros.net/
+OPERATOROS_DATABASE_RELEASE_MODE=apply
+TRUST_PROXY=true
+
+Verify all thirteen canonical module URL variables against
+config/production-environment.contract.json. Do not invent or substitute URLs.
+
+Confirm these are absent:
+
+- APP_URL
+- COOKIE_DOMAIN
+- NEXT_PUBLIC_API_URL
+- OPERATOROS_DATABASE_RELEASE_APPLIED
+- MODULE_SSO_SECRET, unless an explicitly approved emergency rollback exists
+
+Confirm these are absent or false:
+
+- ALLOW_LEGACY_SSO_ROLLBACK
+- ALLOW_UNSAFE_COMMANDS
+
+After I reply CORE ADDED, run:
+
+corepack pnpm preflight:production -- --core
+
+Do not print values. Stop on any failure and identify only the affected
+variable name and required correction.
+
+BATCH 2 — STRIPE SANDBOX
+
+Have me create the following in one Stripe sandbox account:
+
+- TradeFlowKit recurring monthly Price
+- PulseDesk recurring monthly Price
+- TechDeck recurring monthly Price
+- Companion Module recurring monthly Price
+- Additional Operator Seat recurring monthly Price
+
+Use the reviewed amounts in docs/stripe-setup.md. Do not independently change
+pricing.
+
+Have me enter these through Replit Secrets:
+
+- STRIPE_MODE=test
+- STRIPE_SECRET_KEY using the sandbox secret key
+- STRIPE_WEBHOOK_SECRET using the sandbox endpoint signing secret
+- STRIPE_PRICE_TRADEFLOWKIT_MONTHLY
+- STRIPE_PRICE_PULSEDESK_MONTHLY
+- STRIPE_PRICE_TECHDECK_MONTHLY
+- STRIPE_PRICE_COMPANION_MODULE_MONTHLY
+- STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY
+
+The public Stripe webhook endpoint is:
+
+https://operatoros.net/v1/billing/webhook
+
+Configure only the event types documented in docs/stripe-setup.md.
+
+Do not use --revenue-ready during sandbox configuration because that profile
+intentionally requires live Stripe values.
+
+After I reply STRIPE TEST ADDED:
+
+- Build the production artifact.
+- Start the normal unified runtime.
+- Confirm billing reports test mode.
+- Perform one controlled sandbox Checkout.
+- Confirm the signed webhook is received.
+- Confirm the event is idempotently claimed.
+- Confirm the correct tenant entitlement is persisted.
+- Replay the event and confirm no duplicate entitlement is granted.
+- Confirm no secret, Stripe customer ID, or raw payment payload leaks to logs.
+
+Do not create a real charge.
+
+Do not create individual STRIPE_PRICE_ADDON_* values unless the current
+OperatorOS catalog deliberately exposes that legacy purchase path. The current
+stack configurator uses STRIPE_PRICE_COMPANION_MODULE_MONTHLY for paid companion
+quantity.
+
+BATCH 3 — EMAIL
+
+Have me:
+
+- Verify the selected OperatorOS sending domain in Resend.
+- Create a production sending API key with the minimum practical permission.
+- Add RESEND_API_KEY through Replit Secrets.
+- Configure EMAIL_FROM with a sender on the verified domain.
+
+EMAIL_FROM is configuration and can be:
+
+OperatorOS <hello@operatoros.net>
+
+Do not require INVITE_FROM_EMAIL when EMAIL_FROM is present.
+
+After I reply EMAIL ADDED, run:
+
+corepack pnpm preflight:production -- --email-ready
+
+Then send one controlled invitation email to an address I explicitly approve.
+Confirm delivery and safe logs without displaying the key or invitation token.
+
+BATCH 4 — SHARED OPENAI
+
+OperatorOS uses one server-side OPENAI_API_KEY through its shared AI adapter.
+Do not create separate module OpenAI keys and never expose the key through a
+NEXT_PUBLIC variable.
+
+Tell me to use the secure OpenAI Platform key setup flow and add the resulting
+key directly to Replit Secrets as:
+
+OPENAI_API_KEY
+
+Do not ask me to paste it into Agent chat.
+
+After I reply OPENAI ADDED, run:
+
+corepack pnpm preflight:production -- --ai-ready
+
+Then perform one minimum-cost controlled provider smoke against an implemented
+shared AI workflow. Confirm:
+
+- The provider is reported as configured.
+- The output is not a mock.
+- Tenant and entitlement enforcement still apply.
+- Usage is recorded once.
+- No prompt, response, key, or bearer header is logged in full.
+- Provider failure does not create a success or duplicate usage record.
+
+Do not claim every AI module production-ready based on this one smoke.
+
+BATCH 5 — CALLCOMMAND TWILIO
+
+First determine whether the active Replit Twilio connector is bound and usable.
+
+If it is not, instruct me to add these directly through Replit Secrets:
+
+- TWILIO_ACCOUNT_SID
+- TWILIO_AUTH_TOKEN
+- TWILIO_FROM_NUMBER
+
+Configure:
+
+TWILIO_PUBLIC_BASE_URL=https://callcommand-ai.operatoros.net
+
+The number must be an approved E.164 outbound number.
+
+Never enable CALLCOMMAND_TEST_ADAPTER in production.
+
+After I reply TWILIO ADDED, run:
+
+corepack pnpm preflight:production -- --callcommand-ready
+
+Do not place a real call until I explicitly approve the destination, expected
+cost, consent record, and test window. A successful preflight alone does not
+make CallCommand production-ready.
+
+BATCH 6 — LIVE STRIPE CUTOVER
+
+Do not start this batch until the sandbox checkout, webhook, entitlement,
+cancellation, idempotency, and tenant-isolation tests have passed.
+
+Have me switch the entire Stripe configuration atomically to one live Stripe
+account:
+
+- STRIPE_MODE=live
+- Live STRIPE_SECRET_KEY
+- Live STRIPE_WEBHOOK_SECRET
+- Five live recurring Price IDs
+
+Never mix test and live keys, webhook secrets, Products, or Price IDs.
+
+Run:
+
+corepack pnpm preflight:production -- --revenue-ready
+
+Then require an explicitly approved low-risk live transaction and refund or
+cancellation test before declaring live billing operational.
+
+OUTCALL BOUNDARY
+
+OutCall is not part of the initial provisioning batches. Do not add:
+
+- OUTCALL_FIELD_ENCRYPTION_KEY
+- OUTCALL_LOOKUP_HMAC_KEY
+- TWILIO_VERIFY_SERVICE_SID
+- TWILIO_PHONE_NUMBER
+- STRIPE_PRICE_ADDON_OUTCALL
+
+Do not run --outcall-ready or --all until OutCall live activation, phone
+verification, callbacks, encryption-key rotation procedures, legal/safety
+review, and deployed acceptance are separately approved.
+
+UNSUPPORTED PROVIDER BOUNDARY
+
+Do not provision old child-project secrets for:
+
+- TradeFlowKit SendGrid or Stripe Connect
+- TechDeck SMTP or standalone uploads
+- PulseDesk inbox OAuth, SendGrid, or Mailgun
+- FaultlineLab standalone storage
+- SnapProofOS standalone export storage
+- Ninja Launch Kit Anthropic
+- Standalone CallCommand object storage
+- Child databases, authentication, sessions, SSO, or billing
+
+The active attachment adapter is PostgreSQL. There is currently no production
+scanner secret that can make the scanner operational. Report scanning as an
+implementation/readiness gap rather than inventing a scanner credential.
+
+FINAL VALIDATION
+
+Once approved provider batches are configured, run:
+
+corepack pnpm typecheck
+corepack pnpm build:production
+corepack pnpm preflight:production -- --core
+corepack pnpm preflight:production -- --revenue-ready
+corepack pnpm preflight:production -- --email-ready
+corepack pnpm preflight:production -- --callcommand-ready
+corepack pnpm preflight:production -- --ai-ready
+
+Do not run --all while OutCall remains gated.
+
+Then use the canonical Replit production supervisor and verify:
+
+- /healthz
+- /readyz
+- OperatorOS login
+- My Apps
+- Exact-host SSO
+- Return navigation
+- Coordinated logout
+- Stripe sandbox/live status as applicable
+- Email provider status
+- AI provider status
+- Twilio provider status
+
+Finish with a matrix containing:
+
+- Provider
+- Required values present
+- Preflight
+- Real provider smoke
+- Webhook/callback
+- Persistence
+- Tenant isolation
+- Authorization
+- Log redaction
+- Production-ready status
+- Outstanding blocker
+
+Never label a provider or module production-ready from configuration presence
+alone.
