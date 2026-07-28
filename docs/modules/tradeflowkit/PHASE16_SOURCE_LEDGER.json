@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "moduleSlug": "tradeflowkit",
-  "capturedAtUtc": "2026-07-28T16:24:45.333Z",
+  "capturedAtUtc": "2026-07-28T18:11:53.478Z",
   "source": {
     "repository": "https://github.com/shotgunsensei/TradeFlowKit.git",
     "commit": "37aa67f1da804fc3ac56f36e50e01362077d7a26",
@@ -616,11 +616,17 @@
         "method": "DELETE",
         "path": "/api/invoices/:id",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
-        "domain": "invoice_direct_edit_bulk",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+        "disposition": "active",
+        "domain": "invoice_direct_edit_archive",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-document-mutations.test.ts",
+          "apps/api/test/tradeflowkit-revenue-ui-static.test.ts"
+        ],
+        "note": "Direct creation, versioned draft editing, and history-safe soft archive are active with normalized line-item reconciliation."
       },
       {
         "key": "DELETE /api/jobs/:id",
@@ -724,11 +730,17 @@
         "method": "DELETE",
         "path": "/api/quotes/:id",
         "sourcePointer": "server/routes/quotes.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "quote_edit_archive",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Equivalent quote edit/archive behavior is not yet active."
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-document-mutations.test.ts",
+          "apps/api/test/tradeflowkit-revenue-ui-static.test.ts"
+        ],
+        "note": "Versioned draft editing and guarded soft archive reconcile normalized line items in one tenant-scoped transaction."
       },
       {
         "key": "DELETE /api/stripe/connect",
@@ -2234,11 +2246,17 @@
         "method": "PATCH",
         "path": "/api/invoices/:id",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
-        "domain": "invoice_direct_edit_bulk",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+        "disposition": "active",
+        "domain": "invoice_direct_edit_archive",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-document-mutations.test.ts",
+          "apps/api/test/tradeflowkit-revenue-ui-static.test.ts"
+        ],
+        "note": "Direct creation, versioned draft editing, and history-safe soft archive are active with normalized line-item reconciliation."
       },
       {
         "key": "PATCH /api/jobs/:id",
@@ -2406,11 +2424,17 @@
         "method": "PATCH",
         "path": "/api/quotes/:id",
         "sourcePointer": "server/routes/quotes.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "quote_edit_archive",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Equivalent quote edit/archive behavior is not yet active."
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-document-mutations.test.ts",
+          "apps/api/test/tradeflowkit-revenue-ui-static.test.ts"
+        ],
+        "note": "Versioned draft editing and guarded soft archive reconcile normalized line items in one tenant-scoped transaction."
       },
       {
         "key": "PATCH /api/work/stages/:id",
@@ -2809,11 +2833,17 @@
         "method": "POST",
         "path": "/api/invoices",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
-        "domain": "invoice_direct_edit_bulk",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+        "disposition": "active",
+        "domain": "invoice_direct_edit_archive",
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-document-mutations.test.ts",
+          "apps/api/test/tradeflowkit-revenue-ui-static.test.ts"
+        ],
+        "note": "Direct creation, versioned draft editing, and history-safe soft archive are active with normalized line-item reconciliation."
       },
       {
         "key": "POST /api/invoices/:id/payment-link",
@@ -2870,10 +2900,10 @@
         "path": "/api/invoices/bulk-delete",
         "sourcePointer": "server/routes/invoices.ts",
         "disposition": "phase16_gap",
-        "domain": "invoice_direct_edit_bulk",
+        "domain": "invoice_import_bulk",
         "targetPointers": [],
         "evidence": [],
-        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+        "note": "Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation."
       },
       {
         "key": "POST /api/invoices/bulk-mark-paid",
@@ -2881,10 +2911,10 @@
         "path": "/api/invoices/bulk-mark-paid",
         "sourcePointer": "server/routes/invoices.ts",
         "disposition": "phase16_gap",
-        "domain": "invoice_direct_edit_bulk",
+        "domain": "invoice_import_bulk",
         "targetPointers": [],
         "evidence": [],
-        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+        "note": "Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation."
       },
       {
         "key": "POST /api/invoices/bulk-restore",
@@ -2892,10 +2922,10 @@
         "path": "/api/invoices/bulk-restore",
         "sourcePointer": "server/routes/invoices.ts",
         "disposition": "phase16_gap",
-        "domain": "invoice_direct_edit_bulk",
+        "domain": "invoice_import_bulk",
         "targetPointers": [],
         "evidence": [],
-        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+        "note": "Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation."
       },
       {
         "key": "POST /api/invoices/import",
@@ -2903,10 +2933,10 @@
         "path": "/api/invoices/import",
         "sourcePointer": "server/routes/invoices.ts",
         "disposition": "phase16_gap",
-        "domain": "invoice_direct_edit_bulk",
+        "domain": "invoice_import_bulk",
         "targetPointers": [],
         "evidence": [],
-        "note": "Direct invoice creation/edit/archive/import/bulk behavior is not yet equivalent."
+        "note": "Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation."
       },
       {
         "key": "POST /api/jobs",
@@ -3330,11 +3360,17 @@
         "method": "POST",
         "path": "/api/quotes/:id/convert-to-job",
         "sourcePointer": "server/routes/quotes.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "quote_to_job",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Quote-to-job conversion is not yet exposed as an idempotent active contract."
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-document-mutations.test.ts",
+          "apps/api/test/tradeflowkit-revenue-ui-static.test.ts"
+        ],
+        "note": "Accepted quote conversion locks the quote and returns the single linked persistent job on retries."
       },
       {
         "key": "POST /api/quotes/:id/send-email",

@@ -5,6 +5,40 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## Phase 16A TradeFlowKit follow-up
+
+TradeFlowKit was re-baselined against clean restored source commit
+`37aa67f1da804fc3ac56f36e50e01362077d7a26` rather than treating the earlier
+approved-scope snapshot as full-product parity. The executable source ledger
+inventories 35 pages, 194 API routes, 40 tables, and 8 provider/config
+references with zero unclassified items. After the Workflow Studio and
+revenue-document increments, 102 items are active, 53 use shared OperatorOS
+replacements, and 60 remain explicit Phase 16 gaps.
+
+The current revenue increment adds persistent direct invoice creation;
+optimistically versioned, multi-line draft editing for quotes and invoices;
+history-safe soft archive; and row-locked idempotent quote-to-job conversion.
+All writes resolve tenant and module authority from the validated server
+session, reconcile normalized child items within the parent transaction, and
+write activity. Viewers see a read-only UI and are independently denied by the
+API. Accepted quotes and financial-history-bearing invoices cannot be
+rewritten or destructively archived.
+
+Local evidence on 2026-07-28 includes 4/4 focused PostgreSQL/static checks; a
+clean API aggregate at 868 total, 862 pass, zero fail, and six intentional
+HTTP-only skips; workspace typecheck; production build; the compiled 29-step
+release; `200` health/readiness; and an exact-host Chrome workflow. That
+workflow completed PKCE login, customer/quote creation, two-line quote edit,
+quote send/accept, one quote-linked job, quote-derived invoice, direct invoice
+create/edit/archive, `/quotes` refresh persistence, return to OperatorOS,
+secure host-only cookie/no-credential-storage checks, and a 390-pixel
+no-overflow check.
+
+This follow-up does not change the ecosystem **NOT ACCEPTED** verdict or claim
+TradeFlowKit state 5. Sixty parity gaps remain, and deployed authenticated
+acceptance, live providers, an approved real export/apply/reconciliation,
+rollback rehearsal, and production cutover have not occurred.
+
 ## Phase 12B follow-up
 
 OutCall was reconstructed from the owner's recovered ten-phase prompt set
