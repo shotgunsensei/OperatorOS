@@ -1,9 +1,37 @@
 # OperatorOS ecosystem final E2E acceptance report
 
 Assessment date: 2026-07-29
-Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16  
-Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
+Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
+Scope: Phase 17 OperatorOS release identity and enabled-module SSO gate
 Verdict: **NOT ACCEPTED — release gate failed**
+
+## Phase 17 production-truth update — 2026-07-29
+
+The public release and refreshed `origin/main` matched at
+`48b8691fca5c8a8d79f53b309cb44db79698bbcd` when Phase 17 began. Public
+health identified build `932f83cb0d7c15ce994eb04e`, and the pre-change
+read-only verifier passed 48/48.
+
+The Phase 17 candidate adds the missing deployment timestamp and database
+release v29/29 to the Git/build/lock identity, makes readiness depend on that
+complete identity, pins public verification to an intended commit, and aligns
+OutCall with its documented planned/disabled boundary.
+
+Fresh compiled-candidate browser evidence passes three focused tests:
+
+- 1/1 in 29.5 seconds for one-login SSO across all 12 enabled child modules,
+  host-only cookies, no credential URL/storage leakage, and global revocation;
+- 1/1 in 20.1 seconds for TechDeck deep-link return/Back, silent PulseDesk
+  sibling SSO, persistent operations, and TechDeck local logout preserving the
+  sibling;
+- 1/1 in 5.3 seconds for tenant-disabled TechDeck
+  `MODULE_ACCESS_DENIED` and planned OutCall `MODULE_UNAVAILABLE`.
+
+The strengthened public verifier returns 45/48 against the unchanged public
+release because both health snapshots lack the new identity fields and the old
+OutCall callback still renders. This is expected pre-deployment evidence.
+Review/merge, Replit deployment, public 48/48, and the production-safe
+authenticated 3/3 gate remain open. No state 5 or deployed success is claimed.
 
 ## PulseDesk zero-gap follow-up — 2026-07-29
 

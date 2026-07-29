@@ -13,7 +13,14 @@ export interface HealthResponse {
     commit?: string;
     buildId?: string;
     builtAt?: string;
+    deployedAt?: string;
     lockfileSha256?: string;
+    databaseRelease?: {
+      contractVersion: number;
+      releaseVersion: number;
+      stepCount: number;
+      lastStep: string;
+    };
   };
 }
 

@@ -28,7 +28,7 @@ import {
   applyOperatorOSDatabaseRelease,
   verifyOperatorOSDatabaseRelease,
 } from './lib/database-release.js';
-import { loadReleaseMetadata } from './lib/release-metadata.js';
+import { createRuntimeReleaseIdentity, loadReleaseMetadata } from './lib/release-metadata.js';
 import { registerOsRoutes } from './routes/os-routes.js';
 import { registerAuthRoutes } from './routes/auth-routes.js';
 import { registerSaasRoutes } from './routes/saas-routes.js';
@@ -110,6 +110,10 @@ function isAllowedCorsOrigin(origin: string | undefined): boolean {
 
 const startTime = Date.now();
 const releaseMetadata = loadReleaseMetadata();
+const releaseIdentity = createRuntimeReleaseIdentity(
+  releaseMetadata,
+  new Date(startTime).toISOString(),
+);
 const sessionSecret = requireSessionSecret();
 const trustProxy = runtimeTrustsProxy();
 const prettyLogs = !isProductionEnv() && process.env.LOG_PRETTY !== 'false';
@@ -411,7 +415,7 @@ function healthSnapshot(): HealthResponse {
     version: '0.2.0',
     timestamp: new Date().toISOString(),
     uptime: Math.floor((Date.now() - startTime) / 1000),
-    release: releaseMetadata,
+    release: releaseIdentity,
   };
 }
 
@@ -447,7 +451,7 @@ app.get('/readyz', async (_req, reply) => {
       ? 'configured'
       : 'missing',
     sharedServiceWorker: getSharedServiceWorkerStatus().started ? 'configured' : 'missing',
-    releaseIdentity: releaseMetadata.status === 'identified' ? 'configured' : 'missing',
+    releaseIdentity: releaseIdentity.status === 'identified' ? 'configured' : 'missing',
   };
   const externalDependencies = {
     stripe: process.env.STRIPE_SECRET_KEY && process.env.STRIPE_MODE === 'live' ? 'configured' : 'disabled',
@@ -457,12 +461,12 @@ app.get('/readyz', async (_req, reply) => {
   };
   const ready = database === 'healthy'
     && getSharedServiceWorkerStatus().started
-    && (!isProductionEnv() || (ssoCodeEncryptionConfigured && releaseMetadata.status === 'identified'));
+    && (!isProductionEnv() || (ssoCodeEncryptionConfigured && releaseIdentity.status === 'identified'));
   return reply.code(ready ? 200 : 503).send({
     ready,
     checks,
     externalDependencies,
-    release: releaseMetadata,
+    release: releaseIdentity,
     requestId: _req.id,
   });
 });

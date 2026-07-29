@@ -1,8 +1,9 @@
 # OperatorOS SSO v1 validation matrix
 
-- Refreshed: 2026-07-27
-- Source/local result: **PASS**
-- Public deployed result: **PASS (48/48 read-only gate)**
+- Refreshed: 2026-07-29
+- Phase 17 source/isolated-candidate result: **PASS**
+- Current public baseline: **PASS under the pre-Phase-17 48/48 gate**
+- Phase 17 public candidate gate: **EXPECTED PRE-DEPLOY FAIL 45/48**
 - Overall production gate: **CLOSED**
 
 All platform and module callbacks use the exact `*.operatoros.net` registry.
@@ -11,18 +12,18 @@ CORS origins, session domains, or return targets.
 
 | Contract | Source/local result | Public result / blocker |
 | --- | --- | --- |
-| One OperatorOS identity | PASS | Public authenticated acceptance pending candidate deployment |
+| One OperatorOS identity | PASS | Current public baseline works; Phase 17 authenticated gate pending deployment |
 | No module-local credentials | PASS | No second login was used in the local 12-module gate |
-| Exact registered clients/callbacks | PASS | Public callback routes are reachable, but launch is still on the older transaction behavior |
+| Exact registered clients/callbacks | PASS | Current public callbacks/PKCE pass; Phase 17 reduces enabled child clients to 12 by disabling planned OutCall |
 | Opaque single-use code | PASS | Deployed authenticated consume/replay test pending |
-| State and nonce | PASS | Apex public launch does not yet emit the candidate registered request |
-| PKCE S256 | PASS | Apex public launch did not emit `code_challenge_method=S256` |
-| Environment/tenant/module/entitlement binding | PASS | Deployed authenticated negative tests pending |
+| State and nonce | PASS | Current public authorization entry passes; Phase 17 exact deployed run pending |
+| PKCE S256 | PASS | Current public authorization entry passes; Phase 17 exact deployed run pending |
+| Environment/tenant/module/entitlement binding | PASS | Local Phase 17 tenant-disabled TechDeck returned `MODULE_ACCESS_DENIED`; deployed rerun pending |
 | Replay and expiry rejection | PASS | Deployed authenticated negative tests pending |
-| Host-only secure session | PASS | Public app/module launch responses lack the candidate transaction cookies |
-| `SameSite=Lax`, `HttpOnly`, `Secure`, `Path=/` | PASS | Public transaction-cookie verification failed on 14 enabled launch registrations |
+| Host-only secure session | PASS | Current public contract and local Phase 17 12-module gate pass; deployed rerun pending |
+| `SameSite=Lax`, `HttpOnly`, `Secure`, `Path=/` | PASS | Current public contract and local Phase 17 browser checks pass |
 | No parent cookie domain | PASS | Must be rechecked after deployment; never set `COOKIE_DOMAIN` |
-| No credential URL/storage leakage | PASS | Local browser navigation and storage checks passed across all enabled modules |
+| No credential URL/storage leakage | PASS | Local Phase 17 browser navigation and storage checks passed across all 12 enabled modules |
 | Safe return URL/deep link | PASS | Public authenticated return test pending |
 | Open-redirect rejection | PASS | Source tests and local deep-link browser flow passed |
 | Session refresh | PASS | Source/database regression passed |
@@ -32,12 +33,30 @@ CORS origins, session domains, or return targets.
 | Browser refresh | PASS | Every enabled module shell survived reload under its host session |
 | Back navigation / loop prevention | PASS | Browser Back did not restart central authentication |
 | Silent sibling launch | PASS | PulseDesk reused the existing auth-host session without second credential entry |
-| OutCall module boundary | PASS LOCALLY | Exact callback and host-only session pass; non-entitled tenant is denied; live provider remains fail closed |
+| OutCall module boundary | PASS LOCALLY | Canonical catalog is `coming_soon`, registry is disabled, seed reconciles DB status, and SSO issue returns `MODULE_UNAVAILABLE`; old public callback remains enabled until deployment |
 | Tenant isolation and authorization | PASS | Clean aggregate suite includes cross-tenant denial, viewer write denial, and module-session sealing |
 | Structured safe observability | PASS | Request/correlation context is logged without raw codes, cookies, secrets, or passwords |
-| Health/readiness | PASS | Public `/api/health` and `/readyz` return the API snapshot and exact release identity; Replit reserves raw `/healthz` before the app |
+| Health/readiness | PASS LOCALLY; PUBLIC CANDIDATE PENDING | Compiled Phase 17 health/readiness expose Git/build/lock/build time/deploy time/DB v29; current public baseline lacks the two new identity fields |
 
 ## Fresh evidence
+
+### Phase 17 compiled candidate
+
+The Phase 17 candidate ran through the compiled readiness-gated supervisor
+against disposable PostgreSQL 16 and a canonical-host TLS proxy. The complete
+release identity was present on health/readiness. Focused browser runs passed:
+
+- 1/1 in 29.5 seconds for one-login SSO across all 12 enabled modules and
+  global revocation;
+- 1/1 in 20.1 seconds for TechDeck deep-link return, browser Back, PulseDesk
+  silent sibling SSO, persistent workflow, and TechDeck host-local logout;
+- 1/1 in 5.3 seconds for tenant entitlement denial and planned OutCall denial.
+
+The post-deploy command is
+`corepack pnpm --dir apps/web test:e2e:phase17-deployed`. It requires two
+pre-provisioned synthetic accounts and the six `E2E_PHASE17_*` values listed
+in `docs/PHASE17_PRODUCTION_RELEASE_RUNBOOK.md`; it performs no direct database
+write or registration.
 
 ### Local production topology
 
@@ -72,34 +91,29 @@ Local HTTPS probes also returned:
 
 ### Public read-only verification
 
-`corepack pnpm verify:production` ran without authentication or mutation on
-2026-07-27:
+The 2026-07-29 public baseline identified commit
+`48b8691fca5c8a8d79f53b309cb44db79698bbcd`, build
+`932f83cb0d7c15ce994eb04e`, and passed the pre-change 48/48 verifier.
 
-- 48/48 passed against merge `c249a75396104e7aabd773e564be6a95ada56467`,
-  build `2eb701089a539d9e6da5af80`.
-- API health/readiness and release identity, auth security headers, all 17
-  host diagnostics, root/app plus all 13 enabled PKCE authorization responses,
-  every callback route, and OutCall's fail-closed callback passed.
-- The verifier now follows the authoritative contracts: root `/login`,
-  `operatoros_sso_*` transaction cookies, and the Fastify health snapshot
-  through `/api/health` because Replit reserves raw `/healthz`.
-
-This closes the unauthenticated public deployment gate without weakening
-cookies, callbacks, redirects, or health semantics. The authenticated browser
-matrix remains required on the exact deployed revision.
+The strengthened Phase 17 verifier then returned 45/48 against that unchanged
+release. Root health and API readiness lack the new deployment/database
+identity, and the old OutCall callback still renders. All other 45 public
+checks pass. This expected failure is the evidence that Phase 17 is not
+deployed; it does not authorize weakening any identity, callback, or disabled
+module assertion.
 
 ## Remaining deployed acceptance
 
 After authorized deployment, run and record:
 
-1. **PASS:** Public read-only verifier 48/48, including exact release identity.
-2. Real configured test-user login and entitled My Apps filtering.
-3. Direct and launcher-based entry for the primary modules.
-4. Deep-link return, refresh, expired session, disabled entitlement, local
-   logout, and coordinated global logout.
-5. Second-tenant isolation and unauthorized direct API calls.
-6. Persistent module workflows only when their parity phase reaches its own
-   completion gate.
+1. Set `OPERATOROS_EXPECTED_RELEASE_COMMIT` to the deployed merge and require
+   48/48 from `corepack pnpm verify:production`.
+2. Load the six acceptance-account values and require 3/3 from
+   `corepack pnpm --dir apps/web test:e2e:phase17-deployed`.
+3. Record the Replit deployment/build IDs and timestamps in the Phase 17
+   evidence report.
+4. Run persistent module/provider workflows only when their separate parity or
+   provider phase reaches its own completion gate.
 
 Until the remaining steps pass, SSO v1 has public contract evidence but the
 production release and State 5 certifications remain unaccepted.
