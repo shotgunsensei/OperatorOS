@@ -36,6 +36,22 @@ same-key/same-body original-result replay, `409 IDEMPOTENCY_KEY_REUSE` on body
 drift, and database persistence after API shutdown. Legacy customer bulk
 delete/restore is explicitly retired under ADR-0011.
 
+The core CRUD increment completes the shortest functional field-service loop:
+customer → job/work order → task. Operators can create, read, fully edit,
+deep-link, refresh, and dependency-safely archive each record. Customer edits
+atomically update the linked shared Directory organization and primary
+contact, while customer archive deliberately leaves that cross-module identity
+active. Server authorization still denies viewers and hides foreign-tenant
+records; optimistic versions reject stale writes. ADR-0010 remains authoritative,
+so no duplicate project table or project endpoint was introduced.
+
+Fresh local evidence adds a 2/2 PostgreSQL workflow and a 1/1 exact-host Chrome
+workflow in 16.4 seconds against the production build and readiness-gated
+supervisor. The browser case proves PKCE login/return, all three record editors
+and deep links, task status change, refresh persistence, return to My Apps,
+module reopen, and task → job → customer archive ordering. The disposable
+database/container and all synthetic data were removed after the run.
+
 Local evidence on 2026-07-28 includes 5/5 focused PostgreSQL/static checks; a
 clean API aggregate at 872 total, 866 pass, zero fail, and six intentional
 HTTP-only skips; workspace typecheck; production build; the compiled 29-step

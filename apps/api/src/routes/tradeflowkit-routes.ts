@@ -903,6 +903,7 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
       if (priority && !['low','normal','high','urgent'].includes(priority)) throw new InputError('PRIORITY_INVALID', 'priority');
       body = {
         expectedVersion,
+        providedFields: new Set(Object.keys(raw)),
         title: stringValue(raw.title, 'title', 200),
         description: stringValue(raw.description, 'description', 4_000),
         internalNotes: stringValue(raw.internalNotes, 'internalNotes', 10_000),
@@ -924,7 +925,10 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
       const [site] = await db.select({ id: directorySites.id }).from(directorySites).where(and(eq(directorySites.tenantId, tenant), eq(directorySites.id, body.siteId), isNull(directorySites.archivedAt))).limit(1);
       if (!site) return reply.code(404).send({ error: 'Site not found', code: 'SITE_NOT_FOUND' });
     }
-    const patch = Object.fromEntries(Object.entries(body).filter(([key, value]) => key !== 'expectedVersion' && value !== null));
+    const patch = Object.fromEntries(Object.entries(body).filter(([key, value]) => !['expectedVersion', 'providedFields'].includes(key) && value !== null));
+    for (const field of ['description', 'internalNotes', 'assignedToUserId', 'siteId', 'scheduledStart', 'scheduledEnd'] as const) {
+      if (body.providedFields.has(field)) patch[field] = body[field];
+    }
     const [updated] = await db.transaction(async tx => {
       const rows = await tx.update(tradeflowkitJobs).set({
         ...patch,
@@ -937,6 +941,79 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
     });
     if (!updated) return reply.code(409).send({ error: 'Job changed; reload and retry', code: 'JOB_VERSION_CONFLICT' });
     return updated;
+  });
+
+  app.delete('/v1/modules/tradeflowkit/jobs/:id', { preHandler: [...writeGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const tenant = tenantId(request);
+    let expectedVersion;
+    try {
+      expectedVersion = integer(record(request.body).expectedVersion, 'expectedVersion', 1, 1_000_000, true)!;
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+
+    const outcome = await db.transaction(async tx => {
+      const [current] = await tx.select().from(tradeflowkitJobs).where(and(
+        eq(tradeflowkitJobs.id, id),
+        eq(tradeflowkitJobs.tenantId, tenant),
+        isNull(tradeflowkitJobs.deletedAt),
+      )).limit(1);
+      if (!current) return { kind: 'not_found' as const };
+      if (current.version !== expectedVersion) return { kind: 'version_conflict' as const, currentVersion: current.version };
+      const [activeTasks, activeQuotes, activeInvoices] = await Promise.all([
+        tx.select({ id: tradeflowkitTasks.id }).from(tradeflowkitTasks).where(and(
+          eq(tradeflowkitTasks.tenantId, tenant),
+          eq(tradeflowkitTasks.jobId, id),
+          isNull(tradeflowkitTasks.deletedAt),
+        )).limit(1),
+        tx.select({ id: tradeflowkitQuotes.id }).from(tradeflowkitQuotes).where(and(
+          eq(tradeflowkitQuotes.tenantId, tenant),
+          eq(tradeflowkitQuotes.jobId, id),
+          isNull(tradeflowkitQuotes.deletedAt),
+        )).limit(1),
+        tx.select({ id: tradeflowkitInvoices.id }).from(tradeflowkitInvoices).where(and(
+          eq(tradeflowkitInvoices.tenantId, tenant),
+          eq(tradeflowkitInvoices.jobId, id),
+          isNull(tradeflowkitInvoices.deletedAt),
+        )).limit(1),
+      ]);
+      if (activeTasks.length || activeQuotes.length || activeInvoices.length) return { kind: 'active_history' as const };
+      const [archived] = await tx.update(tradeflowkitJobs).set({
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+        version: sql`${tradeflowkitJobs.version} + 1`,
+      }).where(and(
+        eq(tradeflowkitJobs.id, id),
+        eq(tradeflowkitJobs.tenantId, tenant),
+        eq(tradeflowkitJobs.version, expectedVersion),
+        isNull(tradeflowkitJobs.deletedAt),
+      )).returning();
+      if (!archived) return { kind: 'version_conflict' as const, currentVersion: current.version };
+      await audit(tx, {
+        tenantId: tenant,
+        userId: userId(request),
+        action: 'archived',
+        entityType: 'job',
+        entityId: id,
+        metadata: { customerId: current.customerId },
+      });
+      return { kind: 'archived' as const, job: archived };
+    });
+
+    if (outcome.kind === 'not_found') return reply.code(404).send({ error: 'Job not found', code: 'JOB_NOT_FOUND' });
+    if (outcome.kind === 'version_conflict') {
+      return reply.code(409).send({
+        error: 'Job changed; reload and retry',
+        code: 'JOB_VERSION_CONFLICT',
+        currentVersion: outcome.currentVersion,
+      });
+    }
+    if (outcome.kind === 'active_history') {
+      return reply.code(409).send({
+        error: 'Archive active tasks, quotes, and invoices before archiving this job',
+        code: 'JOB_HAS_ACTIVE_HISTORY',
+      });
+    }
+    return { ok: true, job: outcome.job };
   });
 
   app.post('/v1/modules/tradeflowkit/jobs/:id/tasks', { preHandler: [...writeGuards] }, async (request, reply) => {
@@ -998,7 +1075,7 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
       if (status && !TASK_STATUSES.has(status)) throw new InputError('STATUS_INVALID', 'status');
       if (priority && !TASK_PRIORITIES.has(priority)) throw new InputError('PRIORITY_INVALID', 'priority');
       body = {
-        expectedVersion, status, priority,
+        expectedVersion, status, priority, providedFields: new Set(Object.keys(raw)),
         title: stringValue(raw.title, 'title', 200),
         description: stringValue(raw.description, 'description', 4_000),
         assignedToUserId: stringValue(raw.assignedToUserId, 'assignedToUserId', 36),
@@ -1036,7 +1113,10 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
       `);
       if (unmet.rows[0]) return reply.code(409).send({ error: 'Task dependencies must be completed first', code: 'TASK_DEPENDENCY_INCOMPLETE' });
     }
-    const patch = Object.fromEntries(Object.entries(body).filter(([key, value]) => key !== 'expectedVersion' && value !== null));
+    const patch = Object.fromEntries(Object.entries(body).filter(([key, value]) => !['expectedVersion', 'providedFields'].includes(key) && value !== null));
+    for (const field of ['description', 'assignedToUserId', 'workflowStageId', 'dueAt'] as const) {
+      if (body.providedFields.has(field)) patch[field] = body[field];
+    }
     const [updated] = await db.transaction(async tx => {
       const rows = await tx.update(tradeflowkitTasks).set({
         ...patch,

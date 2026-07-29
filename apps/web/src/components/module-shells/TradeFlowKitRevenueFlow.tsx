@@ -95,7 +95,13 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
     try {
       const next = await moduleShellApi.tradeflowkit.revenue();
       setData(next);
-      setCustomerId((current) => current || next.customers[0]?.id || '');
+      const nestedCustomerId = typeof window === 'undefined'
+        ? ''
+        : window.location.pathname.match(/\/customers\/([a-z0-9-]+)$/i)?.[1] || '';
+      setCustomerId((current) => {
+        const candidate = nestedCustomerId || current;
+        return next.customers.some(customer => customer.id === candidate) ? candidate : next.customers[0]?.id || '';
+      });
     } catch (err: any) {
       setError(err?.error || err?.message || 'Unable to load revenue workflow');
     } finally { setLoading(false); }
@@ -200,7 +206,7 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
       {loading ? <div style={{ color: c.muted, padding: '18px 0' }}>Loading revenue records…</div> : (
         <>
           {canManage ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
-            <form onSubmit={createCustomer} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>1. Customer</strong><input required maxLength={160} placeholder="Customer name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} style={input} /><input type="email" placeholder="Email (optional)" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} style={input} /><button disabled={pending || customerName.trim().length < 2} style={button()}><Plus size={14} /> Add customer</button></form>
+            <form data-testid="tradeflowkit-customer-create" onSubmit={createCustomer} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>1. Customer</strong><input required maxLength={160} placeholder="Customer name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} style={input} /><input type="email" placeholder="Email (optional)" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} style={input} /><button disabled={pending || customerName.trim().length < 2} style={button()}><Plus size={14} /> Add customer</button></form>
             <form onSubmit={importCustomers} data-testid="tradeflowkit-customer-import" style={{ ...panel, flex: '1 1 240px', display: 'grid', gap: 8 }}>
               <strong style={{ color: c.ink }}>Import customers</strong>
               <span style={{ color: c.muted, fontSize: 12 }}>CSV columns: name, email, phone, address, notes. Maximum 100 rows and 256 KB.</span>
@@ -214,7 +220,7 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
               </div>}
               <button disabled={pending || customerImportRows.length === 0} style={button(c.blue)}><FileUp size={14} /> Import validated rows</button>
             </form>
-            <form onSubmit={createJob} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>2. Job</strong><select required value={customerId} onChange={(e) => { setCustomerId(e.target.value); setJobId(''); }} style={input}><option value="">Select customer</option>{data.customers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><input required maxLength={200} placeholder="Job title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} style={input} /><button disabled={pending || !customerId || jobTitle.trim().length < 2} style={button(c.blue)}><Plus size={14} /> Add job</button></form>
+            <form data-testid="tradeflowkit-job-create" onSubmit={createJob} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>2. Job</strong><select required value={customerId} onChange={(e) => { setCustomerId(e.target.value); setJobId(''); }} style={input}><option value="">Select customer</option>{data.customers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><input required maxLength={200} placeholder="Job title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} style={input} /><button disabled={pending || !customerId || jobTitle.trim().length < 2} style={button(c.blue)}><Plus size={14} /> Add job</button></form>
             <form onSubmit={createDocument} data-testid="tradeflowkit-document-create-form" style={{ ...panel, flex: '2 1 340px', display: 'grid', gap: 8 }}>
               <strong style={{ color: c.ink }}>3. Revenue document</strong>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -229,6 +235,16 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
             </form>
           </div> : <div data-testid="tradeflowkit-revenue-readonly" style={{ color: c.muted, background: c.soft, borderRadius: 8, padding: 12, marginTop: 16 }}>Viewer access is read-only. Revenue mutations require module operator access.</div>}
 
+          <div data-testid="tradeflowkit-customer-records" style={{ display: 'grid', gap: 10, marginTop: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'end', flexWrap: 'wrap' }}>
+              <div><strong style={{ color: c.ink }}>Customer records</strong><div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>Edit the shared business profile here. Archiving is blocked while active jobs or revenue documents remain.</div></div>
+              <span style={{ color: c.muted, fontSize: 12 }}>{data.customers.length} active</span>
+            </div>
+            {data.customers.length === 0
+              ? <div style={{ color: c.muted, textAlign: 'center', padding: 18, background: c.soft, borderRadius: 8 }}>No customers yet.</div>
+              : data.customers.map(customer => <CustomerRow key={customer.id} customer={customer} selected={customer.id === customerId} pending={pending} canManage={canManage} run={run} onSelect={() => setCustomerId(customer.id)} />)}
+          </div>
+
           <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
             {data.quotes.length === 0 && data.invoices.length === 0 ? <div style={{ color: c.muted, textAlign: 'center', padding: 18, background: c.soft, borderRadius: 8 }}>No quotes or invoices yet. Build the first customer revenue flow above.</div> : null}
             {data.quotes.map((quote) => <QuoteRow key={quote.id} quote={quote} customer={customerById.get(quote.customerId)} job={quote.jobId ? jobById.get(quote.jobId) : undefined} customers={data.customers} jobs={data.jobs} hasInvoice={invoiceQuoteIds.has(quote.id)} pending={pending} canManage={canManage} run={run} />)}
@@ -238,6 +254,73 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
       )}
     </section>
   );
+}
+
+function CustomerRow({ customer, selected, pending, canManage, run, onSelect }: {
+  customer: TradeFlowKitCustomer; selected: boolean; pending: boolean; canManage: boolean;
+  run: (fn: () => Promise<unknown>) => Promise<void>; onSelect: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(customer.name);
+  const [email, setEmail] = useState(customer.email ?? '');
+  const [phone, setPhone] = useState(customer.phone ?? '');
+  const [address, setAddress] = useState(customer.address ?? '');
+  const [notes, setNotes] = useState(customer.notes ?? '');
+
+  useEffect(() => {
+    setName(customer.name);
+    setEmail(customer.email ?? '');
+    setPhone(customer.phone ?? '');
+    setAddress(customer.address ?? '');
+    setNotes(customer.notes ?? '');
+  }, [customer]);
+
+  const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '8px 9px', background: '#fff', color: c.ink };
+  const frame: React.CSSProperties = { border: `1px solid ${selected ? c.green : c.border}`, borderRadius: 8, padding: 12, background: selected ? '#f0fdf4' : '#fff', boxShadow: selected ? `inset 3px 0 ${c.green}` : 'none' };
+
+  if (editing) {
+    return <form data-testid={`tradeflowkit-customer-editor-${customer.id}`} style={{ ...frame, display: 'grid', gap: 8 }} onSubmit={event => {
+      event.preventDefault();
+      void run(async () => {
+        await moduleShellApi.tradeflowkit.updateCustomer(customer.id, {
+          expectedVersion: customer.version,
+          name,
+          email: email || undefined,
+          phone: phone || undefined,
+          address: address || undefined,
+          notes: notes || undefined,
+        });
+        setEditing(false);
+      });
+    }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px,2fr) minmax(180px,1.5fr) minmax(140px,1fr)', gap: 8 }}>
+        <input aria-label="Customer name" required minLength={2} maxLength={160} value={name} onChange={event => setName(event.target.value)} style={inputStyle} />
+        <input aria-label="Customer email" type="email" maxLength={320} value={email} onChange={event => setEmail(event.target.value)} placeholder="Email" style={inputStyle} />
+        <input aria-label="Customer phone" maxLength={40} value={phone} onChange={event => setPhone(event.target.value)} placeholder="Phone" style={inputStyle} />
+      </div>
+      <input aria-label="Customer address" maxLength={500} value={address} onChange={event => setAddress(event.target.value)} placeholder="Address" style={inputStyle} />
+      <textarea aria-label="Customer notes" maxLength={4000} value={notes} onChange={event => setNotes(event.target.value)} placeholder="Internal notes" rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <Action disabled={pending} label="Cancel" Icon={X} tone={c.muted} onClick={() => setEditing(false)} />
+        <button disabled={pending || name.trim().length < 2} style={{ border: 0, borderRadius: 6, padding: '7px 10px', background: c.green, color: '#fff', fontWeight: 800 }}>Save customer · v{customer.version}</button>
+      </div>
+    </form>;
+  }
+
+  return <article id={`tradeflowkit-customer-${customer.id}`} data-testid={`tradeflowkit-customer-${customer.id}`} style={{ ...frame, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }} onClick={onSelect}>
+    <div>
+      <strong style={{ color: c.ink }}>{customer.name}</strong>
+      <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{customer.email || 'No email'} · {customer.phone || 'No phone'} · v{customer.version}</div>
+      {(customer.address || customer.notes) && <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{customer.address || customer.notes}</div>}
+    </div>
+    <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
+      <a href={`/modules/tradeflowkit/customers/${customer.id}`} onClick={event => event.stopPropagation()} style={{ color: c.blue, fontSize: 12 }}>Record deep link</a>
+      {canManage && <Action disabled={pending} label="Edit" Icon={Pencil} tone={c.gold} onClick={() => { onSelect(); setEditing(true); }} />}
+      {canManage && <Action disabled={pending} label="Archive" Icon={Archive} tone={c.red} onClick={() => {
+        if (window.confirm('Archive this customer? Active jobs, quotes, or invoices must be archived first.')) void run(() => moduleShellApi.tradeflowkit.archiveCustomer(customer.id, customer.version));
+      }} />}
+    </div>
+  </article>;
 }
 
 function QuoteRow({ quote, customer, job, customers, jobs, hasInvoice, pending, canManage, run }: {

@@ -20,7 +20,7 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/phase-16a-tradeflowkit-customer-import`
+- Execution branch: `codex/phase16a-tradeflowkit-core-crud`
 - Release gate: **closed**
 
 ## Current verdict
@@ -29,7 +29,7 @@ Phase 16A is active and is not a production-ready declaration. TradeFlowKit
 has been re-baselined against clean restored source commit
 `37aa67f1da804fc3ac56f36e50e01362077d7a26`. The generated source ledger pins
 the reviewed files and classifies 35 client pages, 194 API routes, 40 tables,
-and 8 provider/config references with zero unclassified items. After three
+and 8 provider/config references with zero unclassified items. After four
 real implementation increments, 103 items are active, 53 use shared OperatorOS
 authority, 41 are retired for security, 23 are retired by product boundary,
 and 57 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
@@ -74,6 +74,18 @@ Imported records survive API shutdown. The legacy bulk-delete and bulk-restore
 routes are retired as prohibited destructive controls under ADR-0011 rather
 than exposed as inactive UI.
 
+The fourth increment closes the customer → job/work order → task core editing
+loop without adding the project authority rejected by ADR-0010. Customers now
+have versioned edit and dependency-guarded soft archive APIs and responsive
+record editors. Customer edits atomically reconcile the linked shared Directory
+organization and primary contact; archiving the TradeFlowKit profile never
+archives that cross-module Directory identity. Jobs and tasks have full record
+editors, deep-link selection, and versioned archive controls. A job cannot be
+archived while active tasks or financial documents remain, and a customer
+cannot be archived while active jobs, quotes, or invoices remain. Viewer
+writes fail closed, foreign records return non-enumerating `404` responses,
+and every successful mutation writes tenant-scoped activity.
+
 Phase 16A also adds a read-only, organization-scoped standalone snapshot tool
 and a version 1 guarded atomic apply path for core customers, Directory
 organizations, jobs, quotes/items, invoices/items, paid-state history, leads,
@@ -87,6 +99,39 @@ PostgreSQL apply/replay/security rehearsal passes. No real standalone export,
 production database mutation, deployment, or traffic cutover occurred.
 Workflow/general-task/contact migration and all remaining ledger gaps are
 still open.
+
+### Phase 16A core CRUD verification record
+
+Commands ran on 2026-07-28 from `C:\Dev\OperatorOS`. PostgreSQL checks and the
+compiled browser run used a new disposable `operatoros_phase16a_crud`
+database; the container and all synthetic test data were removed afterward.
+No production database, deployment, provider, or customer data was touched.
+
+```powershell
+corepack pnpm typecheck
+$env:APP_ENV='test'; $env:NODE_ENV='test'
+tsx --test --test-concurrency=1 apps/api/test/tradeflowkit-work-management.test.ts
+$env:INTERNAL_API_URL='http://127.0.0.1:5001'
+corepack pnpm build:production
+node scripts/start-unified-runtime.mjs
+$env:E2E_PRODUCTION_HOSTS='1'
+corepack pnpm --dir apps/web exec playwright test e2e/tradeflowkit-core-crud.spec.ts
+```
+
+Results: workspace typecheck passes across API, runner gateway, and web; the
+focused PostgreSQL workflow passes 2/2 with zero skips; and the production
+build passes for the API, runner gateway, SDK, and 20-page Next application.
+The readiness-gated supervisor reapplied the ordered release and started the
+compiled Fastify and Next artifacts. The exact-host Chrome workflow passes
+1/1 in 16.4 seconds. It proves PKCE login and exact return, customer
+create/edit/deep-link with Directory reconciliation, job create/edit/deep-link,
+task create/edit/status/deep-link, refresh persistence, return to My Apps,
+module reopen, and dependency-ordered task → job → customer archive while the
+shared Directory organization remains active. Initial retries were test
+harness failures only: restricted Windows Node could not resolve the sandbox
+account, the first database target was absent, and the first browser queries
+raced in-flight React mutations. The final isolated API and browser commands
+both pass unchanged product assertions.
 
 ### Phase 16A verification record (current increment)
 

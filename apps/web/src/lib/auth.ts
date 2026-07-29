@@ -872,7 +872,11 @@ export interface FaultlineAssignment {
 }
 
 export interface TradeFlowKitLineItem { description: string; quantity: number; unitPriceCents: number }
-export interface TradeFlowKitCustomer { id: string; name: string; phone: string | null; email: string | null; version: number }
+export interface TradeFlowKitCustomer {
+  id: string; name: string; phone: string | null; email: string | null;
+  address: string | null; notes: string | null; organizationId?: string | null;
+  primaryContactId?: string | null; version: number;
+}
 export interface TradeFlowKitCustomerImportRow {
   name: string; phone?: string; email?: string; address?: string; notes?: string;
 }
@@ -883,7 +887,12 @@ export interface TradeFlowKitCustomerImportResult {
   skippedRows: Array<{ row: number; reason: 'duplicate_name' | 'duplicate_email' | 'duplicate_phone' | 'duplicate_source' }>;
   customers: Array<{ id: string }>;
 }
-export interface TradeFlowKitJob { id: string; customerId: string; number: number | null; title: string; status: string; priority: string; version: number; workflowStageId?: string | null; scheduledStart?: string | null; updatedAt?: string }
+export interface TradeFlowKitJob {
+  id: string; customerId: string; number: number | null; title: string;
+  description: string | null; internalNotes?: string | null; status: string; priority: string;
+  version: number; workflowStageId?: string | null; scheduledStart?: string | null;
+  scheduledEnd?: string | null; updatedAt?: string;
+}
 export interface TradeFlowKitTask {
   id: string; jobId: string; title: string; description: string | null;
   status: 'todo' | 'in_progress' | 'blocked' | 'completed' | 'canceled';
@@ -1754,6 +1763,10 @@ export const moduleShellApi = {
       apiFetch('/modules/tradeflowkit/revenue') as Promise<TradeFlowKitRevenueResponse>,
     createCustomer: (input: TradeFlowKitCustomerImportRow): Promise<TradeFlowKitCustomer> =>
       apiFetch('/modules/tradeflowkit/customers', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitCustomer>,
+    updateCustomer: (id: string, input: TradeFlowKitCustomerImportRow & { expectedVersion: number }): Promise<TradeFlowKitCustomer> =>
+      apiFetch(`/modules/tradeflowkit/customers/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TradeFlowKitCustomer>,
+    archiveCustomer: (id: string, expectedVersion: number): Promise<{ ok: true; customer: TradeFlowKitCustomer }> =>
+      apiFetch(`/modules/tradeflowkit/customers/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true; customer: TradeFlowKitCustomer }>,
     importCustomers: (customers: TradeFlowKitCustomerImportRow[], idempotencyKey: string): Promise<TradeFlowKitCustomerImportResult> =>
       apiFetch('/modules/tradeflowkit/customers/import', {
         method: 'POST',
@@ -1808,6 +1821,8 @@ export const moduleShellApi = {
     job: (id: string) => apiFetch(`/modules/tradeflowkit/jobs/${encodeURIComponent(id)}`),
     updateJob: (id: string, input: Record<string, unknown>): Promise<TradeFlowKitJob> =>
       apiFetch(`/modules/tradeflowkit/jobs/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TradeFlowKitJob>,
+    archiveJob: (id: string, expectedVersion: number): Promise<{ ok: true; job: TradeFlowKitJob }> =>
+      apiFetch(`/modules/tradeflowkit/jobs/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true; job: TradeFlowKitJob }>,
     createTask: (jobId: string, input: { title: string; description?: string; priority?: string; dueAt?: string; sortOrder?: number; workflowStageId?: string }): Promise<TradeFlowKitTask> =>
       apiFetch(`/modules/tradeflowkit/jobs/${encodeURIComponent(jobId)}/tasks`, { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitTask>,
     updateTask: (id: string, input: Record<string, unknown>): Promise<TradeFlowKitTask> =>
