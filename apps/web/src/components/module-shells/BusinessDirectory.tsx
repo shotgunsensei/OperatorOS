@@ -25,6 +25,18 @@ function errorMessage(error: unknown) {
   return value?.error || 'The shared directory request failed. Retry or verify your module access.';
 }
 
+function routeSelection(moduleSlug: DirectoryModuleSlug): { tab: Tab; organizationId: string } {
+  if (typeof window === 'undefined') return { tab: 'organizations', organizationId: '' };
+  const path = window.location.pathname;
+  if (/\/contacts(?:\/|$)/.test(path)) return { tab: 'contacts', organizationId: '' };
+  if (/\/(?:sites|facilities)(?:\/|$)/.test(path)) return { tab: 'sites', organizationId: '' };
+  const organizationMatch = path.match(/\/(?:clients|customers|vendors)\/([a-z0-9-]+)\/?$/);
+  return {
+    tab: 'organizations',
+    organizationId: moduleSlug === 'pulsedesk' ? organizationMatch?.[1] ?? '' : '',
+  };
+}
+
 export default function BusinessDirectory({
   moduleSlug, tenantKey, canArchive,
 }: { moduleSlug: DirectoryModuleSlug; tenantKey: string; canArchive: boolean }) {
@@ -47,7 +59,11 @@ export default function BusinessDirectory({
         directoryApi.organizations.list(moduleSlug, query), directoryApi.contacts.list(moduleSlug, query), directoryApi.sites.list(moduleSlug, query),
       ]);
       setOrganizations(orgs.organizations); setContacts(people.contacts); setSites(locations.sites);
-      setSelectedId(current => current && orgs.organizations.some(row => row.id === current) ? current : orgs.organizations[0]?.id ?? '');
+      const requested = routeSelection(moduleSlug);
+      setTab(requested.tab);
+      setSelectedId(current => requested.organizationId && orgs.organizations.some(row => row.id === requested.organizationId)
+        ? requested.organizationId
+        : current && orgs.organizations.some(row => row.id === current) ? current : orgs.organizations[0]?.id ?? '');
     } catch (requestError) {
       const value = requestError as ApiError; setDenied(value.status === 403); setError(errorMessage(requestError));
     } finally { setLoading(false); }

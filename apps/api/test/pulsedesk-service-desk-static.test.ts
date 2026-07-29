@@ -64,7 +64,12 @@ test('PulseDesk UI exposes real persisted workflows, privacy guidance, responsiv
   assert.match(workspace, /transitionServiceTicket/);
   assert.match(workspace, /uploadTicketAttachment/);
   assert.match(auth, /\/modules\/pulsedesk\/tickets/);
-  for (const path of ['/assets', '/supply-requests', '/facility-requests', '/knowledge', '/service-desk/admin']) assert.ok(routeMap.includes(`'${path}'`));
+  for (const path of ['/app', '/assets', '/submit', '/supply-requests', '/facility-requests', '/knowledge', '/service-desk/admin', '/service-desk-admin', '/analytics']) assert.ok(routeMap.includes(`'${path}'`));
+  assert.match(workspace, /assetIssueMatch/);
+  assert.match(workspace, /requestedAssetId/);
+  assert.match(workspace, /service-desk-admin/);
+  assert.match(workspace, /Reporting an issue for the equipment selected by this deep link/);
+  assert.match(read('apps/web/src/components/module-shells/BusinessDirectory.tsx'), /organizationMatch/);
   assert.doesNotMatch(workspace, /Math\.random|mock ticket|fake CRUD|TODO/);
 });
 

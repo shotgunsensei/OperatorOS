@@ -8,6 +8,7 @@
     "preflight:production": "node scripts/production-env-preflight.mjs",
     "verify:production": "node scripts/verify-production-runtime.mjs",
     "verify:tradeflowkit:phase16": "node scripts/tradeflowkit-phase16-ledger.mjs",
+    "verify:pulsedesk:source": "node scripts/pulsedesk-source-ledger.mjs",
     "db:plan": "tsx apps/api/src/scripts/database-release.ts --plan",
     "db:apply": "tsx apps/api/src/scripts/database-release.ts --apply",
     "export:tradeflowkit:snapshot": "tsx apps/api/src/scripts/tradeflowkit-export.ts --read-only",

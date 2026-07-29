@@ -58,7 +58,12 @@ test('core module deep links resolve only to live native shell sections', () => 
   for (const path of ['assets', 'supply-requests', 'facility-requests', 'knowledge']) {
     assert.equal(resolveCoreModuleDeepLink('pulsedesk', [path])?.sectionId, 'pulsedesk-operations');
   }
+  for (const path of ['app', 'dashboard', 'analytics']) {
+    assert.equal(resolveCoreModuleDeepLink('pulsedesk', [path])?.sectionId, 'pulsedesk-overview');
+  }
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['submit'])?.sectionId, 'pulsedesk-operations');
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['service-desk', 'admin'])?.sectionId, 'pulsedesk-operations');
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['service-desk-admin'])?.sectionId, 'pulsedesk-operations');
   assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['dashboard'])?.sectionId, 'faultlinelab-dashboard');
   assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['challenges'])?.sectionId, 'faultlinelab-challenges');
   assert.equal(resolveCoreModuleDeepLink('faultlinelab', ['daily'])?.sectionId, 'faultlinelab-challenges');
@@ -86,6 +91,8 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['jobs', 'job-123'])?.sectionId, 'tradeflowkit-operations');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['tickets', 'ticket-123']), null);
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['tickets', 'ticket-123'])?.sectionId, 'pulsedesk-operations');
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['clients', 'client-123'])?.sectionId, 'pulsedesk-directory');
+  assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets', 'asset-123', 'report-issue'])?.sectionId, 'pulsedesk-operations');
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets', 'asset-123']), null);
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['unknown']), null);
   assert.equal(resolveCoreModuleDeepLink('ninja-pool-hall', ['matches']), null);

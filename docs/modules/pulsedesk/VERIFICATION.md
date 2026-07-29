@@ -1,8 +1,65 @@
-# PulseDesk Phase 6 verification ledger
+# PulseDesk verification ledger
 
-Assessment date: 2026-07-18
+Assessment date: 2026-07-29
 
-## Environment
+## 2026-07-29 zero-gap restoration evidence
+
+- Branch: `codex/pulsedesk-zero-gap-restoration`
+- Source evidence: clean `C:\Dev\PulseDesk` commit
+  `937849471e489ed23db2a263d04160a388402740`.
+- Database tests and runtime: separate disposable PostgreSQL 16 containers
+  with test-only credentials and no developer or production data.
+- Production artifact: readiness-gated compiled supervisor on ports 5000/5001
+  behind a local exact-host HTTPS proxy on 443.
+- No deployment, provider traffic, production mutation, import apply, or
+  cutover occurred. All containers, listeners, test roles, and synthetic data
+  were removed after verification.
+
+| Gate | Exact command / scope | Result |
+| --- | --- | --- |
+| Executable source ledger | `node scripts/pulsedesk-source-ledger.mjs` | PASS; clean pinned commit, 309/309 items classified: 23 pages, 183 routes, 50 tables, 45 provider/config references, 8 background processes; zero unclassified and zero restoration gaps |
+| Focused non-database suite | `tsx --test` across the PulseDesk ledger, shared-runtime, queue UI, importer, domain, static, and deep-link test files | PASS 42/42 |
+| Complete isolated workflow | `tsx --test test/pulsedesk-state5-workflow.test.ts` against a new disposable PostgreSQL 16 database | PASS 1/1 in 10.7 seconds; persistence, privacy, role/tenant isolation, Directory mapping, and idempotency covered |
+| Migration dry-run | `corepack pnpm import:pulsedesk:dry-run -- --input apps/api/test/fixtures/pulsedesk-export-v1.json` | PASS; stable fingerprint `2371e62e36925e22ffea4a9f3adcf77d352aea3bd8d970c27b18b95584b5dffe`, 34/34 references, zero missing and zero prohibited/privacy findings; apply remains human-gated |
+| Workspace typecheck | `corepack pnpm typecheck` | PASS for API, runner gateway, and web |
+| Database release review | `corepack pnpm db:plan` | PASS; 29 ordered additive/idempotent steps, with PulseDesk step 9 |
+| Production core preflight | `corepack pnpm preflight:production -- --core` with non-secret local test configuration | PASS |
+| Production build | `INTERNAL_API_URL=http://127.0.0.1:5001 corepack pnpm build:production` | PASS for API, runner gateway, and Next; 20 Next pages |
+| Compiled release/runtime | `node scripts/start-unified-runtime.mjs` against a new disposable database | PASS; all 29 release steps applied and verified, API and Next reached readiness |
+| Health/readiness | `GET http://127.0.0.1:5001/healthz`, `GET http://127.0.0.1:5001/readyz`, and proxied `GET http://127.0.0.1:5000/api/health` | PASS; HTTP 200 for all three |
+| PulseDesk exact-host browser workflow | Playwright production-host test filtered to `direct deep link` | PASS 1/1 in 17.5 seconds; exact-host PKCE/SSO, sibling SSO, tenant-scoped asset creation, equipment-issue deep link/prefill, UI ticket creation, internal-note persistence after reload, analytics/admin aliases, exact Directory client detail, My Apps return, and host-only local logout |
+| Broader production-host matrix | Unfiltered `apps/web/e2e/sso-v1.spec.ts` | 5 passed, 4 failed in 23.9 minutes. PulseDesk passed. BrandForgeOS, StudyForge AI, and Ninja Launch Kit timed out on AI generation while OpenAI was intentionally disabled; CallCommand expected its test adapter while production mode correctly disabled it. These are separate provider-configuration failures, not PulseDesk regressions |
+| Public/deployed target | Not run; deployment not authorized | BLOCKED; source/local state remains 4 |
+| Lint/format | No repository command exists | NOT DEFINED; no pass is claimed |
+
+## Replit handoff
+
+PulseDesk adds no module-local credential. The shared Replit deployment needs
+the core secrets already defined by
+`config/production-environment.contract.json`:
+
+- `DATABASE_URL`
+- `SESSION_SECRET` (at least 24 characters)
+- `SSO_CODE_ENCRYPTION_SECRET` (at least 32 characters)
+- `ADMIN_PASSWORD` only when bootstrapping an empty production database
+
+To activate OperatorOS platform billing and outbound notifications, the owner
+must also supply the existing shared-provider secrets:
+
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_PULSEDESK_MONTHLY` and the other price IDs required by the
+  revenue-ready profile
+- `RESEND_API_KEY` plus a verified non-secret `EMAIL_FROM` or
+  `INVITE_FROM_EMAIL`
+
+Exact production URLs, modes, proxy trust, and release mode are non-secret
+configuration and must match the production environment contract. The
+standalone PulseDesk Google/Microsoft/IMAP/SendGrid/Mailgun inbox connectors
+remain deliberately unmounted; adding provider secrets alone does not approve
+or enable those retired child-authority surfaces.
+
+## Historical Phase 6 environment
 
 - Branch: `codex/phase-6-pulsedesk-state-5`
 - Database: disposable Docker `postgres:16` container
