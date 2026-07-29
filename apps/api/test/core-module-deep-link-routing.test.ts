@@ -29,6 +29,10 @@ test('core module deep links resolve only to live native shell sections', () => 
   for (const path of ['directory', 'contacts', 'sites']) {
     assert.equal(resolveCoreModuleDeepLink('tradeflowkit', [path])?.sectionId, 'tradeflowkit-directory');
   }
+  assert.deepEqual(resolveCoreModuleDeepLink('tradeflowkit', ['trash']), {
+    sectionId: 'tradeflowkit-retention',
+    label: 'Archive',
+  });
   assert.deepEqual(resolveCoreModuleDeepLink('techdeck', ['tickets']), {
     sectionId: 'techdeck-ticket-queue',
     label: 'Ticket Queue',
@@ -117,6 +121,7 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
   const tradeFlowKitShell = readRepoFile('apps/web/src/components/module-shells/TradeFlowKitShell.tsx');
   const tradeFlowKitRevenue = readRepoFile('apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx');
   const tradeFlowKitOperations = readRepoFile('apps/web/src/components/module-shells/TradeFlowKitOperations.tsx');
+  const tradeFlowKitRetention = readRepoFile('apps/web/src/components/module-shells/TradeFlowKitRetention.tsx');
   const techDeckShell = readRepoFile('apps/web/src/components/module-shells/TechDeckShell.tsx');
   const techDeckOps = readRepoFile('apps/web/src/components/module-shells/TechDeckOperations.tsx');
   const pulseDeskShell = readRepoFile('apps/web/src/components/module-shells/PulseDeskShell.tsx');
@@ -140,6 +145,7 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
     [tradeFlowKitShell, 'tradeflowkit-directory'],
     [tradeFlowKitRevenue, 'tradeflowkit-revenue-flow'],
     [tradeFlowKitOperations, 'tradeflowkit-operations'],
+    [tradeFlowKitRetention, 'tradeflowkit-retention'],
     [tradeFlowKitShell, 'tradeflowkit-settings'],
     [techDeckShell, 'techdeck-overview'],
     [techDeckShell, 'techdeck-ticket-queue'],

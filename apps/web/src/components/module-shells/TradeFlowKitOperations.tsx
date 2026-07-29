@@ -35,6 +35,8 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
   const [taskTitle, setTaskTitle] = useState('');
   const [taskPriority, setTaskPriority] = useState('normal');
   const [settings, setSettings] = useState<TradeFlowKitSettings | null>(null);
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState('scheduled');
 
   const load = useCallback(async () => {
     setLoading(true); setError(null); setConflict(false);
@@ -94,6 +96,15 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
     });
   }
 
+  function updateSelectedJobs() {
+    const items = data.jobs.filter(job => selectedJobIds.includes(job.id)).map(job => ({ id: job.id, expectedVersion: job.version }));
+    if (items.length === 0) return;
+    void run(async () => {
+      await moduleShellApi.tradeflowkit.bulkJobStatus(items, bulkStatus, `job-bulk-status:${crypto.randomUUID()}`);
+      setSelectedJobIds([]);
+    });
+  }
+
   return (
     <section id="tradeflowkit-operations" className="tfk-panel tfk-ops" data-testid="tradeflowkit-operations" tabIndex={-1}>
       <style>{css}</style>
@@ -119,12 +130,20 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
           <option value="">All job statuses</option><option value="lead">Lead</option><option value="quoted">Quoted</option><option value="scheduled">Scheduled</option><option value="in_progress">In progress</option><option value="done">Done</option><option value="invoiced">Invoiced</option><option value="paid">Paid</option><option value="canceled">Canceled</option>
         </select>
       </div>
+      {canManage && data.jobs.length > 0 && <div className="tfk-bulk-toolbar" data-testid="tradeflowkit-job-bulk-toolbar">
+        <span>{selectedJobIds.length} job{selectedJobIds.length === 1 ? '' : 's'} selected</span>
+        <select aria-label="Bulk job status" value={bulkStatus} onChange={event => setBulkStatus(event.target.value)}><option value="lead">Lead</option><option value="quoted">Quoted</option><option value="scheduled">Scheduled</option><option value="in_progress">In progress</option><option value="done">Done</option><option value="invoiced">Invoiced</option><option value="paid">Paid</option><option value="canceled">Canceled</option></select>
+        <button type="button" disabled={pending || selectedJobIds.length === 0} onClick={updateSelectedJobs}>Update selected</button>
+      </div>}
 
       {loading ? <div className="tfk-ops-state" aria-busy="true" data-testid="tradeflowkit-operations-loading"><Loader2 className="spin" size={18} /> Loading operations…</div>
         : data.jobs.length === 0 ? <div className="tfk-ops-state" data-testid="tradeflowkit-operations-empty"><Wrench size={20} /><div><strong>No jobs in this view</strong><span>Convert a lead or create a customer job in the revenue workflow.</span></div></div>
           : <div className="tfk-ops-layout">
             <aside aria-label="Jobs">
-              {data.jobs.map(job => <JobButton key={job.id} job={job} active={job.id === selectedJobId} onClick={() => setSelectedJobId(job.id)} settings={settings} />)}
+              {data.jobs.map(job => <div className="tfk-job-select" key={job.id}>
+                {canManage && <input type="checkbox" aria-label={`Select job ${job.title}`} checked={selectedJobIds.includes(job.id)} disabled={pending} onChange={event => setSelectedJobIds(current => event.target.checked ? [...new Set([...current, job.id])] : current.filter(id => id !== job.id))} />}
+                <JobButton job={job} active={job.id === selectedJobId} onClick={() => setSelectedJobId(job.id)} settings={settings} />
+              </div>)}
             </aside>
             <div className="tfk-task-board">
               {selectedJob && <>
@@ -253,8 +272,13 @@ const css = `
   .tfk-ops-toolbar label { position:relative; }.tfk-ops-toolbar svg { position:absolute; left:10px; top:10px; color:#789189; }
   .tfk-ops input,.tfk-ops select { box-sizing:border-box; width:100%; border:1px solid rgba(22,101,52,.2); border-radius:7px; padding:9px 10px; background:white; color:#10231d; font:inherit; font-size:13px; }
   .tfk-ops-toolbar input { padding-left:33px; }
+  .tfk-bulk-toolbar { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; padding:9px 10px; border:1px solid rgba(22,101,52,.14); border-radius:8px; background:#f4fbf7; color:#587067; font-size:12px; }
+  .tfk-bulk-toolbar select { width:auto; }
+  .tfk-bulk-toolbar button { border:0; border-radius:7px; padding:8px 11px; background:#047857; color:white; font-weight:800; }
   .tfk-ops-layout { display:grid; grid-template-columns:minmax(210px,280px) minmax(0,1fr); gap:12px; min-height:280px; }
   .tfk-ops-layout aside { display:grid; align-content:start; gap:6px; max-height:520px; overflow:auto; }
+  .tfk-job-select { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:6px; }
+  .tfk-job-select>input { width:16px; height:16px; accent-color:#047857; }
   .tfk-ops-layout aside button { text-align:left; border:1px solid rgba(22,101,52,.14); border-radius:7px; background:white; padding:10px; display:grid; gap:3px; cursor:pointer; color:#10231d; }
   .tfk-ops-layout aside button.active { border-color:#059669; background:#ecfdf5; box-shadow:inset 3px 0 #059669; }
   .tfk-ops-layout aside span,.tfk-task-title span { color:#047857; font-size:10px; font-weight:900; text-transform:uppercase; }

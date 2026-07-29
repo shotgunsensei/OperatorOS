@@ -20,7 +20,7 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/phase16a-tradeflowkit-core-crud`
+- Execution branch: `codex/phase16a-tradeflowkit-retention`
 - Release gate: **closed**
 
 ## Current verdict
@@ -29,11 +29,12 @@ Phase 16A is active and is not a production-ready declaration. TradeFlowKit
 has been re-baselined against clean restored source commit
 `37aa67f1da804fc3ac56f36e50e01362077d7a26`. The generated source ledger pins
 the reviewed files and classifies 35 client pages, 194 API routes, 40 tables,
-and 8 provider/config references with zero unclassified items. After four
-real implementation increments, 103 items are active, 53 use shared OperatorOS
-authority, 41 are retired for security, 23 are retired by product boundary,
-and 57 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
-4 remains valid but is not full-product parity.
+and 8 provider/config references with zero unclassified items. The completed
+source/local restoration classifies 117 items active, 65 as shared OperatorOS
+replacements, 45 as retired for security, 50 as retired by accepted product
+boundary, and zero as unresolved Phase 16 gaps. The earlier Phase 4
+approved-scope state 4 is superseded by this complete approved-scope local
+restoration; state 5 still requires deployment and cutover evidence.
 
 Workflow Studio is now persistent rather than a shell: tenant-admin governed
 workflow templates/stages, default enforcement, optimistic versions, job
@@ -97,8 +98,52 @@ references make identical replay idempotent and source drift fatal; post-apply
 money totals must exactly reconcile before commit. A synthetic isolated
 PostgreSQL apply/replay/security rehearsal passes. No real standalone export,
 production database mutation, deployment, or traffic cutover occurred.
-Workflow/general-task/contact migration and all remaining ledger gaps are
-still open.
+Workflow/general-task/contact migration remains deliberately outside the
+bounded version 1 cutover tool and requires an approved later migration
+version only if real legacy data needs it.
+
+The final restoration increment adds a tenant-scoped retention center with
+versioned, dependency-aware restore for customers, jobs, job-scoped tasks,
+quotes, and invoices; permanent purge remains excluded. It also adds global
+bounded search across active business records and durable per-user saved
+views. Jobs and invoices now support bounded browser-parsed CSV import with
+server revalidation, tenant advisory locks, source fingerprints, normalized
+duplicate suppression, and shared idempotency. Job status and invoice paid
+state have optimistic, bounded bulk actions; bulk invoice settlement creates
+first-class payment history and updates linked jobs atomically. Exact-host
+browser acceptance exercises these features against the compiled production
+runtime.
+
+### Phase 16A restoration closure verification
+
+Commands ran on 2026-07-28 from `C:\Dev\OperatorOS` against disposable
+PostgreSQL database `operatoros_phase16_retention`. Providers were disabled
+and all credentials were process-only synthetic test values.
+
+```powershell
+corepack pnpm typecheck
+corepack pnpm verify:tradeflowkit:phase16
+node -e "require('esbuild').buildSync({entryPoints:['apps/api/test/tradeflowkit-bulk-import.test.ts'],bundle:true,platform:'node',format:'cjs',sourcemap:true,define:{'import.meta.url':JSON.stringify('file:///C:/Dev/OperatorOS/apps/api/src/lib/billing-service.ts')},outfile:'apps/api/.codex-test-artifacts/tradeflowkit-bulk-import.test.cjs'})"
+node --test --test-concurrency=1 apps/api/.codex-test-artifacts/tradeflowkit-bulk-import.test.cjs
+$env:INTERNAL_API_URL='http://localhost:5001'
+corepack pnpm build:production
+node scripts/start-unified-runtime.mjs
+$env:E2E_PRODUCTION_HOSTS='1'
+corepack pnpm --dir apps/web exec playwright test e2e/tradeflowkit-core-crud.spec.ts
+git diff --check
+```
+
+Results: the source ledger reports 117 active, 65 shared replacements, zero
+gaps, 45 security retirements, 50 product-boundary retirements, and zero
+unclassified items. The focused bounded import/bulk PostgreSQL workflow passes
+1/1. Workspace typecheck and the API/runner/SDK/20-page Next production build
+pass. The readiness-gated supervisor applies the ordered database release and
+starts compiled Fastify and Next artifacts. The exact-host Chrome workflow
+passes 1/1 in 25.3 seconds, covering PKCE return, persisted CRUD, archive and
+restore, global search, saved views, job and multi-line invoice CSV imports,
+bulk job status, atomic mark-paid/payment history, refresh, My Apps return,
+and logout. This is complete source/local approved-scope restoration, not a
+deployment or production-data cutover claim.
 
 ### Phase 16A core CRUD verification record
 
@@ -168,8 +213,8 @@ and core production preflight pass; and the production build
 passes for API, runner gateway, SDK, and the 20-page Next application. The
 release applies and verifies twice consecutively, including the one-time
 priority-constraint upgrade without recreating the upgraded constraint. The
-source ledger reports 35 pages, 194 API routes, 40 tables, 8 providers, zero
-unclassified items, and 57 explicit gaps; `git diff --check` passes with
+source ledger now reports 35 pages, 194 API routes, 40 tables, 8 providers,
+zero unclassified items, and zero gaps; `git diff --check` passes with
 line-ending warnings only. The Replit-equivalent supervisor reapplies all 29
 release steps on the isolated database, starts the built Fastify and Next
 artifacts, and returns `200` from API `/healthz`, API `/readyz`, and the web

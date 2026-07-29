@@ -2403,6 +2403,27 @@ export const tradeflowkitTaskDependencies = pgTable('tradeflowkit_task_dependenc
   index('idx_tfk_task_dependency_parent').on(t.tenantId, t.dependsOnTaskId),
 ]);
 
+export const tradeflowkitSavedViews = pgTable('tradeflowkit_saved_views', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  resource: text('resource').notNull(),
+  name: text('name').notNull(),
+  filters: jsonb('filters').$type<Record<string, string | number | boolean | null>>().notNull().default(sql`'{}'::jsonb`),
+  sort: jsonb('sort').$type<{ field: string; direction: 'asc' | 'desc' }>().notNull().default(sql`'{"field":"updatedAt","direction":"desc"}'::jsonb`),
+  isShared: boolean('is_shared').notNull().default(false),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  uniqueIndex('uq_tfk_saved_views_active_name').on(t.tenantId, t.userId, t.resource, t.name)
+    .where(sql`${t.archivedAt} IS NULL`),
+  index('idx_tfk_saved_views_tenant_resource').on(t.tenantId, t.resource, t.isShared, t.archivedAt),
+]);
+
 export const tradeflowkitQuotes = pgTable('tradeflowkit_quotes', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),

@@ -887,6 +887,23 @@ export interface TradeFlowKitCustomerImportResult {
   skippedRows: Array<{ row: number; reason: 'duplicate_name' | 'duplicate_email' | 'duplicate_phone' | 'duplicate_source' }>;
   customers: Array<{ id: string }>;
 }
+export interface TradeFlowKitJobImportRow {
+  customerName: string; title: string; description?: string; status?: string; priority?: string;
+  scheduledStart?: string; scheduledEnd?: string; internalNotes?: string;
+}
+export interface TradeFlowKitInvoiceImportRow {
+  invoiceRef?: string; customerName: string; status?: string; dueDate?: string;
+  taxRateBps?: number; discountCents?: number; notes?: string;
+  itemDescription: string; itemQuantity: number; itemUnitPriceCents: number;
+}
+export interface TradeFlowKitBulkImportResult {
+  imported: number;
+  skipped: number;
+  errors: Array<{ row: number; code: string; field?: string }>;
+  skippedRows: Array<{ row: number; reason: 'duplicate_source' }>;
+  jobs?: Array<{ id: string }>;
+  invoices?: Array<{ id: string }>;
+}
 export interface TradeFlowKitJob {
   id: string; customerId: string; number: number | null; title: string;
   description: string | null; internalNotes?: string | null; status: string; priority: string;
@@ -911,6 +928,49 @@ export interface TradeFlowKitWorkflow {
 export interface TradeFlowKitTaskList {
   items: TradeFlowKitTask[];
   pagination: { total: number; limit: number; offset: number; returned: number };
+}
+export interface TradeFlowKitRetainedItem {
+  kind: 'customer' | 'job' | 'task' | 'quote' | 'invoice';
+  id: string;
+  label: string;
+  detail: string;
+  status: string | null;
+  version: number;
+  archivedAt: string;
+  restoreBlockedReason: string | null;
+}
+export interface TradeFlowKitTrashResponse {
+  items: TradeFlowKitRetainedItem[];
+  returned: number;
+  limitPerEntity: number;
+}
+export interface TradeFlowKitSearchItem {
+  kind: 'lead' | 'customer' | 'job' | 'task' | 'quote' | 'invoice';
+  id: string;
+  title: string;
+  detail: string | null;
+  status: string | null;
+  href: string;
+  updatedAt: string;
+}
+export interface TradeFlowKitSearchResponse {
+  query: string;
+  items: TradeFlowKitSearchItem[];
+  returned: number;
+  limitPerEntity: number;
+}
+export interface TradeFlowKitSavedView {
+  id: string;
+  userId: string;
+  resource: 'search' | 'leads' | 'customers' | 'jobs' | 'tasks' | 'quotes' | 'invoices';
+  name: string;
+  filters: Record<string, string | number | boolean | null>;
+  sort: { field: string; direction: 'asc' | 'desc' };
+  isShared: boolean;
+  owned: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
 }
 export interface TradeFlowKitActivity {
   id: string; action: string; entityType: string; entityId: string | null;
@@ -1773,6 +1833,18 @@ export const moduleShellApi = {
         headers: { 'Idempotency-Key': idempotencyKey },
         body: JSON.stringify({ customers }),
       }) as Promise<TradeFlowKitCustomerImportResult>,
+    importJobs: (jobs: TradeFlowKitJobImportRow[], idempotencyKey: string): Promise<TradeFlowKitBulkImportResult> =>
+      apiFetch('/modules/tradeflowkit/jobs/import', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify({ jobs }),
+      }) as Promise<TradeFlowKitBulkImportResult>,
+    bulkJobStatus: (items: Array<{ id: string; expectedVersion: number }>, status: string, idempotencyKey: string): Promise<{ updated: number; jobIds: string[]; status: string }> =>
+      apiFetch('/modules/tradeflowkit/jobs/bulk-status', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify({ items, status }),
+      }) as Promise<{ updated: number; jobIds: string[]; status: string }>,
     createJob: (input: { customerId: string; title: string; priority?: string }): Promise<TradeFlowKitJob> =>
       apiFetch('/modules/tradeflowkit/jobs', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitJob>,
     createQuote: (input: {
@@ -1798,6 +1870,23 @@ export const moduleShellApi = {
       discountCents?: number; notes?: string; dueDate?: string;
     }): Promise<TradeFlowKitInvoice> =>
       apiFetch('/modules/tradeflowkit/invoices', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitInvoice>,
+    importInvoices: (invoices: TradeFlowKitInvoiceImportRow[], idempotencyKey: string): Promise<TradeFlowKitBulkImportResult> =>
+      apiFetch('/modules/tradeflowkit/invoices/import', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify({ invoices }),
+      }) as Promise<TradeFlowKitBulkImportResult>,
+    bulkMarkInvoicesPaid: (
+      items: Array<{ id: string; expectedVersion: number }>,
+      idempotencyKey: string,
+      paymentMethod = 'other',
+      paymentReference?: string,
+    ): Promise<{ updated: number; invoiceIds: string[] }> =>
+      apiFetch('/modules/tradeflowkit/invoices/bulk-mark-paid', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify({ items, paymentMethod, paymentReference }),
+      }) as Promise<{ updated: number; invoiceIds: string[] }>,
     updateInvoice: (id: string, input: {
       expectedVersion: number; customerId: string; jobId?: string; lineItems: TradeFlowKitLineItem[];
       taxRateBps?: number; discountCents?: number; notes?: string; dueDate?: string;
@@ -1862,6 +1951,27 @@ export const moduleShellApi = {
     task: (id: string) => apiFetch(`/modules/tradeflowkit/tasks/${encodeURIComponent(id)}`),
     archiveTask: (id: string, expectedVersion: number): Promise<{ ok: true }> =>
       apiFetch(`/modules/tradeflowkit/tasks/${encodeURIComponent(id)}`, { method: 'DELETE', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true }>,
+    trash: (): Promise<TradeFlowKitTrashResponse> =>
+      apiFetch('/modules/tradeflowkit/trash') as Promise<TradeFlowKitTrashResponse>,
+    restoreRetained: (kind: `${TradeFlowKitRetainedItem['kind']}s`, id: string, expectedVersion: number): Promise<{ ok: true }> =>
+      apiFetch(`/modules/tradeflowkit/trash/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/restore`, {
+        method: 'POST',
+        body: JSON.stringify({ expectedVersion }),
+      }) as Promise<{ ok: true }>,
+    search: (query: string, limit = 8): Promise<TradeFlowKitSearchResponse> =>
+      apiFetch(`/modules/tradeflowkit/search?q=${encodeURIComponent(query)}&limit=${limit}`) as Promise<TradeFlowKitSearchResponse>,
+    savedViews: (resource?: TradeFlowKitSavedView['resource']): Promise<{ items: TradeFlowKitSavedView[] }> =>
+      apiFetch(`/modules/tradeflowkit/saved-views${resource ? `?resource=${encodeURIComponent(resource)}` : ''}`) as Promise<{ items: TradeFlowKitSavedView[] }>,
+    createSavedView: (input: {
+      resource: TradeFlowKitSavedView['resource']; name: string;
+      filters: Record<string, string | number | boolean | null>;
+      sort?: { field: string; direction: 'asc' | 'desc' }; isShared?: boolean;
+    }): Promise<TradeFlowKitSavedView> =>
+      apiFetch('/modules/tradeflowkit/saved-views', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitSavedView>,
+    archiveSavedView: (id: string, expectedVersion: number): Promise<{ ok: true }> =>
+      apiFetch(`/modules/tradeflowkit/saved-views/${encodeURIComponent(id)}`, {
+        method: 'DELETE', body: JSON.stringify({ expectedVersion }),
+      }) as Promise<{ ok: true }>,
     activity: (filters?: { entityType?: string; entityId?: string; limit?: number; offset?: number }): Promise<{ items: TradeFlowKitActivity[] }> => {
       const query = new URLSearchParams();
       if (filters?.entityType) query.set('entityType', filters.entityType);

@@ -11,9 +11,10 @@ TradeFlowKit was re-baselined against clean restored source commit
 `37aa67f1da804fc3ac56f36e50e01362077d7a26` rather than treating the earlier
 approved-scope snapshot as full-product parity. The executable source ledger
 inventories 35 pages, 194 API routes, 40 tables, and 8 provider/config
-references with zero unclassified items. After the Workflow Studio,
-revenue-document, and customer-import increments, 103 items are active, 53 use
-shared OperatorOS replacements, and 57 remain explicit Phase 16 gaps.
+references with zero unclassified items. After the complete approved-scope
+restoration, 117 items are active, 65 use shared OperatorOS replacements, 45
+are retired for security, 50 are retired by accepted product boundary, and
+zero remain as Phase 16 gaps.
 
 The current revenue increment adds persistent direct invoice creation;
 optimistically versioned, multi-line draft editing for quotes and invoices;
@@ -45,6 +46,13 @@ active. Server authorization still denies viewers and hides foreign-tenant
 records; optimistic versions reject stale writes. ADR-0010 remains authoritative,
 so no duplicate project table or project endpoint was introduced.
 
+The closure increment adds dependency-aware retention restore for customers,
+jobs, job-scoped tasks, quotes, and invoices; bounded global search; durable
+per-user saved views; bounded job and multi-line invoice CSV imports;
+optimistic bulk job status; and atomic bulk invoice settlement with first-class
+payment history. The same tenant, role, optimistic-version, idempotency,
+non-enumeration, and activity rules remain server-authoritative.
+
 Fresh local evidence adds a 2/2 PostgreSQL workflow and a 1/1 exact-host Chrome
 workflow in 16.4 seconds against the production build and readiness-gated
 supervisor. The browser case proves PKCE login/return, all three record editors
@@ -71,10 +79,17 @@ tenant-scoped cleanup was repaired, the scenario passed 1/1 in 8.5 seconds,
 and a count-only check confirmed no synthetic import-gate identity remained.
 The clean rebuilt runtime and core production preflight both pass.
 
+Fresh closure evidence adds a 1/1 bounded import/bulk PostgreSQL workflow,
+workspace typecheck, production build, zero-gap executable ledger, and a 1/1
+exact-host Chrome acceptance run in 25.3 seconds against the readiness-gated
+compiled runtime. It covers persisted CRUD, archive/restore, search/views,
+job/invoice imports, bulk job update, mark-paid/payment history, return, and
+logout.
+
 This follow-up does not change the ecosystem **NOT ACCEPTED** verdict or claim
-TradeFlowKit state 5. Fifty-seven parity gaps remain, and deployed authenticated
-acceptance, live providers, an approved real export/apply/reconciliation,
-rollback rehearsal, and production cutover have not occurred.
+TradeFlowKit state 5. Deployed authenticated acceptance, enabled live
+providers, an approved real export/apply/reconciliation, rollback rehearsal,
+and production cutover have not occurred.
 
 ## Phase 12B follow-up
 

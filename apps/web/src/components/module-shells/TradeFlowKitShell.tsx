@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react';
 import {
   Activity,
   AlertTriangle,
+  ArchiveRestore,
   ArrowLeft,
   BarChart3,
   BriefcaseBusiness,
@@ -28,8 +29,10 @@ import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createTradeFlowKitAdapterContext } from '../../../../../apps/modules/tradeflowkit/adapter.js';
 import TradeFlowKitLeadCenter from './TradeFlowKitLeadCenter';
+import TradeFlowKitGlobalSearch from './TradeFlowKitGlobalSearch';
 import TradeFlowKitRevenueFlow from './TradeFlowKitRevenueFlow';
 import TradeFlowKitOperations from './TradeFlowKitOperations';
+import TradeFlowKitRetention from './TradeFlowKitRetention';
 import TradeFlowKitWorkManagement from './TradeFlowKitWorkManagement';
 import BusinessDirectory from './BusinessDirectory';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
@@ -340,6 +343,10 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               <GitBranch size={15} color={colors.violet} />
               <span>Workflow Studio</span>
             </a>
+            <a href="#tradeflowkit-retention" style={railLinkStyle} data-testid="tradeflowkit-sidebar-retention">
+              <ArchiveRestore size={15} color={colors.blue} />
+              <span>Archive</span>
+            </a>
             <a href="#tradeflowkit-settings" style={railLinkStyle} data-testid="tradeflowkit-sidebar-settings">
               <Settings size={15} color={colors.gold} />
               <span>Settings</span>
@@ -352,6 +359,10 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
                 <MetricTile key={label} label={label} value={value} tone={tone} />
               ))}
             </section>
+
+            {hasTenantContext && adapter.tenantId && (
+              <TradeFlowKitGlobalSearch key={`search-${adapter.tenantId}`} tenantKey={adapter.tenantId} canManage={canManageModule} />
+            )}
 
             <section
               id="tradeflowkit-lead-center"
@@ -373,6 +384,10 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
 
             {hasTenantContext && adapter.tenantId && (
               <TradeFlowKitRevenueFlow key={`revenue-${adapter.tenantId}`} tenantKey={adapter.tenantId} canManage={canManageModule} />
+            )}
+
+            {hasTenantContext && adapter.tenantId && (
+              <TradeFlowKitRetention key={`retention-${adapter.tenantId}`} tenantKey={adapter.tenantId} canManage={canManageModule} />
             )}
 
             {hasTenantContext && adapter.tenantId && (

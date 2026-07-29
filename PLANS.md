@@ -39,7 +39,7 @@ slice is not parity.
 | 13 | Repeatable dry-run imports, reconciliation, rollback-safe cutover, and standalone write freeze | Every targeted module parity schema approved | Source/local rehearsal complete; production exports, backup/restore, write freeze, apply, deployed acceptance, and cutover remain human-gated |
 | 14 | Cross-module security, privacy, performance, and reliability hardening | Functional parity and migration tooling | Local candidate: zero known dependency vulnerabilities; shared headers/bounded DB shutdown/fail-closed disabled billing; threat models; tenant/role negatives; production build; loopback load baseline; and disposable backup/restore pass. Deployment/provider/monitoring gates remain blocked for Phase 15. |
 | 15 | Deployed acceptance, release decision, and state-5 certification matrix | All required prior gates | In progress; merge `c249a753` is deployed as build `2eb701089a539d9e6da5af80` and the contract-corrected public verifier passes 48/48. Authenticated test-user, persistence, tenant, authorization, logout, provider, backup/cutover, and State 5 gates remain open. |
-| 16A | Re-baseline TradeFlowKit against the restored full product and close recorded parity gaps | Phase 15 release evidence plus restored-source provenance | In progress. The executable source ledger has zero unclassified items and 57 explicit gaps after three real increments: Workflow Studio/team work management, persistent revenue-document mutations, and bounded Directory-reconciled customer CSV import. Destructive customer bulk delete/restore is retired under ADR-0011. No real standalone export, production apply, deployment, or state-5 promotion is authorized. |
+| 16A | Re-baseline TradeFlowKit against the restored full product and close recorded parity gaps | Phase 15 release evidence plus restored-source provenance | Source/local restoration complete. The executable ledger has zero gaps and zero unclassified items: 117 active, 65 shared replacements, 45 security retirements, and 50 accepted product-boundary retirements. Compiled exact-host acceptance covers persisted CRUD, archive/restore, search/views, bounded customer/job/invoice imports, safe bulk updates/payment, return, and logout. Real standalone export/apply, deployment, provider acceptance, and state-5 promotion remain gated. |
 
 ## Phase execution rules
 
@@ -58,16 +58,12 @@ slice is not parity.
 
 ## Immediate next gate
 
-Continue Phase 16A from the zero-unclassified restored TradeFlowKit ledger.
-Prioritize complete persistent customer workflows over migration scaffolding:
-each closed route must have tenant predicates, server authorization, optimistic
-concurrency or idempotency as appropriate, real responsive UI, audit evidence,
-and isolated PostgreSQL coverage. Keep every unimplemented source surface as
-an explicit gap. This direction does not authorize deployment, production data
-mutation, promotion, or a production-ready label. Before any public promotion,
-deploy the reviewed cumulative revision through `.replit`, require 48/48 from
-the read-only verifier, and run authenticated deployed SSO, return,
-persistence, deep-link, refresh, entitlement, tenant-isolation, authorization,
-logout, provider, backup/restore, and module acceptance. Record the exact
-deployed commit in `docs/CURRENT_RELEASE_GATE.md` and never weaken the contract
-to make it pass.
+Deploy the reviewed cumulative TradeFlowKit revision through `.replit` after
+the required secrets are supplied. Require 48/48 from the read-only verifier
+and run authenticated deployed SSO, return, persistence, deep-link, refresh,
+entitlement, tenant-isolation, authorization, logout, configured-provider,
+backup/restore, and module acceptance. If legacy standalone data is moving,
+approve the export and a later migration version for records outside bounded
+v1 before applying anything. Record the exact deployed commit in
+`docs/CURRENT_RELEASE_GATE.md`; deployment and production-data mutation remain
+human gates.

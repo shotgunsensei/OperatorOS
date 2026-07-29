@@ -386,6 +386,125 @@ test('customer, job, and task records support tenant-safe edit, restart persiste
   assert.equal(updatedTask.version, task.version + 1);
   assert.equal(updatedTask.status, 'in_progress');
 
+  const viewerSearch = await app.inject({
+    method: 'GET',
+    url: '/v1/modules/tradeflowkit/search?q=Functional%20parity&limit=10',
+    headers: headers(viewer, tenant),
+  });
+  assert.equal(viewerSearch.statusCode, 200, viewerSearch.body);
+  assert.ok(viewerSearch.json().items.some((item: any) => item.kind === 'customer' && item.id === customer.id));
+  assert.ok(viewerSearch.json().items.some((item: any) => item.kind === 'job' && item.id === job.id));
+  const foreignSearch = await app.inject({
+    method: 'GET',
+    url: '/v1/modules/tradeflowkit/search?q=Functional%20parity&limit=10',
+    headers: headers(ownerB, ownerB.currentTenantId),
+  });
+  assert.equal(foreignSearch.statusCode, 200, foreignSearch.body);
+  assert.deepEqual(foreignSearch.json().items, []);
+
+  const privateViewResponse = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/tradeflowkit/saved-views',
+    headers: headers(ownerA, tenant),
+    payload: {
+      resource: 'search',
+      name: 'Functional work',
+      filters: { query: 'Functional parity' },
+      sort: { field: 'updatedAt', direction: 'desc' },
+    },
+  });
+  assert.equal(privateViewResponse.statusCode, 201, privateViewResponse.body);
+  const privateView = privateViewResponse.json();
+  const sharedViewResponse = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/tradeflowkit/saved-views',
+    headers: headers(ownerA, tenant),
+    payload: {
+      resource: 'search',
+      name: 'Urgent work',
+      filters: { query: 'Updated work step', priority: 'urgent' },
+      isShared: true,
+    },
+  });
+  assert.equal(sharedViewResponse.statusCode, 201, sharedViewResponse.body);
+  const sharedView = sharedViewResponse.json();
+  const duplicateView = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/tradeflowkit/saved-views',
+    headers: headers(ownerA, tenant),
+    payload: { resource: 'search', name: privateView.name, filters: { query: 'different' } },
+  });
+  assert.equal(duplicateView.statusCode, 409, duplicateView.body);
+  assert.equal(duplicateView.json().code, 'SAVED_VIEW_NAME_CONFLICT');
+  const viewerViews = await app.inject({
+    method: 'GET',
+    url: '/v1/modules/tradeflowkit/saved-views?resource=search',
+    headers: headers(viewer, tenant),
+  });
+  assert.equal(viewerViews.statusCode, 200, viewerViews.body);
+  assert.deepEqual(viewerViews.json().items.map((item: any) => item.id), [sharedView.id]);
+  assert.equal(viewerViews.json().items[0].owned, false);
+  const viewerCreateView = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/tradeflowkit/saved-views',
+    headers: headers(viewer, tenant),
+    payload: { resource: 'search', name: 'Denied view', filters: { query: 'denied' } },
+  });
+  assert.equal(viewerCreateView.statusCode, 403, viewerCreateView.body);
+  const foreignViews = await app.inject({
+    method: 'GET',
+    url: '/v1/modules/tradeflowkit/saved-views',
+    headers: headers(ownerB, ownerB.currentTenantId),
+  });
+  assert.equal(foreignViews.statusCode, 200, foreignViews.body);
+  assert.deepEqual(foreignViews.json().items, []);
+  const foreignDeleteView = await app.inject({
+    method: 'DELETE',
+    url: `/v1/modules/tradeflowkit/saved-views/${privateView.id}`,
+    headers: headers(ownerB, ownerB.currentTenantId),
+    payload: { expectedVersion: privateView.version },
+  });
+  assert.equal(foreignDeleteView.statusCode, 404, foreignDeleteView.body);
+  const deletePrivateView = await app.inject({
+    method: 'DELETE',
+    url: `/v1/modules/tradeflowkit/saved-views/${privateView.id}`,
+    headers: headers(ownerA, tenant),
+    payload: { expectedVersion: privateView.version },
+  });
+  assert.equal(deletePrivateView.statusCode, 200, deletePrivateView.body);
+
+  const quoteResponse = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/tradeflowkit/quotes',
+    headers: headers(ownerA, tenant),
+    payload: {
+      customerId: customer.id,
+      jobId: job.id,
+      lineItems: [{ description: 'Retained diagnostic work', quantity: 1, unitPriceCents: 12500 }],
+    },
+  });
+  assert.equal(quoteResponse.statusCode, 201, quoteResponse.body);
+  const quote = quoteResponse.json();
+  const invoiceResponse = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/tradeflowkit/invoices',
+    headers: headers(ownerA, tenant),
+    payload: {
+      customerId: customer.id,
+      jobId: job.id,
+      lineItems: [{ description: 'Retained repair work', quantity: 1, unitPriceCents: 25000 }],
+    },
+  });
+  assert.equal(invoiceResponse.statusCode, 201, invoiceResponse.body);
+  const invoice = invoiceResponse.json();
+  const jobAfterDocuments = await app.inject({
+    method: 'GET',
+    url: `/v1/modules/tradeflowkit/jobs/${job.id}`,
+    headers: headers(ownerA, tenant),
+  });
+  assert.equal(jobAfterDocuments.statusCode, 200, jobAfterDocuments.body);
+  const jobVersionWithDocuments = jobAfterDocuments.json().job.version;
+
   const blockedCustomerArchive = await app.inject({
     method: 'DELETE',
     url: `/v1/modules/tradeflowkit/customers/${customer.id}`,
@@ -399,7 +518,7 @@ test('customer, job, and task records support tenant-safe edit, restart persiste
     method: 'DELETE',
     url: `/v1/modules/tradeflowkit/jobs/${job.id}`,
     headers: headers(ownerA, tenant),
-    payload: { expectedVersion: updatedJob.version },
+    payload: { expectedVersion: jobVersionWithDocuments },
   });
   assert.equal(blockedJobArchive.statusCode, 409, blockedJobArchive.body);
   assert.equal(blockedJobArchive.json().code, 'JOB_HAS_ACTIVE_HISTORY');
@@ -428,11 +547,25 @@ test('customer, job, and task records support tenant-safe edit, restart persiste
     payload: { expectedVersion: updatedTask.version },
   });
   assert.equal(taskArchive.statusCode, 200, taskArchive.body);
+  const quoteArchive = await app.inject({
+    method: 'DELETE',
+    url: `/v1/modules/tradeflowkit/quotes/${quote.id}`,
+    headers: headers(ownerA, tenant),
+    payload: { expectedVersion: quote.version },
+  });
+  assert.equal(quoteArchive.statusCode, 200, quoteArchive.body);
+  const invoiceArchive = await app.inject({
+    method: 'DELETE',
+    url: `/v1/modules/tradeflowkit/invoices/${invoice.id}`,
+    headers: headers(ownerA, tenant),
+    payload: { expectedVersion: invoice.version },
+  });
+  assert.equal(invoiceArchive.statusCode, 200, invoiceArchive.body);
   const jobArchive = await app.inject({
     method: 'DELETE',
     url: `/v1/modules/tradeflowkit/jobs/${job.id}`,
     headers: headers(ownerA, tenant),
-    payload: { expectedVersion: updatedJob.version },
+    payload: { expectedVersion: jobVersionWithDocuments },
   });
   assert.equal(jobArchive.statusCode, 200, jobArchive.body);
   const customerArchive = await app.inject({
@@ -445,4 +578,127 @@ test('customer, job, and task records support tenant-safe edit, restart persiste
 
   const [directoryAfterArchive] = await db.select().from(directoryOrganizations).where(eq(directoryOrganizations.id, customer.organizationId)).limit(1);
   assert.equal(directoryAfterArchive.archivedAt, null, 'archiving the module customer must not archive the shared Directory organization');
+  const archivedSearch = await app.inject({
+    method: 'GET',
+    url: '/v1/modules/tradeflowkit/search?q=Updated%20work%20step',
+    headers: headers(ownerA, tenant),
+  });
+  assert.equal(archivedSearch.statusCode, 200, archivedSearch.body);
+  assert.equal(archivedSearch.json().items.some((item: any) => item.id === task.id), false);
+
+  const foreignTrash = await app.inject({
+    method: 'GET',
+    url: '/v1/modules/tradeflowkit/trash',
+    headers: headers(ownerB, ownerB.currentTenantId),
+  });
+  assert.equal(foreignTrash.statusCode, 200, foreignTrash.body);
+  assert.deepEqual(foreignTrash.json().items, []);
+
+  const viewerTrash = await app.inject({
+    method: 'GET',
+    url: '/v1/modules/tradeflowkit/trash',
+    headers: headers(viewer, tenant),
+  });
+  assert.equal(viewerTrash.statusCode, 200, viewerTrash.body);
+  assert.deepEqual(
+    new Set(viewerTrash.json().items.map((item: any) => item.kind)),
+    new Set(['customer', 'job', 'task', 'quote', 'invoice']),
+  );
+  const archivedById = new Map<string, any>(viewerTrash.json().items.map((item: any) => [item.id, item]));
+  assert.equal(archivedById.get(customer.id)?.restoreBlockedReason, null);
+  assert.match(archivedById.get(job.id)?.restoreBlockedReason, /customer first/i);
+  assert.match(archivedById.get(task.id)?.restoreBlockedReason, /job first/i);
+
+  const deniedRestore = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/tradeflowkit/trash/customers/${customer.id}/restore`,
+    headers: headers(viewer, tenant),
+    payload: { expectedVersion: customerArchive.json().customer.version },
+  });
+  assert.equal(deniedRestore.statusCode, 403, deniedRestore.body);
+
+  const blockedTaskRestore = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/tradeflowkit/trash/tasks/${task.id}/restore`,
+    headers: headers(ownerA, tenant),
+    payload: { expectedVersion: updatedTask.version + 1 },
+  });
+  assert.equal(blockedTaskRestore.statusCode, 409, blockedTaskRestore.body);
+  assert.equal(blockedTaskRestore.json().code, 'TASK_JOB_ARCHIVED');
+
+  const blockedJobRestore = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/tradeflowkit/trash/jobs/${job.id}/restore`,
+    headers: headers(ownerA, tenant),
+    payload: { expectedVersion: jobArchive.json().job.version },
+  });
+  assert.equal(blockedJobRestore.statusCode, 409, blockedJobRestore.body);
+  assert.equal(blockedJobRestore.json().code, 'JOB_CUSTOMER_ARCHIVED');
+
+  const staleCustomerRestore = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/tradeflowkit/trash/customers/${customer.id}/restore`,
+    headers: headers(ownerA, tenant),
+    payload: { expectedVersion: updatedCustomer.version },
+  });
+  assert.equal(staleCustomerRestore.statusCode, 409, staleCustomerRestore.body);
+  assert.equal(staleCustomerRestore.json().code, 'TRASH_VERSION_CONFLICT');
+
+  const restoreRequests = [
+    {
+      path: `/v1/modules/tradeflowkit/trash/customers/${customer.id}/restore`,
+      version: customerArchive.json().customer.version,
+    },
+    {
+      path: `/v1/modules/tradeflowkit/trash/jobs/${job.id}/restore`,
+      version: jobArchive.json().job.version,
+    },
+    {
+      path: `/v1/modules/tradeflowkit/trash/tasks/${task.id}/restore`,
+      version: updatedTask.version + 1,
+    },
+    {
+      path: `/v1/modules/tradeflowkit/trash/quotes/${quote.id}/restore`,
+      version: quoteArchive.json().quote.version,
+    },
+    {
+      path: `/v1/modules/tradeflowkit/trash/invoices/${invoice.id}/restore`,
+      version: invoiceArchive.json().invoice.version,
+    },
+  ];
+  for (const request of restoreRequests) {
+    const restored = await app.inject({
+      method: 'POST',
+      url: request.path,
+      headers: headers(ownerA, tenant),
+      payload: { expectedVersion: request.version },
+    });
+    assert.equal(restored.statusCode, 200, restored.body);
+  }
+
+  const retentionRestartApp = await createApp(true);
+  const afterRestore = await retentionRestartApp.inject({
+    method: 'GET',
+    url: '/v1/modules/tradeflowkit/trash',
+    headers: headers(ownerA, tenant),
+  });
+  assert.equal(afterRestore.statusCode, 200, afterRestore.body);
+  assert.equal(afterRestore.json().items.some((item: any) => [
+    customer.id, job.id, task.id, quote.id, invoice.id,
+  ].includes(item.id)), false);
+  const restoredJob = await retentionRestartApp.inject({
+    method: 'GET',
+    url: `/v1/modules/tradeflowkit/jobs/${job.id}`,
+    headers: headers(ownerA, tenant),
+  });
+  assert.equal(restoredJob.statusCode, 200, restoredJob.body);
+  assert.equal(restoredJob.json().tasks[0].id, task.id);
+  const restoredSearch = await retentionRestartApp.inject({
+    method: 'GET',
+    url: '/v1/modules/tradeflowkit/search?q=Updated%20work%20step',
+    headers: headers(ownerA, tenant),
+  });
+  assert.equal(restoredSearch.statusCode, 200, restoredSearch.body);
+  assert.equal(restoredSearch.json().items.find((item: any) => item.id === task.id).href, `/modules/tradeflowkit/tasks/${task.id}`);
+  await retentionRestartApp.close();
 });

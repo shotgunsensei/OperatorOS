@@ -7,8 +7,11 @@ import {
   type TradeFlowKitCustomer,
   type TradeFlowKitCustomerImportResult,
   type TradeFlowKitCustomerImportRow,
+  type TradeFlowKitBulkImportResult,
   type TradeFlowKitInvoice,
+  type TradeFlowKitInvoiceImportRow,
   type TradeFlowKitJob,
+  type TradeFlowKitJobImportRow,
   type TradeFlowKitLineItem,
   type TradeFlowKitQuote,
   type TradeFlowKitRevenueResponse,
@@ -19,7 +22,7 @@ const empty: TradeFlowKitRevenueResponse = { customers: [], jobs: [], quotes: []
 const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 const customerImportColumns = ['name', 'email', 'phone', 'address', 'notes'] as const;
 
-function parseCustomerCsv(value: string): TradeFlowKitCustomerImportRow[] {
+function parseCsvObjects(value: string, allowedColumns: readonly string[], requiredColumns: readonly string[]): Array<Record<string, string>> {
   const records: string[][] = [];
   let record: string[] = [];
   let field = '';
@@ -41,15 +44,16 @@ function parseCustomerCsv(value: string): TradeFlowKitCustomerImportRow[] {
   if (quoted) throw new Error('The CSV contains an unterminated quoted field.');
   record.push(field.replace(/\r$/, ''));
   if (record.some(cell => cell.trim())) records.push(record);
-  if (records.length < 2) throw new Error('The CSV needs a header and at least one customer row.');
+  if (records.length < 2) throw new Error('The CSV needs a header and at least one data row.');
 
   const headers = records[0].map(header => header.replace(/^\uFEFF/, '').trim().toLocaleLowerCase('en-US'));
-  if (!headers.includes('name')) throw new Error('The CSV header must include name.');
+  const missing = requiredColumns.find(column => !headers.includes(column));
+  if (missing) throw new Error(`The CSV header must include ${missing}.`);
   if (new Set(headers).size !== headers.length) throw new Error('The CSV contains duplicate column headers.');
-  const allowed = new Set<string>(customerImportColumns);
+  const allowed = new Set<string>(allowedColumns);
   const unknown = headers.filter(header => !allowed.has(header));
   if (unknown.length > 0) throw new Error(`Unsupported CSV column: ${unknown[0]}.`);
-  if (records.length - 1 > 100) throw new Error('Customer imports are limited to 100 rows.');
+  if (records.length - 1 > 100) throw new Error('Imports are limited to 100 rows.');
 
   return records.slice(1).map((cells, rowIndex) => {
     if (cells.length > headers.length && cells.slice(headers.length).some(cell => cell.trim())) {
@@ -57,12 +61,56 @@ function parseCustomerCsv(value: string): TradeFlowKitCustomerImportRow[] {
     }
     const row: Record<string, string> = {};
     headers.forEach((header, index) => { row[header] = (cells[index] ?? '').trim(); });
+    return row;
+  });
+}
+
+function parseCustomerCsv(value: string): TradeFlowKitCustomerImportRow[] {
+  return parseCsvObjects(value, customerImportColumns, ['name']).map(row => ({
+    name: row.name,
+    ...(row.email ? { email: row.email } : {}),
+    ...(row.phone ? { phone: row.phone } : {}),
+    ...(row.address ? { address: row.address } : {}),
+    ...(row.notes ? { notes: row.notes } : {}),
+  }));
+}
+
+const jobImportColumns = ['customername', 'title', 'description', 'status', 'priority', 'scheduledstart', 'scheduledend', 'internalnotes'] as const;
+function parseJobCsv(value: string): TradeFlowKitJobImportRow[] {
+  return parseCsvObjects(value, jobImportColumns, ['customername', 'title']).map(row => ({
+    customerName: row.customername,
+    title: row.title,
+    ...(row.description ? { description: row.description } : {}),
+    ...(row.status ? { status: row.status } : {}),
+    ...(row.priority ? { priority: row.priority } : {}),
+    ...(row.scheduledstart ? { scheduledStart: row.scheduledstart } : {}),
+    ...(row.scheduledend ? { scheduledEnd: row.scheduledend } : {}),
+    ...(row.internalnotes ? { internalNotes: row.internalnotes } : {}),
+  }));
+}
+
+const invoiceImportColumns = ['invoiceref', 'customername', 'status', 'duedate', 'taxpercent', 'discount', 'notes', 'itemdescription', 'itemquantity', 'itemunitprice'] as const;
+function parseInvoiceCsv(value: string): TradeFlowKitInvoiceImportRow[] {
+  return parseCsvObjects(value, invoiceImportColumns, ['customername', 'itemdescription', 'itemunitprice']).map((row, index) => {
+    const quantity = row.itemquantity ? Number(row.itemquantity) : 1;
+    const unitPrice = Number(row.itemunitprice);
+    const taxPercent = row.taxpercent ? Number(row.taxpercent) : 0;
+    const discount = row.discount ? Number(row.discount) : 0;
+    if (!Number.isInteger(quantity) || quantity < 1 || !Number.isFinite(unitPrice) || unitPrice < 0
+      || !Number.isFinite(taxPercent) || taxPercent < 0 || !Number.isFinite(discount) || discount < 0) {
+      throw new Error(`CSV row ${index + 2} has an invalid quantity, unit price, tax, or discount.`);
+    }
     return {
-      name: row.name,
-      ...(row.email ? { email: row.email } : {}),
-      ...(row.phone ? { phone: row.phone } : {}),
-      ...(row.address ? { address: row.address } : {}),
+      ...(row.invoiceref ? { invoiceRef: row.invoiceref } : {}),
+      customerName: row.customername,
+      ...(row.status ? { status: row.status } : {}),
+      ...(row.duedate ? { dueDate: row.duedate } : {}),
+      taxRateBps: Math.round(taxPercent * 100),
+      discountCents: Math.round(discount * 100),
       ...(row.notes ? { notes: row.notes } : {}),
+      itemDescription: row.itemdescription,
+      itemQuantity: quantity,
+      itemUnitPriceCents: Math.round(unitPrice * 100),
     };
   });
 }
@@ -89,6 +137,17 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
   const [customerImportKey, setCustomerImportKey] = useState('');
   const [customerImportError, setCustomerImportError] = useState<string | null>(null);
   const [customerImportResult, setCustomerImportResult] = useState<TradeFlowKitCustomerImportResult | null>(null);
+  const [jobImportRows, setJobImportRows] = useState<TradeFlowKitJobImportRow[]>([]);
+  const [jobImportName, setJobImportName] = useState('');
+  const [jobImportKey, setJobImportKey] = useState('');
+  const [jobImportError, setJobImportError] = useState<string | null>(null);
+  const [jobImportResult, setJobImportResult] = useState<TradeFlowKitBulkImportResult | null>(null);
+  const [invoiceImportRows, setInvoiceImportRows] = useState<TradeFlowKitInvoiceImportRow[]>([]);
+  const [invoiceImportName, setInvoiceImportName] = useState('');
+  const [invoiceImportKey, setInvoiceImportKey] = useState('');
+  const [invoiceImportError, setInvoiceImportError] = useState<string | null>(null);
+  const [invoiceImportResult, setInvoiceImportResult] = useState<TradeFlowKitBulkImportResult | null>(null);
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -166,6 +225,60 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
     });
   }
 
+  async function selectJobImport(file?: File) {
+    setJobImportRows([]); setJobImportName(''); setJobImportKey(''); setJobImportError(null); setJobImportResult(null);
+    if (!file) return;
+    if (!file.name.toLocaleLowerCase('en-US').endsWith('.csv')) return setJobImportError('Select a .csv file.');
+    if (file.size > 256 * 1024) return setJobImportError('Job CSV files are limited to 256 KB.');
+    try {
+      const rows = parseJobCsv(await file.text());
+      setJobImportRows(rows); setJobImportName(file.name); setJobImportKey(`job-import:${crypto.randomUUID()}`);
+    } catch (nextError) {
+      setJobImportError(nextError instanceof Error ? nextError.message : 'Unable to parse the CSV.');
+    }
+  }
+
+  function importJobs(event: FormEvent) {
+    event.preventDefault();
+    if (jobImportRows.length === 0 || !jobImportKey) return;
+    void run(async () => {
+      const result = await moduleShellApi.tradeflowkit.importJobs(jobImportRows, jobImportKey);
+      setJobImportResult(result); setJobImportRows([]); setJobImportName(''); setJobImportKey('');
+    });
+  }
+
+  async function selectInvoiceImport(file?: File) {
+    setInvoiceImportRows([]); setInvoiceImportName(''); setInvoiceImportKey(''); setInvoiceImportError(null); setInvoiceImportResult(null);
+    if (!file) return;
+    if (!file.name.toLocaleLowerCase('en-US').endsWith('.csv')) return setInvoiceImportError('Select a .csv file.');
+    if (file.size > 256 * 1024) return setInvoiceImportError('Invoice CSV files are limited to 256 KB.');
+    try {
+      const rows = parseInvoiceCsv(await file.text());
+      setInvoiceImportRows(rows); setInvoiceImportName(file.name); setInvoiceImportKey(`invoice-import:${crypto.randomUUID()}`);
+    } catch (nextError) {
+      setInvoiceImportError(nextError instanceof Error ? nextError.message : 'Unable to parse the CSV.');
+    }
+  }
+
+  function importInvoices(event: FormEvent) {
+    event.preventDefault();
+    if (invoiceImportRows.length === 0 || !invoiceImportKey) return;
+    void run(async () => {
+      const result = await moduleShellApi.tradeflowkit.importInvoices(invoiceImportRows, invoiceImportKey);
+      setInvoiceImportResult(result); setInvoiceImportRows([]); setInvoiceImportName(''); setInvoiceImportKey('');
+    });
+  }
+
+  function bulkMarkInvoicesPaid() {
+    const items = data.invoices.filter(invoice => selectedInvoiceIds.includes(invoice.id)).map(invoice => ({ id: invoice.id, expectedVersion: invoice.version }));
+    if (items.length === 0) return;
+    const paymentReference = window.prompt('Payment reference for selected invoices (optional)') || undefined;
+    void run(async () => {
+      await moduleShellApi.tradeflowkit.bulkMarkInvoicesPaid(items, `invoice-bulk-paid:${crypto.randomUUID()}`, 'other', paymentReference);
+      setSelectedInvoiceIds([]);
+    });
+  }
+
   function createJob(event: FormEvent) {
     event.preventDefault();
     if (!customerId) return;
@@ -220,6 +333,24 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
               </div>}
               <button disabled={pending || customerImportRows.length === 0} style={button(c.blue)}><FileUp size={14} /> Import validated rows</button>
             </form>
+            <form onSubmit={importJobs} data-testid="tradeflowkit-job-import" style={{ ...panel, flex: '1 1 240px', display: 'grid', gap: 8 }}>
+              <strong style={{ color: c.ink }}>Import jobs</strong>
+              <span style={{ color: c.muted, fontSize: 12 }}>CSV: customerName, title, description, status, priority, scheduledStart, scheduledEnd, internalNotes.</span>
+              <label style={{ ...input, position: 'relative', overflow: 'hidden', display: 'flex', gap: 7, alignItems: 'center', cursor: 'pointer' }}><FileUp size={15} /><span>{jobImportName || 'Choose job CSV'}</span><input aria-label="Job CSV file" type="file" accept=".csv,text/csv" onChange={(event) => void selectJobImport(event.target.files?.[0])} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} /></label>
+              {jobImportRows.length > 0 && <span style={{ color: c.green, fontSize: 12, fontWeight: 800 }}>{jobImportRows.length} rows ready.</span>}
+              {jobImportError && <span role="alert" style={{ color: c.red, fontSize: 12 }}>{jobImportError}</span>}
+              {jobImportResult && <ImportResult result={jobImportResult} />}
+              <button disabled={pending || jobImportRows.length === 0} style={button(c.blue)}><FileUp size={14} /> Import jobs</button>
+            </form>
+            <form onSubmit={importInvoices} data-testid="tradeflowkit-invoice-import" style={{ ...panel, flex: '1 1 260px', display: 'grid', gap: 8 }}>
+              <strong style={{ color: c.ink }}>Import invoices</strong>
+              <span style={{ color: c.muted, fontSize: 12 }}>CSV: invoiceRef, customerName, status, dueDate, taxPercent, discount, notes, itemDescription, itemQuantity, itemUnitPrice. Repeated refs create multi-line invoices.</span>
+              <label style={{ ...input, position: 'relative', overflow: 'hidden', display: 'flex', gap: 7, alignItems: 'center', cursor: 'pointer' }}><FileUp size={15} /><span>{invoiceImportName || 'Choose invoice CSV'}</span><input aria-label="Invoice CSV file" type="file" accept=".csv,text/csv" onChange={(event) => void selectInvoiceImport(event.target.files?.[0])} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} /></label>
+              {invoiceImportRows.length > 0 && <span style={{ color: c.green, fontSize: 12, fontWeight: 800 }}>{invoiceImportRows.length} rows ready.</span>}
+              {invoiceImportError && <span role="alert" style={{ color: c.red, fontSize: 12 }}>{invoiceImportError}</span>}
+              {invoiceImportResult && <ImportResult result={invoiceImportResult} />}
+              <button disabled={pending || invoiceImportRows.length === 0} style={button(c.gold)}><FileUp size={14} /> Import invoices</button>
+            </form>
             <form data-testid="tradeflowkit-job-create" onSubmit={createJob} style={{ ...panel, flex: '1 1 220px', display: 'grid', gap: 8 }}><strong style={{ color: c.ink }}>2. Job</strong><select required value={customerId} onChange={(e) => { setCustomerId(e.target.value); setJobId(''); }} style={input}><option value="">Select customer</option>{data.customers.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select><input required maxLength={200} placeholder="Job title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} style={input} /><button disabled={pending || !customerId || jobTitle.trim().length < 2} style={button(c.blue)}><Plus size={14} /> Add job</button></form>
             <form onSubmit={createDocument} data-testid="tradeflowkit-document-create-form" style={{ ...panel, flex: '2 1 340px', display: 'grid', gap: 8 }}>
               <strong style={{ color: c.ink }}>3. Revenue document</strong>
@@ -246,9 +377,13 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
           </div>
 
           <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
+            {canManage && data.invoices.some(invoice => ['sent', 'processing'].includes(invoice.status)) && <div data-testid="tradeflowkit-invoice-bulk-toolbar" style={{ ...panel, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: 10 }}>
+              <span style={{ color: c.muted, fontSize: 12 }}>{selectedInvoiceIds.length} payable invoice{selectedInvoiceIds.length === 1 ? '' : 's'} selected</span>
+              <button type="button" disabled={pending || selectedInvoiceIds.length === 0} onClick={bulkMarkInvoicesPaid} style={button(c.green)}>Mark selected paid</button>
+            </div>}
             {data.quotes.length === 0 && data.invoices.length === 0 ? <div style={{ color: c.muted, textAlign: 'center', padding: 18, background: c.soft, borderRadius: 8 }}>No quotes or invoices yet. Build the first customer revenue flow above.</div> : null}
             {data.quotes.map((quote) => <QuoteRow key={quote.id} quote={quote} customer={customerById.get(quote.customerId)} job={quote.jobId ? jobById.get(quote.jobId) : undefined} customers={data.customers} jobs={data.jobs} hasInvoice={invoiceQuoteIds.has(quote.id)} pending={pending} canManage={canManage} run={run} />)}
-            {data.invoices.map((invoice) => <InvoiceRow key={invoice.id} invoice={invoice} customer={customerById.get(invoice.customerId)} customers={data.customers} jobs={data.jobs} pending={pending} canManage={canManage} run={run} />)}
+            {data.invoices.map((invoice) => <InvoiceRow key={invoice.id} invoice={invoice} customer={customerById.get(invoice.customerId)} customers={data.customers} jobs={data.jobs} pending={pending} canManage={canManage} selected={selectedInvoiceIds.includes(invoice.id)} onSelected={(selected) => setSelectedInvoiceIds(current => selected ? [...new Set([...current, invoice.id])] : current.filter(id => id !== invoice.id))} run={run} />)}
           </div>
         </>
       )}
@@ -323,6 +458,14 @@ function CustomerRow({ customer, selected, pending, canManage, run, onSelect }: 
   </article>;
 }
 
+function ImportResult({ result }: { result: TradeFlowKitBulkImportResult }) {
+  return <div style={{ color: c.ink, fontSize: 12 }}>
+    <div>Imported {result.imported}; skipped {result.skipped}; errors {result.errors.length}.</div>
+    {result.errors.slice(0, 3).map(importError => <div key={`${importError.row}:${importError.code}`}>Row {importError.row}: {importError.code}{importError.field ? ` (${importError.field})` : ''}</div>)}
+    {result.errors.length > 3 && <div>{result.errors.length - 3} more validation errors.</div>}
+  </div>;
+}
+
 function QuoteRow({ quote, customer, job, customers, jobs, hasInvoice, pending, canManage, run }: {
   quote: TradeFlowKitQuote; customer?: TradeFlowKitCustomer; job?: TradeFlowKitJob;
   customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[]; hasInvoice: boolean;
@@ -356,10 +499,11 @@ function QuoteRow({ quote, customer, job, customers, jobs, hasInvoice, pending, 
   );
 }
 
-function InvoiceRow({ invoice, customer, customers, jobs, pending, canManage, run }: {
+function InvoiceRow({ invoice, customer, customers, jobs, pending, canManage, selected, onSelected, run }: {
   invoice: TradeFlowKitInvoice; customer?: TradeFlowKitCustomer;
   customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[];
-  pending: boolean; canManage: boolean; run: (fn: () => Promise<unknown>) => Promise<void>;
+  pending: boolean; canManage: boolean; selected: boolean; onSelected: (selected: boolean) => void;
+  run: (fn: () => Promise<unknown>) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   if (editing) {
@@ -372,7 +516,10 @@ function InvoiceRow({ invoice, customer, customers, jobs, pending, canManage, ru
   return (
     <div data-testid={`tradeflowkit-invoice-${invoice.id}`} style={{ border: `1px solid ${c.border}`, borderRadius: 8, padding: 12, background: '#f8fcfa', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
       <div>
-        <strong style={{ color: c.ink }}>Invoice {invoice.number ? `#${invoice.number}` : ''} · {customer?.name ?? 'Customer'}</strong>
+        <strong style={{ color: c.ink, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {canManage && ['sent', 'processing'].includes(invoice.status) && <input type="checkbox" aria-label={`Select invoice ${invoice.number ?? invoice.id}`} checked={selected} disabled={pending} onChange={event => onSelected(event.target.checked)} />}
+          Invoice {invoice.number ? `#${invoice.number}` : ''} · {customer?.name ?? 'Customer'}
+        </strong>
         <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{money(invoice.totalCents)} · <b>{invoice.status}</b> · v{invoice.version}{invoice.paymentReference ? ` · ${invoice.paymentReference}` : ''}</div>
       </div>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>

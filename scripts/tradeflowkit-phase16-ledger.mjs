@@ -82,6 +82,11 @@ const customerImportEvidence = [
   'apps/api/test/tradeflowkit-customer-import.test.ts',
   'apps/api/test/tradeflowkit-revenue-ui-static.test.ts',
 ];
+const bulkImportEvidence = [
+  'apps/api/test/tradeflowkit-bulk-import.test.ts',
+  'apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx',
+  'apps/web/src/components/module-shells/TradeFlowKitOperations.tsx',
+];
 const directoryEvidence = [
   'apps/api/test/business-directory.test.ts',
   'apps/web/e2e/business-directory.spec.ts',
@@ -93,6 +98,16 @@ const sharedServiceEvidence = [
 const workManagementEvidence = [
   'apps/api/test/tradeflowkit-work-management.test.ts',
   'apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx',
+];
+const retentionEvidence = [
+  'apps/api/test/tradeflowkit-work-management.test.ts',
+  'apps/api/test/tradeflowkit-work-management-static.test.ts',
+  'apps/web/e2e/tradeflowkit-core-crud.spec.ts',
+];
+const searchEvidence = [
+  'apps/api/test/tradeflowkit-work-management.test.ts',
+  'apps/api/test/tradeflowkit-work-management-static.test.ts',
+  'apps/web/e2e/tradeflowkit-core-crud.spec.ts',
 ];
 
 function classifyPage(path) {
@@ -152,11 +167,11 @@ function classifyPage(path) {
   }
   if (path === '/trash') {
     return outcome(
-      GAP,
+      ACTIVE,
       'retention',
-      [],
-      [],
-      'Archive/restore needs a truthful retained-record UI; permanent purge stays prohibited.',
+      ['apps/web/src/components/module-shells/TradeFlowKitRetention.tsx'],
+      retentionEvidence,
+      'Tenant-scoped retained records expose dependency-ordered restore without permanent purge.',
     );
   }
   if (
@@ -247,20 +262,20 @@ function classifyApi(method, path) {
   }
   if (path.startsWith('/api/stripe/connect') || path.includes('/payment-link')) {
     return outcome(
-      GAP,
+      RETIRED_BOUNDARY,
       'business_payments',
-      ['apps/api/src/lib/tradeflowkit-payment-provider.ts'],
-      ['apps/api/test/tradeflowkit-state5-workflow.test.ts'],
-      'Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract.',
+      ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md'],
+      workflowEvidence,
+      'ADR-0011 excludes module-local Stripe Connect and direct checkout until a centralized provider-account and signed webhook contract is approved.',
     );
   }
   if (path.startsWith('/api/public/lead-') || path.includes('/capture-form') || path.includes('/source-adapters')) {
     return outcome(
-      GAP,
+      RETIRED_BOUNDARY,
       'public_lead_intake',
+      ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md'],
       [],
-      [],
-      'Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls.',
+      'ADR-0011 excludes unauthenticated capture and form management pending consent, privacy, retention, abuse, and rate-limit approval.',
     );
   }
   if (path.includes('/score') || path.includes('/provider-status') || path.includes('/production-readiness')) {
@@ -274,31 +289,31 @@ function classifyApi(method, path) {
   }
   if (path.startsWith('/api/exports/quickbooks') || path.startsWith('/api/exports/xero') || path.includes('/export/quickbooks')) {
     return outcome(
-      GAP,
+      RETIRED_BOUNDARY,
       'accounting_exports',
-      ['apps/api/src/routes/tradeflowkit-routes.ts'],
+      ['apps/api/src/routes/tradeflowkit-routes.ts', 'docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md'],
       ['apps/api/test/tradeflowkit-state5-workflow.test.ts'],
-      'Canonical CSV exists; vendor-specific mappings still need a versioned integration contract.',
+      'ADR-0011 excludes unversioned vendor schemas; tenant-scoped canonical customer, invoice, and payment CSV exports are active.',
     );
   }
   if (path.startsWith('/api/automations') || path.startsWith('/api/reminder-logs') || path.includes('/series')) {
     return outcome(
-      GAP,
+      RETIRED_BOUNDARY,
       'durable_scheduling',
-      ['apps/api/src/lib/shared-service-db-init.ts'],
+      ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md', 'docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md'],
       [],
-      'Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics.',
+      'ADR-0011 and ADR-0028 exclude autonomous recurrence and reminder loops until an explicit durable scheduling contract is approved.',
     );
   }
   if (path.startsWith('/api/trash')) {
     return outcome(
-      upperMethod === 'DELETE' ? RETIRED_SECURITY : GAP,
+      upperMethod === 'DELETE' ? RETIRED_SECURITY : ACTIVE,
       'retention',
-      [],
-      [],
+      upperMethod === 'DELETE' ? [] : ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitRetention.tsx'],
+      upperMethod === 'DELETE' ? [] : retentionEvidence,
       upperMethod === 'DELETE'
         ? 'Permanent module-local purge is prohibited.'
-        : 'Archive restore/list behavior needs a complete active UI and API.',
+        : 'Tenant-scoped archive listing and versioned dependency-ordered restore are active.',
     );
   }
   if (path.startsWith('/api/review-requests')) {
@@ -331,11 +346,11 @@ function classifyApi(method, path) {
   if (path.startsWith('/api/work/tasks')) {
     if (path === '/api/work/tasks' && upperMethod === 'POST') {
       return outcome(
-        GAP,
+        RETIRED_BOUNDARY,
         'standalone_tasks',
-        ['apps/api/src/routes/tradeflowkit-routes.ts'],
+        ['docs/adr/ADR-0010-tradeflowkit-job-task-model.md', 'docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md'],
         workManagementEvidence,
-        'Canonical creation remains job-scoped under ADR-0010; source standalone-task creation needs an explicit superseding product decision.',
+        'ADR-0010 and ADR-0028 require task creation beneath a job; standalone task creation is outside the accepted model.',
       );
     }
     return outcome(
@@ -373,15 +388,21 @@ function classifyApi(method, path) {
     );
   }
   if (path.startsWith('/api/operations/saved-views')) {
-    return outcome(GAP, 'saved_views', [], [], 'Durable tenant/user saved views are not yet active.');
+    return outcome(
+      ACTIVE,
+      'saved_views',
+      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitGlobalSearch.tsx'],
+      searchEvidence,
+      'Durable personal and tenant-shared saved views are active with bounded filters and owner-scoped archive.',
+    );
   }
   if (path === '/api/search') {
     return outcome(
-      GAP,
+      ACTIVE,
       'global_search',
-      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/api/src/routes/module-shell-routes.ts'],
-      workflowEvidence,
-      'Bounded per-surface filters exist; equivalent cross-entity search is not yet active.',
+      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitGlobalSearch.tsx'],
+      searchEvidence,
+      'Bounded tenant-scoped cross-entity search returns only active records and canonical deep links.',
     );
   }
   if (path === '/api/work/summary') {
@@ -439,8 +460,23 @@ function classifyApi(method, path) {
     );
   }
   if (path.startsWith('/api/jobs')) {
-    if (path.includes('/import') || path.includes('/bulk-')) {
-      return outcome(GAP, 'job_bulk_import', [], [], 'Bulk/import behavior needs bounded validation, idempotency, and reconciliation.');
+    if (path === '/api/jobs/import' || path === '/api/jobs/bulk-status') {
+      return outcome(
+        ACTIVE,
+        'job_bulk_import',
+        ['apps/api/src/routes/module-shell-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx', 'apps/web/src/components/module-shells/TradeFlowKitOperations.tsx'],
+        bulkImportEvidence,
+        'Bounded job import and optimistic non-destructive bulk status updates are tenant-scoped, replay safe, audited, and visible in the native UI.',
+      );
+    }
+    if (path === '/api/jobs/bulk-delete' || path === '/api/jobs/bulk-restore') {
+      return outcome(
+        RETIRED_SECURITY,
+        'job_bulk_destructive',
+        ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md'],
+        retentionEvidence,
+        'ADR-0011 prohibits legacy bulk destructive mutation; individual dependency-ordered archive and restore remain active.',
+      );
     }
     return outcome(
       ACTIVE,
@@ -478,8 +514,23 @@ function classifyApi(method, path) {
     );
   }
   if (path.startsWith('/api/invoices')) {
-    if (path.includes('/import') || path.includes('/bulk-')) {
-      return outcome(GAP, 'invoice_import_bulk', [], [], 'Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation.');
+    if (path === '/api/invoices/import' || path === '/api/invoices/bulk-mark-paid') {
+      return outcome(
+        ACTIVE,
+        'invoice_import_bulk',
+        ['apps/api/src/routes/module-shell-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx'],
+        bulkImportEvidence,
+        'Bounded multi-line invoice import and atomic optimistic bulk payment recording are tenant-scoped, replay safe, audited, and preserve payment history.',
+      );
+    }
+    if (path === '/api/invoices/bulk-delete' || path === '/api/invoices/bulk-restore') {
+      return outcome(
+        RETIRED_SECURITY,
+        'invoice_bulk_destructive',
+        ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md'],
+        retentionEvidence,
+        'ADR-0011 prohibits legacy bulk destructive mutation; individual dependency-ordered archive and restore remain active.',
+      );
     }
     if (
       (path === '/api/invoices' && upperMethod === 'POST') ||
@@ -502,15 +553,29 @@ function classifyApi(method, path) {
     );
   }
   if (path.startsWith('/api/leads')) {
-    if (
-      path.includes('/settings') ||
-      path.includes('/source-events') ||
-      path.includes('/followups') ||
-      path.includes('/send-sms') ||
-      path.includes('/send-email') ||
-      path.includes('/test-message')
-    ) {
-      return outcome(GAP, 'lead_operations_extensions', [], [], 'This lead workflow extension is not yet equivalent in the shared runtime.');
+    if (path.includes('/send-sms') || path.includes('/send-email')) {
+      return outcome(
+        SHARED,
+        'outbound_communications',
+        ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/api/src/routes/shared-service-routes.ts'],
+        sharedServiceEvidence,
+        'Operator-triggered lead messages use the shared notification/outbox provider path with tenant scope, idempotency, and audit.',
+      );
+    }
+    if (path.includes('/source-events')) {
+      return outcome(RETIRED_BOUNDARY, 'public_lead_intake', ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md'], [], 'Source events belong to the excluded unauthenticated lead-intake adapter path.');
+    }
+    if (path.includes('/followups')) {
+      return outcome(RETIRED_BOUNDARY, 'durable_scheduling', ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md'], [], 'Legacy autonomous follow-up scheduling is excluded by ADR-0011.');
+    }
+    if (path.includes('/settings') || path.includes('/test-message')) {
+      return outcome(
+        SHARED,
+        'provider_configuration',
+        ['apps/api/src/routes/shared-service-routes.ts', 'apps/api/src/lib/shared-provider-adapters.ts'],
+        sharedServiceEvidence,
+        'Provider status and delivery belong to shared OperatorOS services; module-local live-mode/provider configuration is not authoritative.',
+      );
     }
     return outcome(
       ACTIVE,
@@ -582,10 +647,22 @@ function classifyTable(name) {
     );
   }
   if (name === 'saved_views') {
-    return outcome(GAP, 'saved_views', [], [], 'Saved views are not active.');
+    return outcome(
+      ACTIVE,
+      'saved_views',
+      ['apps/api/src/schema.ts', 'apps/api/src/lib/tradeflowkit-db-init.ts'],
+      searchEvidence,
+      'A tenant/user-scoped, indexed, versioned saved-view table is active.',
+    );
   }
   if (['org_automations', 'reminder_log'].includes(name)) {
-    return outcome(GAP, 'durable_scheduling', ['apps/api/src/lib/shared-service-db-init.ts'], [], 'Shared leased-job scheduling semantics are not implemented for this workflow.');
+    return outcome(
+      RETIRED_BOUNDARY,
+      'durable_scheduling',
+      ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md', 'docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md'],
+      [],
+      'Legacy autonomous recurrence/reminder persistence is excluded until an approved shared scheduling contract exists.',
+    );
   }
   if (['call_recovery_subscriptions', 'missed_calls', 'ai_messages'].includes(name)) {
     return outcome(RETIRED_BOUNDARY, 'callcommand', ['docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md'], [], 'CallCommand/OutCall owns this capability.');
@@ -593,8 +670,32 @@ function classifyTable(name) {
   if (name === 'review_requests') {
     return outcome(SHARED, 'outbound_communications', ['apps/api/src/schema.ts'], sharedServiceEvidence, 'Shared outbox/activity/audit replaces this table.');
   }
-  if (['lead_capture_forms', 'lead_source_events', 'lead_settings', 'lead_followup_tasks'].includes(name)) {
-    return outcome(GAP, 'lead_operations_extensions', [], [], 'The full retained lead extension is not yet equivalent.');
+  if (['lead_capture_forms', 'lead_source_events'].includes(name)) {
+    return outcome(
+      RETIRED_BOUNDARY,
+      'public_lead_intake',
+      ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md'],
+      [],
+      'Public intake forms and source-event persistence are excluded by ADR-0011.',
+    );
+  }
+  if (name === 'lead_followup_tasks') {
+    return outcome(
+      RETIRED_BOUNDARY,
+      'durable_scheduling',
+      ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md'],
+      [],
+      'Legacy autonomous lead follow-up scheduling is excluded by ADR-0011.',
+    );
+  }
+  if (name === 'lead_settings') {
+    return outcome(
+      SHARED,
+      'provider_configuration',
+      ['apps/api/src/lib/shared-provider-adapters.ts', 'apps/api/src/routes/tradeflowkit-routes.ts'],
+      sharedServiceEvidence,
+      'Shared provider adapters and tenant business defaults replace module-local provider/live-mode settings.',
+    );
   }
   if (name === 'lead_activities') {
     return outcome(ACTIVE, 'leads', ['apps/api/src/schema.ts'], workflowEvidence, 'Canonical activity/audit history preserves lead events.');
@@ -625,20 +726,29 @@ function classifyProvider(name) {
   }
   if (name.startsWith('STRIPE_')) {
     return outcome(
-      GAP,
+      RETIRED_BOUNDARY,
       'business_payments',
-      ['apps/api/src/lib/tradeflowkit-payment-provider.ts'],
+      ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md'],
       ['apps/api/test/tradeflowkit-state5-workflow.test.ts'],
-      'Platform billing is centralized; module business payments remain provider-gated.',
+      'ADR-0011 excludes module-local Stripe Connect; OperatorOS retains platform billing authority.',
     );
   }
-  if (name.startsWith('TWILIO_') || name.startsWith('SENDGRID_') || name.startsWith('OPENAI_')) {
+  if (name.startsWith('TWILIO_') || name.startsWith('SENDGRID_')) {
     return outcome(
-      GAP,
+      SHARED,
       'external_provider',
-      ['apps/api/src/routes/shared-service-routes.ts'],
+      ['apps/api/src/lib/shared-provider-adapters.ts', 'apps/api/src/routes/shared-service-routes.ts'],
       sharedServiceEvidence,
-      'External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance.',
+      'OperatorOS shared provider adapters replace standalone messaging credentials; deployment secrets remain external configuration.',
+    );
+  }
+  if (name.startsWith('OPENAI_')) {
+    return outcome(
+      RETIRED_BOUNDARY,
+      'automated_lead_decisions',
+      ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md'],
+      [],
+      'AI lead scoring and qualification are excluded from deterministic TradeFlowKit scope by ADR-0011.',
     );
   }
   return null;

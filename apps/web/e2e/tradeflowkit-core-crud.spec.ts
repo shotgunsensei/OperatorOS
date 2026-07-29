@@ -68,7 +68,13 @@ async function cleanupIdentity(pg: Client, identity: Identity | null) {
     for (const table of [
       'tradeflowkit_task_dependencies',
       'tradeflowkit_comments',
+      'tradeflowkit_saved_views',
       'tradeflowkit_tasks',
+      'tradeflowkit_payments',
+      'tradeflowkit_invoice_items',
+      'tradeflowkit_invoices',
+      'tradeflowkit_quote_items',
+      'tradeflowkit_quotes',
       'tradeflowkit_jobs',
       'tradeflowkit_customers',
       'tradeflowkit_settings',
@@ -114,6 +120,9 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
   const updatedJobTitle = `${jobTitle} Updated`;
   const taskTitle = `Initial work step ${suffix}`;
   const updatedTaskTitle = `${taskTitle} Updated`;
+  const bulkCustomerName = `Bulk workflow customer ${suffix}`;
+  const importedJobTitle = `Imported scheduled work ${suffix}`;
+  const importedInvoiceRef = `BULK-${suffix}`;
 
   try {
     identity = await registerAndSeed(request, pg);
@@ -205,6 +214,66 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
     await taskEditor.getByRole('button', { name: /^Save task/ }).click();
     await page.reload();
     await expect(page.getByTestId(`tradeflowkit-task-${taskId}`)).toContainText(updatedTaskTitle);
+    const globalSearch = page.getByTestId('tradeflowkit-global-search');
+    await globalSearch.getByLabel('Search the entire workspace').fill(updatedTaskTitle);
+    await globalSearch.getByRole('button', { name: 'Search', exact: true }).click();
+    await expect(page.getByTestId(`tradeflowkit-search-task-${taskId}`)).toContainText(updatedTaskTitle);
+    await globalSearch.getByLabel('Saved view name').fill(`Urgent task ${suffix}`);
+    await globalSearch.getByRole('button', { name: 'Save view' }).click();
+    await expect(page.getByTestId('tradeflowkit-saved-views')).toContainText(`Urgent task ${suffix}`);
+    await page.reload();
+    await page.getByTestId('tradeflowkit-saved-views').getByRole('button', { name: `Urgent task ${suffix}`, exact: true }).click();
+    await expect(page.getByTestId(`tradeflowkit-search-task-${taskId}`)).toContainText(updatedTaskTitle);
+
+    await customerCreate.getByPlaceholder('Customer name').fill(bulkCustomerName);
+    await customerCreate.getByPlaceholder('Email (optional)').fill(`bulk-${suffix}@example.com`);
+    await customerCreate.getByRole('button', { name: 'Add customer' }).click();
+    await expect(page.getByTestId('tradeflowkit-customer-records')).toContainText(bulkCustomerName);
+
+    const jobImport = page.getByTestId('tradeflowkit-job-import');
+    await jobImport.getByLabel('Job CSV file').setInputFiles({
+      name: 'jobs.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(`customerName,title,status,priority\n"${bulkCustomerName}","${importedJobTitle}",scheduled,urgent\n`),
+    });
+    await jobImport.getByRole('button', { name: 'Import jobs' }).click();
+    await expect(jobImport).toContainText('Imported 1; skipped 0; errors 0.');
+    const importedJob = await pg.query<{ id: string }>(
+      `select id from tradeflowkit_jobs where tenant_id = $1 and title = $2 and deleted_at is null`,
+      [identity.tenantId, importedJobTitle],
+    );
+    expect(importedJob.rows).toHaveLength(1);
+
+    const invoiceImport = page.getByTestId('tradeflowkit-invoice-import');
+    await invoiceImport.getByLabel('Invoice CSV file').setInputFiles({
+      name: 'invoices.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(`invoiceRef,customerName,status,taxPercent,itemDescription,itemQuantity,itemUnitPrice\n"${importedInvoiceRef}","${bulkCustomerName}",sent,5,Labor,2,125.00\n"${importedInvoiceRef}","${bulkCustomerName}",sent,5,Parts,1,50.00\n`),
+    });
+    await invoiceImport.getByRole('button', { name: 'Import invoices' }).click();
+    await expect(invoiceImport).toContainText('Imported 1; skipped 0; errors 0.');
+    const importedInvoice = await pg.query<{ id: string; number: number; version: number }>(
+      `select id, number, version from tradeflowkit_invoices where tenant_id = $1 and payment_reference is null and source_id is not null and deleted_at is null order by created_at desc limit 1`,
+      [identity.tenantId],
+    );
+    expect(importedInvoice.rows).toHaveLength(1);
+
+    await page.getByTestId('tradeflowkit-operations').getByRole('button', { name: 'Refresh' }).click();
+    await page.getByLabel(`Select job ${importedJobTitle}`).check();
+    await page.getByLabel('Bulk job status').selectOption('in_progress');
+    await page.getByTestId('tradeflowkit-job-bulk-toolbar').getByRole('button', { name: 'Update selected' }).click();
+    await expect.poll(async () => (await pg.query<{ status: string }>(
+      `select status from tradeflowkit_jobs where tenant_id = $1 and id = $2`,
+      [identity!.tenantId, importedJob.rows[0].id],
+    )).rows[0].status).toBe('in_progress');
+
+    await page.getByLabel(`Select invoice ${importedInvoice.rows[0].number}`).check();
+    page.once('dialog', dialog => void dialog.accept(`E2E-${suffix}`));
+    await page.getByTestId('tradeflowkit-invoice-bulk-toolbar').getByRole('button', { name: 'Mark selected paid' }).click();
+    await expect.poll(async () => (await pg.query<{ status: string; balance_cents: number }>(
+      `select status, balance_cents from tradeflowkit_invoices where tenant_id = $1 and id = $2`,
+      [identity!.tenantId, importedInvoice.rows[0].id],
+    )).rows[0]).toEqual({ status: 'paid', balance_cents: 0 });
 
     const persisted = await pg.query<{
       customer_name: string; organization_name: string; job_title: string; job_status: string;
@@ -266,6 +335,38 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
       job_deleted: true,
       task_deleted: true,
     });
+
+    await page.goto('https://tradeflowkit.operatoros.net/trash');
+    await expect(page.getByTestId('tradeflowkit-retention')).toBeVisible();
+    const retainedCustomer = page.getByTestId(`tradeflowkit-retained-customer-${customerId}`);
+    const retainedJob = page.getByTestId(`tradeflowkit-retained-job-${jobId}`);
+    const retainedTask = page.getByTestId(`tradeflowkit-retained-task-${taskId}`);
+    await expect(retainedCustomer).toBeVisible();
+    await expect(retainedJob.getByRole('button', { name: 'Restore' })).toBeDisabled();
+    await expect(retainedTask.getByRole('button', { name: 'Restore' })).toBeDisabled();
+
+    await retainedCustomer.getByRole('button', { name: 'Restore' }).click();
+    await expect(retainedCustomer).toHaveCount(0);
+    await page.getByTestId(`tradeflowkit-retained-job-${jobId}`).getByRole('button', { name: 'Restore' }).click();
+    await expect(page.getByTestId(`tradeflowkit-retained-job-${jobId}`)).toHaveCount(0);
+    await page.getByTestId(`tradeflowkit-retained-task-${taskId}`).getByRole('button', { name: 'Restore' }).click();
+    await expect(page.getByTestId(`tradeflowkit-retained-task-${taskId}`)).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.getByTestId(`tradeflowkit-retained-customer-${customerId}`)).toHaveCount(0);
+    const restored = await pg.query<{ customer_active: boolean; job_active: boolean; task_active: boolean }>(
+      `select c.deleted_at is null as customer_active,
+              j.deleted_at is null as job_active,
+              t.deleted_at is null as task_active
+         from tradeflowkit_customers c
+         join tradeflowkit_jobs j on j.customer_id = c.id and j.tenant_id = c.tenant_id
+         join tradeflowkit_tasks t on t.job_id = j.id and t.tenant_id = j.tenant_id
+        where c.tenant_id = $1 and c.id = $2 and j.id = $3 and t.id = $4`,
+      [identity.tenantId, customerId, jobId, taskId],
+    );
+    expect(restored.rows[0]).toEqual({ customer_active: true, job_active: true, task_active: true });
+    await page.goto(`https://tradeflowkit.operatoros.net/tasks/${taskId}`);
+    await expect(page.getByTestId(`tradeflowkit-task-${taskId}`)).toContainText(updatedTaskTitle);
   } finally {
     await cleanupIdentity(pg, identity);
     await pg.end();

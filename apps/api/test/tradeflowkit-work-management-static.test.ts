@@ -37,3 +37,52 @@ test('TradeFlowKit work-management UI calls real APIs, exposes states, and disab
   assert.doesNotMatch(component, /coming soon|mock data/i);
   assert.doesNotMatch(component, /\bTODO\b/);
 });
+
+test('TradeFlowKit retention UI exposes ordered soft restore without permanent purge controls', () => {
+  const component = readFileSync(
+    resolve(root, 'apps/web/src/components/module-shells/TradeFlowKitRetention.tsx'),
+    'utf8',
+  );
+  const shell = readFileSync(
+    resolve(root, 'apps/web/src/components/module-shells/TradeFlowKitShell.tsx'),
+    'utf8',
+  );
+  const api = readFileSync(resolve(root, 'apps/web/src/lib/auth.ts'), 'utf8');
+
+  assert.match(shell, /<TradeFlowKitRetention/);
+  assert.match(shell, /tradeflowkit-sidebar-retention/);
+  assert.match(component, /data-testid="tradeflowkit-retention"/);
+  assert.match(component, /data-testid="tradeflowkit-retention-loading"/);
+  assert.match(component, /data-testid="tradeflowkit-retention-empty"/);
+  assert.match(component, /restoreBlockedReason/);
+  assert.match(component, /permanent-delete or bulk-destructive action/);
+  assert.match(api, /restoreRetained/);
+  assert.doesNotMatch(component, /moduleShellApi\.[^\n]*(?:delete|purge)|<button[^>]*>[^<]*(?:delete|purge)/i);
+});
+
+test('TradeFlowKit global search is wired to active tenant records and canonical deep links', () => {
+  const component = readFileSync(
+    resolve(root, 'apps/web/src/components/module-shells/TradeFlowKitGlobalSearch.tsx'),
+    'utf8',
+  );
+  const shell = readFileSync(
+    resolve(root, 'apps/web/src/components/module-shells/TradeFlowKitShell.tsx'),
+    'utf8',
+  );
+  const routes = readFileSync(
+    resolve(root, 'apps/api/src/routes/tradeflowkit-routes.ts'),
+    'utf8',
+  );
+
+  assert.match(shell, /<TradeFlowKitGlobalSearch/);
+  assert.match(component, /data-testid="tradeflowkit-global-search"/);
+  assert.match(component, /tradeflowkit-global-search-empty/);
+  assert.match(component, /data-testid="tradeflowkit-saved-views"/);
+  assert.match(component, /createSavedView/);
+  assert.match(component, /archiveSavedView/);
+  assert.match(component, /item\.href/);
+  assert.match(routes, /\/v1\/modules\/tradeflowkit\/search/);
+  assert.match(routes, /\/v1\/modules\/tradeflowkit\/saved-views/);
+  assert.match(routes, /eq\(tradeflowkitCustomers\.tenantId, tenant\)/);
+  assert.match(routes, /isNull\(tradeflowkitTasks\.deletedAt\)/);
+});

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "moduleSlug": "tradeflowkit",
-  "capturedAtUtc": "2026-07-28T20:12:36.720Z",
+  "capturedAtUtc": "2026-07-29T02:09:36.413Z",
   "source": {
     "repository": "https://github.com/shotgunsensei/TradeFlowKit.git",
     "commit": "37aa67f1da804fc3ac56f36e50e01362077d7a26",
@@ -518,11 +518,17 @@
         "key": "/trash",
         "path": "/trash",
         "sourcePointer": "client/src/App.tsx",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "retention",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Archive/restore needs a truthful retained-record UI; permanent purge stays prohibited."
+        "targetPointers": [
+          "apps/web/src/components/module-shells/TradeFlowKitRetention.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
+        ],
+        "note": "Tenant-scoped retained records expose dependency-ordered restore without permanent purge."
       },
       {
         "key": "/workflows",
@@ -719,11 +725,18 @@
         "method": "DELETE",
         "path": "/api/operations/saved-views/:id",
         "sourcePointer": "server/routes/operationsData.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "saved_views",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Durable tenant/user saved views are not yet active."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitGlobalSearch.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
+        ],
+        "note": "Durable personal and tenant-shared saved views are active with bounded filters and owner-scoped archive."
       },
       {
         "key": "DELETE /api/quotes/:id",
@@ -747,15 +760,16 @@
         "method": "DELETE",
         "path": "/api/stripe/connect",
         "sourcePointer": "server/routes/stripeConnect.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "business_payments",
         "targetPointers": [
-          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
         ],
         "evidence": [
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
         ],
-        "note": "Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract."
+        "note": "ADR-0011 excludes module-local Stripe Connect and direct checkout until a centralized provider-account and signed webhook contract is approved."
       },
       {
         "key": "DELETE /api/trash/customers/:id",
@@ -1024,13 +1038,14 @@
         "method": "GET",
         "path": "/api/automations",
         "sourcePointer": "server/routes/automations.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "durable_scheduling",
         "targetPointers": [
-          "apps/api/src/lib/shared-service-db-init.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md"
         ],
         "evidence": [],
-        "note": "Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics."
+        "note": "ADR-0011 and ADR-0028 exclude autonomous recurrence and reminder loops until an explicit durable scheduling contract is approved."
       },
       {
         "key": "GET /api/call-recovery/missed-calls",
@@ -1254,15 +1269,16 @@
         "method": "GET",
         "path": "/api/exports/quickbooks/iif",
         "sourcePointer": "server/routes/exports.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "accounting_exports",
         "targetPointers": [
-          "apps/api/src/routes/tradeflowkit-routes.ts"
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
         ],
         "evidence": [
           "apps/api/test/tradeflowkit-state5-workflow.test.ts"
         ],
-        "note": "Canonical CSV exists; vendor-specific mappings still need a versioned integration contract."
+        "note": "ADR-0011 excludes unversioned vendor schemas; tenant-scoped canonical customer, invoice, and payment CSV exports are active."
       },
       {
         "key": "GET /api/exports/status",
@@ -1285,45 +1301,48 @@
         "method": "GET",
         "path": "/api/exports/xero/customers.csv",
         "sourcePointer": "server/routes/exports.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "accounting_exports",
         "targetPointers": [
-          "apps/api/src/routes/tradeflowkit-routes.ts"
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
         ],
         "evidence": [
           "apps/api/test/tradeflowkit-state5-workflow.test.ts"
         ],
-        "note": "Canonical CSV exists; vendor-specific mappings still need a versioned integration contract."
+        "note": "ADR-0011 excludes unversioned vendor schemas; tenant-scoped canonical customer, invoice, and payment CSV exports are active."
       },
       {
         "key": "GET /api/exports/xero/invoices.csv",
         "method": "GET",
         "path": "/api/exports/xero/invoices.csv",
         "sourcePointer": "server/routes/exports.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "accounting_exports",
         "targetPointers": [
-          "apps/api/src/routes/tradeflowkit-routes.ts"
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
         ],
         "evidence": [
           "apps/api/test/tradeflowkit-state5-workflow.test.ts"
         ],
-        "note": "Canonical CSV exists; vendor-specific mappings still need a versioned integration contract."
+        "note": "ADR-0011 excludes unversioned vendor schemas; tenant-scoped canonical customer, invoice, and payment CSV exports are active."
       },
       {
         "key": "GET /api/exports/xero/payments.csv",
         "method": "GET",
         "path": "/api/exports/xero/payments.csv",
         "sourcePointer": "server/routes/exports.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "accounting_exports",
         "targetPointers": [
-          "apps/api/src/routes/tradeflowkit-routes.ts"
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
         ],
         "evidence": [
           "apps/api/test/tradeflowkit-state5-workflow.test.ts"
         ],
-        "note": "Canonical CSV exists; vendor-specific mappings still need a versioned integration contract."
+        "note": "ADR-0011 excludes unversioned vendor schemas; tenant-scoped canonical customer, invoice, and payment CSV exports are active."
       },
       {
         "key": "GET /api/invite-codes",
@@ -1398,15 +1417,16 @@
         "method": "GET",
         "path": "/api/invoices/export/quickbooks",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "accounting_exports",
         "targetPointers": [
-          "apps/api/src/routes/tradeflowkit-routes.ts"
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
         ],
         "evidence": [
           "apps/api/test/tradeflowkit-state5-workflow.test.ts"
         ],
-        "note": "Canonical CSV exists; vendor-specific mappings still need a versioned integration contract."
+        "note": "ADR-0011 excludes unversioned vendor schemas; tenant-scoped canonical customer, invoice, and payment CSV exports are active."
       },
       {
         "key": "GET /api/jobs",
@@ -1464,13 +1484,14 @@
         "method": "GET",
         "path": "/api/jobs/:id/series",
         "sourcePointer": "server/routes/jobs.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "durable_scheduling",
         "targetPointers": [
-          "apps/api/src/lib/shared-service-db-init.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md"
         ],
         "evidence": [],
-        "note": "Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics."
+        "note": "ADR-0011 and ADR-0028 exclude autonomous recurrence and reminder loops until an explicit durable scheduling contract is approved."
       },
       {
         "key": "GET /api/leads",
@@ -1531,11 +1552,13 @@
         "method": "GET",
         "path": "/api/leads/:id/followups",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
+        "disposition": "retired_product_boundary",
+        "domain": "durable_scheduling",
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
         "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "note": "Legacy autonomous follow-up scheduling is excluded by ADR-0011."
       },
       {
         "key": "GET /api/leads/health",
@@ -1618,33 +1641,43 @@
         "method": "GET",
         "path": "/api/leads/settings",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "disposition": "shared_replacement",
+        "domain": "provider_configuration",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts",
+          "apps/api/src/lib/shared-provider-adapters.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Provider status and delivery belong to shared OperatorOS services; module-local live-mode/provider configuration is not authoritative."
       },
       {
         "key": "GET /api/leads/source-adapters",
         "method": "GET",
         "path": "/api/leads/source-adapters",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "public_lead_intake",
-        "targetPointers": [],
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
         "evidence": [],
-        "note": "Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls."
+        "note": "ADR-0011 excludes unauthenticated capture and form management pending consent, privacy, retention, abuse, and rate-limit approval."
       },
       {
         "key": "GET /api/leads/source-events",
         "method": "GET",
         "path": "/api/leads/source-events",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
+        "disposition": "retired_product_boundary",
+        "domain": "public_lead_intake",
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
         "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "note": "Source events belong to the excluded unauthenticated lead-intake adapter path."
       },
       {
         "key": "GET /api/leads/stats",
@@ -1776,11 +1809,18 @@
         "method": "GET",
         "path": "/api/operations/saved-views",
         "sourcePointer": "server/routes/operationsData.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "saved_views",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Durable tenant/user saved views are not yet active."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitGlobalSearch.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
+        ],
+        "note": "Durable personal and tenant-shared saved views are active with bounded filters and owner-scoped archive."
       },
       {
         "key": "GET /api/operations/tags",
@@ -1908,13 +1948,14 @@
         "method": "GET",
         "path": "/api/reminder-logs",
         "sourcePointer": "server/routes/automations.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "durable_scheduling",
         "targetPointers": [
-          "apps/api/src/lib/shared-service-db-init.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md"
         ],
         "evidence": [],
-        "note": "Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics."
+        "note": "ADR-0011 and ADR-0028 exclude autonomous recurrence and reminder loops until an explicit durable scheduling contract is approved."
       },
       {
         "key": "GET /api/review-requests",
@@ -1969,47 +2010,50 @@
         "method": "GET",
         "path": "/api/search",
         "sourcePointer": "server/routes/search.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "global_search",
         "targetPointers": [
           "apps/api/src/routes/tradeflowkit-routes.ts",
-          "apps/api/src/routes/module-shell-routes.ts"
+          "apps/web/src/components/module-shells/TradeFlowKitGlobalSearch.tsx"
         ],
         "evidence": [
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
-          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
         ],
-        "note": "Bounded per-surface filters exist; equivalent cross-entity search is not yet active."
+        "note": "Bounded tenant-scoped cross-entity search returns only active records and canonical deep links."
       },
       {
         "key": "GET /api/stripe/connect/authorize",
         "method": "GET",
         "path": "/api/stripe/connect/authorize",
         "sourcePointer": "server/routes/stripeConnect.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "business_payments",
         "targetPointers": [
-          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
         ],
         "evidence": [
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
         ],
-        "note": "Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract."
+        "note": "ADR-0011 excludes module-local Stripe Connect and direct checkout until a centralized provider-account and signed webhook contract is approved."
       },
       {
         "key": "GET /api/stripe/connect/callback",
         "method": "GET",
         "path": "/api/stripe/connect/callback",
         "sourcePointer": "server/routes/stripeConnect.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "business_payments",
         "targetPointers": [
-          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
         ],
         "evidence": [
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
         ],
-        "note": "Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract."
+        "note": "ADR-0011 excludes module-local Stripe Connect and direct checkout until a centralized provider-account and signed webhook contract is approved."
       },
       {
         "key": "GET /api/stripe/plans",
@@ -2050,11 +2094,18 @@
         "method": "GET",
         "path": "/api/trash",
         "sourcePointer": "server/routes/trash.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "retention",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Archive restore/list behavior needs a complete active UI and API."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRetention.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
+        ],
+        "note": "Tenant-scoped archive listing and versioned dependency-ordered restore are active."
       },
       {
         "key": "GET /api/work/activity",
@@ -2298,22 +2349,30 @@
         "method": "PATCH",
         "path": "/api/leads/capture-form/:id",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "public_lead_intake",
-        "targetPointers": [],
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
         "evidence": [],
-        "note": "Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls."
+        "note": "ADR-0011 excludes unauthenticated capture and form management pending consent, privacy, retention, abuse, and rate-limit approval."
       },
       {
         "key": "PATCH /api/leads/settings",
         "method": "PATCH",
         "path": "/api/leads/settings",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "disposition": "shared_replacement",
+        "domain": "provider_configuration",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts",
+          "apps/api/src/lib/shared-provider-adapters.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Provider status and delivery belong to shared OperatorOS services; module-local live-mode/provider configuration is not authoritative."
       },
       {
         "key": "PATCH /api/memberships/:userId/role",
@@ -2661,13 +2720,14 @@
         "method": "POST",
         "path": "/api/automations",
         "sourcePointer": "server/routes/automations.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "durable_scheduling",
         "targetPointers": [
-          "apps/api/src/lib/shared-service-db-init.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md"
         ],
         "evidence": [],
-        "note": "Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics."
+        "note": "ADR-0011 and ADR-0028 exclude autonomous recurrence and reminder loops until an explicit durable scheduling contract is approved."
       },
       {
         "key": "POST /api/call-recovery/checkout",
@@ -2866,15 +2926,16 @@
         "method": "POST",
         "path": "/api/invoices/:id/payment-link",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "business_payments",
         "targetPointers": [
-          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
         ],
         "evidence": [
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
         ],
-        "note": "Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract."
+        "note": "ADR-0011 excludes module-local Stripe Connect and direct checkout until a centralized provider-account and signed webhook contract is approved."
       },
       {
         "key": "POST /api/invoices/:id/send-email",
@@ -2915,44 +2976,70 @@
         "method": "POST",
         "path": "/api/invoices/bulk-delete",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
-        "domain": "invoice_import_bulk",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation."
+        "disposition": "retired_security",
+        "domain": "invoice_bulk_destructive",
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
+        ],
+        "note": "ADR-0011 prohibits legacy bulk destructive mutation; individual dependency-ordered archive and restore remain active."
       },
       {
         "key": "POST /api/invoices/bulk-mark-paid",
         "method": "POST",
         "path": "/api/invoices/bulk-mark-paid",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "invoice_import_bulk",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation."
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-bulk-import.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx"
+        ],
+        "note": "Bounded multi-line invoice import and atomic optimistic bulk payment recording are tenant-scoped, replay safe, audited, and preserve payment history."
       },
       {
         "key": "POST /api/invoices/bulk-restore",
         "method": "POST",
         "path": "/api/invoices/bulk-restore",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
-        "domain": "invoice_import_bulk",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation."
+        "disposition": "retired_security",
+        "domain": "invoice_bulk_destructive",
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
+        ],
+        "note": "ADR-0011 prohibits legacy bulk destructive mutation; individual dependency-ordered archive and restore remain active."
       },
       {
         "key": "POST /api/invoices/import",
         "method": "POST",
         "path": "/api/invoices/import",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "invoice_import_bulk",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation."
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-bulk-import.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx"
+        ],
+        "note": "Bounded multi-line invoice import and atomic optimistic bulk payment recording are tenant-scoped, replay safe, audited, and preserve payment history."
       },
       {
         "key": "POST /api/jobs",
@@ -2976,44 +3063,72 @@
         "method": "POST",
         "path": "/api/jobs/bulk-delete",
         "sourcePointer": "server/routes/jobs.ts",
-        "disposition": "phase16_gap",
-        "domain": "job_bulk_import",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+        "disposition": "retired_security",
+        "domain": "job_bulk_destructive",
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
+        ],
+        "note": "ADR-0011 prohibits legacy bulk destructive mutation; individual dependency-ordered archive and restore remain active."
       },
       {
         "key": "POST /api/jobs/bulk-restore",
         "method": "POST",
         "path": "/api/jobs/bulk-restore",
         "sourcePointer": "server/routes/jobs.ts",
-        "disposition": "phase16_gap",
-        "domain": "job_bulk_import",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+        "disposition": "retired_security",
+        "domain": "job_bulk_destructive",
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
+        ],
+        "note": "ADR-0011 prohibits legacy bulk destructive mutation; individual dependency-ordered archive and restore remain active."
       },
       {
         "key": "POST /api/jobs/bulk-status",
         "method": "POST",
         "path": "/api/jobs/bulk-status",
         "sourcePointer": "server/routes/jobs.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "job_bulk_import",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-bulk-import.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx"
+        ],
+        "note": "Bounded job import and optimistic non-destructive bulk status updates are tenant-scoped, replay safe, audited, and visible in the native UI."
       },
       {
         "key": "POST /api/jobs/import",
         "method": "POST",
         "path": "/api/jobs/import",
         "sourcePointer": "server/routes/jobs.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "job_bulk_import",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-bulk-import.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx"
+        ],
+        "note": "Bounded job import and optimistic non-destructive bulk status updates are tenant-scoped, replay safe, audited, and visible in the native UI."
       },
       {
         "key": "POST /api/leads",
@@ -3085,44 +3200,68 @@
         "method": "POST",
         "path": "/api/leads/:id/send-email",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "disposition": "shared_replacement",
+        "domain": "outbound_communications",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Operator-triggered lead messages use the shared notification/outbox provider path with tenant scope, idempotency, and audit."
       },
       {
         "key": "POST /api/leads/:id/send-sms",
         "method": "POST",
         "path": "/api/leads/:id/send-sms",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "disposition": "shared_replacement",
+        "domain": "outbound_communications",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/shared-service-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Operator-triggered lead messages use the shared notification/outbox provider path with tenant scope, idempotency, and audit."
       },
       {
         "key": "POST /api/leads/settings/apply-template",
         "method": "POST",
         "path": "/api/leads/settings/apply-template",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "disposition": "shared_replacement",
+        "domain": "provider_configuration",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts",
+          "apps/api/src/lib/shared-provider-adapters.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Provider status and delivery belong to shared OperatorOS services; module-local live-mode/provider configuration is not authoritative."
       },
       {
         "key": "POST /api/leads/test-message",
         "method": "POST",
         "path": "/api/leads/test-message",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "disposition": "shared_replacement",
+        "domain": "provider_configuration",
+        "targetPointers": [
+          "apps/api/src/routes/shared-service-routes.ts",
+          "apps/api/src/lib/shared-provider-adapters.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Provider status and delivery belong to shared OperatorOS services; module-local live-mode/provider configuration is not authoritative."
       },
       {
         "key": "POST /api/operations/companies",
@@ -3239,11 +3378,18 @@
         "method": "POST",
         "path": "/api/operations/saved-views",
         "sourcePointer": "server/routes/operationsData.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "saved_views",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Durable tenant/user saved views are not yet active."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitGlobalSearch.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
+        ],
+        "note": "Durable personal and tenant-shared saved views are active with bounded filters and owner-scoped archive."
       },
       {
         "key": "POST /api/operations/tags",
@@ -3320,22 +3466,26 @@
         "method": "POST",
         "path": "/api/public/lead-capture/:publicToken",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "public_lead_intake",
-        "targetPointers": [],
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
         "evidence": [],
-        "note": "Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls."
+        "note": "ADR-0011 excludes unauthenticated capture and form management pending consent, privacy, retention, abuse, and rate-limit approval."
       },
       {
         "key": "POST /api/public/lead-source/:publicToken/:adapterKey",
         "method": "POST",
         "path": "/api/public/lead-source/:publicToken/:adapterKey",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "public_lead_intake",
-        "targetPointers": [],
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
         "evidence": [],
-        "note": "Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls."
+        "note": "ADR-0011 excludes unauthenticated capture and form management pending consent, privacy, retention, abuse, and rate-limit approval."
       },
       {
         "key": "POST /api/quotes",
@@ -3477,33 +3627,54 @@
         "method": "POST",
         "path": "/api/trash/customers/:id/restore",
         "sourcePointer": "server/routes/trash.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "retention",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Archive restore/list behavior needs a complete active UI and API."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRetention.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
+        ],
+        "note": "Tenant-scoped archive listing and versioned dependency-ordered restore are active."
       },
       {
         "key": "POST /api/trash/invoices/:id/restore",
         "method": "POST",
         "path": "/api/trash/invoices/:id/restore",
         "sourcePointer": "server/routes/trash.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "retention",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Archive restore/list behavior needs a complete active UI and API."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRetention.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
+        ],
+        "note": "Tenant-scoped archive listing and versioned dependency-ordered restore are active."
       },
       {
         "key": "POST /api/trash/jobs/:id/restore",
         "method": "POST",
         "path": "/api/trash/jobs/:id/restore",
         "sourcePointer": "server/routes/trash.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "retention",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Archive restore/list behavior needs a complete active UI and API."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRetention.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
+        ],
+        "note": "Tenant-scoped archive listing and versioned dependency-ordered restore are active."
       },
       {
         "key": "POST /api/work/jobs/:id/transition",
@@ -3527,16 +3698,17 @@
         "method": "POST",
         "path": "/api/work/tasks",
         "sourcePointer": "server/routes/workManagement.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "standalone_tasks",
         "targetPointers": [
-          "apps/api/src/routes/tradeflowkit-routes.ts"
+          "docs/adr/ADR-0010-tradeflowkit-job-task-model.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md"
         ],
         "evidence": [
           "apps/api/test/tradeflowkit-work-management.test.ts",
           "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
         ],
-        "note": "Canonical creation remains job-scoped under ADR-0010; source standalone-task creation needs an explicit superseding product decision."
+        "note": "ADR-0010 and ADR-0028 require task creation beneath a job; standalone task creation is outside the accepted model."
       },
       {
         "key": "POST /api/work/tasks/:id/comments",
@@ -3870,41 +4042,53 @@
         "key": "lead_capture_forms",
         "table": "lead_capture_forms",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
+        "disposition": "retired_product_boundary",
+        "domain": "public_lead_intake",
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
         "evidence": [],
-        "note": "The full retained lead extension is not yet equivalent."
+        "note": "Public intake forms and source-event persistence are excluded by ADR-0011."
       },
       {
         "key": "lead_followup_tasks",
         "table": "lead_followup_tasks",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
+        "disposition": "retired_product_boundary",
+        "domain": "durable_scheduling",
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
         "evidence": [],
-        "note": "The full retained lead extension is not yet equivalent."
+        "note": "Legacy autonomous lead follow-up scheduling is excluded by ADR-0011."
       },
       {
         "key": "lead_settings",
         "table": "lead_settings",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "The full retained lead extension is not yet equivalent."
+        "disposition": "shared_replacement",
+        "domain": "provider_configuration",
+        "targetPointers": [
+          "apps/api/src/lib/shared-provider-adapters.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts"
+        ],
+        "evidence": [
+          "apps/api/test/shared-service-routes.test.ts",
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+        ],
+        "note": "Shared provider adapters and tenant business defaults replace module-local provider/live-mode settings."
       },
       {
         "key": "lead_source_events",
         "table": "lead_source_events",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
+        "disposition": "retired_product_boundary",
+        "domain": "public_lead_intake",
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
+        ],
         "evidence": [],
-        "note": "The full retained lead extension is not yet equivalent."
+        "note": "Public intake forms and source-event persistence are excluded by ADR-0011."
       },
       {
         "key": "leads",
@@ -3969,13 +4153,14 @@
         "key": "org_automations",
         "table": "org_automations",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "durable_scheduling",
         "targetPointers": [
-          "apps/api/src/lib/shared-service-db-init.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md"
         ],
         "evidence": [],
-        "note": "Shared leased-job scheduling semantics are not implemented for this workflow."
+        "note": "Legacy autonomous recurrence/reminder persistence is excluded until an approved shared scheduling contract exists."
       },
       {
         "key": "orgs",
@@ -4043,13 +4228,14 @@
         "key": "reminder_log",
         "table": "reminder_log",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "durable_scheduling",
         "targetPointers": [
-          "apps/api/src/lib/shared-service-db-init.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md"
         ],
         "evidence": [],
-        "note": "Shared leased-job scheduling semantics are not implemented for this workflow."
+        "note": "Legacy autonomous recurrence/reminder persistence is excluded until an approved shared scheduling contract exists."
       },
       {
         "key": "review_requests",
@@ -4070,11 +4256,18 @@
         "key": "saved_views",
         "table": "saved_views",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "saved_views",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Saved views are not active."
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-work-management.test.ts",
+          "apps/api/test/tradeflowkit-work-management-static.test.ts",
+          "apps/web/e2e/tradeflowkit-core-crud.spec.ts"
+        ],
+        "note": "A tenant/user-scoped, indexed, versioned saved-view table is active."
       },
       {
         "key": "tags",
@@ -4192,46 +4385,45 @@
         "key": "OPENAI_API_KEY",
         "name": "OPENAI_API_KEY",
         "sourcePointer": "server/leadMessaging.ts",
-        "disposition": "phase16_gap",
-        "domain": "external_provider",
+        "disposition": "retired_product_boundary",
+        "domain": "automated_lead_decisions",
         "targetPointers": [
-          "apps/api/src/routes/shared-service-routes.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
         ],
-        "evidence": [
-          "apps/api/test/shared-service-routes.test.ts",
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
-        ],
-        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+        "evidence": [],
+        "note": "AI lead scoring and qualification are excluded from deterministic TradeFlowKit scope by ADR-0011."
       },
       {
         "key": "SENDGRID_API_KEY",
         "name": "SENDGRID_API_KEY",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
+        "disposition": "shared_replacement",
         "domain": "external_provider",
         "targetPointers": [
+          "apps/api/src/lib/shared-provider-adapters.ts",
           "apps/api/src/routes/shared-service-routes.ts"
         ],
         "evidence": [
           "apps/api/test/shared-service-routes.test.ts",
           "apps/api/test/tradeflowkit-state5-workflow.test.ts"
         ],
-        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+        "note": "OperatorOS shared provider adapters replace standalone messaging credentials; deployment secrets remain external configuration."
       },
       {
         "key": "SENDGRID_FROM_EMAIL",
         "name": "SENDGRID_FROM_EMAIL",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
+        "disposition": "shared_replacement",
         "domain": "external_provider",
         "targetPointers": [
+          "apps/api/src/lib/shared-provider-adapters.ts",
           "apps/api/src/routes/shared-service-routes.ts"
         ],
         "evidence": [
           "apps/api/test/shared-service-routes.test.ts",
           "apps/api/test/tradeflowkit-state5-workflow.test.ts"
         ],
-        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+        "note": "OperatorOS shared provider adapters replace standalone messaging credentials; deployment secrets remain external configuration."
       },
       {
         "key": "SESSION_SECRET",
@@ -4253,60 +4445,63 @@
         "key": "STRIPE_CLIENT_ID",
         "name": "STRIPE_CLIENT_ID",
         "sourcePointer": "server/routes/stripeConnect.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "business_payments",
         "targetPointers": [
-          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md"
         ],
         "evidence": [
           "apps/api/test/tradeflowkit-state5-workflow.test.ts"
         ],
-        "note": "Platform billing is centralized; module business payments remain provider-gated."
+        "note": "ADR-0011 excludes module-local Stripe Connect; OperatorOS retains platform billing authority."
       },
       {
         "key": "TWILIO_ACCOUNT_SID",
         "name": "TWILIO_ACCOUNT_SID",
         "sourcePointer": "server/twilioClient.ts",
-        "disposition": "phase16_gap",
+        "disposition": "shared_replacement",
         "domain": "external_provider",
         "targetPointers": [
+          "apps/api/src/lib/shared-provider-adapters.ts",
           "apps/api/src/routes/shared-service-routes.ts"
         ],
         "evidence": [
           "apps/api/test/shared-service-routes.test.ts",
           "apps/api/test/tradeflowkit-state5-workflow.test.ts"
         ],
-        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+        "note": "OperatorOS shared provider adapters replace standalone messaging credentials; deployment secrets remain external configuration."
       },
       {
         "key": "TWILIO_AUTH_TOKEN",
         "name": "TWILIO_AUTH_TOKEN",
         "sourcePointer": "server/twilioClient.ts",
-        "disposition": "phase16_gap",
+        "disposition": "shared_replacement",
         "domain": "external_provider",
         "targetPointers": [
+          "apps/api/src/lib/shared-provider-adapters.ts",
           "apps/api/src/routes/shared-service-routes.ts"
         ],
         "evidence": [
           "apps/api/test/shared-service-routes.test.ts",
           "apps/api/test/tradeflowkit-state5-workflow.test.ts"
         ],
-        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+        "note": "OperatorOS shared provider adapters replace standalone messaging credentials; deployment secrets remain external configuration."
       },
       {
         "key": "TWILIO_PHONE_NUMBER",
         "name": "TWILIO_PHONE_NUMBER",
         "sourcePointer": "server/twilioClient.ts",
-        "disposition": "phase16_gap",
+        "disposition": "shared_replacement",
         "domain": "external_provider",
         "targetPointers": [
+          "apps/api/src/lib/shared-provider-adapters.ts",
           "apps/api/src/routes/shared-service-routes.ts"
         ],
         "evidence": [
           "apps/api/test/shared-service-routes.test.ts",
           "apps/api/test/tradeflowkit-state5-workflow.test.ts"
         ],
-        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+        "note": "OperatorOS shared provider adapters replace standalone messaging credentials; deployment secrets remain external configuration."
       }
     ]
   },

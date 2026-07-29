@@ -31,6 +31,7 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/invoices': { sectionId: 'tradeflowkit-revenue-flow', label: 'Invoices' },
     '/payments': { sectionId: 'tradeflowkit-revenue-flow', label: 'Payments' },
     '/analytics': { sectionId: 'tradeflowkit-operations', label: 'Operational Analytics' },
+    '/trash': { sectionId: 'tradeflowkit-retention', label: 'Archive' },
     '/settings': { sectionId: 'tradeflowkit-settings', label: 'Settings' },
   },
   techdeck: {

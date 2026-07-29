@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
   activityFeed,
@@ -18,6 +18,7 @@ import {
   tradeflowkitPayments,
   tradeflowkitQuoteItems,
   tradeflowkitQuotes,
+  tradeflowkitSavedViews,
   tradeflowkitSettings,
   tradeflowkitTagAssignments,
   tradeflowkitTags,
@@ -46,6 +47,10 @@ const TASK_PRIORITIES = new Set(['low', 'normal', 'high', 'urgent']);
 const WORKFLOW_ENTITY_TYPES = new Set(['job', 'task']);
 const JOB_STATUSES = new Set(['lead', 'quoted', 'scheduled', 'in_progress', 'done', 'invoiced', 'paid', 'canceled']);
 const WORKFLOW_MAPPED_STATUSES = new Set([...JOB_STATUSES, ...TASK_STATUSES]);
+const RETAINED_ENTITY_KINDS = new Set(['customers', 'jobs', 'tasks', 'quotes', 'invoices']);
+const SAVED_VIEW_RESOURCES = new Set(['search', 'leads', 'customers', 'jobs', 'tasks', 'quotes', 'invoices']);
+const SAVED_VIEW_FILTERS = new Set(['query', 'search', 'status', 'priority', 'urgency', 'scope', 'jobId', 'assignedToUserId']);
+const SAVED_VIEW_SORT_FIELDS = new Set(['updatedAt', 'createdAt', 'name', 'title', 'status', 'dueAt']);
 
 type RequestContext = { tenantId: string };
 type RequestUser = { id: string };
@@ -95,6 +100,32 @@ function dateValue(value: unknown, field: string): Date | null {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) throw new InputError('FIELD_INVALID', field);
   return date;
+}
+
+function savedViewMap(value: unknown, field: string): Record<string, string | number | boolean | null> {
+  if (value === undefined || value === null) return {};
+  if (typeof value !== 'object' || Array.isArray(value)) throw new InputError('FIELD_INVALID', field);
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (entries.length > 12) throw new InputError('FIELD_TOO_LARGE', field);
+  const result: Record<string, string | number | boolean | null> = {};
+  for (const [key, item] of entries) {
+    if (!SAVED_VIEW_FILTERS.has(key) || (item !== null && !['string', 'number', 'boolean'].includes(typeof item))) {
+      throw new InputError('FIELD_INVALID', `${field}.${key}`);
+    }
+    if (typeof item === 'string' && item.length > 100) throw new InputError('FIELD_TOO_LONG', `${field}.${key}`);
+    result[key] = item as string | number | boolean | null;
+  }
+  return result;
+}
+
+function savedViewSort(value: unknown): { field: string; direction: 'asc' | 'desc' } {
+  if (value === undefined || value === null) return { field: 'updatedAt', direction: 'desc' };
+  if (typeof value !== 'object' || Array.isArray(value)) throw new InputError('FIELD_INVALID', 'sort');
+  const raw = value as Record<string, unknown>;
+  const field = stringValue(raw.field, 'sort.field', 40, true)!;
+  const direction = stringValue(raw.direction, 'sort.direction', 4, true)!;
+  if (!SAVED_VIEW_SORT_FIELDS.has(field) || !['asc', 'desc'].includes(direction)) throw new InputError('FIELD_INVALID', 'sort');
+  return { field, direction: direction as 'asc' | 'desc' };
 }
 
 function inputFailure(reply: FastifyReply, error: unknown): boolean {
@@ -787,6 +818,563 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
     });
     if (!archived) return reply.code(409).send({ error: 'Task not found or changed; reload and retry', code: 'TASK_VERSION_CONFLICT' });
     return { ok: true };
+  });
+
+  app.get('/v1/modules/tradeflowkit/search', { preHandler: [...readGuards] }, async (request, reply) => {
+    let query: string;
+    let limit: number;
+    try {
+      const raw = record(request.query ?? {});
+      query = stringValue(raw.q, 'q', 100, true)!;
+      if (query.length < 2) throw new InputError('FIELD_TOO_SHORT', 'q');
+      limit = integer(raw.limit === undefined ? undefined : Number(raw.limit), 'limit', 1, 20) ?? 8;
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const pattern = `%${query}%`;
+    const [leads, customers, jobs, tasks, quotes, invoices] = await Promise.all([
+      db.select({
+        id: tradeflowkitLeads.id,
+        title: tradeflowkitLeads.name,
+        status: tradeflowkitLeads.status,
+        detail: tradeflowkitLeads.serviceType,
+        updatedAt: tradeflowkitLeads.updatedAt,
+      }).from(tradeflowkitLeads).where(and(
+        eq(tradeflowkitLeads.tenantId, tenant),
+        isNull(tradeflowkitLeads.deletedAt),
+        or(
+          ilike(tradeflowkitLeads.name, pattern),
+          ilike(tradeflowkitLeads.email, pattern),
+          ilike(tradeflowkitLeads.phone, pattern),
+          ilike(tradeflowkitLeads.serviceType, pattern),
+          ilike(tradeflowkitLeads.description, pattern),
+        )!,
+      )).orderBy(desc(tradeflowkitLeads.updatedAt)).limit(limit),
+      db.select({
+        id: tradeflowkitCustomers.id,
+        title: tradeflowkitCustomers.name,
+        status: sql<string | null>`NULL`,
+        detail: tradeflowkitCustomers.email,
+        updatedAt: tradeflowkitCustomers.updatedAt,
+      }).from(tradeflowkitCustomers).where(and(
+        eq(tradeflowkitCustomers.tenantId, tenant),
+        isNull(tradeflowkitCustomers.deletedAt),
+        or(
+          ilike(tradeflowkitCustomers.name, pattern),
+          ilike(tradeflowkitCustomers.email, pattern),
+          ilike(tradeflowkitCustomers.phone, pattern),
+          ilike(tradeflowkitCustomers.address, pattern),
+          ilike(tradeflowkitCustomers.notes, pattern),
+        )!,
+      )).orderBy(desc(tradeflowkitCustomers.updatedAt)).limit(limit),
+      db.select({
+        id: tradeflowkitJobs.id,
+        title: tradeflowkitJobs.title,
+        status: tradeflowkitJobs.status,
+        detail: tradeflowkitJobs.description,
+        updatedAt: tradeflowkitJobs.updatedAt,
+      }).from(tradeflowkitJobs).where(and(
+        eq(tradeflowkitJobs.tenantId, tenant),
+        isNull(tradeflowkitJobs.deletedAt),
+        or(
+          ilike(tradeflowkitJobs.title, pattern),
+          ilike(tradeflowkitJobs.description, pattern),
+          ilike(tradeflowkitJobs.internalNotes, pattern),
+        )!,
+      )).orderBy(desc(tradeflowkitJobs.updatedAt)).limit(limit),
+      db.select({
+        id: tradeflowkitTasks.id,
+        title: tradeflowkitTasks.title,
+        status: tradeflowkitTasks.status,
+        detail: tradeflowkitTasks.description,
+        updatedAt: tradeflowkitTasks.updatedAt,
+      }).from(tradeflowkitTasks).innerJoin(tradeflowkitJobs, and(
+        eq(tradeflowkitJobs.tenantId, tradeflowkitTasks.tenantId),
+        eq(tradeflowkitJobs.id, tradeflowkitTasks.jobId),
+        isNull(tradeflowkitJobs.deletedAt),
+      )).where(and(
+        eq(tradeflowkitTasks.tenantId, tenant),
+        isNull(tradeflowkitTasks.deletedAt),
+        or(ilike(tradeflowkitTasks.title, pattern), ilike(tradeflowkitTasks.description, pattern))!,
+      )).orderBy(desc(tradeflowkitTasks.updatedAt)).limit(limit),
+      db.select({
+        id: tradeflowkitQuotes.id,
+        number: tradeflowkitQuotes.number,
+        status: tradeflowkitQuotes.status,
+        detail: tradeflowkitQuotes.notes,
+        updatedAt: tradeflowkitQuotes.updatedAt,
+      }).from(tradeflowkitQuotes).where(and(
+        eq(tradeflowkitQuotes.tenantId, tenant),
+        isNull(tradeflowkitQuotes.deletedAt),
+        or(
+          ilike(sql`COALESCE(${tradeflowkitQuotes.number}::text, '')`, pattern),
+          ilike(tradeflowkitQuotes.notes, pattern),
+        )!,
+      )).orderBy(desc(tradeflowkitQuotes.updatedAt)).limit(limit),
+      db.select({
+        id: tradeflowkitInvoices.id,
+        number: tradeflowkitInvoices.number,
+        status: tradeflowkitInvoices.status,
+        detail: tradeflowkitInvoices.notes,
+        updatedAt: tradeflowkitInvoices.updatedAt,
+      }).from(tradeflowkitInvoices).where(and(
+        eq(tradeflowkitInvoices.tenantId, tenant),
+        isNull(tradeflowkitInvoices.deletedAt),
+        or(
+          ilike(sql`COALESCE(${tradeflowkitInvoices.number}::text, '')`, pattern),
+          ilike(tradeflowkitInvoices.notes, pattern),
+          ilike(tradeflowkitInvoices.paymentReference, pattern),
+        )!,
+      )).orderBy(desc(tradeflowkitInvoices.updatedAt)).limit(limit),
+    ]);
+    const items = [
+      ...leads.map(item => ({ ...item, kind: 'lead' as const, href: '/modules/tradeflowkit/leads' })),
+      ...customers.map(item => ({ ...item, kind: 'customer' as const, href: `/modules/tradeflowkit/customers/${item.id}` })),
+      ...jobs.map(item => ({ ...item, kind: 'job' as const, href: `/modules/tradeflowkit/jobs/${item.id}` })),
+      ...tasks.map(item => ({ ...item, kind: 'task' as const, href: `/modules/tradeflowkit/tasks/${item.id}` })),
+      ...quotes.map(item => ({ ...item, title: item.number ? `Quote #${item.number}` : 'Quote', kind: 'quote' as const, href: '/modules/tradeflowkit/quotes' })),
+      ...invoices.map(item => ({ ...item, title: item.number ? `Invoice #${item.number}` : 'Invoice', kind: 'invoice' as const, href: '/modules/tradeflowkit/invoices' })),
+    ].sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime());
+    return { query, items, returned: items.length, limitPerEntity: limit };
+  });
+
+  app.get('/v1/modules/tradeflowkit/saved-views', { preHandler: [...readGuards] }, async (request, reply) => {
+    let resource: string | null;
+    try {
+      resource = stringValue(record(request.query ?? {}).resource, 'resource', 40);
+      if (resource && !SAVED_VIEW_RESOURCES.has(resource)) throw new InputError('FIELD_INVALID', 'resource');
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    const items = await db.select().from(tradeflowkitSavedViews).where(and(
+      eq(tradeflowkitSavedViews.tenantId, tenant),
+      isNull(tradeflowkitSavedViews.archivedAt),
+      or(eq(tradeflowkitSavedViews.userId, actor), eq(tradeflowkitSavedViews.isShared, true))!,
+      ...(resource ? [eq(tradeflowkitSavedViews.resource, resource)] : []),
+    )).orderBy(asc(tradeflowkitSavedViews.name));
+    return { items: items.map(item => ({ ...item, owned: item.userId === actor })) };
+  });
+
+  app.post('/v1/modules/tradeflowkit/saved-views', { preHandler: [...writeGuards] }, async (request, reply) => {
+    let input: {
+      resource: string;
+      name: string;
+      filters: Record<string, string | number | boolean | null>;
+      sort: { field: string; direction: 'asc' | 'desc' };
+      isShared: boolean;
+    };
+    try {
+      const raw = record(request.body);
+      const resource = stringValue(raw.resource, 'resource', 40, true)!;
+      if (!SAVED_VIEW_RESOURCES.has(resource)) throw new InputError('FIELD_INVALID', 'resource');
+      input = {
+        resource,
+        name: stringValue(raw.name, 'name', 120, true)!,
+        filters: savedViewMap(raw.filters, 'filters'),
+        sort: savedViewSort(raw.sort),
+        isShared: booleanValue(raw.isShared, 'isShared', false),
+      };
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const context = (request as FastifyRequest & {
+      tenantContext: RequestContext & { role?: string; viaPlatformRole?: boolean };
+    }).tenantContext;
+    if (input.isShared && !context.viaPlatformRole && !['owner', 'admin'].includes(context.role ?? '')) {
+      return reply.code(403).send({ error: 'Only tenant administrators can share saved views', code: 'SAVED_VIEW_ADMIN_REQUIRED' });
+    }
+    const actor = userId(request);
+    try {
+      const created = await db.transaction(async tx => {
+        const [row] = await tx.insert(tradeflowkitSavedViews).values({
+          tenantId: context.tenantId,
+          userId: actor,
+          createdByUserId: actor,
+          updatedByUserId: actor,
+          ...input,
+        }).returning();
+        await audit(tx, {
+          tenantId: context.tenantId,
+          userId: actor,
+          action: 'created',
+          entityType: 'saved_view',
+          entityId: row.id,
+          metadata: { resource: row.resource, isShared: row.isShared },
+        });
+        return row;
+      });
+      return reply.code(201).send(created);
+    } catch (error) {
+      const databaseCode = (error as { code?: string; cause?: { code?: string } }).code
+        ?? (error as { cause?: { code?: string } }).cause?.code;
+      if (databaseCode === '23505') {
+        return reply.code(409).send({ error: 'A saved view with this name already exists', code: 'SAVED_VIEW_NAME_CONFLICT' });
+      }
+      throw error;
+    }
+  });
+
+  app.delete('/v1/modules/tradeflowkit/saved-views/:id', { preHandler: [...writeGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    let expectedVersion;
+    try {
+      expectedVersion = integer(record(request.body).expectedVersion, 'expectedVersion', 1, 1_000_000, true)!;
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    const [archived] = await db.transaction(async tx => {
+      const rows = await tx.update(tradeflowkitSavedViews).set({
+        archivedAt: new Date(),
+        updatedAt: new Date(),
+        updatedByUserId: actor,
+        version: sql`${tradeflowkitSavedViews.version} + 1`,
+      }).where(and(
+        eq(tradeflowkitSavedViews.id, id),
+        eq(tradeflowkitSavedViews.tenantId, tenant),
+        eq(tradeflowkitSavedViews.userId, actor),
+        eq(tradeflowkitSavedViews.version, expectedVersion),
+        isNull(tradeflowkitSavedViews.archivedAt),
+      )).returning();
+      if (!rows[0]) return [];
+      await audit(tx, {
+        tenantId: tenant,
+        userId: actor,
+        action: 'archived',
+        entityType: 'saved_view',
+        entityId: id,
+        metadata: { resource: rows[0].resource, isShared: rows[0].isShared },
+      });
+      return rows;
+    });
+    if (!archived) return reply.code(404).send({ error: 'Saved view not found or changed', code: 'SAVED_VIEW_NOT_FOUND' });
+    return { ok: true };
+  });
+
+  app.get('/v1/modules/tradeflowkit/trash', { preHandler: [...readGuards] }, async (request) => {
+    const tenant = tenantId(request);
+    const [
+      customers,
+      jobs,
+      tasks,
+      quotes,
+      invoices,
+      customerReferences,
+      jobReferences,
+      activeOrganizations,
+      taskDependencies,
+      activeInvoices,
+    ] = await Promise.all([
+      db.select().from(tradeflowkitCustomers).where(and(
+        eq(tradeflowkitCustomers.tenantId, tenant),
+        isNotNull(tradeflowkitCustomers.deletedAt),
+      )).orderBy(desc(tradeflowkitCustomers.deletedAt)).limit(100),
+      db.select().from(tradeflowkitJobs).where(and(
+        eq(tradeflowkitJobs.tenantId, tenant),
+        isNotNull(tradeflowkitJobs.deletedAt),
+      )).orderBy(desc(tradeflowkitJobs.deletedAt)).limit(100),
+      db.select().from(tradeflowkitTasks).where(and(
+        eq(tradeflowkitTasks.tenantId, tenant),
+        isNotNull(tradeflowkitTasks.deletedAt),
+      )).orderBy(desc(tradeflowkitTasks.deletedAt)).limit(100),
+      db.select().from(tradeflowkitQuotes).where(and(
+        eq(tradeflowkitQuotes.tenantId, tenant),
+        isNotNull(tradeflowkitQuotes.deletedAt),
+      )).orderBy(desc(tradeflowkitQuotes.deletedAt)).limit(100),
+      db.select().from(tradeflowkitInvoices).where(and(
+        eq(tradeflowkitInvoices.tenantId, tenant),
+        isNotNull(tradeflowkitInvoices.deletedAt),
+      )).orderBy(desc(tradeflowkitInvoices.deletedAt)).limit(100),
+      db.select({
+        id: tradeflowkitCustomers.id,
+        name: tradeflowkitCustomers.name,
+        active: sql<boolean>`${tradeflowkitCustomers.deletedAt} IS NULL`,
+      }).from(tradeflowkitCustomers).where(eq(tradeflowkitCustomers.tenantId, tenant)),
+      db.select({
+        id: tradeflowkitJobs.id,
+        title: tradeflowkitJobs.title,
+        active: sql<boolean>`${tradeflowkitJobs.deletedAt} IS NULL`,
+      }).from(tradeflowkitJobs).where(eq(tradeflowkitJobs.tenantId, tenant)),
+      db.select({ id: directoryOrganizations.id }).from(directoryOrganizations).where(and(
+        eq(directoryOrganizations.tenantId, tenant),
+        isNull(directoryOrganizations.archivedAt),
+      )),
+      db.select({
+        taskId: tradeflowkitTaskDependencies.taskId,
+        dependsOnTaskId: tradeflowkitTaskDependencies.dependsOnTaskId,
+      }).from(tradeflowkitTaskDependencies).where(eq(tradeflowkitTaskDependencies.tenantId, tenant)),
+      db.select({ sourceQuoteId: tradeflowkitInvoices.sourceQuoteId }).from(tradeflowkitInvoices).where(and(
+        eq(tradeflowkitInvoices.tenantId, tenant),
+        isNull(tradeflowkitInvoices.deletedAt),
+        isNotNull(tradeflowkitInvoices.sourceQuoteId),
+      )),
+    ]);
+
+    const customerById = new Map(customerReferences.map(customer => [customer.id, customer]));
+    const jobById = new Map(jobReferences.map(job => [job.id, job]));
+    const activeCustomerIds = new Set(customerReferences.filter(customer => customer.active).map(customer => customer.id));
+    const activeJobIds = new Set(jobReferences.filter(job => job.active).map(job => job.id));
+    const activeOrganizationIds = new Set(activeOrganizations.map(organization => organization.id));
+    const activeTaskIds = new Set(
+      await db.select({ id: tradeflowkitTasks.id }).from(tradeflowkitTasks).where(and(
+        eq(tradeflowkitTasks.tenantId, tenant),
+        isNull(tradeflowkitTasks.deletedAt),
+      )).then(rows => rows.map(row => row.id)),
+    );
+    const dependencyIdsByTask = new Map<string, string[]>();
+    for (const dependency of taskDependencies) {
+      const current = dependencyIdsByTask.get(dependency.taskId) ?? [];
+      current.push(dependency.dependsOnTaskId);
+      dependencyIdsByTask.set(dependency.taskId, current);
+    }
+    const activeInvoiceSourceQuoteIds = new Set(
+      activeInvoices.map(invoice => invoice.sourceQuoteId).filter((id): id is string => !!id),
+    );
+    const parentBlock = (customerId: string, jobId: string | null) => {
+      if (!activeCustomerIds.has(customerId)) return 'Restore the customer first.';
+      if (jobId && !activeJobIds.has(jobId)) return 'Restore the linked job first.';
+      return null;
+    };
+    const items = [
+      ...customers.map(customer => ({
+        kind: 'customer' as const,
+        id: customer.id,
+        label: customer.name,
+        detail: customer.email || customer.phone || 'Customer record',
+        status: null,
+        version: customer.version,
+        archivedAt: customer.deletedAt!,
+        restoreBlockedReason: !customer.organizationId
+          ? 'The shared Directory organization link is missing.'
+          : !activeOrganizationIds.has(customer.organizationId)
+            ? 'Restore the linked shared Directory organization first.'
+            : null,
+      })),
+      ...jobs.map(job => ({
+        kind: 'job' as const,
+        id: job.id,
+        label: job.title,
+        detail: customerById.get(job.customerId)?.name || 'Customer unavailable',
+        status: job.status,
+        version: job.version,
+        archivedAt: job.deletedAt!,
+        restoreBlockedReason: activeCustomerIds.has(job.customerId) ? null : 'Restore the customer first.',
+      })),
+      ...tasks.map(task => ({
+        kind: 'task' as const,
+        id: task.id,
+        label: task.title,
+        detail: jobById.get(task.jobId)?.title || 'Job unavailable',
+        status: task.status,
+        version: task.version,
+        archivedAt: task.deletedAt!,
+        restoreBlockedReason: !activeJobIds.has(task.jobId)
+          ? 'Restore the job first.'
+          : (dependencyIdsByTask.get(task.id) ?? []).some(dependencyId => !activeTaskIds.has(dependencyId))
+            ? 'Restore archived prerequisite tasks first.'
+            : null,
+      })),
+      ...quotes.map(quote => ({
+        kind: 'quote' as const,
+        id: quote.id,
+        label: quote.number ? `Quote #${quote.number}` : 'Quote',
+        detail: customerById.get(quote.customerId)?.name || 'Customer unavailable',
+        status: quote.status,
+        version: quote.version,
+        archivedAt: quote.deletedAt!,
+        restoreBlockedReason: parentBlock(quote.customerId, quote.jobId),
+      })),
+      ...invoices.map(invoice => ({
+        kind: 'invoice' as const,
+        id: invoice.id,
+        label: invoice.number ? `Invoice #${invoice.number}` : 'Invoice',
+        detail: customerById.get(invoice.customerId)?.name || 'Customer unavailable',
+        status: invoice.status,
+        version: invoice.version,
+        archivedAt: invoice.deletedAt!,
+        restoreBlockedReason: parentBlock(invoice.customerId, invoice.jobId)
+          ?? (invoice.sourceQuoteId && activeInvoiceSourceQuoteIds.has(invoice.sourceQuoteId)
+            ? 'Another active invoice already uses this source quote.'
+            : null),
+      })),
+    ].sort((left, right) => right.archivedAt.getTime() - left.archivedAt.getTime());
+    return { items, returned: items.length, limitPerEntity: 100 };
+  });
+
+  app.post('/v1/modules/tradeflowkit/trash/:kind/:id/restore', { preHandler: [...writeGuards] }, async (request, reply) => {
+    const { kind, id } = request.params as { kind: string; id: string };
+    if (!RETAINED_ENTITY_KINDS.has(kind)) {
+      return reply.code(404).send({ error: 'Retained record type not found', code: 'TRASH_KIND_NOT_FOUND' });
+    }
+    let expectedVersion;
+    try {
+      expectedVersion = integer(record(request.body).expectedVersion, 'expectedVersion', 1, 1_000_000, true)!;
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const actor = userId(request);
+
+    const outcome = await db.transaction(async tx => {
+      if (kind === 'customers') {
+        const [current] = await tx.select().from(tradeflowkitCustomers).where(and(
+          eq(tradeflowkitCustomers.id, id),
+          eq(tradeflowkitCustomers.tenantId, tenant),
+          isNotNull(tradeflowkitCustomers.deletedAt),
+        )).limit(1);
+        if (!current) return { kind: 'not_found' as const };
+        if (current.version !== expectedVersion) return { kind: 'version_conflict' as const, currentVersion: current.version };
+        if (!current.organizationId) return { kind: 'blocked' as const, code: 'CUSTOMER_DIRECTORY_MISSING', error: 'The shared Directory organization link is missing' };
+        const [organization] = await tx.select({ id: directoryOrganizations.id }).from(directoryOrganizations).where(and(
+          eq(directoryOrganizations.id, current.organizationId),
+          eq(directoryOrganizations.tenantId, tenant),
+          isNull(directoryOrganizations.archivedAt),
+        )).limit(1);
+        if (!organization) return { kind: 'blocked' as const, code: 'CUSTOMER_DIRECTORY_ARCHIVED', error: 'Restore the linked shared Directory organization first' };
+        const [restored] = await tx.update(tradeflowkitCustomers).set({
+          deletedAt: null,
+          updatedAt: new Date(),
+          version: sql`${tradeflowkitCustomers.version} + 1`,
+        }).where(and(
+          eq(tradeflowkitCustomers.id, id),
+          eq(tradeflowkitCustomers.tenantId, tenant),
+          eq(tradeflowkitCustomers.version, expectedVersion),
+          isNotNull(tradeflowkitCustomers.deletedAt),
+        )).returning();
+        if (!restored) return { kind: 'version_conflict' as const, currentVersion: current.version };
+        await audit(tx, { tenantId: tenant, userId: actor, action: 'restored', entityType: 'customer', entityId: id, metadata: { organizationId: current.organizationId } });
+        return { kind: 'restored' as const, item: restored };
+      }
+
+      if (kind === 'jobs') {
+        const [current] = await tx.select().from(tradeflowkitJobs).where(and(
+          eq(tradeflowkitJobs.id, id),
+          eq(tradeflowkitJobs.tenantId, tenant),
+          isNotNull(tradeflowkitJobs.deletedAt),
+        )).limit(1);
+        if (!current) return { kind: 'not_found' as const };
+        if (current.version !== expectedVersion) return { kind: 'version_conflict' as const, currentVersion: current.version };
+        const [customer] = await tx.select({ id: tradeflowkitCustomers.id }).from(tradeflowkitCustomers).where(and(
+          eq(tradeflowkitCustomers.id, current.customerId),
+          eq(tradeflowkitCustomers.tenantId, tenant),
+          isNull(tradeflowkitCustomers.deletedAt),
+        )).limit(1);
+        if (!customer) return { kind: 'blocked' as const, code: 'JOB_CUSTOMER_ARCHIVED', error: 'Restore the customer first' };
+        const [restored] = await tx.update(tradeflowkitJobs).set({
+          deletedAt: null,
+          updatedAt: new Date(),
+          version: sql`${tradeflowkitJobs.version} + 1`,
+        }).where(and(
+          eq(tradeflowkitJobs.id, id),
+          eq(tradeflowkitJobs.tenantId, tenant),
+          eq(tradeflowkitJobs.version, expectedVersion),
+          isNotNull(tradeflowkitJobs.deletedAt),
+        )).returning();
+        if (!restored) return { kind: 'version_conflict' as const, currentVersion: current.version };
+        await audit(tx, { tenantId: tenant, userId: actor, action: 'restored', entityType: 'job', entityId: id, metadata: { customerId: current.customerId } });
+        return { kind: 'restored' as const, item: restored };
+      }
+
+      if (kind === 'tasks') {
+        const [current] = await tx.select().from(tradeflowkitTasks).where(and(
+          eq(tradeflowkitTasks.id, id),
+          eq(tradeflowkitTasks.tenantId, tenant),
+          isNotNull(tradeflowkitTasks.deletedAt),
+        )).limit(1);
+        if (!current) return { kind: 'not_found' as const };
+        if (current.version !== expectedVersion) return { kind: 'version_conflict' as const, currentVersion: current.version };
+        const [job] = await tx.select({ id: tradeflowkitJobs.id }).from(tradeflowkitJobs).where(and(
+          eq(tradeflowkitJobs.id, current.jobId),
+          eq(tradeflowkitJobs.tenantId, tenant),
+          isNull(tradeflowkitJobs.deletedAt),
+        )).limit(1);
+        if (!job) return { kind: 'blocked' as const, code: 'TASK_JOB_ARCHIVED', error: 'Restore the job first' };
+        const dependencies = await tx.select({ id: tradeflowkitTaskDependencies.dependsOnTaskId }).from(tradeflowkitTaskDependencies).where(and(
+          eq(tradeflowkitTaskDependencies.tenantId, tenant),
+          eq(tradeflowkitTaskDependencies.taskId, id),
+        ));
+        if (dependencies.length) {
+          const activeDependencies = await tx.select({ id: tradeflowkitTasks.id }).from(tradeflowkitTasks).where(and(
+            eq(tradeflowkitTasks.tenantId, tenant),
+            inArray(tradeflowkitTasks.id, dependencies.map(dependency => dependency.id)),
+            isNull(tradeflowkitTasks.deletedAt),
+          ));
+          if (activeDependencies.length !== dependencies.length) {
+            return { kind: 'blocked' as const, code: 'TASK_DEPENDENCY_ARCHIVED', error: 'Restore archived prerequisite tasks first' };
+          }
+        }
+        const [restored] = await tx.update(tradeflowkitTasks).set({
+          deletedAt: null,
+          updatedAt: new Date(),
+          version: sql`${tradeflowkitTasks.version} + 1`,
+        }).where(and(
+          eq(tradeflowkitTasks.id, id),
+          eq(tradeflowkitTasks.tenantId, tenant),
+          eq(tradeflowkitTasks.version, expectedVersion),
+          isNotNull(tradeflowkitTasks.deletedAt),
+        )).returning();
+        if (!restored) return { kind: 'version_conflict' as const, currentVersion: current.version };
+        await audit(tx, { tenantId: tenant, userId: actor, action: 'restored', entityType: 'task', entityId: id, metadata: { jobId: current.jobId } });
+        return { kind: 'restored' as const, item: restored };
+      }
+
+      const table = kind === 'quotes' ? tradeflowkitQuotes : tradeflowkitInvoices;
+      const [current] = await tx.select().from(table).where(and(
+        eq(table.id, id),
+        eq(table.tenantId, tenant),
+        isNotNull(table.deletedAt),
+      )).limit(1);
+      if (!current) return { kind: 'not_found' as const };
+      if (current.version !== expectedVersion) return { kind: 'version_conflict' as const, currentVersion: current.version };
+      const [customer] = await tx.select({ id: tradeflowkitCustomers.id }).from(tradeflowkitCustomers).where(and(
+        eq(tradeflowkitCustomers.id, current.customerId),
+        eq(tradeflowkitCustomers.tenantId, tenant),
+        isNull(tradeflowkitCustomers.deletedAt),
+      )).limit(1);
+      if (!customer) return { kind: 'blocked' as const, code: `${kind === 'quotes' ? 'QUOTE' : 'INVOICE'}_CUSTOMER_ARCHIVED`, error: 'Restore the customer first' };
+      if (current.jobId) {
+        const [job] = await tx.select({ id: tradeflowkitJobs.id }).from(tradeflowkitJobs).where(and(
+          eq(tradeflowkitJobs.id, current.jobId),
+          eq(tradeflowkitJobs.tenantId, tenant),
+          isNull(tradeflowkitJobs.deletedAt),
+        )).limit(1);
+        if (!job) return { kind: 'blocked' as const, code: `${kind === 'quotes' ? 'QUOTE' : 'INVOICE'}_JOB_ARCHIVED`, error: 'Restore the linked job first' };
+      }
+      if (kind === 'invoices' && 'sourceQuoteId' in current && current.sourceQuoteId) {
+        const [activeInvoice] = await tx.select({ id: tradeflowkitInvoices.id }).from(tradeflowkitInvoices).where(and(
+          eq(tradeflowkitInvoices.tenantId, tenant),
+          eq(tradeflowkitInvoices.sourceQuoteId, current.sourceQuoteId),
+          isNull(tradeflowkitInvoices.deletedAt),
+        )).limit(1);
+        if (activeInvoice) return { kind: 'blocked' as const, code: 'INVOICE_SOURCE_QUOTE_CONFLICT', error: 'Another active invoice already uses this source quote' };
+      }
+      const [restored] = await tx.update(table).set({
+        deletedAt: null,
+        updatedAt: new Date(),
+        version: sql`${table.version} + 1`,
+      }).where(and(
+        eq(table.id, id),
+        eq(table.tenantId, tenant),
+        eq(table.version, expectedVersion),
+        isNotNull(table.deletedAt),
+      )).returning();
+      if (!restored) return { kind: 'version_conflict' as const, currentVersion: current.version };
+      const entityType = kind === 'quotes' ? 'quote' : 'invoice';
+      await audit(tx, {
+        tenantId: tenant,
+        userId: actor,
+        action: 'restored',
+        entityType,
+        entityId: id,
+        metadata: { customerId: current.customerId, jobId: current.jobId },
+      });
+      return { kind: 'restored' as const, item: restored };
+    });
+
+    if (outcome.kind === 'not_found') return reply.code(404).send({ error: 'Retained record not found', code: 'TRASH_RECORD_NOT_FOUND' });
+    if (outcome.kind === 'version_conflict') {
+      return reply.code(409).send({
+        error: 'Retained record changed; reload and retry',
+        code: 'TRASH_VERSION_CONFLICT',
+        currentVersion: outcome.currentVersion,
+      });
+    }
+    if (outcome.kind === 'blocked') return reply.code(409).send({ error: outcome.error, code: outcome.code });
+    return { ok: true, item: outcome.item };
   });
 
   app.get('/v1/modules/tradeflowkit/activity', { preHandler: [...readGuards] }, async (request, reply) => {

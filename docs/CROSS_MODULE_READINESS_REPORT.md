@@ -15,7 +15,7 @@ tests all pass in the target deployment.
 | Module | Real shared-runtime workload | Auth/tenant enforcement | Build | DB tests | Live health | Browser E2E | Readiness |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | OperatorOS | Identity, tenant, entitlement, billing, audit, launcher | Local SSO/RBAC/tenant tests pass | Pass | Pass | Local pass; deployed target not run | Local production-host matrix 9/9; deployed target not run | **Not production-ready** |
-| TradeFlowKit | Source/local state 4 candidate: lead conversion; full customer → job/work order → task single-record CRUD/deep links; shared Directory customers and bounded CSV import; numbered jobs/tasks/dependencies; Workflow Studio; direct and quote-derived invoices; versioned multi-line quote/invoice editing; history-safe archive; idempotent quote-to-job/invoice; payments; portal/documents; messaging; settings; analytics; CSV export | Server guards, optimistic versions, dependency-ordered archive, exact-key import replay/body-drift rejection, persistence/restart, viewer denial, normalized duplicate/item reconciliation, Directory mapping/preservation, and cross-tenant tests pass | Pass | Focused core CRUD: 2/2; prior clean aggregate: 866 pass, 0 fail, 6 HTTP-only skips | Production build and readiness-gated compiled runtime pass locally; deployed target not run | Exact-host core CRUD passes 1/1 with PKCE return, customer/job/task create-edit-deep-link, refresh, My Apps return/reopen, and safe archive order; customer-import flow separately passes 1/1. Deployed workflow/cutover not run | **Not production-ready** |
+| TradeFlowKit | Complete approved-scope local product: lead/revenue/field-service lifecycle; Directory customers; customer/job/invoice bounded imports; Workflow Studio; documents/payments/portal/messaging/settings/analytics; safe bulk updates; retention restore; search/views; CSV export | Server guards, versions/idempotency, dependency ordering, persistence, viewer denial, Directory reconciliation, non-enumerating tenant isolation, normalized duplicate/item reconciliation, and activity pass | Pass | Focused import/bulk PostgreSQL: 1/1; prior clean aggregate: 866 pass, 0 fail, 6 HTTP-only skips | Production build and readiness-gated compiled runtime pass locally; deployed target not run | Exact-host compiled acceptance passes 1/1 in 25.3s across PKCE, persisted CRUD, restore, search/views, imports, bulk updates/payment, return and logout. Deployed workflow/cutover not run | **Not production-ready** |
 | PulseDesk | Source/local state 4 candidate: PHI-minimized Directory clients/facilities/requesters; departments; operational assets; numbered tickets; queue/team assignment; notes/replies; shared attachments; time/SLA; vendor, supply and facility coordination; knowledge, views, configuration, dashboards and deep links | Server guards, capability limits, versions, idempotency, privacy validation, internal-note isolation, restart persistence, Directory mapping and cross-tenant tests pass | Pass | Pass | Compiled 19-step shared runtime and anonymous deep-link smoke pass locally; deployed target not run | Local production-host SSO/return/logout evidence recorded below; deployed workflow/privacy/cutover not run | **Not production-ready** |
 | TechDeck | Source/local state 4 candidate: Directory-linked tickets/comments/time; configuration inventory; network/IPAM; lifecycle; versioned documentation/runbooks/backlinks; private attachments; evidence; reports; deep links | Server guards, versions, site/client pairing, managed-client Directory profile, document transitions, secret-field rejection, audit, viewer denial, and cross-tenant tests pass | Pass | Pass | Compiled 18-step shared runtime and anonymous deep-link smoke pass locally; deployed target not run | Production-host SSO 2/2 and TechDeck deep-link/refresh/Back/local logout pass locally; deployed workflow/provider/cutover not run | **Not production-ready** |
 | TorqueShed | Phase 9 source candidate: Phase 7 automotive foundation; safety-ranked Assist and append-only token accounting; persistent Marketplace/Community, scanned media, blocks, reports and append-only moderation with native UI | Phase 9 domain/static contracts pass; the complete Phase 11A aggregate and fresh foundation/Assist regressions are green | Pass | PostgreSQL, scoped foundation/Assist and Marketplace/Community workflows, and the cumulative 23-step release pass | Production build and compiled shared health/readiness pass locally; deployed target not run | Shared SSO/shell coverage passes in the 5/5 matrix; dedicated `/diagnostics`, Assist, Marketplace and Community browser acceptance remains open | **Not production-ready** |
@@ -31,20 +31,17 @@ tests all pass in the target deployment.
 
 ## Final E2E acceptance update
 
-Phase 16A re-baselines TradeFlowKit against the restored full product and does
-not change its state-4/local-only verdict. The generated ledger now records
-103 active items, 53 shared replacements, 57 explicit gaps, zero unclassified,
-41 security retirements, and 23 product-boundary retirements. The latest
-increment activates bounded customer CSV import with browser/server
-validation, serialized tenant writes, normalized duplicate suppression,
-atomic shared Directory reconciliation, safe activity, exact-result replay,
-and changed-body rejection;
-legacy destructive bulk routes are retired under ADR-0011. Focused checks pass
-5/5, the clean API aggregate passes 866 with zero failures
-and six HTTP-only skips, and compiled health/readiness plus the authenticated
-exact-host customer-import browser gate pass 1/1 locally. Deployment, providers, real
-data apply/cutover, rollback rehearsal, and all 57 remaining ledger gaps keep
-TradeFlowKit and the ecosystem **not production-ready**.
+Phase 16A completes approved-scope TradeFlowKit source/local restoration
+without changing the state-4/local-only verdict. The generated ledger records
+117 active items, 65 shared replacements, zero gaps, zero unclassified items,
+45 security retirements, and 50 accepted product-boundary retirements.
+Bounded customer/job/invoice imports, safe bulk updates/payment, retention
+restore, global search, and saved views join the existing persistent product.
+The focused import/bulk workflow passes 1/1, workspace typecheck and production
+build pass, and authenticated exact-host compiled acceptance passes 1/1 in
+25.3 seconds. Deployment, enabled providers, real data apply/cutover, and
+rollback rehearsal keep TradeFlowKit and the ecosystem **not
+production-ready**.
 
 The subsequent core CRUD increment also passes 2/2 focused PostgreSQL checks
 and 1/1 exact-host browser acceptance in 16.4 seconds on the compiled runtime.

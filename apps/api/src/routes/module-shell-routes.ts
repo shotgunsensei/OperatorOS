@@ -41,11 +41,16 @@ import {
   parseCustomerCreate,
   parseCustomerImport,
   parseCustomerUpdate,
+  calculateDocumentTotals,
   parseDocumentArchive,
+  parseInvoiceBulkPaid,
   parseInvoiceCreate,
   parseInvoiceFromQuote,
+  parseInvoiceImport,
   parseInvoiceUpdate,
+  parseJobBulkStatus,
   parseJobCreate,
+  parseJobImport,
   parsePayment,
   parseQuoteCreate,
   parseQuoteToJob,
@@ -418,6 +423,11 @@ function tradeFlowKitCustomerImportSourceId(input: TradeFlowKitCustomerInput): s
     address: input.address?.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US') ?? null,
   })).digest('hex');
   return `customer-import:${fingerprint}`;
+}
+
+function tradeFlowKitImportSourceId(kind: 'job' | 'invoice', input: unknown): string {
+  const fingerprint = createHash('sha256').update(JSON.stringify(input)).digest('hex');
+  return `${kind}-import:${fingerprint}`;
 }
 
 async function createLinkedTradeFlowKitCustomer(
@@ -1157,6 +1167,199 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     return reply.code(200).send(result.response);
   });
 
+  app.post('/v1/modules/tradeflowkit/jobs/import', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    const rawIdempotencyKey = request.headers['idempotency-key'];
+    const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey.trim() : '';
+    if (!/^[A-Za-z0-9._:-]{8,160}$/.test(idempotencyKey)) {
+      return reply.code(400).send({ error: 'A valid Idempotency-Key header is required', code: 'IDEMPOTENCY_KEY_REQUIRED' });
+    }
+    let input;
+    try { input = parseJobImport(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const ctx = (request as any).tenantContext as { tenantId: string };
+    const user = (request as any).user as { id: string };
+    const [moduleRow] = await db.select({ id: modules.id }).from(modules).where(eq(modules.slug, 'tradeflowkit')).limit(1);
+    if (!moduleRow) return reply.code(503).send({ error: 'TradeFlowKit module registry is unavailable', code: 'TRADEFLOWKIT_MODULE_UNAVAILABLE' });
+
+    const result = await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'tradeflowkit_job_import:' + ctx.tenantId}))`);
+      const idempotency = await beginIdempotentOperation({
+        tenantId: ctx.tenantId,
+        moduleId: moduleRow.id,
+        scope: 'tradeflowkit-job-import',
+        idempotencyKey,
+        request: request.body,
+        leaseMs: 60_000,
+      }, tx);
+      if (idempotency.state === 'replay') return { kind: 'response' as const, response: idempotency.responseJson };
+      if (idempotency.state === 'conflict') return { kind: 'conflict' as const };
+      if (idempotency.state === 'in_progress') return { kind: 'in_progress' as const };
+
+      const customers = await tx.select({ id: tradeflowkitCustomers.id, name: tradeflowkitCustomers.name })
+        .from(tradeflowkitCustomers)
+        .where(and(eq(tradeflowkitCustomers.tenantId, ctx.tenantId), isNull(tradeflowkitCustomers.deletedAt)));
+      const customerByName = new Map(customers.map(customer => [normalizeTradeFlowKitCustomerName(customer.name), customer.id]));
+      const imported: Array<{ id: string }> = [];
+      const skippedRows: Array<{ row: number; reason: 'duplicate_source' }> = [];
+      const errors = [...input.errors];
+
+      for (const row of input.jobs) {
+        const customerId = customerByName.get(normalizeTradeFlowKitCustomerName(row.customerName));
+        if (!customerId) {
+          errors.push({ row: row.row, code: 'CUSTOMER_NOT_FOUND', field: 'customerName' });
+          continue;
+        }
+        const sourceId = tradeFlowKitImportSourceId('job', {
+          customerId,
+          title: row.title.toLocaleLowerCase('en-US'),
+          description: row.description,
+          status: row.status,
+          priority: row.priority,
+          scheduledStart: row.scheduledStart?.toISOString() ?? null,
+          scheduledEnd: row.scheduledEnd?.toISOString() ?? null,
+          internalNotes: row.internalNotes,
+        });
+        const [duplicate] = await tx.select({ id: tradeflowkitJobs.id }).from(tradeflowkitJobs).where(and(
+          eq(tradeflowkitJobs.tenantId, ctx.tenantId),
+          eq(tradeflowkitJobs.sourceId, sourceId),
+        )).limit(1);
+        if (duplicate) {
+          skippedRows.push({ row: row.row, reason: 'duplicate_source' });
+          continue;
+        }
+        const number = await allocateTradeFlowKitNumber(tx, ctx.tenantId, 'job');
+        const [created] = await tx.insert(tradeflowkitJobs).values({
+          tenantId: ctx.tenantId,
+          customerId,
+          createdByUserId: user.id,
+          number,
+          title: row.title,
+          description: row.description,
+          internalNotes: row.internalNotes,
+          status: row.status,
+          priority: row.priority,
+          scheduledStart: row.scheduledStart,
+          scheduledEnd: row.scheduledEnd,
+          completedAt: ['done', 'paid'].includes(row.status) ? new Date() : null,
+          sourceId,
+        }).returning({ id: tradeflowkitJobs.id });
+        imported.push(created);
+        await tx.insert(activityFeed).values({
+          tenantId: ctx.tenantId,
+          userId: user.id,
+          action: 'imported',
+          entityType: 'tradeflowkit_job',
+          entityId: created.id,
+          metadata: { customerId, sourceId, row: row.row, number },
+        });
+      }
+
+      const response = {
+        imported: imported.length,
+        skipped: skippedRows.length,
+        errors,
+        skippedRows,
+        jobs: imported,
+      };
+      await tx.insert(activityFeed).values({
+        tenantId: ctx.tenantId,
+        userId: user.id,
+        action: 'import_completed',
+        entityType: 'tradeflowkit_job_import',
+        metadata: { idempotencyKey, totalRows: input.totalRows, imported: imported.length, skipped: skippedRows.length, errors: errors.length },
+      });
+      await completeIdempotentOperation({
+        tenantId: ctx.tenantId,
+        id: idempotency.id,
+        leaseExpiresAt: idempotency.leaseExpiresAt,
+        responseStatus: 200,
+        responseJson: response,
+      }, tx);
+      return { kind: 'response' as const, response };
+    });
+    if (result.kind === 'conflict') return reply.code(409).send({ error: 'Idempotency-Key was already used with a different job import', code: 'IDEMPOTENCY_KEY_REUSE' });
+    if (result.kind === 'in_progress') return reply.code(409).send({ error: 'Job import is already in progress', code: 'IDEMPOTENCY_IN_PROGRESS' });
+    return reply.code(200).send(result.response);
+  });
+
+  app.post('/v1/modules/tradeflowkit/jobs/bulk-status', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    const rawIdempotencyKey = request.headers['idempotency-key'];
+    const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey.trim() : '';
+    if (!/^[A-Za-z0-9._:-]{8,160}$/.test(idempotencyKey)) {
+      return reply.code(400).send({ error: 'A valid Idempotency-Key header is required', code: 'IDEMPOTENCY_KEY_REQUIRED' });
+    }
+    let input;
+    try { input = parseJobBulkStatus(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const ctx = (request as any).tenantContext as { tenantId: string };
+    const user = (request as any).user as { id: string };
+    const [moduleRow] = await db.select({ id: modules.id }).from(modules).where(eq(modules.slug, 'tradeflowkit')).limit(1);
+    if (!moduleRow) return reply.code(503).send({ error: 'TradeFlowKit module registry is unavailable', code: 'TRADEFLOWKIT_MODULE_UNAVAILABLE' });
+
+    const result = await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'tradeflowkit_job_bulk:' + ctx.tenantId}))`);
+      const idempotency = await beginIdempotentOperation({
+        tenantId: ctx.tenantId,
+        moduleId: moduleRow.id,
+        scope: 'tradeflowkit-job-bulk-status',
+        idempotencyKey,
+        request: request.body,
+        leaseMs: 60_000,
+      }, tx);
+      if (idempotency.state === 'replay') return { kind: 'response' as const, response: idempotency.responseJson };
+      if (idempotency.state === 'conflict') return { kind: 'conflict' as const };
+      if (idempotency.state === 'in_progress') return { kind: 'in_progress' as const };
+
+      const currentRows = [];
+      for (const item of input.items) {
+        const [current] = await tx.select().from(tradeflowkitJobs).where(and(
+          eq(tradeflowkitJobs.id, item.id),
+          eq(tradeflowkitJobs.tenantId, ctx.tenantId),
+          isNull(tradeflowkitJobs.deletedAt),
+        )).limit(1);
+        if (!current) return { kind: 'not_found' as const };
+        if (current.version !== item.expectedVersion) return { kind: 'version_conflict' as const };
+        currentRows.push(current);
+      }
+      const updatedIds: string[] = [];
+      for (const current of currentRows) {
+        const [updated] = await tx.update(tradeflowkitJobs).set({
+          status: input.status,
+          completedAt: ['done', 'paid'].includes(input.status) ? current.completedAt ?? new Date() : null,
+          version: sql`${tradeflowkitJobs.version} + 1`,
+          updatedAt: new Date(),
+        }).where(and(
+          eq(tradeflowkitJobs.id, current.id),
+          eq(tradeflowkitJobs.tenantId, ctx.tenantId),
+          eq(tradeflowkitJobs.version, current.version),
+          isNull(tradeflowkitJobs.deletedAt),
+        )).returning({ id: tradeflowkitJobs.id });
+        if (!updated) return { kind: 'version_conflict' as const };
+        updatedIds.push(updated.id);
+        await tx.insert(activityFeed).values({
+          tenantId: ctx.tenantId,
+          userId: user.id,
+          action: 'bulk_status_changed',
+          entityType: 'tradeflowkit_job',
+          entityId: current.id,
+          metadata: { fromStatus: current.status, toStatus: input.status, idempotencyKey },
+        });
+      }
+      const response = { updated: updatedIds.length, jobIds: updatedIds, status: input.status };
+      await completeIdempotentOperation({
+        tenantId: ctx.tenantId,
+        id: idempotency.id,
+        leaseExpiresAt: idempotency.leaseExpiresAt,
+        responseStatus: 200,
+        responseJson: response,
+      }, tx);
+      return { kind: 'response' as const, response };
+    });
+    if (result.kind === 'not_found') return reply.code(404).send({ error: 'One or more jobs were not found', code: 'JOB_NOT_FOUND' });
+    if (result.kind === 'version_conflict') return reply.code(409).send({ error: 'One or more jobs changed; reload and retry', code: 'JOB_VERSION_CONFLICT' });
+    if (result.kind === 'conflict') return reply.code(409).send({ error: 'Idempotency-Key was already used with a different bulk job update', code: 'IDEMPOTENCY_KEY_REUSE' });
+    if (result.kind === 'in_progress') return reply.code(409).send({ error: 'Bulk job update is already in progress', code: 'IDEMPOTENCY_IN_PROGRESS' });
+    return reply.code(200).send(result.response);
+  });
+
   app.post('/v1/modules/tradeflowkit/jobs', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
     let input;
     try { input = parseJobCreate(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
@@ -1443,6 +1646,291 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       return created;
     });
     return reply.code(201).send(invoice);
+  });
+
+  app.post('/v1/modules/tradeflowkit/invoices/import', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    const rawIdempotencyKey = request.headers['idempotency-key'];
+    const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey.trim() : '';
+    if (!/^[A-Za-z0-9._:-]{8,160}$/.test(idempotencyKey)) {
+      return reply.code(400).send({ error: 'A valid Idempotency-Key header is required', code: 'IDEMPOTENCY_KEY_REQUIRED' });
+    }
+    let input;
+    try { input = parseInvoiceImport(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const ctx = (request as any).tenantContext as { tenantId: string };
+    const user = (request as any).user as { id: string };
+    const [moduleRow] = await db.select({ id: modules.id }).from(modules).where(eq(modules.slug, 'tradeflowkit')).limit(1);
+    if (!moduleRow) return reply.code(503).send({ error: 'TradeFlowKit module registry is unavailable', code: 'TRADEFLOWKIT_MODULE_UNAVAILABLE' });
+
+    const result = await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'tradeflowkit_invoice_import:' + ctx.tenantId}))`);
+      const idempotency = await beginIdempotentOperation({
+        tenantId: ctx.tenantId,
+        moduleId: moduleRow.id,
+        scope: 'tradeflowkit-invoice-import',
+        idempotencyKey,
+        request: request.body,
+        leaseMs: 60_000,
+      }, tx);
+      if (idempotency.state === 'replay') return { kind: 'response' as const, response: idempotency.responseJson };
+      if (idempotency.state === 'conflict') return { kind: 'conflict' as const };
+      if (idempotency.state === 'in_progress') return { kind: 'in_progress' as const };
+
+      const customers = await tx.select({ id: tradeflowkitCustomers.id, name: tradeflowkitCustomers.name })
+        .from(tradeflowkitCustomers)
+        .where(and(eq(tradeflowkitCustomers.tenantId, ctx.tenantId), isNull(tradeflowkitCustomers.deletedAt)));
+      const customerByName = new Map(customers.map(customer => [normalizeTradeFlowKitCustomerName(customer.name), customer.id]));
+      type InvoiceImportRow = (typeof input.invoices)[number];
+      const groups = new Map<string, { first: InvoiceImportRow; rows: InvoiceImportRow[] }>();
+      for (const row of input.invoices) {
+        const key = row.invoiceRef ? `ref:${row.invoiceRef.toLocaleLowerCase('en-US')}` : `row:${row.row}`;
+        const group = groups.get(key);
+        if (group) group.rows.push(row);
+        else groups.set(key, { first: row, rows: [row] });
+      }
+
+      const imported: Array<{ id: string }> = [];
+      const skippedRows: Array<{ row: number; reason: 'duplicate_source' }> = [];
+      const errors = [...input.errors];
+      for (const group of groups.values()) {
+        const header = group.first;
+        const customerId = customerByName.get(normalizeTradeFlowKitCustomerName(header.customerName));
+        if (!customerId) {
+          errors.push({ row: header.row, code: 'CUSTOMER_NOT_FOUND', field: 'customerName' });
+          continue;
+        }
+        const conflictingHeader = group.rows.find(row =>
+          normalizeTradeFlowKitCustomerName(row.customerName) !== normalizeTradeFlowKitCustomerName(header.customerName)
+          || row.status !== header.status
+          || row.taxRateBps !== header.taxRateBps
+          || row.discountCents !== header.discountCents
+          || row.dueDate?.toISOString() !== header.dueDate?.toISOString());
+        if (conflictingHeader) {
+          errors.push({ row: conflictingHeader.row, code: 'INVOICE_GROUP_CONFLICT', field: 'invoiceRef' });
+          continue;
+        }
+        const lineItems = group.rows.map(row => ({
+          description: row.itemDescription,
+          quantity: row.itemQuantity,
+          unitPriceCents: row.itemUnitPriceCents,
+        }));
+        let totals;
+        try {
+          totals = calculateDocumentTotals(lineItems, header.taxRateBps, header.discountCents);
+        } catch (error) {
+          if (!(error instanceof TradeFlowKitRevenueValidationError)) throw error;
+          errors.push({ row: header.row, code: error.code, ...(error.field ? { field: error.field } : {}) });
+          continue;
+        }
+        const sourceId = tradeFlowKitImportSourceId('invoice', {
+          invoiceRef: header.invoiceRef?.toLocaleLowerCase('en-US') ?? null,
+          customerId,
+          status: header.status,
+          dueDate: header.dueDate?.toISOString() ?? null,
+          taxRateBps: header.taxRateBps,
+          discountCents: header.discountCents,
+          notes: header.notes,
+          lineItems,
+        });
+        const [duplicate] = await tx.select({ id: tradeflowkitInvoices.id }).from(tradeflowkitInvoices).where(and(
+          eq(tradeflowkitInvoices.tenantId, ctx.tenantId),
+          eq(tradeflowkitInvoices.sourceId, sourceId),
+        )).limit(1);
+        if (duplicate) {
+          skippedRows.push({ row: header.row, reason: 'duplicate_source' });
+          continue;
+        }
+        const number = await allocateTradeFlowKitNumber(tx, ctx.tenantId, 'invoice');
+        const isPaid = header.status === 'paid';
+        const [created] = await tx.insert(tradeflowkitInvoices).values({
+          tenantId: ctx.tenantId,
+          customerId,
+          createdByUserId: user.id,
+          number,
+          status: header.status,
+          lineItems,
+          ...totals,
+          taxRateBps: header.taxRateBps,
+          discountCents: header.discountCents,
+          paidCents: isPaid ? totals.totalCents : 0,
+          balanceCents: isPaid ? 0 : totals.totalCents,
+          notes: header.notes,
+          dueDate: header.dueDate,
+          sentAt: ['sent', 'paid'].includes(header.status) ? new Date() : null,
+          paidAt: isPaid ? new Date() : null,
+          paymentMethod: isPaid ? 'other' : null,
+          paymentReference: isPaid ? header.invoiceRef ?? 'Imported paid invoice' : null,
+          sourceId,
+        }).returning({ id: tradeflowkitInvoices.id });
+        await tx.insert(tradeflowkitInvoiceItems).values(lineItems.map((item, index) => ({
+          tenantId: ctx.tenantId,
+          invoiceId: created.id,
+          lineNumber: index + 1,
+          description: item.description,
+          quantityMilli: item.quantity * 1000,
+          unitPriceCents: item.unitPriceCents,
+          lineTotalCents: item.quantity * item.unitPriceCents,
+        })));
+        if (isPaid && totals.totalCents > 0) {
+          await tx.insert(tradeflowkitPayments).values({
+            tenantId: ctx.tenantId,
+            invoiceId: created.id,
+            createdByUserId: user.id,
+            amountCents: totals.totalCents,
+            method: 'other',
+            reference: header.invoiceRef ?? 'Imported paid invoice',
+            notes: 'Imported with paid status',
+            idempotencyKey: `invoice-import:${createHash('sha256').update(`${idempotencyKey}:${created.id}`).digest('hex')}`,
+          });
+        }
+        imported.push(created);
+        await tx.insert(activityFeed).values({
+          tenantId: ctx.tenantId,
+          userId: user.id,
+          action: 'imported',
+          entityType: 'tradeflowkit_invoice',
+          entityId: created.id,
+          metadata: { customerId, sourceId, row: header.row, number, status: header.status, totalCents: totals.totalCents },
+        });
+      }
+
+      const response = {
+        imported: imported.length,
+        skipped: skippedRows.length,
+        errors,
+        skippedRows,
+        invoices: imported,
+      };
+      await tx.insert(activityFeed).values({
+        tenantId: ctx.tenantId,
+        userId: user.id,
+        action: 'import_completed',
+        entityType: 'tradeflowkit_invoice_import',
+        metadata: { idempotencyKey, totalRows: input.totalRows, imported: imported.length, skipped: skippedRows.length, errors: errors.length },
+      });
+      await completeIdempotentOperation({
+        tenantId: ctx.tenantId,
+        id: idempotency.id,
+        leaseExpiresAt: idempotency.leaseExpiresAt,
+        responseStatus: 200,
+        responseJson: response,
+      }, tx);
+      return { kind: 'response' as const, response };
+    });
+    if (result.kind === 'conflict') return reply.code(409).send({ error: 'Idempotency-Key was already used with a different invoice import', code: 'IDEMPOTENCY_KEY_REUSE' });
+    if (result.kind === 'in_progress') return reply.code(409).send({ error: 'Invoice import is already in progress', code: 'IDEMPOTENCY_IN_PROGRESS' });
+    return reply.code(200).send(result.response);
+  });
+
+  app.post('/v1/modules/tradeflowkit/invoices/bulk-mark-paid', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    const rawIdempotencyKey = request.headers['idempotency-key'];
+    const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey.trim() : '';
+    if (!/^[A-Za-z0-9._:-]{8,160}$/.test(idempotencyKey)) {
+      return reply.code(400).send({ error: 'A valid Idempotency-Key header is required', code: 'IDEMPOTENCY_KEY_REQUIRED' });
+    }
+    let input;
+    try { input = parseInvoiceBulkPaid(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const ctx = (request as any).tenantContext as { tenantId: string };
+    const user = (request as any).user as { id: string };
+    const [moduleRow] = await db.select({ id: modules.id }).from(modules).where(eq(modules.slug, 'tradeflowkit')).limit(1);
+    if (!moduleRow) return reply.code(503).send({ error: 'TradeFlowKit module registry is unavailable', code: 'TRADEFLOWKIT_MODULE_UNAVAILABLE' });
+
+    const result = await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'tradeflowkit_invoice_bulk_paid:' + ctx.tenantId}))`);
+      const idempotency = await beginIdempotentOperation({
+        tenantId: ctx.tenantId,
+        moduleId: moduleRow.id,
+        scope: 'tradeflowkit-invoice-bulk-paid',
+        idempotencyKey,
+        request: request.body,
+        leaseMs: 60_000,
+      }, tx);
+      if (idempotency.state === 'replay') return { kind: 'response' as const, response: idempotency.responseJson };
+      if (idempotency.state === 'conflict') return { kind: 'conflict' as const };
+      if (idempotency.state === 'in_progress') return { kind: 'in_progress' as const };
+
+      const currentRows = [];
+      for (const item of input.items) {
+        const [current] = await tx.select().from(tradeflowkitInvoices).where(and(
+          eq(tradeflowkitInvoices.id, item.id),
+          eq(tradeflowkitInvoices.tenantId, ctx.tenantId),
+          isNull(tradeflowkitInvoices.deletedAt),
+        )).limit(1);
+        if (!current) return { kind: 'not_found' as const };
+        if (current.version !== item.expectedVersion) return { kind: 'version_conflict' as const };
+        if (!['sent', 'processing'].includes(current.status) || current.balanceCents <= 0) {
+          return { kind: 'not_payable' as const };
+        }
+        currentRows.push(current);
+      }
+      const invoiceIds: string[] = [];
+      for (const current of currentRows) {
+        const [updated] = await tx.update(tradeflowkitInvoices).set({
+          status: 'paid',
+          paidAt: new Date(),
+          paymentMethod: input.paymentMethod,
+          paymentReference: input.paymentReference,
+          paymentNotes: input.paymentNotes,
+          paidCents: current.totalCents,
+          balanceCents: 0,
+          version: sql`${tradeflowkitInvoices.version} + 1`,
+          updatedAt: new Date(),
+        }).where(and(
+          eq(tradeflowkitInvoices.id, current.id),
+          eq(tradeflowkitInvoices.tenantId, ctx.tenantId),
+          eq(tradeflowkitInvoices.version, current.version),
+          eq(tradeflowkitInvoices.status, current.status),
+          isNull(tradeflowkitInvoices.deletedAt),
+        )).returning({ id: tradeflowkitInvoices.id });
+        if (!updated) return { kind: 'version_conflict' as const };
+        const paymentKey = `bulk-paid:${createHash('sha256').update(`${idempotencyKey}:${current.id}`).digest('hex')}`;
+        await tx.insert(tradeflowkitPayments).values({
+          tenantId: ctx.tenantId,
+          invoiceId: current.id,
+          createdByUserId: user.id,
+          amountCents: current.balanceCents,
+          method: input.paymentMethod,
+          reference: input.paymentReference,
+          notes: input.paymentNotes,
+          idempotencyKey: paymentKey,
+        });
+        if (current.jobId) {
+          await tx.update(tradeflowkitJobs).set({
+            status: 'paid',
+            completedAt: sql`COALESCE(${tradeflowkitJobs.completedAt}, NOW())`,
+            version: sql`${tradeflowkitJobs.version} + 1`,
+            updatedAt: new Date(),
+          }).where(and(
+            eq(tradeflowkitJobs.id, current.jobId),
+            eq(tradeflowkitJobs.tenantId, ctx.tenantId),
+            isNull(tradeflowkitJobs.deletedAt),
+          ));
+        }
+        invoiceIds.push(updated.id);
+        await tx.insert(activityFeed).values({
+          tenantId: ctx.tenantId,
+          userId: user.id,
+          action: 'bulk_payment_recorded',
+          entityType: 'tradeflowkit_invoice',
+          entityId: current.id,
+          metadata: { amountCents: current.balanceCents, method: input.paymentMethod, idempotencyKey },
+        });
+      }
+      const response = { updated: invoiceIds.length, invoiceIds };
+      await completeIdempotentOperation({
+        tenantId: ctx.tenantId,
+        id: idempotency.id,
+        leaseExpiresAt: idempotency.leaseExpiresAt,
+        responseStatus: 200,
+        responseJson: response,
+      }, tx);
+      return { kind: 'response' as const, response };
+    });
+    if (result.kind === 'not_found') return reply.code(404).send({ error: 'One or more invoices were not found', code: 'INVOICE_NOT_FOUND' });
+    if (result.kind === 'version_conflict') return reply.code(409).send({ error: 'One or more invoices changed; reload and retry', code: 'INVOICE_VERSION_CONFLICT' });
+    if (result.kind === 'not_payable') return reply.code(409).send({ error: 'Every selected invoice must be sent or processing with an outstanding balance', code: 'INVOICE_NOT_PAYABLE' });
+    if (result.kind === 'conflict') return reply.code(409).send({ error: 'Idempotency-Key was already used with a different bulk invoice payment', code: 'IDEMPOTENCY_KEY_REUSE' });
+    if (result.kind === 'in_progress') return reply.code(409).send({ error: 'Bulk invoice payment is already in progress', code: 'IDEMPOTENCY_IN_PROGRESS' });
+    return reply.code(200).send(result.response);
   });
 
   app.post('/v1/modules/tradeflowkit/invoices', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
