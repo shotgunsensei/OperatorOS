@@ -35,6 +35,9 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
   },
   techdeck: {
     '/dashboard': { sectionId: 'techdeck-overview', label: 'Overview' },
+    '/m': { sectionId: 'techdeck-overview', label: 'Overview' },
+    '/m/tickets': { sectionId: 'techdeck-ticket-queue', label: 'Ticket Queue' },
+    '/m/time': { sectionId: 'techdeck-time', label: 'Technician Time' },
     '/tickets': { sectionId: 'techdeck-ticket-queue', label: 'Ticket Queue' },
     '/assets': { sectionId: 'techdeck-inventory', label: 'Configuration Inventory' },
     '/inventory': { sectionId: 'techdeck-inventory', label: 'Configuration Inventory' },
@@ -45,8 +48,10 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/ipam': { sectionId: 'techdeck-network', label: 'Network and IPAM' },
     '/lifecycle': { sectionId: 'techdeck-lifecycle', label: 'Lifecycle' },
     '/documentation': { sectionId: 'techdeck-documentation', label: 'Documentation' },
+    '/kb': { sectionId: 'techdeck-documentation', label: 'Knowledge Base' },
     '/knowledge-base': { sectionId: 'techdeck-documentation', label: 'Knowledge Base' },
     '/evidence': { sectionId: 'techdeck-evidence', label: 'Evidence' },
+    '/evidence/upload': { sectionId: 'techdeck-evidence', label: 'Record Evidence' },
     '/reports': { sectionId: 'techdeck-reports', label: 'Reports' },
     '/time': { sectionId: 'techdeck-time', label: 'Technician Time' },
     '/clients': { sectionId: 'techdeck-directory', label: 'Shared Clients' },
@@ -196,9 +201,19 @@ export function resolveCoreModuleDeepLink(
   if (slug === 'techdeck' && pathSegments.length === 2) {
     const [resource] = pathSegments;
     if (resource === 'assets' || resource === 'inventory') return { sectionId: 'techdeck-inventory', label: 'Configuration Item' };
-    if (resource === 'documents' || resource === 'runbooks') return { sectionId: 'techdeck-documentation', label: 'Document' };
+    if (resource === 'documents' || resource === 'runbooks' || resource === 'kb' || resource === 'knowledge-base') return { sectionId: 'techdeck-documentation', label: 'Document' };
+    if (resource === 'tickets') return { sectionId: 'techdeck-ticket-queue', label: 'Ticket Record' };
+    if (resource === 'clients') return { sectionId: 'techdeck-directory', label: 'Managed Client Record' };
     if (resource === 'evidence') return { sectionId: 'techdeck-evidence', label: 'Evidence Record' };
     if (resource === 'reports') return { sectionId: 'techdeck-reports', label: 'Report Snapshot' };
+  }
+  if (
+    slug === 'techdeck' &&
+    pathSegments.length === 3 &&
+    pathSegments[0] === 'm' &&
+    pathSegments[1] === 'tickets'
+  ) {
+    return { sectionId: 'techdeck-ticket-queue', label: 'Ticket Record' };
   }
   if (slug === 'pulsedesk' && pathSegments.length === 2) {
     const [resource] = pathSegments;

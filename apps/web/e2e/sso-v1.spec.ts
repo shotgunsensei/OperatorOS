@@ -240,10 +240,21 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
     'pulsedesk_departments',
     'pulsedesk_request_sequences',
     'pulsedesk_service_client_profiles',
+    'techdeck_migration_refs',
+    'techdeck_ticket_comments',
+    'techdeck_time_entries',
+    'techdeck_reports',
+    'techdeck_evidence',
+    'techdeck_document_links',
+    'techdeck_document_revisions',
+    'techdeck_documents',
+    'techdeck_document_folders',
+    'techdeck_configuration_relationships',
     'techdeck_runbooks',
     'techdeck_assets',
     'techdeck_tickets',
     'techdeck_ticket_sequences',
+    'techdeck_managed_client_profiles',
     'module_workflow_items',
     'directory_site_contacts',
     'directory_organization_contacts',
@@ -613,6 +624,200 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     collection.stop();
     await sibling.close();
+  });
+
+  test('TechDeck persists managed infrastructure, topology, documentation, evidence, reports, time, tickets, and exact record deep links', async ({ page, request }) => {
+    test.setTimeout(180_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+    const context = page.context();
+
+    await page.goto('https://techdeck.operatoros.net/assets');
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/techdeck\.operatoros\.net\/assets(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await expect(page.getByTestId('techdeck-module-shell')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('techdeck-ops-workspace')).toBeVisible();
+    await assertHostOnlySession(context, 'techdeck.operatoros.net');
+    await assertNoBrowserCredentialStorage(page);
+
+    const suffix = Date.now();
+    const firewallName = `E2E Edge Firewall ${suffix}`;
+    const subnetName = `E2E Clinical VLAN ${suffix}`;
+    const configurationForm = page.getByTestId('techdeck-configuration-create-form');
+    await configurationForm.locator('input[placeholder="Name"]').fill(firewallName);
+    await configurationForm.locator('select').first().selectOption('firewall');
+    await configurationForm.locator('input[placeholder="Hostname"]').fill(`edge-${suffix}.example.test`);
+    await configurationForm.locator('input[placeholder="IP address"]').fill('10.77.29.1');
+    await configurationForm.getByRole('button', { name: 'Add item' }).click();
+    await expect(page.locator('.td-row').filter({ hasText: firewallName })).toBeVisible({ timeout: 30_000 });
+
+    await configurationForm.locator('input[placeholder="Name"]').fill(subnetName);
+    await configurationForm.locator('select').first().selectOption('subnet');
+    await configurationForm.locator('input[placeholder^="CIDR"]').fill('10.77.29.0/24');
+    await configurationForm.locator('input[placeholder="VLAN"]').fill('729');
+    await configurationForm.getByRole('button', { name: 'Add item' }).click();
+    await expect(page.locator('.td-row').filter({ hasText: subnetName })).toBeVisible({ timeout: 30_000 });
+
+    const workspaceAfterItems = await page.evaluate(async () => {
+      const response = await fetch('/api/modules/techdeck/workspace', { credentials: 'include' });
+      return { status: response.status, body: await response.json() };
+    });
+    expect(workspaceAfterItems.status, JSON.stringify(workspaceAfterItems.body)).toBe(200);
+    const firewall = workspaceAfterItems.body.configurationItems.find((row: { name: string }) => row.name === firewallName);
+    const subnet = workspaceAfterItems.body.configurationItems.find((row: { name: string }) => row.name === subnetName);
+    expect(firewall?.id).toBeTruthy();
+    expect(subnet?.id).toBeTruthy();
+
+    await page.getByLabel(`Health for ${firewallName}`).selectOption('warning');
+    await expect(page.getByLabel(`Health for ${firewallName}`)).toHaveValue('warning');
+    const relationshipForm = page.getByTestId('techdeck-relationship-create-form');
+    await relationshipForm.locator('select').nth(0).selectOption(firewall.id);
+    await relationshipForm.locator('select').nth(1).selectOption(subnet.id);
+    await relationshipForm.locator('select').nth(2).selectOption('protects');
+    await relationshipForm.getByRole('button', { name: 'Link' }).click();
+    await expect(page.locator('.td-row').filter({ hasText: `${firewallName} protects ${subnetName}` })).toBeVisible({ timeout: 30_000 });
+
+    await page.goto(`https://techdeck.operatoros.net/assets/${firewall.id}`);
+    const configurationContext = page.getByTestId('techdeck-route-record-context');
+    await expect(configurationContext).toHaveAttribute('data-found', 'true');
+    await expect(configurationContext).toContainText(firewallName);
+    await expect(page.locator(`.td-row[data-record-id="${firewall.id}"][data-active="true"]`)).toBeVisible();
+
+    const runbookTitle = `E2E Firewall Recovery ${suffix}`;
+    const documentForm = page.getByTestId('techdeck-document-create-form');
+    await documentForm.locator('input[placeholder="Document title"]').fill(runbookTitle);
+    await documentForm.locator('select').first().selectOption('runbook');
+    await documentForm.locator('input[placeholder="Summary"]').fill('Validated, documentation-only firewall recovery sequence.');
+    await documentForm.locator('textarea').fill('1. Verify current configuration.\\n2. Capture evidence.\\n3. Apply the approved manual recovery plan.');
+    await documentForm.getByRole('button', { name: 'Save draft' }).click();
+    const runbookRow = page.locator('.td-doc').filter({ hasText: runbookTitle });
+    await expect(runbookRow).toBeVisible({ timeout: 30_000 });
+
+    const workspaceAfterDocument = await page.evaluate(async () => {
+      const response = await fetch('/api/modules/techdeck/workspace', { credentials: 'include' });
+      return response.json();
+    });
+    const runbook = workspaceAfterDocument.documents.find((row: { title: string }) => row.title === runbookTitle);
+    expect(runbook?.id).toBeTruthy();
+    await page.goto(`https://techdeck.operatoros.net/kb/${runbook.id}`);
+    await expect(page.getByTestId('techdeck-route-record-context')).toHaveAttribute('data-found', 'true');
+    await expect(page.locator(`.td-doc[data-record-id="${runbook.id}"][data-active="true"]`)).toBeVisible();
+
+    const deepLinkedRunbook = page.locator('.td-doc').filter({ hasText: runbookTitle });
+    await deepLinkedRunbook.getByRole('button', { name: 'Submit review' }).click();
+    await expect(deepLinkedRunbook.getByRole('button', { name: 'Approve' })).toBeVisible({ timeout: 30_000 });
+    await deepLinkedRunbook.getByRole('button', { name: 'Approve' }).click();
+    await expect(deepLinkedRunbook.getByRole('button', { name: 'Publish' })).toBeVisible({ timeout: 30_000 });
+    await deepLinkedRunbook.getByRole('button', { name: 'Publish' }).click();
+    await expect(deepLinkedRunbook).toContainText('published', { timeout: 30_000 });
+    await page.reload();
+    await expect(page.locator(`.td-doc[data-record-id="${runbook.id}"]`)).toContainText('published');
+
+    const evidenceTitle = `E2E Firewall Validation ${suffix}`;
+    await page.goto('https://techdeck.operatoros.net/evidence/upload');
+    const evidenceForm = page.getByTestId('techdeck-evidence-create-form');
+    await evidenceForm.locator('input[placeholder="Evidence title"]').fill(evidenceTitle);
+    await evidenceForm.locator('select').first().selectOption('test_result');
+    await evidenceForm.locator('select').nth(1).selectOption(firewall.id);
+    await evidenceForm.locator('input[placeholder="Summary"]').fill('Post-change connectivity and policy checks passed.');
+    await evidenceForm.getByRole('button', { name: 'Record' }).click();
+    await expect(page.locator('.td-row').filter({ hasText: evidenceTitle })).toBeVisible({ timeout: 30_000 });
+
+    const reportName = `E2E Managed Infrastructure ${suffix}`;
+    const reportForm = page.getByTestId('techdeck-report-create-form');
+    await reportForm.locator('input').fill(reportName);
+    await reportForm.getByRole('button', { name: 'Generate' }).click();
+    await expect(page.locator('.td-row').filter({ hasText: reportName })).toBeVisible({ timeout: 30_000 });
+
+    const timeNotes = `E2E recovery validation ${suffix}`;
+    const timeForm = page.getByTestId('techdeck-time-create-form');
+    await timeForm.locator('input[type="number"]').fill('45');
+    await timeForm.locator('select').selectOption(firewall.id);
+    await timeForm.locator('input[placeholder="Work notes"]').fill(timeNotes);
+    await timeForm.getByRole('button', { name: 'Log time' }).click();
+    await expect(page.locator('.td-row').filter({ hasText: timeNotes })).toBeVisible({ timeout: 30_000 });
+
+    const ticketTitle = `E2E Firewall Warning ${suffix}`;
+    await page.goto('https://techdeck.operatoros.net/tickets');
+    await page.getByTestId('techdeck-ticket-title').fill(ticketTitle);
+    await page.locator('textarea[placeholder^="Symptoms"]').fill('Monitoring reports a warning posture after the controlled recovery.');
+    await page.getByTestId('techdeck-ticket-create').click();
+    await expect(page.locator('.techdeck-ticket-card').filter({ hasText: ticketTitle })).toBeVisible({ timeout: 30_000 });
+    const ticketResponse = await page.evaluate(async (title) => {
+      const response = await fetch(`/api/modules/techdeck/tickets?search=${encodeURIComponent(title)}`, { credentials: 'include' });
+      return { status: response.status, body: await response.json() };
+    }, ticketTitle);
+    expect(ticketResponse.status, JSON.stringify(ticketResponse.body)).toBe(200);
+    const ticket = ticketResponse.body.tickets?.find((row: { title: string }) => row.title === ticketTitle);
+    expect(ticket?.id).toBeTruthy();
+    await page.goto(`https://techdeck.operatoros.net/tickets/${ticket.id}`);
+    await expect(page.getByTestId('techdeck-ticket-route-context')).toHaveAttribute('data-found', 'true');
+    await expect(page.getByTestId(`techdeck-ticket-${ticket.id}`)).toHaveAttribute('data-active', 'true');
+    await page.getByTestId(`techdeck-ticket-status-${ticket.id}`).selectOption('in_progress');
+    await expect(page.getByTestId(`techdeck-ticket-status-${ticket.id}`)).toHaveValue('in_progress');
+    await page.reload();
+    await expect(page.getByTestId(`techdeck-ticket-status-${ticket.id}`)).toHaveValue('in_progress');
+
+    const clientName = `E2E Managed Client ${suffix}`;
+    const client = await page.evaluate(async (name) => {
+      const organizationResponse = await fetch('/api/modules/techdeck/directory/organizations', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type: 'client' }),
+      });
+      const body = await organizationResponse.json();
+      const profileResponse = await fetch(`/api/modules/techdeck/directory/organizations/${body.id}/profile`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serviceTier: 'managed' }),
+      });
+      return { organizationStatus: organizationResponse.status, profileStatus: profileResponse.status, body };
+    }, clientName);
+    expect(client.organizationStatus, JSON.stringify(client.body)).toBe(201);
+    expect(client.profileStatus, JSON.stringify(client.body)).toBe(200);
+    await page.goto(`https://techdeck.operatoros.net/clients/${client.body.id}`);
+    const directory = page.getByTestId('techdeck-business-directory');
+    await expect(directory).toBeVisible({ timeout: 30_000 });
+    await expect(directory.locator('.directory-row[data-active="true"]').filter({ hasText: clientName })).toBeVisible();
+
+    const persistedWorkspace = await page.evaluate(async () => {
+      const response = await fetch('/api/modules/techdeck/workspace', { credentials: 'include' });
+      return { status: response.status, body: await response.json() };
+    });
+    expect(persistedWorkspace.status, JSON.stringify(persistedWorkspace.body)).toBe(200);
+    expect(persistedWorkspace.body.configurationItems.find((row: { id: string }) => row.id === firewall.id)?.health).toBe('warning');
+    expect(persistedWorkspace.body.relationships.some((row: { sourceAssetId: string; targetAssetId: string }) => row.sourceAssetId === firewall.id && row.targetAssetId === subnet.id)).toBe(true);
+    expect(persistedWorkspace.body.documents.find((row: { id: string }) => row.id === runbook.id)?.status).toBe('published');
+    expect(persistedWorkspace.body.evidence.some((row: { title: string }) => row.title === evidenceTitle)).toBe(true);
+    expect(persistedWorkspace.body.reports.some((row: { name: string }) => row.name === reportName)).toBe(true);
+    expect(persistedWorkspace.body.timeEntries.some((row: { notes: string }) => row.notes === timeNotes)).toBe(true);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('https://techdeck.operatoros.net/m/time');
+    await expect(page.locator('#techdeck-time')).toBeVisible({ timeout: 30_000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    await page.getByTestId('techdeck-return-command-center').click();
+    await expect(page).toHaveURL(/^https:\/\/app\.operatoros\.net\//, { timeout: 30_000 });
+    await expect(page.getByTestId('page-my-apps')).toBeVisible({ timeout: 30_000 });
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByTestId('button-launch-techdeck').click();
+    const reopened = await popupPromise;
+    await expect(reopened.getByTestId('techdeck-module-shell')).toBeVisible({ timeout: 30_000 });
+    await reopened.goto(`https://techdeck.operatoros.net/assets/${firewall.id}`);
+    await expect(reopened.getByTestId('techdeck-route-record-context')).toContainText(firewallName);
+    await reopened.goto('https://techdeck.operatoros.net/logout');
+    await expect(reopened).toHaveURL(/^https:\/\/operatoros\.net\/signed-out\?signed_out=local$/);
+    expect((await sessionCookies(context)).some(cookie => cookie.domain === 'techdeck.operatoros.net')).toBe(false);
+    await reopened.close();
   });
 
   test('FaultlineLab persists a server-scored investigation across return, global logout, reauthentication, and deep-link refresh', async ({ page, request }) => {

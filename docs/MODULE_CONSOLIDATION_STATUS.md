@@ -32,7 +32,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 | --- | --- | --- | --- | --- | --- |
 | TradeFlowKit | `tradeflowkit` | `tradeflowkit.operatoros.net` | core | Original baseline `6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55`; clean restored product evidence `C:\Dev\TradeFlowKit` at `37aa67f1da804fc3ac56f36e50e01362077d7a26` | Approved-scope state 4 remains, but full Phase 16 parity is open: the zero-unclassified source ledger records 57 explicit gaps. Existing revenue/field-service workflows now include Workflow Studio, governed job transitions, team job-task views, activity, direct invoice creation, versioned quote/invoice draft editing, history-safe archive, idempotent quote-to-job, source-valid high priority, and bounded Directory-reconciled customer CSV import. Destructive customer bulk delete/restore is retired by ADR-0011. A read-only snapshot and guarded atomic v1 core-data apply pass synthetic isolated rehearsal; no real export/production cutover occurred and later import versions are required. Deployed acceptance still blocks state 5 |
 | TorqueShed | `torqueshed` | `torqueshed.operatoros.net` | free | Dirty read-only `C:\Dev\TorqueShed-Codex`: local `68da4548f665`, committed reference `508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75`; immutable snapshot remains `c33ade5...` | Phase 9 source candidate: Phase 7 automotive foundation; Phase 8 server-context safety-ranked Assist and OperatorOS-owned append-only token accounting; Phase 9 persistent Marketplace listings/search/saved/contact/messages/expiry/reports and Community profiles/preferences/follows/blocks/posts/tags/comments/reactions/scanned media/reports/append-only moderation with native UI/deep links. No protection/payment/shipping/reputation claims. State remains 3 because Docker engine failure blocks clean DB/payment/ledger/scanner/moderation/concurrency/workflow/runtime/browser evidence |
-| TechDeck | `techdeck` | `techdeck.operatoros.net` | core | Clean `C:\Dev\Tech-Deck` at `8125f8d89d8d39d60a50c8061a26133a0c917792` | Source/local state 4 candidate: Directory-linked tickets/comments/time; typed configuration inventory; network/IPAM topology; lifecycle; versioned documentation/runbooks/backlinks; shared private attachments; evidence metadata; deterministic reports; persisted dashboards and deep links. ADR-0012/0013/0014 exclude discovery/device mutation, secret values, and remote execution; deployed workflow/provider/cutover evidence still block state 5 |
+| TechDeck | `techdeck` | `techdeck.operatoros.net` | core | Clean `C:\Dev\Tech-Deck` at `8125f8d89d8d39d60a50c8061a26133a0c917792`; executable source ledger inventories all 382 discovered capabilities with zero unclassified/gaps | Source/local state 4 candidate: Directory-linked clients/sites and tickets/comments/time; typed configuration inventory; network/IPAM topology; lifecycle; versioned documentation/runbooks/backlinks; shared private attachments; evidence metadata; deterministic reports; persisted dashboards; mobile/KB compatibility; and exact configuration/ticket/client/document/evidence/report deep links. The ledger records 91 active, 109 shared replacements, 48 security retirements, and 134 product-boundary retirements. ADR-0012/0013/0014 exclude discovery/device mutation, secret values, remote execution, unsafe intake, recurrence, and business invoicing; deployed workflow/provider/cutover evidence still block state 5 |
 | PulseDesk | `pulsedesk` | `pulsedesk.operatoros.net` | core | Clean `C:\Dev\PulseDesk` at `937849471e489ed23db2a263d04160a388402740`; executable source ledger inventories all 309 discovered capabilities with zero unclassified/gaps | Source/local state 4 candidate: PHI-minimized shared-Directory clients/facilities/requesters; departments; operational assets; numbered tickets; queues/teams/assignments; internal notes/requester replies; shared private attachments; time/SLA; vendor, supply and facility coordination; knowledge/tags/saved views/preferences; dashboards, configuration, bulk actions, legacy-compatible deep links, equipment-issue prefill, and exact Directory client detail. The ledger records 91 active, 74 shared replacements, 53 security retirements, and 91 product-boundary retirements. ADR-0015 excludes EHR/clinical records and resolves the TechDeck boundary; deployed workflow and authorized privacy-reviewed cutover evidence still block state 5 |
 | FaultlineLab | `faultlinelab` | `faultlinelab.operatoros.net` | free | `C:\Dev\Faultline-Lab` at pinned snapshot `46877aae35565149ccf4f4988dd94627fc6bb92b` | Phase 10A source/local state-4 candidate: four hash-pinned runnable cases; immutable versioned authoring/publish; safe challenge projections; standard/daily/preview/assignment/Chaos attempts; append-only evidence; server scoring; assignments/progress/badges; private proof; analytics/exports; dedicated UI/canonical session deep links; dry-run reconciliation excludes 52 planned cards and all child authority. Compiled runtime/health and production-host SSO/workflow pass locally; deployed acceptance and authorized data cutover still block state 5 |
 | Ninja Pool Hall | `ninja-pool-hall` | `ninja-pool-hall.operatoros.net` | free | Clean `C:\Dev\Shotgun-ninja-pool-hall` and snapshot at `62439c4018ec551ce2891800351200c8ab2cb9e7` | Phase 10B source/local state-4 candidate: Free Shoot, CPU 8-ball and local hot-seat; exact physics/types/rules/bot/audio promotion; persistent profiles/preferences; structured server-rules match events/results/aggregates; recovery and canonical deep links. Continuous physics remains browser-local and evidence is explicitly client-reported. ADR-0020 excludes unsafe online relay, ranking/reward/proof claims and child authority. Local compiled runtime/health and production-host SSO/gameplay pass; deployed acceptance still blocks state 5 |
@@ -45,6 +45,15 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 | OutCall | `outcall` | `outcall.operatoros.net` | add-on | No canonical source repository recovered; product contract reconstructed from the owner's ten-phase prompt set | Phase 12B bounded source/local candidate: verified-self personal-safety exit assistance with safety acknowledgment, encrypted verified phone and triggers, neutral profiles, immediate/delayed requests, persistent safe history, shared jobs/activity/usage and canonical deep links. ADR-0027 keeps it distinct from CallCommand and excludes emergency dispatch, impersonation, recording, location, arbitrary destinations and unfinished extensions. Deterministic no-contact browser workflow passes; live Twilio verification/SMS/voice/DTMF/callbacks and deployed acceptance remain gated |
 
 ## Current verification boundary
+
+The 2026-07-29 zero-gap rebaseline adds an executable, commit-pinned TechDeck
+ledger covering 65 pages, 221 routes, 45 tables, 46 provider/config
+references, and 5 background processes. Fresh evidence passes 20/20 focused
+non-database tests, 14/14 navigation/static confirmation, 3/3 isolated
+PostgreSQL workflows, workspace typecheck, 29-step release plan/apply,
+production build/preflight/runtime, HTTP 200 health/readiness, and an
+exact-host browser workflow 1/1 in 20.3 seconds. No public deployment,
+provider enablement, import apply, or cutover is inferred.
 
 Phase 12A adds the ordered `ninjamation_tables` release step and replaces the
 inferred workflow-automation shell with the commit-pinned AutomationPacks
@@ -62,16 +71,11 @@ deployment, standalone-data apply, endpoint execution or traffic cutover is
 inferred.
 
 The shared source passes the API, runner, and web typechecks and the exact
-production build shape with `INTERNAL_API_URL=http://localhost:5001`.
-TechDeck's focused suite passed 16/16 and the new Phase 5 subset passed 5/5.
-The first complete Phase 5 API run reported 702 total, 695 passed, one stale
-static-navigation assertion failed, and 6 HTTP-only skips. The assertion was
-updated after the old TechDeck placeholder navigation became live and its
-focused rerun passed 8/8. A second stale contract expecting pnpm's obsolete
-package-level build policy was corrected to validate workspace `allowBuilds`
-and passed 2/2. The final clean-database aggregate passed 696, failed 0, and
-skipped 6 out of 702 in 616,919 ms. These are source and isolated-database
-results, not a public deployment claim.
+production build shape with `INTERNAL_API_URL=http://localhost:5001`. The
+historical Phase 5 clean-database aggregate passed 696, failed 0, and skipped
+6 HTTP-only tests out of 702. The current TechDeck zero-gap evidence supersedes
+its older focused counts and is recorded above. These are source and
+isolated-database results, not a public deployment claim.
 
 The 2026-07-29 zero-gap rebaseline adds an executable, commit-pinned PulseDesk
 ledger covering 23 pages, 183 routes, 50 tables, 45 provider/config

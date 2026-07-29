@@ -33,12 +33,16 @@ test('core module deep links resolve only to live native shell sections', () => 
     sectionId: 'techdeck-ticket-queue',
     label: 'Ticket Queue',
   });
+  for (const path of ['dashboard', 'm']) assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-overview');
+  assert.equal(resolveCoreModuleDeepLink('techdeck', ['m', 'tickets'])?.sectionId, 'techdeck-ticket-queue');
+  assert.equal(resolveCoreModuleDeepLink('techdeck', ['m', 'time'])?.sectionId, 'techdeck-time');
   for (const path of ['assets', 'inventory', 'alerts']) assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-inventory');
   for (const path of ['network', 'ipam']) assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-network');
   for (const path of ['scripts', 'runbooks']) assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-runbooks');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['lifecycle'])?.sectionId, 'techdeck-lifecycle');
-  assert.equal(resolveCoreModuleDeepLink('techdeck', ['documentation'])?.sectionId, 'techdeck-documentation');
+  for (const path of ['documentation', 'kb', 'knowledge-base']) assert.equal(resolveCoreModuleDeepLink('techdeck', [path])?.sectionId, 'techdeck-documentation');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['evidence'])?.sectionId, 'techdeck-evidence');
+  assert.equal(resolveCoreModuleDeepLink('techdeck', ['evidence', 'upload'])?.sectionId, 'techdeck-evidence');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['reports'])?.sectionId, 'techdeck-reports');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['time'])?.sectionId, 'techdeck-time');
   for (const path of ['clients', 'sites', 'contacts']) {
@@ -89,7 +93,12 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['payments'])?.sectionId, 'tradeflowkit-revenue-flow');
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['leads', 'lead-123'])?.sectionId, 'tradeflowkit-lead-center');
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['jobs', 'job-123'])?.sectionId, 'tradeflowkit-operations');
-  assert.equal(resolveCoreModuleDeepLink('techdeck', ['tickets', 'ticket-123']), null);
+  assert.equal(resolveCoreModuleDeepLink('techdeck', ['tickets', 'ticket-123'])?.sectionId, 'techdeck-ticket-queue');
+  assert.equal(resolveCoreModuleDeepLink('techdeck', ['m', 'tickets', 'ticket-123'])?.sectionId, 'techdeck-ticket-queue');
+  assert.equal(resolveCoreModuleDeepLink('techdeck', ['clients', 'client-123'])?.sectionId, 'techdeck-directory');
+  for (const path of ['documents', 'runbooks', 'kb', 'knowledge-base']) {
+    assert.equal(resolveCoreModuleDeepLink('techdeck', [path, 'document-123'])?.sectionId, 'techdeck-documentation');
+  }
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['tickets', 'ticket-123'])?.sectionId, 'pulsedesk-operations');
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['clients', 'client-123'])?.sectionId, 'pulsedesk-directory');
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets', 'asset-123', 'report-issue'])?.sectionId, 'pulsedesk-operations');

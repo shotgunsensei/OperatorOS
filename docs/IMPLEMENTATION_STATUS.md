@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-29
-- Phase: **PulseDesk zero-gap source/local rebaseline on the Phase 16A base**
+- Phase: **TechDeck zero-gap source/local rebaseline on the Phase 16A base**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -20,8 +20,48 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/pulsedesk-zero-gap-restoration`
+- Execution branch: `codex/techdeck-zero-gap-restoration`
 - Release gate: **closed**
+
+## 2026-07-29 TechDeck zero-gap rebaseline
+
+TechDeck is now governed by an executable source ledger generated from the
+clean standalone repository at
+`8125f8d89d8d39d60a50c8061a26133a0c917792`. The ledger covers 382 discovered
+capabilities: 65 pages, 221 routes, 45 tables, 46 provider/config references,
+and 5 background processes. It records 91 active capabilities, 109 shared
+OperatorOS replacements, 48 security retirements, 134 product-boundary
+retirements, zero unclassified items, and zero restoration gaps. Verification
+fails closed on source drift, omitted inventory, missing current-repository
+targets/evidence, or any newly unclassified/gap item.
+
+The restored managed-operations path includes shared Directory clients/sites,
+configuration inventory, network/IPAM topology, lifecycle, tickets/comments/
+time, versioned documentation and documentation-only runbooks, evidence,
+deterministic reports, dashboards, compatibility paths, and exact record deep
+links. Exact configuration, ticket, client, document, evidence, and report
+paths now select real tenant-scoped records or report them unavailable. The
+typed selector defect that submitted display labels instead of accepted enum
+values was fixed. Canonical module `/app` remains the OperatorOS My Apps return
+route. OperatorOS remains authoritative for identity, tenants, roles, billing,
+entitlements, launch, provider secrets, and shared services; remote execution,
+secret values, anonymous intake, local authority/billing, recurrence, and
+business invoicing remain deliberately retired by the approved boundary.
+
+| Gate | Result |
+| --- | --- |
+| Executable source ledger | PASS; 382/382 classified, zero unclassified, zero restoration gaps |
+| Focused TechDeck regression | PASS 20/20 non-database plus 14/14 navigation/static confirmation and 3/3 isolated PostgreSQL workflows; final combined TechDeck/Directory gate PASS 43/43 |
+| Workspace/type/release | PASS; API/runner/web typecheck and 29-step additive/idempotent database plan/apply |
+| Production artifact | PASS; core preflight, API/runner/Next 15.5.22 build, readiness-gated compiled runtime, and HTTP 200 API/web health and readiness |
+| Exact-host TechDeck browser | PASS 1/1 in 20.3 seconds; PKCE/SSO, configuration/network/topology, health, runbook publication/reload, evidence/report/time, ticket update/reload, exact Directory client, mobile routes, return/reopen, and host-only logout |
+| Public deployment/cutover | NOT RUN; no deployment, provider traffic, production data mutation, import apply, or cutover was authorized |
+
+TechDeck therefore remains consolidation state 4: its approved source/local
+product boundary is restored and locally proven, but Replit secrets,
+deployed-target authenticated acceptance, provider decisions, real-data
+reconciliation, rollback rehearsal, and authorized cutover remain human
+gates.
 
 ## 2026-07-29 PulseDesk zero-gap rebaseline
 
