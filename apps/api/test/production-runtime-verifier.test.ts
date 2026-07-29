@@ -27,8 +27,8 @@ test('production verifier loads OperatorOS plus exactly 13 canonical module regi
   const registry = await verifier.loadRegistry();
   assert.equal(registry.filter((entry: { moduleId: string }) => entry.moduleId === 'operatoros').length, 1);
   assert.equal(registry.filter((entry: { moduleId: string }) => entry.moduleId !== 'operatoros').length, 13);
-  assert.equal(registry.filter((entry: { enabled: boolean }) => entry.enabled).length, 14);
-  assert.equal(registry.find((entry: { slug: string }) => entry.slug === 'outcall')?.enabled, true);
+  assert.equal(registry.filter((entry: { enabled: boolean }) => entry.enabled).length, 13);
+  assert.equal(registry.find((entry: { slug: string }) => entry.slug === 'outcall')?.enabled, false);
 });
 
 test('authorization redirect validator enforces exact PKCE request, safe next, headers, and host-only cookies', () => {
@@ -69,6 +69,32 @@ test('diagnostic validator requires production exact host/origin and host-only c
     hostRole: 'root',
     publicOrigin: 'https://operatoros.net',
   }, 'operatoros.net', 'root'), []);
+});
+
+test('release identity validator requires the intended commit, database release, and deployment time', () => {
+  const commit = 'a'.repeat(40);
+  const valid = {
+    status: 'identified',
+    contractVersion: 1,
+    commit,
+    buildId: 'b'.repeat(24),
+    builtAt: '2026-07-29T20:00:00.000Z',
+    deployedAt: '2026-07-29T20:05:00.000Z',
+    lockfileSha256: 'c'.repeat(64),
+    databaseRelease: {
+      contractVersion: 1,
+      releaseVersion: 29,
+      stepCount: 29,
+      lastStep: 'free_account_app_backfill',
+    },
+  };
+  assert.deepEqual(verifier.validateReleaseIdentity(valid, commit), []);
+  assert.ok(verifier.validateReleaseIdentity({ ...valid, deployedAt: 'invalid' }, commit).length > 0);
+  assert.ok(verifier.validateReleaseIdentity({
+    ...valid,
+    databaseRelease: { ...valid.databaseRelease, releaseVersion: 28 },
+  }, commit).length > 0);
+  assert.ok(verifier.validateReleaseIdentity(valid, 'd'.repeat(40)).length > 0);
 });
 
 test('public verifier follows canonical root health and authorization entries', async () => {

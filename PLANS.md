@@ -40,6 +40,7 @@ slice is not parity.
 | 14 | Cross-module security, privacy, performance, and reliability hardening | Functional parity and migration tooling | Local candidate: zero known dependency vulnerabilities; shared headers/bounded DB shutdown/fail-closed disabled billing; threat models; tenant/role negatives; production build; loopback load baseline; and disposable backup/restore pass. Deployment/provider/monitoring gates remain blocked for Phase 15. |
 | 15 | Deployed acceptance, release decision, and state-5 certification matrix | All required prior gates | In progress; merge `c249a753` is deployed as build `2eb701089a539d9e6da5af80` and the contract-corrected public verifier passes 48/48. Authenticated test-user, persistence, tenant, authorization, logout, provider, backup/cutover, and State 5 gates remain open. |
 | 16A | Re-baseline TradeFlowKit against the restored full product and close recorded parity gaps | Phase 15 release evidence plus restored-source provenance | In progress. The executable source ledger has zero unclassified items and 57 explicit gaps after three real increments: Workflow Studio/team work management, persistent revenue-document mutations, and bounded Directory-reconciled customer CSV import. Destructive customer bulk delete/restore is retired under ADR-0011. No real standalone export, production apply, deployment, or state-5 promotion is authorized. |
+| 17 | Production truth and revenue release gate | Current cumulative `main` | Candidate on `codex/phase-17-production-truth`: complete Git/build/lock/build-time/deploy-time/DB-v29 identity; commit-pinned public verifier; planned/disabled OutCall alignment; idempotent DB, build/supervisor and focused 3/3 browser gates pass locally. Current public baseline is `48b8691`, build `932f83cb0d7c15ce994eb04e`; strengthened verifier is expected red at 45/48 until reviewed merge, Replit deployment, public 48/48, and production-safe authenticated 3/3. No deployment or state-5 claim. |
 
 ## Phase execution rules
 
@@ -58,16 +59,16 @@ slice is not parity.
 
 ## Immediate next gate
 
-Continue Phase 16A from the zero-unclassified restored TradeFlowKit ledger.
-Prioritize complete persistent customer workflows over migration scaffolding:
-each closed route must have tenant predicates, server authorization, optimistic
-concurrency or idempotency as appropriate, real responsive UI, audit evidence,
-and isolated PostgreSQL coverage. Keep every unimplemented source surface as
-an explicit gap. This direction does not authorize deployment, production data
-mutation, promotion, or a production-ready label. Before any public promotion,
-deploy the reviewed cumulative revision through `.replit`, require 48/48 from
-the read-only verifier, and run authenticated deployed SSO, return,
-persistence, deep-link, refresh, entitlement, tenant-isolation, authorization,
-logout, provider, backup/restore, and module acceptance. Record the exact
-deployed commit in `docs/CURRENT_RELEASE_GATE.md` and never weaken the contract
-to make it pass.
+Close Phase 17 without starting Phase 18 on this branch:
+
+1. Review and merge the Phase 17 draft pull request.
+2. Confirm the provider-managed database backup.
+3. Deploy merged `main` through the checked-in Replit autoscale workflow.
+4. Set `OPERATOROS_EXPECTED_RELEASE_COMMIT` to the merged commit and require
+   48/48 from `corepack pnpm verify:production`.
+5. Provision the two synthetic acceptance accounts and require 3/3 from
+   `corepack pnpm --dir apps/web test:e2e:phase17-deployed`.
+6. Record the deployment/build IDs and exact evidence in the Phase 17 report.
+
+Do not claim deployment, promotion, module state 5, or begin Phase 18 until
+those human-gated actions pass.

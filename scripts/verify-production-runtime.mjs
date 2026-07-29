@@ -19,6 +19,9 @@ const FORBIDDEN_QUERY_KEYS = new Set([
   'session',
   'session_token',
 ]);
+const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
+const BUILD_ID_PATTERN = /^[0-9a-f]{24}$/;
+const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
 function failure(name, message) {
   return { name, ok: false, message };
@@ -120,6 +123,28 @@ export function validateDiagnostics(payload, expectedHost, expectedRole) {
   return issues;
 }
 
+export function validateReleaseIdentity(payload, expectedCommit) {
+  const issues = [];
+  if (payload?.status !== 'identified') issues.push('release status must be identified');
+  if (!COMMIT_PATTERN.test(payload?.commit || '')) issues.push('release commit is invalid');
+  if (!BUILD_ID_PATTERN.test(payload?.buildId || '')) issues.push('release build ID is invalid');
+  if (!SHA256_PATTERN.test(payload?.lockfileSha256 || '')) issues.push('release lockfile hash is invalid');
+  if (!Number.isFinite(Date.parse(payload?.builtAt || ''))) issues.push('release build timestamp is invalid');
+  if (!Number.isFinite(Date.parse(payload?.deployedAt || ''))) issues.push('release deployment timestamp is invalid');
+  if (expectedCommit && payload?.commit !== expectedCommit) {
+    issues.push(`release commit ${payload?.commit ?? '<missing>'} does not match expected ${expectedCommit}`);
+  }
+  if (
+    payload?.databaseRelease?.contractVersion !== 1
+    || payload?.databaseRelease?.releaseVersion !== 29
+    || payload?.databaseRelease?.stepCount !== 29
+    || payload?.databaseRelease?.lastStep !== 'free_account_app_backfill'
+  ) {
+    issues.push('database release identity does not match version 29');
+  }
+  return issues;
+}
+
 async function request(fetchImpl, url, options = {}) {
   return fetchImpl(url, {
     redirect: 'manual',
@@ -159,8 +184,11 @@ export async function loadRegistry(path = DEFAULT_REGISTRY_PATH) {
   return parsed;
 }
 
-export async function verifyProductionRuntime({ fetchImpl = fetch, registry } = {}) {
+export async function verifyProductionRuntime({ fetchImpl = fetch, registry, expectedCommit } = {}) {
   const registrations = registry ?? await loadRegistry();
+  if (expectedCommit && !COMMIT_PATTERN.test(expectedCommit)) {
+    throw new Error('expected release commit must be a full lowercase Git SHA');
+  }
   const platform = registrations.find((entry) => entry.moduleId === 'operatoros');
   const modules = registrations.filter((entry) => entry.moduleId !== 'operatoros');
   if (!platform || modules.length !== 13) {
@@ -168,6 +196,7 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry } = 
   }
 
   const results = [];
+  let healthRelease = null;
   await runCheck(results, 'platform root health', async () => {
     // Replit's Google front end reserves `/healthz` and returns its own 404
     // before the application. `/api/health` traverses the public root-host
@@ -179,7 +208,10 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry } = 
     if (body?.status !== 'healthy' || body?.service !== 'operatoros-api') {
       throw new Error('root health did not return the OperatorOS API snapshot');
     }
-    return 'healthy';
+    const issues = validateReleaseIdentity(body.release, expectedCommit);
+    if (issues.length) throw new Error(issues.join('; '));
+    healthRelease = body.release;
+    return `healthy ${body.release.commit.slice(0, 12)} build ${body.release.buildId}`;
   });
   await runCheck(results, 'platform API readiness', async () => {
     const response = await request(fetchImpl, 'https://api.operatoros.net/readyz');
@@ -192,13 +224,12 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry } = 
     ) {
       throw new Error('API readiness did not confirm SSO encryption and release identity');
     }
-    if (
-      !/^[0-9a-f]{40}$/.test(body?.release?.commit || '') ||
-      !/^[0-9a-f]{24}$/.test(body?.release?.buildId || '')
-    ) {
-      throw new Error('API readiness did not expose a valid commit and build ID');
+    const issues = validateReleaseIdentity(body?.release, expectedCommit);
+    if (issues.length) throw new Error(issues.join('; '));
+    if (!healthRelease || JSON.stringify(body.release) !== JSON.stringify(healthRelease)) {
+      throw new Error('health and readiness did not expose one authoritative release identity');
     }
-    return `ready ${body.release.commit.slice(0, 12)} build ${body.release.buildId}`;
+    return `ready ${body.release.commit.slice(0, 12)} build ${body.release.buildId} db v${body.release.databaseRelease.releaseVersion}`;
   });
   await runCheck(results, 'auth response headers', async () => {
     const response = await request(fetchImpl, 'https://auth.operatoros.net/login');
@@ -252,6 +283,27 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry } = 
     });
   }
 
+  const outcall = modules.find((entry) => entry.slug === 'outcall');
+  await runCheck(results, 'outcall disabled registry', async () => {
+    if (!outcall || outcall.enabled !== false) {
+      throw new Error('OutCall must remain disabled in the production registry');
+    }
+    return 'disabled';
+  });
+  await runCheck(results, 'outcall disabled callback', async () => {
+    if (!outcall) throw new Error('OutCall registration is missing');
+    const response = await request(
+      fetchImpl,
+      `${outcall.exactRedirectUris[0]}?code=probe&state=probe`,
+    );
+    if (response.status === 200) {
+      throw new Error('disabled OutCall callback rendered an exchange surface');
+    }
+    requireStatus(response, [302, 303, 307, 308, 403, 404], 'disabled OutCall callback');
+    requireSecurityHeaders(response, 'disabled OutCall callback');
+    return `denied (HTTP ${response.status})`;
+  });
+
   const passed = results.filter((result) => result.ok).length;
   return { ok: passed === results.length, passed, failed: results.length - passed, total: results.length, results };
 }
@@ -266,7 +318,8 @@ export function formatVerificationReport(report) {
 }
 
 async function main() {
-  const report = await verifyProductionRuntime();
+  const expectedCommit = process.env.OPERATOROS_EXPECTED_RELEASE_COMMIT?.trim().toLowerCase();
+  const report = await verifyProductionRuntime({ expectedCommit });
   console.log(formatVerificationReport(report));
   process.exitCode = report.ok ? 0 : 1;
 }

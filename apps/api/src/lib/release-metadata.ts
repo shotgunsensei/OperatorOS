@@ -1,5 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import {
+  DATABASE_RELEASE_CONTRACT,
+  DATABASE_RELEASE_STEPS,
+} from './database-release-contract.js';
 
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const BUILD_ID_PATTERN = /^[0-9a-f]{24}$/;
@@ -14,6 +18,20 @@ export type OperatorOsReleaseMetadata =
       builtAt: string;
       lockfileSha256: string;
     }
+  | {
+      status: 'unavailable';
+    };
+
+export type OperatorOsReleaseIdentity =
+  | (Extract<OperatorOsReleaseMetadata, { status: 'identified' }> & {
+      deployedAt: string;
+      databaseRelease: {
+        contractVersion: number;
+        releaseVersion: number;
+        stepCount: number;
+        lastStep: string;
+      };
+    })
   | {
       status: 'unavailable';
     };
@@ -63,4 +81,31 @@ export function loadReleaseMetadata(
     }
   }
   return { status: 'unavailable' };
+}
+
+export function createRuntimeReleaseIdentity(
+  metadata: OperatorOsReleaseMetadata,
+  deployedAt = new Date().toISOString(),
+): OperatorOsReleaseIdentity {
+  if (metadata.status !== 'identified' || !Number.isFinite(Date.parse(deployedAt))) {
+    return { status: 'unavailable' };
+  }
+  const lastStep = DATABASE_RELEASE_STEPS.at(-1);
+  if (
+    !Number.isInteger(DATABASE_RELEASE_CONTRACT.releaseVersion)
+    || DATABASE_RELEASE_CONTRACT.releaseVersion !== DATABASE_RELEASE_STEPS.length
+    || !lastStep
+  ) {
+    return { status: 'unavailable' };
+  }
+  return {
+    ...metadata,
+    deployedAt,
+    databaseRelease: {
+      contractVersion: DATABASE_RELEASE_CONTRACT.contractVersion,
+      releaseVersion: DATABASE_RELEASE_CONTRACT.releaseVersion,
+      stepCount: DATABASE_RELEASE_STEPS.length,
+      lastStep: lastStep.id,
+    },
+  };
 }
