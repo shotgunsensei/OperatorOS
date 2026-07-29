@@ -82,6 +82,7 @@ corepack pnpm --dir apps/api test
 The API test command requires an isolated PostgreSQL test database for the DB-backed suites. Do not point tests at production. Authenticated workspace and runner operations should be exercised through the OperatorOS application; their API routes are not anonymous curl endpoints.
 
 See the current [`validation matrix`](docs/auth/VALIDATION_MATRIX.md), [`module consolidation status`](docs/MODULE_CONSOLIDATION_STATUS.md), and [`Replit subdomain checklist`](docs/replit-subdomain-checklist.md) before deployment.
+Use the [`module restoration prompt template`](docs/MODULE_RESTORATION_PROMPT_TEMPLATE.md) to recover another module with the same inventory-to-zero-gap methodology and evidence gates.
 
 ## SSO and authorization boundary
 
