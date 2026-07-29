@@ -1,6 +1,6 @@
-# PulseDesk Phase 6 parity matrix
+# PulseDesk parity matrix
 
-Assessment date: 2026-07-18
+Assessment date: 2026-07-29
 
 The clean provenance source is `C:\Dev\PulseDesk` at
 `937849471e489ed23db2a263d04160a388402740` (`main`, clean). The older
@@ -11,10 +11,35 @@ desk restoration routes, pages, migration, smoke, and E2E evidence. Neither
 source tree is executable OperatorOS code; its server, dependencies,
 migrations, local storage, and provider processes remain unmounted.
 
-The current source defines 182 Express route declarations and more than 50
+The current source defines 183 Express route declarations and 50
 standalone tables across service delivery, identity, billing, connectors, and
 email. The active pre-Phase-6 OperatorOS slice has four PulseDesk tables and a
 PHI-minimized department escalation queue.
+
+## Executable zero-gap rebaseline
+
+`SOURCE_LEDGER.json` is generated and verified by
+`node scripts/pulsedesk-source-ledger.mjs`. It commit-pins and classifies all
+309 discovered source capabilities: 23 pages, 183 routes, 50 tables, 45
+provider/config references, and 8 background processes. The current
+dispositions are 91 active, 74 shared OperatorOS replacements, 53 retired for
+security, 91 retired by product boundary, zero unclassified, and zero
+restoration gaps.
+
+The verifier fails when the source commit or cleanliness changes, a discovered
+capability is omitted, an active/shared target path is missing, an evidence
+pointer is missing, or any item remains unclassified or a restoration gap.
+This makes “no approved source/local gap” executable rather than a narrative
+claim. Retired items do not become product omissions: local identity,
+subscription billing, unsafe credentials/connectors, child schema/runtime
+authority, EHR/clinical records, device/network authority, and out-of-bound
+contract/procurement functions remain intentionally outside PulseDesk.
+
+The legacy `/app`, `/submit`, `/service-desk-admin`, `/analytics`,
+`/clients/:id`, and `/assets/:id/report-issue` paths now resolve to active
+shared-runtime experiences. Client detail opens the matching shared Directory
+organization, and equipment-issue intake opens the ticket workflow with the
+trusted tenant-scoped asset preselected.
 
 | Source capability | OperatorOS target/disposition | Phase 6 evidence target |
 | --- | --- | --- |

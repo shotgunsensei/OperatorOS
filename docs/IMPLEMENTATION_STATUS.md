@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
-- Last updated: 2026-07-28
-- Phase: **16A TradeFlowKit full-product parity and cutover in progress**
+- Last updated: 2026-07-29
+- Phase: **PulseDesk zero-gap source/local rebaseline on the Phase 16A base**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -20,8 +20,50 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/phase16a-tradeflowkit-core-crud`
+- Execution branch: `codex/pulsedesk-zero-gap-restoration`
 - Release gate: **closed**
+
+## 2026-07-29 PulseDesk zero-gap rebaseline
+
+PulseDesk is now governed by an executable source ledger generated from the
+clean standalone repository at
+`937849471e489ed23db2a263d04160a388402740`. The ledger covers 309 discovered
+capabilities: 23 pages, 183 routes, 50 tables, 45 provider/config references,
+and 8 background processes. It records 91 active capabilities, 74 shared
+OperatorOS replacements, 53 security retirements, 91 product-boundary
+retirements, zero unclassified items, and zero restoration gaps. Verification
+fails closed on source drift, omitted inventory, missing current-repository
+targets/evidence, or any newly unclassified/gap item.
+
+The shortest complete healthcare-operations path remains the shared Directory
+client/facility/requester model plus operational equipment, tenant-scoped
+ticket intake, internal notes/replies, assignment, time/SLA, knowledge, supply
+and facility coordination, dashboards, and administration. Source-compatible
+`/app`, `/submit`, `/service-desk-admin`, `/analytics`, `/clients/:id`, and
+`/assets/:id/report-issue` paths now land on active functionality. Equipment
+issue intake preselects the trusted tenant-scoped asset; client detail selects
+the exact shared Directory organization. OperatorOS remains authoritative for
+identity, tenants, roles, billing, entitlements, launch, provider secrets, and
+shared services. No EHR/clinical record, TechDeck device/network authority,
+unsafe child connector, local auth, or local billing surface was restored.
+
+| Gate | Result |
+| --- | --- |
+| Executable source ledger | PASS; 309/309 classified, zero unclassified, zero restoration gaps |
+| Focused PulseDesk regression | PASS 42/42 non-database plus 1/1 complete isolated PostgreSQL workflow |
+| Privacy-reviewed import plan | PASS; fingerprint `2371e62e36925e22ffea4a9f3adcf77d352aea3bd8d970c27b18b95584b5dffe`, 34/34 references, zero missing/privacy findings; no apply |
+| Workspace/type/release | PASS; API/runner/web typecheck and 29-step additive/idempotent database plan/apply |
+| Production artifact | PASS; core preflight, API/runner/Next build, readiness-gated compiled runtime, and HTTP 200 API health/readiness plus web-proxied health |
+| Exact-host PulseDesk browser | PASS 1/1 in 17.5 seconds; PKCE/SSO, sibling SSO, asset-to-ticket intake, UI ticket/note persistence, analytics/admin aliases, Directory client detail, return, and host-only logout |
+| Broader browser matrix | 5 passed, 4 failed in 23.9 minutes. PulseDesk passed; BrandForgeOS, StudyForge AI, Ninja Launch Kit, and CallCommand failures were provider/test-adapter configuration gates outside this change |
+| Public deployment/cutover | NOT RUN; no deployment, provider traffic, production data mutation, import apply, or cutover was authorized |
+
+PulseDesk therefore remains consolidation state 4: its approved source/local
+product boundary is restored and locally proven, but Replit secrets,
+deployed-target authenticated acceptance, privacy-reviewed real-data
+reconciliation, rollback rehearsal, and an authorized cutover are still human
+gates. Provider inbox/connectors require an approved shared-provider design;
+they are not unlocked merely by inserting secrets.
 
 ## Current verdict
 

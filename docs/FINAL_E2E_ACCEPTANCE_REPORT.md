@@ -1,9 +1,42 @@
 # OperatorOS ecosystem final E2E acceptance report
 
-Assessment date: 2026-07-16  
+Assessment date: 2026-07-29
 Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16  
 Scope: OperatorOS, TradeFlowKit, PulseDesk, TechDeck, and TorqueShed  
 Verdict: **NOT ACCEPTED — release gate failed**
+
+## PulseDesk zero-gap follow-up — 2026-07-29
+
+PulseDesk was re-baselined against clean source commit
+`937849471e489ed23db2a263d04160a388402740`. Its executable ledger inventories
+all 309 discovered capabilities—23 pages, 183 routes, 50 tables, 45
+provider/config references, and 8 background processes—with 91 active, 74
+shared replacements, 53 security retirements, 91 product-boundary
+retirements, zero unclassified items, and zero restoration gaps. This closes
+the approved source/local inventory gate without restoring child identity,
+billing, schema authority, unsafe connectors, EHR/clinical data, or TechDeck
+device/network ownership.
+
+The current exact-host PulseDesk test passed 1/1 in 17.5 seconds against a
+compiled production build, readiness-gated supervisor, local HTTPS host proxy,
+and disposable PostgreSQL 16 database. It proves PKCE login/return, silent
+sibling SSO, tenant-scoped operational asset creation, the
+`/assets/:id/report-issue` prefilled intake path, UI ticket creation, internal
+note persistence after reload, `/analytics` and `/service-desk-admin`, exact
+shared Directory `/clients/:id`, My Apps return, and host-only local logout.
+API health, readiness, and web-proxied health returned HTTP 200.
+
+The unfiltered ecosystem matrix finished 5 passed and 4 failed in 23.9
+minutes. PulseDesk passed. BrandForgeOS, StudyForge AI, and Ninja Launch Kit
+timed out on AI generation while OpenAI was intentionally disabled;
+CallCommand expected its local test adapter while the production-mode runtime
+correctly disabled it. Those results are recorded as separate provider
+configuration gates, not PulseDesk regressions.
+
+This follow-up does not change the ecosystem **NOT ACCEPTED** verdict or claim
+PulseDesk state 5. The reviewed revision was not deployed, live providers were
+not enabled, and no real export, apply, reconciliation, rollback rehearsal, or
+cutover was authorized.
 
 ## Phase 16A TradeFlowKit follow-up
 

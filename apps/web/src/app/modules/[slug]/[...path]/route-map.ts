@@ -55,15 +55,19 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/settings': { sectionId: 'techdeck-settings', label: 'Settings' },
   },
   pulsedesk: {
+    '/app': { sectionId: 'pulsedesk-overview', label: 'Overview' },
     '/dashboard': { sectionId: 'pulsedesk-overview', label: 'Overview' },
     '/tickets': { sectionId: 'pulsedesk-operations', label: 'Request Queue' },
     '/requests': { sectionId: 'pulsedesk-operations', label: 'Request Queue' },
+    '/submit': { sectionId: 'pulsedesk-operations', label: 'Submit a Request' },
     '/departments': { sectionId: 'pulsedesk-operations', label: 'Departments' },
     '/assets': { sectionId: 'pulsedesk-operations', label: 'Operational Equipment' },
     '/supply-requests': { sectionId: 'pulsedesk-operations', label: 'Supply Requests' },
     '/facility-requests': { sectionId: 'pulsedesk-operations', label: 'Facility Requests' },
     '/knowledge': { sectionId: 'pulsedesk-operations', label: 'Operational Knowledge' },
     '/service-desk/admin': { sectionId: 'pulsedesk-operations', label: 'Service Desk Administration' },
+    '/service-desk-admin': { sectionId: 'pulsedesk-operations', label: 'Service Desk Administration' },
+    '/analytics': { sectionId: 'pulsedesk-overview', label: 'Operational Analytics' },
     '/clients': { sectionId: 'pulsedesk-directory', label: 'Service Clients' },
     '/facilities': { sectionId: 'pulsedesk-directory', label: 'Shared Facilities' },
     '/sites': { sectionId: 'pulsedesk-directory', label: 'Shared Sites' },
@@ -199,6 +203,15 @@ export function resolveCoreModuleDeepLink(
   if (slug === 'pulsedesk' && pathSegments.length === 2) {
     const [resource] = pathSegments;
     if (resource === 'tickets' || resource === 'requests') return { sectionId: 'pulsedesk-operations', label: 'Ticket Record' };
+    if (resource === 'clients') return { sectionId: 'pulsedesk-directory', label: 'Service Client Record' };
+  }
+  if (
+    slug === 'pulsedesk' &&
+    pathSegments.length === 3 &&
+    pathSegments[0] === 'assets' &&
+    pathSegments[2] === 'report-issue'
+  ) {
+    return { sectionId: 'pulsedesk-operations', label: 'Report Equipment Issue' };
   }
   if (slug === 'torqueshed' && pathSegments.length === 2) {
     const [resource] = pathSegments;

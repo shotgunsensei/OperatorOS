@@ -217,15 +217,41 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
     'tradeflowkit_jobs',
     'tradeflowkit_customers',
     'tradeflowkit_leads',
+    'pulsedesk_ticket_tags',
+    'pulsedesk_vendor_engagements',
+    'pulsedesk_time_entries',
+    'pulsedesk_sla_events',
+    'pulsedesk_ticket_assignments',
+    'pulsedesk_ticket_messages',
+    'pulsedesk_supply_requests',
+    'pulsedesk_facility_requests',
     'pulsedesk_request_events',
     'pulsedesk_requests',
+    'pulsedesk_assets',
+    'pulsedesk_team_members',
+    'pulsedesk_teams',
+    'pulsedesk_queues',
+    'pulsedesk_ticket_options',
+    'pulsedesk_sla_policies',
+    'pulsedesk_knowledge_articles',
+    'pulsedesk_saved_views',
+    'pulsedesk_notification_preferences',
+    'pulsedesk_tags',
     'pulsedesk_departments',
     'pulsedesk_request_sequences',
+    'pulsedesk_service_client_profiles',
     'techdeck_runbooks',
     'techdeck_assets',
     'techdeck_tickets',
     'techdeck_ticket_sequences',
     'module_workflow_items',
+    'directory_site_contacts',
+    'directory_organization_contacts',
+    'directory_relationships',
+    'directory_sites',
+    'directory_addresses',
+    'directory_contacts',
+    'directory_organizations',
     'ninja_pool_match_events',
     'ninja_pool_match_sessions',
     'ninja_pool_player_profiles',
@@ -452,6 +478,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
   });
 
   test('direct deep link survives login, a sibling tab uses silent SSO, back does not loop, and local logout is host-only', async ({ page, request }) => {
+    test.setTimeout(150_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
     identities.push(identity);
@@ -501,6 +528,79 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(loginPosts, 'a sibling module tab must reuse the auth-host session').toBe(1);
     await assertHostOnlySession(context, 'pulsedesk.operatoros.net');
     assertNoCredentialQuery(sibling.url());
+
+    const asset = await sibling.evaluate(async () => {
+      const response = await fetch('/api/modules/pulsedesk/assets', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assetTag: 'E2E-OPS-01',
+          name: 'Facilities Dispatch Console',
+          equipmentType: 'operational_equipment',
+          status: 'active',
+          phiAcknowledged: true,
+        }),
+      });
+      return { status: response.status, body: await response.json() };
+    });
+    expect(asset.status, JSON.stringify(asset.body)).toBe(201);
+    expect(asset.body.id).toBeTruthy();
+
+    await sibling.goto(`https://pulsedesk.operatoros.net/assets/${asset.body.id}/report-issue`);
+    await expect(sibling.getByTestId('pulsedesk-service-ticket-create')).toBeVisible({ timeout: 30_000 });
+    await expect(sibling.getByRole('status').filter({ hasText: 'Reporting an issue for the equipment selected by this deep link' })).toBeVisible();
+    await expect(sibling.locator('select[name="assetId"]')).toHaveValue(asset.body.id);
+    const ticketSummary = `E2E operational equipment issue ${Date.now()}`;
+    const createForm = sibling.getByTestId('pulsedesk-service-ticket-create');
+    await createForm.locator('input[name="summary"]').fill(ticketSummary);
+    await createForm.locator('textarea[name="description"]').fill('Facilities dispatch console is unavailable for operational coordination.');
+    await createForm.locator('input[name="locationLabel"]').fill('Facilities dispatch');
+    await createForm.locator('input[name="phiAcknowledged"]').check();
+    await createForm.getByRole('button', { name: 'Create ticket' }).click();
+    await expect(sibling.getByRole('status').filter({ hasText: 'Ticket creation completed.' })).toBeVisible({ timeout: 30_000 });
+
+    const createdTicket = await sibling.evaluate(async (summary) => {
+      const response = await fetch(`/api/modules/pulsedesk/tickets?search=${encodeURIComponent(summary)}`, {
+        credentials: 'include',
+      });
+      const body = await response.json();
+      return { status: response.status, ticket: body.tickets?.[0] ?? null };
+    }, ticketSummary);
+    expect(createdTicket.status, JSON.stringify(createdTicket)).toBe(200);
+    expect(createdTicket.ticket?.id).toBeTruthy();
+
+    await sibling.goto(`https://pulsedesk.operatoros.net/tickets/${createdTicket.ticket.id}`);
+    await expect(sibling.getByTestId('pulsedesk-ticket-workspace')).toBeVisible({ timeout: 30_000 });
+    await expect(sibling.getByText(ticketSummary, { exact: false }).first()).toBeVisible();
+    const internalNote = 'Dispatch supervisor confirmed equipment replacement is staged.';
+    const noteForm = sibling.locator('form').filter({ has: sibling.getByRole('button', { name: 'Add internal note' }) });
+    await noteForm.locator('textarea[name="body"]').fill(internalNote);
+    await noteForm.getByRole('button', { name: 'Add internal note' }).click();
+    await expect(sibling.getByText(internalNote, { exact: true })).toBeVisible({ timeout: 30_000 });
+    await sibling.reload();
+    await expect(sibling.getByText(internalNote, { exact: true })).toBeVisible({ timeout: 30_000 });
+
+    await sibling.goto('https://pulsedesk.operatoros.net/analytics');
+    await expect(sibling.getByTestId('pulsedesk-tab-dashboard')).toHaveAttribute('aria-selected', 'true');
+    await sibling.goto('https://pulsedesk.operatoros.net/service-desk-admin');
+    await expect(sibling.getByTestId('pulsedesk-tab-admin')).toHaveAttribute('aria-selected', 'true');
+
+    const clientName = `E2E Service Client ${Date.now()}`;
+    const client = await sibling.evaluate(async (name) => {
+      const response = await fetch('/api/modules/pulsedesk/clients', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type: 'client', facilityCategory: 'healthcare_operations', phiRestricted: true }),
+      });
+      return { status: response.status, body: await response.json() };
+    }, clientName);
+    expect(client.status, JSON.stringify(client.body)).toBe(201);
+    await sibling.goto(`https://pulsedesk.operatoros.net/clients/${client.body.id}`);
+    const directory = sibling.getByTestId('pulsedesk-business-directory');
+    await expect(directory).toBeVisible({ timeout: 30_000 });
+    await expect(directory.locator('.directory-row[data-active="true"]').filter({ hasText: clientName })).toBeVisible();
 
     await page.goto('https://techdeck.operatoros.net/logout');
     await expect(page).toHaveURL(/^https:\/\/operatoros\.net\/signed-out\?signed_out=local$/);
