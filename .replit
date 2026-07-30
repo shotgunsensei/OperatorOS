@@ -85,6 +85,7 @@ PORT = "5000"
 
 [userenv.development]
 OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL = "john@shotgunninjas.com"
+STRIPE_MODE = "test"
 
 [postMerge]
 path = "scripts/post-merge.sh"
