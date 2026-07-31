@@ -1,16 +1,42 @@
 # OperatorOS current release gate
 
-- Evidence date: 2026-07-27
-- Candidate branch: `codex/phase-15-deployed-acceptance-fix2`
+- Evidence date: 2026-07-29
+- Candidate branch: `codex/phase-17-production-truth`
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
-- Platform and Phases 2-14 source/local gate: **PARTIAL; local hardening gates pass, live-provider and deployed gates remain open**
-- Public deployment gate: **PASS (48/48) on deployed merge `c249a75396104e7aabd773e564be6a95ada56467`, build `2eb701089a539d9e6da5af80`**
+- Platform and module source/local gate: **PARTIAL; local gates pass, live-provider and deployed gates remain open**
+- Current public release: **commit `48b8691fca5c8a8d79f53b309cb44db79698bbcd`, build `932f83cb0d7c15ce994eb04e`; pre-Phase-17 verifier PASS 48/48**
+- Phase 17 candidate public comparison: **EXPECTED PRE-DEPLOY FAIL 45/48; release identity and disabled OutCall are not on the public release**
 - First deployment attempt: **FAILED BEFORE BUILD** — deployment
   `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd`, build
   `c49eeb9c-5f0b-40b3-9f31-44813446124c`
 - Overall release decision: **CLOSED — do not promote**
+
+## Phase 17 production truth
+
+At the start of Phase 17, refreshed `origin/main` and the commit identified by
+public health/readiness were both
+`48b8691fca5c8a8d79f53b309cb44db79698bbcd`; the source-to-production Git
+difference was zero.
+
+The Phase 17 candidate adds a deployment timestamp and explicit database
+release v29/29 to the non-secret release identity, makes readiness fail closed
+on that complete identity, lets the public verifier pin the intended Git
+commit, and reconciles the documented planned OutCall boundary across the
+catalog, registry, database seed, verifier, and browser gate.
+
+Fresh isolated evidence passes the clean and idempotent 29-step release,
+46/46 focused contracts, workspace typecheck, production build, core
+preflight, compiled supervisor health/readiness, all-12-module SSO/global
+logout 1/1, deep-link/sibling/local logout 1/1, and entitlement/OutCall denial
+1/1. These are candidate results, not deployed results.
+
+The strengthened verifier returns 45/48 against the unchanged public release:
+both health snapshots lack Phase 17 deployment/database identity and the old
+OutCall callback still renders. Promotion remains blocked on the exact
+workflow in `docs/PHASE17_PRODUCTION_RELEASE_RUNBOOK.md` and the evidence
+record in `docs/PHASE17_PRODUCTION_EVIDENCE_REPORT.md`.
 
 ## Decision
 
@@ -120,14 +146,14 @@ and migration parity remain controlled by the module parity index.
 | Frozen dependency contract | PASS FROM PHASE 0 | Pinned pnpm `10.34.5`; lockfile unchanged by Phase 1 |
 | Production environment contract | PASS | Machine-readable contract plus 7 preflight tests; core CLI preflight passed with exact canonical values and non-secret local test credentials |
 | Unsafe configuration rejection | PASS | Rejects missing/short secrets, legacy `APP_URL`, parent `COOKIE_DOMAIN`, public unified-runtime API URL, unsafe commands, legacy SSO rollback, wildcard/insecure/credentialed/loopback CORS, and drifted module hosts |
-| Database release plan | PASS | `db:plan` emits 29 ordered, additive, secret-free steps; Phase 12B clean apply and idempotent reapply passed on disposable PostgreSQL 16, including `outcall_tables` |
+| Database release plan | PASS | Phase 17 declares release v29 with 29 ordered, additive, secret-free steps; clean apply and idempotent reapply passed on disposable PostgreSQL 16 |
 | Backup/restore rehearsal | PASS LOCALLY | Phase 4 custom dump restored in 3.570 s; source/restore matched 94 public tables, 17 TradeFlowKit, 9 Directory, and 10 shared-service tables |
 | Restored data/constraints | PASS | Restored release apply passed; dump SHA-256 `d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82` |
-| Production build | PASS | Installed workspace toolchain produced SDK, API, runner gateway, and Next artifacts after API/runner/web typechecks; Next 14.2.35 generated 20 static page entries. The exact Replit wrapper remains pinned to pnpm 10.34.5. |
-| Compiled production supervisor | PASS | Compiled 29-step release ran idempotently, Fastify and the shared worker reached readiness on 5001, and compiled Next reached ready on isolated public port 5100; no `tsx` production runtime |
+| Production build | PASS | Phase 17 produced SDK, API, runner gateway, and Next 15.5.22 artifacts after API/runner/web typechecks; 20 page entries generated. The exact Replit wrapper remains pinned to pnpm 10.34.5. |
+| Compiled production supervisor | PASS | Phase 17 compiled 29-step release ran idempotently, Fastify and the shared worker reached readiness on 5001 with the complete release identity, then compiled Next reached ready on 5000; no `tsx` production runtime |
 | Local canonical-host health | PASS | HTTPS apex `/healthz` returned 200 with `operatoros-api`; API `/readyz` returned 200 with database/auth/SSO/registry configured |
 | Local public URL diagnostics | PASS | TechDeck diagnostic resolved forwarded exact host, HTTPS origin, module role, and host-only cookie mode |
-| Production-host SSO browser gate | PASS LOCALLY | Fresh Phase 12B matrix passed 9/9 in 2.1 minutes across root/app/auth and all 13 enabled modules. PKCE/state/nonce, exact callbacks, Secure host-only cookies, return/Back/refresh, silent launches, local/global logout and persistent module workflows passed. Separate first-screen workflows pass 2/2, including OutCall verified-self no-contact scheduling and non-entitled denial |
+| Production-host SSO browser gate | PASS LOCALLY | Phase 17 focused compiled-candidate gates pass 3/3: all 12 enabled modules plus global logout; TechDeck/PulseDesk deep link, sibling SSO and local logout; tenant-denied TechDeck and planned OutCall denial. No credential URL/storage leakage |
 | Focused Phase 1 tests | PASS | 11/11 database-release, preflight, and supervisor contract tests |
 | Focused Phase 2 tests | PASS | 9/9 directory, UI, deep-link, and release-contract tests |
 | Focused Phase 3 tests | PASS | 24/24 shared-service, route, retention, lease-recovery, release, webhook, and provider-state tests on a clean database |
@@ -141,31 +167,35 @@ and migration parity remain controlled by the module parity index.
 | Phase 2 browser workflow | PASS LOCALLY | 1/1 on compiled artifacts; CRUD, refresh persistence, same organization ID across three modules, and no script-readable auth |
 | Full API regression | PASS | Fresh untouched-schema aggregate on the exact Phase 12B source passed 839/839 with 0 failures, 0 skips and 0 todo |
 | Replit automatic npm preinstall | PASS LOCALLY AFTER DEFECT FIX | npm dry-run exits 0; pnpm-only scoped overrides remain in `pnpm-workspace.yaml` |
-| Public read-only runtime verifier | PASS | 48/48 on 2026-07-27 against merge `c249a753`, build `2eb701089a539d9e6da5af80`; no authentication and no mutation |
+| Public read-only runtime verifier | BASELINE PASS; CANDIDATE EXPECTED FAIL | Existing public release `48b8691`, build `932f83cb0d7c15ce994eb04e`, passed the pre-Phase-17 48/48 gate. The strengthened candidate verifier returns 45/48 until the complete identity and disabled OutCall are deployed |
 | Formatting/lint | NOT DEFINED | Repository has no supported formatting or lint script; no pass is claimed |
 
 ## Public deployment result
 
-The 2026-07-27 contract-corrected read-only verifier passes API health and
-readiness with exact release identity, auth security headers, all 17 public
-diagnostics, root/app and all 13 module PKCE/state/nonce/host-only-cookie
-authorization responses, every registered callback, and OutCall's fail-closed
-callback. No cookie Domain, legacy callback, credential URL, or redirect
-allowlist was widened.
+The current 2026-07-29 public release is healthy and identified as
+`48b8691fca5c8a8d79f53b309cb44db79698bbcd`, build
+`932f83cb0d7c15ce994eb04e`. It passed the prior public 48/48 contract. It is
+not the Phase 17 candidate.
+
+The strengthened Phase 17 verifier intentionally returns 45/48 against that
+unchanged release. The three failures are the missing deployment/database
+identity on health and readiness and the old enabled OutCall callback. No
+Phase 17 deployed pass is claimed.
 
 ## Human deployment closure
 
-1. **Complete:** deploy the scoped cumulative revision through the `.replit`
-   autoscale build/run path.
+1. Review and merge the Phase 17 pull request, then deploy the exact merged
+   revision through the `.replit` autoscale build/run path.
 2. Validate the real production secrets with
    `corepack pnpm preflight:production -- --core`; enable provider profiles only
    when the corresponding feature is meant to be live.
 3. Confirm the provider-managed backup is current before the database release.
-4. **Complete:** run `corepack pnpm verify:production` and require 48/48,
-   including exact release commit/build identity from readiness.
-5. Run authenticated browser SSO, direct deep-link, return navigation, refresh,
-   local logout, global logout, expired session, disabled entitlement, second
-   tenant isolation, and unauthorized API checks on the deployed revision.
+4. Set `OPERATOROS_EXPECTED_RELEASE_COMMIT` to `git rev-parse origin/main`, run
+   `corepack pnpm verify:production`, and require 48/48 including the exact
+   complete identity on health and readiness.
+5. Provision the two synthetic accounts and six `E2E_PHASE17_*` values listed
+   in `docs/PHASE17_PRODUCTION_RELEASE_RUNBOOK.md`, then run
+   `corepack pnpm --dir apps/web test:e2e:phase17-deployed` and require 3/3.
 6. Record the deployed commit and results in this file and
    `docs/auth/VALIDATION_MATRIX.md`.
 

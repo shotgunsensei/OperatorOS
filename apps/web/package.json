@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:e2e:sso": "playwright test e2e/sso-v1.spec.ts",
+    "test:e2e:phase17-deployed": "playwright test e2e/phase17-deployed-acceptance.spec.ts",
     "test:e2e:sso:proxy": "node e2e/production-host-proxy.mjs",
     "build:android": "bash scripts/build-android.sh",
     "cap:sync": "npx cap sync android",

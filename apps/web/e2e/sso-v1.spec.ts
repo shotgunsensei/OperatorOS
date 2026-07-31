@@ -52,8 +52,8 @@ const ENABLED_MODULES: BrowserModule[] = deploymentRegistry
     };
   });
 
-if (ENABLED_MODULES.length !== 13) {
-  throw new Error(`Expected 13 enabled OperatorOS modules, found ${ENABLED_MODULES.length}`);
+if (ENABLED_MODULES.length !== 12) {
+  throw new Error(`Expected 12 enabled OperatorOS modules, found ${ENABLED_MODULES.length}`);
 }
 
 const PUBLIC_AUTH_HEADERS = {
@@ -381,7 +381,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await pg.end().catch(() => undefined);
   });
 
-  test('one credential entry establishes the canonical app host then silently launches all thirteen enabled modules', async ({ page, request }) => {
+  test('one credential entry establishes the canonical app host then silently launches all twelve enabled modules', async ({ page, request }) => {
     test.setTimeout(180_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
@@ -818,6 +818,72 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(reopened).toHaveURL(/^https:\/\/operatoros\.net\/signed-out\?signed_out=local$/);
     expect((await sessionCookies(context)).some(cookie => cookie.domain === 'techdeck.operatoros.net')).toBe(false);
     await reopened.close();
+  });
+
+  test('tenant entitlement denial and planned OutCall fail closed without issuing a handoff', async ({ page, request }) => {
+    test.setTimeout(90_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+
+    const techdeck = await pg.query<{ id: string }>(
+      `select id from modules where slug = 'techdeck' limit 1`,
+    );
+    expect(techdeck.rows).toHaveLength(1);
+    await pg.query(
+      `update tenant_modules
+          set status = 'disabled', updated_at = now()
+        where tenant_id = $1 and module_id = $2`,
+      [identity.tenantId, techdeck.rows[0].id],
+    );
+
+    await page.goto(`${ROOT}/app`);
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+
+    const denied = await page.evaluate(async (tenantId) => {
+      const issue = async (moduleId: string) => {
+        const response = await fetch('/api/sso/issue', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            moduleId,
+            tenantId,
+            clientId: `operatoros:${moduleId}`,
+            redirectUri: `https://${moduleId}.operatoros.net/sso`,
+            returnTo: '/',
+            state: 's'.repeat(43),
+            nonce: 'n'.repeat(43),
+            codeChallenge: 'c'.repeat(43),
+            codeChallengeMethod: 'S256',
+          }),
+        });
+        return { status: response.status, body: await response.json() };
+      };
+      return {
+        tenant: await issue('techdeck'),
+        outcall: await issue('outcall'),
+      };
+    }, identity.tenantId);
+
+    expect(denied.tenant.status).toBe(403);
+    expect(denied.tenant.body.code).toBe('MODULE_ACCESS_DENIED');
+    expect(denied.tenant.body.launchUrl).toBeUndefined();
+    expect(denied.tenant.body.code).not.toMatch(/TOKEN|CREDENTIAL/);
+
+    expect(denied.outcall.status).toBe(403);
+    expect(denied.outcall.body.code).toBe('MODULE_UNAVAILABLE');
+    expect(denied.outcall.body.launchUrl).toBeUndefined();
+    expect(denied.outcall.body.code).not.toMatch(/TOKEN|CREDENTIAL/);
+
+    assertNoCredentialQuery(page.url());
+    await assertNoBrowserCredentialStorage(page);
   });
 
   test('FaultlineLab persists a server-scored investigation across return, global logout, reauthentication, and deep-link refresh', async ({ page, request }) => {

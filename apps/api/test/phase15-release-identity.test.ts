@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { createReleaseMetadata } from '../../../scripts/generate-release-metadata.mjs';
-import { loadReleaseMetadata } from '../src/lib/release-metadata.js';
+import { createRuntimeReleaseIdentity, loadReleaseMetadata } from '../src/lib/release-metadata.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
@@ -53,14 +53,47 @@ test('runtime accepts only a complete build-generated release identity', () => {
   }
 });
 
+test('runtime identity binds the build to deployment time and database release version', () => {
+  const metadata = createReleaseMetadata({
+    commit: 'c'.repeat(40),
+    lockfileBytes: Buffer.from('locked'),
+    builtAt: '2026-07-29T20:00:00.000Z',
+  });
+  assert.deepEqual(
+    createRuntimeReleaseIdentity(
+      { status: 'identified', ...metadata },
+      '2026-07-29T20:05:00.000Z',
+    ),
+    {
+      status: 'identified',
+      ...metadata,
+      deployedAt: '2026-07-29T20:05:00.000Z',
+      databaseRelease: {
+        contractVersion: 1,
+        releaseVersion: 29,
+        stepCount: 29,
+        lastStep: 'free_account_app_backfill',
+      },
+    },
+  );
+  assert.deepEqual(
+    createRuntimeReleaseIdentity(
+      { status: 'identified', ...metadata },
+      'not-a-timestamp',
+    ),
+    { status: 'unavailable' },
+  );
+});
+
 test('production build, readiness, and public verifier require release identity', () => {
   const pkg = JSON.parse(read('package.json'));
   const api = read('apps/api/src/index.ts');
   const verifier = read('scripts/verify-production-runtime.mjs');
   assert.match(pkg.scripts['build:production'], /generate-release-metadata\.mjs/);
   assert.match(api, /releaseIdentity/);
-  assert.match(api, /releaseMetadata\.status === 'identified'/);
-  assert.match(verifier, /valid commit and build ID/);
+  assert.match(api, /releaseIdentity\.status === 'identified'/);
+  assert.match(verifier, /validateReleaseIdentity/);
+  assert.match(verifier, /OPERATOROS_EXPECTED_RELEASE_COMMIT/);
 });
 
 test('Replit npm preinstall can parse root overrides while pnpm retains scoped overrides', () => {

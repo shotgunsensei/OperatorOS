@@ -1,18 +1,44 @@
-# OperatorOS Phase 15 production acceptance report
+# OperatorOS production acceptance report
 
-- Evidence date: 2026-07-27
-- Candidate branch: `codex/phase-15-deployed-acceptance-fix2`
-- Decision: **PUBLIC GATE PASSED; RELEASE STOPPED PENDING AUTHENTICATED ACCEPTANCE**
+- Evidence date: 2026-07-29
+- Candidate branch: `codex/phase-17-production-truth`
+- Decision: **PHASE 17 DEPLOYABLE CANDIDATE; NOT DEPLOYED; RELEASE STOPPED**
 - State 5 certifications issued: **0**
+
+## Phase 17 result
+
+Current public health/readiness identifies commit
+`48b8691fca5c8a8d79f53b309cb44db79698bbcd`, build
+`932f83cb0d7c15ce994eb04e`. That commit matched refreshed `origin/main` at the
+start of the phase and passed the pre-Phase-17 48/48 public verifier.
+
+The Phase 17 branch establishes one complete, non-secret release identity:
+Git commit, deterministic build ID, lockfile hash, build timestamp, deployment
+timestamp, and database release v29/29. It also corrects the documented
+planned OutCall boundary by disabling it in the deployment registry and
+reconciling its persisted catalog status to `coming_soon`.
+
+Fresh isolated candidate evidence passes 46/46 focused contracts, clean and
+idempotent 29-step release, workspace typecheck, production build/core
+preflight, compiled supervisor health/readiness, and three focused
+production-host browser gates. Those browser gates cover all 12 enabled module
+hosts, PKCE/host-only sessions, deep links, silent sibling SSO, local/global
+logout, entitlement denial, planned OutCall denial, and no credential
+URL/storage leakage.
+
+The strengthened verifier returns 45/48 against the unchanged public release:
+the two public health snapshots lack the new deployment/database identity and
+the old OutCall callback still renders. This is an expected pre-deployment
+failure. The exact remaining owner actions and commands are recorded in
+`docs/PHASE17_PRODUCTION_RELEASE_RUNBOOK.md`; full evidence is in
+`docs/PHASE17_PRODUCTION_EVIDENCE_REPORT.md`.
 
 ## Executive result
 
-The OperatorOS ecosystem is not yet accepted for production release. The
-current deployment identifies exact merge
-`c249a75396104e7aabd773e564be6a95ada56467`, build
-`2eb701089a539d9e6da5af80`, and passes the contract-corrected 48/48 public
-read-only gate. Authenticated end-to-end module workflows and production data
-cutover have not been attempted.
+The OperatorOS ecosystem is not yet accepted for the Phase 17 production
+release. The current deployment is the healthy pre-phase baseline; the Phase
+17 candidate has not been merged or deployed. No production data cutover has
+been attempted.
 
 ## Deployment iteration 1
 
@@ -42,7 +68,7 @@ cutover have not been attempted.
 | Public result | 48/48, no authentication or mutation |
 | Production build | Pass after workspace typecheck |
 
-## Current public read-only result
+## Historical Phase 15 public read-only result
 
 `corepack pnpm verify:production` ran on 2026-07-27 without authentication or
 mutation: **48 passed, 0 failed, 48 total**.
@@ -60,7 +86,7 @@ Passed:
 No public read-only check failed. This does not replace authenticated
 acceptance.
 
-## Acceptance sequence status
+## Historical Phase 15 acceptance sequence status
 
 | Area | Result | Evidence/blocker |
 | --- | --- | --- |
@@ -81,12 +107,12 @@ acceptance.
 | Backup/restore | PASS LOCALLY, NOT RUN PRODUCTION | Phase 14 disposable rehearsal only |
 | Provider acceptance | NOT RUN | Live Stripe/Twilio/OpenAI/scanner configuration is human-gated |
 
-## Release closure requirements
+## Phase 17 release closure requirements
 
-The exact deployed candidate passes 48/48. Next, run the complete acceptance
-sequence with configured test users and two
-tenants, preserve request/response/log evidence for every failure, and re-run
-related regressions after each correction. Production backup, database apply,
-provider use, promotion, and rollback remain explicit human gates.
+Merge and deploy the Phase 17 pull request through the existing Replit
+workflow, require 48/48 from the commit-pinned public verifier, then require
+3/3 from the production-safe authenticated gate with the two pre-provisioned
+synthetic accounts. Production backup, provider use, promotion, and rollback
+remain explicit human gates.
 
 No production-ready or state-5 claim is authorized by this report.

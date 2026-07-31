@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-07-29
-- Phase: **TechDeck zero-gap source/local rebaseline on the Phase 16A base**
+- Phase: **17 — Production Truth and Revenue Release Gate**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -62,6 +62,42 @@ product boundary is restored and locally proven, but Replit secrets,
 deployed-target authenticated acceptance, provider decisions, real-data
 reconciliation, rollback rehearsal, and authorized cutover remain human
 gates.
+
+## 2026-07-29 Phase 17 production truth candidate
+
+The public release and refreshed `origin/main` both identified
+`48b8691fca5c8a8d79f53b309cb44db79698bbcd` at phase start, so the initial
+main-versus-production Git difference was zero. Public health also identified
+build `932f83cb0d7c15ce994eb04e`.
+
+Phase 17 adds a deployment timestamp and database release v29/29 to the
+non-secret Git/build/lock identity shared by health and readiness. Readiness
+fails closed on the complete identity, and the public verifier can require the
+intended commit through `OPERATOROS_EXPECTED_RELEASE_COMMIT`.
+
+The phase also resolves a production-truth contradiction: OutCall was
+documented as planned/disabled but still advertised live/enabled by the SDK
+catalog and deployment registry. The candidate marks it `coming_soon`,
+disables its deployment registration, reconciles existing module seed rows,
+and verifies both anonymous callback denial and authenticated
+`MODULE_UNAVAILABLE`. No OutCall data or tables were deleted.
+
+| Gate | Result |
+| --- | --- |
+| Release contract | PASS; v29 equals 29 ordered non-destructive steps |
+| Disposable database | PASS; clean apply plus idempotent reapply |
+| Focused contracts | PASS 46/46 plus production-safe deployed-gate static contracts |
+| Workspace typecheck/build/preflight | PASS; API/runner/web, SDK/API/runner/Next 15.5.22, core environment contract |
+| Compiled supervisor identity | PASS; Git/build/lock/build time/deploy time/DB v29 exposed after readiness |
+| Focused production-host browser | PASS 3/3; 12 enabled modules/global logout, deep-link/sibling/local logout, entitlement and OutCall denial |
+| Current public baseline | Pre-change verifier PASS 48/48 on `48b8691`; email/Twilio/OpenAI configured, Stripe disabled |
+| Strengthened candidate verifier vs old public release | EXPECTED FAIL 45/48; new identity absent and old OutCall callback still enabled |
+| Deployment/authenticated public gate | NOT RUN; requires reviewed merge, Replit deploy access, backup confirmation, and two pre-provisioned acceptance accounts |
+
+No deployment, production mutation, provider activation, promotion, module
+state change, or Phase 18 commerce work is claimed. Exact operator steps are in
+`docs/PHASE17_PRODUCTION_RELEASE_RUNBOOK.md`; exact evidence and blockers are
+in `docs/PHASE17_PRODUCTION_EVIDENCE_REPORT.md`.
 
 ## 2026-07-29 PulseDesk zero-gap rebaseline
 

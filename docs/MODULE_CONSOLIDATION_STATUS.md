@@ -18,7 +18,8 @@ OperatorOS is a modular monorepo and shared Replit runtime:
   Kit intentionally uses `ninjalaunchkit.operatoros.net`. These Replit-attached
   subdomains are the production destinations, not an interim migration layer.
   Standalone branded domains are legacy references only. OutCall's subdomain
-  is active for the bounded shared-runtime Phase 12B workload.
+  remains registered but is planned/disabled in the Phase 17 candidate; the
+  old public release remains enabled until that candidate is deployed.
 - Module code owns only its product UI, tenant-scoped workflows, module data,
   and operational integrations.
 - A module may become a separately deployed workload only when its runtime or
@@ -42,7 +43,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 | Ninja Launch Kit | `ninja-launch-kit` | `ninjalaunchkit.operatoros.net` | add-on | Clean `C:\Dev\Ninja-Launch-Kit` and snapshot at `30bd1abc05846926e97bc7b26c5b7d6625e8f161` | Phase 11D source/local state-4 candidate: tenant-scoped launches, phases, milestones, task dependencies, reviewed campaign artifacts, private shared assets, server-computed readiness, OperatorOS-owned AI/idempotency/usage/activity, audited JSON/Markdown/CSV exports, responsive workspace and canonical deep links. ADR-0024 separates launch execution from BrandForgeOS brand/campaign authority and excludes child identity/billing/admin, legacy URL-token SSO and simulated claims. Clean 26-step release, aggregate 816/816, compiled health/readiness and production-host matrix 8/8 pass locally; deployed acceptance and authorized data reconciliation/cutover still block state 5 |
 | CallCommand AI | `callcommand-ai` | `callcommand-ai.operatoros.net` | add-on | Clean `C:\Dev\Call-Command-AI` and snapshot at `d49434e1d641d62cc141591c7208539a7afbf11e` | Phase 11E source/local state-4 candidate: tenant channels, bounded receptionist/intake profiles, review-only transfer targets, purpose-specific outbound consent, do-not-call suppression, signed inbound DTMF intake, persistent calls/safe events, operator dispositions, reviewed follow-up drafts and record-derived analytics; explicit test-only adapter; fail-closed Twilio provider; replay-safe callbacks; forced-off recording with no SID/URL activation; responsive workspace and canonical deep links. ADR-0025 assigns contacts to Shared Directory and excludes child authority/billing, fake delivery, transfer execution, recording/transcription/AI summaries, incomplete SIP providers and bulk/cold/predictive/autonomous dialing; OutCall remains disabled. Clean 27-step release, aggregate 825/825, compiled health/readiness and production-host matrix 9/9 pass locally; deployed/live-provider acceptance and authorized reconciliation/cutover still block state 5 |
 | Ninjamation | `ninjamation` | `ninjamation.operatoros.net` | add-on | Replit-synced AutomationPacks source at `C:\Dev\Ninjamation`, application commit `cca75338d04ed35b89f28d614eb51559735aa32f`, catalog commit `ca0e55fd086f6751a43964927166bfa69db012b6`; 263 tracked/184 retained files, 2,855,775 bytes, zero high-confidence secret findings | Phase 12A source/local state-4 candidate: tenant-scoped PC automation script authoring; immutable versions; server static analysis; review submission; tenant-admin approve/reject/retire; approved-current-version-only downloads with immutable audit; shared AI drafts with idempotent usage; responsive workspace and canonical deep links. ADR-0026 forbids OperatorOS/browser script execution and excludes child identity/billing/admin/sync. AutoWorkFlowHub is discontinued and excluded. Clean/idempotent 28-step release, aggregate 836/836, compiled health/readiness, production-host matrix 9/9 and first-screen workflows 2/2 pass locally; deployment and authorized reconciliation/cutover still block state 5 |
-| OutCall | `outcall` | `outcall.operatoros.net` | add-on | No canonical source repository recovered; product contract reconstructed from the owner's ten-phase prompt set | Phase 12B bounded source/local candidate: verified-self personal-safety exit assistance with safety acknowledgment, encrypted verified phone and triggers, neutral profiles, immediate/delayed requests, persistent safe history, shared jobs/activity/usage and canonical deep links. ADR-0027 keeps it distinct from CallCommand and excludes emergency dispatch, impersonation, recording, location, arbitrary destinations and unfinished extensions. Deterministic no-contact browser workflow passes; live Twilio verification/SMS/voice/DTMF/callbacks and deployed acceptance remain gated |
+| OutCall | `outcall` | `outcall.operatoros.net` | add-on | No canonical source repository recovered; product contract reconstructed from the owner's ten-phase prompt set | Phase 12B bounded source/local code remains preserved, but Phase 17 truthfully marks the product `coming_soon` and disables its launch/callback registration. The idempotent seed reconciles existing rows without deleting data; authenticated SSO returns `MODULE_UNAVAILABLE`. Live Twilio verification/SMS/voice/DTMF/callbacks and deployed acceptance remain gated, so no state 4/5 or production-ready claim is made |
 
 ## Current verification boundary
 
@@ -54,6 +55,15 @@ PostgreSQL workflows, workspace typecheck, 29-step release plan/apply,
 production build/preflight/runtime, HTTP 200 health/readiness, and an
 exact-host browser workflow 1/1 in 20.3 seconds. No public deployment,
 provider enablement, import apply, or cutover is inferred.
+
+Phase 17 does not change any module parity state. It establishes a complete
+release identity and aligns OutCall's planned/disabled policy across the
+catalog, deployment registry, persisted seed, verifier, and browser matrix.
+Fresh candidate evidence passes the idempotent 29-step release, 46/46 focused
+contracts, production build/supervisor, and three focused exact-host browser
+gates across 12 enabled modules. The unchanged public release still exposes
+the old OutCall callback, so this remains source/isolated-candidate evidence
+until the Phase 17 deploy and public 48/48 plus authenticated 3/3 gates pass.
 
 Phase 12A adds the ordered `ninjamation_tables` release step and replaces the
 inferred workflow-automation shell with the commit-pinned AutomationPacks
