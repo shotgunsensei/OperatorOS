@@ -1,4 +1,36 @@
-# TorqueShed Phase 9 verification
+# TorqueShed verification
+
+## State 4 acceptance follow-up — 2026-07-31
+
+The prior Phase 9 blocked-gate record below is retained as historical evidence.
+Docker Desktop was started, and the missing local gates were rerun against a
+new disposable PostgreSQL 16 database and compiled OperatorOS artifacts.
+
+| Gate | Result |
+| --- | --- |
+| Focused domain/static/browser contracts | PASS 23/23 |
+| Phase 7 foundation + Phase 8 Assist + Phase 9 social PostgreSQL workflows | PASS 3/3 in 14.8 seconds total |
+| Database release | PASS; v29 plan, clean apply in 10.4 seconds, idempotent reapply in 1.8 seconds |
+| Workspace typecheck | PASS for API, runner gateway, and web |
+| Production build | PASS; SDK/API/runner and Next 15.5.22 with 20/20 static pages |
+| Core preflight and compiled runtime | PASS; web-proxied health/readiness HTTP 200, release v29/29, all core readiness checks configured |
+| Dedicated exact-host browser workflow | PASS 1/1 in 13.8 seconds |
+
+The browser workflow proves native vehicle/diagnostic/evidence persistence,
+VIN masking, deterministic server-selected Assist, one signed test payment
+credit and one exact ledger debit, Marketplace draft/publish, Community
+draft/publish/reaction/comment, direct database persistence, mobile layout,
+global revocation, diagnostic deep-link reauthentication, My Apps
+return/relaunch, Marketplace refresh, and host-only logout. The adapters are
+available only in the explicit local test environment; no live payment or AI
+provider traffic occurred.
+
+TorqueShed is therefore a source/local consolidation state 4 candidate. It is
+not state 5 or production-ready: deployed authenticated acceptance, approved
+live Stripe/OpenAI configuration, production backup/rollback, real-data
+reconciliation, and an authorized cutover remain open.
+
+## Historical Phase 9 verification — 2026-07-18
 
 Assessment date: 2026-07-18
 Branch: `codex/phase-9-torqueshed-marketplace-community`
