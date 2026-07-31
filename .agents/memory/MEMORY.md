@@ -1,2 +1,4 @@
 - [SDK web import](sdk-web-import.md) — importing @operatoros/sdk in apps/web needs webpack extensionAlias (.js→.ts) or it 500s "Module not found .js" despite passing typecheck.
 - [Free-with-any-account apps](free-account-apps.md) — free app grants use tenant_modules(allowAllMembers) not tenant_entitlements; flip a module live with no URL via catalog `internal: true`.
+- [Twilio connector proxy](twilio-connector-proxy.md) — token needs `repl `/`depl ` prefix; `connector_names` filter broken; serves API key pair (auth as api_key:secret); webhooks still need TWILIO_AUTH_TOKEN.
+- [Installs & preflight](monorepo-installs-preflight.md) — install only via pinned pnpm frozen-lockfile (npm drift once broke fastify boot); preflight needs production values injected inline.

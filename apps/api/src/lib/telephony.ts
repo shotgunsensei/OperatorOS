@@ -36,10 +36,31 @@ export type TelephonySource = 'connector' | 'env';
 
 export interface TelephonyConfig {
   accountSid: string;
+  /**
+   * REST/basic-auth secret. For env-sourced config this is the account's
+   * primary auth token; for connector-sourced config it is the API key
+   * secret paired with `apiKeySid`.
+   */
   authToken: string;
+  /**
+   * Present when credentials are a Twilio API key (SK…) rather than the
+   * primary auth token — the Replit connector serves API keys. Twilio
+   * basic auth must then be `apiKeySid:secret`, not `accountSid:secret`.
+   */
+  apiKeySid?: string;
   fromNumber: string;
   publicBaseUrl: string;
   source: TelephonySource;
+}
+
+/**
+ * Basic auth header value for Twilio REST calls, honoring API-key auth.
+ * Exported so every Twilio REST call site (e.g. the shared SMS adapter)
+ * builds auth identically — `accountSid:secret` is invalid for API keys.
+ */
+export function restAuthHeader(cfg: Pick<TelephonyConfig, 'accountSid' | 'authToken' | 'apiKeySid'>): string {
+  const username = cfg.apiKeySid ?? cfg.accountSid;
+  return `Basic ${Buffer.from(`${username}:${cfg.authToken}`).toString('base64')}`;
 }
 
 function readEnvConfig(): TelephonyConfig | null {
@@ -63,28 +84,38 @@ function readEnvConfig(): TelephonyConfig | null {
  * `from_number`).
  */
 async function readConnectorConfig(): Promise<TelephonyConfig | null> {
+  // Tests always exercise the env-var path with synthetic credentials;
+  // the workspace's live connector must not shadow them.
+  if (process.env.NODE_ENV === 'test') return null;
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const token = process.env.REPL_IDENTITY || process.env.WEB_REPL_RENEWAL;
+  // The proxy requires a scheme prefix on the identity token:
+  // `repl <token>` for workspace REPL_IDENTITY, `depl <token>` for
+  // deployment WEB_REPL_RENEWAL. A raw token is rejected with 401.
+  const token = process.env.REPL_IDENTITY
+    ? `repl ${process.env.REPL_IDENTITY}`
+    : process.env.WEB_REPL_RENEWAL
+      ? `depl ${process.env.WEB_REPL_RENEWAL}`
+      : null;
   if (!hostname || !token) return null;
   const publicBaseUrl = process.env.TWILIO_PUBLIC_BASE_URL || process.env.APP_URL;
   if (!publicBaseUrl) return null;
 
   try {
-    const res = await fetch(
-      `https://${hostname}/api/v2/connection?include_secrets=true&connector_names=twilio`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          X_REPLIT_TOKEN: token,
-        },
+    // Note: the `connector_names` query filter has been observed to return
+    // zero items even when the twilio connection exists, so fetch the full
+    // list and match on `connector_name` client-side.
+    const res = await fetch(`https://${hostname}/api/v2/connection?include_secrets=true`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        X_REPLIT_TOKEN: token,
       },
-    );
+    });
     if (!res.ok) return null;
     const body = (await res.json()) as {
-      items?: Array<{ settings?: Record<string, unknown> }>;
+      items?: Array<{ connector_name?: string; settings?: Record<string, unknown> }>;
     };
-    const settings = body.items?.[0]?.settings;
+    const settings = body.items?.find((i) => i.connector_name === 'twilio')?.settings;
     if (!settings || typeof settings !== 'object') return null;
 
     const pick = (...keys: string[]): string | null => {
@@ -96,10 +127,27 @@ async function readConnectorConfig(): Promise<TelephonyConfig | null> {
     };
 
     const accountSid = pick('account_sid', 'accountSid', 'sid');
-    const authToken = pick('auth_token', 'authToken', 'token', 'api_key', 'apiKey');
     const fromNumber = pick('phone_number', 'phoneNumber', 'from_number', 'fromNumber', 'from');
-    if (!accountSid || !authToken || !fromNumber) return null;
+    if (!accountSid || !fromNumber) return null;
 
+    // The connector serves a Twilio API key pair (`api_key` SK… +
+    // `api_key_secret`) rather than the account's primary auth token.
+    const apiKeySid = pick('api_key', 'apiKey', 'api_key_sid', 'apiKeySid');
+    const apiKeySecret = pick('api_key_secret', 'apiKeySecret', 'secret');
+    if (apiKeySid && apiKeySecret) {
+      return {
+        accountSid,
+        authToken: apiKeySecret,
+        apiKeySid,
+        fromNumber,
+        publicBaseUrl,
+        source: 'connector',
+      };
+    }
+
+    // Fallback for older connector schemas that served the auth token.
+    const authToken = pick('auth_token', 'authToken', 'token');
+    if (!authToken) return null;
     return { accountSid, authToken, fromNumber, publicBaseUrl, source: 'connector' };
   } catch {
     return null;
@@ -258,13 +306,12 @@ export async function placeTwilioCall(input: PlaceCallInput): Promise<PlaceCallR
     form.set('Record', 'false');
   }
 
-  const auth = Buffer.from(`${cfg.accountSid}:${cfg.authToken}`).toString('base64');
   const res = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${cfg.accountSid}/Calls.json`,
     {
       method: 'POST',
       headers: {
-        Authorization: `Basic ${auth}`,
+        Authorization: restAuthHeader(cfg),
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: form.toString(),
@@ -288,6 +335,12 @@ export async function placeTwilioCall(input: PlaceCallInput): Promise<PlaceCallR
  * Async because credentials may come from the Replit connector proxy
  * (network call). The proxy result is cached, so the hot path is normally
  * an in-memory lookup.
+ *
+ * Caveat: Twilio computes webhook signatures with the account's PRIMARY
+ * auth token. Connector-sourced credentials are an API key pair, whose
+ * secret is NOT the signing key, so signature verification cannot succeed
+ * for connector-sourced config unless TWILIO_AUTH_TOKEN is also set — we
+ * prefer that env var here when present.
  */
 export async function verifyTwilioSignature(
   url: string,
@@ -300,17 +353,17 @@ export async function verifyTwilioSignature(
   const sortedKeys = Object.keys(params).sort();
   let data = url;
   for (const k of sortedKeys) data += k + params[k];
-  const expected = createHmac('sha1', cfg.authToken).update(data, 'utf8').digest('base64');
+  const signingKey = process.env.TWILIO_AUTH_TOKEN || cfg.authToken;
+  const expected = createHmac('sha1', signingKey).update(data, 'utf8').digest('base64');
   return expected === signature;
 }
 
 export async function fetchTwilioTranscription(recordingSid: string): Promise<string | null> {
   const cfg = await resolveTelephonyConfig();
   if (!cfg) return null;
-  const auth = Buffer.from(`${cfg.accountSid}:${cfg.authToken}`).toString('base64');
   const res = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${cfg.accountSid}/Recordings/${recordingSid}/Transcriptions.json`,
-    { headers: { Authorization: `Basic ${auth}` } },
+    { headers: { Authorization: restAuthHeader(cfg) } },
   );
   if (!res.ok) return null;
   const body = (await res.json()) as { transcriptions?: Array<{ transcription_text?: string }> };

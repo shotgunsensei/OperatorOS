@@ -1,5 +1,5 @@
 import { getAiProvider, getProviderInfo, type AiCompletionRequest, type AiCompletionResponse } from './ai-provider.js';
-import { resolveTelephonyConfig } from './telephony.js';
+import { resolveTelephonyConfig, restAuthHeader } from './telephony.js';
 import { isOperatorOSTestEnvironment } from './shared-service-safety.js';
 
 export type ProviderKind = 'email' | 'sms' | 'payments' | 'ai';
@@ -116,7 +116,7 @@ class TwilioSmsAdapter implements OutboundProviderAdapter {
       {
         method: 'POST',
         headers: {
-          Authorization: `Basic ${Buffer.from(`${this.config.accountSid}:${this.config.authToken}`).toString('base64')}`,
+          Authorization: restAuthHeader(this.config),
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: body.toString(),
