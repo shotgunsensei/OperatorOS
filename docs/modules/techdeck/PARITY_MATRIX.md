@@ -1,51 +1,65 @@
-# TechDeck Phase 5 parity matrix
+# TechDeck zero-gap parity matrix
 
-Assessment date: 2026-07-18
+Assessment date: 2026-07-29
 
-Recovered source: `C:\Dev\Tech-Deck` at
-`8125f8d89d8d39d60a50c8061a26133a0c917792` (`main`, clean). The legacy
-quarantined snapshot contains 302 files: 265 are byte-identical to the
-recovered checkout, 36 contain earlier OperatorOS conversion edits, and one is
-snapshot-only. The recovered checkout has 122 additional tracked files,
-primarily agent/prompt evidence plus the later operations workspace. None of
-the standalone server, dependencies, uploads, or migrations are activated.
+Recovered source: clean `C:\Dev\Tech-Deck` `main` at
+`8125f8d89d8d39d60a50c8061a26133a0c917792`. The source remains read-only:
+its standalone server, dependencies, migrations, uploads, identity, billing,
+and provider processes are not activated in OperatorOS.
 
-The recovered source defines 45 PostgreSQL tables, 215 Express route
-registrations across auth and 27 route modules, 20 module manifests, and 17
-test files with 135 direct test declarations. Its July 15 operations
-restoration is the primary product evidence for infrastructure, network,
-documentation, lifecycle, and import behavior.
+The executable ledger at `docs/modules/techdeck/SOURCE_LEDGER.json` inventories
+all 382 discovered source capabilities: 65 pages, 221 API routes, 45 database
+tables, 46 provider/config references, and 5 background processes. It records
+91 active capabilities, 109 shared OperatorOS replacements, 48 security
+retirements, 134 product-boundary retirements, zero unclassified items, and
+zero restoration gaps. `corepack pnpm verify:techdeck:source` fails closed on
+source drift, missing current-repository targets/evidence, or a newly
+unclassified/gap item.
 
-| Source capability | OperatorOS target/disposition | Phase 5 evidence |
+| Source capability | OperatorOS target/disposition | Current evidence |
 | --- | --- | --- |
-| Local users, sessions, MFA, tenants, memberships, invitations, system admin | Excluded; OperatorOS authority only | SSO/integration contracts and existing negative tests |
-| Local plans, Stripe checkout/webhooks, subscriptions, usage entitlements | Excluded; OperatorOS platform billing only | Existing 410/decommission evidence; routes remain unmounted |
-| Clients, contacts, sites | Shared Directory organizations, contacts, sites, relationships, and `techdeck_managed_client_profiles` | Directory DB/browser tests plus Phase 5 compatibility and association tests |
-| Legacy assets and recovered configuration inventory | Expanded namespaced `techdeck_assets` configuration model with Directory references, lifecycle, health, technical metadata, versions, archive state | Phase 5 workflow and restart tests |
-| Servers, workstations, firewalls, switches, APs, printers, network devices, applications/services, vendors | Typed configuration items | Phase 5 create/filter/search tests |
-| VLAN, subnet, address, gateway, DHCP, DNS, WAN circuit, public IP | Typed network/IPAM configuration records with syntactic validation and topology relationships | ADR-0012 and Phase 5 network journey |
-| Configuration relationships | Same-tenant directed graph with composite foreign keys and duplicate/self-link denial | Phase 5 relationship/isolation tests |
-| Licenses, certificates, warranties | Lifecycle configuration records and due/expired dashboard projections | Phase 5 metrics and lifecycle assertions |
-| Tickets/comments/SLA | Existing technician tickets retained; Directory/site/configuration links, versions, comments, and time are added without owning PulseDesk service delivery | Phase 5 ticket/time workflow tests |
-| Runbooks/procedures | Safe documentation records with draft, review, approve, publish, archive, immutable revisions, links, and shared attachments | ADR-0014 and Phase 5 document workflow tests |
-| Documentation folders/pages/tags/backlinks | Namespaced folders, safe Markdown/text pages, tag arrays, explicit cross-links/backlinks, revisions | Phase 5 search/deep-link/revision tests |
-| Evidence vault and reports | Namespaced evidence metadata plus deterministic report snapshots; binary files use shared private attachments | Shared attachment controls and Phase 5 evidence/report tests |
-| Time entries | Bounded tenant/user/ticket/client/site/configuration-linked minutes and notes | Phase 5 workflow tests |
-| CSV import preview/commit | Deterministic dry-run importer with source fingerprints, duplicate/reference checks, row errors, counts, and reconciliation; apply remains human-gated | Phase 5 import tests and fixture |
+| Local users, sessions, MFA, tenants, memberships, invitations, system admin | Excluded; OperatorOS authority only | SSO/integration contracts, host-only sessions, and negative tests |
+| Local plans, Stripe checkout/webhooks, subscriptions, usage entitlements | Excluded; OperatorOS platform billing only | Decommissioned child routes remain unmounted |
+| Clients, contacts, sites | Shared Directory organizations, contacts, sites, relationships, and `techdeck_managed_client_profiles` | Directory API/UI tests and exact `/clients/:id` selection |
+| Legacy assets and recovered configuration inventory | Namespaced `techdeck_assets` configuration model with Directory references, lifecycle, health, technical metadata, versions, and archive state | Isolated PostgreSQL workflows plus exact item deep links |
+| Servers, workstations, firewalls, switches, APs, printers, network devices, applications/services, vendors | Typed configuration items | Create, filter, update, persistence, and browser checks |
+| VLAN, subnet, address, gateway, DHCP, DNS, WAN circuit, public IP | Typed network/IPAM configuration records with validation and topology relationships | ADR-0012, database workflow, and exact-host browser journey |
+| Configuration relationships | Same-tenant directed graph with composite foreign keys and duplicate/self-link denial | Relationship and tenant-isolation tests |
+| Licenses, certificates, warranties | Lifecycle configuration records and due/expired dashboard projections | Metrics and lifecycle assertions |
+| Tickets/comments/SLA | Technician tickets with Directory/site/configuration links, versions, comments, and time; PulseDesk retains healthcare service-delivery ownership | Ticket/time API, persistence, exact `/tickets/:id`, and mobile `/m/tickets/:id` |
+| Runbooks/procedures | Documentation records with draft, review, approve, publish, archive, immutable revisions, links, and shared attachments | ADR-0014, transition tests, and exact `/kb/:id` browser flow |
+| Documentation folders/pages/tags/backlinks | Namespaced folders, safe Markdown/text pages, tags, explicit links/backlinks, and revisions | Search, revision, record selection, and reload evidence |
+| Evidence vault and reports | Namespaced evidence metadata plus deterministic report snapshots; binary files use shared private attachments | Typed evidence selector regression plus workflow tests |
+| Time entries | Bounded tenant/user/ticket/client/site/configuration-linked minutes and notes | API and responsive `/m/time` browser workflow |
+| CSV import preview/commit | Deterministic dry-run importer with source fingerprints, duplicate/reference checks, row errors, counts, and reconciliation; apply remains human-gated | Import tests and fixture |
 | External credential reference | Bounded non-secret vault reference only; no value/reveal API | ADR-0013 and forbidden-field tests |
-| IT Ops AI/script console and browser localStorage "vault" | Excluded from active runtime; no remote action or secret store | ADR-0013/0014 and threat model |
-| Calendar/dispatch and recurring ticket generator | Excluded from Phase 5: scheduling belongs in shared leased jobs and needs recurrence/timezone/cancellation semantics | Parity disposition; no active button |
-| Business invoicing | Excluded from TechDeck core; TradeFlowKit owns lead-to-cash and OperatorOS owns platform billing | Boundary documentation |
-| Standalone Knowledge Base | Consolidated into versioned TechDeck documentation pages | Phase 5 documentation workflow |
-| Secure intake/client portal | Not approved for anonymous Phase 5 activation; shared attachments exist, but token abuse, uploader identity, consent, retention, and portal relationship policy require a later decision | Threat-model residual gap; no placeholder claim |
-| License server, API tokens, outbound webhooks, public status pages | Excluded from TechDeck product parity: platform/shared capabilities require separate OperatorOS-wide policy | Existing shared services and explicit parity disposition |
-| Mobile routes | Responsive OperatorOS shell rather than a second mobile application/router | Web typecheck/build and browser viewport evidence |
+| IT Ops AI/script console and browser localStorage vault | Security-retired; no remote action or secret store | ADR-0013/0014 and threat model |
+| Calendar/dispatch and recurring ticket generator | Product-boundary retired; future scheduling must use shared leased jobs and explicit recurrence/timezone/cancellation semantics | Ledger disposition; no inactive button |
+| Business invoicing | Product-boundary retired; TradeFlowKit owns lead-to-cash and OperatorOS owns platform billing | Boundary documentation |
+| Standalone Knowledge Base | Consolidated into versioned TechDeck documentation pages | Documentation workflow and `/kb` compatibility routes |
+| Secure intake/client portal | Security-retired pending shared uploader identity, consent, retention, relationship, rate, and malware-scanning policy | Threat-model residual gate; no anonymous placeholder |
+| License server, API tokens, outbound webhooks, public status pages | Retired from the module; these require separate OperatorOS-wide shared-service policy | Ledger disposition and existing shared authority |
+| Mobile routes | Responsive OperatorOS shell with `/m`, `/m/tickets`, and `/m/time` compatibility paths rather than a second mobile router | 390-pixel browser acceptance |
+
+## Route and UI compatibility
+
+The active shell now resolves source-compatible `/m`, `/m/tickets`,
+`/m/time`, `/kb`, `/evidence/upload`, ticket, managed-client, configuration,
+document, evidence, and report record paths to real tenant-scoped state. Exact
+records are selected or explicitly reported unavailable rather than rendering
+a misleading generic panel. Canonical module-host `/app` remains the
+OperatorOS My Apps return path and is intentionally not captured by TechDeck.
+
+The document, evidence, and report selectors retain machine enum values while
+showing human-readable labels. This fixes a real create-flow defect where
+labels such as `Test result` were previously submitted instead of accepted
+values such as `test_result`.
 
 ## Completion boundary
 
-Phase 5 may reach source/local state 4 when the approved target rows above are
-implemented and locally verified. State 5 still requires deployment of the
-cumulative revision, public 48/48 verification, authenticated deployed
-TechDeck workflow/deep-link/logout evidence, production attachment/provider
-decisions, and an approved standalone-data cutover. No local result waives
-those gates.
+TechDeck satisfies consolidation state 4 for its approved source/local product
+boundary. State 5 still requires deployment of the reviewed cumulative
+revision, public 48/48 verification, authenticated deployed TechDeck
+create/update/reload/deep-link/logout and second-tenant denial evidence,
+production attachment/provider decisions, and an authorized standalone-data
+cutover. No local result waives those gates.

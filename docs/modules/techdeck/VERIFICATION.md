@@ -1,49 +1,65 @@
-# TechDeck Phase 5 verification
+# TechDeck zero-gap verification
 
-Evidence date: 2026-07-18
+Evidence date: 2026-07-29
 
-This is source/local state 4 evidence. It does not claim a deployed state 5.
-All PostgreSQL activity used disposable PostgreSQL 16 databases in the
-`operatoros-phase5-postgres` Docker container. No public deployment, provider
-traffic, standalone-data apply, or production mutation occurred.
+This is source/local consolidation state 4 evidence. It does not claim a
+deployed state 5. PostgreSQL work used a new disposable PostgreSQL 16
+container and isolated databases. No public deployment, live provider
+traffic, standalone-data apply, production mutation, or cutover occurred.
 
 ## Results
 
 | Gate | Result |
 | --- | --- |
-| Provenance | PASS; clean `C:\Dev\Tech-Deck` `main` at `8125f8d89d8d39d60a50c8061a26133a0c917792`; 265 common files byte-identical, 36 adapted, 122 recovered-source-only |
-| Focused TechDeck regression | PASS 16/16, including configuration/network/lifecycle, document workflow, isolation, role denial, importer, release contract, and deep links |
-| New Phase 5 tests | PASS 5/5 |
-| Dry-run fixture | PASS; fingerprint `356117c32885d1761fa3c0a1674d185d9d63b6dad910cfaac2bbdb09674fd374`, 8 mappings, 12/12 references resolved, 0 missing |
-| Database release | PASS repeatedly on PostgreSQL 16; 18 ordered additive steps, including `techdeck_tables`, applied without drift |
+| Final consolidated TechDeck/Directory gate | PASS 43/43 on the isolated database after documentation was updated |
+| Provenance and executable ledger | PASS; clean `C:\Dev\Tech-Deck` at `8125f8d89d8d39d60a50c8061a26133a0c917792`; all 382 items classified: 65 pages, 221 routes, 45 tables, 46 provider/config references, 5 background processes; 91 active, 109 shared replacements, 48 security retirements, 134 product-boundary retirements, zero unclassified/gaps |
+| Focused non-database regression | PASS 20/20 for Directory UI, deep links, ticket shell, source ledger, and TechDeck static contracts |
+| Navigation/static confirmation | PASS 14/14, including canonical module `/app` return behavior, compatibility aliases, record routes, and enum machine values |
+| Isolated PostgreSQL workflows | PASS 3/3 for configuration posture/tenant isolation/alerts, documentation-only runbook authorization, and the complete managed infrastructure/document/evidence/report/time workflow |
+| Database release | PASS; 29 ordered additive/idempotent steps planned, applied on a separate clean database, then applied again without drift |
 | Workspace typecheck | PASS for API, runner gateway, and web |
-| Production build | PASS for SDK, API, runner gateway, and Next 14.2.35; 20 static page entries |
+| Production build | PASS for SDK, API, runner gateway, and Next 15.5.22; 20 static page entries |
 | Production core preflight | PASS with isolated non-production configuration |
-| Compiled runtime | PASS; release applied, Fastify/shared-worker readiness reached on 5001, Next reached ready on 5000 |
-| Anonymous production-host smoke | PASS; API readiness and web root returned 200; eight TechDeck deep links returned exact-host PKCE redirects; workspace API returned 401 |
-| Production-host SSO browser gate | PASS 2/2 in 1.7 minutes after assigning the twelve-module scenario a bounded 180-second budget; all enabled module launches, TechDeck deep-link return, refresh, Back, sibling silent SSO, local logout, and global revocation passed |
-| Document/reference authorization hardening | PASS 1/1 on a clean database; role escalation, restricted document/detail/attachment/link access, and foreign configuration references fail closed |
-| Full API regression | PASS; final clean-database run reported 702 total, 696 passed, 0 failed, 6 HTTP-only skips in 616,919 ms. Earlier stale TechDeck-navigation and pnpm-policy assertions were corrected and passed in focused/final reruns. |
+| Compiled runtime and health | PASS; readiness-gated supervisor applied the release, API `/healthz` and `/readyz` returned 200, and web `/healthz` returned 200 |
+| Exact-host TechDeck browser | PASS 1/1 in 20.3 seconds; PKCE/SSO, configuration/network/relationship creation, health update, exact item deep link, runbook review/approval/publication/reload, evidence/report/time creation, ticket create/update/reload, exact shared Directory client detail, workspace persistence, 390-pixel mobile routes, My Apps return/reopen, and host-only logout |
 | Lint/format | NOT DEFINED; this repository has no supported lint or formatting script |
 
-The first production-host SSO attempt reached the final part of the
-twelve-module loop but exceeded the prior global 60-second test timeout. It
-had no application assertion failure. The scenario now has an explicit
-180-second bound and the fresh 2/2 rerun passed.
+The first browser attempt correctly exposed the existing canonical navigation
+contract: module-host `/app` must return to OperatorOS My Apps. The TechDeck
+scenario now launches through `/assets` and retains the `/app` redirect
+contract. A later attempt exposed the enum-label submission defect in typed
+evidence creation; the selector was corrected, rebuilt, and the complete
+fresh browser rerun passed. Fail-closed startup attempts without required test
+secrets were rejected as evidence.
 
-One attempted final aggregate omitted the explicit test-only session key
-needed by files that import authentication before shared setup; that run was
-stopped and rejected as evidence. A second correctly configured run was also
-stopped after manual review found the record-level authorization edge fixed by
-the focused regression above. Only the final new-database aggregate recorded
-in the table is authoritative.
+## Replit configuration boundary
+
+The active TechDeck managed-operations core requires no additional
+TechDeck-specific third-party secret. The OperatorOS deployment still needs
+its normal server-only configuration, including:
+
+- `DATABASE_URL`
+- `SESSION_SECRET`
+- `SERVICE_TOKEN`
+- `SSO_CODE_PEPPER`
+- `SSO_IP_HASH_KEY`
+- `SSO_DATA_ENCRYPTION_KEY`
+- `SSO_CODE_ENCRYPTION_SECRET`
+- canonical OperatorOS/module URL variables documented by the platform
+- `ADMIN_PASSWORD` only when the initial admin seed still needs creation
+
+Stripe, OpenAI, email, and other shared provider secrets are conditional on
+the separately enabled platform/provider features; they are not required for
+the verified TechDeck managed core. Attachment storage/scanning remains a
+deployment decision and must fail closed when its shared provider is not
+configured.
 
 ## Remaining state-5 gates
 
 - Review and human-authorized deployment of the cumulative revision.
 - Public 48/48 read-only verification on the exact deployed commit.
-- Authenticated deployed TechDeck create/update/reload/deep-link/logout and
-  second-tenant denial evidence.
-- Approved production attachment/provider decisions.
+- Authenticated deployed TechDeck persistence, deep-link, authorization,
+  tenant-isolation, return, and logout evidence.
+- Approved production attachment/provider configuration.
 - Frozen standalone export, reviewed dry run, authorized apply,
-  reconciliation, write freeze, and rollback rehearsal.
+  reconciliation, write freeze, rollback rehearsal, and cutover approval.

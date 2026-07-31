@@ -5,6 +5,33 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: Phase 17 OperatorOS release identity and enabled-module SSO gate
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## TechDeck zero-gap follow-up — 2026-07-29
+
+TechDeck was re-baselined against clean source commit
+`8125f8d89d8d39d60a50c8061a26133a0c917792`. Its executable ledger inventories
+all 382 discovered capabilities—65 pages, 221 routes, 45 tables, 46
+provider/config references, and 5 background processes—with 91 active, 109
+shared replacements, 48 security retirements, 134 product-boundary
+retirements, zero unclassified items, and zero restoration gaps. This closes
+the approved source/local inventory gate without restoring child identity,
+billing, provider authority, secret storage, anonymous intake, recurrence,
+business invoicing, or remote device/script execution.
+
+The current exact-host TechDeck test passed 1/1 in 20.3 seconds against a
+compiled production build, readiness-gated supervisor, local HTTPS host proxy,
+and disposable PostgreSQL 16 database. It proves PKCE login/return,
+tenant-scoped configuration and network creation, topology and health updates,
+exact item deep links, runbook review/approval/publication and reload, typed
+evidence, reports, time, ticket creation/update/reload, exact shared Directory
+client selection, workspace persistence, 390-pixel mobile compatibility,
+My Apps return/reopen, and host-only local logout. API health/readiness and web
+health returned HTTP 200.
+
+This follow-up does not change the ecosystem **NOT ACCEPTED** verdict or claim
+TechDeck state 5. The reviewed revision was not deployed, production
+attachment/providers were not enabled, and no real export, apply,
+reconciliation, rollback rehearsal, or cutover was authorized.
+
 ## Phase 17 production-truth update — 2026-07-29
 
 The public release and refreshed `origin/main` matched at

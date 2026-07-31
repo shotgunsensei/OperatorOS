@@ -1,6 +1,6 @@
 # TechDeck migration plan
 
-Assessment date: 2026-07-18
+Assessment date: 2026-07-29
 
 ## Source and target
 
@@ -8,6 +8,12 @@ The provenance source is the clean `C:\Dev\Tech-Deck` checkout at commit
 `8125f8d89d8d39d60a50c8061a26133a0c917792`. It remains read-only. Its
 standalone server, identity, billing, dependencies, migrations, uploads, and
 runtime are never copied into or started from OperatorOS.
+
+The executable source ledger inventories all 382 discovered capabilities
+(65 pages, 221 routes, 45 tables, 46 provider/config references, and 5
+background processes) with zero unclassified items and zero restoration gaps.
+It proves the approved target boundary; it does not authorize a data export or
+apply.
 
 The target is the OperatorOS-owned TechDeck schema plus shared Directory and
 shared attachment services. Directory organizations and sites remain the only

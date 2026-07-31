@@ -33,7 +33,7 @@ function routeSelection(moduleSlug: DirectoryModuleSlug): { tab: Tab; organizati
   const organizationMatch = path.match(/\/(?:clients|customers|vendors)\/([a-z0-9-]+)\/?$/);
   return {
     tab: 'organizations',
-    organizationId: moduleSlug === 'pulsedesk' ? organizationMatch?.[1] ?? '' : '',
+    organizationId: organizationMatch?.[1] ?? '',
   };
 }
 

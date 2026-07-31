@@ -87,6 +87,11 @@ function priorityLabel(priority: TechDeckTicketPriority): string {
   return PRIORITY_OPTIONS.find((option) => option.value === priority)?.label ?? priority;
 }
 
+function routeTicketId(): string {
+  if (typeof window === 'undefined') return '';
+  return window.location.pathname.match(/\/(?:m\/)?tickets\/([a-z0-9-]+)\/?$/)?.[1] ?? '';
+}
+
 function ticketDeadline(ticket: TechDeckTicket): { label: string; value: string; overdue: boolean } | null {
   if (!ticket.respondedAt && ticket.responseDeadline) {
     return {
@@ -124,10 +129,12 @@ export default function TechDeckTicketQueue({
   const [statusFilter, setStatusFilter] = useState<TechDeckTicketStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<TechDeckTicketPriority | 'all'>('all');
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>('all');
+  const [requestedTicketId, setRequestedTicketId] = useState('');
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setRequestedTicketId(routeTicketId());
     setLoading(true);
     setLoadError(null);
     setActionError(null);
@@ -167,6 +174,9 @@ export default function TechDeckTicketQueue({
     mine: tickets.filter((ticket) => ticket.assignedToUserId === currentUserId && !['resolved', 'closed'].includes(ticket.status)).length,
     overdue: tickets.filter((ticket) => ticketDeadline(ticket)?.overdue).length,
   }), [currentUserId, tickets]);
+  const requestedTicket = requestedTicketId
+    ? tickets.find((ticket) => ticket.id === requestedTicketId)
+    : undefined;
 
   function clearFilters() {
     setSearch('');
@@ -297,6 +307,14 @@ export default function TechDeckTicketQueue({
           <Metric label="Overdue" value={String(metrics.overdue)} />
         </div>
       </div>
+
+      {requestedTicketId && !loading && (
+        <div className="techdeck-ticket-route-context" data-testid="techdeck-ticket-route-context" data-found={Boolean(requestedTicket)}>
+          {requestedTicket
+            ? <><CheckCircle2 size={17} aria-hidden="true" /><span>Deep-linked ticket: <strong>#{requestedTicket.number} {requestedTicket.title}</strong></span></>
+            : <><AlertTriangle size={17} aria-hidden="true" /><span>The requested ticket is not available in this tenant.</span></>}
+        </div>
+      )}
 
       {loadError && (
         <div className="techdeck-ticket-error" role="alert" data-testid="techdeck-ticket-error">
@@ -484,7 +502,7 @@ export default function TechDeckTicketQueue({
             const canChangeAssignment = !assignmentOwnedByAnother || canManageTickets;
             const isUpdating = updatingId === ticket.id;
             return (
-              <article className="techdeck-ticket-card" key={ticket.id} data-testid={`techdeck-ticket-${ticket.id}`}>
+              <article className="techdeck-ticket-card" key={ticket.id} data-testid={`techdeck-ticket-${ticket.id}`} data-active={ticket.id === requestedTicketId}>
                 <div className="techdeck-ticket-card-main">
                   <div className="techdeck-ticket-card-flags">
                     <span className={`techdeck-ticket-priority techdeck-ticket-priority-${ticket.priority}`}>
@@ -610,6 +628,8 @@ const ticketQueueCss = `
   .techdeck-ticket-metrics span { color: #8fa3bd; font-size: 10px; text-transform: uppercase; font-weight: 800; }
   .techdeck-ticket-metrics strong { color: #e5eefc; font-size: 14px; font-variant-numeric: tabular-nums; }
   .techdeck-ticket-error { border: 1px solid rgba(239,68,68,.38); background: rgba(127,29,29,.2); color: #fecaca; border-radius: 7px; padding: 11px 12px; display: flex; gap: 10px; align-items: center; font-size: 13px; }
+  .techdeck-ticket-route-context { border: 1px solid rgba(148,163,184,.24); background: #101826; color: #cbd5e1; border-radius: 7px; padding: 10px 12px; display: flex; gap: 9px; align-items: center; font-size: 13px; }
+  .techdeck-ticket-route-context[data-found=true] { border-color: rgba(56,189,248,.45); color: #bae6fd; }
   .techdeck-ticket-error > div { flex: 1; display: grid; gap: 3px; }
   .techdeck-ticket-error span { color: #fca5a5; }
   .techdeck-ticket-error button, .techdeck-ticket-empty button { border: 1px solid rgba(56,189,248,.3); background: #101826; color: #e5eefc; border-radius: 6px; padding: 8px 10px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font: inherit; font-weight: 800; cursor: pointer; }
@@ -636,6 +656,7 @@ const ticketQueueCss = `
   .techdeck-ticket-search input { padding-left: 34px; }
   .techdeck-ticket-list { display: grid; gap: 9px; }
   .techdeck-ticket-card { border: 1px solid rgba(148,163,184,.18); border-radius: 8px; background: #0b111d; padding: 13px; display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 14px; align-items: start; }
+  .techdeck-ticket-card[data-active=true] { border-color: #38bdf8; box-shadow: 0 0 0 1px rgba(56,189,248,.5); background: rgba(14,165,233,.08); }
   .techdeck-ticket-card-main { min-width: 0; }
   .techdeck-ticket-card-flags { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
   .techdeck-ticket-priority, .techdeck-ticket-status-pill { display: inline-flex; width: fit-content; border-radius: 999px; padding: 3px 7px; font-size: 9px; font-weight: 900; text-transform: uppercase; }
