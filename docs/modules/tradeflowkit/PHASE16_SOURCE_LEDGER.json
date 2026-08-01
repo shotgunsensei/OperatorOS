@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "moduleSlug": "tradeflowkit",
-  "capturedAtUtc": "2026-08-01T18:49:43.539Z",
+  "capturedAtUtc": "2026-08-01T21:29:16.197Z",
   "source": {
     "repository": "https://github.com/shotgunsensei/TradeFlowKit.git",
     "commit": "37aa67f1da804fc3ac56f36e50e01362077d7a26",
@@ -2974,33 +2974,58 @@
         "method": "POST",
         "path": "/api/invoices/bulk-delete",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
-        "domain": "invoice_import_bulk",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation."
+        "disposition": "retired_security",
+        "domain": "invoice_bulk_delete",
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-safe-bulk-operations.test.ts",
+          "apps/api/test/tradeflowkit-safe-bulk-operations-static.test.ts",
+          "docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md"
+        ],
+        "note": "Bulk deletion remains prohibited; invoices retain durable financial and payment history."
       },
       {
         "key": "POST /api/invoices/bulk-mark-paid",
         "method": "POST",
         "path": "/api/invoices/bulk-mark-paid",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
-        "domain": "invoice_import_bulk",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation."
+        "disposition": "active",
+        "domain": "invoice_safe_bulk",
+        "targetPointers": [
+          "apps/api/src/lib/tradeflowkit-bulk-operations.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitTrash.tsx",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-safe-bulk-operations.test.ts",
+          "apps/api/test/tradeflowkit-safe-bulk-operations-static.test.ts",
+          "docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md"
+        ],
+        "note": "Admin-only invoice batches are capped at 25, tenant scoped, optimistic, atomic, audited, replay safe, and create exact payment-ledger records."
       },
       {
         "key": "POST /api/invoices/bulk-restore",
         "method": "POST",
         "path": "/api/invoices/bulk-restore",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
-        "domain": "invoice_import_bulk",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation."
+        "disposition": "active",
+        "domain": "invoice_safe_bulk",
+        "targetPointers": [
+          "apps/api/src/lib/tradeflowkit-bulk-operations.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitTrash.tsx",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-safe-bulk-operations.test.ts",
+          "apps/api/test/tradeflowkit-safe-bulk-operations-static.test.ts",
+          "docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md"
+        ],
+        "note": "Admin-only invoice batches are capped at 25, tenant scoped, optimistic, atomic, audited, replay safe, and create exact payment-ledger records."
       },
       {
         "key": "POST /api/invoices/import",
@@ -3008,10 +3033,10 @@
         "path": "/api/invoices/import",
         "sourcePointer": "server/routes/invoices.ts",
         "disposition": "phase16_gap",
-        "domain": "invoice_import_bulk",
+        "domain": "invoice_import",
         "targetPointers": [],
         "evidence": [],
-        "note": "Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation."
+        "note": "Invoice import still needs a bounded schema, line reconciliation, idempotency, and financial validation."
       },
       {
         "key": "POST /api/jobs",
@@ -3035,33 +3060,58 @@
         "method": "POST",
         "path": "/api/jobs/bulk-delete",
         "sourcePointer": "server/routes/jobs.ts",
-        "disposition": "phase16_gap",
-        "domain": "job_bulk_import",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+        "disposition": "retired_security",
+        "domain": "job_bulk_delete",
+        "targetPointers": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-safe-bulk-operations.test.ts",
+          "apps/api/test/tradeflowkit-safe-bulk-operations-static.test.ts",
+          "docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md"
+        ],
+        "note": "Bulk deletion remains prohibited; retained job records use dependency-safe restore and single-record history-safe archive."
       },
       {
         "key": "POST /api/jobs/bulk-restore",
         "method": "POST",
         "path": "/api/jobs/bulk-restore",
         "sourcePointer": "server/routes/jobs.ts",
-        "disposition": "phase16_gap",
-        "domain": "job_bulk_import",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+        "disposition": "active",
+        "domain": "job_safe_bulk",
+        "targetPointers": [
+          "apps/api/src/lib/tradeflowkit-bulk-operations.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx",
+          "apps/web/src/components/module-shells/TradeFlowKitTrash.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-safe-bulk-operations.test.ts",
+          "apps/api/test/tradeflowkit-safe-bulk-operations-static.test.ts",
+          "docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md"
+        ],
+        "note": "Admin-only job batches are capped at 25, tenant scoped, optimistic, atomic, audited, and protected by shared idempotency."
       },
       {
         "key": "POST /api/jobs/bulk-status",
         "method": "POST",
         "path": "/api/jobs/bulk-status",
         "sourcePointer": "server/routes/jobs.ts",
-        "disposition": "phase16_gap",
-        "domain": "job_bulk_import",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+        "disposition": "active",
+        "domain": "job_safe_bulk",
+        "targetPointers": [
+          "apps/api/src/lib/tradeflowkit-bulk-operations.ts",
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx",
+          "apps/web/src/components/module-shells/TradeFlowKitTrash.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-safe-bulk-operations.test.ts",
+          "apps/api/test/tradeflowkit-safe-bulk-operations-static.test.ts",
+          "docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md"
+        ],
+        "note": "Admin-only job batches are capped at 25, tenant scoped, optimistic, atomic, audited, and protected by shared idempotency."
       },
       {
         "key": "POST /api/jobs/import",
@@ -3069,10 +3119,10 @@
         "path": "/api/jobs/import",
         "sourcePointer": "server/routes/jobs.ts",
         "disposition": "phase16_gap",
-        "domain": "job_bulk_import",
+        "domain": "job_import",
         "targetPointers": [],
         "evidence": [],
-        "note": "Bulk/import behavior needs bounded validation, idempotency, and reconciliation."
+        "note": "Job import still needs a bounded schema, idempotency, duplicate policy, and customer reconciliation."
       },
       {
         "key": "POST /api/leads",

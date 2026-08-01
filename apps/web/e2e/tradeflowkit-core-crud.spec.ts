@@ -219,6 +219,19 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
     await jobEditor.getByRole('button', { name: /^Save job/ }).click();
     await expect(page.getByTestId(`tradeflowkit-job-${jobId}`)).toContainText(updatedJobTitle);
 
+    await page.getByLabel(`Select ${updatedJobTitle} for batch status`).check();
+    const jobBatch = page.getByTestId('tradeflowkit-job-bulk-actions');
+    await jobBatch.getByLabel('Bulk job status').selectOption('scheduled');
+    page.once('dialog', dialog => void dialog.accept());
+    await jobBatch.getByRole('button', { name: 'Apply status' }).click();
+    await expect.poll(async () => {
+      const result = await pg.query<{ status: string; version: number }>(
+        `select status, version from tradeflowkit_jobs where tenant_id = $1 and id = $2`,
+        [identity!.tenantId, jobId],
+      );
+      return result.rows[0];
+    }).toMatchObject({ status: 'scheduled', version: 3 });
+
     await page.getByLabel('Search jobs').fill(suffix);
     await page.getByLabel('Filter job status').selectOption('scheduled');
     await expect(page.getByTestId(`tradeflowkit-job-${jobId}`)).toBeVisible();
@@ -358,7 +371,9 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
     await expect(archivedJob).toContainText(updatedJobTitle);
     await archivedCustomer.getByRole('button', { name: 'Restore' }).click();
     await expect(archivedCustomer).toHaveCount(0);
-    await page.getByTestId(`tradeflowkit-trash-jobs-${jobId}`).getByRole('button', { name: 'Restore' }).click();
+    await page.getByLabel(`Select archived job ${jobId}`).check();
+    page.once('dialog', dialog => void dialog.accept());
+    await page.getByTestId('tradeflowkit-jobs-bulk-restore').getByRole('button', { name: 'Restore selected' }).click();
     await expect(page.getByTestId(`tradeflowkit-trash-jobs-${jobId}`)).toHaveCount(0);
     await page.goto(`https://tradeflowkit.operatoros.net/jobs/${jobId}`);
     await expect(page.getByTestId(`tradeflowkit-job-${jobId}`)).toContainText(updatedJobTitle);

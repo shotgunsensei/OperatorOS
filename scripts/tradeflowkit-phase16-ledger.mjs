@@ -108,6 +108,11 @@ const accountingExportEvidence = [
   'apps/api/test/tradeflowkit-accounting-exports.test.ts',
   'apps/web/src/components/module-shells/TradeFlowKitOperations.tsx',
 ];
+const safeBulkEvidence = [
+  'apps/api/test/tradeflowkit-safe-bulk-operations.test.ts',
+  'apps/api/test/tradeflowkit-safe-bulk-operations-static.test.ts',
+  'docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md',
+];
 
 function classifyPage(path) {
   if (['/subscription', '/admin', '/access-denied'].includes(path)) {
@@ -459,8 +464,26 @@ function classifyApi(method, path) {
     );
   }
   if (path.startsWith('/api/jobs')) {
-    if (path.includes('/import') || path.includes('/bulk-')) {
-      return outcome(GAP, 'job_bulk_import', [], [], 'Bulk/import behavior needs bounded validation, idempotency, and reconciliation.');
+    if (path === '/api/jobs/import') {
+      return outcome(GAP, 'job_import', [], [], 'Job import still needs a bounded schema, idempotency, duplicate policy, and customer reconciliation.');
+    }
+    if (path === '/api/jobs/bulk-delete') {
+      return outcome(
+        RETIRED_SECURITY,
+        'job_bulk_delete',
+        ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md', 'docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md'],
+        safeBulkEvidence,
+        'Bulk deletion remains prohibited; retained job records use dependency-safe restore and single-record history-safe archive.',
+      );
+    }
+    if (path === '/api/jobs/bulk-status' || path === '/api/jobs/bulk-restore') {
+      return outcome(
+        ACTIVE,
+        'job_safe_bulk',
+        ['apps/api/src/lib/tradeflowkit-bulk-operations.ts', 'apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitOperations.tsx', 'apps/web/src/components/module-shells/TradeFlowKitTrash.tsx'],
+        safeBulkEvidence,
+        'Admin-only job batches are capped at 25, tenant scoped, optimistic, atomic, audited, and protected by shared idempotency.',
+      );
     }
     return outcome(
       ACTIVE,
@@ -498,8 +521,26 @@ function classifyApi(method, path) {
     );
   }
   if (path.startsWith('/api/invoices')) {
-    if (path.includes('/import') || path.includes('/bulk-')) {
-      return outcome(GAP, 'invoice_import_bulk', [], [], 'Invoice import and bulk behavior still needs bounded validation, idempotency, and reconciliation.');
+    if (path === '/api/invoices/import') {
+      return outcome(GAP, 'invoice_import', [], [], 'Invoice import still needs a bounded schema, line reconciliation, idempotency, and financial validation.');
+    }
+    if (path === '/api/invoices/bulk-delete') {
+      return outcome(
+        RETIRED_SECURITY,
+        'invoice_bulk_delete',
+        ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md', 'docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md'],
+        safeBulkEvidence,
+        'Bulk deletion remains prohibited; invoices retain durable financial and payment history.',
+      );
+    }
+    if (path === '/api/invoices/bulk-restore' || path === '/api/invoices/bulk-mark-paid') {
+      return outcome(
+        ACTIVE,
+        'invoice_safe_bulk',
+        ['apps/api/src/lib/tradeflowkit-bulk-operations.ts', 'apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitTrash.tsx', 'apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx'],
+        safeBulkEvidence,
+        'Admin-only invoice batches are capped at 25, tenant scoped, optimistic, atomic, audited, replay safe, and create exact payment-ledger records.',
+      );
     }
     if (
       (path === '/api/invoices' && upperMethod === 'POST') ||

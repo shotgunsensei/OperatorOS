@@ -40,12 +40,15 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
   const [viewName, setViewName] = useState('');
   const [shareView, setShareView] = useState(false);
   const [viewPending, setViewPending] = useState(false);
+  const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState('scheduled');
 
   const load = useCallback(async () => {
     setLoading(true); setError(null); setConflict(false);
     try {
       const next = await moduleShellApi.tradeflowkit.operations({ search: search || undefined, status: status || undefined });
       setData(next);
+      setSelectedJobIds(new Set());
       const nestedJobId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/jobs\/([a-z0-9-]+)$/i)?.[1] || '';
       const nestedTaskId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/tasks\/([a-z0-9-]+)$/i)?.[1] || '';
       const taskJobId = next.tasks.find(task => task.id === nestedTaskId)?.jobId || '';
@@ -143,6 +146,24 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
     finally { setViewPending(false); }
   }
 
+  function toggleBulkJob(id: string) {
+    setSelectedJobIds(current => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else if (next.size < 25) next.add(id);
+      return next;
+    });
+  }
+
+  function applyBulkStatus() {
+    const records = data.jobs
+      .filter(job => selectedJobIds.has(job.id))
+      .map(job => ({ id: job.id, expectedVersion: job.version }));
+    if (records.length === 0) return;
+    if (!window.confirm(`Set ${records.length} selected job${records.length === 1 ? '' : 's'} to ${bulkStatus.replaceAll('_', ' ')}? The batch is all-or-nothing.`)) return;
+    void run(() => moduleShellApi.tradeflowkit.bulkJobStatus(records, bulkStatus, `job-bulk-status:${crypto.randomUUID()}`));
+  }
+
   return (
     <section id="tradeflowkit-operations" className="tfk-panel tfk-ops" data-testid="tradeflowkit-operations" tabIndex={-1}>
       <style>{css}</style>
@@ -192,11 +213,23 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
           : <div className="tfk-saved-chips" aria-label="Saved job views">{savedViews.map(view => <div key={view.id} data-testid={`tradeflowkit-saved-view-${view.id}`}><button type="button" className="tfk-saved-apply" onClick={() => applySavedView(view)} disabled={viewPending}>{view.isShared && <Share2 size={12} />}{view.name}</button>{view.owned && <button type="button" className="tfk-saved-delete" aria-label={`Delete saved view ${view.name}`} onClick={() => void deleteSavedView(view)} disabled={viewPending}><Trash2 size={12} /></button>}</div>)}</div>}
       </div>
 
+      {canManage && data.jobs.length > 0 && <section className="tfk-bulk-bar" data-testid="tradeflowkit-job-bulk-actions" aria-label="Job batch actions">
+        <div><CheckCircle2 size={16} /><span><strong>{selectedJobIds.size} selected</strong><small>Choose up to 25 visible jobs. Every version must still match.</small></span></div>
+        <select aria-label="Bulk job status" value={bulkStatus} onChange={event => setBulkStatus(event.target.value)}>
+          <option value="lead">Lead</option><option value="quoted">Quoted</option><option value="scheduled">Scheduled</option><option value="in_progress">In progress</option><option value="done">Done</option><option value="invoiced">Invoiced</option><option value="paid">Paid</option><option value="canceled">Canceled</option>
+        </select>
+        <button type="button" disabled={pending || selectedJobIds.size === 0} onClick={applyBulkStatus}>Apply status</button>
+        {selectedJobIds.size > 0 && <button type="button" className="secondary" disabled={pending} onClick={() => setSelectedJobIds(new Set())}>Clear</button>}
+      </section>}
+
       {loading ? <div className="tfk-ops-state" aria-busy="true" data-testid="tradeflowkit-operations-loading"><Loader2 className="spin" size={18} /> Loading operations…</div>
         : data.jobs.length === 0 ? <div className="tfk-ops-state" data-testid="tradeflowkit-operations-empty"><Wrench size={20} /><div><strong>No jobs in this view</strong><span>Convert a lead or create a customer job in the revenue workflow.</span></div></div>
           : <div className="tfk-ops-layout">
             <aside aria-label="Jobs">
-              {data.jobs.map(job => <JobButton key={job.id} job={job} active={job.id === selectedJobId} onClick={() => setSelectedJobId(job.id)} settings={settings} />)}
+              {data.jobs.map(job => <div className="tfk-job-choice" key={job.id}>
+                {canManage && <input type="checkbox" aria-label={`Select ${job.title} for batch status`} checked={selectedJobIds.has(job.id)} disabled={pending || (!selectedJobIds.has(job.id) && selectedJobIds.size >= 25)} onChange={() => toggleBulkJob(job.id)} />}
+                <JobButton job={job} active={job.id === selectedJobId} onClick={() => setSelectedJobId(job.id)} settings={settings} />
+              </div>)}
             </aside>
             <div className="tfk-task-board">
               {selectedJob && <>
@@ -336,9 +369,13 @@ const css = `
   .tfk-saved-chips { display:flex; gap:6px; flex-wrap:wrap; }.tfk-saved-chips > div { display:inline-flex; border:1px solid rgba(5,150,105,.22); border-radius:999px; overflow:hidden; background:white; }
   .tfk-saved-chips button { border:0; background:transparent; color:#047857; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:4px; }.tfk-saved-chips .tfk-saved-delete { color:#b91c1c; padding-left:6px; border-left:1px solid rgba(5,150,105,.14); }
   .tfk-saved-empty { color:#6d847c; font-size:11px; }
+  .tfk-bulk-bar { border:1px solid rgba(3,105,161,.2); border-radius:8px; background:#f0f9ff; padding:9px; display:grid; grid-template-columns:minmax(190px,1fr) minmax(150px,190px) auto auto; gap:8px; align-items:center; }
+  .tfk-bulk-bar>div { display:flex; gap:8px; align-items:center; color:#0369a1; }.tfk-bulk-bar>div span { display:grid; }.tfk-bulk-bar small { color:#526b76; font-size:10px; }
+  .tfk-bulk-bar button { border:0; border-radius:7px; padding:9px 11px; background:#0369a1; color:white; font-weight:800; cursor:pointer; }.tfk-bulk-bar button.secondary { background:#64748b; }.tfk-bulk-bar button:disabled { opacity:.5; cursor:not-allowed; }
   .tfk-ops-layout { display:grid; grid-template-columns:minmax(210px,280px) minmax(0,1fr); gap:12px; min-height:280px; }
   .tfk-ops-layout aside { display:grid; align-content:start; gap:6px; max-height:520px; overflow:auto; }
-  .tfk-ops-layout aside button { text-align:left; border:1px solid rgba(22,101,52,.14); border-radius:7px; background:white; padding:10px; display:grid; gap:3px; cursor:pointer; color:#10231d; }
+  .tfk-job-choice { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:6px; }.tfk-job-choice>input { width:auto; margin:0 0 0 3px; }
+  .tfk-ops-layout aside button { width:100%; text-align:left; border:1px solid rgba(22,101,52,.14); border-radius:7px; background:white; padding:10px; display:grid; gap:3px; cursor:pointer; color:#10231d; }
   .tfk-ops-layout aside button.active { border-color:#059669; background:#ecfdf5; box-shadow:inset 3px 0 #059669; }
   .tfk-ops-layout aside span,.tfk-task-title span { color:#047857; font-size:10px; font-weight:900; text-transform:uppercase; }
   .tfk-ops-layout aside small { color:#6d847c; text-transform:capitalize; }
@@ -353,5 +390,5 @@ const css = `
   .spin { animation:tfk-ops-spin 1s linear infinite; } @keyframes tfk-ops-spin { to { transform:rotate(360deg); } }
   .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }
   @media(max-width:960px){.tfk-ops-metrics{grid-template-columns:repeat(3,1fr)}.tfk-settings{grid-template-columns:repeat(2,1fr)}.tfk-settings>div{grid-column:1/-1}.tfk-settings button{grid-column:auto}}
-  @media(max-width:700px){.tfk-ops-head{display:grid}.tfk-ops-toolbar,.tfk-ops-layout{grid-template-columns:1fr}.tfk-saved-views form{grid-template-columns:auto minmax(0,1fr)}.tfk-saved-views form button{grid-column:1/-1}.tfk-ops-layout aside{display:flex;overflow:auto}.tfk-ops-layout aside button{min-width:190px}.tfk-task-title{display:grid}.tfk-task-form,.tfk-editor-grid,.tfk-editor-grid.task{grid-template-columns:1fr}.tfk-task{grid-template-columns:auto minmax(0,1fr)}.tfk-task>.tfk-record-actions{grid-column:1/-1}.tfk-settings{grid-template-columns:1fr}.tfk-ops-metrics{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:700px){.tfk-ops-head{display:grid}.tfk-ops-toolbar,.tfk-ops-layout,.tfk-bulk-bar{grid-template-columns:1fr}.tfk-saved-views form{grid-template-columns:auto minmax(0,1fr)}.tfk-saved-views form button{grid-column:1/-1}.tfk-ops-layout aside{display:flex;overflow:auto}.tfk-job-choice{min-width:220px}.tfk-ops-layout aside button{min-width:190px}.tfk-task-title{display:grid}.tfk-task-form,.tfk-editor-grid,.tfk-editor-grid.task{grid-template-columns:1fr}.tfk-task{grid-template-columns:auto minmax(0,1fr)}.tfk-task>.tfk-record-actions{grid-column:1/-1}.tfk-settings{grid-template-columns:1fr}.tfk-ops-metrics{grid-template-columns:repeat(2,1fr)}}
 `;

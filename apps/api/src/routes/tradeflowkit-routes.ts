@@ -37,6 +37,14 @@ import {
 import { enqueueOutboxMessage } from '../lib/shared-notification-outbox.js';
 import { getTradeFlowKitPaymentProvider } from '../lib/tradeflowkit-payment-provider.js';
 import {
+  TRADEFLOWKIT_BULK_LIMIT,
+  bulkMarkTradeFlowKitInvoicesPaid,
+  bulkRestoreTradeFlowKitInvoices,
+  bulkRestoreTradeFlowKitJobs,
+  bulkUpdateTradeFlowKitJobStatus,
+  type TradeFlowKitBulkRecord,
+} from '../lib/tradeflowkit-bulk-operations.js';
+import {
   TRADEFLOWKIT_ACCOUNTING_EXPORT_VERSION,
   buildQuickBooksIif,
   buildQuickBooksInvoiceCsv,
@@ -144,6 +152,37 @@ function idempotencyKey(request: FastifyRequest): string | null {
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (!value || !/^[A-Za-z0-9._:-]{8,200}$/.test(value)) return null;
   return value;
+}
+
+function bulkIdempotencyKey(request: FastifyRequest): string | null {
+  const value = idempotencyKey(request);
+  return value && value.length <= 160 ? value : null;
+}
+
+function onlyFields(value: Record<string, unknown>, allowed: string[]): void {
+  if (Object.keys(value).some(key => !allowed.includes(key))) throw new InputError('FIELD_NOT_ALLOWED');
+}
+
+function bulkRecords(value: unknown): TradeFlowKitBulkRecord[] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > TRADEFLOWKIT_BULK_LIMIT) {
+    throw new InputError('BULK_RECORDS_INVALID', 'records');
+  }
+  const seen = new Set<string>();
+  const records = value.map((raw, index) => {
+    const row = record(raw);
+    onlyFields(row, ['id', 'expectedVersion']);
+    const id = stringValue(row.id, `records.${index}.id`, 36, true)!;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+      throw new InputError('FIELD_INVALID', `records.${index}.id`);
+    }
+    if (seen.has(id)) throw new InputError('BULK_DUPLICATE_ID', `records.${index}.id`);
+    seen.add(id);
+    return {
+      id,
+      expectedVersion: integer(row.expectedVersion, `records.${index}.expectedVersion`, 1, 1_000_000, true)!,
+    };
+  });
+  return records.sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function pageQuery(raw: unknown) {
@@ -926,6 +965,120 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
       }
       throw error;
     }
+  });
+
+  app.post('/v1/modules/tradeflowkit/jobs/bulk-status', { preHandler: [...adminGuards] }, async (request, reply) => {
+    const key = bulkIdempotencyKey(request);
+    if (!key) return reply.code(400).send({
+      error: 'A valid Idempotency-Key header is required',
+      code: 'IDEMPOTENCY_KEY_REQUIRED',
+      field: 'Idempotency-Key',
+    });
+    let input: { records: TradeFlowKitBulkRecord[]; status: string };
+    try {
+      const raw = record(request.body);
+      onlyFields(raw, ['records', 'status']);
+      const status = stringValue(raw.status, 'status', 30, true)!;
+      if (!JOB_STATUSES.has(status)) throw new InputError('STATUS_INVALID', 'status');
+      input = { records: bulkRecords(raw.records), status };
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const result = await bulkUpdateTradeFlowKitJobStatus({
+      tenantId: tenantId(request),
+      userId: userId(request),
+      moduleId: await moduleId(),
+      idempotencyKey: key,
+    }, input);
+    return reply.code(result.status).send(result.body);
+  });
+
+  app.post('/v1/modules/tradeflowkit/trash/jobs/bulk-restore', { preHandler: [...adminGuards] }, async (request, reply) => {
+    const key = bulkIdempotencyKey(request);
+    if (!key) return reply.code(400).send({
+      error: 'A valid Idempotency-Key header is required',
+      code: 'IDEMPOTENCY_KEY_REQUIRED',
+      field: 'Idempotency-Key',
+    });
+    let input: { records: TradeFlowKitBulkRecord[] };
+    try {
+      const raw = record(request.body);
+      onlyFields(raw, ['records']);
+      input = { records: bulkRecords(raw.records) };
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const result = await bulkRestoreTradeFlowKitJobs({
+      tenantId: tenantId(request),
+      userId: userId(request),
+      moduleId: await moduleId(),
+      idempotencyKey: key,
+    }, input);
+    return reply.code(result.status).send(result.body);
+  });
+
+  app.post('/v1/modules/tradeflowkit/trash/invoices/bulk-restore', { preHandler: [...adminGuards] }, async (request, reply) => {
+    const key = bulkIdempotencyKey(request);
+    if (!key) return reply.code(400).send({
+      error: 'A valid Idempotency-Key header is required',
+      code: 'IDEMPOTENCY_KEY_REQUIRED',
+      field: 'Idempotency-Key',
+    });
+    let input: { records: TradeFlowKitBulkRecord[] };
+    try {
+      const raw = record(request.body);
+      onlyFields(raw, ['records']);
+      input = { records: bulkRecords(raw.records) };
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    try {
+      const result = await bulkRestoreTradeFlowKitInvoices({
+        tenantId: tenantId(request),
+        userId: userId(request),
+        moduleId: await moduleId(),
+        idempotencyKey: key,
+      }, input);
+      return reply.code(result.status).send(result.body);
+    } catch (error) {
+      if (databaseErrorCode(error) === '23505') {
+        return reply.code(409).send({
+          error: 'One or more invoices conflict with an active invoice; reload and retry',
+          code: 'BULK_RECORD_CONFLICT',
+        });
+      }
+      throw error;
+    }
+  });
+
+  app.post('/v1/modules/tradeflowkit/invoices/bulk-mark-paid', { preHandler: [...adminGuards] }, async (request, reply) => {
+    const key = bulkIdempotencyKey(request);
+    if (!key) return reply.code(400).send({
+      error: 'A valid Idempotency-Key header is required',
+      code: 'IDEMPOTENCY_KEY_REQUIRED',
+      field: 'Idempotency-Key',
+    });
+    let input: {
+      records: TradeFlowKitBulkRecord[];
+      method: string;
+      reference: string | null;
+      notes: string | null;
+    };
+    try {
+      const raw = record(request.body);
+      onlyFields(raw, ['records', 'method', 'reference', 'notes']);
+      const method = stringValue(raw.method, 'method', 40, true)!;
+      if (!['cash', 'check', 'card_external', 'bank_transfer', 'other'].includes(method)) {
+        throw new InputError('PAYMENT_METHOD_INVALID', 'method');
+      }
+      input = {
+        records: bulkRecords(raw.records),
+        method,
+        reference: stringValue(raw.reference, 'reference', 200),
+        notes: stringValue(raw.notes, 'notes', 2_000),
+      };
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const result = await bulkMarkTradeFlowKitInvoicesPaid({
+      tenantId: tenantId(request),
+      userId: userId(request),
+      moduleId: await moduleId(),
+      idempotencyKey: key,
+    }, input);
+    return reply.code(result.status).send(result.body);
   });
 
   app.get('/v1/modules/tradeflowkit/workflows', { preHandler: [...readGuards] }, async (request, reply) => {
