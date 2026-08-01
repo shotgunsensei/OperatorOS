@@ -1,7 +1,8 @@
 # OperatorOS current release gate
 
-- Evidence date: 2026-07-31
-- Current reviewed source: `main` at `92ca0db4a2609f4090104909bbd558e5b3b3157f`
+- Evidence date: 2026-08-01
+- Current reviewed base: `main` at `79f8eef8c34434ffaa724b55c53b0a75552ef987`
+- Current source candidate: `codex/tradeflowkit-saved-views`; deployment identity pending
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -12,6 +13,28 @@
   `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd`, build
   `c49eeb9c-5f0b-40b3-9f31-44813446124c`
 - Overall release decision: **CLOSED — do not promote**
+
+## Current additive release v30 source gate
+
+The current source candidate advances the ordered database contract from v29
+to additive v30. Step 30 creates bounded, tenant/user-owned
+`tradeflowkit_saved_views` persistence; it does not change the semantics of
+the already released v29 steps. Clean apply and idempotent reapply pass on
+disposable PostgreSQL 16, and compiled health/readiness report v30/30 with
+`tradeflowkit_saved_views` as the last step.
+
+The saved-view increment passes 14/14 focused release/static contracts, 1/1
+dedicated PostgreSQL workflow, 10/10 adjacent TradeFlowKit PostgreSQL tests,
+workspace typecheck, production build, core preflight, compiled supervisor
+health/readiness, and exact-host Chrome 1/1 in 22.0 seconds. The executable
+TradeFlowKit ledger moves from 111 active/49 gaps to 115 active/45 gaps with
+zero unclassified items.
+
+This is source/local evidence only. Working-tree artifacts are validation, not
+a deployable identity; release handoff requires a fresh build from the final
+committed revision. That revision must still be deployed and pass the
+authenticated live workflow, provider, data-cutover, and rollback gates
+before promotion.
 
 ## Phase 17 production truth
 
@@ -156,11 +179,11 @@ and migration parity remain controlled by the module parity index.
 | Frozen dependency contract | PASS FROM PHASE 0 | Pinned pnpm `10.34.5`; lockfile unchanged by Phase 1 |
 | Production environment contract | PASS | Machine-readable contract plus 7 preflight tests; core CLI preflight passed with exact canonical values and non-secret local test credentials |
 | Unsafe configuration rejection | PASS | Rejects missing/short secrets, legacy `APP_URL`, parent `COOKIE_DOMAIN`, public unified-runtime API URL, unsafe commands, legacy SSO rollback, wildcard/insecure/credentialed/loopback CORS, and drifted module hosts |
-| Database release plan | PASS | Phase 17 declares release v29 with 29 ordered, additive, secret-free steps; clean apply and idempotent reapply passed on disposable PostgreSQL 16 |
+| Database release plan | PASS | Current source declares release v30 with 30 ordered, additive, secret-free steps; clean apply and idempotent reapply passed on disposable PostgreSQL 16. Phase 17 v29 remains the historical deployed baseline. |
 | Backup/restore rehearsal | PASS LOCALLY | Phase 4 custom dump restored in 3.570 s; source/restore matched 94 public tables, 17 TradeFlowKit, 9 Directory, and 10 shared-service tables |
 | Restored data/constraints | PASS | Restored release apply passed; dump SHA-256 `d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82` |
-| Production build | PASS | Phase 17 produced SDK, API, runner gateway, and Next 15.5.22 artifacts after API/runner/web typechecks; 20 page entries generated. The exact Replit wrapper remains pinned to pnpm 10.34.5. |
-| Compiled production supervisor | PASS | Phase 17 compiled 29-step release ran idempotently, Fastify and the shared worker reached readiness on 5001 with the complete release identity, then compiled Next reached ready on 5000; no `tsx` production runtime |
+| Production build | PASS | Current source produced SDK, API, runner gateway, and Next 15.5.22 artifacts after API/runner/web typechecks; 20 page entries generated. The pre-commit identity is validation-only and must be rebuilt at the final commit. |
+| Compiled production supervisor | PASS | Current source compiled the 30-step release idempotently; Fastify, shared worker, and Next reached readiness with database release v30/30 and no `tsx` production runtime. |
 | Local canonical-host health | PASS | HTTPS apex `/healthz` returned 200 with `operatoros-api`; API `/readyz` returned 200 with database/auth/SSO/registry configured |
 | Local public URL diagnostics | PASS | TechDeck diagnostic resolved forwarded exact host, HTTPS origin, module role, and host-only cookie mode |
 | Production-host SSO browser gate | PASS LOCALLY | Phase 17 focused compiled-candidate gates pass 3/3: all 12 enabled modules plus global logout; TechDeck/PulseDesk deep link, sibling SSO and local logout; tenant-denied TechDeck and planned OutCall denial. No credential URL/storage leakage |
@@ -182,14 +205,13 @@ and migration parity remain controlled by the module parity index.
 
 ## Public deployment result
 
-The current 2026-07-31 public release is healthy and identified as
+The last verified 2026-07-31 public release was healthy and identified as
 `c29cbca376525885e906d10b3e2df647cfce6b00`, build
 `25095fde5c3543a8aa748634`. The current verifier passes 48/48 unpinned,
 including complete release/database identity and disabled OutCall behavior.
 
-Current main is `92ca0db4a2609f4090104909bbd558e5b3b3157f`. The pinned public verifier
-returns 46/48 because health and readiness correctly report the older public
-commit. No deployment or acceptance of current main is claimed.
+The public deployment was not re-verified during the v30 source work. No
+deployment or acceptance of the current candidate is claimed.
 
 ## Human deployment closure
 

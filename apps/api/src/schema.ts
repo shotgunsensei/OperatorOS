@@ -2592,6 +2592,26 @@ export const tradeflowkitSettings = pgTable('tradeflowkit_settings', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+export const tradeflowkitSavedViews = pgTable('tradeflowkit_saved_views', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  resource: varchar('resource', { length: 80 }).notNull(),
+  name: varchar('name', { length: 120 }).notNull(),
+  normalizedName: varchar('normalized_name', { length: 120 }).notNull(),
+  filters: jsonb('filters').$type<Record<string, string>>().notNull().default({}),
+  sort: jsonb('sort').$type<{ field: string; direction: 'asc' | 'desc' }>().notNull(),
+  isShared: boolean('is_shared').notNull().default(false),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  archivedAt: timestamp('archived_at'),
+}, (t) => [
+  uniqueIndex('uq_tfk_saved_views_active_name').on(t.tenantId, t.userId, t.resource, t.normalizedName)
+    .where(sql`${t.archivedAt} IS NULL`),
+  index('idx_tfk_saved_views_visible').on(t.tenantId, t.resource, t.isShared, t.userId, t.archivedAt),
+]);
+
 export const tradeflowkitSequences = pgTable('tradeflowkit_sequences', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
@@ -2632,3 +2652,4 @@ export type TradeFlowKitTaskRow = typeof tradeflowkitTasks.$inferSelect;
 export type TradeFlowKitQuoteRow = typeof tradeflowkitQuotes.$inferSelect;
 export type TradeFlowKitInvoiceRow = typeof tradeflowkitInvoices.$inferSelect;
 export type TradeFlowKitPaymentRow = typeof tradeflowkitPayments.$inferSelect;
+export type TradeFlowKitSavedViewRow = typeof tradeflowkitSavedViews.$inferSelect;

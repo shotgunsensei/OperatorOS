@@ -1,11 +1,12 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Archive, CheckCircle2, Circle, Clock3, ListChecks, Loader2, Pencil, Plus, RefreshCw, Save, Search, Settings2, Wrench, X } from 'lucide-react';
+import { AlertTriangle, Archive, Bookmark, CheckCircle2, Circle, Clock3, ListChecks, Loader2, Pencil, Plus, RefreshCw, Save, Search, Settings2, Share2, Trash2, Wrench, X } from 'lucide-react';
 import {
   moduleShellApi,
   type TradeFlowKitJob,
   type TradeFlowKitOperationsResponse,
+  type TradeFlowKitSavedView,
   type TradeFlowKitSettings,
   type TradeFlowKitTask,
 } from '@/lib/auth';
@@ -35,6 +36,10 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
   const [taskTitle, setTaskTitle] = useState('');
   const [taskPriority, setTaskPriority] = useState('normal');
   const [settings, setSettings] = useState<TradeFlowKitSettings | null>(null);
+  const [savedViews, setSavedViews] = useState<TradeFlowKitSavedView[]>([]);
+  const [viewName, setViewName] = useState('');
+  const [shareView, setShareView] = useState(false);
+  const [viewPending, setViewPending] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null); setConflict(false);
@@ -56,6 +61,17 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
   }, [canManage, search, status]);
 
   useEffect(() => { void load(); }, [load, tenantKey]);
+
+  const loadSavedViews = useCallback(async () => {
+    try {
+      const response = await moduleShellApi.tradeflowkit.savedViews('jobs');
+      setSavedViews(response.savedViews);
+    } catch (requestError) {
+      setError(message(requestError));
+    }
+  }, []);
+
+  useEffect(() => { void loadSavedViews(); }, [loadSavedViews, tenantKey]);
 
   const selectedJob = data.jobs.find(job => job.id === selectedJobId) ?? null;
   const tasks = useMemo(() => data.tasks.filter(task => task.jobId === selectedJobId), [data.tasks, selectedJobId]);
@@ -94,6 +110,39 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
     });
   }
 
+  async function saveCurrentView(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!viewName.trim()) return;
+    setViewPending(true); setError(null);
+    try {
+      await moduleShellApi.tradeflowkit.createSavedView({
+        resource: 'jobs',
+        name: viewName,
+        filters: Object.fromEntries(Object.entries({ search, status }).filter(([, value]) => value)),
+        sort: { field: 'updatedAt', direction: 'desc' },
+        isShared: canManage && shareView,
+      });
+      setViewName(''); setShareView(false);
+      await loadSavedViews();
+    } catch (requestError) { setError(message(requestError)); }
+    finally { setViewPending(false); }
+  }
+
+  function applySavedView(view: TradeFlowKitSavedView) {
+    setSearch(view.filters.search ?? '');
+    setStatus(view.filters.status ?? '');
+  }
+
+  async function deleteSavedView(view: TradeFlowKitSavedView) {
+    if (!view.owned || !window.confirm(`Delete saved view “${view.name}”?`)) return;
+    setViewPending(true); setError(null);
+    try {
+      await moduleShellApi.tradeflowkit.deleteSavedView(view.id);
+      await loadSavedViews();
+    } catch (requestError) { setError(message(requestError)); }
+    finally { setViewPending(false); }
+  }
+
   return (
     <section id="tradeflowkit-operations" className="tfk-panel tfk-ops" data-testid="tradeflowkit-operations" tabIndex={-1}>
       <style>{css}</style>
@@ -118,6 +167,18 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
         <select aria-label="Filter job status" value={status} onChange={event => setStatus(event.target.value)}>
           <option value="">All job statuses</option><option value="lead">Lead</option><option value="quoted">Quoted</option><option value="scheduled">Scheduled</option><option value="in_progress">In progress</option><option value="done">Done</option><option value="invoiced">Invoiced</option><option value="paid">Paid</option><option value="canceled">Canceled</option>
         </select>
+      </div>
+
+      <div className="tfk-saved-views" data-testid="tradeflowkit-saved-views">
+        <form onSubmit={saveCurrentView}>
+          <Bookmark size={15} />
+          <label><span className="sr-only">Saved view name</span><input aria-label="Saved view name" value={viewName} onChange={event => setViewName(event.target.value)} placeholder="Save these job filters as…" minLength={1} maxLength={120} required /></label>
+          {canManage && <label className="tfk-share-view"><input type="checkbox" checked={shareView} onChange={event => setShareView(event.target.checked)} /> <Share2 size={13} /> Share with tenant</label>}
+          <button disabled={viewPending || !viewName.trim()}><Save size={14} /> Save view</button>
+        </form>
+        {savedViews.length === 0
+          ? <span className="tfk-saved-empty">No saved job views yet.</span>
+          : <div className="tfk-saved-chips" aria-label="Saved job views">{savedViews.map(view => <div key={view.id} data-testid={`tradeflowkit-saved-view-${view.id}`}><button type="button" className="tfk-saved-apply" onClick={() => applySavedView(view)} disabled={viewPending}>{view.isShared && <Share2 size={12} />}{view.name}</button>{view.owned && <button type="button" className="tfk-saved-delete" aria-label={`Delete saved view ${view.name}`} onClick={() => void deleteSavedView(view)} disabled={viewPending}><Trash2 size={12} /></button>}</div>)}</div>}
       </div>
 
       {loading ? <div className="tfk-ops-state" aria-busy="true" data-testid="tradeflowkit-operations-loading"><Loader2 className="spin" size={18} /> Loading operations…</div>
@@ -253,6 +314,14 @@ const css = `
   .tfk-ops-toolbar label { position:relative; }.tfk-ops-toolbar svg { position:absolute; left:10px; top:10px; color:#789189; }
   .tfk-ops input,.tfk-ops select { box-sizing:border-box; width:100%; border:1px solid rgba(22,101,52,.2); border-radius:7px; padding:9px 10px; background:white; color:#10231d; font:inherit; font-size:13px; }
   .tfk-ops-toolbar input { padding-left:33px; }
+  .tfk-saved-views { border:1px solid rgba(22,101,52,.14); background:#f8fcfa; border-radius:8px; padding:9px; display:grid; gap:8px; }
+  .tfk-saved-views form { display:grid; grid-template-columns:auto minmax(180px,1fr) auto auto; gap:8px; align-items:center; color:#047857; }
+  .tfk-saved-views form > label { position:static; }.tfk-saved-views form input { padding:8px 9px; }
+  .tfk-saved-views form button { border:0; border-radius:7px; background:#047857; color:white; padding:8px 10px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; gap:5px; cursor:pointer; }
+  .tfk-saved-views .tfk-share-view { color:#425e55; font-size:11px; font-weight:800; display:flex; align-items:center; gap:5px; white-space:nowrap; }.tfk-saved-views .tfk-share-view input { width:auto; }
+  .tfk-saved-chips { display:flex; gap:6px; flex-wrap:wrap; }.tfk-saved-chips > div { display:inline-flex; border:1px solid rgba(5,150,105,.22); border-radius:999px; overflow:hidden; background:white; }
+  .tfk-saved-chips button { border:0; background:transparent; color:#047857; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:4px; }.tfk-saved-chips .tfk-saved-delete { color:#b91c1c; padding-left:6px; border-left:1px solid rgba(5,150,105,.14); }
+  .tfk-saved-empty { color:#6d847c; font-size:11px; }
   .tfk-ops-layout { display:grid; grid-template-columns:minmax(210px,280px) minmax(0,1fr); gap:12px; min-height:280px; }
   .tfk-ops-layout aside { display:grid; align-content:start; gap:6px; max-height:520px; overflow:auto; }
   .tfk-ops-layout aside button { text-align:left; border:1px solid rgba(22,101,52,.14); border-radius:7px; background:white; padding:10px; display:grid; gap:3px; cursor:pointer; color:#10231d; }
@@ -270,5 +339,5 @@ const css = `
   .spin { animation:tfk-ops-spin 1s linear infinite; } @keyframes tfk-ops-spin { to { transform:rotate(360deg); } }
   .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }
   @media(max-width:960px){.tfk-ops-metrics{grid-template-columns:repeat(3,1fr)}.tfk-settings{grid-template-columns:repeat(2,1fr)}.tfk-settings>div{grid-column:1/-1}.tfk-settings button{grid-column:auto}}
-  @media(max-width:700px){.tfk-ops-head{display:grid}.tfk-ops-toolbar,.tfk-ops-layout{grid-template-columns:1fr}.tfk-ops-layout aside{display:flex;overflow:auto}.tfk-ops-layout aside button{min-width:190px}.tfk-task-title{display:grid}.tfk-task-form,.tfk-editor-grid,.tfk-editor-grid.task{grid-template-columns:1fr}.tfk-task{grid-template-columns:auto minmax(0,1fr)}.tfk-task>.tfk-record-actions{grid-column:1/-1}.tfk-settings{grid-template-columns:1fr}.tfk-ops-metrics{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:700px){.tfk-ops-head{display:grid}.tfk-ops-toolbar,.tfk-ops-layout{grid-template-columns:1fr}.tfk-saved-views form{grid-template-columns:auto minmax(0,1fr)}.tfk-saved-views form button{grid-column:1/-1}.tfk-ops-layout aside{display:flex;overflow:auto}.tfk-ops-layout aside button{min-width:190px}.tfk-task-title{display:grid}.tfk-task-form,.tfk-editor-grid,.tfk-editor-grid.task{grid-template-columns:1fr}.tfk-task{grid-template-columns:auto minmax(0,1fr)}.tfk-task>.tfk-record-actions{grid-column:1/-1}.tfk-settings{grid-template-columns:1fr}.tfk-ops-metrics{grid-template-columns:repeat(2,1fr)}}
 `;

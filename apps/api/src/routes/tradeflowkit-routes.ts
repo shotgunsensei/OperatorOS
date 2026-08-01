@@ -18,6 +18,7 @@ import {
   tradeflowkitPayments,
   tradeflowkitQuoteItems,
   tradeflowkitQuotes,
+  tradeflowkitSavedViews,
   tradeflowkitSettings,
   tradeflowkitTagAssignments,
   tradeflowkitTags,
@@ -46,6 +47,23 @@ const TASK_PRIORITIES = new Set(['low', 'normal', 'high', 'urgent']);
 const WORKFLOW_ENTITY_TYPES = new Set(['job', 'task']);
 const JOB_STATUSES = new Set(['lead', 'quoted', 'scheduled', 'in_progress', 'done', 'invoiced', 'paid', 'canceled']);
 const WORKFLOW_MAPPED_STATUSES = new Set([...JOB_STATUSES, ...TASK_STATUSES]);
+const SAVED_VIEW_FILTERS = {
+  jobs: new Set(['search', 'status', 'priority', 'assignedToUserId', 'customerId']),
+  tasks: new Set(['search', 'status', 'priority', 'assignedToUserId', 'jobId', 'scope']),
+  leads: new Set(['search', 'status', 'urgency', 'assignedToUserId']),
+  customers: new Set(['search']),
+  quotes: new Set(['search', 'status', 'customerId']),
+  invoices: new Set(['search', 'status', 'customerId']),
+} as const;
+const SAVED_VIEW_SORTS = {
+  jobs: new Set(['updatedAt', 'createdAt', 'title', 'status', 'priority']),
+  tasks: new Set(['updatedAt', 'title', 'status', 'priority', 'dueAt']),
+  leads: new Set(['updatedAt', 'name', 'status', 'nextFollowUpAt']),
+  customers: new Set(['updatedAt', 'name']),
+  quotes: new Set(['updatedAt', 'number', 'status', 'totalCents']),
+  invoices: new Set(['updatedAt', 'number', 'status', 'totalCents']),
+} as const;
+type SavedViewResource = keyof typeof SAVED_VIEW_FILTERS;
 
 type RequestContext = { tenantId: string };
 type RequestUser = { id: string };
@@ -179,6 +197,75 @@ function mappedStatusAllowed(entityType: 'job' | 'task', status: string | null):
   return !status || (entityType === 'job' ? JOB_STATUSES : TASK_STATUSES).has(status);
 }
 
+function databaseErrorCode(error: unknown): string | null {
+  let current = error;
+  for (let depth = 0; depth < 5 && current && typeof current === 'object'; depth += 1) {
+    const code = (current as { code?: unknown }).code;
+    if (typeof code === 'string') return code;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return null;
+}
+
+function savedViewResource(value: unknown, required = true): SavedViewResource | null {
+  const resource = stringValue(value, 'resource', 80, required);
+  if (!resource) return null;
+  if (!Object.hasOwn(SAVED_VIEW_FILTERS, resource)) throw new InputError('SAVED_VIEW_RESOURCE_INVALID', 'resource');
+  return resource as SavedViewResource;
+}
+
+function savedViewInput(raw: unknown) {
+  const body = record(raw);
+  if (Object.keys(body).some(key => !['resource', 'name', 'filters', 'sort', 'isShared'].includes(key))) {
+    throw new InputError('FIELD_NOT_ALLOWED');
+  }
+  const resource = savedViewResource(body.resource)!;
+  const name = stringValue(body.name, 'name', 120, true)!;
+  const filters = body.filters === undefined ? {} : record(body.filters);
+  if (Buffer.byteLength(JSON.stringify(filters), 'utf8') > 2048) throw new InputError('SAVED_VIEW_FILTERS_TOO_LARGE', 'filters');
+  const normalizedFilters: Record<string, string> = {};
+  for (const [key, rawValue] of Object.entries(filters)) {
+    if (!SAVED_VIEW_FILTERS[resource].has(key as never)) throw new InputError('SAVED_VIEW_FILTER_INVALID', `filters.${key}`);
+    const value = stringValue(rawValue, `filters.${key}`, 100, true)!;
+    normalizedFilters[key] = value;
+  }
+  const sort = body.sort === undefined ? { field: 'updatedAt', direction: 'desc' } : record(body.sort);
+  if (Object.keys(sort).some(key => !['field', 'direction'].includes(key))) throw new InputError('SAVED_VIEW_SORT_INVALID', 'sort');
+  const field = stringValue(sort.field, 'sort.field', 40, true)!;
+  const direction = stringValue(sort.direction, 'sort.direction', 4, true)!;
+  if (!SAVED_VIEW_SORTS[resource].has(field as never) || !['asc', 'desc'].includes(direction)) {
+    throw new InputError('SAVED_VIEW_SORT_INVALID', 'sort');
+  }
+  return {
+    resource,
+    name,
+    normalizedName: normalizeName(name),
+    filters: normalizedFilters,
+    sort: { field, direction: direction as 'asc' | 'desc' },
+    isShared: booleanValue(body.isShared, 'isShared'),
+  };
+}
+
+function canShareSavedViews(request: FastifyRequest): boolean {
+  const role = (request as FastifyRequest & { tenantContext: RequestContext & { role?: string } }).tenantContext.role;
+  return role === 'owner' || role === 'admin';
+}
+
+function savedViewResponse(row: typeof tradeflowkitSavedViews.$inferSelect, actorUserId: string) {
+  return {
+    id: row.id,
+    resource: row.resource,
+    name: row.name,
+    filters: row.filters,
+    sort: row.sort,
+    isShared: row.isShared,
+    version: row.version,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    owned: row.userId === actorUserId,
+  };
+}
+
 function csvCell(value: unknown): string {
   const text = value === null || value === undefined ? '' : value instanceof Date ? value.toISOString() : String(value);
   return `"${text.replaceAll('"', '""')}"`;
@@ -269,6 +356,80 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
       jobs, tasks, payments, settings: settings[0] ?? null,
       metrics: counts.rows[0], pagination: { limit: query.limit, offset: query.offset, returned: jobs.length },
     };
+  });
+
+  app.get('/v1/modules/tradeflowkit/saved-views', { preHandler: [...readGuards] }, async (request, reply) => {
+    let resource: SavedViewResource | null;
+    try {
+      const query = record(request.query ?? {});
+      if (Object.keys(query).some(key => key !== 'resource')) throw new InputError('FIELD_NOT_ALLOWED');
+      resource = savedViewResource(query.resource, false);
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    const rows = await db.select().from(tradeflowkitSavedViews).where(and(
+      eq(tradeflowkitSavedViews.tenantId, tenant),
+      isNull(tradeflowkitSavedViews.archivedAt),
+      or(eq(tradeflowkitSavedViews.userId, actor), eq(tradeflowkitSavedViews.isShared, true)),
+      ...(resource ? [eq(tradeflowkitSavedViews.resource, resource)] : []),
+    )).orderBy(asc(tradeflowkitSavedViews.resource), asc(tradeflowkitSavedViews.name)).limit(200);
+    return { savedViews: rows.map(row => savedViewResponse(row, actor)) };
+  });
+
+  app.post('/v1/modules/tradeflowkit/saved-views', { preHandler: [...readGuards] }, async (request, reply) => {
+    let input: ReturnType<typeof savedViewInput>;
+    try { input = savedViewInput(request.body); } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    if (input.isShared && !canShareSavedViews(request)) {
+      return reply.code(403).send({ error: 'Only tenant administrators can share saved views', code: 'SAVED_VIEW_ADMIN_REQUIRED' });
+    }
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    try {
+      const outcome = await db.transaction(async tx => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`tradeflowkit:saved-view:${tenant}:${actor}:${input.resource}`}))`);
+        const usage = await tx.execute(sql`
+          SELECT COUNT(*)::int AS count
+          FROM tradeflowkit_saved_views
+          WHERE tenant_id = ${tenant} AND user_id = ${actor} AND resource = ${input.resource} AND archived_at IS NULL
+        `);
+        if (Number(usage.rows[0]?.count ?? 0) >= 50) return { kind: 'limit' as const };
+        const [row] = await tx.insert(tradeflowkitSavedViews).values({ tenantId: tenant, userId: actor, ...input }).returning();
+        await audit(tx, { tenantId: tenant, userId: actor, action: 'created', entityType: 'saved_view', entityId: row.id, metadata: { resource: input.resource, isShared: input.isShared } });
+        return { kind: 'created' as const, row };
+      });
+      if (outcome.kind === 'limit') {
+        return reply.code(409).send({ error: 'Saved view limit reached for this resource', code: 'SAVED_VIEW_LIMIT_REACHED' });
+      }
+      return reply.code(201).send(savedViewResponse(outcome.row, actor));
+    } catch (error) {
+      if (databaseErrorCode(error) === '23505') {
+        return reply.code(409).send({ error: 'A saved view with that name already exists', code: 'SAVED_VIEW_NAME_CONFLICT' });
+      }
+      throw error;
+    }
+  });
+
+  app.delete('/v1/modules/tradeflowkit/saved-views/:id', { preHandler: [...readGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    const now = new Date();
+    const row = await db.transaction(async tx => {
+      const [archived] = await tx.update(tradeflowkitSavedViews).set({
+        archivedAt: now,
+        updatedAt: now,
+        version: sql`${tradeflowkitSavedViews.version} + 1`,
+      }).where(and(
+        eq(tradeflowkitSavedViews.id, id),
+        eq(tradeflowkitSavedViews.tenantId, tenant),
+        eq(tradeflowkitSavedViews.userId, actor),
+        isNull(tradeflowkitSavedViews.archivedAt),
+      )).returning();
+      if (archived) await audit(tx, { tenantId: tenant, userId: actor, action: 'archived', entityType: 'saved_view', entityId: id, metadata: { resource: archived.resource, isShared: archived.isShared } });
+      return archived;
+    });
+    if (!row) return reply.code(404).send({ error: 'Saved view not found', code: 'SAVED_VIEW_NOT_FOUND' });
+    return { ok: true, savedView: savedViewResponse(row, actor) };
   });
 
   app.get('/v1/modules/tradeflowkit/search', { preHandler: [...readGuards] }, async (request, reply) => {

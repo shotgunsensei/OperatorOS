@@ -72,6 +72,7 @@ async function cleanupIdentity(pg: Client, identity: Identity | null) {
       'tradeflowkit_jobs',
       'tradeflowkit_customers',
       'tradeflowkit_leads',
+      'tradeflowkit_saved_views',
       'tradeflowkit_settings',
       'tradeflowkit_sequences',
       'shared_outbox_messages',
@@ -119,6 +120,7 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
   const updatedTaskTitle = `${taskTitle} Updated`;
   const leadName = `Messaging lead ${suffix}`;
   const leadEmail = `messaging-${suffix}@example.com`;
+  const savedViewName = `Scheduled ${suffix}`;
 
   try {
     identity = await registerAndSeed(request, pg);
@@ -207,6 +209,38 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
     await jobEditor.getByLabel('Description').fill('Edited project scope through the module UI.');
     await jobEditor.getByRole('button', { name: /^Save job/ }).click();
     await expect(page.getByTestId(`tradeflowkit-job-${jobId}`)).toContainText(updatedJobTitle);
+
+    await page.getByLabel('Search jobs').fill(suffix);
+    await page.getByLabel('Filter job status').selectOption('scheduled');
+    await expect(page.getByTestId(`tradeflowkit-job-${jobId}`)).toBeVisible();
+    await page.getByLabel('Saved view name').fill(savedViewName);
+    await page.getByText('Share with tenant').click();
+    await page.getByTestId('tradeflowkit-saved-views').getByRole('button', { name: 'Save view' }).click();
+    await expect.poll(async () => {
+      const result = await pg.query<{ id: string }>(
+        `select id from tradeflowkit_saved_views
+          where tenant_id = $1 and name = $2 and is_shared = true and archived_at is null`,
+        [identity!.tenantId, savedViewName],
+      );
+      return result.rows[0]?.id ?? '';
+    }).not.toBe('');
+    await page.reload();
+    await expect(page.getByTestId('tradeflowkit-saved-views')).toContainText(savedViewName);
+    await page.getByLabel('Search jobs').fill('no-match');
+    await page.getByLabel('Filter job status').selectOption('paid');
+    await page.getByTestId('tradeflowkit-saved-views').getByRole('button', { name: savedViewName, exact: true }).click();
+    await expect(page.getByLabel('Search jobs')).toHaveValue(suffix);
+    await expect(page.getByLabel('Filter job status')).toHaveValue('scheduled');
+    page.once('dialog', dialog => void dialog.accept());
+    await page.getByLabel(`Delete saved view ${savedViewName}`).click();
+    await expect(page.getByTestId('tradeflowkit-saved-views')).not.toContainText(savedViewName);
+    await expect.poll(async () => {
+      const result = await pg.query<{ archived: boolean }>(
+        `select archived_at is not null as archived from tradeflowkit_saved_views where tenant_id = $1 and name = $2`,
+        [identity!.tenantId, savedViewName],
+      );
+      return result.rows[0]?.archived ?? false;
+    }).toBe(true);
 
     await page.getByLabel('New task title').fill(taskTitle);
     await page.getByLabel('Task priority').selectOption('normal');

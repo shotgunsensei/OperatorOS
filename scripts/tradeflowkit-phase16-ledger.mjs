@@ -98,6 +98,11 @@ const leadMessagingEvidence = [
   'apps/api/test/tradeflowkit-lead-messaging.test.ts',
   'apps/api/test/tradeflowkit-lead-messaging-static.test.ts',
 ];
+const savedViewEvidence = [
+  'apps/api/test/tradeflowkit-saved-views.test.ts',
+  'apps/api/test/tradeflowkit-saved-views-static.test.ts',
+  'apps/web/src/components/module-shells/TradeFlowKitOperations.tsx',
+];
 
 function classifyPage(path) {
   if (['/subscription', '/admin', '/access-denied'].includes(path)) {
@@ -377,7 +382,13 @@ function classifyApi(method, path) {
     );
   }
   if (path.startsWith('/api/operations/saved-views')) {
-    return outcome(GAP, 'saved_views', [], [], 'Durable tenant/user saved views are not yet active.');
+    return outcome(
+      ACTIVE,
+      'saved_views',
+      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitOperations.tsx'],
+      savedViewEvidence,
+      'Bounded tenant/user saved views support personal ownership, admin-governed tenant sharing, persistence, application, and soft deletion.',
+    );
   }
   if (path === '/api/search') {
     return outcome(
@@ -593,7 +604,13 @@ function classifyTable(name) {
     );
   }
   if (name === 'saved_views') {
-    return outcome(GAP, 'saved_views', [], [], 'Saved views are not active.');
+    return outcome(
+      ACTIVE,
+      'saved_views',
+      ['apps/api/src/schema.ts', 'apps/api/src/lib/tradeflowkit-saved-views-db-init.ts'],
+      savedViewEvidence,
+      'Canonical tenant-scoped saved-view persistence is active with bounded JSON, ownership, audit, indexes, and soft-delete state.',
+    );
   }
   if (['org_automations', 'reminder_log'].includes(name)) {
     return outcome(GAP, 'durable_scheduling', ['apps/api/src/lib/shared-service-db-init.ts'], [], 'Shared leased-job scheduling semantics are not implemented for this workflow.');

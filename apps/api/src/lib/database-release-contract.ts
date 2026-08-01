@@ -1,6 +1,6 @@
 export const DATABASE_RELEASE_CONTRACT = Object.freeze({
   contractVersion: 1,
-  releaseVersion: 29,
+  releaseVersion: 30,
   mode: 'idempotent-apply',
   destructive: false,
   rollback: 'restore-to-new-database-and-switch-traffic',
@@ -36,4 +36,5 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'demo_tenant_seed', kind: 'seed' },
   { id: 'launch_fix_post_seed', kind: 'repair' },
   { id: 'free_account_app_backfill', kind: 'backfill' },
+  { id: 'tradeflowkit_saved_views', kind: 'ddl' },
 ] as const);
