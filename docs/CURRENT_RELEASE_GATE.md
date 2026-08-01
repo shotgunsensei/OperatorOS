@@ -2,7 +2,7 @@
 
 - Evidence date: 2026-08-01
 - Current reviewed base: `main` at `79f8eef8c34434ffaa724b55c53b0a75552ef987`
-- Current source candidate: `codex/tradeflowkit-saved-views`; deployment identity pending
+- Current source candidate: `codex/tradeflowkit-accounting-exports`; deployment identity pending
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -15,6 +15,20 @@
 - Overall release decision: **CLOSED — do not promote**
 
 ## Current additive release v30 source gate
+
+The current Phase 16A increment does not change the v30 database contract. It
+adds bounded format-v1 QuickBooks IIF/invoice CSV and Xero
+customer/invoice/payment CSV projections over existing tenant-scoped data.
+Format/static contracts pass 2/2, the isolated PostgreSQL auth/tenant/payment
+workflow passes 1/1, adjacent revenue/document/saved-view regressions pass
+11/11, and the executable ledger advances from 115 active/45 gaps to 120
+active/40 gaps with zero unclassified items. Workspace typecheck, production
+build, readiness-gated compiled runtime at v30/30, and the updated exact-host
+download workflow pass locally; the browser gate is 1/1 in 21.5 seconds and
+inspects a real authenticated QuickBooks IIF download. These are working-tree
+artifacts, not a deployable release identity; a fresh build from the final
+committed revision remains required. Prior v30 evidence below remains
+historical baseline evidence.
 
 The current source candidate advances the ordered database contract from v29
 to additive v30. Step 30 creates bounded, tenant/user-owned

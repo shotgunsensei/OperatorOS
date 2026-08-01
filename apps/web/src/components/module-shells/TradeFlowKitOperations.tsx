@@ -1,7 +1,7 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Archive, Bookmark, CheckCircle2, Circle, Clock3, ListChecks, Loader2, Pencil, Plus, RefreshCw, Save, Search, Settings2, Share2, Trash2, Wrench, X } from 'lucide-react';
+import { AlertTriangle, Archive, Bookmark, CheckCircle2, Circle, Clock3, Download, ListChecks, Loader2, Pencil, Plus, RefreshCw, Save, Search, Settings2, Share2, Trash2, Wrench, X } from 'lucide-react';
 import {
   moduleShellApi,
   type TradeFlowKitJob,
@@ -160,6 +160,17 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
         <Metric label="Outstanding" value={money(data.metrics.outstanding_cents)} />
       </div>
 
+      <section className="tfk-accounting-exports" data-testid="tradeflowkit-accounting-exports" aria-labelledby="tradeflowkit-accounting-exports-title">
+        <div><Download size={18} /><div><strong id="tradeflowkit-accounting-exports-title">Accounting handoff · format v1</strong><span>Tenant-scoped active customers, invoice lines, and successful payment-ledger entries. Review account and tax mappings in your accounting sandbox before import.</span></div></div>
+        <nav aria-label="Accounting exports">
+          <a data-testid="tradeflowkit-export-quickbooks-iif" href="/api/modules/tradeflowkit/exports/quickbooks.iif">QuickBooks IIF</a>
+          <a href="/api/modules/tradeflowkit/exports/quickbooks/invoices.csv">QuickBooks invoice CSV</a>
+          <a href="/api/modules/tradeflowkit/exports/xero/customers.csv">Xero customers</a>
+          <a href="/api/modules/tradeflowkit/exports/xero/invoices.csv">Xero invoices</a>
+          <a href="/api/modules/tradeflowkit/exports/xero/payments.csv">Xero payments</a>
+        </nav>
+      </section>
+
       {error && <div className={`tfk-ops-alert ${conflict ? 'conflict' : ''}`} role="alert" data-testid={conflict ? 'tradeflowkit-conflict-state' : 'tradeflowkit-operations-error'}><AlertTriangle size={17} /><span>{error}</span>{conflict && <button type="button" onClick={() => void load()}>Reload current version</button>}</div>}
 
       <div className="tfk-ops-toolbar">
@@ -307,6 +318,9 @@ const css = `
   .tfk-ops-metrics div { border:1px solid rgba(22,101,52,.14); background:#f4fbf7; border-radius:8px; padding:10px; display:grid; gap:3px; }
   .tfk-ops-metrics span { color:#6d847c; font-size:10px; font-weight:800; text-transform:uppercase; }
   .tfk-ops-metrics strong { color:#10231d; font-size:15px; }
+  .tfk-accounting-exports { border:1px solid rgba(3,105,161,.18); background:#f0f9ff; border-radius:8px; padding:11px; display:grid; gap:10px; }
+  .tfk-accounting-exports>div { display:flex; gap:8px; align-items:flex-start; color:#0369a1; }.tfk-accounting-exports>div div { display:grid; gap:2px; }.tfk-accounting-exports>div span { color:#526b76; font-size:11px; line-height:1.45; }
+  .tfk-accounting-exports nav { display:flex; flex-wrap:wrap; gap:6px; }.tfk-accounting-exports a { border:1px solid rgba(3,105,161,.23); border-radius:7px; background:white; color:#0369a1; padding:7px 9px; font-size:11px; font-weight:800; text-decoration:none; }
   .tfk-ops-alert { padding:10px 12px; border:1px solid rgba(220,38,38,.25); background:#fff1f2; color:#991b1b; border-radius:7px; display:flex; align-items:center; gap:8px; }
   .tfk-ops-alert span { flex:1; }.tfk-ops-alert button { border:1px solid currentColor; background:white; color:inherit; border-radius:5px; padding:6px 8px; }
   .tfk-ops-alert.conflict { background:#fff7ed; color:#9a3412; }

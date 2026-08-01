@@ -1,5 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { Client } from 'pg';
+import { readFile } from 'node:fs/promises';
 
 const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:5001';
 const PASSWORD = 'OperatorOS-E2E-Only-94!';
@@ -179,6 +180,14 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
     await customerEditor.getByLabel('Customer notes').fill('Edited through exact-host browser flow.');
     await customerEditor.getByRole('button', { name: /^Save customer/ }).click();
     await expect(page.getByTestId(`tradeflowkit-customer-${customerId}`)).toContainText(updatedCustomerName);
+
+    const quickBooksDownload = page.waitForEvent('download');
+    await page.getByTestId('tradeflowkit-export-quickbooks-iif').click();
+    const downloaded = await quickBooksDownload;
+    expect(downloaded.suggestedFilename()).toBe('tradeflowkit-quickbooks-v1.iif');
+    const downloadedPath = await downloaded.path();
+    expect(downloadedPath).toBeTruthy();
+    expect(await readFile(downloadedPath!, 'utf8')).toContain(`CUST\t${updatedCustomerName}`);
 
     const jobCreate = page.getByTestId('tradeflowkit-job-create');
     await jobCreate.getByRole('combobox').selectOption(customerId);

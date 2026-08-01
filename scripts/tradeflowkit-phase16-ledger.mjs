@@ -103,6 +103,11 @@ const savedViewEvidence = [
   'apps/api/test/tradeflowkit-saved-views-static.test.ts',
   'apps/web/src/components/module-shells/TradeFlowKitOperations.tsx',
 ];
+const accountingExportEvidence = [
+  'apps/api/test/tradeflowkit-accounting-export-format.test.ts',
+  'apps/api/test/tradeflowkit-accounting-exports.test.ts',
+  'apps/web/src/components/module-shells/TradeFlowKitOperations.tsx',
+];
 
 function classifyPage(path) {
   if (['/subscription', '/admin', '/access-denied'].includes(path)) {
@@ -283,11 +288,11 @@ function classifyApi(method, path) {
   }
   if (path.startsWith('/api/exports/quickbooks') || path.startsWith('/api/exports/xero') || path.includes('/export/quickbooks')) {
     return outcome(
-      GAP,
+      ACTIVE,
       'accounting_exports',
-      ['apps/api/src/routes/tradeflowkit-routes.ts'],
-      ['apps/api/test/tradeflowkit-state5-workflow.test.ts'],
-      'Canonical CSV exists; vendor-specific mappings still need a versioned integration contract.',
+      ['apps/api/src/lib/tradeflowkit-accounting-exports.ts', 'apps/api/src/routes/tradeflowkit-routes.ts'],
+      accountingExportEvidence,
+      'Versioned, bounded QuickBooks IIF/invoice CSV and Xero customer/invoice/payment CSV exports use tenant-scoped normalized invoice lines and successful payment-ledger entries.',
     );
   }
   if (path.startsWith('/api/automations') || path.startsWith('/api/reminder-logs') || path.includes('/series')) {
