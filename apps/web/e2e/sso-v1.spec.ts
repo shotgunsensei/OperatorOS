@@ -334,6 +334,36 @@ async function assertNoBrowserCredentialStorage(page: Page) {
   }
 }
 
+async function browserJson<T = Record<string, unknown>>(
+  page: Page,
+  path: string,
+  method = 'GET',
+  body?: unknown,
+  headers: Record<string, string> = {},
+): Promise<{ status: number; body: T; requestId: string | null }> {
+  return page.evaluate(
+    async ({ path, method, body, headers }) => {
+      const response = await fetch(path, {
+        method,
+        credentials: 'include',
+        headers: body === undefined
+          ? headers
+          : { 'Content-Type': 'application/json', ...headers },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      const text = await response.text();
+      let parsed: unknown = text;
+      try { parsed = JSON.parse(text); } catch {}
+      return {
+        status: response.status,
+        body: parsed as T,
+        requestId: response.headers.get('x-request-id'),
+      };
+    },
+    { path, method, body, headers },
+  );
+}
+
 function navigationCollector(context: BrowserContext) {
   const urls: string[] = [];
   const handler = (request: Request) => {
@@ -817,6 +847,289 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await reopened.goto('https://techdeck.operatoros.net/logout');
     await expect(reopened).toHaveURL(/^https:\/\/operatoros\.net\/signed-out\?signed_out=local$/);
     expect((await sessionCookies(context)).some(cookie => cookie.domain === 'techdeck.operatoros.net')).toBe(false);
+    await reopened.close();
+  });
+
+  test('TorqueShed persists diagnostics, signed Assist accounting, Marketplace, and Community across deep-link reauthentication', async ({ page, request }) => {
+    test.setTimeout(240_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+    const context = page.context();
+    const suffix = Date.now().toString(36);
+    const vehicleName = `E2E Misfire Rig ${suffix}`;
+    const diagnosticTitle = `E2E P0302 investigation ${suffix}`;
+    const listingTitle = `E2E diagnostic scope ${suffix}`;
+    const postTitle = `E2E evidence-first finding ${suffix}`;
+    const commentBody = `Compression evidence independently verified ${suffix}.`;
+
+    await page.goto('https://torqueshed.operatoros.net/diagnostics');
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/torqueshed\.operatoros\.net\/diagnostics(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await expect(page.getByTestId('torqueshed-module-shell')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('torqueshed-diagnostics')).toBeVisible();
+    await assertHostOnlySession(context, 'torqueshed.operatoros.net');
+    await assertNoBrowserCredentialStorage(page);
+    assertNoCredentialQuery(page.url());
+
+    await page.getByRole('button', { name: 'Garage', exact: true }).click();
+    const vehicleForm = page.getByTestId('torqueshed-garage').locator('form').first();
+    await vehicleForm.getByLabel('Year').fill('2018');
+    await vehicleForm.getByLabel('Nickname').fill(vehicleName);
+    await vehicleForm.getByLabel('Make').fill('Ford');
+    await vehicleForm.getByLabel('Model').fill('F-150');
+    await vehicleForm.getByLabel('Mileage').fill('84210');
+    await vehicleForm.getByLabel('Engine').fill('3.5L EcoBoost');
+    await vehicleForm.getByLabel('VIN (masked after save)').fill('1FTFW1EG0JFA12345');
+    const vehicleResponse = page.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === '/api/modules/torqueshed/vehicles');
+    await vehicleForm.getByRole('button', { name: 'Save vehicle' }).click();
+    const vehicleReply = await vehicleResponse;
+    expect(vehicleReply.status(), await vehicleReply.text()).toBe(201);
+    const vehicle = await vehicleReply.json() as { id: string; vinMasked: string };
+    expect(vehicle.vinMasked).toBe('***********A12345');
+    await expect(page.getByTestId('torqueshed-garage')).toContainText(vehicleName);
+
+    await page.getByRole('button', { name: 'Diagnostics', exact: true }).click();
+    const diagnosticForm = page.getByTestId('torqueshed-diagnostics').locator('form').first();
+    await diagnosticForm.getByLabel('Vehicle').selectOption(vehicle.id);
+    await diagnosticForm.getByLabel('Title').fill(diagnosticTitle);
+    await diagnosticForm.getByLabel('Customer concern').fill('Intermittent misfire under load with no confirmed repair.');
+    await diagnosticForm.getByLabel('Symptoms').fill('P0302 returns during controlled acceleration.');
+    const diagnosticResponse = page.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === '/api/modules/torqueshed/diagnostics');
+    await diagnosticForm.getByRole('button', { name: 'Start session' }).click();
+    const diagnosticReply = await diagnosticResponse;
+    expect(diagnosticReply.status(), await diagnosticReply.text()).toBe(201);
+    const diagnostic = await diagnosticReply.json() as { id: string };
+    const diagnosticCard = page.locator(`button[data-record-id="${diagnostic.id}"]`);
+    await expect(diagnosticCard).toContainText(diagnosticTitle);
+    await diagnosticCard.click();
+
+    const timeline = page.getByTestId('torqueshed-diagnostic-timeline');
+    await expect(timeline).toHaveAttribute('data-record-id', diagnostic.id);
+    const codeForm = timeline.locator('form').filter({ hasText: 'Trouble code' });
+    await codeForm.locator('input[name="code"]').fill('P0302');
+    await codeForm.locator('input[name="description"]').fill('Cylinder 2 misfire detected');
+    await codeForm.locator('input[name="freezeFrame"]').fill('Load 62 percent at 2,800 RPM');
+    await codeForm.getByRole('button', { name: 'Add code' }).click();
+    await expect(timeline).toContainText('P0302', { timeout: 30_000 });
+
+    const evidenceForm = timeline.locator('form').filter({ hasText: 'Timeline evidence' });
+    await evidenceForm.locator('select[name="kind"]').selectOption('measurement');
+    await evidenceForm.locator('input[name="title"]').fill('Cylinder 2 compression');
+    await evidenceForm.locator('input[name="valueNumeric"]').fill('165');
+    await evidenceForm.locator('input[name="unit"]').fill('psi');
+    await evidenceForm.locator('input[name="outcome"]').fill('Within the manufacturer comparison range');
+    await evidenceForm.getByRole('button', { name: 'Add evidence' }).click();
+    await expect(timeline).toContainText('Cylinder 2 compression', { timeout: 30_000 });
+
+    const assist = page.getByTestId('torqueshed-torque-assist');
+    await expect(assist).toContainText('Deterministic test adapter active', { timeout: 30_000 });
+    await assist.locator('summary').click();
+    const purchaseResponse = page.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === '/api/modules/torqueshed/token-purchases/checkout');
+    await assist.getByRole('button', { name: /Roadside: 25,000 units/ }).click();
+    const purchaseReply = await purchaseResponse;
+    expect(purchaseReply.status(), await purchaseReply.text()).toBe(201);
+    const purchaseBody = await purchaseReply.json() as {
+      purchase: {
+        id: string; tenantId: string; userId: string; moduleId: string; packageKey: string;
+        units: number; amountMinor: number; currency: string; providerCheckoutId: string;
+      };
+    };
+    const purchase = purchaseBody.purchase;
+    const eventId = `evt_torqueshed_browser_${suffix}`;
+    const payment = await browserJson<Record<string, unknown>>(
+      page,
+      '/api/billing/torque-assist/webhook',
+      'POST',
+      {
+        id: eventId,
+        type: 'checkout.session.completed',
+        livemode: false,
+        data: {
+          object: {
+            id: purchase.providerCheckoutId,
+            payment_intent: `pi_torqueshed_browser_${suffix}`,
+            payment_status: 'paid',
+            amount_total: purchase.amountMinor,
+            currency: purchase.currency.toLowerCase(),
+            metadata: {
+              operatoros_kind: 'torque_assist_credit',
+              purchase_id: purchase.id,
+              tenant_id: purchase.tenantId,
+              user_id: purchase.userId,
+              module_id: purchase.moduleId,
+              package_key: purchase.packageKey,
+              units: String(purchase.units),
+            },
+          },
+        },
+      },
+      { 'stripe-signature': 'operatoros-test-signature' },
+    );
+    expect(payment.status, JSON.stringify(payment.body)).toBe(200);
+
+    const diagnosticUrl = `https://torqueshed.operatoros.net/diagnostics/${diagnostic.id}`;
+    await page.goto(diagnosticUrl);
+    await expect(page.getByTestId('torqueshed-diagnostic-timeline')).toContainText(diagnosticTitle, { timeout: 30_000 });
+    const refreshedAssist = page.getByTestId('torqueshed-torque-assist');
+    await expect(refreshedAssist).toContainText('25,000 units', { timeout: 30_000 });
+    const assistResponse = page.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === '/api/modules/torqueshed/torque-assist');
+    await refreshedAssist.getByRole('button', { name: 'Generate diagnostic plan' }).click();
+    const assistReply = await assistResponse;
+    expect(assistReply.status(), await assistReply.text()).toBe(200);
+    const assistBody = await assistReply.json() as { actualUnits: number; result: { disclaimer: string } };
+    expect(assistBody.actualUnits).toBeGreaterThan(0);
+    expect(assistBody.result.disclaimer).toContain('not a verified repair');
+    await expect(refreshedAssist).toContainText('Accepted result recorded.');
+    await expect(refreshedAssist).toContainText('Recommended tests');
+
+    const ledger = await browserJson<{
+      balance: number;
+      entries: Array<{ entryKind: string; purchaseIntentId?: string; diagnosticSessionId?: string }>;
+    }>(page, '/api/modules/torqueshed/token-ledger');
+    expect(ledger.status, JSON.stringify(ledger.body)).toBe(200);
+    expect(ledger.body.entries.filter(entry => entry.entryKind === 'credit' && entry.purchaseIntentId === purchase.id)).toHaveLength(1);
+    expect(ledger.body.entries.filter(entry => entry.entryKind === 'debit' && entry.diagnosticSessionId === diagnostic.id)).toHaveLength(1);
+    expect(ledger.body.balance).toBeGreaterThan(0);
+
+    await page.goto('https://torqueshed.operatoros.net/marketplace');
+    const marketplace = page.getByTestId('torqueshed-marketplace');
+    await expect(marketplace).toBeVisible({ timeout: 30_000 });
+    const listingForm = marketplace.locator('form').filter({ hasText: 'Create a draft listing' });
+    await listingForm.getByLabel('Title').fill(listingTitle);
+    await listingForm.getByLabel('Category').selectOption('tools');
+    await listingForm.getByLabel('Price (USD)').fill('49.00');
+    await listingForm.getByLabel('Locality (no street address)').fill('Raleigh');
+    await listingForm.getByLabel('State / region').fill('NC');
+    await listingForm.getByLabel('Description').fill('Working automotive diagnostic scope with leads and a verified self-test.');
+    const listingResponse = page.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === '/api/modules/torqueshed/marketplace/listings');
+    await listingForm.getByRole('button', { name: 'Create draft' }).click();
+    const listingReply = await listingResponse;
+    expect(listingReply.status(), await listingReply.text()).toBe(201);
+    const listing = await listingReply.json() as { id: string };
+    await marketplace.getByRole('button', { name: 'My listings' }).click();
+    const listingCard = marketplace.locator(`article[data-record-id="${listing.id}"]`);
+    await expect(listingCard).toContainText(listingTitle);
+    const listingPublish = page.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === `/api/modules/torqueshed/marketplace/listings/${listing.id}/publish`);
+    await listingCard.getByRole('button', { name: 'Publish' }).click();
+    expect((await listingPublish).status()).toBe(200);
+    await expect(listingCard).toContainText('published');
+
+    await page.goto('https://torqueshed.operatoros.net/community');
+    const community = page.getByTestId('torqueshed-community');
+    await expect(community).toBeVisible({ timeout: 30_000 });
+    const postForm = community.locator('form').filter({ hasText: 'Create a draft post' });
+    await postForm.getByLabel('Title').fill(postTitle);
+    await postForm.getByLabel('Topic').selectOption('diagnostics');
+    await postForm.getByLabel('Tags (comma separated)').fill('acceptance,diagnostics');
+    await postForm.getByLabel('Post').fill('Evidence supports a repeatable test plan; no repair is authorized without verification.');
+    const postResponse = page.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === '/api/modules/torqueshed/community/posts');
+    await postForm.getByRole('button', { name: 'Create draft' }).click();
+    const postReply = await postResponse;
+    expect(postReply.status(), await postReply.text()).toBe(201);
+    const post = await postReply.json() as { id: string };
+    await community.getByRole('button', { name: 'My posts' }).click();
+    const postCard = community.locator(`article[data-record-id="${post.id}"]`);
+    await expect(postCard).toContainText(postTitle);
+    const postPublish = page.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === `/api/modules/torqueshed/community/posts/${post.id}/publish`);
+    await postCard.getByRole('button', { name: 'Publish' }).click();
+    expect((await postPublish).status()).toBe(200);
+    await postCard.getByRole('button', { name: 'Open discussion' }).click();
+    const discussion = page.getByTestId('torqueshed-community-discussion');
+    await expect(discussion).toHaveAttribute('data-record-id', post.id);
+    const reactionResponse = page.waitForResponse(response =>
+      response.request().method() === 'PUT'
+      && new URL(response.url()).pathname === `/api/modules/torqueshed/community/posts/${post.id}/reaction`);
+    await discussion.getByRole('button', { name: 'helpful', exact: true }).click();
+    expect((await reactionResponse).status()).toBe(200);
+    const commentResponse = page.waitForResponse(response =>
+      response.request().method() === 'POST'
+      && new URL(response.url()).pathname === `/api/modules/torqueshed/community/posts/${post.id}/comments`);
+    await discussion.getByLabel('Add comment').fill(commentBody);
+    await discussion.getByRole('button', { name: 'Comment' }).click();
+    expect((await commentResponse).status()).toBe(201);
+    await expect(discussion).toContainText(commentBody);
+
+    const persisted = await pg.query<{
+      vehicles: string; diagnostics: string; codes: string; entries: string; assists: string;
+      credits: string; debits: string; listings: string; posts: string; comments: string; reactions: string;
+    }>(
+      `select
+        (select count(*) from torqueshed_vehicles where tenant_id=$1 and id=$2 and vin_sha256 is not null and vin_last6='A12345')::text as vehicles,
+        (select count(*) from torqueshed_diagnostic_sessions where tenant_id=$1 and id=$3)::text as diagnostics,
+        (select count(*) from torqueshed_diagnostic_trouble_codes where tenant_id=$1 and diagnostic_session_id=$3 and code='P0302')::text as codes,
+        (select count(*) from torqueshed_diagnostic_entries where tenant_id=$1 and diagnostic_session_id=$3 and kind='measurement')::text as entries,
+        (select count(*) from torqueshed_assist_requests where tenant_id=$1 and diagnostic_session_id=$3 and status='complete')::text as assists,
+        (select count(*) from torqueshed_token_ledger_entries where tenant_id=$1 and purchase_intent_id=$4 and entry_kind='credit')::text as credits,
+        (select count(*) from torqueshed_token_ledger_entries where tenant_id=$1 and diagnostic_session_id=$3 and entry_kind='debit')::text as debits,
+        (select count(*) from torqueshed_marketplace_listings where tenant_id=$1 and id=$5 and status='published' and price_minor=4900)::text as listings,
+        (select count(*) from torqueshed_community_posts where tenant_id=$1 and id=$6 and status='published')::text as posts,
+        (select count(*) from torqueshed_community_comments where tenant_id=$1 and post_id=$6 and body=$7)::text as comments,
+        (select count(*) from torqueshed_community_post_reactions where tenant_id=$1 and post_id=$6 and reaction='helpful')::text as reactions`,
+      [identity.tenantId, vehicle.id, diagnostic.id, purchase.id, listing.id, post.id, commentBody],
+    );
+    for (const [name, count] of Object.entries(persisted.rows[0])) {
+      expect(Number(count), `${name} must persist exactly once`).toBe(1);
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
+    await expect(page.getByTestId('torqueshed-community')).toBeVisible({ timeout: 30_000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    const logoutAll = await browserJson(page, '/api/auth/logout-all', 'POST', {});
+    expect(logoutAll.status, JSON.stringify(logoutAll.body)).toBe(200);
+    await page.goto(diagnosticUrl);
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(diagnosticUrl, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await expect(page.getByTestId('torqueshed-diagnostic-timeline')).toContainText(diagnosticTitle, { timeout: 30_000 });
+    await expect(page.getByTestId('torqueshed-diagnostic-timeline')).toContainText('P0302');
+    await expect(page.getByTestId('torqueshed-diagnostic-timeline')).toContainText('Cylinder 2 compression');
+    await assertNoBrowserCredentialStorage(page);
+    assertNoCredentialQuery(page.url());
+
+    await Promise.all([
+      page.waitForURL(/^https:\/\/app\.operatoros\.net\//, { timeout: 30_000 }),
+      page.getByTestId('link-back-to-apps').click(),
+    ]);
+    await expect(page.getByTestId('page-my-apps')).toBeVisible();
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByTestId('button-launch-torqueshed').click();
+    const reopened = await popupPromise;
+    await expect(reopened.getByTestId('torqueshed-module-shell')).toBeVisible({ timeout: 30_000 });
+    await reopened.goto('https://torqueshed.operatoros.net/marketplace');
+    await expect(reopened.getByTestId('torqueshed-marketplace')).toBeVisible({ timeout: 30_000 });
+    await reopened.getByTestId('torqueshed-marketplace').getByRole('button', { name: 'My listings' }).click();
+    await expect(reopened.locator(`article[data-record-id="${listing.id}"]`)).toContainText(listingTitle);
+    await reopened.goto('https://torqueshed.operatoros.net/logout');
+    await expect(reopened).toHaveURL(/^https:\/\/operatoros\.net\/signed-out\?signed_out=local$/);
+    expect((await sessionCookies(context)).some(cookie => cookie.domain === 'torqueshed.operatoros.net')).toBe(false);
     await reopened.close();
   });
 

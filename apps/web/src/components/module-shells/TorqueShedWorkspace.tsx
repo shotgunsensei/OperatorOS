@@ -1011,6 +1011,7 @@ export default function TorqueShedWorkspace() {
             {diagnostics.map((row) => (
               <button
                 key={row.id}
+                data-record-id={row.id}
                 onClick={() => void openDiagnostic(row.id)}
                 style={{
                   ...cardStyle,
@@ -1191,6 +1192,7 @@ function DiagnosticDetail({
     <article
       style={{ ...cardStyle, borderColor: '#f59e0b66' }}
       data-testid="torqueshed-diagnostic-timeline"
+      data-record-id={diagnostic.id}
     >
       <h2 style={{ marginTop: 0, color: semantic.text }}>{diagnostic.title}</h2>
       <p style={{ color: semantic.textMuted }}>{diagnostic.customerConcern}</p>

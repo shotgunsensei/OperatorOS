@@ -1,6 +1,6 @@
 # OperatorOS current release gate
 
-- Evidence date: 2026-07-29
+- Evidence date: 2026-07-31
 - Candidate branch: `codex/phase-17-production-truth`
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
@@ -37,6 +37,18 @@ both health snapshots lack Phase 17 deployment/database identity and the old
 OutCall callback still renders. Promotion remains blocked on the exact
 workflow in `docs/PHASE17_PRODUCTION_RELEASE_RUNBOOK.md` and the evidence
 record in `docs/PHASE17_PRODUCTION_EVIDENCE_REPORT.md`.
+
+## TorqueShed local acceptance follow-up
+
+TorqueShed's previously open local Phase 7-9 gate is closed on
+`codex/torqueshed-state4-acceptance`: 23/23 focused contracts, 3/3 isolated
+PostgreSQL workflows, release v29 plan/apply/reapply, typecheck, production
+build/core preflight/supervisor health, and the dedicated exact-host browser
+workflow 1/1 in 13.8 seconds pass. This promotes only the source/local module
+state from 3 to 4. The overall release remains closed because the exact
+revision is not deployed and live provider, authenticated deployed workflow,
+second-tenant, backup/rollback, data reconciliation, and cutover gates remain
+open.
 
 ## Decision
 

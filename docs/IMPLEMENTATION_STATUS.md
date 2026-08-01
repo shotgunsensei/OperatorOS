@@ -1,6 +1,6 @@
 # OperatorOS implementation status
 
-- Last updated: 2026-07-29
+- Last updated: 2026-07-31
 - Phase: **17 — Production Truth and Revenue Release Gate**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
@@ -20,8 +20,39 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/techdeck-zero-gap-restoration`
+- Execution branch: `codex/torqueshed-state4-acceptance`
 - Release gate: **closed**
+
+## 2026-07-31 TorqueShed State 4 acceptance closure
+
+TorqueShed now has a dedicated exact-host browser workflow joining the already
+implemented Phase 7-9 product boundary. The scenario uses the native UI to
+create a VIN-masked vehicle, diagnostic session, trouble code, and measurement;
+creates one server-owned token purchase; accepts one signed test-only payment
+event; records one deterministic server-selected Torque Assist result and one
+append-only debit; publishes a Marketplace listing and Community post; records
+a reaction and comment; and verifies the resulting rows directly in the
+trusted tenant. It also covers mobile layout, global session revocation,
+diagnostic deep-link reauthentication, My Apps return/relaunch, Marketplace
+refresh, and host-only local logout. Browser inputs never choose tenant,
+provider, price, payment success, or ledger mutations.
+
+| Gate | Result |
+| --- | --- |
+| Focused contracts | PASS 23/23 across TorqueShed foundation, Assist, Marketplace/Community, and shared SSO browser-matrix checks |
+| PostgreSQL workflows | PASS 3/3 on disposable PostgreSQL 16: garage-to-diagnostic foundation, signed Assist accounting, and social/moderation/isolation |
+| Database release | PASS; release v29 plan, clean apply, and idempotent reapply |
+| Workspace/type/build | PASS; API/runner/web typecheck and production build with Next 15.5.22, 20/20 static pages |
+| Production-mode runtime | PASS; core preflight, readiness-gated supervisor, and web-proxied `/healthz` and `/readyz` HTTP 200 with database/auth/SSO/registry/worker/release identity configured |
+| Exact-host TorqueShed browser | PASS 1/1 in 13.8 seconds on compiled artifacts and local HTTPS topology |
+| External providers/deployment/cutover | NOT RUN; the browser uses explicit test-only payment/AI adapters, no Stripe/OpenAI traffic, Replit deployment, source-data apply, or traffic cutover |
+
+TorqueShed is promoted from consolidation state 3 to source/local state 4.
+This closes the approved Phase 7-9 local workflow gate, not production
+readiness. State 5 still requires the reviewed revision on the target Replit
+deployment, authenticated deployed SSO/workflow/tenant-denial acceptance,
+approved live-provider configuration, production backup/rollback evidence,
+and any authorized real-data reconciliation and cutover.
 
 ## 2026-07-29 TechDeck zero-gap rebaseline
 
@@ -1348,11 +1379,11 @@ acceptance. Those gates remain explicit blockers.
    internal-note isolation, attachment/provider, deep-link/logout,
    second-tenant denial, and an approved privacy-reviewed frozen-export
    apply/reconciliation/cutover.
-7. TorqueShed Phases 7/8 require a usable Docker/PostgreSQL test runtime, clean
-   release apply, foundation plus signed-payment/ledger/provider/concurrency
-   workflows, complete API regression, compiled
-   runtime, exact credit/debit and SSO/deep-link/logout browser evidence, and
-   later deployed/provider/data-cutover gates.
+7. TorqueShed is locally accepted at state 4. State 5 still requires the exact
+   reviewed revision on the target deployment, authenticated deployed
+   diagnostics/Assist/Marketplace/Community plus second-tenant denial,
+   approved live Stripe/OpenAI configuration, production backup/rollback, and
+   any authorized data reconciliation and cutover.
 8. Remaining module parity, provenance, repeatable migration, reconciliation,
    and rollback gaps recorded in `docs/modules/MODULE_PARITY_INDEX.md`.
 9. Ninjamation source/product decision and the disabled OutCall boundary.

@@ -94,3 +94,22 @@ test('release verification includes all Phase 9 durable boundaries', () => {
   ])
     assert.match(release, new RegExp(`to_regclass\\('public\\.${table}'\\)`));
 });
+
+test('dedicated production-host acceptance joins TorqueShed diagnostics, Assist accounting, and social workflows', () => {
+  const browser = read('apps/web/e2e/sso-v1.spec.ts');
+  assert.match(
+    browser,
+    /TorqueShed persists diagnostics, signed Assist accounting, Marketplace, and Community across deep-link reauthentication/,
+  );
+  for (const evidence of [
+    'torqueshed-diagnostic-timeline',
+    'operatoros-test-signature',
+    'torqueshed_token_ledger_entries',
+    'torqueshed-marketplace',
+    'torqueshed-community-discussion',
+    'logout-all',
+    'torqueshed.operatoros.net/logout',
+  ]) {
+    assert.ok(browser.includes(evidence), evidence);
+  }
+});

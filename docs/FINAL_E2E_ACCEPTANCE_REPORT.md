@@ -5,6 +5,31 @@ Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: Phase 17 OperatorOS release identity and enabled-module SSO gate
 Verdict: **NOT ACCEPTED — release gate failed**
 
+## TorqueShed State 4 follow-up — 2026-07-31
+
+The dedicated TorqueShed exact-host scenario passed 1/1 in 13.8 seconds on
+compiled OperatorOS artifacts, the local HTTPS host topology, and a disposable
+PostgreSQL 16 database. It uses the native UI for the complete accepted path:
+VIN-masked vehicle and diagnostic creation, trouble-code and measurement
+evidence, one server-owned token purchase, one signed deterministic payment
+credit, one server-selected Assist result and exact append-only debit,
+Marketplace publication, Community publication/reaction/comment, mobile
+layout, global revocation, diagnostic deep-link reauthentication, My Apps
+return/relaunch, Marketplace refresh, and host-only logout. Direct database
+assertions confirm every business record exactly once in the trusted tenant.
+
+Supporting gates also pass: 23/23 focused contracts, 3/3 TorqueShed
+PostgreSQL workflows, release v29 clean apply/idempotent reapply, workspace
+typecheck, production build, core preflight, readiness-gated supervisor, and
+web-proxied health/readiness HTTP 200. This promotes TorqueShed to
+source/local consolidation state 4.
+
+The ecosystem remains **NOT ACCEPTED** for production. The tested payment and
+AI adapters were explicitly local/test-only; no live Stripe/OpenAI traffic,
+Replit deployment, production backup/restore, real-data apply/reconciliation,
+or cutover occurred. State 5 requires authenticated acceptance on the exact
+deployed revision and the remaining provider/data/rollback gates.
+
 ## TechDeck zero-gap follow-up — 2026-07-29
 
 TechDeck was re-baselined against clean source commit

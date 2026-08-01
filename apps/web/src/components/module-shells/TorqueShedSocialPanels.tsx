@@ -277,7 +277,11 @@ export function TorqueShedMarketplacePanel() {
         }}
       >
         {listings.map((row) => (
-          <article key={row.id} style={{ ...cardStyle, display: 'grid', gap: 8 }}>
+          <article
+            key={row.id}
+            data-record-id={row.id}
+            style={{ ...cardStyle, display: 'grid', gap: 8 }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
               <strong style={{ color: semantic.text }}>{row.title}</strong>
               <span style={{ color: '#f59e0b', fontWeight: 800 }}>
@@ -574,7 +578,11 @@ function ListingActions({
   onClose: () => void;
 }) {
   return (
-    <div style={{ ...cardStyle, display: 'grid', gap: space.md, borderColor: '#f59e0b66' }}>
+    <div
+      data-testid="torqueshed-marketplace-listing-actions"
+      data-record-id={listing.id}
+      style={{ ...cardStyle, display: 'grid', gap: space.md, borderColor: '#f59e0b66' }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
         <h3 style={{ margin: 0, color: semantic.text }}>{listing.title}</h3>
         <button
@@ -900,7 +908,11 @@ export function TorqueShedCommunityPanel() {
         }}
       >
         {posts.map((post) => (
-          <article key={post.id} style={{ ...cardStyle, display: 'grid', gap: 8 }}>
+          <article
+            key={post.id}
+            data-record-id={post.id}
+            style={{ ...cardStyle, display: 'grid', gap: 8 }}
+          >
             <div style={{ color: '#f59e0b', fontSize: fontSize.sm, fontWeight: 800 }}>
               {post.topicName ?? post.topicSlug} / {post.visibility} / {post.status}
             </div>
@@ -1234,7 +1246,11 @@ function CommunityDiscussion({
   const post = detail.post as TorqueShedCommunityPost;
   const comments = detail.comments as Array<Record<string, any>>;
   return (
-    <div style={{ ...cardStyle, display: 'grid', gap: space.md, borderColor: '#f59e0b66' }}>
+    <div
+      data-testid="torqueshed-community-discussion"
+      data-record-id={post.id}
+      style={{ ...cardStyle, display: 'grid', gap: space.md, borderColor: '#f59e0b66' }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
         <div>
           <h3 style={{ margin: 0, color: semantic.text }}>{post.title}</h3>
