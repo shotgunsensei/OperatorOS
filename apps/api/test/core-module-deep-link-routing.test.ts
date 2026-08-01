@@ -29,6 +29,7 @@ test('core module deep links resolve only to live native shell sections', () => 
   for (const path of ['directory', 'contacts', 'sites']) {
     assert.equal(resolveCoreModuleDeepLink('tradeflowkit', [path])?.sectionId, 'tradeflowkit-directory');
   }
+  assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['trash'])?.sectionId, 'tradeflowkit-trash');
   assert.deepEqual(resolveCoreModuleDeepLink('techdeck', ['tickets']), {
     sectionId: 'techdeck-ticket-queue',
     label: 'Ticket Queue',

@@ -955,6 +955,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     try { input = parseDocumentArchive(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
 
     const outcome = await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`tradeflowkit:customer:${ctx.tenantId}:${id}`}))`);
       const [current] = await tx.select().from(tradeflowkitCustomers).where(and(
         eq(tradeflowkitCustomers.id, id),
         eq(tradeflowkitCustomers.tenantId, ctx.tenantId),

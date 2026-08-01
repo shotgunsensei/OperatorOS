@@ -125,8 +125,8 @@ TradeFlowKit was re-baselined against clean restored source commit
 approved-scope snapshot as full-product parity. The executable source ledger
 inventories 35 pages, 194 API routes, 40 tables, and 8 provider/config
 references with zero unclassified items. After the Workflow Studio,
-revenue-document, customer-import, core-record editing, and global-search increments,
-104 items are active, 53 use shared OperatorOS replacements, and 56 remain
+revenue-document, customer-import, core-record editing, global-search, and
+retention increments, 109 items are active, 53 use shared OperatorOS replacements, and 51 remain
 explicit Phase 16 gaps.
 
 The current revenue increment adds persistent direct invoice creation;
@@ -167,6 +167,13 @@ use canonical module-host workflow paths; the exact-host test follows a returned
 and confirms the selected persistent record rather than merely asserting a
 rendered result label.
 
+The retention increment adds a canonical `/trash` workspace and bounded safe
+projections for archived customers, jobs, and invoices. Owner/admin restores
+require current optimistic versions and active dependencies, serialize with
+parent archives through tenant-specific advisory locks, and write activity.
+Viewers remain read-only, foreign records remain non-enumerating, document
+token hashes are never projected, and no permanent-purge route exists.
+
 Fresh local evidence adds a 2/2 PostgreSQL workflow and a 1/1 exact-host Chrome
 workflow in 16.4 seconds against the production build and readiness-gated
 supervisor. The browser case proves PKCE login/return, all three record editors
@@ -181,6 +188,13 @@ and 1/1 exact-host Chrome in 16.1 seconds. The public deployment passes its
 own unpinned 48/48 read-only gate but identifies an older commit; pinning
 current main fails only the two release-identity assertions. Deployment and
 authenticated deployed acceptance therefore remain open.
+
+Fresh retention evidence on 2026-07-31 passes 4/4 focused static/routing
+checks, 22/22 adjacent isolated PostgreSQL regressions, workspace typecheck,
+production build, core preflight, release-v29 compiled health/readiness, and
+1/1 exact-host Chrome in 19.3 seconds. The browser archives task, job, and
+customer; visits canonical `/trash`; restores customer then job; and confirms
+the task remains archived. This is local production-mode evidence only.
 
 Local evidence on 2026-07-28 includes 5/5 focused PostgreSQL/static checks; a
 clean API aggregate at 872 total, 866 pass, zero fail, and six intentional
@@ -202,7 +216,7 @@ and a count-only check confirmed no synthetic import-gate identity remained.
 The clean rebuilt runtime and core production preflight both pass.
 
 This follow-up does not change the ecosystem **NOT ACCEPTED** verdict or claim
-TradeFlowKit state 5. Fifty-six parity gaps remain, and deployed authenticated
+TradeFlowKit state 5. Fifty-one parity gaps remain, and deployed authenticated
 acceptance, live providers, an approved real export/apply/reconciliation,
 rollback rehearsal, and production cutover have not occurred.
 

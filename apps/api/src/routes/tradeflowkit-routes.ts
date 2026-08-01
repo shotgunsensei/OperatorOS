@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
   activityFeed,
@@ -437,6 +437,228 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
       total: leads.length + customers.length + jobs.length + tasks.length
         + organizations.length + contacts.length + quotes.length + invoices.length,
     };
+  });
+
+  app.get('/v1/modules/tradeflowkit/trash', { preHandler: [...readGuards] }, async (request, reply) => {
+    let limit: number;
+    try {
+      const raw = record(request.query ?? {});
+      limit = integer(raw.limit === undefined ? 50 : Number(raw.limit), 'limit', 1, 100, true)!;
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const [customers, jobs, invoices] = await Promise.all([
+      db.select({
+        id: tradeflowkitCustomers.id,
+        name: tradeflowkitCustomers.name,
+        email: tradeflowkitCustomers.email,
+        phone: tradeflowkitCustomers.phone,
+        version: tradeflowkitCustomers.version,
+        deletedAt: tradeflowkitCustomers.deletedAt,
+      }).from(tradeflowkitCustomers).where(and(
+        eq(tradeflowkitCustomers.tenantId, tenant),
+        isNotNull(tradeflowkitCustomers.deletedAt),
+      )).orderBy(desc(tradeflowkitCustomers.deletedAt)).limit(limit + 1),
+      db.select({
+        id: tradeflowkitJobs.id,
+        customerId: tradeflowkitJobs.customerId,
+        number: tradeflowkitJobs.number,
+        title: tradeflowkitJobs.title,
+        status: tradeflowkitJobs.status,
+        version: tradeflowkitJobs.version,
+        deletedAt: tradeflowkitJobs.deletedAt,
+      }).from(tradeflowkitJobs).where(and(
+        eq(tradeflowkitJobs.tenantId, tenant),
+        isNotNull(tradeflowkitJobs.deletedAt),
+      )).orderBy(desc(tradeflowkitJobs.deletedAt)).limit(limit + 1),
+      db.select({
+        id: tradeflowkitInvoices.id,
+        customerId: tradeflowkitInvoices.customerId,
+        jobId: tradeflowkitInvoices.jobId,
+        number: tradeflowkitInvoices.number,
+        status: tradeflowkitInvoices.status,
+        totalCents: tradeflowkitInvoices.totalCents,
+        balanceCents: tradeflowkitInvoices.balanceCents,
+        version: tradeflowkitInvoices.version,
+        deletedAt: tradeflowkitInvoices.deletedAt,
+      }).from(tradeflowkitInvoices).where(and(
+        eq(tradeflowkitInvoices.tenantId, tenant),
+        isNotNull(tradeflowkitInvoices.deletedAt),
+      )).orderBy(desc(tradeflowkitInvoices.deletedAt)).limit(limit + 1),
+    ]);
+    return {
+      customers: customers.slice(0, limit),
+      jobs: jobs.slice(0, limit),
+      invoices: invoices.slice(0, limit),
+      hasMore: {
+        customers: customers.length > limit,
+        jobs: jobs.length > limit,
+        invoices: invoices.length > limit,
+      },
+    };
+  });
+
+  app.post('/v1/modules/tradeflowkit/trash/customers/:id/restore', { preHandler: [...writeGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    let expectedVersion: number;
+    try { expectedVersion = integer(record(request.body).expectedVersion, 'expectedVersion', 1, 1_000_000, true)!; }
+    catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    const outcome = await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`tradeflowkit:customer:${tenant}:${id}`}))`);
+      const [current] = await tx.select().from(tradeflowkitCustomers).where(and(
+        eq(tradeflowkitCustomers.id, id),
+        eq(tradeflowkitCustomers.tenantId, tenant),
+        isNotNull(tradeflowkitCustomers.deletedAt),
+      )).limit(1);
+      if (!current) return { kind: 'not_found' as const };
+      if (current.version !== expectedVersion) return { kind: 'version_conflict' as const, currentVersion: current.version };
+      if (current.organizationId) {
+        const [organization] = await tx.select({ id: directoryOrganizations.id }).from(directoryOrganizations).where(and(
+          eq(directoryOrganizations.id, current.organizationId),
+          eq(directoryOrganizations.tenantId, tenant),
+          isNull(directoryOrganizations.archivedAt),
+        )).limit(1);
+        if (!organization) return { kind: 'parent_unavailable' as const };
+      }
+      const [restored] = await tx.update(tradeflowkitCustomers).set({
+        deletedAt: null,
+        updatedAt: new Date(),
+        version: sql`${tradeflowkitCustomers.version} + 1`,
+      }).where(and(
+        eq(tradeflowkitCustomers.id, id),
+        eq(tradeflowkitCustomers.tenantId, tenant),
+        eq(tradeflowkitCustomers.version, expectedVersion),
+        isNotNull(tradeflowkitCustomers.deletedAt),
+      )).returning({ id: tradeflowkitCustomers.id, version: tradeflowkitCustomers.version });
+      if (!restored) return { kind: 'version_conflict' as const, currentVersion: current.version };
+      await audit(tx, { tenantId: tenant, userId: actor, action: 'restored', entityType: 'customer', entityId: id });
+      return { kind: 'restored' as const, record: restored };
+    });
+    if (outcome.kind === 'not_found') return reply.code(404).send({ error: 'Archived customer not found', code: 'CUSTOMER_NOT_FOUND' });
+    if (outcome.kind === 'parent_unavailable') return reply.code(409).send({ error: 'Restore the linked Directory organization first', code: 'CUSTOMER_DIRECTORY_ARCHIVED' });
+    if (outcome.kind === 'version_conflict') return reply.code(409).send({ error: 'Customer changed; reload and retry', code: 'CUSTOMER_VERSION_CONFLICT', currentVersion: outcome.currentVersion });
+    return { ok: true, customer: outcome.record };
+  });
+
+  app.post('/v1/modules/tradeflowkit/trash/jobs/:id/restore', { preHandler: [...writeGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    let expectedVersion: number;
+    try { expectedVersion = integer(record(request.body).expectedVersion, 'expectedVersion', 1, 1_000_000, true)!; }
+    catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    const outcome = await db.transaction(async tx => {
+      const [current] = await tx.select().from(tradeflowkitJobs).where(and(
+        eq(tradeflowkitJobs.id, id),
+        eq(tradeflowkitJobs.tenantId, tenant),
+        isNotNull(tradeflowkitJobs.deletedAt),
+      )).limit(1);
+      if (!current) return { kind: 'not_found' as const };
+      if (current.version !== expectedVersion) return { kind: 'version_conflict' as const, currentVersion: current.version };
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`tradeflowkit:customer:${tenant}:${current.customerId}`}))`);
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`tradeflowkit:job:${tenant}:${id}`}))`);
+      const [customer] = await tx.select({ id: tradeflowkitCustomers.id }).from(tradeflowkitCustomers).where(and(
+        eq(tradeflowkitCustomers.id, current.customerId),
+        eq(tradeflowkitCustomers.tenantId, tenant),
+        isNull(tradeflowkitCustomers.deletedAt),
+      )).limit(1);
+      if (!customer) return { kind: 'customer_archived' as const };
+      if (current.siteId) {
+        const [site] = await tx.select({ id: directorySites.id }).from(directorySites).where(and(
+          eq(directorySites.id, current.siteId),
+          eq(directorySites.tenantId, tenant),
+          isNull(directorySites.archivedAt),
+        )).limit(1);
+        if (!site) return { kind: 'site_archived' as const };
+      }
+      if (current.workflowStageId) {
+        const [stage] = await tx.select({ id: tradeflowkitWorkflowStages.id }).from(tradeflowkitWorkflowStages).where(and(
+          eq(tradeflowkitWorkflowStages.id, current.workflowStageId),
+          eq(tradeflowkitWorkflowStages.tenantId, tenant),
+          isNull(tradeflowkitWorkflowStages.archivedAt),
+        )).limit(1);
+        if (!stage) return { kind: 'stage_archived' as const };
+      }
+      const [restored] = await tx.update(tradeflowkitJobs).set({
+        deletedAt: null,
+        updatedAt: new Date(),
+        version: sql`${tradeflowkitJobs.version} + 1`,
+      }).where(and(
+        eq(tradeflowkitJobs.id, id),
+        eq(tradeflowkitJobs.tenantId, tenant),
+        eq(tradeflowkitJobs.version, expectedVersion),
+        isNotNull(tradeflowkitJobs.deletedAt),
+      )).returning({ id: tradeflowkitJobs.id, version: tradeflowkitJobs.version });
+      if (!restored) return { kind: 'version_conflict' as const, currentVersion: current.version };
+      await audit(tx, { tenantId: tenant, userId: actor, action: 'restored', entityType: 'job', entityId: id, metadata: { customerId: current.customerId } });
+      return { kind: 'restored' as const, record: restored };
+    });
+    if (outcome.kind === 'not_found') return reply.code(404).send({ error: 'Archived job not found', code: 'JOB_NOT_FOUND' });
+    if (outcome.kind === 'customer_archived') return reply.code(409).send({ error: 'Restore the customer before restoring this job', code: 'JOB_CUSTOMER_ARCHIVED' });
+    if (outcome.kind === 'site_archived') return reply.code(409).send({ error: 'Restore the linked site before restoring this job', code: 'JOB_SITE_ARCHIVED' });
+    if (outcome.kind === 'stage_archived') return reply.code(409).send({ error: 'Restore or replace the workflow stage before restoring this job', code: 'JOB_STAGE_ARCHIVED' });
+    if (outcome.kind === 'version_conflict') return reply.code(409).send({ error: 'Job changed; reload and retry', code: 'JOB_VERSION_CONFLICT', currentVersion: outcome.currentVersion });
+    return { ok: true, job: outcome.record };
+  });
+
+  app.post('/v1/modules/tradeflowkit/trash/invoices/:id/restore', { preHandler: [...writeGuards] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    let expectedVersion: number;
+    try { expectedVersion = integer(record(request.body).expectedVersion, 'expectedVersion', 1, 1_000_000, true)!; }
+    catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const tenant = tenantId(request);
+    const actor = userId(request);
+    try {
+      const outcome = await db.transaction(async tx => {
+        const [current] = await tx.select().from(tradeflowkitInvoices).where(and(
+          eq(tradeflowkitInvoices.id, id),
+          eq(tradeflowkitInvoices.tenantId, tenant),
+          isNotNull(tradeflowkitInvoices.deletedAt),
+        )).limit(1);
+        if (!current) return { kind: 'not_found' as const };
+        if (current.version !== expectedVersion) return { kind: 'version_conflict' as const, currentVersion: current.version };
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`tradeflowkit:customer:${tenant}:${current.customerId}`}))`);
+        if (current.jobId) await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`tradeflowkit:job:${tenant}:${current.jobId}`}))`);
+        const [customer] = await tx.select({ id: tradeflowkitCustomers.id }).from(tradeflowkitCustomers).where(and(
+          eq(tradeflowkitCustomers.id, current.customerId),
+          eq(tradeflowkitCustomers.tenantId, tenant),
+          isNull(tradeflowkitCustomers.deletedAt),
+        )).limit(1);
+        if (!customer) return { kind: 'customer_archived' as const };
+        if (current.jobId) {
+          const [job] = await tx.select({ id: tradeflowkitJobs.id }).from(tradeflowkitJobs).where(and(
+            eq(tradeflowkitJobs.id, current.jobId),
+            eq(tradeflowkitJobs.tenantId, tenant),
+            isNull(tradeflowkitJobs.deletedAt),
+          )).limit(1);
+          if (!job) return { kind: 'job_archived' as const };
+        }
+        const [restored] = await tx.update(tradeflowkitInvoices).set({
+          deletedAt: null,
+          updatedAt: new Date(),
+          version: sql`${tradeflowkitInvoices.version} + 1`,
+        }).where(and(
+          eq(tradeflowkitInvoices.id, id),
+          eq(tradeflowkitInvoices.tenantId, tenant),
+          eq(tradeflowkitInvoices.version, expectedVersion),
+          isNotNull(tradeflowkitInvoices.deletedAt),
+        )).returning({ id: tradeflowkitInvoices.id, version: tradeflowkitInvoices.version });
+        if (!restored) return { kind: 'version_conflict' as const, currentVersion: current.version };
+        await audit(tx, { tenantId: tenant, userId: actor, action: 'restored', entityType: 'invoice', entityId: id, metadata: { customerId: current.customerId, jobId: current.jobId } });
+        return { kind: 'restored' as const, record: restored };
+      });
+      if (outcome.kind === 'not_found') return reply.code(404).send({ error: 'Archived invoice not found', code: 'INVOICE_NOT_FOUND' });
+      if (outcome.kind === 'customer_archived') return reply.code(409).send({ error: 'Restore the customer before restoring this invoice', code: 'INVOICE_CUSTOMER_ARCHIVED' });
+      if (outcome.kind === 'job_archived') return reply.code(409).send({ error: 'Restore the job before restoring this invoice', code: 'INVOICE_JOB_ARCHIVED' });
+      if (outcome.kind === 'version_conflict') return reply.code(409).send({ error: 'Invoice changed; reload and retry', code: 'INVOICE_VERSION_CONFLICT', currentVersion: outcome.currentVersion });
+      return { ok: true, invoice: outcome.record };
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') {
+        return reply.code(409).send({ error: 'Another active invoice already uses this source quote or number', code: 'INVOICE_RESTORE_CONFLICT' });
+      }
+      throw error;
+    }
   });
 
   app.get('/v1/modules/tradeflowkit/workflows', { preHandler: [...readGuards] }, async (request, reply) => {
@@ -1120,6 +1342,7 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
     } catch (error) { if (inputFailure(reply, error)) return; throw error; }
 
     const outcome = await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`tradeflowkit:job:${tenant}:${id}`}))`);
       const [current] = await tx.select().from(tradeflowkitJobs).where(and(
         eq(tradeflowkitJobs.id, id),
         eq(tradeflowkitJobs.tenantId, tenant),

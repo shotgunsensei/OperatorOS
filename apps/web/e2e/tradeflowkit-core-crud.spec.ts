@@ -281,6 +281,19 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
       job_deleted: true,
       task_deleted: true,
     });
+
+    await page.goto('https://tradeflowkit.operatoros.net/trash');
+    const archivedCustomer = page.getByTestId(`tradeflowkit-trash-customers-${customerId}`);
+    const archivedJob = page.getByTestId(`tradeflowkit-trash-jobs-${jobId}`);
+    await expect(archivedCustomer).toContainText(updatedCustomerName);
+    await expect(archivedJob).toContainText(updatedJobTitle);
+    await archivedCustomer.getByRole('button', { name: 'Restore' }).click();
+    await expect(archivedCustomer).toHaveCount(0);
+    await page.getByTestId(`tradeflowkit-trash-jobs-${jobId}`).getByRole('button', { name: 'Restore' }).click();
+    await expect(page.getByTestId(`tradeflowkit-trash-jobs-${jobId}`)).toHaveCount(0);
+    await page.goto(`https://tradeflowkit.operatoros.net/jobs/${jobId}`);
+    await expect(page.getByTestId(`tradeflowkit-job-${jobId}`)).toContainText(updatedJobTitle);
+    await expect(page.getByTestId(`tradeflowkit-task-${taskId}`)).toHaveCount(0);
   } finally {
     await cleanupIdentity(pg, identity);
     await pg.end();

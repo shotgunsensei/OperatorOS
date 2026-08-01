@@ -152,11 +152,11 @@ function classifyPage(path) {
   }
   if (path === '/trash') {
     return outcome(
-      GAP,
+      ACTIVE,
       'retention',
-      [],
-      [],
-      'Archive/restore needs a truthful retained-record UI; permanent purge stays prohibited.',
+      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitTrash.tsx'],
+      ['apps/api/test/tradeflowkit-retention.test.ts', 'apps/api/test/tradeflowkit-retention-static.test.ts'],
+      'Bounded archived-record listing and dependency-safe restore are active; permanent purge stays prohibited.',
     );
   }
   if (
@@ -292,13 +292,13 @@ function classifyApi(method, path) {
   }
   if (path.startsWith('/api/trash')) {
     return outcome(
-      upperMethod === 'DELETE' ? RETIRED_SECURITY : GAP,
+      upperMethod === 'DELETE' ? RETIRED_SECURITY : ACTIVE,
       'retention',
-      [],
-      [],
+      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitTrash.tsx'],
+      ['apps/api/test/tradeflowkit-retention.test.ts', 'apps/api/test/tradeflowkit-retention-static.test.ts'],
       upperMethod === 'DELETE'
         ? 'Permanent module-local purge is prohibited.'
-        : 'Archive restore/list behavior needs a complete active UI and API.',
+        : 'Archived customers, jobs, and invoices can be listed and restored in dependency order with optimistic versions and tenant-scoped audit.',
     );
   }
   if (path.startsWith('/api/review-requests')) {

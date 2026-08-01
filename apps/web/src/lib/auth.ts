@@ -1132,6 +1132,12 @@ export interface TradeFlowKitSearchResponse {
   invoices: Array<{ id: string; number: number | null; status: string; totalCents: number; balanceCents: number; customerName: string }>;
   total: number;
 }
+export interface TradeFlowKitTrashResponse {
+  customers: Array<Pick<TradeFlowKitCustomer, 'id' | 'name' | 'email' | 'phone' | 'version'> & { deletedAt: string }>;
+  jobs: Array<Pick<TradeFlowKitJob, 'id' | 'customerId' | 'number' | 'title' | 'status' | 'version'> & { deletedAt: string }>;
+  invoices: Array<Pick<TradeFlowKitInvoice, 'id' | 'customerId' | 'jobId' | 'number' | 'status' | 'totalCents' | 'balanceCents' | 'version'> & { deletedAt: string }>;
+  hasMore: { customers: boolean; jobs: boolean; invoices: boolean };
+}
 
 export type DirectoryModuleSlug = 'tradeflowkit' | 'techdeck' | 'pulsedesk';
 export interface DirectoryPagination { total: number; limit: number; offset: number; hasMore: boolean }
@@ -1775,6 +1781,14 @@ export const moduleShellApi = {
       apiFetch('/modules/tradeflowkit/revenue') as Promise<TradeFlowKitRevenueResponse>,
     search: (query: string): Promise<TradeFlowKitSearchResponse> =>
       apiFetch(`/modules/tradeflowkit/search?q=${encodeURIComponent(query)}`) as Promise<TradeFlowKitSearchResponse>,
+    trash: (): Promise<TradeFlowKitTrashResponse> =>
+      apiFetch('/modules/tradeflowkit/trash') as Promise<TradeFlowKitTrashResponse>,
+    restoreCustomer: (id: string, expectedVersion: number): Promise<{ ok: true; customer: { id: string; version: number } }> =>
+      apiFetch(`/modules/tradeflowkit/trash/customers/${encodeURIComponent(id)}/restore`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true; customer: { id: string; version: number } }>,
+    restoreJob: (id: string, expectedVersion: number): Promise<{ ok: true; job: { id: string; version: number } }> =>
+      apiFetch(`/modules/tradeflowkit/trash/jobs/${encodeURIComponent(id)}/restore`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true; job: { id: string; version: number } }>,
+    restoreInvoice: (id: string, expectedVersion: number): Promise<{ ok: true; invoice: { id: string; version: number } }> =>
+      apiFetch(`/modules/tradeflowkit/trash/invoices/${encodeURIComponent(id)}/restore`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true; invoice: { id: string; version: number } }>,
     createCustomer: (input: TradeFlowKitCustomerImportRow): Promise<TradeFlowKitCustomer> =>
       apiFetch('/modules/tradeflowkit/customers', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitCustomer>,
     updateCustomer: (id: string, input: TradeFlowKitCustomerImportRow & { expectedVersion: number }): Promise<TradeFlowKitCustomer> =>

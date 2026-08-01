@@ -178,10 +178,10 @@ Phase 16A is active and is not a production-ready declaration. TradeFlowKit
 has been re-baselined against clean restored source commit
 `37aa67f1da804fc3ac56f36e50e01362077d7a26`. The generated source ledger pins
 the reviewed files and classifies 35 client pages, 194 API routes, 40 tables,
-and 8 provider/config references with zero unclassified items. After five
-real implementation increments, 104 items are active, 53 use shared OperatorOS
+and 8 provider/config references with zero unclassified items. After six
+real implementation increments, 109 items are active, 53 use shared OperatorOS
 authority, 41 are retired for security, 23 are retired by product boundary,
-and 56 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
+and 51 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
 4 remains valid but is not full-product parity.
 
 Workflow Studio is now persistent rather than a shell: tenant-admin governed
@@ -246,6 +246,17 @@ including exact record deep links where the native shell supports selection;
 viewer search remains read-only and all write authority is unchanged. Focused
 tests prove anonymous denial, viewer access, per-type bounds, literal wildcard
 handling, second-tenant non-enumeration, and persistence across API restart.
+
+The sixth increment restores safe retention operations without reviving the
+standalone destructive purge surface. `GET /v1/modules/tradeflowkit/trash`
+returns bounded, tenant-scoped archived customer, job, and invoice projections
+without public token hashes. Owner/admin restore routes require the current
+optimistic version, validate active customer/job/site/workflow dependencies,
+serialize with parent archives through tenant-specific advisory locks, and
+write activity. The responsive `/trash` workspace provides loading, error,
+empty, mobile, and viewer read-only states. Foreign records remain
+non-enumerating, shared Directory identity stays active, and no permanent
+delete route exists.
 
 Phase 16A also adds a read-only, organization-scoped standalone snapshot tool
 and a version 1 guarded atomic apply path for core customers, Directory
@@ -345,6 +356,55 @@ read-only verification separately passes 48/48 against deployed commit
 `92ca0db4a2609f4090104909bbd558e5b3b3157f` returns 46/48 solely because the
 public health/readiness release identity is older. Deployed authenticated
 workflow, provider, data-cutover, and rollback gates remain open.
+
+### Phase 16A retention verification record
+
+Commands ran on 2026-07-31 from `C:\Dev\OperatorOS`. The database and compiled
+browser checks used only a disposable PostgreSQL 16 database with synthetic
+records. Providers were disabled; no deployment, production database, or
+customer data was touched.
+
+```powershell
+node --import tsx --test apps/api/test/tradeflowkit-retention-static.test.ts `
+  apps/api/test/core-module-deep-link-routing.test.ts
+$env:APP_ENV='test'; $env:NODE_ENV='test'
+node --import tsx --test --test-concurrency=1 `
+  apps/api/test/tradeflowkit-customer-import.test.ts `
+  apps/api/test/tradeflowkit-document-mutations.test.ts `
+  apps/api/test/tradeflowkit-global-search.test.ts `
+  apps/api/test/tradeflowkit-retention.test.ts `
+  apps/api/test/tradeflowkit-revenue-flow.test.ts `
+  apps/api/test/tradeflowkit-shared-runtime-leads.test.ts `
+  apps/api/test/tradeflowkit-state5-workflow.test.ts `
+  apps/api/test/tradeflowkit-work-management.test.ts
+corepack pnpm verify:tradeflowkit:phase16
+$env:INTERNAL_API_URL='http://127.0.0.1:5001'
+corepack pnpm build:production
+corepack pnpm preflight:production -- --core
+node scripts/start-unified-runtime.mjs
+$env:E2E_PRODUCTION_HOSTS='1'
+& 'C:\Dev\OperatorOS\apps\web\node_modules\.bin\playwright.cmd' test e2e/tradeflowkit-core-crud.spec.ts
+```
+
+Results: focused retention/static routing passes 4/4. The eight-file adjacent
+PostgreSQL regression passes 22/22 with zero failures or skips. The executable
+ledger passes with 109 active items, 53 shared replacements, 51 explicit gaps,
+zero unclassified, 41 security retirements, and 23 product-boundary
+retirements. Workspace typecheck and the API, runner gateway, SDK, and 20-page
+Next production build pass. Core preflight passes. The readiness-gated
+supervisor applies/verifies database release v29 and returns HTTP 200 from
+health/readiness with database, auth, SSO encryption, module registry, shared
+worker, and release identity configured.
+
+The exact-host Chrome workflow passes 1/1 in 19.3 seconds. It completes PKCE
+return, customer/job/task create-edit-deep-link and refresh, safe task → job →
+customer archive, canonical `/trash` navigation, then dependency-ordered
+customer and job restore. It confirms the task deliberately remains archived.
+The API proof additionally covers anonymous/viewer/foreign-tenant denial,
+safe projections, stale-version rejection, dependency failure codes, restart
+persistence, active Directory preservation, and three tenant-scoped restore
+activity events. This remains local evidence; deployed authenticated workflow,
+provider, approved data-cutover, and rollback gates remain open.
 
 ### Phase 16A verification record (current increment)
 
