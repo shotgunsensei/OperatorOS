@@ -31,6 +31,7 @@ import TradeFlowKitLeadCenter from './TradeFlowKitLeadCenter';
 import TradeFlowKitRevenueFlow from './TradeFlowKitRevenueFlow';
 import TradeFlowKitOperations from './TradeFlowKitOperations';
 import TradeFlowKitWorkManagement from './TradeFlowKitWorkManagement';
+import TradeFlowKitGlobalSearch from './TradeFlowKitGlobalSearch';
 import BusinessDirectory from './BusinessDirectory';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
@@ -311,6 +312,10 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
             <ContextChip label="Session" value="OperatorOS SSO" tone={colors.green} testId="tradeflowkit-session-badge" />
             <ContextChip label="Host" value={adapter.hostnames.production} tone={colors.gold} testId="tradeflowkit-host-badge" />
           </div>
+
+          {hasTenantContext && adapter.tenantId && (
+            <TradeFlowKitGlobalSearch key={`search-${adapter.tenantId}`} tenantKey={adapter.tenantId} />
+          )}
         </header>
 
         {!hasTenantContext && (

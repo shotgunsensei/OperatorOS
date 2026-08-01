@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "moduleSlug": "tradeflowkit",
-  "capturedAtUtc": "2026-07-28T20:12:36.720Z",
+  "capturedAtUtc": "2026-08-01T02:51:44.658Z",
   "source": {
     "repository": "https://github.com/shotgunsensei/TradeFlowKit.git",
     "commit": "37aa67f1da804fc3ac56f36e50e01362077d7a26",
@@ -1969,17 +1969,17 @@
         "method": "GET",
         "path": "/api/search",
         "sourcePointer": "server/routes/search.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "global_search",
         "targetPointers": [
           "apps/api/src/routes/tradeflowkit-routes.ts",
-          "apps/api/src/routes/module-shell-routes.ts"
+          "apps/web/src/components/module-shells/TradeFlowKitGlobalSearch.tsx"
         ],
         "evidence": [
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
-          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+          "apps/api/test/tradeflowkit-global-search.test.ts",
+          "apps/api/test/tradeflowkit-global-search-static.test.ts"
         ],
-        "note": "Bounded per-surface filters exist; equivalent cross-entity search is not yet active."
+        "note": "Bounded tenant-scoped search covers active leads, customers, jobs, tasks, shared Directory records, quotes, and invoices with canonical deep links."
       },
       {
         "key": "GET /api/stripe/connect/authorize",

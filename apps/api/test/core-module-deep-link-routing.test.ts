@@ -93,6 +93,7 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['payments'])?.sectionId, 'tradeflowkit-revenue-flow');
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['leads', 'lead-123'])?.sectionId, 'tradeflowkit-lead-center');
   assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['jobs', 'job-123'])?.sectionId, 'tradeflowkit-operations');
+  assert.equal(resolveCoreModuleDeepLink('tradeflowkit', ['clients', 'client-123'])?.sectionId, 'tradeflowkit-directory');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['tickets', 'ticket-123'])?.sectionId, 'techdeck-ticket-queue');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['m', 'tickets', 'ticket-123'])?.sectionId, 'techdeck-ticket-queue');
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['clients', 'client-123'])?.sectionId, 'techdeck-directory');

@@ -1120,6 +1120,18 @@ export interface TradeFlowKitRevenueResponse {
   customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[];
   quotes: TradeFlowKitQuote[]; invoices: TradeFlowKitInvoice[];
 }
+export interface TradeFlowKitSearchResponse {
+  query: string;
+  leads: Array<{ id: string; name: string; status: string; serviceType: string | null }>;
+  customers: Array<{ id: string; name: string; email: string | null; phone: string | null }>;
+  jobs: Array<{ id: string; title: string; status: string; number: number | null; customerName: string }>;
+  tasks: Array<{ id: string; title: string; status: string; priority: string; jobId: string; jobTitle: string }>;
+  organizations: Array<{ id: string; name: string; type: string; status: string }>;
+  contacts: Array<{ id: string; firstName: string; lastName: string; email: string | null; phone: string | null }>;
+  quotes: Array<{ id: string; number: number | null; status: string; totalCents: number; customerName: string }>;
+  invoices: Array<{ id: string; number: number | null; status: string; totalCents: number; balanceCents: number; customerName: string }>;
+  total: number;
+}
 
 export type DirectoryModuleSlug = 'tradeflowkit' | 'techdeck' | 'pulsedesk';
 export interface DirectoryPagination { total: number; limit: number; offset: number; hasMore: boolean }
@@ -1761,6 +1773,8 @@ export const moduleShellApi = {
   tradeflowkit: {
     revenue: (): Promise<TradeFlowKitRevenueResponse> =>
       apiFetch('/modules/tradeflowkit/revenue') as Promise<TradeFlowKitRevenueResponse>,
+    search: (query: string): Promise<TradeFlowKitSearchResponse> =>
+      apiFetch(`/modules/tradeflowkit/search?q=${encodeURIComponent(query)}`) as Promise<TradeFlowKitSearchResponse>,
     createCustomer: (input: TradeFlowKitCustomerImportRow): Promise<TradeFlowKitCustomer> =>
       apiFetch('/modules/tradeflowkit/customers', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitCustomer>,
     updateCustomer: (id: string, input: TradeFlowKitCustomerImportRow & { expectedVersion: number }): Promise<TradeFlowKitCustomer> =>

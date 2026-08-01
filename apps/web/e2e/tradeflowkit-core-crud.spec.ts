@@ -104,6 +104,7 @@ async function cleanupIdentity(pg: Client, identity: Identity | null) {
 
 test('TradeFlowKit customer to job to task CRUD persists across exact-host deep links and archives safely', async ({ page, request }) => {
   test.setTimeout(120_000);
+  await page.context().clearCookies();
   const pg = new Client({ connectionString: process.env.DATABASE_URL });
   await pg.connect();
   let identity: Identity | null = null;
@@ -228,6 +229,20 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
       task_title: updatedTaskTitle,
       task_status: 'in_progress',
     });
+
+    await page.goto('https://tradeflowkit.operatoros.net/');
+    const globalSearch = page.getByTestId('tradeflowkit-global-search');
+    await globalSearch.getByTestId('tradeflowkit-global-search-input').fill(suffix);
+    await globalSearch.getByTestId('tradeflowkit-global-search-submit').click();
+    const searchResults = globalSearch.getByTestId('tradeflowkit-global-search-results');
+    await expect(searchResults).toContainText(updatedCustomerName);
+    await expect(searchResults).toContainText(updatedJobTitle);
+    await expect(searchResults).toContainText(updatedTaskTitle);
+    await Promise.all([
+      page.waitForURL(`https://tradeflowkit.operatoros.net/tasks/${taskId}`, { timeout: 30_000 }),
+      globalSearch.getByTestId(`tradeflowkit-search-result-tasks-${taskId}`).click(),
+    ]);
+    await expect(page.getByTestId(`tradeflowkit-task-${taskId}`)).toContainText(updatedTaskTitle);
 
     await Promise.all([
       page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),

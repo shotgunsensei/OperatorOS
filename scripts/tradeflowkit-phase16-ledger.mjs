@@ -377,11 +377,11 @@ function classifyApi(method, path) {
   }
   if (path === '/api/search') {
     return outcome(
-      GAP,
+      ACTIVE,
       'global_search',
-      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/api/src/routes/module-shell-routes.ts'],
-      workflowEvidence,
-      'Bounded per-surface filters exist; equivalent cross-entity search is not yet active.',
+      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitGlobalSearch.tsx'],
+      ['apps/api/test/tradeflowkit-global-search.test.ts', 'apps/api/test/tradeflowkit-global-search-static.test.ts'],
+      'Bounded tenant-scoped search covers active leads, customers, jobs, tasks, shared Directory records, quotes, and invoices with canonical deep links.',
     );
   }
   if (path === '/api/work/summary') {

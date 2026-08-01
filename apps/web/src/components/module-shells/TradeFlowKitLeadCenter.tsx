@@ -72,6 +72,7 @@ export default function TradeFlowKitLeadCenter({ tenantKey }: { tenantKey: strin
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
+  const deepLeadId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/leads\/([a-z0-9-]+)$/i)?.[1] || '';
 
   useEffect(() => {
     let cancelled = false;
@@ -332,7 +333,7 @@ export default function TradeFlowKitLeadCenter({ tenantKey }: { tenantKey: strin
       ) : (
         <div className="tfk-lead-list" data-testid="tradeflowkit-lead-list">
           {visibleLeads.map((lead) => (
-            <article className="tfk-lead-row" key={lead.id} data-testid={`tradeflowkit-lead-${lead.id}`}>
+            <article className={`tfk-lead-row${lead.id === deepLeadId ? ' selected' : ''}`} key={lead.id} data-testid={`tradeflowkit-lead-${lead.id}`}>
               <div className="tfk-lead-identity">
                 <div className={`tfk-lead-urgency tfk-lead-urgency-${lead.urgency}`}>{lead.urgency}</div>
                 <h3>{lead.name}</h3>
@@ -359,7 +360,7 @@ export default function TradeFlowKitLeadCenter({ tenantKey }: { tenantKey: strin
               </label>
               <div className="tfk-lead-delete">
                 {lead.status === 'converted' && lead.jobId ? (
-                  <a className="tfk-converted-link" href={`/modules/tradeflowkit/jobs/${lead.jobId}`}>Job <ArrowRight size={14} /></a>
+                  <a className="tfk-converted-link" href={`/jobs/${lead.jobId}`}>Job <ArrowRight size={14} /></a>
                 ) : pendingDeleteId === lead.id ? (
                   <>
                     <button type="button" className="tfk-danger" disabled={updatingId === lead.id} onClick={() => deleteLead(lead.id)}>
@@ -419,6 +420,7 @@ const leadCenterCss = `
   .tfk-lead-search input { padding-left: 34px; }
   .tfk-lead-list { display: grid; gap: 8px; }
   .tfk-lead-row { border: 1px solid rgba(22,101,52,.14); border-radius: 7px; background: #fff; padding: 11px; display: grid; grid-template-columns: minmax(150px, 1.2fr) minmax(150px, 1fr) minmax(115px, .65fr) 130px auto; gap: 12px; align-items: center; }
+  .tfk-lead-row.selected { border-color: #059669; background: #f0fdf4; box-shadow: inset 3px 0 #059669; }
   .tfk-lead-identity { min-width: 0; }
   .tfk-lead-identity h3 { margin: 3px 0 0; font-size: 14px; overflow-wrap: anywhere; }
   .tfk-lead-identity p, .tfk-lead-contact span, .tfk-lead-value span { margin: 3px 0 0; color: #587067; font-size: 11px; overflow-wrap: anywhere; }

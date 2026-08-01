@@ -271,6 +271,174 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
     };
   });
 
+  app.get('/v1/modules/tradeflowkit/search', { preHandler: [...readGuards] }, async (request, reply) => {
+    let query: string;
+    try {
+      const raw = record(request.query ?? {});
+      query = stringValue(raw.q, 'q', 100)?.trim() ?? '';
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+
+    const empty = {
+      query,
+      leads: [], customers: [], jobs: [], tasks: [], organizations: [], contacts: [], quotes: [], invoices: [],
+      total: 0,
+    };
+    if (!query) return empty;
+
+    const tenant = tenantId(request);
+    const escaped = query.replace(/[\\%_]/g, '\\$&');
+    const pattern = `%${escaped}%`;
+    const prefix = `${escaped}%`;
+    const limit = 5;
+    const [leads, customers, jobs, tasks, organizations, contacts, quotes, invoices] = await Promise.all([
+      db.select({
+        id: tradeflowkitLeads.id,
+        name: tradeflowkitLeads.name,
+        status: tradeflowkitLeads.status,
+        serviceType: tradeflowkitLeads.serviceType,
+      }).from(tradeflowkitLeads).where(and(
+        eq(tradeflowkitLeads.tenantId, tenant),
+        isNull(tradeflowkitLeads.deletedAt),
+        or(
+          ilike(tradeflowkitLeads.name, pattern),
+          ilike(tradeflowkitLeads.phone, pattern),
+          ilike(tradeflowkitLeads.email, pattern),
+          ilike(tradeflowkitLeads.serviceType, pattern),
+        ),
+      )).orderBy(desc(tradeflowkitLeads.updatedAt)).limit(limit),
+      db.select({
+        id: tradeflowkitCustomers.id,
+        name: tradeflowkitCustomers.name,
+        email: tradeflowkitCustomers.email,
+        phone: tradeflowkitCustomers.phone,
+      }).from(tradeflowkitCustomers).where(and(
+        eq(tradeflowkitCustomers.tenantId, tenant),
+        isNull(tradeflowkitCustomers.deletedAt),
+        or(
+          ilike(tradeflowkitCustomers.name, pattern),
+          ilike(tradeflowkitCustomers.email, pattern),
+          ilike(tradeflowkitCustomers.phone, pattern),
+        ),
+      )).orderBy(desc(tradeflowkitCustomers.updatedAt)).limit(limit),
+      db.select({
+        id: tradeflowkitJobs.id,
+        title: tradeflowkitJobs.title,
+        status: tradeflowkitJobs.status,
+        number: tradeflowkitJobs.number,
+        customerName: tradeflowkitCustomers.name,
+      }).from(tradeflowkitJobs).innerJoin(tradeflowkitCustomers, and(
+        eq(tradeflowkitCustomers.tenantId, tradeflowkitJobs.tenantId),
+        eq(tradeflowkitCustomers.id, tradeflowkitJobs.customerId),
+        isNull(tradeflowkitCustomers.deletedAt),
+      )).where(and(
+        eq(tradeflowkitJobs.tenantId, tenant),
+        isNull(tradeflowkitJobs.deletedAt),
+        or(
+          ilike(tradeflowkitJobs.title, pattern),
+          ilike(tradeflowkitJobs.description, pattern),
+          ilike(tradeflowkitCustomers.name, pattern),
+          sql`CAST(${tradeflowkitJobs.number} AS TEXT) ILIKE ${prefix}`,
+        ),
+      )).orderBy(desc(tradeflowkitJobs.updatedAt)).limit(limit),
+      db.select({
+        id: tradeflowkitTasks.id,
+        title: tradeflowkitTasks.title,
+        status: tradeflowkitTasks.status,
+        priority: tradeflowkitTasks.priority,
+        jobId: tradeflowkitTasks.jobId,
+        jobTitle: tradeflowkitJobs.title,
+      }).from(tradeflowkitTasks).innerJoin(tradeflowkitJobs, and(
+        eq(tradeflowkitJobs.tenantId, tradeflowkitTasks.tenantId),
+        eq(tradeflowkitJobs.id, tradeflowkitTasks.jobId),
+        isNull(tradeflowkitJobs.deletedAt),
+      )).where(and(
+        eq(tradeflowkitTasks.tenantId, tenant),
+        isNull(tradeflowkitTasks.deletedAt),
+        or(
+          ilike(tradeflowkitTasks.title, pattern),
+          ilike(tradeflowkitTasks.description, pattern),
+          ilike(tradeflowkitJobs.title, pattern),
+        ),
+      )).orderBy(desc(tradeflowkitTasks.updatedAt)).limit(limit),
+      db.select({
+        id: directoryOrganizations.id,
+        name: directoryOrganizations.name,
+        type: directoryOrganizations.type,
+        status: directoryOrganizations.status,
+      }).from(directoryOrganizations).where(and(
+        eq(directoryOrganizations.tenantId, tenant),
+        isNull(directoryOrganizations.archivedAt),
+        or(
+          ilike(directoryOrganizations.name, pattern),
+          ilike(directoryOrganizations.website, pattern),
+        ),
+      )).orderBy(desc(directoryOrganizations.updatedAt)).limit(limit),
+      db.select({
+        id: directoryContacts.id,
+        firstName: directoryContacts.firstName,
+        lastName: directoryContacts.lastName,
+        email: directoryContacts.email,
+        phone: directoryContacts.phone,
+      }).from(directoryContacts).where(and(
+        eq(directoryContacts.tenantId, tenant),
+        isNull(directoryContacts.archivedAt),
+        or(
+          ilike(directoryContacts.firstName, pattern),
+          ilike(directoryContacts.lastName, pattern),
+          ilike(directoryContacts.normalizedName, pattern),
+          ilike(directoryContacts.email, pattern),
+          ilike(directoryContacts.phone, pattern),
+        ),
+      )).orderBy(desc(directoryContacts.updatedAt)).limit(limit),
+      db.select({
+        id: tradeflowkitQuotes.id,
+        number: tradeflowkitQuotes.number,
+        status: tradeflowkitQuotes.status,
+        totalCents: tradeflowkitQuotes.totalCents,
+        customerName: tradeflowkitCustomers.name,
+      }).from(tradeflowkitQuotes).innerJoin(tradeflowkitCustomers, and(
+        eq(tradeflowkitCustomers.tenantId, tradeflowkitQuotes.tenantId),
+        eq(tradeflowkitCustomers.id, tradeflowkitQuotes.customerId),
+        isNull(tradeflowkitCustomers.deletedAt),
+      )).where(and(
+        eq(tradeflowkitQuotes.tenantId, tenant),
+        isNull(tradeflowkitQuotes.deletedAt),
+        or(
+          ilike(tradeflowkitQuotes.id, prefix),
+          ilike(tradeflowkitCustomers.name, pattern),
+          sql`CAST(${tradeflowkitQuotes.number} AS TEXT) ILIKE ${prefix}`,
+        ),
+      )).orderBy(desc(tradeflowkitQuotes.updatedAt)).limit(limit),
+      db.select({
+        id: tradeflowkitInvoices.id,
+        number: tradeflowkitInvoices.number,
+        status: tradeflowkitInvoices.status,
+        totalCents: tradeflowkitInvoices.totalCents,
+        balanceCents: tradeflowkitInvoices.balanceCents,
+        customerName: tradeflowkitCustomers.name,
+      }).from(tradeflowkitInvoices).innerJoin(tradeflowkitCustomers, and(
+        eq(tradeflowkitCustomers.tenantId, tradeflowkitInvoices.tenantId),
+        eq(tradeflowkitCustomers.id, tradeflowkitInvoices.customerId),
+        isNull(tradeflowkitCustomers.deletedAt),
+      )).where(and(
+        eq(tradeflowkitInvoices.tenantId, tenant),
+        isNull(tradeflowkitInvoices.deletedAt),
+        or(
+          ilike(tradeflowkitInvoices.id, prefix),
+          ilike(tradeflowkitCustomers.name, pattern),
+          sql`CAST(${tradeflowkitInvoices.number} AS TEXT) ILIKE ${prefix}`,
+        ),
+      )).orderBy(desc(tradeflowkitInvoices.updatedAt)).limit(limit),
+    ]);
+
+    return {
+      query,
+      leads, customers, jobs, tasks, organizations, contacts, quotes, invoices,
+      total: leads.length + customers.length + jobs.length + tasks.length
+        + organizations.length + contacts.length + quotes.length + invoices.length,
+    };
+  });
+
   app.get('/v1/modules/tradeflowkit/workflows', { preHandler: [...readGuards] }, async (request, reply) => {
     let entityType: 'job' | 'task' | null;
     try {

@@ -178,10 +178,10 @@ Phase 16A is active and is not a production-ready declaration. TradeFlowKit
 has been re-baselined against clean restored source commit
 `37aa67f1da804fc3ac56f36e50e01362077d7a26`. The generated source ledger pins
 the reviewed files and classifies 35 client pages, 194 API routes, 40 tables,
-and 8 provider/config references with zero unclassified items. After four
-real implementation increments, 103 items are active, 53 use shared OperatorOS
+and 8 provider/config references with zero unclassified items. After five
+real implementation increments, 104 items are active, 53 use shared OperatorOS
 authority, 41 are retired for security, 23 are retired by product boundary,
-and 57 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
+and 56 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
 4 remains valid but is not full-product parity.
 
 Workflow Studio is now persistent rather than a shell: tenant-admin governed
@@ -235,6 +235,18 @@ cannot be archived while active jobs, quotes, or invoices remain. Viewer
 writes fail closed, foreign records return non-enumerating `404` responses,
 and every successful mutation writes tenant-scoped activity.
 
+The fifth increment replaces the standalone global-search gap with a real
+shared-runtime workflow. `GET /v1/modules/tradeflowkit/search` uses the trusted
+session tenant and existing read guards, validates a maximum 100-character
+query, escapes SQL wildcard characters, and returns at most five matches from
+each of eight active groups: leads, customers, jobs, tasks, shared Directory
+organizations/contacts, quotes, and invoices. The responsive UI exposes
+loading, error, and empty states and uses canonical module-host workflow paths,
+including exact record deep links where the native shell supports selection;
+viewer search remains read-only and all write authority is unchanged. Focused
+tests prove anonymous denial, viewer access, per-type bounds, literal wildcard
+handling, second-tenant non-enumeration, and persistence across API restart.
+
 Phase 16A also adds a read-only, organization-scoped standalone snapshot tool
 and a version 1 guarded atomic apply path for core customers, Directory
 organizations, jobs, quotes/items, invoices/items, paid-state history, leads,
@@ -282,6 +294,58 @@ account, the first database target was absent, and the first browser queries
 raced in-flight React mutations. The final isolated API and browser commands
 both pass unchanged product assertions.
 
+### Phase 16A global-search verification record
+
+Commands ran on 2026-07-31 from `C:\Dev\OperatorOS`. Database-backed checks
+and the compiled browser flow used disposable PostgreSQL 16 data only;
+providers were disabled and no production mutation or deployment occurred.
+
+```powershell
+node --import tsx --test apps/api/test/tradeflowkit-global-search-static.test.ts
+$env:APP_ENV='test'; $env:NODE_ENV='test'
+node --import tsx --test --test-concurrency=1 `
+  apps/api/test/tradeflowkit-global-search.test.ts `
+  apps/api/test/tradeflowkit-customer-import.test.ts `
+  apps/api/test/tradeflowkit-document-mutations.test.ts `
+  apps/api/test/tradeflowkit-revenue-flow.test.ts `
+  apps/api/test/tradeflowkit-shared-runtime-leads.test.ts `
+  apps/api/test/tradeflowkit-state5-workflow.test.ts `
+  apps/api/test/tradeflowkit-work-management.test.ts
+corepack pnpm verify:tradeflowkit:phase16
+$env:INTERNAL_API_URL='http://127.0.0.1:5001'
+corepack pnpm build:production
+corepack pnpm preflight:production -- --core
+node scripts/start-unified-runtime.mjs
+$env:E2E_PRODUCTION_HOSTS='1'
+& 'C:\Dev\OperatorOS\apps\web\node_modules\.bin\playwright.cmd' test e2e/tradeflowkit-core-crud.spec.ts
+```
+
+Results: the search static contract passes 1/1 and the broader non-database
+TradeFlowKit contract/import set passes 16/16. The seven-file isolated
+PostgreSQL regression passes 21/21 with zero failures or skips. The executable
+ledger passes with 104 active items, 53 shared replacements, 56 explicit gaps,
+zero unclassified, 41 security retirements, and 23 product-boundary
+retirements. The API, runner gateway, SDK, and 20-page Next production build
+passes with workspace typecheck. Core preflight passes. The readiness-gated
+supervisor reapplies and verifies database release v29, identifies commit
+`92ca0db4a2609f4090104909bbd558e5b3b3157f` with build
+`ea0462cd5cffff3a08cfebd2`, and returns HTTP 200 health/readiness with database,
+auth, SSO encryption, module registry, shared worker, and release identity
+healthy/configured.
+
+The exact-host Chrome workflow passes 1/1 in 16.1 seconds. In addition to the
+existing customer/job/task create-edit-persist-archive path, it searches by a
+unique suffix, renders the updated customer, job, and task, follows the task
+result to canonical `/tasks/:id`, and confirms the selected persisted task.
+The first run correctly exposed an internal `/modules/tradeflowkit/...` result
+URL that is invalid on the canonical module host; links were corrected to
+module-host paths and the unchanged end-to-end assertion then passed. Live
+read-only verification separately passes 48/48 against deployed commit
+`c29cbca376525885e906d10b3e2df647cfce6b00`; pinning current main
+`92ca0db4a2609f4090104909bbd558e5b3b3157f` returns 46/48 solely because the
+public health/readiness release identity is older. Deployed authenticated
+workflow, provider, data-cutover, and rollback gates remain open.
+
 ### Phase 16A verification record (current increment)
 
 Commands ran on 2026-07-28 from `C:\Dev\OperatorOS`. Database-backed tests used
@@ -318,7 +382,7 @@ passes for API, runner gateway, SDK, and the 20-page Next application. The
 release applies and verifies twice consecutively, including the one-time
 priority-constraint upgrade without recreating the upgraded constraint. The
 source ledger reports 35 pages, 194 API routes, 40 tables, 8 providers, zero
-unclassified items, and 57 explicit gaps; `git diff --check` passes with
+unclassified items, and 56 explicit gaps; `git diff --check` passes with
 line-ending warnings only. The Replit-equivalent supervisor reapplies all 29
 release steps on the isolated database, starts the built Fastify and Next
 artifacts, and returns `200` from API `/healthz`, API `/readyz`, and the web
@@ -377,11 +441,15 @@ change. Deployed browser acceptance, real standalone export/cutover, live
 provider acceptance, and rollback rehearsal remain pending for this Phase 16
 revision.
 
-Phase 15 has not accepted a production release, but the public deployment gate
-now passes. Merge `c249a75396104e7aabd773e564be6a95ada56467` is live as build
-`2eb701089a539d9e6da5af80`; readiness identifies that exact revision, and the
-contract-corrected public verifier passes 48/48. The earlier 31/48 result used
-stale root-entry, transaction-cookie-name, and Replit health-path assumptions.
+The current public deployment passes the unpinned read-only verifier 48/48 at
+commit `c29cbca376525885e906d10b3e2df647cfce6b00`, build
+`25095fde5c3543a8aa748634`. Current main
+`92ca0db4a2609f4090104909bbd558e5b3b3157f` is not deployed: pinning the
+verifier to it returns 46/48, with only the health and readiness release-commit
+assertions failing. This is a deployment-identity gate, not evidence that main
+is live or accepted. An earlier Phase 15 public revision also passed 48/48
+after stale root-entry, transaction-cookie-name, and Replit health-path
+assumptions were corrected.
 Deployment
 `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd` / build
 `c49eeb9c-5f0b-40b3-9f31-44813446124c` then failed before the repository build
