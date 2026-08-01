@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "moduleSlug": "tradeflowkit",
-  "capturedAtUtc": "2026-08-01T03:41:25.791Z",
+  "capturedAtUtc": "2026-08-01T16:48:19.941Z",
   "source": {
     "repository": "https://github.com/shotgunsensei/TradeFlowKit.git",
     "commit": "37aa67f1da804fc3ac56f36e50e01362077d7a26",
@@ -725,11 +725,18 @@
         "method": "DELETE",
         "path": "/api/operations/saved-views/:id",
         "sourcePointer": "server/routes/operationsData.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "saved_views",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Durable tenant/user saved views are not yet active."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-saved-views.test.ts",
+          "apps/api/test/tradeflowkit-saved-views-static.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx"
+        ],
+        "note": "Bounded tenant/user saved views support personal ownership, admin-governed tenant sharing, persistence, application, and soft deletion."
       },
       {
         "key": "DELETE /api/quotes/:id",
@@ -1800,11 +1807,18 @@
         "method": "GET",
         "path": "/api/operations/saved-views",
         "sourcePointer": "server/routes/operationsData.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "saved_views",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Durable tenant/user saved views are not yet active."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-saved-views.test.ts",
+          "apps/api/test/tradeflowkit-saved-views-static.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx"
+        ],
+        "note": "Bounded tenant/user saved views support personal ownership, admin-governed tenant sharing, persistence, application, and soft deletion."
       },
       {
         "key": "GET /api/operations/tags",
@@ -3281,11 +3295,18 @@
         "method": "POST",
         "path": "/api/operations/saved-views",
         "sourcePointer": "server/routes/operationsData.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "saved_views",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Durable tenant/user saved views are not yet active."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-saved-views.test.ts",
+          "apps/api/test/tradeflowkit-saved-views-static.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx"
+        ],
+        "note": "Bounded tenant/user saved views support personal ownership, admin-governed tenant sharing, persistence, application, and soft deletion."
       },
       {
         "key": "POST /api/operations/tags",
@@ -4130,11 +4151,18 @@
         "key": "saved_views",
         "table": "saved_views",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "saved_views",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Saved views are not active."
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-saved-views-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-saved-views.test.ts",
+          "apps/api/test/tradeflowkit-saved-views-static.test.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitOperations.tsx"
+        ],
+        "note": "Canonical tenant-scoped saved-view persistence is active with bounded JSON, ownership, audit, indexes, and soft-delete state."
       },
       {
         "key": "tags",

@@ -1,6 +1,6 @@
 # OperatorOS implementation status
 
-- Last updated: 2026-07-31
+- Last updated: 2026-08-01
 - Phase: **17 — Production Truth and Revenue Release Gate**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
@@ -20,8 +20,45 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/torqueshed-state4-acceptance`
+- Execution branch: `codex/tradeflowkit-saved-views`
 - Release gate: **closed**
+
+## 2026-08-01 TradeFlowKit saved-view restoration and release v30
+
+TradeFlowKit now restores the standalone product's durable saved-view surface
+inside OperatorOS authority. Members can create personal resource-scoped
+views; tenant owners/admins may share them; viewers remain read-only; and only
+the owning user can soft-delete a view. The API accepts only allowlisted
+resources, filter fields, sort fields, and directions, bounds JSON payloads
+and per-user/resource counts, applies trusted tenant/user predicates to every
+query, returns no owner or tenant identifiers, and records create/archive
+activity. The responsive operations workspace can save, share, reload, apply,
+and delete real persisted job filters.
+
+The schema is an additive database release rather than a mutation of the
+previous v29 operation. Release v30 adds `tradeflowkit_saved_views` as step
+30, with tenant/user foreign keys, JSON/name/resource/version checks, an
+active-name uniqueness rule, a visibility index, and soft-delete timestamps.
+The repository rollback contract remains restore-to-new-database and
+switch-traffic; application rollback retains the additive table and data.
+
+| Gate | Result |
+| --- | --- |
+| Focused contracts/static | PASS 14/14 across release identity, runtime verifier, schema/API/client/UI, and ledger wiring |
+| Saved-view PostgreSQL workflow | PASS 1/1; validation bounds, viewer denial, admin-only sharing, tenant isolation, ownership, safe projection, audit, soft delete, and restart persistence |
+| Adjacent TradeFlowKit PostgreSQL regression | PASS 10/10 across saved views, search, messaging, retention, revenue, state-5 workflow, and work management |
+| Executable source ledger | PASS; 115 active, 53 shared replacements, 45 explicit gaps, 41 security retirements, 23 product-boundary retirements, zero unclassified |
+| Database release | PASS; v30 plan, clean apply, and idempotent reapply on disposable PostgreSQL 16 |
+| Workspace/type/build | PASS; API/runner/web typecheck and production build with Next 15.5.22 and 20/20 generated page entries |
+| Production-mode runtime | PASS; core preflight and readiness-gated supervisor returned HTTP 200 from `/healthz` and `/readyz` with database/auth/SSO/registry/worker/release identity configured and database release v30/30 |
+| Exact-host TradeFlowKit browser | PASS 1/1 in 22.0 seconds; exact-host PKCE plus saved-view create/share/persist/reload/apply/delete and the existing lead/customer/job/task/search/archive/restore path |
+| Deployment/providers/data cutover | NOT RUN; all credentials were synthetic local test values, providers remained disabled, and no production data, Replit deployment, or traffic cutover was touched |
+
+The working-tree production artifact validates the code but is not itself a
+deployable release identity; release handoff is conditioned on a fresh build
+from the final committed revision. Deployed/provider/data/rollback acceptance
+gates remain open, so TradeFlowKit stays source/local state 4 rather than
+production-ready.
 
 ## 2026-07-31 TorqueShed State 4 acceptance closure
 

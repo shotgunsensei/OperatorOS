@@ -1107,6 +1107,18 @@ export interface TradeFlowKitOperationsResponse {
   metrics: { leads: number; jobs: number; tasks: number; completed_tasks: number; invoiced_cents: string; collected_cents: string; outstanding_cents: string };
   pagination: { limit: number; offset: number; returned: number };
 }
+export interface TradeFlowKitSavedView {
+  id: string;
+  resource: 'jobs' | 'tasks' | 'leads' | 'customers' | 'quotes' | 'invoices';
+  name: string;
+  filters: Record<string, string>;
+  sort: { field: string; direction: 'asc' | 'desc' };
+  isShared: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  owned: boolean;
+}
 export interface TradeFlowKitQuote {
   id: string; number: number | null; customerId: string; jobId: string | null; status: string; lineItems: TradeFlowKitLineItem[];
   subtotalCents: number; taxRateBps: number; taxCents: number; discountCents: number; totalCents: number;
@@ -1855,6 +1867,15 @@ export const moduleShellApi = {
       const suffix = query.size ? `?${query.toString()}` : '';
       return apiFetch(`/modules/tradeflowkit/operations${suffix}`) as Promise<TradeFlowKitOperationsResponse>;
     },
+    savedViews: (resource?: TradeFlowKitSavedView['resource']): Promise<{ savedViews: TradeFlowKitSavedView[] }> =>
+      apiFetch(`/modules/tradeflowkit/saved-views${resource ? `?resource=${encodeURIComponent(resource)}` : ''}`) as Promise<{ savedViews: TradeFlowKitSavedView[] }>,
+    createSavedView: (input: {
+      resource: TradeFlowKitSavedView['resource']; name: string; filters: Record<string, string>;
+      sort: TradeFlowKitSavedView['sort']; isShared?: boolean;
+    }): Promise<TradeFlowKitSavedView> =>
+      apiFetch('/modules/tradeflowkit/saved-views', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitSavedView>,
+    deleteSavedView: (id: string): Promise<{ ok: true; savedView: TradeFlowKitSavedView }> =>
+      apiFetch(`/modules/tradeflowkit/saved-views/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<{ ok: true; savedView: TradeFlowKitSavedView }>,
     job: (id: string) => apiFetch(`/modules/tradeflowkit/jobs/${encodeURIComponent(id)}`),
     updateJob: (id: string, input: Record<string, unknown>): Promise<TradeFlowKitJob> =>
       apiFetch(`/modules/tradeflowkit/jobs/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<TradeFlowKitJob>,
