@@ -125,8 +125,8 @@ TradeFlowKit was re-baselined against clean restored source commit
 approved-scope snapshot as full-product parity. The executable source ledger
 inventories 35 pages, 194 API routes, 40 tables, and 8 provider/config
 references with zero unclassified items. After the Workflow Studio,
-revenue-document, customer-import, core-record editing, global-search, and
-retention increments, 109 items are active, 53 use shared OperatorOS replacements, and 51 remain
+revenue-document, customer-import, core-record editing, global-search,
+retention, and lead-messaging increments, 111 items are active, 53 use shared OperatorOS replacements, and 49 remain
 explicit Phase 16 gaps.
 
 The current revenue increment adds persistent direct invoice creation;
@@ -174,6 +174,13 @@ parent archives through tenant-specific advisory locks, and write activity.
 Viewers remain read-only, foreign records remain non-enumerating, document
 token hashes are never projected, and no permanent-purge route exists.
 
+The lead-messaging increment restores dedicated lead email and SMS actions
+without creating module-local provider authority. Destinations are derived
+from the tenant-owned lead, SMS requires stored consent and enforced opt-out
+wording, changed-message idempotency-key reuse fails, and the shared outbox
+records queue state. The Lead Center exposes responsive queue actions and a
+viewer read-only state while accurately leaving delivery to the shared worker.
+
 Fresh local evidence adds a 2/2 PostgreSQL workflow and a 1/1 exact-host Chrome
 workflow in 16.4 seconds against the production build and readiness-gated
 supervisor. The browser case proves PKCE login/return, all three record editors
@@ -196,6 +203,13 @@ production build, core preflight, release-v29 compiled health/readiness, and
 customer; visits canonical `/trash`; restores customer then job; and confirms
 the task remains archived. This is local production-mode evidence only.
 
+Fresh lead-messaging evidence on 2026-07-31 passes 9/9 focused non-database
+checks, 23/23 adjacent isolated PostgreSQL regressions, workspace typecheck,
+production build/core preflight/readiness-gated runtime, and 1/1 exact-host
+Chrome in 20.7 seconds. The browser creates a consent-marked lead, queues an
+email, verifies its server-owned shared-outbox destination, then completes the
+existing archive/restore workflow. No provider delivery was invoked.
+
 Local evidence on 2026-07-28 includes 5/5 focused PostgreSQL/static checks; a
 clean API aggregate at 872 total, 866 pass, zero fail, and six intentional
 HTTP-only skips; workspace typecheck; production build; the compiled 29-step
@@ -216,7 +230,7 @@ and a count-only check confirmed no synthetic import-gate identity remained.
 The clean rebuilt runtime and core production preflight both pass.
 
 This follow-up does not change the ecosystem **NOT ACCEPTED** verdict or claim
-TradeFlowKit state 5. Fifty-one parity gaps remain, and deployed authenticated
+TradeFlowKit state 5. Forty-nine parity gaps remain, and deployed authenticated
 acceptance, live providers, an approved real export/apply/reconciliation,
 rollback rehearsal, and production cutover have not occurred.
 

@@ -1789,6 +1789,15 @@ export const moduleShellApi = {
       apiFetch(`/modules/tradeflowkit/trash/jobs/${encodeURIComponent(id)}/restore`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true; job: { id: string; version: number } }>,
     restoreInvoice: (id: string, expectedVersion: number): Promise<{ ok: true; invoice: { id: string; version: number } }> =>
       apiFetch(`/modules/tradeflowkit/trash/invoices/${encodeURIComponent(id)}/restore`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true; invoice: { id: string; version: number } }>,
+    messageLead: (
+      id: string,
+      channel: 'email' | 'sms',
+      idempotencyKey: string,
+      input: { template?: string; subject?: string } = {},
+    ): Promise<{ status: 'queued'; duplicate: boolean }> =>
+      apiFetch(`/modules/tradeflowkit/leads/${encodeURIComponent(id)}/send-${channel}`, {
+        method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify(input),
+      }) as Promise<{ status: 'queued'; duplicate: boolean }>,
     createCustomer: (input: TradeFlowKitCustomerImportRow): Promise<TradeFlowKitCustomer> =>
       apiFetch('/modules/tradeflowkit/customers', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitCustomer>,
     updateCustomer: (id: string, input: TradeFlowKitCustomerImportRow & { expectedVersion: number }): Promise<TradeFlowKitCustomer> =>
@@ -1928,6 +1937,7 @@ export const moduleShellApi = {
       urgency?: 'normal' | 'urgent' | 'emergency';
       estimatedValueCents?: number | null;
       nextFollowUpAt?: string | null;
+      consentToSms?: boolean;
     }) => apiFetch('/modules/tradeflowkit/leads', {
       method: 'POST',
       body: JSON.stringify(input),

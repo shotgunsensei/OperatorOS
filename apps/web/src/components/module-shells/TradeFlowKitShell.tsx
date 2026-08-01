@@ -370,7 +370,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               tabIndex={-1}
             >
               {hasTenantContext && adapter.tenantId && (
-                <TradeFlowKitLeadCenter key={adapter.tenantId} tenantKey={adapter.tenantId} />
+                <TradeFlowKitLeadCenter key={adapter.tenantId} tenantKey={adapter.tenantId} canManage={canManageModule} />
               )}
             </section>
 

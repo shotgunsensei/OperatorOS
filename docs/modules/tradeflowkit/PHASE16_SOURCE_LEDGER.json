@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "moduleSlug": "tradeflowkit",
-  "capturedAtUtc": "2026-08-01T03:22:45.877Z",
+  "capturedAtUtc": "2026-08-01T03:41:25.791Z",
   "source": {
     "repository": "https://github.com/shotgunsensei/TradeFlowKit.git",
     "commit": "37aa67f1da804fc3ac56f36e50e01362077d7a26",
@@ -3115,22 +3115,34 @@
         "method": "POST",
         "path": "/api/leads/:id/send-email",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "disposition": "active",
+        "domain": "lead_messaging",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitLeadCenter.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging-static.test.ts"
+        ],
+        "note": "Email and consent-gated SMS are queued through the shared replay-safe outbox using the tenant-owned lead destination."
       },
       {
         "key": "POST /api/leads/:id/send-sms",
         "method": "POST",
         "path": "/api/leads/:id/send-sms",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "disposition": "active",
+        "domain": "lead_messaging",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitLeadCenter.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging-static.test.ts"
+        ],
+        "note": "Email and consent-gated SMS are queued through the shared replay-safe outbox using the tenant-owned lead destination."
       },
       {
         "key": "POST /api/leads/settings/apply-template",

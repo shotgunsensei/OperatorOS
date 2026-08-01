@@ -1871,6 +1871,90 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
     return result;
   });
 
+  const queueLeadMessage = (channel: 'email' | 'sms') => async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const tenant = tenantId(request);
+    const key = idempotencyKey(request);
+    if (!key) return reply.code(400).send({ error: 'A valid Idempotency-Key header is required', code: 'IDEMPOTENCY_KEY_REQUIRED' });
+    let template: string | null;
+    let subject: string | null;
+    try {
+      const raw = record(request.body ?? {});
+      if (Object.keys(raw).some(field => !['template', 'body', 'subject'].includes(field))) {
+        throw new InputError('FIELD_NOT_ALLOWED');
+      }
+      template = stringValue(raw.template ?? raw.body, 'template', 18_000);
+      subject = stringValue(raw.subject, 'subject', 500);
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
+    const [lead] = await db.select({
+      id: tradeflowkitLeads.id,
+      name: tradeflowkitLeads.name,
+      phone: tradeflowkitLeads.phone,
+      email: tradeflowkitLeads.email,
+      serviceType: tradeflowkitLeads.serviceType,
+      consentToSms: tradeflowkitLeads.consentToSms,
+    }).from(tradeflowkitLeads).where(and(
+      eq(tradeflowkitLeads.id, id),
+      eq(tradeflowkitLeads.tenantId, tenant),
+      isNull(tradeflowkitLeads.deletedAt),
+    )).limit(1);
+    if (!lead) return reply.code(404).send({ error: 'Lead not found', code: 'LEAD_NOT_FOUND' });
+    if (channel === 'sms' && !lead.consentToSms) {
+      return reply.code(409).send({ error: 'SMS consent is required before messaging this lead', code: 'LEAD_SMS_CONSENT_REQUIRED' });
+    }
+    const destination = channel === 'email' ? lead.email : lead.phone;
+    if (!destination) {
+      return reply.code(409).send({ error: `Lead has no ${channel === 'email' ? 'email address' : 'phone number'}`, code: channel === 'email' ? 'LEAD_EMAIL_UNAVAILABLE' : 'LEAD_SMS_UNAVAILABLE' });
+    }
+    const defaultBody = channel === 'email'
+      ? 'Hi {name}, thanks for reaching out about {service}. We received your request and will follow up shortly.'
+      : 'Hi {name}, we received your request about {service}. Reply STOP to opt out.';
+    let body = (template ?? defaultBody)
+      .replaceAll('{name}', lead.name)
+      .replaceAll('{service}', lead.serviceType || 'your service request');
+    if (channel === 'sms' && !/\b(?:stop|unsubscribe)\b/i.test(body)) body += ' Reply STOP to opt out.';
+    try {
+      const queued = await enqueueOutboxMessage({
+        tenantId: tenant,
+        moduleId: await moduleId(),
+        requestedByUserId: userId(request),
+        channel,
+        destination,
+        subject: channel === 'email' ? (subject ?? 'Following up on your request') : null,
+        body,
+        idempotencyKey: key,
+        context: { entityType: 'lead', entityId: id, sourceRoute: `send-${channel}` },
+      });
+      if (queued.duplicate) {
+        const existing = queued.message as Record<string, unknown>;
+        const existingSubject = existing.subject === undefined || existing.subject === null ? null : String(existing.subject);
+        if (
+          String(existing.channel) !== channel ||
+          String(existing.destination) !== destination ||
+          existingSubject !== (channel === 'email' ? (subject ?? 'Following up on your request') : null) ||
+          String(existing.body) !== body
+        ) {
+          return reply.code(409).send({ error: 'Idempotency key was already used for a different lead message', code: 'IDEMPOTENCY_KEY_REUSE' });
+        }
+      }
+      await audit(db, {
+        tenantId: tenant,
+        userId: userId(request),
+        action: 'message_queued',
+        entityType: 'lead',
+        entityId: id,
+        metadata: { channel, duplicate: queued.duplicate },
+      });
+      return reply.code(queued.duplicate ? 200 : 202).send({ ...queued, status: 'queued' });
+    } catch (error) {
+      const code = String((error as { code?: string })?.code || 'MESSAGE_INVALID');
+      return reply.code(400).send({ error: error instanceof Error ? error.message : 'Message could not be queued', code });
+    }
+  };
+
+  app.post('/v1/modules/tradeflowkit/leads/:id/send-email', { preHandler: [...writeGuards] }, queueLeadMessage('email'));
+  app.post('/v1/modules/tradeflowkit/leads/:id/send-sms', { preHandler: [...writeGuards] }, queueLeadMessage('sms'));
+
   app.post('/v1/modules/tradeflowkit/:entityType/:entityId/message', { preHandler: [...writeGuards] }, async (request, reply) => {
     const { entityType, entityId } = request.params as { entityType: string; entityId: string };
     const tenant = tenantId(request);

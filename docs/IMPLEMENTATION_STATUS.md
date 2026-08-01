@@ -178,10 +178,10 @@ Phase 16A is active and is not a production-ready declaration. TradeFlowKit
 has been re-baselined against clean restored source commit
 `37aa67f1da804fc3ac56f36e50e01362077d7a26`. The generated source ledger pins
 the reviewed files and classifies 35 client pages, 194 API routes, 40 tables,
-and 8 provider/config references with zero unclassified items. After six
-real implementation increments, 109 items are active, 53 use shared OperatorOS
+and 8 provider/config references with zero unclassified items. After seven
+real implementation increments, 111 items are active, 53 use shared OperatorOS
 authority, 41 are retired for security, 23 are retired by product boundary,
-and 51 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
+and 49 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
 4 remains valid but is not full-product parity.
 
 Workflow Studio is now persistent rather than a shell: tenant-admin governed
@@ -257,6 +257,16 @@ write activity. The responsive `/trash` workspace provides loading, error,
 empty, mobile, and viewer read-only states. Foreign records remain
 non-enumerating, shared Directory identity stays active, and no permanent
 delete route exists.
+
+The seventh increment restores dedicated lead email and SMS queue actions
+through OperatorOS shared notification infrastructure. The API derives the
+destination from the active tenant-owned lead, requires a valid idempotency
+key, rejects changed-message key reuse, requires explicit stored SMS consent,
+and appends opt-out wording when a custom SMS template omits it. It never
+accepts a client destination, stores no provider credential, and reports only
+queued state. The responsive Lead Center records manual SMS consent, exposes
+email/SMS actions with accurate disabled states, and renders viewer access as
+read only. Actual provider delivery remains a deployment acceptance gate.
 
 Phase 16A also adds a read-only, organization-scoped standalone snapshot tool
 and a version 1 guarded atomic apply path for core customers, Directory
@@ -405,6 +415,54 @@ safe projections, stale-version rejection, dependency failure codes, restart
 persistence, active Directory preservation, and three tenant-scoped restore
 activity events. This remains local evidence; deployed authenticated workflow,
 provider, approved data-cutover, and rollback gates remain open.
+
+### Phase 16A lead-messaging verification record
+
+Commands ran on 2026-07-31 from `C:\Dev\OperatorOS` against a new disposable
+PostgreSQL 16 database and synthetic leads. Providers remained disabled; the
+tests inspected queued outbox records and did not attempt delivery.
+
+```powershell
+node --import tsx --test `
+  apps/api/test/tradeflowkit-shared-runtime-leads.test.ts `
+  apps/api/test/tradeflowkit-lead-messaging-static.test.ts
+$env:APP_ENV='test'; $env:NODE_ENV='test'
+node --import tsx --test --test-concurrency=1 `
+  apps/api/test/tradeflowkit-customer-import.test.ts `
+  apps/api/test/tradeflowkit-document-mutations.test.ts `
+  apps/api/test/tradeflowkit-global-search.test.ts `
+  apps/api/test/tradeflowkit-lead-messaging.test.ts `
+  apps/api/test/tradeflowkit-retention.test.ts `
+  apps/api/test/tradeflowkit-revenue-flow.test.ts `
+  apps/api/test/tradeflowkit-shared-runtime-leads.test.ts `
+  apps/api/test/tradeflowkit-state5-workflow.test.ts `
+  apps/api/test/tradeflowkit-work-management.test.ts
+corepack pnpm verify:tradeflowkit:phase16
+$env:INTERNAL_API_URL='http://127.0.0.1:5001'
+corepack pnpm build:production
+corepack pnpm preflight:production -- --core
+node scripts/start-unified-runtime.mjs
+$env:E2E_PRODUCTION_HOSTS='1'
+& 'C:\Dev\OperatorOS\apps\web\node_modules\.bin\playwright.cmd' test e2e/tradeflowkit-core-crud.spec.ts
+```
+
+Results: focused lead contracts/static coverage passes 9/9. The nine-file
+adjacent PostgreSQL regression passes 23/23 with zero failures or skips. The
+ledger passes at 111 active, 53 shared replacements, 49 gaps, zero
+unclassified, 41 security retirements, and 23 product-boundary retirements.
+Workspace typecheck and the API, runner gateway, SDK, and 20-page Next
+production build pass; core preflight and the readiness-gated release-v29
+runtime pass.
+
+The exact-host Chrome workflow passes 1/1 in 20.7 seconds. It creates a manual
+lead with explicit SMS consent, queues email from the responsive Lead Center,
+and verifies the server-derived destination in `shared_outbox_messages` before
+completing the existing customer/job/task archive-and-restore path. API proof
+also covers anonymous/viewer/foreign-tenant denial, forbidden client
+destinations, missing replay protection, exact replay, changed-body rejection,
+SMS consent denial, enforced STOP wording, safe context, and activity. No live
+email/SMS provider acceptance, deployment, data cutover, or rollback rehearsal
+occurred.
 
 ### Phase 16A verification record (current increment)
 

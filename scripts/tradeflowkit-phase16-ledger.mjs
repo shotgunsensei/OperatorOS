@@ -94,6 +94,10 @@ const workManagementEvidence = [
   'apps/api/test/tradeflowkit-work-management.test.ts',
   'apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx',
 ];
+const leadMessagingEvidence = [
+  'apps/api/test/tradeflowkit-lead-messaging.test.ts',
+  'apps/api/test/tradeflowkit-lead-messaging-static.test.ts',
+];
 
 function classifyPage(path) {
   if (['/subscription', '/admin', '/access-denied'].includes(path)) {
@@ -502,12 +506,19 @@ function classifyApi(method, path) {
     );
   }
   if (path.startsWith('/api/leads')) {
+    if (path.includes('/send-sms') || path.includes('/send-email')) {
+      return outcome(
+        ACTIVE,
+        'lead_messaging',
+        ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitLeadCenter.tsx'],
+        leadMessagingEvidence,
+        'Email and consent-gated SMS are queued through the shared replay-safe outbox using the tenant-owned lead destination.',
+      );
+    }
     if (
       path.includes('/settings') ||
       path.includes('/source-events') ||
       path.includes('/followups') ||
-      path.includes('/send-sms') ||
-      path.includes('/send-email') ||
       path.includes('/test-message')
     ) {
       return outcome(GAP, 'lead_operations_extensions', [], [], 'This lead workflow extension is not yet equivalent in the shared runtime.');

@@ -622,7 +622,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
           action: 'created',
           entityType: 'tradeflowkit_lead',
           entityId: created.id,
-          metadata: { source: created.source, status: created.status },
+          metadata: { source: created.source, status: created.status, consentToSms: created.consentToSms },
         });
         return created;
       });
@@ -688,6 +688,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
           metadata: {
             changedFields,
             ...(statusChanged ? { fromStatus: before.status, toStatus: updated.status } : {}),
+            ...(patch.consentToSms !== undefined ? { consentToSms: patch.consentToSms } : {}),
           },
         });
         return updated;
