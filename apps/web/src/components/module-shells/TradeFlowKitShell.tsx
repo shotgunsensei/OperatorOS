@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import type { CSSProperties } from 'react';
 import {
   Activity,
+  ArchiveRestore,
   AlertTriangle,
   ArrowLeft,
   BarChart3,
@@ -31,6 +32,8 @@ import TradeFlowKitLeadCenter from './TradeFlowKitLeadCenter';
 import TradeFlowKitRevenueFlow from './TradeFlowKitRevenueFlow';
 import TradeFlowKitOperations from './TradeFlowKitOperations';
 import TradeFlowKitWorkManagement from './TradeFlowKitWorkManagement';
+import TradeFlowKitGlobalSearch from './TradeFlowKitGlobalSearch';
+import TradeFlowKitTrash from './TradeFlowKitTrash';
 import BusinessDirectory from './BusinessDirectory';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
@@ -311,6 +314,10 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
             <ContextChip label="Session" value="OperatorOS SSO" tone={colors.green} testId="tradeflowkit-session-badge" />
             <ContextChip label="Host" value={adapter.hostnames.production} tone={colors.gold} testId="tradeflowkit-host-badge" />
           </div>
+
+          {hasTenantContext && adapter.tenantId && (
+            <TradeFlowKitGlobalSearch key={`search-${adapter.tenantId}`} tenantKey={adapter.tenantId} />
+          )}
         </header>
 
         {!hasTenantContext && (
@@ -340,6 +347,10 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               <GitBranch size={15} color={colors.violet} />
               <span>Workflow Studio</span>
             </a>
+            <a href="#tradeflowkit-trash" style={railLinkStyle} data-testid="tradeflowkit-sidebar-trash">
+              <ArchiveRestore size={15} color={colors.blue} />
+              <span>Archived Records</span>
+            </a>
             <a href="#tradeflowkit-settings" style={railLinkStyle} data-testid="tradeflowkit-sidebar-settings">
               <Settings size={15} color={colors.gold} />
               <span>Settings</span>
@@ -359,7 +370,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               tabIndex={-1}
             >
               {hasTenantContext && adapter.tenantId && (
-                <TradeFlowKitLeadCenter key={adapter.tenantId} tenantKey={adapter.tenantId} />
+                <TradeFlowKitLeadCenter key={adapter.tenantId} tenantKey={adapter.tenantId} canManage={canManageModule} />
               )}
             </section>
 
@@ -379,6 +390,10 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               <section id="tradeflowkit-directory" tabIndex={-1}>
                 <BusinessDirectory moduleSlug="tradeflowkit" tenantKey={adapter.tenantId} canArchive={canManageModule} />
               </section>
+            )}
+
+            {hasTenantContext && adapter.tenantId && (
+              <TradeFlowKitTrash key={`trash-${adapter.tenantId}`} tenantKey={adapter.tenantId} canManage={canManageModule} />
             )}
 
             <section className="tfk-panel" style={{ padding: 18 }} data-testid="tradeflowkit-workflows-panel">

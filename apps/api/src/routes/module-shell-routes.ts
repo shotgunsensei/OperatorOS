@@ -622,7 +622,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
           action: 'created',
           entityType: 'tradeflowkit_lead',
           entityId: created.id,
-          metadata: { source: created.source, status: created.status },
+          metadata: { source: created.source, status: created.status, consentToSms: created.consentToSms },
         });
         return created;
       });
@@ -688,6 +688,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
           metadata: {
             changedFields,
             ...(statusChanged ? { fromStatus: before.status, toStatus: updated.status } : {}),
+            ...(patch.consentToSms !== undefined ? { consentToSms: patch.consentToSms } : {}),
           },
         });
         return updated;
@@ -955,6 +956,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     try { input = parseDocumentArchive(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
 
     const outcome = await db.transaction(async tx => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`tradeflowkit:customer:${ctx.tenantId}:${id}`}))`);
       const [current] = await tx.select().from(tradeflowkitCustomers).where(and(
         eq(tradeflowkitCustomers.id, id),
         eq(tradeflowkitCustomers.tenantId, ctx.tenantId),

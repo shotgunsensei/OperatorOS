@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "moduleSlug": "tradeflowkit",
-  "capturedAtUtc": "2026-07-28T20:12:36.720Z",
+  "capturedAtUtc": "2026-08-01T03:41:25.791Z",
   "source": {
     "repository": "https://github.com/shotgunsensei/TradeFlowKit.git",
     "commit": "37aa67f1da804fc3ac56f36e50e01362077d7a26",
@@ -518,11 +518,17 @@
         "key": "/trash",
         "path": "/trash",
         "sourcePointer": "client/src/App.tsx",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "retention",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Archive/restore needs a truthful retained-record UI; permanent purge stays prohibited."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitTrash.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-retention.test.ts",
+          "apps/api/test/tradeflowkit-retention-static.test.ts"
+        ],
+        "note": "Bounded archived-record listing and dependency-safe restore are active; permanent purge stays prohibited."
       },
       {
         "key": "/workflows",
@@ -764,8 +770,14 @@
         "sourcePointer": "server/routes/trash.ts",
         "disposition": "retired_security",
         "domain": "retention",
-        "targetPointers": [],
-        "evidence": [],
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitTrash.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-retention.test.ts",
+          "apps/api/test/tradeflowkit-retention-static.test.ts"
+        ],
         "note": "Permanent module-local purge is prohibited."
       },
       {
@@ -775,8 +787,14 @@
         "sourcePointer": "server/routes/trash.ts",
         "disposition": "retired_security",
         "domain": "retention",
-        "targetPointers": [],
-        "evidence": [],
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitTrash.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-retention.test.ts",
+          "apps/api/test/tradeflowkit-retention-static.test.ts"
+        ],
         "note": "Permanent module-local purge is prohibited."
       },
       {
@@ -786,8 +804,14 @@
         "sourcePointer": "server/routes/trash.ts",
         "disposition": "retired_security",
         "domain": "retention",
-        "targetPointers": [],
-        "evidence": [],
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitTrash.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-retention.test.ts",
+          "apps/api/test/tradeflowkit-retention-static.test.ts"
+        ],
         "note": "Permanent module-local purge is prohibited."
       },
       {
@@ -1969,17 +1993,17 @@
         "method": "GET",
         "path": "/api/search",
         "sourcePointer": "server/routes/search.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "global_search",
         "targetPointers": [
           "apps/api/src/routes/tradeflowkit-routes.ts",
-          "apps/api/src/routes/module-shell-routes.ts"
+          "apps/web/src/components/module-shells/TradeFlowKitGlobalSearch.tsx"
         ],
         "evidence": [
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
-          "apps/api/test/tradeflowkit-revenue-flow.test.ts"
+          "apps/api/test/tradeflowkit-global-search.test.ts",
+          "apps/api/test/tradeflowkit-global-search-static.test.ts"
         ],
-        "note": "Bounded per-surface filters exist; equivalent cross-entity search is not yet active."
+        "note": "Bounded tenant-scoped search covers active leads, customers, jobs, tasks, shared Directory records, quotes, and invoices with canonical deep links."
       },
       {
         "key": "GET /api/stripe/connect/authorize",
@@ -2050,11 +2074,17 @@
         "method": "GET",
         "path": "/api/trash",
         "sourcePointer": "server/routes/trash.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "retention",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Archive restore/list behavior needs a complete active UI and API."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitTrash.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-retention.test.ts",
+          "apps/api/test/tradeflowkit-retention-static.test.ts"
+        ],
+        "note": "Archived customers, jobs, and invoices can be listed and restored in dependency order with optimistic versions and tenant-scoped audit."
       },
       {
         "key": "GET /api/work/activity",
@@ -3085,22 +3115,34 @@
         "method": "POST",
         "path": "/api/leads/:id/send-email",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "disposition": "active",
+        "domain": "lead_messaging",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitLeadCenter.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging-static.test.ts"
+        ],
+        "note": "Email and consent-gated SMS are queued through the shared replay-safe outbox using the tenant-owned lead destination."
       },
       {
         "key": "POST /api/leads/:id/send-sms",
         "method": "POST",
         "path": "/api/leads/:id/send-sms",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
-        "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "disposition": "active",
+        "domain": "lead_messaging",
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitLeadCenter.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging-static.test.ts"
+        ],
+        "note": "Email and consent-gated SMS are queued through the shared replay-safe outbox using the tenant-owned lead destination."
       },
       {
         "key": "POST /api/leads/settings/apply-template",
@@ -3477,33 +3519,51 @@
         "method": "POST",
         "path": "/api/trash/customers/:id/restore",
         "sourcePointer": "server/routes/trash.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "retention",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Archive restore/list behavior needs a complete active UI and API."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitTrash.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-retention.test.ts",
+          "apps/api/test/tradeflowkit-retention-static.test.ts"
+        ],
+        "note": "Archived customers, jobs, and invoices can be listed and restored in dependency order with optimistic versions and tenant-scoped audit."
       },
       {
         "key": "POST /api/trash/invoices/:id/restore",
         "method": "POST",
         "path": "/api/trash/invoices/:id/restore",
         "sourcePointer": "server/routes/trash.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "retention",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Archive restore/list behavior needs a complete active UI and API."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitTrash.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-retention.test.ts",
+          "apps/api/test/tradeflowkit-retention-static.test.ts"
+        ],
+        "note": "Archived customers, jobs, and invoices can be listed and restored in dependency order with optimistic versions and tenant-scoped audit."
       },
       {
         "key": "POST /api/trash/jobs/:id/restore",
         "method": "POST",
         "path": "/api/trash/jobs/:id/restore",
         "sourcePointer": "server/routes/trash.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "retention",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Archive restore/list behavior needs a complete active UI and API."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitTrash.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-retention.test.ts",
+          "apps/api/test/tradeflowkit-retention-static.test.ts"
+        ],
+        "note": "Archived customers, jobs, and invoices can be listed and restored in dependency order with optimistic versions and tenant-scoped audit."
       },
       {
         "key": "POST /api/work/jobs/:id/transition",

@@ -113,6 +113,8 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
   const jobById = useMemo(() => new Map(data.jobs.map((row) => [row.id, row])), [data.jobs]);
   const invoiceQuoteIds = useMemo(() => new Set(data.invoices.map((row) => row.sourceQuoteId).filter(Boolean)), [data.invoices]);
   const jobsForCustomer = data.jobs.filter((row) => row.customerId === customerId);
+  const deepQuoteId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/quotes\/([a-z0-9-]+)$/i)?.[1] || '';
+  const deepInvoiceId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/invoices\/([a-z0-9-]+)$/i)?.[1] || '';
 
   async function run(operation: () => Promise<unknown>) {
     setPending(true); setError(null);
@@ -247,8 +249,8 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
 
           <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
             {data.quotes.length === 0 && data.invoices.length === 0 ? <div style={{ color: c.muted, textAlign: 'center', padding: 18, background: c.soft, borderRadius: 8 }}>No quotes or invoices yet. Build the first customer revenue flow above.</div> : null}
-            {data.quotes.map((quote) => <QuoteRow key={quote.id} quote={quote} customer={customerById.get(quote.customerId)} job={quote.jobId ? jobById.get(quote.jobId) : undefined} customers={data.customers} jobs={data.jobs} hasInvoice={invoiceQuoteIds.has(quote.id)} pending={pending} canManage={canManage} run={run} />)}
-            {data.invoices.map((invoice) => <InvoiceRow key={invoice.id} invoice={invoice} customer={customerById.get(invoice.customerId)} customers={data.customers} jobs={data.jobs} pending={pending} canManage={canManage} run={run} />)}
+            {data.quotes.map((quote) => <QuoteRow key={quote.id} quote={quote} customer={customerById.get(quote.customerId)} job={quote.jobId ? jobById.get(quote.jobId) : undefined} customers={data.customers} jobs={data.jobs} hasInvoice={invoiceQuoteIds.has(quote.id)} selected={quote.id === deepQuoteId} pending={pending} canManage={canManage} run={run} />)}
+            {data.invoices.map((invoice) => <InvoiceRow key={invoice.id} invoice={invoice} customer={customerById.get(invoice.customerId)} customers={data.customers} jobs={data.jobs} selected={invoice.id === deepInvoiceId} pending={pending} canManage={canManage} run={run} />)}
           </div>
         </>
       )}
@@ -314,7 +316,7 @@ function CustomerRow({ customer, selected, pending, canManage, run, onSelect }: 
       {(customer.address || customer.notes) && <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{customer.address || customer.notes}</div>}
     </div>
     <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
-      <a href={`/modules/tradeflowkit/customers/${customer.id}`} onClick={event => event.stopPropagation()} style={{ color: c.blue, fontSize: 12 }}>Record deep link</a>
+      <a href={`/customers/${customer.id}`} onClick={event => event.stopPropagation()} style={{ color: c.blue, fontSize: 12 }}>Record deep link</a>
       {canManage && <Action disabled={pending} label="Edit" Icon={Pencil} tone={c.gold} onClick={() => { onSelect(); setEditing(true); }} />}
       {canManage && <Action disabled={pending} label="Archive" Icon={Archive} tone={c.red} onClick={() => {
         if (window.confirm('Archive this customer? Active jobs, quotes, or invoices must be archived first.')) void run(() => moduleShellApi.tradeflowkit.archiveCustomer(customer.id, customer.version));
@@ -323,9 +325,9 @@ function CustomerRow({ customer, selected, pending, canManage, run, onSelect }: 
   </article>;
 }
 
-function QuoteRow({ quote, customer, job, customers, jobs, hasInvoice, pending, canManage, run }: {
+function QuoteRow({ quote, customer, job, customers, jobs, hasInvoice, selected, pending, canManage, run }: {
   quote: TradeFlowKitQuote; customer?: TradeFlowKitCustomer; job?: TradeFlowKitJob;
-  customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[]; hasInvoice: boolean;
+  customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[]; hasInvoice: boolean; selected: boolean;
   pending: boolean; canManage: boolean; run: (fn: () => Promise<unknown>) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
@@ -337,12 +339,13 @@ function QuoteRow({ quote, customer, job, customers, jobs, hasInvoice, pending, 
   }
   const archivable = ['draft', 'declined', 'expired', 'void'].includes(quote.status) && !hasInvoice;
   return (
-    <div data-testid={`tradeflowkit-quote-${quote.id}`} style={{ border: `1px solid ${c.border}`, borderRadius: 8, padding: 12, background: '#fff', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+    <div data-testid={`tradeflowkit-quote-${quote.id}`} style={{ border: `1px solid ${selected ? c.green : c.border}`, borderRadius: 8, padding: 12, background: selected ? '#f0fdf4' : '#fff', boxShadow: selected ? `inset 3px 0 ${c.green}` : 'none', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
       <div>
         <strong style={{ color: c.ink }}>Quote {quote.number ? `#${quote.number}` : ''} · {customer?.name ?? 'Customer'}</strong>
         <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{job?.title ?? 'Unlinked quote'} · {money(quote.totalCents)} · <b>{quote.status}</b> · v{quote.version}</div>
       </div>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
+        <a href={`/quotes/${quote.id}`} style={{ color: c.blue, fontSize: 12 }}>Record deep link</a>
         {canManage && quote.status === 'draft' && <><Action disabled={pending} label="Edit" Icon={Pencil} tone={c.gold} onClick={() => setEditing(true)} /><Action disabled={pending} label="Send" onClick={() => void run(() => moduleShellApi.tradeflowkit.transitionQuote(quote.id, quote.version, 'sent'))} /></>}
         {canManage && quote.status === 'sent' && <><Action disabled={pending} label="Accept" onClick={() => void run(() => moduleShellApi.tradeflowkit.transitionQuote(quote.id, quote.version, 'accepted'))} /><Action disabled={pending} label="Decline" tone={c.red} onClick={() => void run(() => moduleShellApi.tradeflowkit.transitionQuote(quote.id, quote.version, 'declined'))} /></>}
         {canManage && quote.status === 'accepted' && !quote.jobId && <Action disabled={pending} label="Create job" Icon={BriefcaseBusiness} tone={c.green} onClick={() => void run(() => moduleShellApi.tradeflowkit.quoteToJob(quote.id, quote.version))} />}
@@ -356,9 +359,9 @@ function QuoteRow({ quote, customer, job, customers, jobs, hasInvoice, pending, 
   );
 }
 
-function InvoiceRow({ invoice, customer, customers, jobs, pending, canManage, run }: {
+function InvoiceRow({ invoice, customer, customers, jobs, selected, pending, canManage, run }: {
   invoice: TradeFlowKitInvoice; customer?: TradeFlowKitCustomer;
-  customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[];
+  customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[]; selected: boolean;
   pending: boolean; canManage: boolean; run: (fn: () => Promise<unknown>) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
@@ -370,12 +373,13 @@ function InvoiceRow({ invoice, customer, customers, jobs, pending, canManage, ru
   }
   const archivable = ['draft', 'void'].includes(invoice.status) && invoice.paidCents === 0;
   return (
-    <div data-testid={`tradeflowkit-invoice-${invoice.id}`} style={{ border: `1px solid ${c.border}`, borderRadius: 8, padding: 12, background: '#f8fcfa', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+    <div data-testid={`tradeflowkit-invoice-${invoice.id}`} style={{ border: `1px solid ${selected ? c.green : c.border}`, borderRadius: 8, padding: 12, background: selected ? '#f0fdf4' : '#f8fcfa', boxShadow: selected ? `inset 3px 0 ${c.green}` : 'none', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
       <div>
         <strong style={{ color: c.ink }}>Invoice {invoice.number ? `#${invoice.number}` : ''} · {customer?.name ?? 'Customer'}</strong>
         <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{money(invoice.totalCents)} · <b>{invoice.status}</b> · v{invoice.version}{invoice.paymentReference ? ` · ${invoice.paymentReference}` : ''}</div>
       </div>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
+        <a href={`/invoices/${invoice.id}`} style={{ color: c.blue, fontSize: 12 }}>Record deep link</a>
         {canManage && invoice.status === 'draft' && <><Action disabled={pending} label="Edit" Icon={Pencil} tone={c.gold} onClick={() => setEditing(true)} /><Action disabled={pending} label="Send invoice" onClick={() => void run(() => moduleShellApi.tradeflowkit.transitionInvoice(invoice.id, invoice.version, 'sent'))} /></>}
         {canManage && ['sent', 'processing'].includes(invoice.status) && <Action disabled={pending} label="Record payment" tone={c.green} onClick={() => { const ref = window.prompt('Payment reference (optional)') || undefined; void run(() => moduleShellApi.tradeflowkit.payInvoice(invoice.id, invoice.version, 'other', ref)); }} />}
         {canManage && archivable && <Action disabled={pending} label="Archive" Icon={Archive} tone={c.red} onClick={() => {

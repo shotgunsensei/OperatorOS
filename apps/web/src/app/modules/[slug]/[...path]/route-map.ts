@@ -31,6 +31,7 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/invoices': { sectionId: 'tradeflowkit-revenue-flow', label: 'Invoices' },
     '/payments': { sectionId: 'tradeflowkit-revenue-flow', label: 'Payments' },
     '/analytics': { sectionId: 'tradeflowkit-operations', label: 'Operational Analytics' },
+    '/trash': { sectionId: 'tradeflowkit-trash', label: 'Archived Records' },
     '/settings': { sectionId: 'tradeflowkit-settings', label: 'Settings' },
   },
   techdeck: {
@@ -196,6 +197,7 @@ export function resolveCoreModuleDeepLink(
     const [resource] = pathSegments;
     if (resource === 'jobs' || resource === 'tasks') return { sectionId: 'tradeflowkit-operations', label: resource === 'jobs' ? 'Job Record' : 'Task Record' };
     if (resource === 'leads') return { sectionId: 'tradeflowkit-lead-center', label: 'Lead Record' };
+    if (resource === 'clients') return { sectionId: 'tradeflowkit-directory', label: 'Directory Organization' };
     if (['customers', 'quotes', 'invoices', 'payments'].includes(resource)) return { sectionId: 'tradeflowkit-revenue-flow', label: 'Revenue Record' };
   }
   if (slug === 'techdeck' && pathSegments.length === 2) {

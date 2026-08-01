@@ -71,8 +71,10 @@ async function cleanupIdentity(pg: Client, identity: Identity | null) {
       'tradeflowkit_tasks',
       'tradeflowkit_jobs',
       'tradeflowkit_customers',
+      'tradeflowkit_leads',
       'tradeflowkit_settings',
       'tradeflowkit_sequences',
+      'shared_outbox_messages',
       'directory_relationships',
       'directory_sites',
       'directory_addresses',
@@ -104,6 +106,7 @@ async function cleanupIdentity(pg: Client, identity: Identity | null) {
 
 test('TradeFlowKit customer to job to task CRUD persists across exact-host deep links and archives safely', async ({ page, request }) => {
   test.setTimeout(120_000);
+  await page.context().clearCookies();
   const pg = new Client({ connectionString: process.env.DATABASE_URL });
   await pg.connect();
   let identity: Identity | null = null;
@@ -114,6 +117,8 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
   const updatedJobTitle = `${jobTitle} Updated`;
   const taskTitle = `Initial work step ${suffix}`;
   const updatedTaskTitle = `${taskTitle} Updated`;
+  const leadName = `Messaging lead ${suffix}`;
+  const leadEmail = `messaging-${suffix}@example.com`;
 
   try {
     identity = await registerAndSeed(request, pg);
@@ -125,6 +130,28 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
       page.waitForURL('https://tradeflowkit.operatoros.net/customers', { timeout: 30_000 }),
       page.getByTestId('button-login').click(),
     ]);
+
+    const leadForm = page.getByTestId('tradeflowkit-lead-form');
+    await leadForm.getByLabel('Name *').fill(leadName);
+    await leadForm.getByLabel('Email').fill(leadEmail);
+    await leadForm.getByLabel(/explicitly consented to SMS/i).check();
+    await leadForm.getByRole('button', { name: 'Add lead' }).click();
+    await expect(page.getByTestId('tradeflowkit-lead-list')).toContainText(leadName);
+    const leadResult = await pg.query<{ id: string }>(
+      `select id from tradeflowkit_leads where tenant_id = $1 and name = $2 and deleted_at is null`,
+      [identity.tenantId, leadName],
+    );
+    expect(leadResult.rows).toHaveLength(1);
+    const leadRow = page.getByTestId(`tradeflowkit-lead-${leadResult.rows[0].id}`);
+    await leadRow.getByRole('button', { name: `Queue email to ${leadName}` }).click();
+    await expect(page.getByTestId('tradeflowkit-lead-message-status')).toContainText(`Email is queued for ${leadName}`);
+    await expect.poll(async () => {
+      const result = await pg.query<{ count: string }>(
+        `select count(*)::text as count from shared_outbox_messages where tenant_id = $1 and channel = 'email' and destination = $2`,
+        [identity!.tenantId, leadEmail],
+      );
+      return Number(result.rows[0].count);
+    }).toBe(1);
 
     const customerCreate = page.getByTestId('tradeflowkit-customer-create');
     await customerCreate.getByPlaceholder('Customer name').fill(customerName);
@@ -229,6 +256,20 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
       task_status: 'in_progress',
     });
 
+    await page.goto('https://tradeflowkit.operatoros.net/');
+    const globalSearch = page.getByTestId('tradeflowkit-global-search');
+    await globalSearch.getByTestId('tradeflowkit-global-search-input').fill(suffix);
+    await globalSearch.getByTestId('tradeflowkit-global-search-submit').click();
+    const searchResults = globalSearch.getByTestId('tradeflowkit-global-search-results');
+    await expect(searchResults).toContainText(updatedCustomerName);
+    await expect(searchResults).toContainText(updatedJobTitle);
+    await expect(searchResults).toContainText(updatedTaskTitle);
+    await Promise.all([
+      page.waitForURL(`https://tradeflowkit.operatoros.net/tasks/${taskId}`, { timeout: 30_000 }),
+      globalSearch.getByTestId(`tradeflowkit-search-result-tasks-${taskId}`).click(),
+    ]);
+    await expect(page.getByTestId(`tradeflowkit-task-${taskId}`)).toContainText(updatedTaskTitle);
+
     await Promise.all([
       page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
       page.getByRole('link', { name: 'My Apps' }).first().click(),
@@ -266,6 +307,19 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
       job_deleted: true,
       task_deleted: true,
     });
+
+    await page.goto('https://tradeflowkit.operatoros.net/trash');
+    const archivedCustomer = page.getByTestId(`tradeflowkit-trash-customers-${customerId}`);
+    const archivedJob = page.getByTestId(`tradeflowkit-trash-jobs-${jobId}`);
+    await expect(archivedCustomer).toContainText(updatedCustomerName);
+    await expect(archivedJob).toContainText(updatedJobTitle);
+    await archivedCustomer.getByRole('button', { name: 'Restore' }).click();
+    await expect(archivedCustomer).toHaveCount(0);
+    await page.getByTestId(`tradeflowkit-trash-jobs-${jobId}`).getByRole('button', { name: 'Restore' }).click();
+    await expect(page.getByTestId(`tradeflowkit-trash-jobs-${jobId}`)).toHaveCount(0);
+    await page.goto(`https://tradeflowkit.operatoros.net/jobs/${jobId}`);
+    await expect(page.getByTestId(`tradeflowkit-job-${jobId}`)).toContainText(updatedJobTitle);
+    await expect(page.getByTestId(`tradeflowkit-task-${taskId}`)).toHaveCount(0);
   } finally {
     await cleanupIdentity(pg, identity);
     await pg.end();

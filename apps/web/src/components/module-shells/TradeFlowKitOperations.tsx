@@ -185,7 +185,7 @@ function JobEditor({ job, settings, pending, canManage, activeTaskCount, run }: 
     </form>;
   }
 
-  return <div className="tfk-task-title" data-testid={`tradeflowkit-job-${job.id}`}><div><span>{formatJobNumber(job, settings)}</span><h3>{job.title}</h3><p>{job.status.replaceAll('_', ' ')} · {job.priority} priority · v{job.version}</p>{job.description && <p className="tfk-record-description">{job.description}</p>}</div><div className="tfk-record-actions"><a href={`/modules/tradeflowkit/jobs/${job.id}`}>Record deep link</a>{canManage && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={14} /> Edit</button>}{canManage && <button type="button" className="danger" disabled={pending} onClick={() => {
+  return <div className="tfk-task-title" data-testid={`tradeflowkit-job-${job.id}`}><div><span>{formatJobNumber(job, settings)}</span><h3>{job.title}</h3><p>{job.status.replaceAll('_', ' ')} · {job.priority} priority · v{job.version}</p>{job.description && <p className="tfk-record-description">{job.description}</p>}</div><div className="tfk-record-actions"><a href={`/jobs/${job.id}`}>Record deep link</a>{canManage && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={14} /> Edit</button>}{canManage && <button type="button" className="danger" disabled={pending} onClick={() => {
     if (window.confirm(`Archive this job? ${activeTaskCount ? 'Archive its active tasks first.' : 'It will leave the active workspace.'}`)) void run(() => moduleShellApi.tradeflowkit.archiveJob(job.id, job.version));
   }}><Archive size={14} /> Archive</button>}</div></div>;
 }
@@ -229,7 +229,7 @@ function TaskRow({ task, selected, pending, canManage, run }: {
     </form>;
   }
 
-  return <article className={`tfk-task tfk-task-${task.status} ${selected ? 'selected' : ''}`} id={`tradeflowkit-task-${task.id}`} data-testid={`tradeflowkit-task-${task.id}`}><Icon size={18} /><div><strong>{task.title}</strong><span>{task.priority} priority{task.dueAt ? ` · due ${new Date(task.dueAt).toLocaleDateString()}` : ''} · v{task.version}</span>{task.description && <span>{task.description}</span>}</div><div className="tfk-record-actions"><a href={`/modules/tradeflowkit/tasks/${task.id}`}>Deep link</a>{canManage && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={13} /> Edit</button>}{canManage && <button type="button" className="danger" disabled={pending} onClick={() => {
+  return <article className={`tfk-task tfk-task-${task.status} ${selected ? 'selected' : ''}`} id={`tradeflowkit-task-${task.id}`} data-testid={`tradeflowkit-task-${task.id}`}><Icon size={18} /><div><strong>{task.title}</strong><span>{task.priority} priority{task.dueAt ? ` · due ${new Date(task.dueAt).toLocaleDateString()}` : ''} · v{task.version}</span>{task.description && <span>{task.description}</span>}</div><div className="tfk-record-actions"><a href={`/tasks/${task.id}`}>Deep link</a>{canManage && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={13} /> Edit</button>}{canManage && <button type="button" className="danger" disabled={pending} onClick={() => {
     if (window.confirm('Archive this task? It will leave the active job board.')) void run(() => moduleShellApi.tradeflowkit.archiveTask(task.id, task.version));
   }}><Archive size={13} /> Archive</button>}</div></article>;
 }

@@ -28,6 +28,7 @@ test('manual lead create normalizes bounded workflow fields', () => {
     urgency: 'urgent',
     estimatedValueCents: 325_000,
     nextFollowUpAt: '2026-07-14T15:30:00.000Z',
+    consentToSms: true,
   });
 
   assert.deepEqual(input, {
@@ -39,6 +40,7 @@ test('manual lead create normalizes bounded workflow fields', () => {
     urgency: 'urgent',
     estimatedValueCents: 325_000,
     nextFollowUpAt: new Date('2026-07-14T15:30:00.000Z'),
+    consentToSms: true,
   });
 });
 
@@ -60,6 +62,7 @@ test('manual lead contract rejects invalid and oversized data', () => {
     [{ name: 'Valid', estimatedValueCents: 1.5 }, 'estimatedValueCents'],
     [{ name: 'Valid', description: 'x'.repeat(4_001) }, 'description'],
     [{ name: 'Valid', nextFollowUpAt: 'not-a-date' }, 'nextFollowUpAt'],
+    [{ name: 'Valid', consentToSms: 'yes' }, 'consentToSms'],
   ] as const) {
     assert.throws(
       () => parseTradeFlowKitLeadCreate(body),
@@ -79,8 +82,8 @@ test('manual lead patch permits only explicit editable fields and no fake conver
   ]);
   assert.equal(TRADEFLOWKIT_LEAD_STATUSES.includes('converted'), true);
 
-  const patch = parseTradeFlowKitLeadPatch({ status: 'contacted', nextFollowUpAt: null });
-  assert.deepEqual(patch, { status: 'contacted', nextFollowUpAt: null });
+  const patch = parseTradeFlowKitLeadPatch({ status: 'contacted', nextFollowUpAt: null, consentToSms: false });
+  assert.deepEqual(patch, { status: 'contacted', nextFollowUpAt: null, consentToSms: false });
   assert.throws(
     () => parseTradeFlowKitLeadPatch({ tenantId: 'other-tenant' }),
     TradeFlowKitLeadValidationError,

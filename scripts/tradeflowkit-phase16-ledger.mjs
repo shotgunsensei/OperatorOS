@@ -94,6 +94,10 @@ const workManagementEvidence = [
   'apps/api/test/tradeflowkit-work-management.test.ts',
   'apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx',
 ];
+const leadMessagingEvidence = [
+  'apps/api/test/tradeflowkit-lead-messaging.test.ts',
+  'apps/api/test/tradeflowkit-lead-messaging-static.test.ts',
+];
 
 function classifyPage(path) {
   if (['/subscription', '/admin', '/access-denied'].includes(path)) {
@@ -152,11 +156,11 @@ function classifyPage(path) {
   }
   if (path === '/trash') {
     return outcome(
-      GAP,
+      ACTIVE,
       'retention',
-      [],
-      [],
-      'Archive/restore needs a truthful retained-record UI; permanent purge stays prohibited.',
+      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitTrash.tsx'],
+      ['apps/api/test/tradeflowkit-retention.test.ts', 'apps/api/test/tradeflowkit-retention-static.test.ts'],
+      'Bounded archived-record listing and dependency-safe restore are active; permanent purge stays prohibited.',
     );
   }
   if (
@@ -292,13 +296,13 @@ function classifyApi(method, path) {
   }
   if (path.startsWith('/api/trash')) {
     return outcome(
-      upperMethod === 'DELETE' ? RETIRED_SECURITY : GAP,
+      upperMethod === 'DELETE' ? RETIRED_SECURITY : ACTIVE,
       'retention',
-      [],
-      [],
+      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitTrash.tsx'],
+      ['apps/api/test/tradeflowkit-retention.test.ts', 'apps/api/test/tradeflowkit-retention-static.test.ts'],
       upperMethod === 'DELETE'
         ? 'Permanent module-local purge is prohibited.'
-        : 'Archive restore/list behavior needs a complete active UI and API.',
+        : 'Archived customers, jobs, and invoices can be listed and restored in dependency order with optimistic versions and tenant-scoped audit.',
     );
   }
   if (path.startsWith('/api/review-requests')) {
@@ -377,11 +381,11 @@ function classifyApi(method, path) {
   }
   if (path === '/api/search') {
     return outcome(
-      GAP,
+      ACTIVE,
       'global_search',
-      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/api/src/routes/module-shell-routes.ts'],
-      workflowEvidence,
-      'Bounded per-surface filters exist; equivalent cross-entity search is not yet active.',
+      ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitGlobalSearch.tsx'],
+      ['apps/api/test/tradeflowkit-global-search.test.ts', 'apps/api/test/tradeflowkit-global-search-static.test.ts'],
+      'Bounded tenant-scoped search covers active leads, customers, jobs, tasks, shared Directory records, quotes, and invoices with canonical deep links.',
     );
   }
   if (path === '/api/work/summary') {
@@ -502,12 +506,19 @@ function classifyApi(method, path) {
     );
   }
   if (path.startsWith('/api/leads')) {
+    if (path.includes('/send-sms') || path.includes('/send-email')) {
+      return outcome(
+        ACTIVE,
+        'lead_messaging',
+        ['apps/api/src/routes/tradeflowkit-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitLeadCenter.tsx'],
+        leadMessagingEvidence,
+        'Email and consent-gated SMS are queued through the shared replay-safe outbox using the tenant-owned lead destination.',
+      );
+    }
     if (
       path.includes('/settings') ||
       path.includes('/source-events') ||
       path.includes('/followups') ||
-      path.includes('/send-sms') ||
-      path.includes('/send-email') ||
       path.includes('/test-message')
     ) {
       return outcome(GAP, 'lead_operations_extensions', [], [], 'This lead workflow extension is not yet equivalent in the shared runtime.');

@@ -1,13 +1,13 @@
 # OperatorOS current release gate
 
 - Evidence date: 2026-07-31
-- Candidate branch: `codex/phase-17-production-truth`
+- Current reviewed source: `main` at `92ca0db4a2609f4090104909bbd558e5b3b3157f`
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
 - Platform and module source/local gate: **PARTIAL; local gates pass, live-provider and deployed gates remain open**
-- Current public release: **commit `48b8691fca5c8a8d79f53b309cb44db79698bbcd`, build `932f83cb0d7c15ce994eb04e`; pre-Phase-17 verifier PASS 48/48**
-- Phase 17 candidate public comparison: **EXPECTED PRE-DEPLOY FAIL 45/48; release identity and disabled OutCall are not on the public release**
+- Current public release: **commit `c29cbca376525885e906d10b3e2df647cfce6b00`, build `25095fde5c3543a8aa748634`; current unpinned verifier PASS 48/48**
+- Current-main public comparison: **EXPECTED PRE-DEPLOY FAIL 46/48; only health/readiness release-commit identity differs**
 - First deployment attempt: **FAILED BEFORE BUILD** — deployment
   `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd`, build
   `c49eeb9c-5f0b-40b3-9f31-44813446124c`
@@ -15,10 +15,9 @@
 
 ## Phase 17 production truth
 
-At the start of Phase 17, refreshed `origin/main` and the commit identified by
-public health/readiness were both
-`48b8691fca5c8a8d79f53b309cb44db79698bbcd`; the source-to-production Git
-difference was zero.
+The public release now exposes the complete Phase 17 release identity,
+database release v29/29, and planned/disabled OutCall boundary. The current
+read-only verifier passes 48/48 without an expected-commit pin.
 
 The Phase 17 candidate adds a deployment timestamp and explicit database
 release v29/29 to the non-secret release identity, makes readiness fail closed
@@ -26,17 +25,16 @@ on that complete identity, lets the public verifier pin the intended Git
 commit, and reconciles the documented planned OutCall boundary across the
 catalog, registry, database seed, verifier, and browser gate.
 
-Fresh isolated evidence passes the clean and idempotent 29-step release,
-46/46 focused contracts, workspace typecheck, production build, core
-preflight, compiled supervisor health/readiness, all-12-module SSO/global
-logout 1/1, deep-link/sibling/local logout 1/1, and entitlement/OutCall denial
-1/1. These are candidate results, not deployed results.
+Current main is newer than that deployed identity. Pinning
+`OPERATOROS_EXPECTED_RELEASE_COMMIT` to
+`92ca0db4a2609f4090104909bbd558e5b3b3157f` returns 46/48; the only failures
+are the health and readiness release-commit comparisons. All public routes,
+SSO redirect contracts, callbacks, and disabled-OutCall assertions still pass.
 
-The strengthened verifier returns 45/48 against the unchanged public release:
-both health snapshots lack Phase 17 deployment/database identity and the old
-OutCall callback still renders. Promotion remains blocked on the exact
-workflow in `docs/PHASE17_PRODUCTION_RELEASE_RUNBOOK.md` and the evidence
-record in `docs/PHASE17_PRODUCTION_EVIDENCE_REPORT.md`.
+Promotion of current main remains blocked on deployment plus the exact
+authenticated/provider/data/rollback workflow in
+`docs/PHASE17_PRODUCTION_RELEASE_RUNBOOK.md`; an unpinned public 48/48 result
+does not prove that the current source revision is deployed.
 
 ## TorqueShed local acceptance follow-up
 
@@ -179,25 +177,24 @@ and migration parity remain controlled by the module parity index.
 | Phase 2 browser workflow | PASS LOCALLY | 1/1 on compiled artifacts; CRUD, refresh persistence, same organization ID across three modules, and no script-readable auth |
 | Full API regression | PASS | Fresh untouched-schema aggregate on the exact Phase 12B source passed 839/839 with 0 failures, 0 skips and 0 todo |
 | Replit automatic npm preinstall | PASS LOCALLY AFTER DEFECT FIX | npm dry-run exits 0; pnpm-only scoped overrides remain in `pnpm-workspace.yaml` |
-| Public read-only runtime verifier | BASELINE PASS; CANDIDATE EXPECTED FAIL | Existing public release `48b8691`, build `932f83cb0d7c15ce994eb04e`, passed the pre-Phase-17 48/48 gate. The strengthened candidate verifier returns 45/48 until the complete identity and disabled OutCall are deployed |
+| Public read-only runtime verifier | PUBLIC PASS; CURRENT MAIN NOT DEPLOYED | Public release `c29cbca`, build `25095fde5c3543a8aa748634`, passes 48/48 unpinned. Pinning current main `92ca0db` returns 46/48 solely on health/readiness release-commit mismatch |
 | Formatting/lint | NOT DEFINED | Repository has no supported formatting or lint script; no pass is claimed |
 
 ## Public deployment result
 
-The current 2026-07-29 public release is healthy and identified as
-`48b8691fca5c8a8d79f53b309cb44db79698bbcd`, build
-`932f83cb0d7c15ce994eb04e`. It passed the prior public 48/48 contract. It is
-not the Phase 17 candidate.
+The current 2026-07-31 public release is healthy and identified as
+`c29cbca376525885e906d10b3e2df647cfce6b00`, build
+`25095fde5c3543a8aa748634`. The current verifier passes 48/48 unpinned,
+including complete release/database identity and disabled OutCall behavior.
 
-The strengthened Phase 17 verifier intentionally returns 45/48 against that
-unchanged release. The three failures are the missing deployment/database
-identity on health and readiness and the old enabled OutCall callback. No
-Phase 17 deployed pass is claimed.
+Current main is `92ca0db4a2609f4090104909bbd558e5b3b3157f`. The pinned public verifier
+returns 46/48 because health and readiness correctly report the older public
+commit. No deployment or acceptance of current main is claimed.
 
 ## Human deployment closure
 
-1. Review and merge the Phase 17 pull request, then deploy the exact merged
-   revision through the `.replit` autoscale build/run path.
+1. Deploy the exact reviewed current-main revision through the `.replit`
+   autoscale build/run path.
 2. Validate the real production secrets with
    `corepack pnpm preflight:production -- --core`; enable provider profiles only
    when the corresponding feature is meant to be live.

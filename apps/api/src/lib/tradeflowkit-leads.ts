@@ -31,6 +31,7 @@ const CREATE_FIELDS = new Set([
   'urgency',
   'estimatedValueCents',
   'nextFollowUpAt',
+  'consentToSms',
 ]);
 const PATCH_FIELDS = new Set([...CREATE_FIELDS, 'status']);
 const LIST_FIELDS = new Set(['status', 'search']);
@@ -56,6 +57,7 @@ export interface TradeFlowKitLeadCreateInput {
   urgency: TradeFlowKitLeadUrgency;
   estimatedValueCents: number | null;
   nextFollowUpAt: Date | null;
+  consentToSms: boolean;
 }
 
 export type TradeFlowKitLeadPatchInput = Partial<
@@ -136,6 +138,14 @@ function optionalMoneyCents(value: unknown): number | null {
   return value;
 }
 
+function smsConsent(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  if (typeof value !== 'boolean') {
+    throw new TradeFlowKitLeadValidationError('consentToSms must be true or false', 'consentToSms');
+  }
+  return value;
+}
+
 function optionalDate(value: unknown): Date | null {
   if (value === undefined || value === null || value === '') return null;
   if (typeof value !== 'string' && !(value instanceof Date)) {
@@ -181,6 +191,7 @@ export function parseTradeFlowKitLeadCreate(input: unknown): TradeFlowKitLeadCre
     urgency: urgency(body.urgency),
     estimatedValueCents: optionalMoneyCents(body.estimatedValueCents),
     nextFollowUpAt: optionalDate(body.nextFollowUpAt),
+    consentToSms: smsConsent(body.consentToSms),
   };
 }
 
@@ -197,6 +208,7 @@ export function parseTradeFlowKitLeadPatch(input: unknown): TradeFlowKitLeadPatc
   if ('urgency' in body) patch.urgency = urgency(body.urgency);
   if ('estimatedValueCents' in body) patch.estimatedValueCents = optionalMoneyCents(body.estimatedValueCents);
   if ('nextFollowUpAt' in body) patch.nextFollowUpAt = optionalDate(body.nextFollowUpAt);
+  if ('consentToSms' in body) patch.consentToSms = smsConsent(body.consentToSms);
   if ('status' in body) {
     const nextStatus = status(body.status);
     if (nextStatus === 'converted') {
