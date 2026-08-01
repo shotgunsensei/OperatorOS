@@ -36,6 +36,15 @@ import {
 } from '../lib/tenant-auth.js';
 import { enqueueOutboxMessage } from '../lib/shared-notification-outbox.js';
 import { getTradeFlowKitPaymentProvider } from '../lib/tradeflowkit-payment-provider.js';
+import {
+  TRADEFLOWKIT_ACCOUNTING_EXPORT_VERSION,
+  buildQuickBooksIif,
+  buildQuickBooksInvoiceCsv,
+  buildXeroCustomersCsv,
+  buildXeroInvoicesCsv,
+  buildXeroPaymentsCsv,
+  type AccountingExportData,
+} from '../lib/tradeflowkit-accounting-exports.js';
 
 const readGuards = [requireTenantMember, requireTenantModuleAccess('tradeflowkit')];
 const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
@@ -47,6 +56,7 @@ const TASK_PRIORITIES = new Set(['low', 'normal', 'high', 'urgent']);
 const WORKFLOW_ENTITY_TYPES = new Set(['job', 'task']);
 const JOB_STATUSES = new Set(['lead', 'quoted', 'scheduled', 'in_progress', 'done', 'invoiced', 'paid', 'canceled']);
 const WORKFLOW_MAPPED_STATUSES = new Set([...JOB_STATUSES, ...TASK_STATUSES]);
+const ACCOUNTING_EXPORT_LIMITS = { customers: 10_000, invoices: 10_000, items: 50_000, payments: 20_000 } as const;
 const SAVED_VIEW_FILTERS = {
   jobs: new Set(['search', 'status', 'priority', 'assignedToUserId', 'customerId']),
   tasks: new Set(['search', 'status', 'priority', 'assignedToUserId', 'jobId', 'scope']),
@@ -273,6 +283,102 @@ function csvCell(value: unknown): string {
 
 function csv(headers: string[], rows: unknown[][]): string {
   return `${headers.map(csvCell).join(',')}\r\n${rows.map(row => row.map(csvCell).join(',')).join('\r\n')}\r\n`;
+}
+
+class AccountingExportLimitError extends Error {
+  constructor(public resource: keyof typeof ACCOUNTING_EXPORT_LIMITS) {
+    super(`Accounting export exceeds the ${ACCOUNTING_EXPORT_LIMITS[resource]} ${resource} limit`);
+  }
+}
+
+function assertAccountingExportLimit<T>(rows: T[], resource: keyof typeof ACCOUNTING_EXPORT_LIMITS): T[] {
+  if (rows.length > ACCOUNTING_EXPORT_LIMITS[resource]) throw new AccountingExportLimitError(resource);
+  return rows;
+}
+
+async function loadAccountingExportData(tenant: string): Promise<AccountingExportData> {
+  const [settingsRows, customerRows, invoiceRows] = await Promise.all([
+    db.select({ invoicePrefix: tradeflowkitSettings.invoicePrefix, currency: tradeflowkitSettings.currency })
+      .from(tradeflowkitSettings).where(eq(tradeflowkitSettings.tenantId, tenant)).limit(1),
+    db.select({
+      id: tradeflowkitCustomers.id,
+      name: tradeflowkitCustomers.name,
+      email: tradeflowkitCustomers.email,
+      phone: tradeflowkitCustomers.phone,
+      address: tradeflowkitCustomers.address,
+    }).from(tradeflowkitCustomers).where(and(
+      eq(tradeflowkitCustomers.tenantId, tenant),
+      isNull(tradeflowkitCustomers.deletedAt),
+    )).orderBy(asc(tradeflowkitCustomers.name), asc(tradeflowkitCustomers.id))
+      .limit(ACCOUNTING_EXPORT_LIMITS.customers + 1),
+    db.select({
+      id: tradeflowkitInvoices.id,
+      number: tradeflowkitInvoices.number,
+      status: tradeflowkitInvoices.status,
+      customerName: tradeflowkitCustomers.name,
+      customerEmail: tradeflowkitCustomers.email,
+      subtotalCents: tradeflowkitInvoices.subtotalCents,
+      taxCents: tradeflowkitInvoices.taxCents,
+      discountCents: tradeflowkitInvoices.discountCents,
+      totalCents: tradeflowkitInvoices.totalCents,
+      notes: tradeflowkitInvoices.notes,
+      createdAt: tradeflowkitInvoices.createdAt,
+      dueDate: tradeflowkitInvoices.dueDate,
+    }).from(tradeflowkitInvoices).innerJoin(tradeflowkitCustomers, and(
+      eq(tradeflowkitCustomers.id, tradeflowkitInvoices.customerId),
+      eq(tradeflowkitCustomers.tenantId, tenant),
+    )).where(and(
+      eq(tradeflowkitInvoices.tenantId, tenant),
+      isNull(tradeflowkitInvoices.deletedAt),
+    )).orderBy(asc(tradeflowkitInvoices.number), asc(tradeflowkitInvoices.id))
+      .limit(ACCOUNTING_EXPORT_LIMITS.invoices + 1),
+  ]);
+  const customers = assertAccountingExportLimit(customerRows, 'customers');
+  const invoices = assertAccountingExportLimit(invoiceRows, 'invoices');
+  const invoiceIds = invoices.map(invoice => invoice.id);
+  const [itemRows, paymentRows] = invoiceIds.length === 0 ? [[], []] : await Promise.all([
+    db.select({
+      invoiceId: tradeflowkitInvoiceItems.invoiceId,
+      lineNumber: tradeflowkitInvoiceItems.lineNumber,
+      description: tradeflowkitInvoiceItems.description,
+      quantityMilli: tradeflowkitInvoiceItems.quantityMilli,
+      unitPriceCents: tradeflowkitInvoiceItems.unitPriceCents,
+      lineTotalCents: tradeflowkitInvoiceItems.lineTotalCents,
+    }).from(tradeflowkitInvoiceItems).where(and(
+      eq(tradeflowkitInvoiceItems.tenantId, tenant),
+      inArray(tradeflowkitInvoiceItems.invoiceId, invoiceIds),
+    )).orderBy(asc(tradeflowkitInvoiceItems.invoiceId), asc(tradeflowkitInvoiceItems.lineNumber))
+      .limit(ACCOUNTING_EXPORT_LIMITS.items + 1),
+    db.select({
+      id: tradeflowkitPayments.id,
+      invoiceId: tradeflowkitPayments.invoiceId,
+      amountCents: tradeflowkitPayments.amountCents,
+      method: tradeflowkitPayments.method,
+      reference: tradeflowkitPayments.reference,
+      paidAt: tradeflowkitPayments.paidAt,
+    }).from(tradeflowkitPayments).where(and(
+      eq(tradeflowkitPayments.tenantId, tenant),
+      inArray(tradeflowkitPayments.invoiceId, invoiceIds),
+      eq(tradeflowkitPayments.status, 'succeeded'),
+      isNull(tradeflowkitPayments.voidedAt),
+    )).orderBy(asc(tradeflowkitPayments.paidAt), asc(tradeflowkitPayments.id))
+      .limit(ACCOUNTING_EXPORT_LIMITS.payments + 1),
+  ]);
+  assertAccountingExportLimit(itemRows, 'items');
+  const payments = assertAccountingExportLimit(paymentRows, 'payments');
+  const itemsByInvoice = new Map<string, typeof itemRows>();
+  for (const item of itemRows) {
+    const items = itemsByInvoice.get(item.invoiceId) ?? [];
+    items.push(item);
+    itemsByInvoice.set(item.invoiceId, items);
+  }
+  return {
+    invoicePrefix: settingsRows[0]?.invoicePrefix || 'INV',
+    currency: settingsRows[0]?.currency || 'USD',
+    customers,
+    invoices: invoices.map(invoice => ({ ...invoice, items: itemsByInvoice.get(invoice.id) ?? [] })),
+    payments,
+  };
 }
 
 export async function allocateTradeFlowKitNumber(executor: Executor, tenant: string, kind: 'job' | 'quote' | 'invoice'): Promise<number> {
@@ -1179,6 +1285,65 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
     if (!archived) return reply.code(409).send({ error: 'Workflow not found or changed; reload and retry', code: 'WORKFLOW_VERSION_CONFLICT' });
     return { ok: true };
   });
+
+  async function sendAccountingExport(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    definition: { filename: string; contentType: string; build: (data: AccountingExportData) => string },
+  ) {
+    try {
+      const output = definition.build(await loadAccountingExportData(tenantId(request)));
+      return reply
+        .header('Content-Type', definition.contentType)
+        .header('Content-Disposition', `attachment; filename="${definition.filename}"`)
+        .header('Cache-Control', 'private, no-store')
+        .header('X-Content-Type-Options', 'nosniff')
+        .header('X-TradeFlowKit-Accounting-Export-Version', TRADEFLOWKIT_ACCOUNTING_EXPORT_VERSION)
+        .send(output);
+    } catch (error) {
+      if (error instanceof AccountingExportLimitError) {
+        return reply.code(409).send({
+          error: error.message,
+          code: 'ACCOUNTING_EXPORT_LIMIT_EXCEEDED',
+          resource: error.resource,
+          limit: ACCOUNTING_EXPORT_LIMITS[error.resource],
+        });
+      }
+      request.log.error({ err: error }, 'TradeFlowKit accounting export failed');
+      return reply.code(500).send({ error: 'Accounting export failed', code: 'ACCOUNTING_EXPORT_FAILED' });
+    }
+  }
+
+  app.get('/v1/modules/tradeflowkit/exports/quickbooks.iif', { preHandler: [...readGuards] }, (request, reply) =>
+    sendAccountingExport(request, reply, {
+      filename: 'tradeflowkit-quickbooks-v1.iif',
+      contentType: 'text/plain; charset=utf-8',
+      build: buildQuickBooksIif,
+    }));
+  app.get('/v1/modules/tradeflowkit/exports/quickbooks/invoices.csv', { preHandler: [...readGuards] }, (request, reply) =>
+    sendAccountingExport(request, reply, {
+      filename: 'tradeflowkit-quickbooks-invoices-v1.csv',
+      contentType: 'text/csv; charset=utf-8',
+      build: buildQuickBooksInvoiceCsv,
+    }));
+  app.get('/v1/modules/tradeflowkit/exports/xero/customers.csv', { preHandler: [...readGuards] }, (request, reply) =>
+    sendAccountingExport(request, reply, {
+      filename: 'tradeflowkit-xero-customers-v1.csv',
+      contentType: 'text/csv; charset=utf-8',
+      build: buildXeroCustomersCsv,
+    }));
+  app.get('/v1/modules/tradeflowkit/exports/xero/invoices.csv', { preHandler: [...readGuards] }, (request, reply) =>
+    sendAccountingExport(request, reply, {
+      filename: 'tradeflowkit-xero-invoices-v1.csv',
+      contentType: 'text/csv; charset=utf-8',
+      build: buildXeroInvoicesCsv,
+    }));
+  app.get('/v1/modules/tradeflowkit/exports/xero/payments.csv', { preHandler: [...readGuards] }, (request, reply) =>
+    sendAccountingExport(request, reply, {
+      filename: 'tradeflowkit-xero-payments-v1.csv',
+      contentType: 'text/csv; charset=utf-8',
+      build: buildXeroPaymentsCsv,
+    }));
 
   app.get('/v1/modules/tradeflowkit/exports/:kind.csv', { preHandler: [...readGuards] }, async (request, reply) => {
     const { kind } = request.params as { kind: string };

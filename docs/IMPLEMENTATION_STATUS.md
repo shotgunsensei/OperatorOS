@@ -20,8 +20,38 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/tradeflowkit-saved-views`
+- Execution branch: `codex/tradeflowkit-accounting-exports`
 - Release gate: **closed**
+
+## 2026-08-01 TradeFlowKit accounting-export restoration
+
+TradeFlowKit now exposes five authenticated accounting handoffs over the
+canonical tenant data: QuickBooks Desktop IIF, QuickBooks invoice CSV, and
+Xero customer, invoice, and payment CSV. Format v1 uses configured invoice
+numbering/currency, normalized invoice lines, exact integer-cents totals, and
+actual successful non-voided payment-ledger records, including partial
+payments. Exports are bounded, deterministically ordered, no-store, marked
+with an explicit format version, and neutralize spreadsheet formulas. They do
+not connect to either vendor or require provider secrets.
+
+| Gate | Result |
+| --- | --- |
+| Format and static contracts | PASS 2/2; IIF/CSV structure, exact money, formula neutralization, API/UI wiring, bounds, and ledger mapping |
+| Isolated PostgreSQL workflow | PASS 1/1; anonymous denial, entitlement path, five downloads, version/cache headers, second-tenant exclusion, successful partial-payment selection, and failed-payment exclusion |
+| Adjacent TradeFlowKit regression | PASS 11/11 across accounting exports, revenue flow, document mutation, saved views, and provider boundary |
+| Executable source ledger | PASS; 120 active, 53 shared replacements, 40 explicit gaps, 41 security retirements, 23 product-boundary retirements, zero unclassified |
+| Workspace/type/build | PASS; API/runner/web typecheck and production build with Next 15.5.22 and 20/20 generated page entries |
+| Production-mode runtime | PASS; readiness-gated supervisor returned HTTP 200 from `/readyz` with database/auth/SSO/registry/worker/release identity configured and database release v30/30 |
+| Exact-host TradeFlowKit browser | PASS 1/1 in 21.5 seconds; PKCE workflow downloads and inspects QuickBooks IIF before continuing saved views, customer/job/task persistence, search, archive, and restore |
+| Deployment/provider/accounting import | NOT RUN; no Replit deployment, provider call, production data, or QuickBooks/Xero import occurred |
+
+This increment leaves database release v30 unchanged. The working-tree build
+and browser proof validate the source but do not represent a deployed release
+identity; a fresh build from the final committed revision remains the handoff
+gate. Customer-specific
+QuickBooks account names and Xero account/tax mappings must be reviewed in
+vendor sandboxes before import. Deployed authenticated acceptance, approved
+data/cutover, and rollback gates remain open, so no module state changes.
 
 ## 2026-08-01 TradeFlowKit saved-view restoration and release v30
 
