@@ -126,9 +126,9 @@ approved-scope snapshot as full-product parity. The executable source ledger
 inventories 35 pages, 194 API routes, 40 tables, and 8 provider/config
 references with zero unclassified items. After the Workflow Studio,
 revenue-document, customer-import, core-record editing, global-search,
-retention, lead-messaging, saved-view, accounting-export, safe-bulk, and
-lead-operations increments, 135 items are active, 53 use shared OperatorOS
-replacements, and 23 remain explicit Phase 16 gaps.
+retention, lead-messaging, saved-view, accounting-export, safe-bulk,
+lead-operations, and bounded record-import increments, 137 items are active,
+58 use shared OperatorOS replacements, and 8 remain explicit Phase 16 gaps.
 
 The current revenue increment adds persistent direct invoice creation;
 optimistically versioned, multi-line draft editing for quotes and invoices;
@@ -150,6 +150,18 @@ second-tenant isolation, safe audit/activity metadata, exact
 same-key/same-body original-result replay, `409 IDEMPOTENCY_KEY_REUSE` on body
 drift, and database persistence after API shutdown. Legacy customer bulk
 delete/restore is explicitly retired under ADR-0011.
+
+The bounded record-import increment restores job and invoice CSV workflows
+without reviving standalone authority. Both browser flows cap files at 256 KB
+and 100 rows, send parsed JSON, require module write access and a replay key,
+serialize per tenant, and suppress deterministic duplicates. Jobs resolve a
+unique active tenant customer and allocate canonical numbers. Repeated invoice
+references group at most 50 normalized lines, decimal inputs become exact
+integer cents/basis points, and paid status is rejected so imports cannot
+manufacture payment history. ADR-0031 also resolves the legacy scheduler,
+standalone-task, SendGrid/Twilio, and unreviewed lead-AI entries through the
+already accepted deterministic/job-scoped/shared-provider boundaries. Public
+anonymous intake and production business-payment activation remain fail-closed.
 
 The core CRUD increment completes the shortest functional field-service loop:
 customer → job/work order → task. Operators can create, read, fully edit,
@@ -268,8 +280,21 @@ tenant-scoped cleanup was repaired, the scenario passed 1/1 in 8.5 seconds,
 and a count-only check confirmed no synthetic import-gate identity remained.
 The clean rebuilt runtime and core production preflight both pass.
 
+Focused record-import/API/UI evidence on 2026-08-02 passes 6/6, covering
+viewer denial, bounds, tenant separation, customer reconciliation, schedule
+validation, exact same-key replay, changed-body conflict, deterministic
+duplicate suppression, grouped normalized invoice lines, exact-cent totals,
+synthetic-paid-history rejection, and safe batch metadata. The final clean
+aggregate passes 904 with zero failures and six intentional HTTP-only skips
+across 910 tests. Workspace typecheck, the 20-page production build, v31/31
+release-plan proof, compiled health/readiness, and the exact-host browser
+workflow also pass locally. The browser imports customers, jobs, and grouped
+invoice lines, verifies the exact database totals, reports invalid rows,
+suppresses duplicate re-imports, survives refresh, fits a 390-pixel viewport,
+returns to My Apps, and relaunches; 1/1 passed in 9.6 seconds.
+
 This follow-up does not change the ecosystem **NOT ACCEPTED** verdict or claim
-TradeFlowKit state 5. Twenty-three parity gaps remain, and deployed authenticated
+TradeFlowKit state 5. Eight parity gaps remain, and deployed authenticated
 acceptance, live providers, an approved real export/apply/reconciliation,
 rollback rehearsal, and production cutover have not occurred.
 

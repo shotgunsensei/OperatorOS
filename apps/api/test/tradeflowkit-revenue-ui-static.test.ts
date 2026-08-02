@@ -65,3 +65,35 @@ test('TradeFlowKit customer CSV import is bounded, replay protected, and wired t
   assert.match(component, /customerImportResult\.errors\.slice\(0, 3\)/);
   assert.doesNotMatch(component, /FormData|multipart/);
 });
+
+test('TradeFlowKit job and invoice CSV imports use the same bounded server-authoritative workflow', () => {
+  const component = readFileSync(
+    resolve(root, 'apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx'),
+    'utf8',
+  );
+  const api = readFileSync(resolve(root, 'apps/web/src/lib/auth.ts'), 'utf8');
+  const server = readFileSync(resolve(root, 'apps/api/src/routes/module-shell-routes.ts'), 'utf8');
+  const validation = readFileSync(resolve(root, 'apps/api/src/lib/tradeflowkit-revenue.ts'), 'utf8');
+
+  assert.match(component, /data-testid="tradeflowkit-job-import"/);
+  assert.match(component, /data-testid="tradeflowkit-invoice-import"/);
+  assert.match(component, /parseJobCsv\(await file\.text\(\)\)/);
+  assert.match(component, /parseInvoiceCsv\(await file\.text\(\)\)/);
+  assert.match(component, /Paid status is rejected so payment history stays authoritative/);
+  assert.match(component, /records\.length - 1 > 100/);
+  assert.match(api, /importJobs:/);
+  assert.match(api, /JSON\.stringify\(\{ jobs \}\)/);
+  assert.match(api, /importInvoices:/);
+  assert.match(api, /JSON\.stringify\(\{ invoices \}\)/);
+  assert.match(server, /\/v1\/modules\/tradeflowkit\/jobs\/import/);
+  assert.match(server, /\/v1\/modules\/tradeflowkit\/invoices\/import/);
+  assert.match(server, /scope: 'tradeflowkit-job-import'/);
+  assert.match(server, /scope: 'tradeflowkit-invoice-import'/);
+  assert.match(server, /pg_advisory_xact_lock/);
+  assert.match(server, /sourceId = tradeFlowKitRecordImportSourceId/);
+  assert.match(server, /calculateDocumentTotals/);
+  assert.match(validation, /body\.jobs\.length > 100/);
+  assert.match(validation, /body\.invoices\.length > 100/);
+  assert.match(validation, /const INVOICE_IMPORT_STATUSES = new Set\(\['draft', 'sent', 'void'\]\)/);
+  assert.doesNotMatch(component, /FormData|multipart/);
+});

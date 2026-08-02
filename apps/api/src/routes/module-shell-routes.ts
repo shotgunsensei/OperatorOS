@@ -41,11 +41,14 @@ import {
   parseCustomerCreate,
   parseCustomerImport,
   parseCustomerUpdate,
+  calculateDocumentTotals,
   parseDocumentArchive,
   parseInvoiceCreate,
   parseInvoiceFromQuote,
+  parseInvoiceImport,
   parseInvoiceUpdate,
   parseJobCreate,
+  parseJobImport,
   parsePayment,
   parseQuoteCreate,
   parseQuoteToJob,
@@ -420,6 +423,58 @@ function tradeFlowKitCustomerImportSourceId(input: TradeFlowKitCustomerInput): s
     address: input.address?.trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-US') ?? null,
   })).digest('hex');
   return `customer-import:${fingerprint}`;
+}
+
+function tradeFlowKitRecordImportSourceId(kind: 'job' | 'invoice', input: Record<string, unknown>): string {
+  const fingerprint = createHash('sha256').update(JSON.stringify(input)).digest('hex');
+  return `${kind}-import:${fingerprint}`;
+}
+
+function tradeFlowKitImportIdempotencyKey(request: FastifyRequest): string | null {
+  const raw = request.headers['idempotency-key'];
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  return /^[A-Za-z0-9._:-]{8,160}$/.test(value) ? value : null;
+}
+
+async function runTradeFlowKitRecordImport<T>(input: {
+  tenantId: string;
+  scope: 'tradeflowkit-job-import' | 'tradeflowkit-invoice-import';
+  idempotencyKey: string;
+  requestBody: unknown;
+  work: (tx: TradeFlowKitTransaction, requestSha256: string) => Promise<T>;
+}): Promise<
+  | { kind: 'response'; response: T | unknown }
+  | { kind: 'conflict' }
+  | { kind: 'in_progress' }
+  | { kind: 'module_unavailable' }
+> {
+  const [moduleRow] = await db.select({ id: modules.id }).from(modules)
+    .where(eq(modules.slug, 'tradeflowkit'))
+    .limit(1);
+  if (!moduleRow) return { kind: 'module_unavailable' };
+  return db.transaction(async tx => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`${input.scope}:${input.tenantId}`}))`);
+    const idempotency = await beginIdempotentOperation({
+      tenantId: input.tenantId,
+      moduleId: moduleRow.id,
+      scope: input.scope,
+      idempotencyKey: input.idempotencyKey,
+      request: input.requestBody,
+      leaseMs: 60_000,
+    }, tx);
+    if (idempotency.state === 'replay') return { kind: 'response' as const, response: idempotency.responseJson };
+    if (idempotency.state === 'conflict') return { kind: 'conflict' as const };
+    if (idempotency.state === 'in_progress') return { kind: 'in_progress' as const };
+    const response = await input.work(tx, idempotency.requestSha256);
+    await completeIdempotentOperation({
+      tenantId: input.tenantId,
+      id: idempotency.id,
+      leaseExpiresAt: idempotency.leaseExpiresAt,
+      responseStatus: 200,
+      responseJson: response,
+    }, tx);
+    return { kind: 'response' as const, response };
+  });
 }
 
 async function createLinkedTradeFlowKitCustomer(
@@ -1167,6 +1222,123 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
     return reply.code(200).send(result.response);
   });
 
+  app.post('/v1/modules/tradeflowkit/jobs/import', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    const importKey = tradeFlowKitImportIdempotencyKey(request);
+    if (!importKey) {
+      return reply.code(400).send({
+        error: 'A valid Idempotency-Key header is required', code: 'IDEMPOTENCY_KEY_REQUIRED', field: 'Idempotency-Key',
+      });
+    }
+    let input;
+    try { input = parseJobImport(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    const result = await runTradeFlowKitRecordImport({
+      tenantId: ctx.tenantId,
+      scope: 'tradeflowkit-job-import',
+      idempotencyKey: importKey,
+      requestBody: request.body,
+      work: async (tx, requestSha256) => {
+        const customerRows = await tx.select({ id: tradeflowkitCustomers.id, name: tradeflowkitCustomers.name })
+          .from(tradeflowkitCustomers)
+          .where(and(eq(tradeflowkitCustomers.tenantId, ctx.tenantId), isNull(tradeflowkitCustomers.deletedAt)));
+        const customerIds = new Map<string, string | null>();
+        for (const customer of customerRows) {
+          const normalizedName = normalizeTradeFlowKitCustomerName(customer.name);
+          customerIds.set(normalizedName, customerIds.has(normalizedName) ? null : customer.id);
+        }
+        const existingRows = await tx.select({ sourceId: tradeflowkitJobs.sourceId }).from(tradeflowkitJobs)
+          .where(eq(tradeflowkitJobs.tenantId, ctx.tenantId));
+        const sourceIds = new Set(existingRows.map(row => row.sourceId).filter((value): value is string => !!value));
+        const errors = [...input.errors];
+        const skippedRows: Array<{ row: number; reason: 'duplicate_source' }> = [];
+        const importedJobs: Array<{ id: string }> = [];
+
+        for (const job of input.jobs) {
+          const customerKey = normalizeTradeFlowKitCustomerName(job.customerName);
+          const customerId = customerIds.get(customerKey);
+          if (customerId === undefined) {
+            errors.push({ row: job.row, code: 'CUSTOMER_NOT_FOUND', field: 'customerName' });
+            continue;
+          }
+          if (customerId === null) {
+            errors.push({ row: job.row, code: 'CUSTOMER_AMBIGUOUS', field: 'customerName' });
+            continue;
+          }
+          const sourceId = tradeFlowKitRecordImportSourceId('job', {
+            customerId,
+            title: normalizeTradeFlowKitCustomerName(job.title),
+            description: job.description,
+            internalNotes: job.internalNotes,
+            status: job.status,
+            priority: job.priority,
+            scheduledStart: job.scheduledStart?.toISOString() ?? null,
+            scheduledEnd: job.scheduledEnd?.toISOString() ?? null,
+          });
+          if (sourceIds.has(sourceId)) {
+            skippedRows.push({ row: job.row, reason: 'duplicate_source' });
+            continue;
+          }
+          const number = await allocateTradeFlowKitNumber(tx, ctx.tenantId, 'job');
+          const [created] = await tx.insert(tradeflowkitJobs).values({
+            tenantId: ctx.tenantId,
+            customerId,
+            createdByUserId: user.id,
+            number,
+            title: job.title,
+            description: job.description,
+            internalNotes: job.internalNotes,
+            status: job.status,
+            priority: job.priority,
+            scheduledStart: job.scheduledStart,
+            scheduledEnd: job.scheduledEnd,
+            sourceId,
+          }).returning({ id: tradeflowkitJobs.id });
+          await tx.insert(activityFeed).values({
+            tenantId: ctx.tenantId,
+            userId: user.id,
+            action: 'imported',
+            entityType: 'tradeflowkit_job',
+            entityId: created.id,
+            metadata: { customerId, number, status: job.status, sourceId },
+          });
+          importedJobs.push(created);
+          sourceIds.add(sourceId);
+        }
+
+        const response = {
+          imported: importedJobs.length,
+          skipped: skippedRows.length,
+          errors,
+          skippedRows,
+          jobs: importedJobs,
+        };
+        await tx.insert(activityFeed).values({
+          tenantId: ctx.tenantId,
+          userId: user.id,
+          action: 'import_completed',
+          entityType: 'tradeflowkit_job_import',
+          metadata: {
+            idempotencyKey: importKey,
+            requestSha256,
+            totalRows: input.totalRows,
+            imported: importedJobs.length,
+            skipped: skippedRows.length,
+            errors: errors.length,
+            validationErrors: errors,
+            skippedRows,
+            importedJobIds: importedJobs.map(job => job.id),
+          },
+        });
+        return response;
+      },
+    });
+    if (result.kind === 'module_unavailable') return reply.code(503).send({ error: 'TradeFlowKit module registry is unavailable', code: 'TRADEFLOWKIT_MODULE_UNAVAILABLE' });
+    if (result.kind === 'conflict') return reply.code(409).send({ error: 'Idempotency-Key was already used with a different job import', code: 'IDEMPOTENCY_KEY_REUSE' });
+    if (result.kind === 'in_progress') return reply.code(409).send({ error: 'Job import is already in progress', code: 'IDEMPOTENCY_IN_PROGRESS' });
+    return reply.code(200).send(result.response);
+  });
+
   app.post('/v1/modules/tradeflowkit/jobs', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
     let input;
     try { input = parseJobCreate(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
@@ -1500,6 +1672,199 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
       return created;
     });
     return reply.code(201).send(invoice);
+  });
+
+  app.post('/v1/modules/tradeflowkit/invoices/import', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {
+    const importKey = tradeFlowKitImportIdempotencyKey(request);
+    if (!importKey) {
+      return reply.code(400).send({
+        error: 'A valid Idempotency-Key header is required', code: 'IDEMPOTENCY_KEY_REQUIRED', field: 'Idempotency-Key',
+      });
+    }
+    let input;
+    try { input = parseInvoiceImport(request.body); } catch (err) { if (revenueValidation(reply, err)) return; throw err; }
+    const ctx = (request as any).tenantContext;
+    const user = (request as any).user;
+    type InvoiceImportRow = (typeof input.invoices)[number];
+    type InvoiceImportGroup = {
+      key: string;
+      firstRow: number;
+      header: InvoiceImportRow;
+      headerFingerprint: string;
+      invalid: boolean;
+      items: Array<{ description: string; quantity: number; unitPriceCents: number }>;
+    };
+    const errors = [...input.errors];
+    const groups = new Map<string, InvoiceImportGroup>();
+    const groupOrder: string[] = [];
+    for (const row of input.invoices) {
+      const key = row.invoiceRef
+        ? `ref:${row.invoiceRef.trim().toLocaleLowerCase('en-US')}`
+        : `row:${row.row}`;
+      const headerFingerprint = JSON.stringify({
+        customerName: normalizeTradeFlowKitCustomerName(row.customerName),
+        status: row.status,
+        dueDate: row.dueDate?.toISOString() ?? null,
+        taxRateBps: row.taxRateBps,
+        discountCents: row.discountCents,
+        notes: row.notes,
+      });
+      let group = groups.get(key);
+      if (!group) {
+        group = { key, firstRow: row.row, header: row, headerFingerprint, invalid: false, items: [] };
+        groups.set(key, group);
+        groupOrder.push(key);
+      } else if (group.headerFingerprint !== headerFingerprint) {
+        group.invalid = true;
+        errors.push({ row: row.row, code: 'INVOICE_GROUP_CONFLICT', field: 'invoiceRef' });
+      }
+      if (!row.itemDescription) {
+        errors.push({ row: row.row, code: 'FIELD_REQUIRED', field: 'itemDescription' });
+      } else if (group.items.length >= 50) {
+        group.invalid = true;
+        errors.push({ row: row.row, code: 'LINE_ITEMS_INVALID', field: 'itemDescription' });
+      } else {
+        group.items.push({
+          description: row.itemDescription,
+          quantity: row.itemQuantity,
+          unitPriceCents: row.itemUnitPriceCents,
+        });
+      }
+    }
+
+    const result = await runTradeFlowKitRecordImport({
+      tenantId: ctx.tenantId,
+      scope: 'tradeflowkit-invoice-import',
+      idempotencyKey: importKey,
+      requestBody: request.body,
+      work: async (tx, requestSha256) => {
+        const customerRows = await tx.select({ id: tradeflowkitCustomers.id, name: tradeflowkitCustomers.name })
+          .from(tradeflowkitCustomers)
+          .where(and(eq(tradeflowkitCustomers.tenantId, ctx.tenantId), isNull(tradeflowkitCustomers.deletedAt)));
+        const customerIds = new Map<string, string | null>();
+        for (const customer of customerRows) {
+          const normalizedName = normalizeTradeFlowKitCustomerName(customer.name);
+          customerIds.set(normalizedName, customerIds.has(normalizedName) ? null : customer.id);
+        }
+        const existingRows = await tx.select({ sourceId: tradeflowkitInvoices.sourceId }).from(tradeflowkitInvoices)
+          .where(eq(tradeflowkitInvoices.tenantId, ctx.tenantId));
+        const sourceIds = new Set(existingRows.map(row => row.sourceId).filter((value): value is string => !!value));
+        const skippedRows: Array<{ row: number; reason: 'duplicate_source' }> = [];
+        const importedInvoices: Array<{ id: string }> = [];
+
+        for (const key of groupOrder) {
+          const group = groups.get(key)!;
+          if (group.invalid) continue;
+          if (group.items.length === 0) {
+            errors.push({ row: group.firstRow, code: 'LINE_ITEMS_INVALID', field: 'itemDescription' });
+            continue;
+          }
+          const customerKey = normalizeTradeFlowKitCustomerName(group.header.customerName);
+          const customerId = customerIds.get(customerKey);
+          if (customerId === undefined) {
+            errors.push({ row: group.firstRow, code: 'CUSTOMER_NOT_FOUND', field: 'customerName' });
+            continue;
+          }
+          if (customerId === null) {
+            errors.push({ row: group.firstRow, code: 'CUSTOMER_AMBIGUOUS', field: 'customerName' });
+            continue;
+          }
+          let totals;
+          try {
+            totals = calculateDocumentTotals(group.items, group.header.taxRateBps, group.header.discountCents);
+          } catch (error) {
+            if (!(error instanceof TradeFlowKitRevenueValidationError)) throw error;
+            errors.push({ row: group.firstRow, code: error.code, ...(error.field ? { field: error.field } : {}) });
+            continue;
+          }
+          const sourceId = tradeFlowKitRecordImportSourceId('invoice', group.header.invoiceRef
+            ? { invoiceRef: group.header.invoiceRef.trim().toLocaleLowerCase('en-US') }
+            : {
+              customerId,
+              status: group.header.status,
+              dueDate: group.header.dueDate?.toISOString() ?? null,
+              taxRateBps: group.header.taxRateBps,
+              discountCents: group.header.discountCents,
+              notes: group.header.notes,
+              items: group.items,
+            });
+          if (sourceIds.has(sourceId)) {
+            skippedRows.push({ row: group.firstRow, reason: 'duplicate_source' });
+            continue;
+          }
+          const number = await allocateTradeFlowKitNumber(tx, ctx.tenantId, 'invoice');
+          const [created] = await tx.insert(tradeflowkitInvoices).values({
+            tenantId: ctx.tenantId,
+            customerId,
+            createdByUserId: user.id,
+            number,
+            status: group.header.status,
+            lineItems: group.items,
+            subtotalCents: totals.subtotalCents,
+            taxRateBps: group.header.taxRateBps,
+            taxCents: totals.taxCents,
+            discountCents: group.header.discountCents,
+            totalCents: totals.totalCents,
+            paidCents: 0,
+            balanceCents: totals.totalCents,
+            notes: group.header.notes,
+            dueDate: group.header.dueDate,
+            sentAt: group.header.status === 'sent' ? new Date() : null,
+            sourceId,
+          }).returning({ id: tradeflowkitInvoices.id });
+          await tx.insert(tradeflowkitInvoiceItems).values(group.items.map((item, index) => ({
+            tenantId: ctx.tenantId,
+            invoiceId: created.id,
+            lineNumber: index + 1,
+            description: item.description,
+            quantityMilli: item.quantity * 1000,
+            unitPriceCents: item.unitPriceCents,
+            lineTotalCents: item.quantity * item.unitPriceCents,
+          })));
+          await tx.insert(activityFeed).values({
+            tenantId: ctx.tenantId,
+            userId: user.id,
+            action: 'imported',
+            entityType: 'tradeflowkit_invoice',
+            entityId: created.id,
+            metadata: { customerId, number, status: group.header.status, totalCents: totals.totalCents, sourceId },
+          });
+          importedInvoices.push(created);
+          sourceIds.add(sourceId);
+        }
+
+        const response = {
+          imported: importedInvoices.length,
+          skipped: skippedRows.length,
+          errors,
+          skippedRows,
+          invoices: importedInvoices,
+        };
+        await tx.insert(activityFeed).values({
+          tenantId: ctx.tenantId,
+          userId: user.id,
+          action: 'import_completed',
+          entityType: 'tradeflowkit_invoice_import',
+          metadata: {
+            idempotencyKey: importKey,
+            requestSha256,
+            totalRows: input.totalRows,
+            totalGroups: groups.size,
+            imported: importedInvoices.length,
+            skipped: skippedRows.length,
+            errors: errors.length,
+            validationErrors: errors,
+            skippedRows,
+            importedInvoiceIds: importedInvoices.map(invoice => invoice.id),
+          },
+        });
+        return response;
+      },
+    });
+    if (result.kind === 'module_unavailable') return reply.code(503).send({ error: 'TradeFlowKit module registry is unavailable', code: 'TRADEFLOWKIT_MODULE_UNAVAILABLE' });
+    if (result.kind === 'conflict') return reply.code(409).send({ error: 'Idempotency-Key was already used with a different invoice import', code: 'IDEMPOTENCY_KEY_REUSE' });
+    if (result.kind === 'in_progress') return reply.code(409).send({ error: 'Invoice import is already in progress', code: 'IDEMPOTENCY_IN_PROGRESS' });
+    return reply.code(200).send(result.response);
   });
 
   app.patch('/v1/modules/tradeflowkit/invoices/:id', { preHandler: [...tradeflowkitWriteGuards] }, async (request, reply) => {

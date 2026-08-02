@@ -63,6 +63,9 @@ async function cleanupIdentity(pg: Client, identity: Identity | null) {
   try {
     await pg.query(`set local operatoros.tenant_hard_delete = 'on'`);
     for (const table of [
+      'tradeflowkit_invoice_items',
+      'tradeflowkit_invoices',
+      'tradeflowkit_jobs',
       'tradeflowkit_customers',
       'tradeflowkit_settings',
       'tradeflowkit_sequences',
@@ -96,7 +99,7 @@ async function cleanupIdentity(pg: Client, identity: Identity | null) {
   }
 }
 
-test('TradeFlowKit customer CSV import persists through exact-host SSO, refresh, and duplicate replay', async ({ page, request }) => {
+test('TradeFlowKit customer, job, and invoice CSV imports persist through exact-host SSO and duplicate replay', async ({ page, request }) => {
   test.setTimeout(120_000);
   const pg = new Client({ connectionString: process.env.DATABASE_URL });
   await pg.connect();
@@ -109,6 +112,18 @@ test('TradeFlowKit customer CSV import persists through exact-host SSO, refresh,
     `"${alpha}",alpha-${suffix}@example.com,(555) 010-1000,100 Alpha Avenue,"Priority, quoted note"`,
     `Invalid Email,not-an-email,,,`,
     `${beta},beta-${suffix}@example.com,555-010-2000,200 Beta Avenue,`,
+  ].join('\n'));
+  const jobCsv = Buffer.from([
+    'customerName,title,description,status,priority,scheduledStart,scheduledEnd,internalNotes',
+    `${alpha},Imported inspection,Production inspection,scheduled,urgent,2026-08-10T13:00:00.000Z,2026-08-10T15:00:00.000Z,Review before dispatch`,
+    `Unknown Customer,Unresolved job,,,,,,`,
+  ].join('\n'));
+  const invoiceRef = `browser-${suffix}`;
+  const invoiceCsv = Buffer.from([
+    'invoiceRef,customerName,status,dueDate,taxRate,discount,notes,itemDescription,itemQty,itemUnitPrice',
+    `${invoiceRef},${alpha},draft,2026-08-31,7.50,1.00,Imported invoice,Inspection labor,2,12.50`,
+    `${invoiceRef},${alpha},draft,2026-08-31,7.50,1.00,Imported invoice,Report package,1,5.00`,
+    `paid-${suffix},${alpha},paid,2026-08-31,0,0,Unsafe history,Already paid,1,50.00`,
   ].join('\n'));
 
   try {
@@ -169,6 +184,61 @@ test('TradeFlowKit customer CSV import persists through exact-host SSO, refresh,
     await replayForm.getByRole('button', { name: 'Import validated rows' }).click();
     await expect(replayForm.getByTestId('tradeflowkit-customer-import-result'))
       .toContainText('Imported 0; skipped 2; errors 1.');
+
+    const jobImportForm = page.getByTestId('tradeflowkit-job-import');
+    await jobImportForm.getByLabel('Job CSV file').setInputFiles({
+      name: 'phase16-jobs.csv', mimeType: 'text/csv', buffer: jobCsv,
+    });
+    await expect(jobImportForm.getByText('2 rows ready for server validation.')).toBeVisible();
+    await jobImportForm.getByRole('button', { name: 'Import validated jobs' }).click();
+    await expect(jobImportForm.getByTestId('tradeflowkit-job-import-result'))
+      .toContainText('Imported 1; skipped 0; errors 1.');
+    await expect(jobImportForm.getByTestId('tradeflowkit-job-import-result'))
+      .toContainText('Row 3: CUSTOMER_NOT_FOUND (customerName)');
+
+    const invoiceImportForm = page.getByTestId('tradeflowkit-invoice-import');
+    await invoiceImportForm.getByLabel('Invoice CSV file').setInputFiles({
+      name: 'phase16-invoices.csv', mimeType: 'text/csv', buffer: invoiceCsv,
+    });
+    await expect(invoiceImportForm.getByText('3 rows ready for server validation.')).toBeVisible();
+    await invoiceImportForm.getByRole('button', { name: 'Import validated invoices' }).click();
+    await expect(invoiceImportForm.getByTestId('tradeflowkit-invoice-import-result'))
+      .toContainText('Imported 1; skipped 0; errors 1.');
+    await expect(invoiceImportForm.getByTestId('tradeflowkit-invoice-import-result'))
+      .toContainText('Row 4: FIELD_INVALID (status)');
+
+    const recordImports = await pg.query<{
+      job_count: string; invoice_count: string; invoice_item_count: string;
+      subtotal_cents: number; tax_cents: number; discount_cents: number; total_cents: number; paid_cents: number;
+    }>(
+      `select
+         (select count(*) from tradeflowkit_jobs where tenant_id = $1)::text as job_count,
+         (select count(*) from tradeflowkit_invoices where tenant_id = $1)::text as invoice_count,
+         (select count(*) from tradeflowkit_invoice_items where tenant_id = $1)::text as invoice_item_count,
+         subtotal_cents, tax_cents, discount_cents, total_cents, paid_cents
+       from tradeflowkit_invoices
+       where tenant_id = $1
+       limit 1`,
+      [identity.tenantId],
+    );
+    expect(recordImports.rows[0]).toEqual({
+      job_count: '1', invoice_count: '1', invoice_item_count: '2',
+      subtotal_cents: 3000, tax_cents: 225, discount_cents: 100, total_cents: 3125, paid_cents: 0,
+    });
+
+    await jobImportForm.getByLabel('Job CSV file').setInputFiles({
+      name: 'phase16-jobs-retry.csv', mimeType: 'text/csv', buffer: jobCsv,
+    });
+    await jobImportForm.getByRole('button', { name: 'Import validated jobs' }).click();
+    await expect(jobImportForm.getByTestId('tradeflowkit-job-import-result'))
+      .toContainText('Imported 0; skipped 1; errors 1.');
+
+    await invoiceImportForm.getByLabel('Invoice CSV file').setInputFiles({
+      name: 'phase16-invoices-retry.csv', mimeType: 'text/csv', buffer: invoiceCsv,
+    });
+    await invoiceImportForm.getByRole('button', { name: 'Import validated invoices' }).click();
+    await expect(invoiceImportForm.getByTestId('tradeflowkit-invoice-import-result'))
+      .toContainText('Imported 0; skipped 1; errors 1.');
 
     await page.setViewportSize({ width: 390, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

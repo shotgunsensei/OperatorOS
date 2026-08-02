@@ -31,7 +31,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 
 | Product | Slug | Canonical host | Commercial class | Source project observed | Current OperatorOS functional state |
 | --- | --- | --- | --- | --- | --- |
-| TradeFlowKit | `tradeflowkit` | `tradeflowkit.operatoros.net` | core | Original baseline `6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55`; clean restored product evidence `C:\Dev\TradeFlowKit` at `37aa67f1da804fc3ac56f36e50e01362077d7a26` | Approved-scope state 4 remains, but full Phase 16 parity is open: the zero-unclassified source ledger records 135 active capabilities and 23 explicit gaps. Existing revenue/field-service workflows now include Workflow Studio, governed job transitions, team job-task views, activity, direct invoice creation, versioned quote/invoice draft editing, history-safe archive/restore, idempotent quote-to-job, source-valid high priority, bounded Directory-reconciled customer CSV import, tenant-scoped global search, durable personal/admin-shared job views, bounded format-v1 QuickBooks/Xero exports, bounded archived-record restore, admin-only bounded job-status and job/invoice-restore batches, exact-balance invoice-settlement batches, replay-safe lead email/consent-gated SMS, and versioned lead settings/templates with transactional manually actioned follow-ups plus sanitized adapter validation/history. ADR-0030 keeps automatic response, direct provider credentials, and anonymous lead intake disabled; destructive bulk deletion and permanent purge remain retired by ADR-0011/0029. A read-only snapshot and guarded atomic v1 core-data apply pass synthetic isolated rehearsal; no real export/production cutover occurred and later import versions are required. Release v31 adds four tenant-scoped lead-operations tables; accounting sandbox review plus deployed provider and authenticated acceptance still block state 5 |
+| TradeFlowKit | `tradeflowkit` | `tradeflowkit.operatoros.net` | core | Original baseline `6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55`; clean restored product evidence `C:\Dev\TradeFlowKit` at `37aa67f1da804fc3ac56f36e50e01362077d7a26` | Approved-scope state 4 remains, but full Phase 16 parity is open: the zero-unclassified source ledger records 137 active capabilities and 8 explicit gaps. Existing revenue/field-service workflows now include Workflow Studio, governed job transitions, team job-task views, activity, direct invoice creation, versioned quote/invoice draft editing, history-safe archive/restore, idempotent quote-to-job, source-valid high priority, bounded Directory-reconciled customer CSV import, bounded tenant/customer-reconciled job and exact-cent invoice CSV imports, tenant-scoped global search, durable personal/admin-shared job views, bounded format-v1 QuickBooks/Xero exports, bounded archived-record restore, admin-only bounded job-status and job/invoice-restore batches, exact-balance invoice-settlement batches, replay-safe lead email/consent-gated SMS, and versioned lead settings/templates with transactional manually actioned follow-ups plus sanitized adapter validation/history. ADR-0031 keeps tasks job-scoped, excludes autonomous scheduling and unreviewed lead AI, and maps legacy communication providers to OperatorOS shared adapters; ADR-0030 keeps automatic response and anonymous lead intake disabled; destructive bulk deletion and permanent purge remain retired by ADR-0011/0029. A read-only snapshot and guarded atomic v1 core-data apply pass synthetic isolated rehearsal; no real export/production cutover occurred and later import versions are required. Release v31 remains current because the imports use existing constrained tables; accounting sandbox review plus deployed provider and authenticated acceptance still block state 5 |
 | TorqueShed | `torqueshed` | `torqueshed.operatoros.net` | free | Dirty read-only `C:\Dev\TorqueShed-Codex`: local `68da4548f665`, committed reference `508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75`; immutable snapshot remains `c33ade5...` | Source/local state 4: Phase 7 automotive foundation; Phase 8 server-context safety-ranked Assist and OperatorOS-owned append-only token accounting; Phase 9 persistent Marketplace listings/search/saved/contact/messages/expiry/reports and Community profiles/preferences/follows/blocks/posts/tags/comments/reactions/scanned media/reports/append-only moderation with native UI/deep links. No protection/payment/shipping/reputation claims. Fresh focused, PostgreSQL, release v29, build/runtime/health, and dedicated exact-host browser gates pass locally; deployed provider/data/rollback/cutover gates still block state 5 |
 | TechDeck | `techdeck` | `techdeck.operatoros.net` | core | Clean `C:\Dev\Tech-Deck` at `8125f8d89d8d39d60a50c8061a26133a0c917792`; executable source ledger inventories all 382 discovered capabilities with zero unclassified/gaps | Source/local state 4 candidate: Directory-linked clients/sites and tickets/comments/time; typed configuration inventory; network/IPAM topology; lifecycle; versioned documentation/runbooks/backlinks; shared private attachments; evidence metadata; deterministic reports; persisted dashboards; mobile/KB compatibility; and exact configuration/ticket/client/document/evidence/report deep links. The ledger records 91 active, 109 shared replacements, 48 security retirements, and 134 product-boundary retirements. ADR-0012/0013/0014 exclude discovery/device mutation, secret values, remote execution, unsafe intake, recurrence, and business invoicing; deployed workflow/provider/cutover evidence still block state 5 |
 | PulseDesk | `pulsedesk` | `pulsedesk.operatoros.net` | core | Clean `C:\Dev\PulseDesk` at `937849471e489ed23db2a263d04160a388402740`; executable source ledger inventories all 309 discovered capabilities with zero unclassified/gaps | Source/local state 4 candidate: PHI-minimized shared-Directory clients/facilities/requesters; departments; operational assets; numbered tickets; queues/teams/assignments; internal notes/requester replies; shared private attachments; time/SLA; vendor, supply and facility coordination; knowledge/tags/saved views/preferences; dashboards, configuration, bulk actions, legacy-compatible deep links, equipment-issue prefill, and exact Directory client detail. The ledger records 91 active, 74 shared replacements, 53 security retirements, and 91 product-boundary retirements. ADR-0015 excludes EHR/clinical records and resolves the TechDeck boundary; deployed workflow and authorized privacy-reviewed cutover evidence still block state 5 |
@@ -167,16 +167,19 @@ until a reviewed centralized adapter is configured.
 
 Phase 16A re-baselines TradeFlowKit against the newer clean restored source
 commit instead of treating the Phase 4 snapshot as full-product parity. Its
-machine-readable ledger has zero unclassified source items, 135 active
-capabilities, and 23 explicit gaps. Eleven persisted increments now cover
+machine-readable ledger has zero unclassified source items, 137 active
+capabilities, and 8 explicit gaps. Twelve persisted increments now cover
 Workflow Studio, revenue documents, customer import, full customer/job/task
 editing, global search, retention, lead messaging, saved views, accounting
-exports, non-destructive safe-bulk actions, and internal lead operations.
+exports, non-destructive safe-bulk actions, internal lead operations, and
+bounded tenant/customer-reconciled job plus exact-cent invoice imports.
 Versioned lead settings/templates, the internal capture profile,
 transactionally scheduled/manual follow-ups, sanitized adapter validation and
 history, and authenticated-admin delivery checks run through trusted tenant
-authority and the shared idempotent outbox. ADR-0030 keeps automatic response,
-direct provider credentials, and anonymous/public intake disabled. The
+authority and the shared idempotent outbox. ADR-0031 resolves standalone
+tasks, autonomous scheduling, legacy communication providers, and unreviewed
+lead AI without activating them; ADR-0030 keeps automatic response and
+anonymous/public intake disabled. The
 version 1 migration path can read a scoped legacy snapshot
 and atomically apply bounded core business records to one trusted entitled
 tenant with explicit user mappings, exact fingerprints, migration references,
@@ -189,12 +192,14 @@ candidate: job attachments use private authorized
 storage, scan jobs, idempotency, usage/activity, notifications/outbox, and
 transaction-bound platform audit. CallCommand's signed Twilio status callback
 uses the shared verified receipt/deduplication/retry ledger. TradeFlowKit still
-requires implementation or explicit disposition of every remaining Phase 16
-gap, a later import version for restored workflows/general tasks/contacts,
+requires implementation or explicit disposition of the eight remaining Phase
+16 gaps, a later import version for restored workflows/general tasks/contacts,
 deployed workflow/public-document smoke, accounting sandbox review, provider
 acceptance, and approved real-data cutover evidence before state 5. The current
-local candidate passes 900/0/6 across 906 API tests, v31/31 release proof,
-compiled readiness, and the updated exact-host workflow.
+local candidate passes 904/0/6 across 910 API tests on a fresh disposable
+database, the focused record-import/API/UI gate 6/6, v31/31 release-plan proof,
+workspace typecheck, the 20-page production build, compiled health/readiness,
+and exact-host customer/job/invoice import acceptance 1/1 in 9.6 seconds.
 
 TechDeck now runs its approved managed-operations workflows in the shared
 runtime. Directory-linked configuration items model infrastructure,
