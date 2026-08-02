@@ -1150,6 +1150,16 @@ export interface TradeFlowKitTrashResponse {
   invoices: Array<Pick<TradeFlowKitInvoice, 'id' | 'customerId' | 'jobId' | 'number' | 'status' | 'totalCents' | 'balanceCents' | 'version'> & { deletedAt: string }>;
   hasMore: { customers: boolean; jobs: boolean; invoices: boolean };
 }
+export interface TradeFlowKitBulkRecord { id: string; expectedVersion: number }
+export interface TradeFlowKitBulkResult {
+  ok: true;
+  operation: 'job_status' | 'job_restore' | 'invoice_restore' | 'invoice_mark_paid';
+  count: number;
+  replay: boolean;
+  status?: string;
+  totalCents?: number;
+  records: Array<{ id: string; version: number; paymentId?: string; amountCents?: number }>;
+}
 
 export type DirectoryModuleSlug = 'tradeflowkit' | 'techdeck' | 'pulsedesk';
 export interface DirectoryPagination { total: number; limit: number; offset: number; hasMore: boolean }
@@ -1801,6 +1811,25 @@ export const moduleShellApi = {
       apiFetch(`/modules/tradeflowkit/trash/jobs/${encodeURIComponent(id)}/restore`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true; job: { id: string; version: number } }>,
     restoreInvoice: (id: string, expectedVersion: number): Promise<{ ok: true; invoice: { id: string; version: number } }> =>
       apiFetch(`/modules/tradeflowkit/trash/invoices/${encodeURIComponent(id)}/restore`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<{ ok: true; invoice: { id: string; version: number } }>,
+    bulkJobStatus: (records: TradeFlowKitBulkRecord[], status: string, key: string): Promise<TradeFlowKitBulkResult> =>
+      apiFetch('/modules/tradeflowkit/jobs/bulk-status', {
+        method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ records, status }),
+      }) as Promise<TradeFlowKitBulkResult>,
+    bulkRestoreJobs: (records: TradeFlowKitBulkRecord[], key: string): Promise<TradeFlowKitBulkResult> =>
+      apiFetch('/modules/tradeflowkit/trash/jobs/bulk-restore', {
+        method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ records }),
+      }) as Promise<TradeFlowKitBulkResult>,
+    bulkRestoreInvoices: (records: TradeFlowKitBulkRecord[], key: string): Promise<TradeFlowKitBulkResult> =>
+      apiFetch('/modules/tradeflowkit/trash/invoices/bulk-restore', {
+        method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ records }),
+      }) as Promise<TradeFlowKitBulkResult>,
+    bulkMarkInvoicesPaid: (
+      records: TradeFlowKitBulkRecord[],
+      input: { method: string; reference?: string; notes?: string },
+      key: string,
+    ): Promise<TradeFlowKitBulkResult> => apiFetch('/modules/tradeflowkit/invoices/bulk-mark-paid', {
+      method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ records, ...input }),
+    }) as Promise<TradeFlowKitBulkResult>,
     messageLead: (
       id: string,
       channel: 'email' | 'sms',

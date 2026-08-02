@@ -20,8 +20,42 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/tradeflowkit-accounting-exports`
+- Execution branch: `codex/tradeflowkit-safe-bulk-operations`
 - Release gate: **closed**
+
+## 2026-08-01 TradeFlowKit safe bulk-operation restoration
+
+TradeFlowKit now restores the highest-value non-destructive batch workflows
+without reviving the standalone product's unsafe bulk-delete authority.
+Tenant owners and admins may update the status of at most 25 current jobs,
+restore at most 25 archived jobs or invoices, or record the exact remaining
+balance for at most 25 payable invoices. Every request supplies the current
+record version and a shared `Idempotency-Key`; the server uses trusted session
+tenant/module authority, stable row-lock ordering, optimistic concurrency,
+all-or-nothing transactions, exact replay/body-drift protection, per-record
+activity, and a batch activity summary. Invoice settlement creates first-class
+successful payment rows rather than changing invoice state without a ledger.
+
+ADR-0029 governs the boundary. Legacy job/invoice bulk-delete and permanent
+purge capabilities are now explicitly retired for security; job/invoice CSV
+imports remain open parity work rather than being misrepresented as complete.
+
+| Gate | Result |
+| --- | --- |
+| Focused static contract | PASS 1/1; route, guard, client, UI, ADR, and ledger wiring |
+| Focused isolated PostgreSQL workflow | PASS 3/3; admin/key/limit enforcement, tenant isolation, stale-version atomicity, replay/body drift, dependency blocking, exact payment rows, and no duplicate settlement |
+| Adjacent TradeFlowKit regression | PASS 23/23 across safe bulk, retention, revenue, documents, saved views, accounting exports, global search, and work management |
+| Executable source ledger | PASS; 124 active, 53 shared replacements, 34 explicit gaps, 43 security retirements, 23 product-boundary retirements, zero unclassified |
+| Workspace/type/build | PASS; workspace typecheck and production build with Next 15.5.22 and 20/20 generated page entries |
+| Production-mode runtime | PASS; core preflight and readiness-gated supervisor returned HTTP 200 from `/readyz` with database/auth/SSO/registry/worker/release identity configured and database release v30/30 |
+| Exact-host TradeFlowKit browser | PASS 1/1 in 19.7 seconds; real PKCE login, persisted job batch status, dependency-safe archive, and batch restore through the responsive UI |
+| Deployment/providers/data cutover | NOT RUN; all credentials and data were isolated local test values, providers remained disabled, and no Replit deployment or production traffic/data was touched |
+
+This increment leaves database release v30 unchanged and keeps TradeFlowKit at
+source/local state 4. The working-tree artifact is not a deployed release
+identity; a fresh production build from the final committed revision and the
+existing deployment, provider, data, rollback, and accounting-sandbox gates
+remain required before state 5.
 
 ## 2026-08-01 TradeFlowKit accounting-export restoration
 
@@ -245,10 +279,10 @@ Phase 16A is active and is not a production-ready declaration. TradeFlowKit
 has been re-baselined against clean restored source commit
 `37aa67f1da804fc3ac56f36e50e01362077d7a26`. The generated source ledger pins
 the reviewed files and classifies 35 client pages, 194 API routes, 40 tables,
-and 8 provider/config references with zero unclassified items. After seven
-real implementation increments, 111 items are active, 53 use shared OperatorOS
-authority, 41 are retired for security, 23 are retired by product boundary,
-and 49 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
+and 8 provider/config references with zero unclassified items. After the
+current restoration increments, 124 items are active, 53 use shared OperatorOS
+authority, 43 are retired for security, 23 are retired by product boundary,
+and 34 remain explicit Phase 16 gaps. The earlier Phase 4 approved-scope state
 4 remains valid but is not full-product parity.
 
 Workflow Studio is now persistent rather than a shell: tenant-admin governed

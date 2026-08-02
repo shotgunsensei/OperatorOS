@@ -126,7 +126,8 @@ approved-scope snapshot as full-product parity. The executable source ledger
 inventories 35 pages, 194 API routes, 40 tables, and 8 provider/config
 references with zero unclassified items. After the Workflow Studio,
 revenue-document, customer-import, core-record editing, global-search,
-retention, and lead-messaging increments, 111 items are active, 53 use shared OperatorOS replacements, and 49 remain
+retention, lead-messaging, saved-view, accounting-export, and safe-bulk
+increments, 124 items are active, 53 use shared OperatorOS replacements, and 34 remain
 explicit Phase 16 gaps.
 
 The current revenue increment adds persistent direct invoice creation;
@@ -181,6 +182,23 @@ wording, changed-message idempotency-key reuse fails, and the shared outbox
 records queue state. The Lead Center exposes responsive queue actions and a
 viewer read-only state while accurately leaving delivery to the shared worker.
 
+The safe-bulk increment restores the non-destructive batch workflows under
+ADR-0029: owner/admin job-status updates, archived job/invoice restore, and
+exact-remaining-balance invoice settlement, each bounded to 25 versioned
+records. Stable row locks, trusted tenant predicates, all-or-nothing
+optimistic concurrency, shared idempotency replay/body-drift checks, dependency
+validation, and per-record plus batch activity keep the workflow atomic and
+non-enumerating. Invoice settlement creates real successful payment rows.
+Legacy bulk delete and permanent purge remain retired.
+
+Fresh safe-bulk evidence on 2026-08-01 passes 1/1 static contract, 3/3
+isolated PostgreSQL workflows, 23/23 adjacent regressions, workspace
+typecheck, production build, core preflight, compiled v30/30 readiness, and
+1/1 exact-host Chrome in 19.7 seconds. The browser completes real PKCE login,
+persists a job-status batch, archives the dependent records in order, and
+restores the job through the batch UI. This is local evidence only; providers
+were disabled and deployment/cutover were not run.
+
 Fresh local evidence adds a 2/2 PostgreSQL workflow and a 1/1 exact-host Chrome
 workflow in 16.4 seconds against the production build and readiness-gated
 supervisor. The browser case proves PKCE login/return, all three record editors
@@ -230,7 +248,7 @@ and a count-only check confirmed no synthetic import-gate identity remained.
 The clean rebuilt runtime and core production preflight both pass.
 
 This follow-up does not change the ecosystem **NOT ACCEPTED** verdict or claim
-TradeFlowKit state 5. Forty-nine parity gaps remain, and deployed authenticated
+TradeFlowKit state 5. Thirty-four parity gaps remain, and deployed authenticated
 acceptance, live providers, an approved real export/apply/reconciliation,
 rollback rehearsal, and production cutover have not occurred.
 

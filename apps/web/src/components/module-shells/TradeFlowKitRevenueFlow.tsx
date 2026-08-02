@@ -89,12 +89,16 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
   const [customerImportKey, setCustomerImportKey] = useState('');
   const [customerImportError, setCustomerImportError] = useState<string | null>(null);
   const [customerImportResult, setCustomerImportResult] = useState<TradeFlowKitCustomerImportResult | null>(null);
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set());
+  const [bulkPaymentMethod, setBulkPaymentMethod] = useState('other');
+  const [bulkPaymentReference, setBulkPaymentReference] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
       const next = await moduleShellApi.tradeflowkit.revenue();
       setData(next);
+      setSelectedInvoiceIds(new Set());
       const nestedCustomerId = typeof window === 'undefined'
         ? ''
         : window.location.pathname.match(/\/customers\/([a-z0-9-]+)$/i)?.[1] || '';
@@ -193,6 +197,27 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
     });
   }
 
+  function toggleInvoice(id: string) {
+    setSelectedInvoiceIds(current => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else if (next.size < 25) next.add(id);
+      return next;
+    });
+  }
+
+  function recordSelectedPayments() {
+    const invoices = data.invoices.filter(invoice => selectedInvoiceIds.has(invoice.id));
+    const records = invoices.map(invoice => ({ id: invoice.id, expectedVersion: invoice.version }));
+    if (records.length === 0) return;
+    const total = invoices.reduce((sum, invoice) => sum + invoice.balanceCents, 0);
+    if (!window.confirm(`Record ${money(total)} in full offline payments across ${records.length} invoice${records.length === 1 ? '' : 's'}? The batch is all-or-nothing.`)) return;
+    void run(() => moduleShellApi.tradeflowkit.bulkMarkInvoicesPaid(records, {
+      method: bulkPaymentMethod,
+      reference: bulkPaymentReference || undefined,
+    }, `invoice-bulk-payment:${crypto.randomUUID()}`));
+  }
+
   const panel: React.CSSProperties = { border: `1px solid ${c.border}`, borderRadius: 10, background: c.panel, padding: 16 };
   const input: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '9px 10px', background: '#fbfefc', color: c.ink };
   const button = (tone = c.green): React.CSSProperties => ({ border: 0, borderRadius: 7, padding: '9px 12px', background: tone, color: '#fff', fontWeight: 800, cursor: pending ? 'wait' : 'pointer', opacity: pending ? .6 : 1 });
@@ -248,9 +273,16 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
           </div>
 
           <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
+            {canManage && data.invoices.some(invoice => ['sent', 'processing'].includes(invoice.status) && invoice.balanceCents > 0) && <section data-testid="tradeflowkit-invoice-bulk-payment" aria-label="Invoice batch payment" style={{ border: '1px solid rgba(3,105,161,.22)', borderRadius: 8, background: '#f0f9ff', padding: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 220px', display: 'grid', color: c.ink }}><strong>{selectedInvoiceIds.size} payable invoices selected</strong><span style={{ color: c.muted, fontSize: 11 }}>Records the exact current balance as first-class offline payment history. Maximum 25.</span></div>
+              <select aria-label="Bulk payment method" value={bulkPaymentMethod} onChange={event => setBulkPaymentMethod(event.target.value)} style={{ ...input, flex: '0 1 150px' }}><option value="other">Other</option><option value="cash">Cash</option><option value="check">Check</option><option value="card_external">External card</option><option value="bank_transfer">Bank transfer</option></select>
+              <input aria-label="Bulk payment reference" value={bulkPaymentReference} onChange={event => setBulkPaymentReference(event.target.value)} maxLength={200} placeholder="Reference (optional)" style={{ ...input, flex: '1 1 180px' }} />
+              <button type="button" disabled={pending || selectedInvoiceIds.size === 0} onClick={recordSelectedPayments} style={button(c.blue)}>Record selected balances</button>
+              {selectedInvoiceIds.size > 0 && <button type="button" disabled={pending} onClick={() => setSelectedInvoiceIds(new Set())} style={button(c.muted)}>Clear</button>}
+            </section>}
             {data.quotes.length === 0 && data.invoices.length === 0 ? <div style={{ color: c.muted, textAlign: 'center', padding: 18, background: c.soft, borderRadius: 8 }}>No quotes or invoices yet. Build the first customer revenue flow above.</div> : null}
             {data.quotes.map((quote) => <QuoteRow key={quote.id} quote={quote} customer={customerById.get(quote.customerId)} job={quote.jobId ? jobById.get(quote.jobId) : undefined} customers={data.customers} jobs={data.jobs} hasInvoice={invoiceQuoteIds.has(quote.id)} selected={quote.id === deepQuoteId} pending={pending} canManage={canManage} run={run} />)}
-            {data.invoices.map((invoice) => <InvoiceRow key={invoice.id} invoice={invoice} customer={customerById.get(invoice.customerId)} customers={data.customers} jobs={data.jobs} selected={invoice.id === deepInvoiceId} pending={pending} canManage={canManage} run={run} />)}
+            {data.invoices.map((invoice) => <InvoiceRow key={invoice.id} invoice={invoice} customer={customerById.get(invoice.customerId)} customers={data.customers} jobs={data.jobs} selected={invoice.id === deepInvoiceId} batchSelected={selectedInvoiceIds.has(invoice.id)} batchSelectionFull={selectedInvoiceIds.size >= 25} pending={pending} canManage={canManage} run={run} onToggleBatch={() => toggleInvoice(invoice.id)} />)}
           </div>
         </>
       )}
@@ -359,10 +391,10 @@ function QuoteRow({ quote, customer, job, customers, jobs, hasInvoice, selected,
   );
 }
 
-function InvoiceRow({ invoice, customer, customers, jobs, selected, pending, canManage, run }: {
+function InvoiceRow({ invoice, customer, customers, jobs, selected, batchSelected, batchSelectionFull, pending, canManage, run, onToggleBatch }: {
   invoice: TradeFlowKitInvoice; customer?: TradeFlowKitCustomer;
-  customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[]; selected: boolean;
-  pending: boolean; canManage: boolean; run: (fn: () => Promise<unknown>) => Promise<void>;
+  customers: TradeFlowKitCustomer[]; jobs: TradeFlowKitJob[]; selected: boolean; batchSelected: boolean; batchSelectionFull: boolean;
+  pending: boolean; canManage: boolean; run: (fn: () => Promise<unknown>) => Promise<void>; onToggleBatch: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   if (editing) {
@@ -372,11 +404,15 @@ function InvoiceRow({ invoice, customer, customers, jobs, selected, pending, can
     })} />;
   }
   const archivable = ['draft', 'void'].includes(invoice.status) && invoice.paidCents === 0;
+  const payable = ['sent', 'processing'].includes(invoice.status) && invoice.balanceCents > 0;
   return (
     <div data-testid={`tradeflowkit-invoice-${invoice.id}`} style={{ border: `1px solid ${selected ? c.green : c.border}`, borderRadius: 8, padding: 12, background: selected ? '#f0fdf4' : '#f8fcfa', boxShadow: selected ? `inset 3px 0 ${c.green}` : 'none', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-      <div>
+      <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+        {canManage && payable && <input type="checkbox" aria-label={`Select invoice ${invoice.number ?? invoice.id} for batch payment`} checked={batchSelected} disabled={pending || (!batchSelected && batchSelectionFull)} onChange={onToggleBatch} style={{ marginTop: 3, accentColor: c.green }} />}
+        <div>
         <strong style={{ color: c.ink }}>Invoice {invoice.number ? `#${invoice.number}` : ''} · {customer?.name ?? 'Customer'}</strong>
-        <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{money(invoice.totalCents)} · <b>{invoice.status}</b> · v{invoice.version}{invoice.paymentReference ? ` · ${invoice.paymentReference}` : ''}</div>
+        <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{money(invoice.totalCents)} · balance {money(invoice.balanceCents)} · <b>{invoice.status}</b> · v{invoice.version}{invoice.paymentReference ? ` · ${invoice.paymentReference}` : ''}</div>
+        </div>
       </div>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', alignItems: 'center' }}>
         <a href={`/invoices/${invoice.id}`} style={{ color: c.blue, fontSize: 12 }}>Record deep link</a>

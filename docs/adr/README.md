@@ -33,6 +33,7 @@ new ADR explicitly supersedes it.
 | ADR-0026 | Ninjamation owns tenant-scoped PC automation script authoring, immutable versions, static review, admin approval and audited downloads; OperatorOS never executes scripts and AutoWorkFlowHub is excluded. | Accepted | `docs/adr/ADR-0026-ninjamation-script-library-and-execution-boundary.md` |
 | ADR-0027 | OutCall is a distinct verified-self exit-assistance and personal-safety add-on; CallCommand remains business call operations and live safety/provider features fail closed until separately accepted. | Accepted | `docs/adr/ADR-0027-outcall-personal-safety-and-provider-boundary.md` |
 | ADR-0028 | TradeFlowKit owns tenant-scoped workflow templates, governed job-stage transitions, team job-task views, and activity; automation execution, recurrence, and standalone tasks remain gated. | Accepted | `docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md` |
+| ADR-0029 | TradeFlowKit permits admin-only, 25-record, versioned, idempotent and atomic bulk status, restore, and manual-payment operations; bulk delete and purge remain retired. | Accepted | `docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md` |
 
 ## Required future ADRs
 
