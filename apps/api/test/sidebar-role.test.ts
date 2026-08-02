@@ -3,8 +3,8 @@
  *
  * The role-aware sidebar is the user-visible information architecture for
  * the whole product. This test pins down:
- *   1. Section order: Launch, Tenant, Platform, Account.
- *   2. Tenant section is hidden for non-admins.
+ *   1. Section order: Workspace, Organization, Platform, Account.
+ *   2. Organization section is hidden for non-admins.
  *   3. Platform section is gated by super_admin only.
  *   4. The legacy entries (Workspaces / Projects / Tasks / Notes / Activity)
  *      are gone from every role's sidebar.
@@ -19,32 +19,32 @@ function ids(sections: ReturnType<typeof buildNavSections>): string[] {
   return sections.flatMap(s => s.items.map(i => i.id));
 }
 
-test('regular user sees only Launch + Account, in that order', () => {
+test('regular user sees only Workspace + Account, in that order', () => {
   const sections = buildNavSections({ isSuperAdmin: false, isTenantAdmin: false });
-  assert.deepEqual(sections.map(s => s.label), ['Launch', 'Account']);
+  assert.deepEqual(sections.map(s => s.label), ['Workspace', 'Account']);
   const itemIds = ids(sections);
   assert.ok(itemIds.includes('my-apps'));
   assert.ok(itemIds.includes('apps'));
   assert.ok(itemIds.includes('billing'));
   assert.ok(itemIds.includes('settings'));
   assert.ok(itemIds.includes('contact'));
-  assert.ok(!itemIds.includes('command-center'), 'no Tenant entries for non-admin');
+  assert.ok(!itemIds.includes('command-center'), 'no Organization entries for non-admin');
   assert.ok(!itemIds.includes('platform'), 'no Platform entry for non-super-admin');
 });
 
-test('Contact is an external account link to the canonical OperatorOS contact page', () => {
+test('Help and support is an external account link to the canonical OperatorOS contact page', () => {
   const sections = buildNavSections({ isSuperAdmin: false, isTenantAdmin: false });
   const account = sections.find(section => section.label === 'Account');
   const contact = account?.items.find(item => item.id === 'contact');
 
-  assert.ok(contact, 'Account section must include Contact');
-  assert.equal(contact.label, 'Contact');
+  assert.ok(contact, 'Account section must include help and support');
+  assert.equal(contact.label, 'Help and support');
   assert.equal(contact.href, 'https://operatoros.net/john');
 });
 
-test('tenant admin sees Launch + Tenant + Account, in that order', () => {
+test('tenant admin sees Workspace + Organization + Account, in that order', () => {
   const sections = buildNavSections({ isSuperAdmin: false, isTenantAdmin: true });
-  assert.deepEqual(sections.map(s => s.label), ['Launch', 'Tenant', 'Account']);
+  assert.deepEqual(sections.map(s => s.label), ['Workspace', 'Organization', 'Account']);
   const itemIds = ids(sections);
   assert.ok(itemIds.includes('command-center'));
   assert.ok(itemIds.includes('tenant-users'));
@@ -54,9 +54,9 @@ test('tenant admin sees Launch + Tenant + Account, in that order', () => {
   assert.ok(!itemIds.includes('platform'));
 });
 
-test('super admin sees Launch + Tenant + Platform + Account, in that order', () => {
+test('super admin sees Workspace + Organization + Platform + Account, in that order', () => {
   const sections = buildNavSections({ isSuperAdmin: true, isTenantAdmin: true });
-  assert.deepEqual(sections.map(s => s.label), ['Launch', 'Tenant', 'Platform', 'Account']);
+  assert.deepEqual(sections.map(s => s.label), ['Workspace', 'Organization', 'Platform', 'Account']);
   const itemIds = ids(sections);
   assert.ok(itemIds.includes('platform'));
 });
@@ -73,7 +73,7 @@ const sectionShape = (sections: ReturnType<typeof buildNavSections>) =>
 test('snapshot: regular user sidebar IA', () => {
   const snap = sectionShape(buildNavSections({ isSuperAdmin: false, isTenantAdmin: false }));
   assert.deepEqual(snap, [
-    { label: 'Launch',  ids: ['my-apps', 'apps', 'ai-tools'] },
+    { label: 'Workspace', ids: ['my-apps', 'apps', 'ai-tools'] },
     { label: 'Account', ids: ['billing', 'settings', 'contact'] },
   ]);
 });
@@ -81,8 +81,8 @@ test('snapshot: regular user sidebar IA', () => {
 test('snapshot: tenant admin sidebar IA', () => {
   const snap = sectionShape(buildNavSections({ isSuperAdmin: false, isTenantAdmin: true }));
   assert.deepEqual(snap, [
-    { label: 'Launch',  ids: ['my-apps', 'apps', 'ai-tools'] },
-    { label: 'Tenant',  ids: ['command-center', 'tenant-users', 'tenant-modules', 'tenant-billing', 'tenant-settings'] },
+    { label: 'Workspace', ids: ['my-apps', 'apps', 'ai-tools'] },
+    { label: 'Organization', ids: ['command-center', 'tenant-users', 'tenant-modules', 'tenant-billing', 'tenant-settings'] },
     { label: 'Account', ids: ['billing', 'settings', 'contact'] },
   ]);
 });
@@ -90,8 +90,8 @@ test('snapshot: tenant admin sidebar IA', () => {
 test('snapshot: super admin sidebar IA', () => {
   const snap = sectionShape(buildNavSections({ isSuperAdmin: true, isTenantAdmin: true }));
   assert.deepEqual(snap, [
-    { label: 'Launch',   ids: ['my-apps', 'apps', 'ai-tools'] },
-    { label: 'Tenant',   ids: ['command-center', 'tenant-users', 'tenant-modules', 'tenant-billing', 'tenant-settings'] },
+    { label: 'Workspace', ids: ['my-apps', 'apps', 'ai-tools'] },
+    { label: 'Organization', ids: ['command-center', 'tenant-users', 'tenant-modules', 'tenant-billing', 'tenant-settings'] },
     { label: 'Platform', ids: ['platform'] },
     { label: 'Account',  ids: ['billing', 'settings', 'contact'] },
   ]);

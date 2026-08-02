@@ -83,15 +83,12 @@ export default function TenantUsersPage() {
       } else if (delivery.ok && delivery.provider === 'test') {
         setStatus({ kind: 'warn', message: 'Email delivery is not active here. Use Copy link to share this invite securely.' });
       } else {
-        setStatus({ kind: 'warn', message: 'Invite created, email failed (provider not configured or returned error). Use Copy link.' });
+        setStatus({ kind: 'warn', message: 'The invitation was created, but the email could not be sent. Use Copy link to share it securely.' });
       }
       setEmail('');
       await reload(tenantId);
     } catch (e: unknown) {
-      const msg = (e as { error?: string; message?: string })?.error
-               ?? (e as { message?: string })?.message
-               ?? 'Failed to create invite';
-      setErr(msg);
+      setErr('We could not create the invitation. No team access was added. Check the email address and try again.');
     } finally {
       setBusy(false);
     }
@@ -103,7 +100,7 @@ export default function TenantUsersPage() {
       await tenantApi.updateUser(tenantId, userId, next);
       await reload(tenantId);
     } catch (e: any) {
-      window.alert(e?.error || 'Failed to update role');
+      window.alert('We could not change this role. Existing access is unchanged. Refresh and try again.');
     }
   };
 
@@ -114,7 +111,7 @@ export default function TenantUsersPage() {
       await tenantApi.removeUser(tenantId, userId);
       await reload(tenantId);
     } catch (e: any) {
-      window.alert(e?.error || 'Failed to remove member');
+      window.alert('We could not remove this team member. Their existing access is unchanged. Refresh and try again.');
     }
   };
 
@@ -148,7 +145,7 @@ export default function TenantUsersPage() {
       }
       setResendMsg({ id: inviteId, ok: true, text: 'Invite link copied to clipboard.' });
     } catch (e: any) {
-      setResendMsg({ id: inviteId, ok: false, text: e?.error || e?.message || 'Failed to copy link' });
+      setResendMsg({ id: inviteId, ok: false, text: 'We could not copy the invitation link. Try again in a moment.' });
     } finally {
       setCopyingId(null);
     }
@@ -159,9 +156,9 @@ export default function TenantUsersPage() {
     setResendMsg(null);
     try {
       const r = await tenantApi.resendInvite(tenantId, inviteId);
-      setResendMsg({ id: inviteId, ok: true, text: `Invite email sent (${r?.provider ?? 'email'}).` });
+      setResendMsg({ id: inviteId, ok: true, text: 'Invitation email sent.' });
     } catch (e: any) {
-      setResendMsg({ id: inviteId, ok: false, text: e?.error || 'Failed to resend invite' });
+      setResendMsg({ id: inviteId, ok: false, text: 'We could not resend the invitation email. The existing invitation link still works.' });
     } finally {
       setResendingId(null);
     }
@@ -191,16 +188,16 @@ export default function TenantUsersPage() {
       const r = await tenantApi.getUserModuleAccess(tenantId, userId);
       setAccessByUser(prev => ({ ...prev, [userId]: r.grid ?? [] }));
     } catch (e: any) {
-      window.alert(e?.error || 'Failed to update access');
+      window.alert('We could not change tool access. Existing access is unchanged. Refresh and try again.');
     }
   };
 
   return (
     <div style={{ padding: 32, maxWidth: 1100, margin: '0 auto' }} data-testid="page-tenant-users">
       <header style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#fff' }}>Organization Members</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#fff' }}>Team members</h1>
         <p style={{ color: colors.textMuted, margin: '4px 0 0', fontSize: 13 }}>
-          Invite members, change roles, revoke access, and grant per-module access.
+          Invite people, choose their responsibility level, and control which tools they can open.
         </p>
       </header>
 
@@ -213,7 +210,9 @@ export default function TenantUsersPage() {
           <UserPlus size={16} color={colors.accent} /> Invite a member
         </h2>
         <form onSubmit={submitInvite} style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <label className="ops-visually-hidden" htmlFor="team-invite-email">Email address</label>
           <input
+            id="team-invite-email"
             data-testid="input-invite-email"
             type="email"
             required
@@ -221,23 +220,24 @@ export default function TenantUsersPage() {
             value={email}
             onChange={e => setEmail(e.target.value)}
             style={{
-              flex: '1 1 240px', padding: '8px 12px', borderRadius: 6,
+              flex: '1 1 240px', minHeight: 40, padding: '8px 12px', borderRadius: 6,
               border: `1px solid ${colors.border}`, background: colors.bg,
               color: colors.text, fontSize: 13,
             }}
           />
           <select
+            aria-label="Responsibility level"
             data-testid="select-invite-role"
             value={role}
             onChange={e => setRole(e.target.value as any)}
             style={{
-              padding: '8px 12px', borderRadius: 6,
+              minHeight: 40, padding: '8px 12px', borderRadius: 6,
               border: `1px solid ${colors.border}`, background: colors.bg,
               color: colors.text, fontSize: 13,
             }}
           >
-            <option value="member">Member</option>
-            <option value="admin">Admin</option>
+            <option value="member">Team member</option>
+            <option value="admin">Administrator</option>
             <option value="owner">Owner</option>
           </select>
           <button
@@ -245,7 +245,7 @@ export default function TenantUsersPage() {
             type="submit"
             disabled={busy}
             style={{
-              padding: '8px 16px', borderRadius: 6, border: 'none',
+              minHeight: 40, padding: '8px 16px', borderRadius: 6, border: 'none',
               background: colors.accent, color: '#fff', cursor: busy ? 'wait' : 'pointer',
               fontSize: 13, fontWeight: 600,
             }}
@@ -269,7 +269,7 @@ export default function TenantUsersPage() {
 
       {/* Members */}
       <section style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 14, fontWeight: 600, margin: '0 0 12px', color: '#fff' }}>Members</h2>
+          <h2 style={{ fontSize: 14, fontWeight: 600, margin: '0 0 12px', color: '#fff' }}>Current team</h2>
         <div style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: 'hidden' }}>
           {members.length === 0 ? (
             <div style={{ padding: 16, color: colors.textMuted, fontSize: 13 }} data-testid="members-empty">No members yet.</div>
@@ -282,13 +282,14 @@ export default function TenantUsersPage() {
                   data-testid={`row-member-${m.userId}`}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '12px 16px',
+                    padding: '12px 16px', flexWrap: 'wrap',
                   }}
                 >
                   <button
                     data-testid={`button-expand-access-${m.userId}`}
                     onClick={() => toggleExpand(m.userId)}
-                    title="Per-module access"
+                    title="Show tool access"
+                    aria-label={`${isOpen ? 'Hide' : 'Show'} tool access for ${m.name || m.email}`}
                     style={{
                       background: 'none', border: 'none', cursor: 'pointer',
                       color: isOpen ? colors.accent : colors.textMuted, padding: 0,
@@ -311,13 +312,14 @@ export default function TenantUsersPage() {
                       color: colors.text, fontSize: 12,
                     }}
                   >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
+                    <option value="member">Team member</option>
+                    <option value="admin">Administrator</option>
                     <option value="owner">Owner</option>
                   </select>
                   <button
                     data-testid={`button-remove-${m.userId}`}
                     onClick={() => removeMember(m.userId)}
+                    aria-label={`Remove ${m.name || m.email} from this organization`}
                     style={{
                       padding: 6, borderRadius: 6, border: `1px solid ${colors.border}`,
                       background: 'transparent', color: colors.accentRed, cursor: 'pointer',
@@ -332,13 +334,13 @@ export default function TenantUsersPage() {
                     style={{ background: colors.bg, padding: '8px 16px 16px 40px' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: colors.textMuted, fontSize: 12, margin: '4px 0 8px' }}>
-                      <Boxes size={12} /> Per-module access
+                      <Boxes size={12} /> Tool access
                     </div>
                     {accessLoading === m.userId && !grid ? (
                       <div style={{ color: colors.textMuted, fontSize: 12 }}>Loading\u2026</div>
                     ) : !grid || grid.length === 0 ? (
                       <div style={{ color: colors.textMuted, fontSize: 12 }} data-testid={`access-empty-${m.userId}`}>
-                        No apps are enabled for this organization.
+                        No tools are enabled for this organization.
                       </div>
                     ) : (
                       <div style={{ display: 'grid', gap: 6 }}>
@@ -356,12 +358,13 @@ export default function TenantUsersPage() {
                               {g.moduleName ?? g.moduleSlug ?? g.moduleId}
                               {g.allowAllMembers && (
                                 <span style={{ marginLeft: 8, fontSize: 10, color: colors.accent }}>
-                                  open to all
+                                  available to everyone
                                 </span>
                               )}
                             </div>
                             <select
                               data-testid={`select-access-${m.userId}-${g.moduleSlug}`}
+                              aria-label={`${g.moduleName ?? 'Tool'} access for ${m.name || m.email}`}
                               value={g.accessLevel}
                               onChange={e => g.moduleSlug && setAccess(m.userId, g.moduleSlug, e.target.value as AccessRow['accessLevel'])}
                               disabled={!g.moduleSlug}
@@ -372,7 +375,7 @@ export default function TenantUsersPage() {
                               }}
                             >
                               {ACCESS_LEVELS.map(lvl => (
-                                <option key={lvl} value={lvl}>{lvl}</option>
+                                <option key={lvl} value={lvl}>{lvl === 'none' ? 'No access' : lvl === 'user' ? 'Use tool' : 'Manage tool'}</option>
                               ))}
                             </select>
                           </div>

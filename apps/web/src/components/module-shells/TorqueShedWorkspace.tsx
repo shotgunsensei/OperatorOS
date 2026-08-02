@@ -39,14 +39,8 @@ import { TorqueShedCommunityPanel, TorqueShedMarketplacePanel } from './TorqueSh
 type Tab = 'dashboard' | 'garage' | 'service' | 'builds' | 'diagnostics' | 'templates' | 'marketplace' | 'community';
 
 function errorText(error: unknown): string {
-  const value = error as { error?: unknown; message?: unknown; code?: unknown };
-  const message =
-    typeof value?.error === 'string'
-      ? value.error
-      : typeof value?.message === 'string'
-        ? value.message
-        : 'TorqueShed could not complete that request.';
-  return `${message}${value?.code ? ` (${String(value.code)})` : ''}`;
+  void error;
+  return 'TorqueShed could not confirm that action. Your saved records are still available. Check the form, refresh if needed, and try again.';
 }
 
 function number(value: FormDataEntryValue | null): number | undefined {
@@ -85,6 +79,7 @@ const label: React.CSSProperties = {
   fontSize: fontSize.sm,
 };
 const button: React.CSSProperties = {
+  minHeight: 44,
   border: 0,
   borderRadius: radius.sm,
   background: '#f59e0b',
@@ -304,7 +299,7 @@ export default function TorqueShedWorkspace() {
       data-testid="torqueshed-module-shell"
       style={{ maxWidth: 1240, margin: '0 auto', padding: space.xxl }}
     >
-      <style>{`@media (max-width: 760px) { [data-testid="torqueshed-builds"], [data-testid="torqueshed-diagnostics"] { grid-template-columns: minmax(0, 1fr) !important; } [data-testid="torqueshed-module-shell"] { padding: 16px !important; } }`}</style>
+      <style>{`@media (max-width: 760px) { [data-testid="torqueshed-builds"], [data-testid="torqueshed-diagnostics"] { grid-template-columns: minmax(0, 1fr) !important; } [data-testid="torqueshed-module-shell"] { padding: 16px !important; } } @media (max-width: 560px) { [data-testid="torqueshed-garage"] form > div, [data-testid="torqueshed-service"] form > div { grid-template-columns: minmax(0, 1fr) !important; } }`}</style>
       <header
         style={{
           display: 'flex',
@@ -339,30 +334,29 @@ export default function TorqueShedWorkspace() {
                 textTransform: 'uppercase',
               }}
             >
-              Automotive operations and diagnostics
+              Vehicle service and diagnostics
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
               <h1 style={{ margin: '3px 0', color: semantic.text }}>TorqueShed</h1>
               <ShellLiveBadge />
             </div>
             <p style={{ color: semantic.textMuted, margin: 0 }}>
-              Durable garage, maintenance, build, and evidence-driven diagnostic records.
+              Keep vehicle history, repairs, reminders, projects, and diagnostic evidence in one place.
             </p>
           </div>
         </div>
-        <a
-          href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}
-          style={{
-            color: '#f59e0b',
-            textDecoration: 'none',
-            fontWeight: 700,
-            display: 'flex',
-            gap: 7,
-            alignItems: 'center',
-          }}
-        >
-          <ArrowLeft size={16} /> My Apps
-        </a>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <button type="button" onClick={() => setTab(vehicles.length ? 'diagnostics' : 'garage')} style={button}>
+            {vehicles.length ? <Activity size={16} /> : <Plus size={16} />}
+            {vehicles.length ? 'Start a diagnostic' : 'Add your first vehicle'}
+          </button>
+          <a
+            href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}
+            style={{ ...button, color: '#f59e0b', background: 'transparent', border: '1px solid #f59e0b66', textDecoration: 'none' }}
+          >
+            <ArrowLeft size={16} /> My Apps
+          </a>
+        </div>
       </header>
 
       <div
@@ -377,14 +371,11 @@ export default function TorqueShedWorkspace() {
       >
         {(
           [
-            ['dashboard', 'Dashboard', Gauge],
-            ['garage', 'Garage', Car],
-            ['service', 'Maintenance & repair', Wrench],
-            ['builds', 'Builds', Settings2],
+            ['dashboard', 'Overview', Gauge],
+            ['garage', 'Vehicles', Car],
+            ['service', 'Service records', Wrench],
             ['diagnostics', 'Diagnostics', Activity],
-            ['templates', 'Templates & vendors', ClipboardCheck],
-            ['marketplace', 'Marketplace', Store],
-            ['community', 'Community', Users],
+            ['builds', 'Projects', Settings2],
           ] as const
         ).map(([id, name, Icon]) => (
           <button
@@ -401,6 +392,24 @@ export default function TorqueShedWorkspace() {
             {name}
           </button>
         ))}
+        <details style={{ position: 'relative' }}>
+          <summary style={{ ...button, minHeight: 44, background: 'transparent', color: semantic.textMuted, listStyle: 'none' }}>
+            More tools
+          </summary>
+          <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 10, minWidth: 220, display: 'grid', gap: 5, padding: 8, borderRadius: radius.md, border: `1px solid ${semantic.border}`, background: semantic.bgPanel, boxShadow: '0 16px 40px rgba(0,0,0,.35)' }}>
+            {(
+              [
+                ['templates', 'Templates and vendors', ClipboardCheck],
+                ['marketplace', 'Parts marketplace', Store],
+                ['community', 'Community', Users],
+              ] as const
+            ).map(([id, name, Icon]) => (
+              <button key={id} onClick={() => setTab(id)} aria-pressed={tab === id} style={{ ...button, width: '100%', justifyContent: 'flex-start', background: tab === id ? '#f59e0b' : 'transparent', color: tab === id ? '#18130a' : semantic.textMuted }}>
+                <Icon size={15} /> {name}
+              </button>
+            ))}
+          </div>
+        </details>
         <button
           onClick={() => void load()}
           disabled={loading}
@@ -461,8 +470,7 @@ export default function TorqueShedWorkspace() {
       >
         <ShieldCheck size={18} color="#f59e0b" />
         <span>
-          VINs are protected and shown only as a masked suffix. Public-build
-          visibility never publishes VINs, maintenance costs, files, or private diagnostics.
+          Private by default: shared build pages never show VINs, maintenance costs, files, or private diagnostic notes.
         </span>
       </div>
 
@@ -471,6 +479,22 @@ export default function TorqueShedWorkspace() {
 
       {tab === 'dashboard' && (
         <section data-testid="torqueshed-dashboard" style={{ display: 'grid', gap: space.lg }}>
+          {(vehicles.length === 0 || diagnostics.length === 0) && (
+            <article style={{ ...cardStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.lg, flexWrap: 'wrap', borderColor: '#f59e0b66', background: '#f59e0b0b' }}>
+              <div>
+                <h2 style={{ margin: 0, color: semantic.text, fontSize: 18 }}>{vehicles.length === 0 ? 'Start with the vehicle' : 'Ready to diagnose a concern?'}</h2>
+                <p style={{ margin: '6px 0 0', color: semantic.textMuted, lineHeight: 1.5 }}>
+                  {vehicles.length === 0
+                    ? 'Add the year, make, and model once. Then service history, reminders, and diagnostics stay connected to that vehicle.'
+                    : 'Open a diagnostic session to record the customer concern, codes, tests, evidence, and final fix.'}
+                </p>
+              </div>
+              <button type="button" onClick={() => setTab(vehicles.length === 0 ? 'garage' : 'diagnostics')} style={button}>
+                {vehicles.length === 0 ? <Plus size={16} /> : <Activity size={16} />}
+                {vehicles.length === 0 ? 'Add vehicle' : 'Start diagnostic'}
+              </button>
+            </article>
+          )}
           <div
             style={{
               display: 'grid',
@@ -519,7 +543,7 @@ export default function TorqueShedWorkspace() {
                 </button>
               ))}
               {diagnostics.length === 0 && (
-                <p style={{ color: semantic.textMuted }}>No diagnostic sessions yet.</p>
+                <p style={{ color: semantic.textMuted }}>No diagnostic sessions yet. Use Start diagnostic above when a vehicle has been added.</p>
               )}
             </article>
             <article style={cardStyle}>
@@ -544,7 +568,7 @@ export default function TorqueShedWorkspace() {
                 </div>
               ))}
               {reminders.length === 0 && (
-                <p style={{ color: semantic.textMuted }}>No open reminders.</p>
+                <p style={{ color: semantic.textMuted }}>No service reminders are due. Add one from Service records when you know the next date or mileage.</p>
               )}
             </article>
           </div>
@@ -1479,7 +1503,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
         return;
       }
       setNotice(
-        'Purchase intent created. Credits appear only after the signed payment event is verified; this page does not trust checkout success.',
+        'Checkout started. Credits appear after payment is confirmed. If you return here before they appear, refresh once before trying again.',
       );
       await load();
     } catch (next) {
@@ -1516,7 +1540,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
             <Bot size={19} /> Torque Assist
           </h3>
           <p style={{ color: semantic.textMuted, margin: '5px 0 0' }}>
-            Evidence-ranked diagnostic planning. No result confirms a repair without verification.
+            Uses the evidence you record to suggest the next safest tests. Always verify the fault before replacing parts.
           </p>
         </div>
         <div style={{ color: semantic.text, textAlign: 'right' }}>
@@ -1524,7 +1548,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
             <Coins size={17} /> {(ledger?.balance ?? status?.balance ?? 0).toLocaleString()} units
           </strong>
           <span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-            Ledger-computed balance
+            Credits available
           </span>
         </div>
       </div>
@@ -1678,16 +1702,16 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
           <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
             {result.disclaimer}
             <br />
-            Estimated{' '}
-            {(response?.estimatedUnits ?? history[0]?.estimatedUnits ?? 0).toLocaleString()} ·
-            actual {(response?.actualUnits ?? history[0]?.actualUnits ?? 0).toLocaleString()} units
+            Estimated use{' '}
+            {(response?.estimatedUnits ?? history[0]?.estimatedUnits ?? 0).toLocaleString()} credits ·
+            used {(response?.actualUnits ?? history[0]?.actualUnits ?? 0).toLocaleString()} credits
           </div>
         </div>
       )}
 
       <details>
         <summary style={{ cursor: 'pointer', color: semantic.text }}>
-          Purchase credits and usage history
+          Buy credits and review usage
         </summary>
         <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
           {status?.packages.map((tokenPackage) => (
@@ -1709,8 +1733,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
           ))}
           {paymentsDisabled && (
             <span style={{ color: semantic.accentDanger }}>
-              Purchases are disabled until OperatorOS payment configuration and signed webhooks are
-              ready.
+              Credit purchases are temporarily unavailable. Nothing will be charged. Contact your organization administrator for help.
             </span>
           )}
           {history.slice(0, 5).map((item) => (
@@ -1722,8 +1745,8 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
                 color: semantic.textMuted,
               }}
             >
-              {item.status} · {Number(item.actualUnits ?? 0).toLocaleString()} units ·{' '}
-              {item.provider || 'no provider'} · {new Date(item.createdAt).toLocaleString()}
+              {String(item.status).replace(/_/g, ' ')} · {Number(item.actualUnits ?? 0).toLocaleString()} credits ·{' '}
+              {new Date(item.createdAt).toLocaleString()}
             </div>
           ))}
           {!history.length && (

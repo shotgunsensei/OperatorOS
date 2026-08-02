@@ -105,8 +105,7 @@ function InternalAppContent() {
         if (errObj?.status === 403 || errObj?.status === 404) {
           if (alive) { setMod(null); setErr(null); }
         } else {
-          const msg = errObj?.error ?? errObj?.message ?? 'Failed to load module';
-          if (alive) setErr(msg);
+          if (alive) setErr('OperatorOS could not confirm access to this tool. Your account and tool access have not changed. Try again in a moment.');
         }
       } finally {
         if (alive) setLoading(false);
@@ -158,7 +157,7 @@ function InternalAppContent() {
   if (loading) {
     return (
       <div style={{ padding: space.xxl, color: semantic.textMuted }} data-testid="app-shell-loading">
-        Loading module access...
+        Checking tool access…
       </div>
     );
   }
@@ -179,10 +178,18 @@ function InternalAppContent() {
           <AlertTriangle size={18} color={semantic.accentDanger} />
           <div>
             <div style={{ color: semantic.accentDanger, fontWeight: 600 }}>
-              {err ? 'Could not load this module' : `${slug} is not enabled for this tenant`}
+              {err ? 'This tool could not be opened' : 'This tool is not available for this organization'}
             </div>
             <div style={{ color: semantic.textMuted, fontSize: fontSize.sm, marginTop: 4 }}>
-              {err ?? 'Open the Module Marketplace or ask a tenant admin to grant access. OperatorOS will enforce entitlement before launch.'}
+              {err ?? 'Browse other tools or ask your organization administrator to add access. OperatorOS checks access again every time a tool opens.'}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+              <Link href="/app?page=apps" style={{ minHeight: 40, display: 'inline-flex', alignItems: 'center', padding: '8px 13px', borderRadius: radius.sm, background: semantic.accent, color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: fontSize.sm }}>
+                Browse other tools
+              </Link>
+              <a href={DEFAULT_OPERATOROS_NAVIGATION_URLS.supportUrl} style={{ minHeight: 40, display: 'inline-flex', alignItems: 'center', padding: '8px 13px', borderRadius: radius.sm, border: `1px solid ${semantic.border}`, color: semantic.text, textDecoration: 'none', fontWeight: 700, fontSize: fontSize.sm }}>
+                Contact support
+              </a>
             </div>
           </div>
         </div>
@@ -195,9 +202,6 @@ function InternalAppContent() {
     return (
       <div>
         <OperatorOSEcosystemHeader moduleName={mod.name} moduleSlug={mod.slug} />
-        <div style={{ padding: `${space.lg}px ${space.xxl}px 0` }}>
-          <BackLink />
-        </div>
         <Shell baseUrl={mod.baseUrl ?? undefined} />
       </div>
     );
@@ -233,14 +237,14 @@ function InternalAppContent() {
                 fontWeight: 600, fontSize: fontSize.body,
               }}
             >
-              Launch {mod.name} <ExternalLink size={14} />
+              Open {mod.name} <ExternalLink size={14} />
             </a>
           ) : (
             <span
               data-testid={`text-no-baseurl-${mod.slug}`}
               style={{ color: semantic.textMuted, fontSize: fontSize.sm }}
             >
-              This module is enabled, but no external launch URL is configured yet.
+              This module is enabled but cannot be opened right now. Ask a platform administrator to review its launch settings.
             </span>
           )}
         </div>

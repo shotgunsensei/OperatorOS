@@ -1,0 +1,156 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
+
+test('shared experience system preserves zoom, focus, reduced motion, and skip navigation', () => {
+  const layout = read('apps/web/src/app/layout.tsx');
+  const styles = read('apps/web/src/app/globals.css');
+  const shell = read('apps/web/src/components/SaasLayout.tsx');
+
+  assert.match(layout, /import '\.\/globals\.css'/);
+  assert.doesNotMatch(layout, /maximumScale|userScalable/);
+  assert.match(styles, /:focus-visible/);
+  assert.match(styles, /prefers-reduced-motion/);
+  assert.match(styles, /\.ops-skip-link/);
+  assert.match(shell, /href="#workspace-main"/);
+  assert.match(shell, /id="workspace-main"/);
+  assert.match(shell, /aria-current=\{isActive \? 'page'/);
+  assert.match(shell, /aria-label="Switch OperatorOS tool"/);
+});
+
+test('workspace navigation and home use plain customer language', () => {
+  const nav = read('apps/web/src/lib/sidebar-nav.ts');
+  const home = read('apps/web/src/components/pages/MyAppsPage.tsx');
+  const appRoute = read('apps/web/src/app/app/page.tsx');
+
+  for (const label of [
+    'Workspace',
+    'Home',
+    'Browse tools',
+    'Organization',
+    'Team members',
+    'Tool access',
+    'Profile and security',
+    'Help and support',
+  ]) assert.ok(nav.includes(label), label);
+
+  assert.match(home, /Choose what you want to work on/);
+  assert.match(home, /Your tools/);
+  assert.match(home, /Open \$\{card\.name\}/);
+  assert.doesNotMatch(home, /Parent command layer/);
+  assert.match(appRoute, /<MyAppsPage onNavigate=\{handleNavigate\}/);
+  assert.match(appRoute, /<AppsPage onNavigate=\{handleNavigate\}/);
+  assert.match(appRoute, /<TenantCommandCenterPage onNavigate=\{handleNavigate\}/);
+  assert.match(appRoute, /url\.searchParams\.set\('page', page\)/);
+  assert.match(appRoute, /window\.history\.pushState/);
+  assert.match(appRoute, /window\.addEventListener\('popstate', restoreRoute\)/);
+  assert.doesNotMatch(appRoute, /<MyAppsPage onNavigate=\{setActivePage\}/);
+});
+
+test('account forms have programmatic labels and recoverable error messages', () => {
+  const settings = read('apps/web/src/components/pages/SettingsPage.tsx');
+
+  for (const id of [
+    'settings-current-email',
+    'settings-name',
+    'settings-current-password',
+    'settings-new-password',
+    'settings-new-email',
+    'settings-email-password',
+    'settings-delete-confirm',
+    'settings-delete-password',
+  ]) {
+    assert.match(settings, new RegExp(`htmlFor="${id}"`), `${id} label`);
+    assert.match(settings, new RegExp(`id="${id}"`), `${id} input`);
+  }
+
+  assert.match(settings, /Your account is unchanged/);
+  assert.match(settings, /Your current email is unchanged/);
+  assert.match(settings, /Permanently delete my account/);
+  assert.doesNotMatch(settings, /err\.error/);
+});
+
+test('catalog and billing surfaces provide specific actions and safe recovery', () => {
+  const catalog = read('apps/web/src/components/pages/AppsPage.tsx');
+  const billing = read('apps/web/src/components/pages/BillingPage.tsx');
+
+  assert.match(catalog, /htmlFor="marketplace-search"/);
+  assert.match(catalog, /type="search"/);
+  assert.match(catalog, /aria-pressed=\{isActive\}/);
+  assert.match(catalog, /Clear all filters/);
+  assert.match(catalog, /Browse tools/);
+  assert.match(catalog, /No tools match your filters/);
+  assert.match(catalog, /Open \$\{m\.name\}/);
+  assert.doesNotMatch(catalog, /STRIPE_PRICE_/);
+
+  assert.match(billing, /Workspace plan and billing/);
+  assert.match(billing, /Billing details could not be loaded/);
+  assert.match(billing, /Keep current plan/);
+  assert.match(billing, /Cancel plan at renewal/);
+  assert.match(billing, /No billing activity yet/);
+  assert.doesNotMatch(billing, />Downgrade Warning</);
+  assert.doesNotMatch(billing, />Are you sure\?</);
+});
+
+test('every module receives organization context and customer-facing account navigation', () => {
+  const header = read('apps/web/src/components/module-shells/OperatorOSEcosystemHeader.tsx');
+
+  assert.match(header, /Organization:/);
+  assert.match(header, /Signed in as/);
+  assert.match(header, /Profile and security/);
+  assert.match(header, /Billing and plans/);
+  assert.match(header, /Help and support/);
+  assert.match(header, /Sign out/);
+});
+
+test('six representative customer workflows expose a plain first action and trust boundary', () => {
+  const home = read('apps/web/src/components/pages/MyAppsPage.tsx');
+  const tradeFlowKit = read('apps/web/src/components/module-shells/TradeFlowKitShell.tsx');
+  const torqueShed = read('apps/web/src/components/module-shells/TorqueShedWorkspace.tsx');
+  const pulseDesk = read('apps/web/src/components/module-shells/PulseDeskShell.tsx');
+  const techDeck = read('apps/web/src/components/module-shells/TechDeckShell.tsx');
+  const catalog = read('apps/web/src/components/pages/AppsPage.tsx');
+  const billing = read('apps/web/src/components/pages/BillingPage.tsx');
+
+  assert.match(home, /Get organization setup help/);
+  assert.match(home, /link-workspace-setup-help/);
+  assert.doesNotMatch(home, /onNavigate\('settings'\).*organization setup/s);
+
+  assert.match(tradeFlowKit, /Start with a lead/);
+  assert.match(tradeFlowKit, /Protected by OperatorOS/);
+  assert.match(torqueShed, /Start diagnostic/);
+  assert.match(torqueShed, /More tools/);
+  assert.match(pulseDesk, /Open request queue/);
+  assert.match(pulseDesk, /not patient charts or clinical records/);
+  assert.match(techDeck, /Open ticket queue/);
+  assert.match(techDeck, /Protected by OperatorOS/);
+
+  assert.match(catalog, /How to get access/);
+  assert.match(catalog, /Purchase temporarily unavailable/);
+  assert.match(billing, /Nothing was charged and your current plan is unchanged/);
+});
+
+test('customer surfaces do not expose provider or migration implementation language', () => {
+  const files = [
+    'apps/web/src/components/module-shells/TradeFlowKitShell.tsx',
+    'apps/web/src/components/module-shells/PulseDeskShell.tsx',
+    'apps/web/src/components/module-shells/TechDeckShell.tsx',
+    'apps/web/src/components/module-shells/TorqueShedWorkspace.tsx',
+    'apps/web/src/components/pages/AppsPage.tsx',
+    'apps/web/src/components/pages/BillingPage.tsx',
+  ];
+
+  const combined = files.map(read).join('\n');
+  for (const phrase of [
+    'idempotent notification routing',
+    'consolidation boundary',
+    'test-only provider',
+    'hashed-link',
+    'STRIPE_PRICE_',
+  ]) assert.ok(!combined.includes(phrase), phrase);
+});

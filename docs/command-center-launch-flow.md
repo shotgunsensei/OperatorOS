@@ -23,12 +23,13 @@ the active tenant's server-resolved module access from `GET /api/modules`.
 2. OperatorOS resolves the active tenant through `TenantProvider`.
 3. Command Center loads the central module registry.
 4. Command Center fetches `GET /api/modules` for the active tenant.
-5. Cards are grouped into:
-   - Active modules
-   - Locked modules
-   - Planned modules
-   - Unavailable modules
-6. User clicks Launch and the frontend opens the registry's exact module base
+5. Home keeps the first-use decision small and groups cards into two
+   customer-facing states:
+   - Your tools
+   - More tools you can add
+   Planned and unavailable catalog entries remain discoverable under
+   **Browse tools** without competing with the primary Home workflow.
+6. The user chooses **Open {module name}** and the frontend opens the registry's exact module base
    URL. The frontend does not mint or carry a handoff code.
 7. When that host lacks its own `operatoros_session`, middleware creates
    host-only HttpOnly state, nonce, and PKCE verifier cookies and redirects to
@@ -66,28 +67,18 @@ display hint from server summaries.
 
 ## Display Rules
 
-Active modules:
+Your tools:
 
 - Registry status is `active`.
 - Server summary says the module is unlocked.
-- Launch button opens the module host, which begins the authorization flow.
+- The specific **Open {module name}** button opens the module host, which begins the authorization flow.
 
-Locked modules:
+More tools you can add:
 
-- Registry status is `active`.
-- Server summary is not unlocked.
-- Card shows upgrade, add-on, access denied, or access-options state.
-
-Planned modules:
-
-- Registry status is `planned`, or server module status is `coming_soon`.
-- Launch is disabled.
-
-Unavailable modules:
-
-- Registry/server status is disabled, tenant is missing, or the registry entry is
-  not present in the API module catalog.
-- Launch is disabled with a controlled state.
+- Registry status is `active` and the tool has a customer-completable next
+  action such as comparing plans or asking an organization administrator.
+- Planned and unavailable entries appear only in **Browse tools**, where their
+  state is explained without blocking the user's ready-to-use tools.
 
 ## Admin Visibility
 
@@ -112,17 +103,18 @@ does not grant root access by email string.
 ## Manual QA
 
 1. Log in to `/app`.
-2. Confirm Command Center shows the active tenant.
-3. Switch tenant when multiple tenants are available.
-4. Confirm active modules render Launch buttons.
-5. Click Launch on an entitled module and confirm the target host redirects to
+2. Confirm Workspace home shows the active organization.
+3. Switch organizations when multiple memberships are available.
+4. Confirm available tools render specific **Open {tool name}** buttons.
+5. Open an entitled module and confirm the target host redirects to
    auth with state, nonce, and S256 challenge; `/api/sso/issue` then returns the
    exact callback.
-6. Confirm a locked module shows upgrade/add-on/access-options state.
-7. Confirm planned modules cannot be launched.
-8. Confirm tenant admins see Manage buttons.
-9. Confirm normal users do not see Platform Command.
-10. Confirm platform admins see Platform Command.
+6. Confirm a tool that is not included explains whether a plan, add-on, or
+   administrator grant is needed under **Browse tools**.
+7. Confirm planned tools cannot be opened and do not crowd Home.
+8. Confirm organization admins see **Manage tool access** buttons.
+9. Confirm normal users do not see Platform administration.
+10. Confirm platform admins see Platform administration.
 
 ## Cross-Subdomain Handoff (Task #140)
 

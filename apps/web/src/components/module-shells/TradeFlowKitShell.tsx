@@ -6,13 +6,10 @@ import {
   Activity,
   ArchiveRestore,
   AlertTriangle,
-  ArrowLeft,
   BarChart3,
   BriefcaseBusiness,
-  CheckCircle2,
   ClipboardList,
   CreditCard,
-  DollarSign,
   ExternalLink,
   FileText,
   GitBranch,
@@ -61,7 +58,7 @@ const workflowShortcuts = [
   {
     id: 'leads',
     label: 'Leads',
-    summary: 'Manual lead intake, follow-up state, shared-directory conversion, and lead-to-cash handoff.',
+    summary: 'Add a lead, record follow-up, and turn qualified work into a customer and job.',
     Icon: ClipboardList,
     tone: colors.green,
   },
@@ -75,28 +72,28 @@ const workflowShortcuts = [
   {
     id: 'jobs',
     label: 'Jobs',
-    summary: 'Field-service jobs, scheduling, assignment, dependent tasks, comments, tags, and completion.',
+    summary: 'Schedule field work, assign it, track tasks, and mark the job complete.',
     Icon: BriefcaseBusiness,
     tone: colors.green,
   },
   {
     id: 'quotes',
     label: 'Quotes',
-    summary: 'Quote creation, hashed-link customer decisions, expiration, and idempotent invoice conversion.',
+    summary: 'Send a quote for customer approval, track its expiration, and turn an accepted quote into an invoice.',
     Icon: FileText,
     tone: colors.gold,
   },
   {
     id: 'invoices',
     label: 'Invoices',
-    summary: 'Invoices, line items, partial payment state, exports, public documents, and customer portal flow.',
+    summary: 'Create invoices, record partial or full payments, and share customer documents.',
     Icon: Receipt,
     tone: colors.blue,
   },
   {
     id: 'payments',
     label: 'Payments',
-    summary: 'First-class manual payments plus an explicit test-only provider flow; production processing fails closed.',
+    summary: 'Record payments safely. Online payment processing appears only after an administrator finishes setup.',
     Icon: CreditCard,
     tone: colors.gold,
   },
@@ -110,12 +107,10 @@ const workflowShortcuts = [
 ];
 
 const readinessRows = [
-  ['Leads', 'Ready', colors.green],
-  ['Customers', 'Connected', colors.blue],
-  ['Quotes & invoices', 'Ready', colors.gold],
-  ['Field work', 'Live workflow', colors.green],
-  ['Team access', 'Shared', colors.blue],
-  ['Online payments', 'Setup available', colors.gold],
+  ['Sign-in', 'Protected', colors.green],
+  ['Business records', 'Organization-only', colors.blue],
+  ['Team access', 'Based on role', colors.green],
+  ['Online payments', 'Requires setup', colors.gold],
 ];
 
 const shellCss = `
@@ -241,10 +236,14 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
   const isLoading = authLoading || tenantLoading;
   const hasTenantContext = !!adapter.tenantId || platformAdmin;
   const roleLabel = platformAdmin
-    ? 'Platform super admin'
-    : activeRole
-      ? `Organization ${activeRole}`
-      : adapter.localRole;
+    ? 'Platform administrator'
+    : activeRole === 'owner'
+      ? 'Organization owner'
+      : activeRole === 'admin'
+        ? 'Organization administrator'
+        : activeRole === 'viewer'
+          ? 'Read-only access'
+          : 'Team member';
   const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
   const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
   const externalLaunchUrl = baseUrl && /^https?:\/\//i.test(baseUrl) ? baseUrl.replace(/\/+$/, '') : null;
@@ -280,29 +279,29 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
         >
           <div className="tfk-header-top">
             <div style={{ minWidth: 0 }}>
-              <div style={eyebrowStyle}>Field-service revenue command layer</div>
+              <div style={eyebrowStyle}>Field service and revenue</div>
               <h1 style={titleStyle}>TradeFlowKit</h1>
               <p style={ledeStyle}>
                 Move leads into customers, jobs, quotes, invoices, payments, and clear revenue visibility from one workspace.
               </p>
             </div>
             <div className="tfk-actions">
-              <HeaderLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} testId="tradeflowkit-return-command-center" Icon={ArrowLeft}>
-                Command Center
+              <HeaderLink href="#tradeflowkit-lead-center" testId="tradeflowkit-start-with-lead" Icon={ClipboardList}>
+                Start with a lead
               </HeaderLink>
               {canManageModule && (
                 <HeaderLink href="#tradeflowkit-settings" testId="tradeflowkit-module-settings-link" Icon={Settings}>
-                  Settings
+                  Manage TradeFlowKit
                 </HeaderLink>
               )}
               {platformAdmin && (
                 <HeaderLink href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}app/platform/modules/tradeflowkit`} testId="tradeflowkit-platform-manage-link" Icon={ShieldCheck}>
-                  Platform Command
+                  Platform settings
                 </HeaderLink>
               )}
               {externalLaunchUrl && (
                 <HeaderLink href={externalLaunchUrl} testId="tradeflowkit-external-launch-link" Icon={ExternalLink}>
-                  External Module
+                  Open standalone app
                 </HeaderLink>
               )}
             </div>
@@ -311,8 +310,8 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
           <div className="tfk-chip-row">
             <ContextChip label="Organization" value={tenantLabel} tone={hasTenantContext ? colors.blue : colors.red} testId="tradeflowkit-tenant-badge" />
             <ContextChip label="Role" value={roleLabel} tone={platformAdmin ? colors.violet : colors.green} testId="tradeflowkit-role-badge" />
-            <ContextChip label="Session" value="OperatorOS SSO" tone={colors.green} testId="tradeflowkit-session-badge" />
-            <ContextChip label="Host" value={adapter.hostnames.production} tone={colors.gold} testId="tradeflowkit-host-badge" />
+            <ContextChip label="Sign-in" value="Protected by OperatorOS" tone={colors.green} testId="tradeflowkit-session-badge" />
+            {platformAdmin && <ContextChip label="Module address" value={adapter.hostnames.production} tone={colors.gold} testId="tradeflowkit-host-badge" />}
           </div>
 
           {hasTenantContext && adapter.tenantId && (
@@ -326,7 +325,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
             tone={colors.red}
             Icon={AlertTriangle}
             title="Choose an organization"
-            body="Select an organization in the Command Center to open its sales, job, quote, invoice, and payment workflows."
+            body="Return to My Apps and choose the organization whose leads, jobs, quotes, invoices, and payments you want to manage."
           />
         )}
 
@@ -399,30 +398,13 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
             <section className="tfk-panel" style={{ padding: 18 }} data-testid="tradeflowkit-workflows-panel">
               <SectionHeading
                 Icon={Truck}
-                title="Field-Service Workflows"
-                subtitle="Core TradeFlowKit routes stay grouped around lead-to-cash execution."
+                title="What you can do"
+                subtitle="Move from a new lead to completed work and payment without losing the customer history."
               />
               <div className="tfk-workflow-grid" style={{ marginTop: 14 }}>
                 {workflowShortcuts.map(({ id, label, summary, Icon, tone }) => (
                   <WorkflowPanel key={id} id={id} label={label} summary={summary} Icon={Icon} tone={tone} />
                 ))}
-              </div>
-            </section>
-
-            <section className="tfk-panel" style={{ padding: 18 }} data-testid="tradeflowkit-empty-state-panel">
-              <SectionHeading
-                Icon={CheckCircle2}
-                title="Workspace ready"
-                subtitle="Your lead-to-cash and field operations tools are connected and ready for the team."
-              />
-              <div style={emptyStateStyle} data-testid="tradeflowkit-empty-state">
-                <DollarSign size={18} color={colors.green} />
-                <div>
-                  <div style={{ fontWeight: 800 }}>Lead-to-cash operations are ready</div>
-                  <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                    Manage customers, jobs, team tasks, workflow stages, quotes, approvals, invoices, partial payments, files, notifications, activity, and analytics without leaving the workspace.
-                  </div>
-                </div>
               </div>
             </section>
 
@@ -435,8 +417,8 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
             >
               <SectionHeading
                 Icon={ShieldCheck}
-                title="Settings and Admin"
-                subtitle={canManageModule ? 'Management actions are available for authorized operators.' : 'Management actions are hidden for normal module users.'}
+                title="Access and settings"
+                subtitle={canManageModule ? 'You can manage this tool because you are an organization administrator.' : 'Your administrator controls team and billing access.'}
               />
               <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
                 <AdminRow
@@ -451,7 +433,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
                 />
                 <AdminRow
                   label="Current access"
-                  value={canManageModule ? 'Administrative controls visible.' : 'Normal field-service operations view.'}
+                  value={canManageModule ? 'You can manage team access and settings.' : 'You can use the field-service workflows assigned to you.'}
                   tone={canManageModule ? colors.gold : colors.muted}
                 />
               </div>
@@ -462,7 +444,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               tone={colors.gold}
               Icon={AlertTriangle}
               title="Need help?"
-              body="Retry the action first. If access or payments are blocked, ask your workspace administrator to review your TradeFlowKit setup."
+              body="Try the action again. If you still cannot open work or record a payment, contact your organization administrator. Your existing records will not be changed by a failed attempt."
             />
           </section>
         </div>
@@ -711,17 +693,6 @@ const workflowPanelStyle: CSSProperties = {
   padding: 14,
   background: 'rgba(255, 255, 255, 0.78)',
   minWidth: 0,
-};
-
-const emptyStateStyle: CSSProperties = {
-  marginTop: 14,
-  display: 'flex',
-  gap: 10,
-  alignItems: 'flex-start',
-  border: `1px solid rgba(5, 150, 105, 0.35)`,
-  borderRadius: 8,
-  background: 'rgba(5, 150, 105, 0.08)',
-  padding: 14,
 };
 
 const adminRowStyle: CSSProperties = {

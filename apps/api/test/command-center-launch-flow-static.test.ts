@@ -23,9 +23,9 @@ test('Command Center launchpad is registry-driven and starts authorization on th
   assert.match(page, /command-center-tenant-selector/);
   assert.match(page, /button-command-center-platform/);
   assert.match(page, /button-command-center-manage-modules/);
-  assert.match(page, /Active modules/);
-  assert.match(page, /Locked modules/);
-  assert.match(page, /Planned modules/);
+  assert.match(page, /Your tools/);
+  assert.match(page, /More tools you can add/);
+  assert.doesNotMatch(page, /Planned for OperatorOS/);
 
   assert.match(launchHelper, /openExternal\(module\.productionBaseUrl\)/);
   assert.match(login, /issueModuleLaunch\(module\.id/);
@@ -55,9 +55,9 @@ test('Command Center launch flow documentation covers states and server authorit
     'POST /api/sso/issue',
     'central module registry',
     'tenantId',
-    'Active modules',
-    'Locked modules',
-    'Planned modules',
+    'Your tools',
+    'More tools you can add',
+    'Browse tools',
     'access denied',
     'module disabled',
     'network failure',

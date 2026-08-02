@@ -5,6 +5,7 @@ import { useAuth } from '../AuthProvider';
 import { authApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import { useToast } from '../Toast';
+import { FieldMessage, PageHeader } from '../ExperiencePrimitives';
 
 export default function SettingsPage() {
   const { user, refresh, logout, logoutEverywhere } = useAuth();
@@ -39,7 +40,7 @@ export default function SettingsPage() {
       toast('Profile updated');
       setMessage('');
     } catch (err: any) {
-      setMessage(err.error || 'Failed to update');
+      setMessage('We could not save your profile. Your name is still on this page. Check it and try again.');
     } finally { setSaving(false); }
   };
 
@@ -52,8 +53,8 @@ export default function SettingsPage() {
       toast('Password changed successfully');
       setPwMessage('');
       setCurrentPassword(''); setNewPassword('');
-    } catch (err: any) {
-      setPwMessage(err.error || 'Failed to change password');
+    } catch {
+      setPwMessage('We could not change your password. Check your current password and try again. Your account is unchanged.');
     } finally { setPwSaving(false); }
   };
 
@@ -67,8 +68,8 @@ export default function SettingsPage() {
       toast('Email updated successfully');
       setEmailMessage('');
       setNewEmail(''); setEmailPassword('');
-    } catch (err: any) {
-      setEmailMessage(err.error || 'Failed to change email');
+    } catch {
+      setEmailMessage('We could not update your email. Check your password and email address, then try again. Your current email is unchanged.');
     } finally { setEmailSaving(false); }
   };
 
@@ -79,8 +80,8 @@ export default function SettingsPage() {
     try {
       await authApi.requestDeletion(deletePassword);
       await logout();
-    } catch (err: any) {
-      setDeleteMessage(err.error || 'Failed to delete account');
+    } catch {
+      setDeleteMessage('We could not delete your account. Your account and data are unchanged. Check your password and try again.');
       setDeleteSaving(false);
     }
   };
@@ -94,7 +95,7 @@ export default function SettingsPage() {
         window.location.assign('/signed-out?signed_out=global');
       }
     } catch (err: any) {
-      setGlobalLogoutMessage(err?.error || 'Could not revoke every OperatorOS session.');
+      setGlobalLogoutMessage('We could not sign this account out everywhere. Your current session is still active. Try again in a moment.');
       setGlobalLogoutSaving(false);
     }
   };
@@ -123,71 +124,77 @@ export default function SettingsPage() {
   };
 
   return (
-    <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 700 }} data-testid="settings-page">
-      <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 32px' }}>Settings</h1>
+    <div className="ops-page" style={{ maxWidth: 820 }} data-testid="settings-page">
+      <PageHeader
+        eyebrow="Account"
+        title="Profile and security"
+        description="Update your personal details, sign-in information, and active OperatorOS sessions. Organization settings are managed separately."
+      />
 
-      <div style={cardStyle}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 16px' }}>Profile</h3>
+      <section style={cardStyle} aria-labelledby="profile-heading">
+        <h2 id="profile-heading" style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 6px' }}>Personal details</h2>
+        <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 18px' }}>This name appears to teammates in OperatorOS activity and assignments.</p>
         <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>Email</label>
-          <input disabled value={user?.email || ''} style={{ ...inputStyle, color: colors.textMuted }} />
+          <label htmlFor="settings-current-email" style={labelStyle}>Current email</label>
+          <input id="settings-current-email" disabled value={user?.email || ''} style={{ ...inputStyle, color: colors.textMuted }} />
         </div>
         <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>Name</label>
-          <input data-testid="input-settings-name" value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
+          <label htmlFor="settings-name" style={labelStyle}>Display name</label>
+          <input id="settings-name" autoComplete="name" data-testid="input-settings-name" value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
         </div>
-        {message && <div style={{ fontSize: 13, color: message.includes('updated') ? colors.accentGreen : colors.accentRed, marginBottom: 12 }}>{message}</div>}
+        {message && <FieldMessage>{message}</FieldMessage>}
         <button data-testid="button-save-profile" onClick={handleSaveProfile} disabled={saving} style={btnStyle}>
-          {saving ? 'Saving...' : 'Save profile'}
+          {saving ? 'Saving profile…' : 'Save profile'}
         </button>
-      </div>
+      </section>
 
-      <div style={cardStyle}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 16px' }}>Change Password</h3>
+      <section style={cardStyle} aria-labelledby="password-heading">
+        <h2 id="password-heading" style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 6px' }}>Password</h2>
+        <p id="password-guidance" style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 18px' }}>Use at least 8 characters. Changing your password signs out other sessions.</p>
         <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>Current password</label>
-          <input data-testid="input-current-password" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} style={inputStyle} />
+          <label htmlFor="settings-current-password" style={labelStyle}>Current password</label>
+          <input id="settings-current-password" autoComplete="current-password" data-testid="input-current-password" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} style={inputStyle} />
         </div>
         <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>New password</label>
-          <input data-testid="input-new-password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={inputStyle} placeholder="Min 8 characters" />
+          <label htmlFor="settings-new-password" style={labelStyle}>New password</label>
+          <input id="settings-new-password" autoComplete="new-password" aria-describedby="password-guidance" data-testid="input-new-password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={inputStyle} />
         </div>
-        {pwMessage && <div style={{ fontSize: 13, color: pwMessage.includes('success') ? colors.accentGreen : colors.accentRed, marginBottom: 12 }}>{pwMessage}</div>}
+        {pwMessage && <FieldMessage>{pwMessage}</FieldMessage>}
         <button data-testid="button-change-password" onClick={handleChangePassword} disabled={pwSaving} style={btnStyle}>
-          {pwSaving ? 'Changing...' : 'Change password'}
+          {pwSaving ? 'Changing password…' : 'Change password'}
         </button>
-      </div>
+      </section>
 
-      <div style={cardStyle}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 16px' }}>Change Email</h3>
+      <section style={cardStyle} aria-labelledby="email-heading">
+        <h2 id="email-heading" style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 6px' }}>Sign-in email</h2>
         <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 16px' }}>Changing your email requires password verification.</p>
         <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>New email</label>
-          <input data-testid="input-new-email" type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} style={inputStyle} placeholder="new@example.com" />
+          <label htmlFor="settings-new-email" style={labelStyle}>New email</label>
+          <input id="settings-new-email" autoComplete="email" data-testid="input-new-email" type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} style={inputStyle} />
         </div>
         <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>Current password</label>
-          <input data-testid="input-email-password" type="password" value={emailPassword} onChange={e => setEmailPassword(e.target.value)} style={inputStyle} />
+          <label htmlFor="settings-email-password" style={labelStyle}>Current password</label>
+          <input id="settings-email-password" autoComplete="current-password" data-testid="input-email-password" type="password" value={emailPassword} onChange={e => setEmailPassword(e.target.value)} style={inputStyle} />
         </div>
-        {emailMessage && <div style={{ fontSize: 13, color: emailMessage.includes('success') ? colors.accentGreen : colors.accentRed, marginBottom: 12 }}>{emailMessage}</div>}
+        {emailMessage && <FieldMessage>{emailMessage}</FieldMessage>}
         <button data-testid="button-change-email" onClick={handleChangeEmail} disabled={emailSaving} style={btnStyle}>
-          {emailSaving ? 'Updating...' : 'Update email'}
+          {emailSaving ? 'Updating email…' : 'Update sign-in email'}
         </button>
-      </div>
+      </section>
 
-      <div style={cardStyle}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>Account Info</h3>
+      <section style={cardStyle} aria-labelledby="account-info-heading">
+        <h2 id="account-info-heading" style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>Account information</h2>
         <div style={{ fontSize: 13, color: colors.textMuted, marginBottom: 16 }}>
-          <div>Role: <span style={{ color: user?.role === 'admin' ? colors.accentPurple : colors.text }}>{user?.role}</span></div>
-          <div>Status: <span style={{ color: colors.accentGreen }}>{user?.status}</span></div>
+          <div>Account type: <span style={{ color: user?.role === 'admin' ? colors.accentPurple : colors.text }}>{user?.role === 'admin' ? 'Administrator' : 'Team member'}</span></div>
+          <div>Account status: <span style={{ color: colors.accentGreen }}>{user?.status === 'active' ? 'Active' : 'Needs attention'}</span></div>
           <div>Member since: {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}</div>
         </div>
-      </div>
+      </section>
 
-      <div style={cardStyle}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>Active Sessions</h3>
+      <section style={cardStyle} aria-labelledby="sessions-heading">
+        <h2 id="sessions-heading" style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>Active sessions</h2>
         <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 16px', lineHeight: 1.6 }}>
-          Sign out everywhere invalidates this account&apos;s OperatorOS and module sessions. Other tabs and subdomains will be denied on their next authenticated request.
+          Sign out everywhere closes this account&apos;s OperatorOS and module sessions. Other tabs and modules will ask you to sign in again on their next secure request.
         </p>
         {globalLogoutMessage && (
           <div role="alert" style={{ fontSize: 13, color: colors.accentRed, marginBottom: 12 }}>
@@ -200,30 +207,30 @@ export default function SettingsPage() {
           disabled={globalLogoutSaving}
           style={{ ...btnStyle, background: colors.accentRed }}
         >
-          {globalLogoutSaving ? 'Revoking sessions...' : 'Sign out everywhere'}
+          {globalLogoutSaving ? 'Signing out everywhere…' : 'Sign out everywhere'}
         </button>
-      </div>
+      </section>
 
       {user?.role !== 'admin' && (
-        <div style={{ ...cardStyle, borderColor: 'rgba(248,81,73,0.3)' }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: colors.accentRed, margin: '0 0 8px' }}>Danger Zone</h3>
+        <section style={{ ...cardStyle, borderColor: 'rgba(255,107,99,0.45)' }} aria-labelledby="delete-account-heading">
+          <h2 id="delete-account-heading" style={{ fontSize: 16, fontWeight: 600, color: colors.accentRed, margin: '0 0 8px' }}>Delete account</h2>
           <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 16px' }}>
-            Permanently delete your account and all associated data. This action cannot be undone.
+            Permanently delete your OperatorOS user account and personal account data. Business records owned by an organization follow that organization&apos;s access and retention rules. This action cannot be undone.
           </p>
           <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>Type DELETE to confirm</label>
-            <input data-testid="input-delete-confirm" value={deleteConfirm} onChange={e => setDeleteConfirm(e.target.value)} style={inputStyle} placeholder="DELETE" />
+            <label htmlFor="settings-delete-confirm" style={labelStyle}>Type DELETE to confirm</label>
+            <input id="settings-delete-confirm" data-testid="input-delete-confirm" value={deleteConfirm} onChange={e => setDeleteConfirm(e.target.value)} style={inputStyle} />
           </div>
           <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>Password</label>
-            <input data-testid="input-delete-password" type="password" value={deletePassword} onChange={e => setDeletePassword(e.target.value)} style={inputStyle} />
+            <label htmlFor="settings-delete-password" style={labelStyle}>Current password</label>
+            <input id="settings-delete-password" autoComplete="current-password" data-testid="input-delete-password" type="password" value={deletePassword} onChange={e => setDeletePassword(e.target.value)} style={inputStyle} />
           </div>
-          {deleteMessage && <div style={{ fontSize: 13, color: colors.accentRed, marginBottom: 12 }}>{deleteMessage}</div>}
+          {deleteMessage && <FieldMessage>{deleteMessage}</FieldMessage>}
           <button data-testid="button-delete-account" onClick={handleDeleteAccount} disabled={deleteSaving}
             style={{ ...btnStyle, background: colors.accentRed }}>
-            {deleteSaving ? 'Deleting...' : 'Delete my account'}
+            {deleteSaving ? 'Deleting account…' : 'Permanently delete my account'}
           </button>
-        </div>
+        </section>
       )}
     </div>
   );

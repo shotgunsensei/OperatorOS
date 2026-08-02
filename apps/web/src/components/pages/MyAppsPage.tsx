@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Circle,
   Clock,
-  KeyRound,
   Loader2,
   Lock,
   Rocket,
@@ -158,9 +157,9 @@ function buildLaunchpadModule(
       name: registry.name,
       description,
       category: registry.category,
-      statusLabel: 'Tenant required',
+      statusLabel: 'Organization needed',
       statusTone: 'warning',
-      entitlementLabel: 'No tenant selected',
+      entitlementLabel: 'Setup incomplete',
       entitlementTone: 'warning',
       action: 'tenant_required',
       unlocked: false,
@@ -179,7 +178,7 @@ function buildLaunchpadModule(
       category: registry.category,
       statusLabel: 'Planned',
       statusTone: 'neutral',
-      entitlementLabel: 'Roadmap',
+      entitlementLabel: 'Not available yet',
       entitlementTone: 'neutral',
       action: 'planned',
       unlocked: false,
@@ -196,7 +195,7 @@ function buildLaunchpadModule(
       name: registry.name,
       description,
       category: registry.category,
-      statusLabel: 'Disabled',
+      statusLabel: 'Unavailable',
       statusTone: 'danger',
       entitlementLabel: 'Unavailable',
       entitlementTone: 'danger',
@@ -211,17 +210,17 @@ function buildLaunchpadModule(
   if (unlocked) {
     const source = summary?.access_source ?? null;
     const sourceLabel =
-      source === 'admin_role' ? 'Admin override'
+      source === 'admin_role' ? 'Administrator access'
       : source === 'addon' ? 'Add-on active'
-      : source === 'override' ? 'Granted'
-      : 'Entitled';
+      : source === 'override' ? 'Access granted'
+      : 'Included in your plan';
     return {
       registry,
       summary,
       name: summary?.module.name ?? registry.name,
       description,
       category: summary?.module.category ?? registry.category,
-      statusLabel: dbStatus === 'beta' ? 'Beta' : 'Active',
+      statusLabel: dbStatus === 'beta' ? 'Beta' : 'Ready to use',
       statusTone: dbStatus === 'beta' ? 'warning' : 'success',
       entitlementLabel: sourceLabel,
       entitlementTone: source === 'admin_role' ? 'info' : 'success',
@@ -242,7 +241,7 @@ function buildLaunchpadModule(
       category: registry.category,
       statusLabel: 'Unavailable',
       statusTone: 'danger',
-      entitlementLabel: 'Catalog missing',
+      entitlementLabel: 'Contact support',
       entitlementTone: 'danger',
       action: 'unavailable',
       unlocked: false,
@@ -259,7 +258,7 @@ function buildLaunchpadModule(
       name: summary.module.name,
       description,
       category: summary.module.category ?? registry.category,
-      statusLabel: 'Available',
+      statusLabel: 'Available to add',
       statusTone: 'info',
       entitlementLabel: money(summary.addon_price_cents) ?? 'Add-on required',
       entitlementTone: 'warning',
@@ -278,9 +277,9 @@ function buildLaunchpadModule(
       name: summary.module.name,
       description,
       category: summary.module.category ?? registry.category,
-      statusLabel: 'Locked',
+      statusLabel: 'Another plan needed',
       statusTone: 'warning',
-      entitlementLabel: 'Core product required',
+      entitlementLabel: 'Compare plans',
       entitlementTone: 'warning',
       action: 'upgrade',
       unlocked: false,
@@ -296,9 +295,9 @@ function buildLaunchpadModule(
     name: summary.module.name,
     description,
     category: summary.module.category ?? registry.category,
-    statusLabel: 'Locked',
+    statusLabel: 'Access needed',
     statusTone: 'warning',
-    entitlementLabel: 'Access denied',
+    entitlementLabel: 'Ask your administrator',
     entitlementTone: 'warning',
     action: 'unavailable',
     unlocked: false,
@@ -348,7 +347,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
       if (data.ssoFallback && data.warning) toast(data.warning, 'error');
     } catch (err: any) {
       setSummaries([]);
-      setLoadError(err?.error || err?.message || 'Failed to load module access.');
+      setLoadError('Your tool access could not be loaded. Nothing changed. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -376,11 +375,9 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
   }, [summaries, activeTenant?.id]);
 
   const activeCards = cards.filter((card) => card.action === 'launch');
-  const lockedCards = cards.filter((card) =>
+  const addableCards = cards.filter((card) =>
     !card.unlocked && !card.planned && card.action !== 'disabled' && card.action !== 'tenant_required'
   );
-  const plannedCards = cards.filter((card) => card.planned);
-  const unavailableCards = cards.filter((card) => card.action === 'disabled' || card.action === 'tenant_required');
 
   const recentCards = useMemo(() => {
     const bySlug = new Map(cards.map((card) => [card.registry.slug, card]));
@@ -388,22 +385,23 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
   }, [recentSlugs, cards]);
 
   const activationSteps = [
-    { label: 'Team space ready', complete: !!activeTenant?.id },
-    { label: 'Product stack active', complete: activeCards.length > 0 },
-    { label: 'First workflow launched', complete: recentCards.length > 0 },
+    { label: 'Organization selected', complete: !!activeTenant?.id },
+    { label: 'At least one tool is ready', complete: activeCards.length > 0 },
+    { label: 'First tool opened', complete: recentCards.length > 0 },
   ];
   const activationComplete = activationSteps.filter((step) => step.complete).length;
   const nextActivationAction = !activeTenant?.id
-    ? { label: 'Choose a team space', page: 'settings' }
+    ? { label: 'Get organization setup help', href: 'https://operatoros.net/john' }
     : activeCards.length === 0
-      ? { label: 'Choose a core product', page: 'billing' }
+      ? { label: 'Compare plans and tools', page: 'billing' }
       : recentCards.length === 0
-        ? { label: 'Open your first module', page: 'apps' }
-        : { label: 'Expand your ecosystem', page: 'apps' };
+        ? { label: 'Choose your first tool', page: 'apps' }
+        : { label: 'Browse more tools', page: 'apps' };
+  const showSetup = activationComplete < activationSteps.length;
 
   const launch = async (card: LaunchpadModule) => {
     if (!activeTenant?.id && card.registry.requiresTenant) {
-      setLaunchErrors((cur) => ({ ...cur, [card.registry.slug]: 'Select a tenant before launching.' }));
+      setLaunchErrors((cur) => ({ ...cur, [card.registry.slug]: 'Choose an organization before opening this module.' }));
       return;
     }
     setLaunching(card.registry.slug);
@@ -433,35 +431,34 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
       await switchTenant(tenantId);
     } catch (err: any) {
       setSwitchingTenant(false);
-      toast(err?.error || err?.message || 'Could not switch tenant.', 'error');
+      toast('We could not switch organizations. Your current organization is still active. Try again in a moment.', 'error');
     }
   };
 
   return (
-    <div style={{ padding: 'clamp(16px, 4vw, 32px)', maxWidth: 1240, margin: '0 auto' }} data-testid="page-my-apps">
+    <div className="ops-page" data-testid="page-my-apps">
       <header
         style={{
           marginBottom: space.xl,
           borderRadius: radius.md,
           border: `1px solid ${semantic.border}`,
-          background:
-            'linear-gradient(135deg, rgba(88,166,255,0.13), rgba(63,185,80,0.08)), linear-gradient(180deg, #0d1117, #010409)',
+          background: 'linear-gradient(135deg, rgba(79,140,255,0.11), rgba(75,194,107,0.06)), #121820',
           padding: '22px',
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) minmax(min(100%, 360px), 0.55fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
           gap: space.lg,
           alignItems: 'center',
         }}
       >
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: fontSize.xs, color: semantic.accent, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-            OperatorOS Command Center
+            Workspace home
           </div>
           <h1 style={{ fontSize: 30, lineHeight: 1.1, fontWeight: 800, margin: 0, color: '#fff', letterSpacing: 0 }}>
-            Module launch control
+            Choose what you want to work on
           </h1>
           <p style={{ color: semantic.textMuted, margin: '10px 0 0', fontSize: fontSize.md, lineHeight: 1.55, maxWidth: 680 }}>
-            Open the apps included with your workspace and continue with the same secure sign-in.
+            Pick a tool and continue your work. OperatorOS keeps access, team membership, and billing together.
           </p>
         </div>
 
@@ -469,13 +466,12 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
               gap: 8,
             }}
           >
-            <Metric label="Ready" value={activeCards.length} tone="success" />
-            <Metric label="Locked" value={lockedCards.length} tone="warning" />
-            <Metric label="Planned" value={plannedCards.length} tone="neutral" />
+            <Metric label="Your tools" value={activeCards.length} tone="success" />
+            <Metric label="More tools" value={addableCards.length} tone="info" />
           </div>
           {visibleTenants.length > 1 && (
             <label
@@ -492,7 +488,8 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
                 fontSize: fontSize.sm,
               }}
             >
-              <Building2 size={14} color={semantic.accent} />
+              <Building2 size={14} color={semantic.accent} aria-hidden="true" />
+              <span className="ops-visually-hidden">Organization</span>
               <select
                 value={activeTenant?.id ?? ''}
                 disabled={tenantLoading || switchingTenant}
@@ -522,7 +519,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
                 onClick={() => onNavigate('tenant-modules')}
                 style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 11px' }}
               >
-                <Settings size={13} /> Manage modules
+                <Settings size={13} aria-hidden="true" /> Manage tool access
               </button>
             )}
             {userIsPlatformAdmin && (
@@ -531,24 +528,24 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
                 onClick={() => onNavigate('platform')}
                 style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 11px' }}
               >
-                <ShieldCheck size={13} /> Platform Command
+                <ShieldCheck size={13} aria-hidden="true" /> Platform administration
               </button>
             )}
           </div>
         </div>
       </header>
 
-      <section
+      {showSetup && <section
         data-testid="ecosystem-activation-path"
-        aria-label="Ecosystem activation path"
+        aria-label="Workspace setup progress"
         style={{
           marginBottom: space.xl,
           padding: '16px 18px',
           borderRadius: radius.lg,
           border: `1px solid ${semantic.border}`,
-          background: 'linear-gradient(105deg, rgba(188,140,255,0.09), rgba(88,166,255,0.05), rgba(13,17,23,0.96))',
+          background: '#121820',
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) auto',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
           gap: space.lg,
           alignItems: 'center',
         }}
@@ -556,7 +553,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexWrap: 'wrap' }}>
             <h2 style={{ margin: 0, color: '#fff', fontSize: fontSize.lg, fontWeight: 750 }}>
-              Your ecosystem activation path
+              Workspace setup
             </h2>
             <span style={{ fontSize: fontSize.xs, color: semantic.textMuted }}>
               {activationComplete} of {activationSteps.length} ready
@@ -584,24 +581,40 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
             ))}
           </div>
         </div>
-        <button
-          data-testid="button-ecosystem-next-action"
-          onClick={() => onNavigate(nextActivationAction.page)}
-          style={{
-            ...buttonStyles.primary,
-            minHeight: 40,
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-            background: 'linear-gradient(135deg, #58a6ff, #bc8cff)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {nextActivationAction.label} <ArrowRight size={14} />
-        </button>
-      </section>
+        {'href' in nextActivationAction ? (
+          <a
+            data-testid="link-workspace-setup-help"
+            href={nextActivationAction.href}
+            style={{
+              ...buttonStyles.primary,
+              minHeight: 40,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              background: 'linear-gradient(135deg, #58a6ff, #bc8cff)',
+              whiteSpace: 'nowrap', textDecoration: 'none',
+            }}
+          >
+            {nextActivationAction.label} <ArrowRight size={14} />
+          </a>
+        ) : (
+          <button
+            data-testid="button-ecosystem-next-action"
+            onClick={() => onNavigate(nextActivationAction.page)}
+            style={{
+              ...buttonStyles.primary,
+              minHeight: 40,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              background: 'linear-gradient(135deg, #58a6ff, #bc8cff)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {nextActivationAction.label} <ArrowRight size={14} />
+          </button>
+        )}
+      </section>}
 
       {recentCards.length > 0 && (
         <section style={{ marginBottom: space.xl }} data-testid="my-apps-recent">
-          <SectionTitle icon={<Clock size={13} />} title="Recently launched" />
+          <SectionTitle icon={<Clock size={13} />} title="Recently used" />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: space.sm }}>
             {recentCards.map((card) => (
               <button
@@ -636,10 +649,10 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
         >
           <AlertTriangle size={18} color={semantic.accentDanger} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, color: '#fff' }}>Module access could not be loaded</div>
+            <div style={{ fontWeight: 700, color: '#fff' }}>Tool access could not be loaded</div>
             <div style={{ fontSize: fontSize.body, color: semantic.textMuted }}>{loadError}</div>
           </div>
-          <button onClick={load} style={buttonStyles.secondary}>Retry</button>
+          <button onClick={load} style={buttonStyles.secondary}>Reload tool access</button>
         </div>
       )}
 
@@ -648,9 +661,9 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
       ) : (
         <>
           <ModuleSection
-            title="Active modules"
+            title="Your tools"
             icon={<Rocket size={13} />}
-            empty="No launchable modules are active for this tenant yet."
+            empty="No tools are ready for this organization yet. An organization administrator can add tool access, or you can review available tools."
             cards={activeCards}
             launching={launching}
             launchErrors={launchErrors}
@@ -660,10 +673,10 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
           />
 
           <ModuleSection
-            title="Locked modules"
+            title="More tools you can add"
             icon={<Lock size={13} />}
-            empty="No locked active modules for this tenant."
-            cards={lockedCards}
+            empty="Every active tool is already available to this organization."
+            cards={addableCards}
             launching={launching}
             launchErrors={launchErrors}
             onLaunch={launch}
@@ -671,33 +684,6 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
             canManage={userIsTenantAdmin}
           />
 
-          {plannedCards.length > 0 && (
-            <ModuleSection
-              title="Planned modules"
-              icon={<KeyRound size={13} />}
-              empty=""
-              cards={plannedCards}
-              launching={launching}
-              launchErrors={launchErrors}
-              onLaunch={launch}
-              onNavigate={onNavigate}
-              canManage={userIsTenantAdmin}
-            />
-          )}
-
-          {unavailableCards.length > 0 && (
-            <ModuleSection
-              title="Unavailable"
-              icon={<Ban size={13} />}
-              empty=""
-              cards={unavailableCards}
-              launching={launching}
-              launchErrors={launchErrors}
-              onLaunch={launch}
-              onNavigate={onNavigate}
-              canManage={userIsTenantAdmin}
-            />
-          )}
         </>
       )}
 
@@ -726,8 +712,8 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
         >
           <Store size={20} color={semantic.accent} />
           <span>
-            <span style={{ display: 'block', color: '#fff', fontWeight: 700, marginBottom: 3 }}>Open Marketplace</span>
-            <span style={{ display: 'block', color: semantic.textMuted, fontSize: fontSize.body }}>Review upgrades, add-ons, and inactive modules.</span>
+            <span style={{ display: 'block', color: '#fff', fontWeight: 700, marginBottom: 3 }}>Browse all tools</span>
+            <span style={{ display: 'block', color: semantic.textMuted, fontSize: fontSize.body }}>See what each tool does, what is included, and how to add access.</span>
           </span>
         </button>
       </section>
@@ -865,7 +851,7 @@ function ModuleCard({
       {image && (
         <img
           src={image}
-          alt={`${card.name} module visual.`}
+          alt={`${card.name} illustration.`}
           loading="lazy"
           style={{ width: '100%', height: 110, objectFit: 'cover', display: 'block' }}
         />
@@ -919,7 +905,7 @@ function ModuleCard({
               data-testid={`button-manage-${card.registry.slug}`}
               onClick={() => onNavigate('tenant-modules')}
               style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 11px' }}
-              title="Manage tenant module access"
+              title={`Manage ${card.name} access for this organization`}
             >
               <Settings size={13} /> Manage
             </button>
@@ -950,7 +936,7 @@ function renderActionButton({
         style={{ ...buttonStyles.primary, display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center', flex: 1 }}
       >
         {launching ? <Loader2 size={14} /> : <Rocket size={14} />}
-        {launching ? 'Launching' : 'Launch'}
+        {launching ? `Opening ${card.name}` : `Open ${card.name}`}
       </button>
     );
   }
@@ -962,7 +948,7 @@ function renderActionButton({
         onClick={() => onNavigate('billing')}
         style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center', flex: 1 }}
       >
-        <Lock size={13} /> View stack options
+        <Lock size={13} /> View plan options
       </button>
     );
   }
@@ -974,7 +960,7 @@ function renderActionButton({
         onClick={() => onNavigate('apps')}
         style={{ ...buttonStyles.secondary, display: 'inline-flex', alignItems: 'center', gap: 7, justifyContent: 'center', flex: 1 }}
       >
-        <Store size={13} /> Access options
+        <Store size={13} /> View add-on options
       </button>
     );
   }
@@ -1027,7 +1013,7 @@ function LoadingGrid() {
           }}
         >
           <Loader2 size={16} />
-          Loading module access
+          Loading tool access
         </div>
       ))}
     </div>
