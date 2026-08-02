@@ -85,7 +85,7 @@ test('Lead Conversion Center exposes working setup, follow-up, validation, and d
   ]) assert.match(client, new RegExp(method));
 });
 
-test('executable Phase 16 ledger closes eleven lead-operation gaps without reclassifying public ingress', () => {
+test('executable Phase 16 ledger preserves lead operations and keeps public ingress explicit after record-import closure', () => {
   const ledger = JSON.parse(read('docs/modules/tradeflowkit/PHASE16_SOURCE_LEDGER.json')) as {
     inventory: Record<string, Array<{ key: string; disposition: string }>>;
   };
@@ -94,8 +94,11 @@ test('executable Phase 16 ledger closes eleven lead-operation gaps without recla
     result[row.disposition] = (result[row.disposition] ?? 0) + 1;
     return result;
   }, {});
-  assert.equal(counts.active, 135);
-  assert.equal(counts.phase16_gap, 23);
+  assert.equal(counts.active, 137);
+  assert.equal(counts.shared_replacement, 58);
+  assert.equal(counts.phase16_gap, 8);
+  assert.equal(counts.retired_security, 43);
+  assert.equal(counts.retired_product_boundary, 31);
   for (const key of [
     'GET /api/leads/:id/followups',
     'GET /api/leads/settings',

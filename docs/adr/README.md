@@ -35,6 +35,7 @@ new ADR explicitly supersedes it.
 | ADR-0028 | TradeFlowKit owns tenant-scoped workflow templates, governed job-stage transitions, team job-task views, and activity; automation execution, recurrence, and standalone tasks remain gated. | Accepted | `docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md` |
 | ADR-0029 | TradeFlowKit permits admin-only, 25-record, versioned, idempotent and atomic bulk status, restore, and manual-payment operations; bulk delete and purge remain retired. | Accepted | `docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md` |
 | ADR-0030 | Restore authenticated TradeFlowKit lead settings, templates, follow-ups, adapter validation, source history, and server-destination test email while anonymous intake remains disabled. | Accepted | `docs/adr/ADR-0030-tradeflowkit-lead-operations-boundary.md` |
+| ADR-0031 | Restore bounded replay-safe TradeFlowKit job/invoice imports; keep scheduling and tasks deterministic/job-scoped; replace module-owned communication providers and exclude unreviewed lead AI. | Accepted | `docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md` |
 
 ## Required future ADRs
 

@@ -82,6 +82,132 @@ export function parseCustomerImport(raw: unknown) {
   return { customers, errors, totalRows: body.customers.length };
 }
 
+const JOB_IMPORT_STATUSES = new Set(['lead', 'quoted', 'scheduled', 'in_progress', 'done', 'invoiced', 'paid', 'canceled']);
+const JOB_IMPORT_PRIORITIES = new Set(['low', 'normal', 'urgent']);
+const INVOICE_IMPORT_STATUSES = new Set(['draft', 'sent', 'void']);
+
+function enumText(value: unknown, field: string, values: Set<string>, fallback: string): string {
+  const normalized = text(value, field, 40) ?? fallback;
+  if (!values.has(normalized)) throw new TradeFlowKitRevenueValidationError('FIELD_INVALID', field);
+  return normalized;
+}
+
+function positiveInteger(value: unknown, field: string, fallback: number): number {
+  if (value === undefined || value === null || value === '') return fallback;
+  const normalized = typeof value === 'number' ? String(value) : value;
+  if (typeof normalized !== 'string' || !/^\d+$/.test(normalized.trim())) {
+    throw new TradeFlowKitRevenueValidationError('FIELD_INVALID', field);
+  }
+  const parsed = Number(normalized);
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 10_000) {
+    throw new TradeFlowKitRevenueValidationError('FIELD_INVALID', field);
+  }
+  return parsed;
+}
+
+function scaledDecimal(value: unknown, field: string, fallback: number, max: number): number {
+  if (value === undefined || value === null || value === '') return fallback;
+  const normalized = typeof value === 'number' ? String(value) : value;
+  if (typeof normalized !== 'string' || !/^\d+(?:\.\d{1,2})?$/.test(normalized.trim())) {
+    throw new TradeFlowKitRevenueValidationError('FIELD_INVALID', field);
+  }
+  const [whole, fraction = ''] = normalized.trim().split('.');
+  const parsed = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
+  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > max) {
+    throw new TradeFlowKitRevenueValidationError('FIELD_INVALID', field);
+  }
+  return parsed;
+}
+
+export function parseJobImport(raw: unknown) {
+  const body = object(raw);
+  if (!Array.isArray(body.jobs) || body.jobs.length < 1 || body.jobs.length > 100) {
+    throw new TradeFlowKitRevenueValidationError('JOB_IMPORT_ROWS_INVALID', 'jobs');
+  }
+  const jobs: Array<{
+    row: number;
+    customerName: string;
+    title: string;
+    description: string | null;
+    internalNotes: string | null;
+    status: string;
+    priority: string;
+    scheduledStart: Date | null;
+    scheduledEnd: Date | null;
+  }> = [];
+  const errors: Array<{ row: number; code: string; field?: string }> = [];
+  body.jobs.forEach((entry, index) => {
+    const row = index + 2;
+    try {
+      const value = object(entry);
+      const scheduledStart = date(value.scheduledStart, 'scheduledStart');
+      const scheduledEnd = date(value.scheduledEnd, 'scheduledEnd');
+      if (scheduledStart && scheduledEnd && scheduledEnd <= scheduledStart) {
+        throw new TradeFlowKitRevenueValidationError('SCHEDULE_INVALID', 'scheduledEnd');
+      }
+      jobs.push({
+        row,
+        customerName: text(value.customerName, 'customerName', 160, true)!,
+        title: text(value.title, 'title', 200, true)!,
+        description: text(value.description, 'description', 4_000),
+        internalNotes: text(value.internalNotes, 'internalNotes', 4_000),
+        status: enumText(value.status, 'status', JOB_IMPORT_STATUSES, 'lead'),
+        priority: enumText(value.priority, 'priority', JOB_IMPORT_PRIORITIES, 'normal'),
+        scheduledStart,
+        scheduledEnd,
+      });
+    } catch (error) {
+      if (!(error instanceof TradeFlowKitRevenueValidationError)) throw error;
+      errors.push({ row, code: error.code, ...(error.field ? { field: error.field } : {}) });
+    }
+  });
+  return { jobs, errors, totalRows: body.jobs.length };
+}
+
+export function parseInvoiceImport(raw: unknown) {
+  const body = object(raw);
+  if (!Array.isArray(body.invoices) || body.invoices.length < 1 || body.invoices.length > 100) {
+    throw new TradeFlowKitRevenueValidationError('INVOICE_IMPORT_ROWS_INVALID', 'invoices');
+  }
+  const invoices: Array<{
+    row: number;
+    invoiceRef: string | null;
+    customerName: string;
+    status: string;
+    dueDate: Date | null;
+    taxRateBps: number;
+    discountCents: number;
+    notes: string | null;
+    itemDescription: string | null;
+    itemQuantity: number;
+    itemUnitPriceCents: number;
+  }> = [];
+  const errors: Array<{ row: number; code: string; field?: string }> = [];
+  body.invoices.forEach((entry, index) => {
+    const row = index + 2;
+    try {
+      const value = object(entry);
+      invoices.push({
+        row,
+        invoiceRef: text(value.invoiceRef, 'invoiceRef', 100),
+        customerName: text(value.customerName, 'customerName', 160, true)!,
+        status: enumText(value.status, 'status', INVOICE_IMPORT_STATUSES, 'draft'),
+        dueDate: date(value.dueDate, 'dueDate'),
+        taxRateBps: scaledDecimal(value.taxRate, 'taxRate', 0, 10_000),
+        discountCents: scaledDecimal(value.discount, 'discount', 0, 1_000_000_000),
+        notes: text(value.notes, 'notes', 4_000),
+        itemDescription: text(value.itemDescription, 'itemDescription', 500),
+        itemQuantity: positiveInteger(value.itemQty, 'itemQty', 1),
+        itemUnitPriceCents: scaledDecimal(value.itemUnitPrice, 'itemUnitPrice', 0, 100_000_000),
+      });
+    } catch (error) {
+      if (!(error instanceof TradeFlowKitRevenueValidationError)) throw error;
+      errors.push({ row, code: error.code, ...(error.field ? { field: error.field } : {}) });
+    }
+  });
+  return { invoices, errors, totalRows: body.invoices.length };
+}
+
 export function parseJobCreate(raw: unknown) {
   const body = object(raw);
   const priority = body.priority ?? 'normal';

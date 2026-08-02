@@ -887,6 +887,22 @@ export interface TradeFlowKitCustomerImportResult {
   skippedRows: Array<{ row: number; reason: 'duplicate_name' | 'duplicate_email' | 'duplicate_phone' | 'duplicate_source' }>;
   customers: Array<{ id: string }>;
 }
+export interface TradeFlowKitJobImportRow {
+  customerName: string; title: string; description?: string; status?: string; priority?: string;
+  scheduledStart?: string; scheduledEnd?: string; internalNotes?: string;
+}
+export interface TradeFlowKitInvoiceImportRow {
+  invoiceRef?: string; customerName: string; status?: string; dueDate?: string; taxRate?: string;
+  discount?: string; notes?: string; itemDescription?: string; itemQty?: string; itemUnitPrice?: string;
+}
+export interface TradeFlowKitRecordImportResult {
+  imported: number;
+  skipped: number;
+  errors: Array<{ row: number; code: string; field?: string }>;
+  skippedRows: Array<{ row: number; reason: 'duplicate_source' }>;
+  jobs?: Array<{ id: string }>;
+  invoices?: Array<{ id: string }>;
+}
 export interface TradeFlowKitJob {
   id: string; customerId: string; number: number | null; title: string;
   description: string | null; internalNotes?: string | null; status: string; priority: string;
@@ -1879,6 +1895,18 @@ export const moduleShellApi = {
         headers: { 'Idempotency-Key': idempotencyKey },
         body: JSON.stringify({ customers }),
       }) as Promise<TradeFlowKitCustomerImportResult>,
+    importJobs: (jobs: TradeFlowKitJobImportRow[], idempotencyKey: string): Promise<TradeFlowKitRecordImportResult> =>
+      apiFetch('/modules/tradeflowkit/jobs/import', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify({ jobs }),
+      }) as Promise<TradeFlowKitRecordImportResult>,
+    importInvoices: (invoices: TradeFlowKitInvoiceImportRow[], idempotencyKey: string): Promise<TradeFlowKitRecordImportResult> =>
+      apiFetch('/modules/tradeflowkit/invoices/import', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify({ invoices }),
+      }) as Promise<TradeFlowKitRecordImportResult>,
     createJob: (input: { customerId: string; title: string; priority?: string }): Promise<TradeFlowKitJob> =>
       apiFetch('/modules/tradeflowkit/jobs', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitJob>,
     createQuote: (input: {

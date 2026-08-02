@@ -113,6 +113,15 @@ const safeBulkEvidence = [
   'apps/api/test/tradeflowkit-safe-bulk-operations-static.test.ts',
   'docs/adr/ADR-0029-tradeflowkit-bounded-bulk-operations.md',
 ];
+const recordImportEvidence = [
+  'apps/api/test/tradeflowkit-record-imports.test.ts',
+  'apps/api/test/tradeflowkit-revenue-ui-static.test.ts',
+];
+const deterministicSchedulingBoundaryEvidence = [
+  'docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md',
+  'docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md',
+  'docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md',
+];
 
 function classifyPage(path) {
   if (['/subscription', '/admin', '/access-denied'].includes(path)) {
@@ -302,11 +311,11 @@ function classifyApi(method, path) {
   }
   if (path.startsWith('/api/automations') || path.startsWith('/api/reminder-logs') || path.includes('/series')) {
     return outcome(
-      GAP,
+      RETIRED_BOUNDARY,
       'durable_scheduling',
-      ['apps/api/src/lib/shared-service-db-init.ts'],
-      [],
-      'Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics.',
+      deterministicSchedulingBoundaryEvidence,
+      deterministicSchedulingBoundaryEvidence,
+      'Autonomous automation, reminders, and recurring job generation remain outside the accepted deterministic TradeFlowKit scope.',
     );
   }
   if (path.startsWith('/api/trash')) {
@@ -350,11 +359,11 @@ function classifyApi(method, path) {
   if (path.startsWith('/api/work/tasks')) {
     if (path === '/api/work/tasks' && upperMethod === 'POST') {
       return outcome(
-        GAP,
+        RETIRED_BOUNDARY,
         'standalone_tasks',
-        ['apps/api/src/routes/tradeflowkit-routes.ts'],
+        ['docs/adr/ADR-0010-tradeflowkit-job-task-model.md', 'docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md', 'docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md'],
         workManagementEvidence,
-        'Canonical creation remains job-scoped under ADR-0010; source standalone-task creation needs an explicit superseding product decision.',
+        'Standalone task creation is excluded; canonical tasks remain job-scoped under ADR-0010 and ADR-0028.',
       );
     }
     return outcome(
@@ -465,7 +474,13 @@ function classifyApi(method, path) {
   }
   if (path.startsWith('/api/jobs')) {
     if (path === '/api/jobs/import') {
-      return outcome(GAP, 'job_import', [], [], 'Job import still needs a bounded schema, idempotency, duplicate policy, and customer reconciliation.');
+      return outcome(
+        ACTIVE,
+        'job_import',
+        ['apps/api/src/routes/module-shell-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx'],
+        recordImportEvidence,
+        'Bounded CSV-to-JSON job import is tenant scoped, replay safe, customer reconciled, duplicate suppressed, numbered, and audited.',
+      );
     }
     if (path === '/api/jobs/bulk-delete') {
       return outcome(
@@ -522,7 +537,13 @@ function classifyApi(method, path) {
   }
   if (path.startsWith('/api/invoices')) {
     if (path === '/api/invoices/import') {
-      return outcome(GAP, 'invoice_import', [], [], 'Invoice import still needs a bounded schema, line reconciliation, idempotency, and financial validation.');
+      return outcome(
+        ACTIVE,
+        'invoice_import',
+        ['apps/api/src/routes/module-shell-routes.ts', 'apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx'],
+        recordImportEvidence,
+        'Bounded CSV-to-JSON invoice import groups normalized lines, uses exact integer cents, rejects synthetic paid history, suppresses duplicate references, and is tenant scoped, replay safe, numbered, and audited.',
+      );
     }
     if (path === '/api/invoices/bulk-delete') {
       return outcome(
@@ -659,7 +680,13 @@ function classifyTable(name) {
     );
   }
   if (['org_automations', 'reminder_log'].includes(name)) {
-    return outcome(GAP, 'durable_scheduling', ['apps/api/src/lib/shared-service-db-init.ts'], [], 'Shared leased-job scheduling semantics are not implemented for this workflow.');
+    return outcome(
+      RETIRED_BOUNDARY,
+      'durable_scheduling',
+      deterministicSchedulingBoundaryEvidence,
+      deterministicSchedulingBoundaryEvidence,
+      'Legacy autonomous scheduling persistence is excluded from the accepted deterministic TradeFlowKit scope.',
+    );
   }
   if (['call_recovery_subscriptions', 'missed_calls', 'ai_messages'].includes(name)) {
     return outcome(RETIRED_BOUNDARY, 'callcommand', ['docs/adr/ADR-0025-callcommand-outcall-consent-and-provider-boundary.md'], [], 'CallCommand/OutCall owns this capability.');
@@ -706,13 +733,22 @@ function classifyProvider(name) {
       'Platform billing is centralized; module business payments remain provider-gated.',
     );
   }
-  if (name.startsWith('TWILIO_') || name.startsWith('SENDGRID_') || name.startsWith('OPENAI_')) {
+  if (name.startsWith('OPENAI_')) {
     return outcome(
-      GAP,
+      RETIRED_BOUNDARY,
+      'automated_lead_decisions',
+      ['docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md', 'docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md'],
+      leadMessagingEvidence,
+      'Legacy unreviewed lead AI behavior is excluded from TradeFlowKit; deterministic operator-reviewed workflows remain active.',
+    );
+  }
+  if (name.startsWith('TWILIO_') || name.startsWith('SENDGRID_')) {
+    return outcome(
+      SHARED,
       'external_provider',
-      ['apps/api/src/routes/shared-service-routes.ts'],
-      sharedServiceEvidence,
-      'External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance.',
+      ['apps/api/src/lib/shared-provider-adapters.ts', 'apps/api/src/lib/shared-notification-outbox.ts'],
+      [...sharedServiceEvidence, ...leadMessagingEvidence],
+      'OperatorOS shared provider adapters and the replay-safe outbox replace module-owned email and SMS provider clients.',
     );
   }
   return null;

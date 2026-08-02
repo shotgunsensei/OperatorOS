@@ -1,6 +1,6 @@
 # OperatorOS implementation status
 
-- Last updated: 2026-08-01
+- Last updated: 2026-08-02
 - Phase: **17 — Production Truth and Revenue Release Gate**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
@@ -20,8 +20,47 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/tradeflowkit-lead-operations`
+- Execution branch: `codex/tradeflowkit-record-imports`
 - Release gate: **closed**
+
+## 2026-08-02 TradeFlowKit bounded record imports and deterministic-scope closure
+
+TradeFlowKit now imports bounded job and invoice records through the active
+OperatorOS runtime. Browser-parsed CSV batches are capped at 100 rows and 256
+KiB, then revalidated on the server under trusted tenant, module, entitlement,
+and write authority. Jobs reconcile only active same-tenant customers and
+validate statuses, priorities, and schedule ordering. Invoices group repeated
+source references into normalized line items, use exact integer-cents and
+basis-point arithmetic, allocate canonical invoice numbers, and reject
+synthetic paid history. Both routes use per-tenant advisory locks, shared
+idempotency records, exact replay/body-drift protection, deterministic source
+fingerprints, duplicate suppression, and metadata-only batch activity.
+
+ADR-0031 records the accepted product boundary. The same ledger reconciliation
+closes the legacy standalone-task, autonomous scheduling/recurrence,
+module-owned SendGrid/Twilio, and unreviewed lead-AI items without activating a
+second authority or unsafe automation. The executable source ledger therefore
+falls from 23 to 8 explicit gaps: three anonymous/public lead-intake contracts
+and five production business-payment/Stripe Connect contracts. Database
+release v31 remains unchanged because the imports use the existing canonical
+customer, job, invoice, item, sequence, activity, and idempotency tables.
+
+| Gate | Result |
+| --- | --- |
+| Focused record-import/API/UI | PASS 6/6; bounds, viewer denial, tenant separation, customer reconciliation, schedule validation, exact replay/body drift, deterministic duplicates, grouped invoice lines, exact-cent totals, paid-history rejection, and safe metadata |
+| Adjacent TradeFlowKit PostgreSQL regression | PASS 27/27 across record imports, customer import, document mutations, revenue, lead operations/messaging, retention, safe bulk, saved views, accounting, work management, and state-5 workflow |
+| Full API aggregate | PASS 904, FAIL 0, SKIP 6 intentional HTTP-only cases across 910 tests on a fresh disposable PostgreSQL database |
+| Executable source ledger | PASS; 137 active, 58 shared replacements, 8 explicit gaps, 43 security retirements, 31 product-boundary retirements, zero unclassified |
+| Workspace/type/build | PASS; API/runner/web typecheck and production build with Next 15.5.22 and 20/20 generated page entries |
+| Database/runtime | PASS; read-only v31/31 non-destructive release plan, core preflight, readiness-gated compiled supervisor, and HTTP 200 `/healthz` and `/readyz` with database/auth/SSO/registry/worker/release configured |
+| Exact-host TradeFlowKit browser | PASS 1/1 in 9.6 seconds; PKCE login, customer/job/invoice CSV import, database persistence, exact totals, invalid-row diagnostics, duplicate replay, refresh, 390-pixel layout, My Apps return, and relaunch |
+| Deployment/providers/data cutover | NOT RUN; credentials and data were disposable local test values, providers remained disabled, and no Replit deployment, production data, Stripe Connect/business-payment activation, or traffic cutover was touched |
+
+The local candidate remains consolidation state 4. Its accepted deterministic
+scope is materially closer to completion, but the eight recorded gaps,
+accounting sandbox review, deployed authenticated acceptance, production
+provider configuration, approved export/apply reconciliation, backup/rollback,
+and cutover remain required before state 5.
 
 ## 2026-08-01 TradeFlowKit lead-operations restoration and release v31
 

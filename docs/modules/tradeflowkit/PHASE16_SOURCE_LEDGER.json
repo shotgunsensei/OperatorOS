@@ -1055,13 +1055,19 @@
         "method": "GET",
         "path": "/api/automations",
         "sourcePointer": "server/routes/automations.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "durable_scheduling",
         "targetPointers": [
-          "apps/api/src/lib/shared-service-db-init.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
         ],
-        "evidence": [],
-        "note": "Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics."
+        "evidence": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
+        ],
+        "note": "Autonomous automation, reminders, and recurring job generation remain outside the accepted deterministic TradeFlowKit scope."
       },
       {
         "key": "GET /api/call-recovery/missed-calls",
@@ -1510,13 +1516,19 @@
         "method": "GET",
         "path": "/api/jobs/:id/series",
         "sourcePointer": "server/routes/jobs.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "durable_scheduling",
         "targetPointers": [
-          "apps/api/src/lib/shared-service-db-init.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
         ],
-        "evidence": [],
-        "note": "Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics."
+        "evidence": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
+        ],
+        "note": "Autonomous automation, reminders, and recurring job generation remain outside the accepted deterministic TradeFlowKit scope."
       },
       {
         "key": "GET /api/leads",
@@ -1985,13 +1997,19 @@
         "method": "GET",
         "path": "/api/reminder-logs",
         "sourcePointer": "server/routes/automations.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "durable_scheduling",
         "targetPointers": [
-          "apps/api/src/lib/shared-service-db-init.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
         ],
-        "evidence": [],
-        "note": "Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics."
+        "evidence": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
+        ],
+        "note": "Autonomous automation, reminders, and recurring job generation remain outside the accepted deterministic TradeFlowKit scope."
       },
       {
         "key": "GET /api/review-requests",
@@ -2750,13 +2768,19 @@
         "method": "POST",
         "path": "/api/automations",
         "sourcePointer": "server/routes/automations.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "durable_scheduling",
         "targetPointers": [
-          "apps/api/src/lib/shared-service-db-init.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
         ],
-        "evidence": [],
-        "note": "Recurring work must use shared leased jobs with timezone, cancellation, and retry semantics."
+        "evidence": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
+        ],
+        "note": "Autonomous automation, reminders, and recurring job generation remain outside the accepted deterministic TradeFlowKit scope."
       },
       {
         "key": "POST /api/call-recovery/checkout",
@@ -3062,11 +3086,17 @@
         "method": "POST",
         "path": "/api/invoices/import",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "invoice_import",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Invoice import still needs a bounded schema, line reconciliation, idempotency, and financial validation."
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-record-imports.test.ts",
+          "apps/api/test/tradeflowkit-revenue-ui-static.test.ts"
+        ],
+        "note": "Bounded CSV-to-JSON invoice import groups normalized lines, uses exact integer cents, rejects synthetic paid history, suppresses duplicate references, and is tenant scoped, replay safe, numbered, and audited."
       },
       {
         "key": "POST /api/jobs",
@@ -3148,11 +3178,17 @@
         "method": "POST",
         "path": "/api/jobs/import",
         "sourcePointer": "server/routes/jobs.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "job_import",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Job import still needs a bounded schema, idempotency, duplicate policy, and customer reconciliation."
+        "targetPointers": [
+          "apps/api/src/routes/module-shell-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-record-imports.test.ts",
+          "apps/api/test/tradeflowkit-revenue-ui-static.test.ts"
+        ],
+        "note": "Bounded CSV-to-JSON job import is tenant scoped, replay safe, customer reconciled, duplicate suppressed, numbered, and audited."
       },
       {
         "key": "POST /api/leads",
@@ -3716,16 +3752,18 @@
         "method": "POST",
         "path": "/api/work/tasks",
         "sourcePointer": "server/routes/workManagement.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "standalone_tasks",
         "targetPointers": [
-          "apps/api/src/routes/tradeflowkit-routes.ts"
+          "docs/adr/ADR-0010-tradeflowkit-job-task-model.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
         ],
         "evidence": [
           "apps/api/test/tradeflowkit-work-management.test.ts",
           "apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx"
         ],
-        "note": "Canonical creation remains job-scoped under ADR-0010; source standalone-task creation needs an explicit superseding product decision."
+        "note": "Standalone task creation is excluded; canonical tasks remain job-scoped under ADR-0010 and ADR-0028."
       },
       {
         "key": "POST /api/work/tasks/:id/comments",
@@ -4183,13 +4221,19 @@
         "key": "org_automations",
         "table": "org_automations",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "durable_scheduling",
         "targetPointers": [
-          "apps/api/src/lib/shared-service-db-init.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
         ],
-        "evidence": [],
-        "note": "Shared leased-job scheduling semantics are not implemented for this workflow."
+        "evidence": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
+        ],
+        "note": "Legacy autonomous scheduling persistence is excluded from the accepted deterministic TradeFlowKit scope."
       },
       {
         "key": "orgs",
@@ -4257,13 +4301,19 @@
         "key": "reminder_log",
         "table": "reminder_log",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
+        "disposition": "retired_product_boundary",
         "domain": "durable_scheduling",
         "targetPointers": [
-          "apps/api/src/lib/shared-service-db-init.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
         ],
-        "evidence": [],
-        "note": "Shared leased-job scheduling semantics are not implemented for this workflow."
+        "evidence": [
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
+        ],
+        "note": "Legacy autonomous scheduling persistence is excluded from the accepted deterministic TradeFlowKit scope."
       },
       {
         "key": "review_requests",
@@ -4413,46 +4463,53 @@
         "key": "OPENAI_API_KEY",
         "name": "OPENAI_API_KEY",
         "sourcePointer": "server/leadMessaging.ts",
-        "disposition": "phase16_gap",
-        "domain": "external_provider",
+        "disposition": "retired_product_boundary",
+        "domain": "automated_lead_decisions",
         "targetPointers": [
-          "apps/api/src/routes/shared-service-routes.ts"
+          "docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md",
+          "docs/adr/ADR-0031-tradeflowkit-record-import-and-deterministic-scope-closure.md"
         ],
         "evidence": [
-          "apps/api/test/shared-service-routes.test.ts",
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging-static.test.ts"
         ],
-        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+        "note": "Legacy unreviewed lead AI behavior is excluded from TradeFlowKit; deterministic operator-reviewed workflows remain active."
       },
       {
         "key": "SENDGRID_API_KEY",
         "name": "SENDGRID_API_KEY",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
+        "disposition": "shared_replacement",
         "domain": "external_provider",
         "targetPointers": [
-          "apps/api/src/routes/shared-service-routes.ts"
+          "apps/api/src/lib/shared-provider-adapters.ts",
+          "apps/api/src/lib/shared-notification-outbox.ts"
         ],
         "evidence": [
           "apps/api/test/shared-service-routes.test.ts",
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging-static.test.ts"
         ],
-        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+        "note": "OperatorOS shared provider adapters and the replay-safe outbox replace module-owned email and SMS provider clients."
       },
       {
         "key": "SENDGRID_FROM_EMAIL",
         "name": "SENDGRID_FROM_EMAIL",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
+        "disposition": "shared_replacement",
         "domain": "external_provider",
         "targetPointers": [
-          "apps/api/src/routes/shared-service-routes.ts"
+          "apps/api/src/lib/shared-provider-adapters.ts",
+          "apps/api/src/lib/shared-notification-outbox.ts"
         ],
         "evidence": [
           "apps/api/test/shared-service-routes.test.ts",
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging-static.test.ts"
         ],
-        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+        "note": "OperatorOS shared provider adapters and the replay-safe outbox replace module-owned email and SMS provider clients."
       },
       {
         "key": "SESSION_SECRET",
@@ -4488,46 +4545,55 @@
         "key": "TWILIO_ACCOUNT_SID",
         "name": "TWILIO_ACCOUNT_SID",
         "sourcePointer": "server/twilioClient.ts",
-        "disposition": "phase16_gap",
+        "disposition": "shared_replacement",
         "domain": "external_provider",
         "targetPointers": [
-          "apps/api/src/routes/shared-service-routes.ts"
+          "apps/api/src/lib/shared-provider-adapters.ts",
+          "apps/api/src/lib/shared-notification-outbox.ts"
         ],
         "evidence": [
           "apps/api/test/shared-service-routes.test.ts",
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging-static.test.ts"
         ],
-        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+        "note": "OperatorOS shared provider adapters and the replay-safe outbox replace module-owned email and SMS provider clients."
       },
       {
         "key": "TWILIO_AUTH_TOKEN",
         "name": "TWILIO_AUTH_TOKEN",
         "sourcePointer": "server/twilioClient.ts",
-        "disposition": "phase16_gap",
+        "disposition": "shared_replacement",
         "domain": "external_provider",
         "targetPointers": [
-          "apps/api/src/routes/shared-service-routes.ts"
+          "apps/api/src/lib/shared-provider-adapters.ts",
+          "apps/api/src/lib/shared-notification-outbox.ts"
         ],
         "evidence": [
           "apps/api/test/shared-service-routes.test.ts",
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging-static.test.ts"
         ],
-        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+        "note": "OperatorOS shared provider adapters and the replay-safe outbox replace module-owned email and SMS provider clients."
       },
       {
         "key": "TWILIO_PHONE_NUMBER",
         "name": "TWILIO_PHONE_NUMBER",
         "sourcePointer": "server/twilioClient.ts",
-        "disposition": "phase16_gap",
+        "disposition": "shared_replacement",
         "domain": "external_provider",
         "targetPointers": [
-          "apps/api/src/routes/shared-service-routes.ts"
+          "apps/api/src/lib/shared-provider-adapters.ts",
+          "apps/api/src/lib/shared-notification-outbox.ts"
         ],
         "evidence": [
           "apps/api/test/shared-service-routes.test.ts",
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+          "apps/api/test/tradeflowkit-lead-messaging-static.test.ts"
         ],
-        "note": "External messaging/AI use needs the owning product contract, production preflight, safe logging, and live-provider acceptance."
+        "note": "OperatorOS shared provider adapters and the replay-safe outbox replace module-owned email and SMS provider clients."
       }
     ]
   },
