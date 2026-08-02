@@ -5,10 +5,8 @@ import type { CSSProperties } from 'react';
 import {
   Activity,
   AlertTriangle,
-  ArrowLeft,
   BarChart3,
   Boxes,
-  CheckCircle2,
   ClipboardList,
   ExternalLink,
   FileLock2,
@@ -19,7 +17,6 @@ import {
   ServerCog,
   Settings,
   ShieldCheck,
-  Sparkles,
   TicketCheck,
   type LucideIcon,
 } from 'lucide-react';
@@ -104,10 +101,10 @@ const workflowShortcuts = [
 ];
 
 const readinessRows = [
-  ['Access', 'Secure', colors.green],
-  ['Directory', 'Connected', colors.cyan],
-  ['Operations', 'Shared', colors.amber],
-  ['Sign-in', 'One account', colors.green],
+  ['Sign-in', 'Protected', colors.green],
+  ['Client records', 'Organization-only', colors.cyan],
+  ['Team access', 'Based on role', colors.amber],
+  ['Activity history', 'Recorded', colors.green],
 ];
 
 const shellCss = `
@@ -231,10 +228,14 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
   const isLoading = authLoading || tenantLoading;
   const hasTenantContext = !!adapter.tenantId;
   const roleLabel = platformAdmin
-    ? 'Platform super admin'
-    : activeRole
-      ? `Organization ${activeRole}`
-      : adapter.localRole;
+    ? 'Platform administrator'
+    : activeRole === 'owner'
+      ? 'Organization owner'
+      : activeRole === 'admin'
+        ? 'Organization administrator'
+        : activeRole === 'viewer'
+          ? 'Read-only access'
+          : 'Technician';
   const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
   const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
   const canWriteModule = platformAdmin || activeRole !== 'viewer';
@@ -271,29 +272,29 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
         >
           <div className="techdeck-header-top">
             <div style={{ minWidth: 0 }}>
-              <div style={eyebrowStyle}>MSP operations command layer</div>
+              <div style={eyebrowStyle}>MSP service operations</div>
               <h1 style={titleStyle}>TechDeck</h1>
               <p style={ledeStyle}>
                 Technician workspace for tickets, configuration inventory, network/IPAM, lifecycle, documentation, evidence, and time.
               </p>
             </div>
             <div className="techdeck-actions">
-              <HeaderLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} testId="techdeck-return-command-center" Icon={ArrowLeft}>
-                Command Center
+              <HeaderLink href="#techdeck-ticket-queue" testId="techdeck-open-ticket-queue" Icon={TicketCheck}>
+                Open ticket queue
               </HeaderLink>
               {canManageModule && (
                 <HeaderLink href="#techdeck-settings" testId="techdeck-module-settings-link" Icon={Settings}>
-                  Settings
+                  Manage TechDeck
                 </HeaderLink>
               )}
               {platformAdmin && (
                 <HeaderLink href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}app/platform/modules/techdeck`} testId="techdeck-platform-manage-link" Icon={ShieldCheck}>
-                  Platform Command
+                  Platform settings
                 </HeaderLink>
               )}
               {externalLaunchUrl && (
                 <HeaderLink href={externalLaunchUrl} testId="techdeck-external-launch-link" Icon={ExternalLink}>
-                  External Module
+                  Open standalone app
                 </HeaderLink>
               )}
             </div>
@@ -302,8 +303,8 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
           <div className="techdeck-chip-row">
             <ContextChip label="Organization" value={tenantLabel} tone={hasTenantContext ? colors.cyan : colors.red} testId="techdeck-tenant-badge" />
             <ContextChip label="Role" value={roleLabel} tone={platformAdmin ? colors.violet : colors.green} testId="techdeck-role-badge" />
-            <ContextChip label="Session" value="OperatorOS SSO" tone={colors.green} testId="techdeck-session-badge" />
-            <ContextChip label="Host" value={adapter.hostnames.production} tone={colors.amber} testId="techdeck-host-badge" />
+            <ContextChip label="Sign-in" value="Protected by OperatorOS" tone={colors.green} testId="techdeck-session-badge" />
+            {platformAdmin && <ContextChip label="Module address" value={adapter.hostnames.production} tone={colors.amber} testId="techdeck-host-badge" />}
           </div>
         </header>
 
@@ -313,7 +314,7 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
             tone={colors.red}
             Icon={AlertTriangle}
             title="Choose an organization"
-            body="Select an organization in the Command Center to open its technician workspace."
+            body="Return to My Apps and choose the organization whose clients and support work you want to manage."
           />
         )}
 
@@ -377,23 +378,6 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
               </section>
             )}
 
-            <section className="techdeck-panel" style={{ padding: 18 }} data-testid="techdeck-empty-state-panel">
-              <SectionHeading
-                Icon={CheckCircle2}
-                title="Consolidation boundary"
-                subtitle="Your organization, permissions, contacts, attachments, and activity history carry across the workspace."
-              />
-              <div style={emptyStateStyle} data-testid="techdeck-empty-state">
-                <Sparkles size={18} color={colors.green} />
-                <div>
-                  <div style={{ fontWeight: 800 }}>Your IT operations workspace is ready</div>
-                  <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                    Tickets, infrastructure, networks, documentation, evidence, reports, and technician time are available from one connected console.
-                  </div>
-                </div>
-              </div>
-            </section>
-
             <section
               id="techdeck-settings"
               className="techdeck-panel"
@@ -403,8 +387,8 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
             >
               <SectionHeading
                 Icon={LockKeyhole}
-                title="Settings and Admin"
-                subtitle={canManageModule ? 'Management actions are available for authorized operators.' : 'Management actions are hidden for normal module users.'}
+                title="Access and settings"
+                subtitle={canManageModule ? 'You can manage this tool because you are an organization administrator.' : 'Your administrator controls team access and settings.'}
               />
               <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
                 <AdminRow
@@ -419,7 +403,7 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
                 />
                 <AdminRow
                   label="Current access"
-                  value={canManageModule ? 'Administrative controls visible.' : 'Normal user view.'}
+                  value={canManageModule ? 'You can manage team access and settings.' : 'You can use the technical workflows assigned to you.'}
                   tone={canManageModule ? colors.amber : colors.muted}
                 />
               </div>
@@ -430,7 +414,7 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
               tone={colors.amber}
               Icon={LifeBuoy}
               title="Need help?"
-              body="Retry the action first. If access is blocked, ask your workspace administrator to review your TechDeck permissions."
+              body="Try the action again. If you still cannot open support work, contact your organization administrator. A failed attempt will not change existing records."
             />
           </section>
         </div>
@@ -679,17 +663,6 @@ const workflowPanelStyle: CSSProperties = {
   padding: 14,
   background: 'rgba(8, 13, 22, 0.62)',
   minWidth: 0,
-};
-
-const emptyStateStyle: CSSProperties = {
-  marginTop: 14,
-  display: 'flex',
-  gap: 10,
-  alignItems: 'flex-start',
-  border: `1px solid rgba(34, 197, 94, 0.35)`,
-  borderRadius: 8,
-  background: 'rgba(34, 197, 94, 0.08)',
-  padding: 14,
 };
 
 const adminRowStyle: CSSProperties = {

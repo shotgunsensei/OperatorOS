@@ -44,6 +44,7 @@ const SOURCE: readonly MarketingCatalogSource[] = [
   { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Plan, review, and prove launch campaigns are ready', planMin: 'elite', ord: 10, defaultStatus: 'live' },
   { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'AI phone agent + call automation',           planMin: 'elite',   ord: 11, defaultStatus: 'live' },
   { slug: 'ninjamation',      name: 'Ninjamation',      description: 'Reviewed PC automation scripts + AI drafts', planMin: 'elite',   ord: 12, defaultStatus: 'live' },
+  { slug: 'outcall',          name: 'OutCall',           description: 'Discreet exit-assistance and personal-safety calling', planMin: 'starter', ord: 13, defaultStatus: 'live' },
 ];
 
 export type MarketingStatus = 'Available' | 'Coming Soon' | 'Beta' | 'Locked';
@@ -70,18 +71,19 @@ export interface MarketingModule {
 }
 
 const OUTCOMES: Record<string, string> = {
-  'tradeflowkit':     'Run quotes, jobs, invoices, and payments from one operating lane.',
-  'torqueshed':       'Move vehicles through diagnostics, repair, proof, and closeout.',
-  'techdeck':         'Give technicians a dense MSP command surface for daily work.',
-  'pulsedesk':        'Coordinate clinical and support workflows without losing escalations.',
-  'faultlinelab':     'Turn hard failures into documented diagnostic evidence trails.',
-  'ninja-pool-hall':  'Give the organization an included companion engagement experience.',
-  'brandforgeos':     'Plan, generate, and ship brand assets from one creative console.',
-  'snapproofos':      'Capture proof, screenshots, and work evidence before trust breaks.',
-  'studyforge-ai':    'Turn operational knowledge into repeatable training sessions.',
-  'ninja-launch-kit': 'Stand up launch assets and internal tools without rebuilding the stack.',
-  'callcommand-ai':   'Route phone work through an AI-assisted call operations layer.',
-  'ninjamation':      'Author, review, and download tenant-owned PC automation scripts.',
+  'tradeflowkit':     'Turn a new lead into a scheduled job, approved quote, invoice, and recorded payment.',
+  'torqueshed':       'Keep each vehicle’s service history, repair evidence, reminders, and diagnostic work together.',
+  'techdeck':         'Triage tickets while keeping client systems, procedures, evidence, and technician time connected.',
+  'pulsedesk':        'Route facility and department requests without losing ownership, deadlines, or escalation history.',
+  'faultlinelab':     'Practice difficult troubleshooting scenarios and keep a clear evidence trail for every attempt.',
+  'ninja-pool-hall':  'Track players, matches, results, and community activity in one shared place.',
+  'brandforgeos':     'Build campaigns, review brand assets, and keep approved creative work organized.',
+  'snapproofos':      'Capture dated proof of work before a customer, auditor, or teammate asks for it.',
+  'studyforge-ai':    'Turn team knowledge into guided study sessions that can be reused and reviewed.',
+  'ninja-launch-kit': 'Create the launch plan, checklist, approvals, and exportable assets needed to ship.',
+  'callcommand-ai':   'Handle repetitive phone work with reviewed scripts, routing, and call history.',
+  'ninjamation':      'Create, review, approve, and download repeatable PC automation scripts.',
+  'outcall':          'Schedule a discreet safety call with a clear fallback plan and trusted contact details.',
 };
 
 const AUDIENCES: Record<string, string> = {
@@ -97,6 +99,7 @@ const AUDIENCES: Record<string, string> = {
   'ninja-launch-kit': 'Operators shipping internal tools',
   'callcommand-ai':   'Teams with high-volume calls',
   'ninjamation':      'IT operators building repeatable PC automation',
+  'outcall':          'People who want discreet personal-safety support',
 };
 
 const SOLVES: Record<string, string> = {
@@ -112,12 +115,13 @@ const SOLVES: Record<string, string> = {
   'ninja-launch-kit': 'Slow setup work before a new product or internal tool can ship.',
   'callcommand-ai':   'Missed calls and repetitive phone workflows draining operator time.',
   'ninjamation':      'Unreviewed one-off scripts with no version, approval, or download trail.',
+  'outcall':          'Awkward or unsafe situations where a planned check-in can help someone leave.',
 };
 
 export const PACKAGE_LABELS: Record<MarketingPackageType, string> = {
-  core: 'Core Product',
-  included: 'Free With Any Account',
-  companion: 'Companion Module',
+  core: 'Full business tool',
+  included: 'Included with account',
+  companion: 'Optional add-on',
 };
 
 export const PACKAGE_DESCRIPTIONS: Record<MarketingPackageType, string> = {
@@ -139,6 +143,7 @@ const PACKAGE_BY_SLUG: Record<string, MarketingPackageType> = {
   'ninja-launch-kit': 'companion',
   'callcommand-ai': 'companion',
   'ninjamation': 'companion',
+  'outcall': 'companion',
 };
 
 const IMAGE_SRC: Record<string, string> = {

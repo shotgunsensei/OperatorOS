@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Zap } from 'lucide-react';
+import { BarChart3, BookTemplate, History, Zap } from 'lucide-react';
 import { colors } from '../SaasLayout';
 import { useToast } from '../Toast';
 import { aiApi } from '@/lib/auth';
@@ -88,7 +88,7 @@ export default function AiToolsPage() {
       setPlan(toolsData.plan);
       setUsage(usageData);
     } catch (err) {
-      toast('Failed to load AI tools', 'error');
+      toast('We could not load AI tools. Your account and usage have not changed. Try again in a moment.', 'error');
     } finally {
       setLoading(false);
     }
@@ -98,7 +98,7 @@ export default function AiToolsPage() {
     try {
       const data = await aiApi.getHistory(30);
       setHistory(data.history);
-    } catch { toast('Failed to load history', 'error'); }
+    } catch { toast('We could not load AI history. Try again in a moment.', 'error'); }
   }
 
   async function loadTemplates() {
@@ -109,7 +109,7 @@ export default function AiToolsPage() {
       if (err?.code === 'FEATURE_LOCKED') {
         setTemplates([]);
       } else {
-        toast('Failed to load templates', 'error');
+        toast('We could not load saved templates. Try again in a moment.', 'error');
       }
     }
   }
@@ -131,9 +131,9 @@ export default function AiToolsPage() {
       aiApi.getUsage().then(setUsage).catch(() => {});
     } catch (err: any) {
       if (err?.code === 'AI_ACCESS_DENIED') {
-        toast(err.error || err.message || 'AI access denied', 'error');
+        toast('This AI tool is not included with your current access. Review workspace plan options or ask an organization admin.', 'error');
       } else {
-        toast(err?.error || 'AI processing failed', 'error');
+        toast('We could not generate a suggestion. Your request is still on this page. Review it and try again.', 'error');
       }
     } finally {
       setExecuting(false);
@@ -150,7 +150,7 @@ export default function AiToolsPage() {
       setTplName(''); setTplDesc(''); setTplPrompt('');
       loadTemplates();
     } catch (err: any) {
-      toast(err?.error || 'Failed to save template', 'error');
+      toast('We could not save this template. Your entries are still on this page. Check them and try again.', 'error');
     } finally {
       setTplSaving(false);
     }
@@ -161,14 +161,14 @@ export default function AiToolsPage() {
       await aiApi.deleteTemplate(id);
       toast('Template deleted', 'success');
       loadTemplates();
-    } catch { toast('Failed to delete template', 'error'); }
+    } catch { toast('We could not delete this template. It is still available. Try again in a moment.', 'error'); }
   }
 
   const tabs: { key: Tab; label: string; icon: TabIcon }[] = [
     { key: 'tools', label: 'AI Tools', icon: <Zap size={14} strokeWidth={2} style={{ verticalAlign: 'middle' }} /> },
-    { key: 'templates', label: 'Templates', icon: '📋' },
-    { key: 'history', label: 'History', icon: '🕐' },
-    { key: 'usage', label: 'Usage', icon: '📊' },
+    { key: 'templates', label: 'Templates', icon: <BookTemplate size={14} aria-hidden="true" /> },
+    { key: 'history', label: 'History', icon: <History size={14} aria-hidden="true" /> },
+    { key: 'usage', label: 'Usage', icon: <BarChart3 size={14} aria-hidden="true" /> },
   ];
 
   const planBadgeColors: Record<string, string> = {
@@ -182,7 +182,7 @@ export default function AiToolsPage() {
       <div style={{ padding: 'clamp(16px, 3vw, 40px)' }} data-testid="ai-tools-page">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', paddingTop: 80 }}>
           <div style={{ width: 40, height: 40, border: `3px solid ${colors.border}`, borderTop: `3px solid ${colors.accent}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          <div style={{ color: colors.textMuted, fontSize: 14 }}>Loading AI tools...</div>
+          <div style={{ color: colors.textMuted, fontSize: 14 }}>Loading AI tools…</div>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -482,7 +482,7 @@ function ToolExecutor({
             {executing ? (
               <>
                 <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
-                Generating...
+                Generating suggestion…
               </>
             ) : (
               <>{tool.icon} Generate</>
@@ -497,7 +497,10 @@ function ToolExecutor({
           borderRadius: 16, padding: 28,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>Result</div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>Generated suggestion</div>
+              <div style={{ marginTop: 3, color: colors.textMuted, fontSize: 12 }}>Review and edit this content before using it in business decisions or customer communication.</div>
+            </div>
             <button data-testid="button-copy-result"
               onClick={() => {
                 navigator.clipboard.writeText(result);

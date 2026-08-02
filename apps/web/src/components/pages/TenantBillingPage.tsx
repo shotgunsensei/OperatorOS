@@ -65,20 +65,21 @@ export default function TenantBillingPage() {
       if (r?.url) {
         const { openExternal } = await import('@/lib/launch');
         await openExternal(r.url);
-      } else setErr('Billing portal not configured');
+      } else setErr('Billing management is temporarily unavailable. Your plan and payment method are unchanged.');
     } catch (e: any) {
-      setErr(e?.error || 'Could not open billing portal');
+      setErr('We could not open billing management. Your plan and payment method are unchanged. Try again in a moment.');
     } finally { setBusy(null); }
   };
 
-  const cancelAddon = async (slug: string) => {
-    if (!confirm(`Cancel the ${slug} add-on at end of period?`)) return;
+  const cancelAddon = async (addon: AddonRow) => {
+    const slug = addon.module.slug;
+    if (!confirm(`Cancel ${addon.module.name} at the end of the current billing period? Access continues until then.`)) return;
     setErr(null); setBusy(slug);
     try {
       await modulesApi.cancelAddon(slug);
       await refresh();
     } catch (e: any) {
-      setErr(e?.error || 'Could not cancel add-on');
+      setErr(`We could not schedule cancellation for ${addon.module.name}. Access and billing are unchanged. Try again in a moment.`);
     } finally { setBusy(null); }
   };
 
@@ -88,7 +89,7 @@ export default function TenantBillingPage() {
       await billingApi.changeFreeCompanion(moduleKey);
       await refresh();
     } catch (e: any) {
-      setErr(e?.error || e?.message || 'Could not change included companion module');
+      setErr('We could not change the included tool. Your current selection is unchanged. Try again in a moment.');
     } finally { setBusy(null); }
   };
 
@@ -111,23 +112,23 @@ export default function TenantBillingPage() {
   const freeCompanionEntitlement = activeEntitlements.find((row: any) => row.source === 'selected_free_companion');
   const coreProductName = coreEntitlement
     ? CORE_PRODUCTS_BY_KEY[coreEntitlement.entitlementKey as keyof typeof CORE_PRODUCTS_BY_KEY]?.name ?? coreEntitlement.entitlementKey
-    : 'No core product';
+    : 'No tool package selected';
 
   return (
     <div style={{ padding: space.xxl, maxWidth: 1100, margin: '0 auto' }} data-testid="page-tenant-billing">
       <header style={{ marginBottom: space.xl, display: 'flex', alignItems: 'center', gap: 12 }}>
         <Receipt size={24} color={semantic.accent} />
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: '#fff' }}>Tenant Billing</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: '#fff' }}>Billing and add-ons</h1>
           <p style={{ color: semantic.textMuted, margin: '4px 0 0', fontSize: fontSize.body }}>
-            Subscription, usage, and add-ons for {tenantName ? <strong>{tenantName}</strong> : 'the active tenant'}.
-            {!isOwner && <span style={{ marginLeft: 8, color: semantic.accentWarning }}>Read-only \u2014 only owners can manage billing.</span>}
+            Tool package, team seats, and paid add-ons for {tenantName ? <strong>{tenantName}</strong> : 'this organization'}.
+            {!isOwner && <span style={{ marginLeft: 8, color: semantic.accentWarning }}>Read-only — only the organization owner can make billing changes.</span>}
           </p>
         </div>
       </header>
 
       {loading ? (
-        <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="tenant-billing-loading">Loading tenant billing...</div>
+        <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="tenant-billing-loading">Loading organization billing…</div>
       ) : (
         <>
           <div
@@ -140,21 +141,21 @@ export default function TenantBillingPage() {
           >
             <div style={cardStyle} data-testid="tenant-billing-plan">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: semantic.textMuted, fontSize: fontSize.sm, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                <CreditCard size={14} /> Core Product
+                <CreditCard size={14} /> Tool package
               </div>
               <div style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginTop: space.sm }}>{coreProductName}</div>
-              <div style={{ marginTop: space.sm }}><span style={statusBadge}>{status}</span></div>
+              <div style={{ marginTop: space.sm }}><span style={statusBadge}>{status === 'active' ? 'Active' : status === 'trialing' ? 'Trial' : status === 'past_due' ? 'Payment needed' : status === 'canceled' ? 'Canceled' : status === 'unpaid' ? 'Payment needed' : 'Status unavailable'}</span></div>
             </div>
             <div style={cardStyle} data-testid="tenant-billing-usage">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: semantic.textMuted, fontSize: fontSize.sm, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                <Package size={14} /> Seats Included
+                <Package size={14} /> Team seats included
               </div>
               <div style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginTop: space.sm }}>
                 {stack?.seatLimit ?? 0}
               </div>
               {usage?.aiCallsThisMonth != null && (
                 <div style={{ marginTop: space.sm, fontSize: fontSize.sm, color: semantic.textMuted }}>
-                  AI calls this month: {usage.aiCallsThisMonth}
+                  AI actions this month: {usage.aiCallsThisMonth}
                 </div>
               )}
             </div>
@@ -162,21 +163,21 @@ export default function TenantBillingPage() {
               <div>
                 <div style={{ color: semantic.textMuted, fontSize: fontSize.sm, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Manage</div>
                 <p style={{ color: semantic.textMuted, fontSize: fontSize.sm, margin: `${space.sm}px 0 0` }}>
-                  Open the Stripe customer portal to update card, download invoices, or change plan.
+                  Open the secure billing page to update the payment method, download invoices, or change the package.
                 </p>
               </div>
               <button
                 data-testid="button-open-portal"
                 onClick={openPortal}
                 disabled={!isOwner || busy === 'portal'}
-                title={!isOwner ? 'Only tenant owners can open the billing portal' : undefined}
+                title={!isOwner ? 'Only the organization owner can manage billing' : undefined}
                 style={{
                   ...buttonStyles.primary, marginTop: space.md, opacity: !isOwner ? 0.5 : 1,
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   cursor: !isOwner ? 'not-allowed' : 'pointer',
                 }}
               >
-                <ExternalLink size={14} /> {busy === 'portal' ? 'Opening\u2026' : 'Open billing portal'}
+                <ExternalLink size={14} /> {busy === 'portal' ? 'Opening…' : 'Manage billing securely'}
               </button>
             </div>
           </div>
@@ -190,14 +191,14 @@ export default function TenantBillingPage() {
           {coreEntitlement && (
             <section style={{ ...panelStyle, marginBottom: space.xl }} data-testid="tenant-billing-free-companion">
               <div style={{ padding: '12px 16px', borderBottom: `1px solid ${semantic.border}` }}>
-                <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Included Companion Module</h2>
+                <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Included tool</h2>
                 <p style={{ color: semantic.textMuted, fontSize: fontSize.sm, margin: '5px 0 0' }}>
-                  One companion module is included at $0 while your core product is active.
+                  Choose one additional tool at no extra charge while this tool package is active.
                 </p>
               </div>
               <div style={{ padding: 16 }}>
                 <select
-                  aria-label="Included companion module"
+                  aria-label="Included tool"
                   value={freeCompanionEntitlement?.entitlementKey ?? ''}
                   disabled={!isOwner || busy === 'free-companion'}
                   onChange={event => changeFreeCompanion(event.target.value)}
@@ -207,7 +208,7 @@ export default function TenantBillingPage() {
                     color: '#fff', fontSize: fontSize.body,
                   }}
                 >
-                  <option value="" disabled>Select a companion module</option>
+                  <option value="" disabled>Select an included tool</option>
                   {COMPANION_MODULES.map(module => (
                     <option key={module.key} value={module.key}>{module.name} — $0 included</option>
                   ))}
@@ -219,11 +220,12 @@ export default function TenantBillingPage() {
           <section style={{ ...panelStyle, marginBottom: space.xl }} data-testid="tenant-billing-addons">
             <div style={{ padding: '12px 16px', borderBottom: `1px solid ${semantic.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Package size={14} color={semantic.accentInfo} />
-              <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Additional Modules</h2>
+              <h2 style={{ fontSize: fontSize.md, fontWeight: 600, margin: 0, color: '#fff' }}>Paid add-ons</h2>
             </div>
             {addons.length === 0 ? (
               <div data-testid="tenant-addons-empty" style={{ padding: space.lg, color: semantic.textMuted, fontSize: fontSize.body }}>
-                No additional paid modules are active for this tenant.
+                No paid add-ons are active for this organization.
+                <div style={{ marginTop: 12 }}><a href="/app?page=apps" style={{ color: semantic.accent, fontWeight: 700 }}>Browse available tools</a></div>
               </div>
             ) : addons.map(a => (
               <div
@@ -243,15 +245,15 @@ export default function TenantBillingPage() {
                 {a.unlocked && (
                   <button
                     data-testid={`button-cancel-addon-${a.module.slug}`}
-                    onClick={() => cancelAddon(a.module.slug)}
+                    onClick={() => cancelAddon(a)}
                     disabled={!isOwner || busy === a.module.slug}
-                    title={!isOwner ? 'Only tenant owners can cancel add-ons' : undefined}
+                    title={!isOwner ? 'Only the organization owner can cancel add-ons' : undefined}
                     style={{
                       ...buttonStyles.danger, padding: '6px 10px', fontSize: fontSize.sm,
                       cursor: !isOwner ? 'not-allowed' : 'pointer', opacity: !isOwner ? 0.5 : 1,
                     }}
                   >
-                    {busy === a.module.slug ? 'Canceling\u2026' : 'Cancel'}
+                    {busy === a.module.slug ? 'Canceling…' : `Cancel ${a.module.name}`}
                   </button>
                 )}
               </div>

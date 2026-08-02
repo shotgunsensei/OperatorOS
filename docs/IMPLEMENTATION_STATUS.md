@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-08-02
-- Phase: **18 — OutCall Activation and Customer Experience Closure**
+- Phase: **19 — Shared Customer Experience System**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -20,8 +20,76 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/phase18-release-candidate-closure`
+- Execution branch: `codex/phase19-customer-experience`
 - Release gate: **closed**
+
+## 2026-08-02 Phase 19 shared customer experience system
+
+The authenticated OperatorOS experience now uses one clearer, customer-facing
+shell across ordinary members, organization administrators, platform
+administrators, and all thirteen active module hosts. This source/local
+candidate changes presentation and recovery behavior only; it does not change
+identity, exact-host SSO, session cookies, organization authority, roles,
+entitlements, billing ownership, module persistence, or database schema.
+
+The shared shell now groups work under Workspace, Organization, Platform, and
+Account; identifies the current location; provides an explicit module switch,
+help, organization switch, user menu, skip navigation, and visible keyboard
+focus; and uses plain customer labels for module access, team members, billing,
+settings, and platform administration. The default Home surface explains how
+to begin work, shows only server-authoritative module access, exposes specific
+**Open {module}** actions, and adapts its header/setup controls to narrow
+screens without inventing cross-module attention metrics.
+
+Global experience tokens replace near-black, low-contrast console surfaces
+with neutral slate surfaces, stronger text hierarchy, restrained shadows,
+larger default type, consistent actions, reduced-motion handling, and reusable
+page/empty/error/field-message primitives. Browser zoom is no longer disabled.
+Account forms now have programmatic labels and autocomplete hints, specific
+save/delete actions, and recovery copy that states whether data changed.
+Module browsing now has a labeled search field, pressed-state filters, a useful
+empty result with one-step reset, specific module actions, and no raw billing
+environment names. Workspace billing separates capacity from organization
+module access, explains failed loads safely, names reduction/cancellation
+consequences, and provides a useful empty history. AI tools use vector icons,
+safe errors, and an explicit human-review reminder for generated suggestions.
+Every active module inherits organization/user context plus clearer account,
+billing, help, and sign-out navigation with mobile-sized actions.
+
+The bounded inventory, design decisions, and route-by-route coverage are in
+`docs/OPERATOROS_CUSTOMER_EXPERIENCE_PHASE19.md`.
+
+The skeptical customer-readiness follow-up then evaluated the source candidate
+as a one-person field service business, complexity-averse mechanic, healthcare
+office manager, 25-person MSP, nontechnical employee, and purchasing business
+owner. It fixed the no-organization Home dead end; reduced Home to ready/addable
+tools; normalized customer navigation to **Browse tools** and **Tool access**;
+added plain first actions to TradeFlowKit, TorqueShed, PulseDesk, and TechDeck;
+clarified the nonclinical PulseDesk boundary and the account-plan versus paid-
+tool billing boundary; made purchase failures state that nothing was charged;
+corrected team access labels to the actual server-supported values; improved
+narrow-screen controls/forms; and added OutCall to the customer catalog without
+inventing artwork, pricing, or entitlement. Findings, route coverage, product-
+owner decisions, and the strongest before/after proof are recorded in
+`docs/OPERATOROS_CUSTOMER_READINESS_REVIEW_PHASE19.md`.
+
+Fresh source/local verification:
+
+| Gate | Result |
+| --- | --- |
+| Focused customer-readiness, navigation, launch, billing, ecosystem, pricing, role, and icon contracts | PASS 39/39 |
+| Focused public marketing shell/catalog contracts | PASS 27, FAIL 0, SKIP 6 HTTP-only cases because no dev server was running |
+| Web TypeScript | PASS via `corepack pnpm --dir apps/web typecheck` |
+| Workspace TypeScript | PASS across API, runner gateway, and web via `corepack pnpm typecheck` |
+| Production build | PASS via `INTERNAL_API_URL=http://localhost:5001; corepack pnpm build:production`; API, runner, and Next 15.5.22 compiled, with 20/20 Next route entries generated |
+| Database release plan | PASS v33/33; additive, non-destructive; no apply performed |
+| Production core preflight | EXPECTED ENVIRONMENT BLOCK: missing production database/secrets, production flags, canonical module URLs, release-apply mode, and proxy setting; no values were printed and no production state was touched |
+| Browser visual, keyboard, responsive, and screenshot proof | NOT RUN: the Product Design in-app Browser is not exposed in this Codex session; direct Playwright capture was not substituted without a user-selected browser |
+
+The release gate remains closed. This pass is not deployed and does not claim
+WCAG 2.2 AA conformance, authenticated deployed acceptance, live provider
+acceptance, database apply, backup/restore, cutover, rollback, or module State
+5. Those gates remain exactly as recorded by Phase 18.
 
 ## 2026-08-02 Phase 18 merged-main release-candidate closure
 

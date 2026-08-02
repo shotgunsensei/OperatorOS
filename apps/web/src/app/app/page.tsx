@@ -74,6 +74,12 @@ function AppContent() {
   }, [user?.id]);
 
   useEffect(() => {
+    const restoreRoute = () => setActivePage(initialConsolePage());
+    window.addEventListener('popstate', restoreRoute);
+    return () => window.removeEventListener('popstate', restoreRoute);
+  }, []);
+
+  useEffect(() => {
     if (loading || !user) return;
     let pending: string | null = null;
     try { pending = sessionStorage.getItem('operatoros.pendingInviteToken'); } catch {}
@@ -112,21 +118,23 @@ function AppContent() {
       const url = new URL(window.location.href);
       if (page === 'my-apps') url.searchParams.delete('page');
       else url.searchParams.set('page', page);
-      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+      const nextRoute = `${url.pathname}${url.search}${url.hash}`;
+      const currentRoute = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (nextRoute !== currentRoute) window.history.pushState(null, '', nextRoute);
     }
     setActivePage(page);
   };
 
   const renderPage = () => {
     switch (activePage) {
-      case 'my-apps': return <MyAppsPage onNavigate={setActivePage} />;
-      case 'apps': return <AppsPage onNavigate={setActivePage} />;
+      case 'my-apps': return <MyAppsPage onNavigate={handleNavigate} />;
+      case 'apps': return <AppsPage onNavigate={handleNavigate} />;
       case 'ai-tools': return <AiToolsPage />;
       case 'billing': return <BillingPage />;
       case 'settings': return <SettingsPage />;
       case 'command-center':
         return userIsTenantAdmin
-          ? <TenantCommandCenterPage onNavigate={setActivePage} />
+          ? <TenantCommandCenterPage onNavigate={handleNavigate} />
           : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can access the Command Center." />;
       case 'tenant-users':
         return userIsTenantAdmin
@@ -148,7 +156,7 @@ function AppContent() {
         return userIsSuperAdmin
           ? <PlatformPage />
           : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only platform super-administrators can access this page." />;
-      default: return <MyAppsPage onNavigate={setActivePage} />;
+      default: return <MyAppsPage onNavigate={handleNavigate} />;
     }
   };
 

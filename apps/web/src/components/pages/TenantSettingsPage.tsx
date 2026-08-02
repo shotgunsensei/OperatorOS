@@ -90,7 +90,7 @@ export default function TenantSettingsPage() {
       // dropdown re-renders with the new name without a page reload.
       try { await tenantCtx.refresh(); } catch { /* best-effort */ }
     } catch (e: any) {
-      setErr(e?.error || 'Failed to rename tenant');
+      setErr('We could not save the organization name. The current name is unchanged. Check the entry and try again.');
     } finally { setBusy(false); }
   };
 
@@ -100,7 +100,7 @@ export default function TenantSettingsPage() {
     if (!target) return;
     if (!confirm(
       `Transfer ownership of "${tenant.name}" to ${target.name || target.email}? ` +
-      `You will be demoted to admin. This is reversible only by the new owner.`,
+      `Your role will change to administrator. Only the new owner can reverse this change.`,
     )) return;
     setTransferErr(null); setTransferBusy(true);
     try {
@@ -114,7 +114,7 @@ export default function TenantSettingsPage() {
       if (t) setTenant(t);
       setTransferTo('');
     } catch (e: any) {
-      setTransferErr(e?.error || 'Transfer failed');
+      setTransferErr('We could not transfer ownership. The current owner and team access are unchanged. Try again in a moment.');
     } finally { setTransferBusy(false); }
   };
 
@@ -132,11 +132,11 @@ export default function TenantSettingsPage() {
       <header style={{ marginBottom: space.xl, display: 'flex', alignItems: 'center', gap: 12 }}>
         <SettingsIcon size={24} color={semantic.accent} />
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#fff' }}>Tenant Settings</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#fff' }}>Organization settings</h1>
           <p style={{ color: semantic.textMuted, margin: '4px 0 0', fontSize: fontSize.body }}>
             {isOwner
-              ? 'Update your tenant\u2019s display name, transfer ownership, or review metadata.'
-              : 'Read-only view. Only tenant owners can change settings.'}
+              ? 'Update the organization name or choose another team member to become the owner.'
+              : 'Read-only view. Only the organization owner can change these settings.'}
           </p>
         </div>
       </header>
@@ -155,10 +155,10 @@ export default function TenantSettingsPage() {
           <AlertTriangle size={18} color={semantic.accentDanger} />
           <div>
             <div style={{ color: semantic.accentDanger, fontWeight: 600, fontSize: fontSize.body }}>
-              This tenant is suspended.
+              This organization is suspended.
             </div>
             <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-              Settings, rename, and ownership transfer are disabled until a platform admin restores access.
+              Name changes and ownership transfer are unavailable until a platform administrator restores access.
             </div>
           </div>
         </div>
@@ -168,17 +168,18 @@ export default function TenantSettingsPage() {
         <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="tenant-settings-loading">Loading\u2026</div>
       ) : !tenant ? (
         <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="tenant-settings-empty">
-          No active tenant.
+          No organization is selected. Return to Home and choose an organization first.
         </div>
       ) : (
         <>
           {/* Rename */}
           <form onSubmit={save} style={{ ...cardStyle, marginBottom: space.lg }}>
-            <label style={{ fontSize: fontSize.sm, color: semantic.textMuted, display: 'block', marginBottom: 6 }}>
-              Display name
+            <label htmlFor="organization-display-name" style={{ fontSize: fontSize.sm, color: semantic.textMuted, display: 'block', marginBottom: 6 }}>
+              Organization name
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <input
+                id="organization-display-name"
                 data-testid="input-tenant-name"
                 value={name}
                 onChange={e => setName(e.target.value)}
@@ -196,8 +197,8 @@ export default function TenantSettingsPage() {
                 type="submit"
                 disabled={!isOwner || !dirty || busy || isSuspended}
                 title={
-                  isSuspended ? 'Tenant is suspended'
-                  : !isOwner ? 'Only tenant owners can rename the tenant'
+                  isSuspended ? 'Organization is suspended'
+                  : !isOwner ? 'Only the organization owner can rename it'
                   : undefined
                 }
                 style={{
@@ -208,7 +209,7 @@ export default function TenantSettingsPage() {
                   display: 'flex', alignItems: 'center', gap: 6,
                 }}
               >
-                <Save size={14} /> {busy ? 'Saving\u2026' : 'Save'}
+                 <Save size={14} /> {busy ? 'Saving…' : 'Save organization name'}
               </button>
             </div>
             {err && (
@@ -218,7 +219,7 @@ export default function TenantSettingsPage() {
             )}
             {savedAt && !err && (
               <div data-testid="tenant-settings-saved" style={{ color: semantic.accentSuccess, fontSize: fontSize.sm, marginTop: 8 }}>
-                Saved.
+                Organization name saved.
               </div>
             )}
           </form>
@@ -233,11 +234,11 @@ export default function TenantSettingsPage() {
                 </h2>
               </div>
               <p style={{ color: semantic.textMuted, fontSize: fontSize.sm, margin: `0 0 ${space.md}px` }}>
-                Promote another member to owner. You will be demoted to admin. The transfer is staged
-                so the tenant always has at least one owner.
+                Choose another team member to become the owner. Your role will change to administrator, and only the new owner can reverse the transfer.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 <select
+                  aria-label="New organization owner"
                   data-testid="select-transfer-target"
                   value={transferTo}
                   onChange={e => setTransferTo(e.target.value)}
@@ -251,7 +252,7 @@ export default function TenantSettingsPage() {
                   <option value="">{otherMembers.length === 0 ? 'No other members yet' : 'Choose a member\u2026'}</option>
                   {otherMembers.map(m => (
                     <option key={m.userId} value={m.userId}>
-                      {(m.name || m.email)} ({m.role})
+                      {(m.name || m.email)} ({m.role === 'admin' ? 'Administrator' : m.role === 'owner' ? 'Owner' : 'Team member'})
                     </option>
                   ))}
                 </select>
@@ -259,7 +260,7 @@ export default function TenantSettingsPage() {
                   data-testid="button-transfer-ownership"
                   onClick={transfer}
                   disabled={!transferTo || transferBusy || isSuspended}
-                  title={isSuspended ? 'Tenant is suspended' : undefined}
+                  title={isSuspended ? 'Organization is suspended' : undefined}
                   style={{
                     ...buttonStyles.primary,
                     background: !transferTo || isSuspended ? semantic.bgHover : semantic.accentWarning,
@@ -276,20 +277,23 @@ export default function TenantSettingsPage() {
             </section>
           )}
 
-          {/* Read-only metadata */}
           <div style={panelStyle}>
-            {meta('Slug', tenant.slug, 'value-tenant-slug')}
-            {meta('Type', tenant.type, 'value-tenant-type')}
             {meta(
-              'Status',
+              'Organization status',
               <span style={
                 tenant.status === 'suspended' ? badgeStyles.danger
                 : tenant.status === 'archived' ? badgeStyles.neutral
                 : badgeStyles.success
-              }>{tenant.status}</span>,
+              }>{tenant.status === 'active' ? 'Active' : tenant.status === 'suspended' ? 'Suspended' : 'Archived'}</span>,
               'value-tenant-status',
             )}
-            {tenant.role && meta('Your role', tenant.role, 'value-tenant-role')}
+            {tenant.role && meta('Your role', tenant.role === 'owner' ? 'Owner' : tenant.role === 'admin' ? 'Administrator' : 'Team member', 'value-tenant-role')}
+            {isOwner && (
+              <details style={{ borderTop: `1px solid ${semantic.border}`, padding: '12px 16px', color: semantic.textMuted }}>
+                <summary style={{ cursor: 'pointer', color: semantic.text, fontWeight: 700 }}>Technical organization details</summary>
+                <div style={{ marginTop: 10 }}>{meta('Organization identifier', tenant.slug, 'value-tenant-slug')}{meta('Organization type', tenant.type, 'value-tenant-type')}</div>
+              </details>
+            )}
           </div>
         </>
       )}

@@ -28,9 +28,10 @@ test('module route renders shared identity, tenant, navigation, and global logou
   const consolePage = read('apps/web/src/app/app/page.tsx');
   const header = read('apps/web/src/components/module-shells/OperatorOSEcosystemHeader.tsx');
   assert.match(page, /OperatorOSEcosystemHeader/);
-  for (const label of ['My Apps', 'Profile', 'Billing', 'Support', 'Logout']) {
+  for (const label of ['My Apps', 'Profile and security', 'Billing and plans', 'Help and support']) {
     assert.match(header, new RegExp(`['\"]${label}['\"]`));
   }
+  assert.match(header, /Sign out/);
   assert.match(header, /activeTenant\?\.name/);
   assert.match(header, /user\?\.name \|\| user\?\.email/);
   assert.match(header, /logoutEverywhere/);

@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Sparkles, Filter, Settings as SettingsIcon, Lock } from 'lucide-react';
+import { Search, Filter, Settings as SettingsIcon, Lock } from 'lucide-react';
 import { modulesApi, meApi } from '@/lib/auth';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/components/AuthProvider';
 import { colors } from '@/lib/design-tokens';
 import { MARKETING_MODULES } from '@/lib/marketing-catalog';
 import { friendlyModuleLaunchError, launchModuleViaSso } from '@/lib/module-launch';
+import { EmptyState, ErrorState, PageHeader } from '@/components/ExperiencePrimitives';
 
 type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
 type ModuleCta = 'open' | 'upgrade' | 'buy_addon' | 'coming_soon' | 'disabled';
@@ -49,16 +50,16 @@ interface ModuleListResponse {
 const sourceLabel: Record<string, { label: string; color: string; bg: string }> = {
   plan:       { label: 'Included',  color: '#3fb950', bg: 'rgba(63,185,80,0.15)' },
   addon:      { label: 'Add-on',    color: '#bc8cff', bg: 'rgba(188,140,255,0.15)' },
-  override:   { label: 'Granted',   color: '#58a6ff', bg: 'rgba(88,166,255,0.15)' },
-  admin_role: { label: 'Admin',     color: '#f0b400', bg: 'rgba(240,180,0,0.15)' },
-  locked:     { label: 'Locked',    color: '#8b949e', bg: 'rgba(139,148,158,0.15)' },
+  override:   { label: 'Access granted', color: '#58a6ff', bg: 'rgba(88,166,255,0.15)' },
+  admin_role: { label: 'Administrator', color: '#f0b400', bg: 'rgba(240,180,0,0.15)' },
+  locked:     { label: 'Not included', color: '#8b949e', bg: 'rgba(139,148,158,0.15)' },
 };
 
 const statusLabel: Record<string, { label: string; color: string }> = {
-  live:        { label: 'Live',        color: '#3fb950' },
+  live:        { label: 'Ready',       color: '#3fb950' },
   beta:        { label: 'Beta',        color: '#d29922' },
-  coming_soon: { label: 'Coming Soon', color: '#8b949e' },
-  disabled:    { label: 'Disabled',    color: '#f85149' },
+  coming_soon: { label: 'Planned',     color: '#8b949e' },
+  disabled:    { label: 'Unavailable', color: '#f85149' },
 };
 
 const marketingBySlug = new Map(MARKETING_MODULES.map((m) => [m.slug, m]));
@@ -69,9 +70,29 @@ function priceLabel(cents: number | null): string {
   return dollars % 1 === 0 ? `$${dollars}/mo` : `$${dollars.toFixed(2)}/mo`;
 }
 
+function accessReason(reason?: string): string {
+  const messages: Record<string, string> = {
+    addon_required: 'Available as an add-on',
+    module_access_denied: 'Ask an organization admin for access',
+    module_disabled: 'Temporarily unavailable',
+    module_not_seeded: 'Not available in this workspace',
+    module_planned: 'Planned for a future release',
+    tenant_required: 'Choose an organization first',
+    upgrade_required: 'Another workspace plan is required',
+  };
+  return reason ? (messages[reason] ?? 'Access is not available for this organization') : '';
+}
+
+function humanize(value: string): string {
+  return value
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
 export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) => void } = {}) {
   const [modules, setModules] = useState<ModuleSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [launching, setLaunching] = useState<string | null>(null);
   const [warningShown, setWarningShown] = useState(false);
   const [search, setSearch] = useState('');
@@ -113,6 +134,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
   const load = async () => {
     try {
       setLoading(true);
+      setLoadError(false);
       const data = (await modulesApi.list()) as ModuleListResponse;
       setModules(data.modules);
       if (data.ssoFallback && data.warning && !warningShown) {
@@ -120,7 +142,9 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
         setWarningShown(true);
       }
     } catch (err: any) {
-      toast(`Failed to load modules: ${err.error || err.message}`, 'error');
+      setModules([]);
+      setLoadError(true);
+      toast('We could not load the tool catalog. Your access has not changed. Try again in a moment.', 'error');
     } finally {
       setLoading(false);
     }
@@ -132,7 +156,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
     setLaunching(slug);
     try {
       await launchModuleViaSso(slug);
-      toast('Launching module through OperatorOS SSO', 'success');
+      toast('Opening your tool securely', 'success');
     } catch (err: any) {
       toast(friendlyModuleLaunchError(err), 'error');
     } finally {
@@ -150,7 +174,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
       toast(result.action === 'already_active' ? 'Add-on already active' : 'Add-on activated', 'success');
       await load();
     } catch (err: any) {
-      toast(`Could not subscribe: ${err.error || err.message}`, 'error');
+      toast('We could not start the add-on purchase. Nothing was charged. Check your billing access and try again.', 'error');
     }
   };
 
@@ -249,7 +273,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
         {marketing?.imageSrc && (
           <img
             src={marketing.imageSrc}
-            alt={`${m.name} marketplace module visual.`}
+            alt={`${m.name} illustration.`}
             loading="lazy"
             style={{ width: '100%', height: 128, objectFit: 'cover', display: 'block' }}
           />
@@ -272,19 +296,25 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
         </div>
 
         <div style={{ fontSize: 13, color: colors.textMuted, minHeight: 36, padding: '0 20px' }}>
-          {marketing?.outcome || m.description || 'OperatorOS module in the parent ecosystem.'}
+          {marketing?.outcome || m.description || 'A business tool available through OperatorOS.'}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: colors.textDim, padding: '0 20px' }}>
           <span>
-            <strong style={{ color: colors.text }}>{marketing?.packageLabel ?? 'Ecosystem module'}</strong>
+            <strong style={{ color: colors.text }}>{marketing?.packageLabel ?? 'OperatorOS tool'}</strong>
           </span>
           {!unlocked && reason && (
             <span data-testid={`module-reason-${m.slug}`} style={{ fontStyle: 'italic' }}>
-              {reason.replace(/_/g, ' ')}
+              {accessReason(reason)}
             </span>
           )}
         </div>
+
+        {requested[m.slug] && (
+          <div role="status" style={{ margin: '0 20px', padding: '9px 10px', borderRadius: 8, border: `1px solid ${colors.accentPurple}55`, background: `${colors.accentPurple}12`, color: colors.text, fontSize: 12, lineHeight: 1.45 }}>
+            Ask your organization owner or administrator to open Tool access and add {m.name} for you.
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 'auto', padding: '0 20px 20px' }}>
           {cta === 'open' && (
@@ -293,27 +323,27 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
               onClick={() => launch(m.slug)}
               disabled={launching === m.slug}
               style={{
-                flex: 1, padding: '8px 14px', borderRadius: 8, border: 'none',
+                flex: 1, minHeight: 40, padding: '8px 14px', borderRadius: 8, border: 'none',
                 background: colors.accent, color: '#fff', fontWeight: 600,
                 fontSize: 13, cursor: launching === m.slug ? 'wait' : 'pointer',
               }}
             >
-              {launching === m.slug ? 'Launching\u2026' : 'Open App'}
+              {launching === m.slug ? `Opening ${m.name}…` : `Open ${m.name}`}
             </button>
           )}
           {isTenantAdmin && (
             <button
               data-testid={`button-manage-${m.slug}`}
               onClick={() => onNavigate ? onNavigate('tenant-modules') : null}
-              title="Manage this app for your organization"
+              title={`Manage ${m.name} access for this organization`}
               style={{
-                padding: '8px 12px', borderRadius: 8,
+                minHeight: 40, padding: '8px 12px', borderRadius: 8,
                 border: `1px solid ${colors.border}`, background: 'transparent',
                 color: colors.textMuted, fontSize: 12, cursor: 'pointer',
                 display: 'inline-flex', alignItems: 'center', gap: 4,
               }}
             >
-              <SettingsIcon size={12} /> Manage
+              <SettingsIcon size={12} aria-hidden="true" /> Manage access
             </button>
           )}
           {cta === 'coming_soon' && (
@@ -322,7 +352,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
               disabled
               title={reason ? reason.replace(/_/g, ' ') : 'This module is not available yet'}
               style={{
-                flex: 1, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
+                flex: 1, minHeight: 40, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
                 background: 'transparent', color: colors.textMuted, fontSize: 13, cursor: 'not-allowed',
               }}
             >Not available yet</button>
@@ -332,12 +362,12 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
               data-testid={`button-subscribe-${m.slug}`}
               onClick={() => subscribe(m.slug)}
               style={{
-                flex: 1, padding: '8px 14px', borderRadius: 8,
+                flex: 1, minHeight: 40, padding: '8px 14px', borderRadius: 8,
                 border: `1px solid ${colors.accent}`, background: 'transparent',
                 color: colors.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
               }}
             >
-              {priceLabel(addon_price_cents) ? `Add to stack — ${priceLabel(addon_price_cents)}` : 'Add to stack'}
+              {priceLabel(addon_price_cents) ? `Add ${m.name} — ${priceLabel(addon_price_cents)}` : `Add ${m.name}`}
             </button>
           )}
           {cta === 'upgrade' && (
@@ -345,12 +375,12 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
               data-testid={`button-upgrade-${m.slug}`}
               onClick={() => onNavigate ? onNavigate('billing') : (window.location.href = '/')}
               style={{
-                flex: 1, padding: '8px 14px', borderRadius: 8,
+                flex: 1, minHeight: 40, padding: '8px 14px', borderRadius: 8,
                 border: `1px solid ${colors.accent}`, background: 'transparent',
                 color: colors.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer',
               }}
             >
-              View stack options
+              View plan options
             </button>
           )}
           {cta === 'disabled' && (() => {
@@ -371,18 +401,17 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                   data-testid={`button-request-${m.slug}`}
                   onClick={() => {
                     setRequested(r => ({ ...r, [m.slug]: true }));
-        toast('Ask an organization admin to grant this app from Organization Apps.', 'success');
+                    toast('Ask your organization owner or administrator to add this tool under Tool access.', 'success');
                   }}
-                  disabled={sent}
                   style={{
-                    flex: 1, padding: '8px 14px', borderRadius: 8,
+                    flex: 1, minHeight: 40, padding: '8px 14px', borderRadius: 8,
                     border: `1px solid ${colors.accentPurple}`, background: 'transparent',
                     color: colors.accentPurple, fontSize: 13, fontWeight: 600,
-                    cursor: sent ? 'default' : 'pointer',
+                    cursor: 'pointer',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}
                 >
-                  <Lock size={12} /> {sent ? 'Guidance shown' : 'Ask admin'}
+                  <Lock size={12} aria-hidden="true" /> {sent ? 'Access instructions shown' : 'How to get access'}
                 </button>
               );
             }
@@ -392,14 +421,14 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                 disabled
                 title={
                   stripeMissing
-                    ? 'Stripe billing is not configured for this add-on; ask a platform admin to set STRIPE_PRICE_*.'
+                    ? 'A purchase cannot be started right now. Nothing will be charged. Contact support for help.'
                     : (reason ? reason.replace(/_/g, ' ') : 'This app is currently unavailable')
                 }
                 style={{
-                  flex: 1, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
+                  flex: 1, minHeight: 40, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
                   background: 'transparent', color: colors.textMuted, fontSize: 13, cursor: 'not-allowed',
                 }}
-              >{stripeMissing ? 'Billing not configured' : 'Unavailable'}</button>
+              >{stripeMissing ? 'Purchase temporarily unavailable' : 'Unavailable'}</button>
             );
           })()}
         </div>
@@ -410,37 +439,46 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
   if (loading) {
     return (
       <div style={{ padding: 32, color: colors.textMuted, fontSize: 14 }} data-testid="apps-loading">
-        Loading your apps...
+        Loading the tool catalog…
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 'clamp(16px, 4vw, 32px)', maxWidth: 1200, margin: '0 auto' }} data-testid="apps-page">
-      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Sparkles size={24} color={colors.accentPurple} />
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Module Marketplace</h1>
-          <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 6 }}>
-            One login for the OperatorOS ecosystem, with the right apps for your organization and plan.
-          </p>
+    <div className="ops-page" style={{ maxWidth: 1200 }} data-testid="apps-page">
+      <PageHeader
+        eyebrow="Workspace"
+        title="Browse tools"
+        description="Find the OperatorOS tool that matches the work you need to complete. Each card shows availability and the exact next step for this organization."
+      />
+
+      {loadError && (
+        <div style={{ marginBottom: 24 }}>
+          <ErrorState
+            title="Tools could not be loaded"
+            description="Your access has not changed. Check your connection, then try loading the list again."
+            action={<button type="button" onClick={() => void load()} style={{ minHeight: 40, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.bgHover, color: colors.text, cursor: 'pointer', fontWeight: 700 }}>Reload tools</button>}
+          />
         </div>
-      </div>
+      )}
 
       {/* Search + category pills */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 8, padding: '6px 10px', flex: '1 1 240px', maxWidth: 360, minWidth: 0 }}>
-          <Search size={14} color={colors.textDim} />
+          <Search size={16} color={colors.textDim} aria-hidden="true" />
+          <label className="ops-visually-hidden" htmlFor="marketplace-search">Search tools</label>
           <input
+            id="marketplace-search"
+            type="search"
             data-testid="input-marketplace-search"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search apps\u2026"
+            placeholder="Search by tool or outcome"
             style={{ flex: 1, background: 'transparent', border: 'none', color: colors.text, fontSize: 13, outline: 'none' }}
           />
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', minWidth: 0 }}>
-          <Filter size={12} color={colors.textDim} />
+        <div role="group" aria-label="Tool category" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', minWidth: 0 }}>
+          <Filter size={14} color={colors.textDim} aria-hidden="true" />
           {categories.map(c => {
             const isActive = activeCategory === c;
             return (
@@ -448,21 +486,22 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                 key={c}
                 data-testid={`pill-category-${c}`}
                 onClick={() => setActiveCategory(c)}
+                aria-pressed={isActive}
                 style={{
-                  padding: '4px 10px', borderRadius: 999, fontSize: 11, cursor: 'pointer',
+                  minHeight: 40, padding: '6px 12px', borderRadius: 999, fontSize: 12, cursor: 'pointer',
                   border: `1px solid ${isActive ? colors.accent : colors.border}`,
                   background: isActive ? `${colors.accent}22` : 'transparent',
                   color: isActive ? colors.accent : colors.textMuted, fontWeight: 600,
                   textTransform: 'capitalize',
                 }}
-              >{c}</button>
+              >{c === 'all' ? 'All categories' : humanize(c)}</button>
             );
           })}
         </div>
       </div>
 
       {/* Availability / status filter chips */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 20 }}>
+      <div role="group" aria-label="Tool availability" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 20 }}>
         {statusFilters.map(f => {
           const isActive = statusFilter === f;
           const labels: Record<StatusFilter, string> = {
@@ -474,8 +513,9 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
               key={f}
               data-testid={`pill-status-${f}`}
               onClick={() => setStatusFilter(f)}
+              aria-pressed={isActive}
               style={{
-                padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
+                minHeight: 40, padding: '6px 12px', borderRadius: 7, fontSize: 12, cursor: 'pointer',
                 border: `1px solid ${isActive ? colors.accentPurple : colors.border}`,
                 background: isActive ? `${colors.accentPurple}22` : 'transparent',
                 color: isActive ? colors.accentPurple : colors.textMuted, fontWeight: 600,
@@ -485,9 +525,25 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
         })}
       </div>
 
+      <p role="status" aria-live="polite" style={{ margin: '-8px 0 18px', color: colors.textDim, fontSize: 12 }}>
+        {filtered.length} {filtered.length === 1 ? 'tool' : 'tools'} shown
+      </p>
+
       {filtered.length === 0 && (
-        <div data-testid="marketplace-empty" style={{ padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 13, border: `1px dashed ${colors.border}`, borderRadius: 12 }}>
-          No modules match these filters. Clear search or switch to All to review the full ecosystem.
+        <div data-testid="marketplace-empty">
+          <EmptyState
+            title="No tools match your filters"
+            description="Try a broader search, choose another category, or show all availability states. Your current tool access has not changed."
+            action={(
+              <button
+                type="button"
+                onClick={() => { setSearch(''); setActiveCategory('all'); setStatusFilter('all'); }}
+                style={{ minHeight: 40, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.bgHover, color: colors.text, cursor: 'pointer', fontWeight: 700 }}
+              >
+                Clear all filters
+              </button>
+            )}
+          />
         </div>
       )}
 

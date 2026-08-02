@@ -5,10 +5,8 @@ import type { CSSProperties } from 'react';
 import {
   Activity,
   AlertTriangle,
-  ArrowLeft,
   BarChart3,
   Building2,
-  CheckCircle2,
   ClipboardList,
   ExternalLink,
   HeartPulse,
@@ -105,17 +103,17 @@ const workflowShortcuts = [
   {
     id: 'notifications',
     label: 'Notifications',
-    summary: 'Idempotent in-app notification routing through shared OperatorOS services without copying ticket text.',
+    summary: 'Notify the right team without copying sensitive request details into the alert.',
     Icon: Inbox,
     tone: colors.green,
   },
 ];
 
 const readinessRows = [
-  ['Access', 'Secure', colors.green],
-  ['Departments', 'Connected', colors.blue],
-  ['Operations', 'Shared', colors.amber],
-  ['Sign-in', 'One account', colors.cyan],
+  ['Sign-in', 'Protected', colors.green],
+  ['Operational data', 'Organization-only', colors.blue],
+  ['Patient charts', 'Not stored here', colors.amber],
+  ['Team access', 'Based on role', colors.cyan],
 ];
 
 const shellCss = `
@@ -241,10 +239,14 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
   const isLoading = authLoading || tenantLoading;
   const hasTenantContext = !!adapter.tenantId;
   const roleLabel = platformAdmin
-    ? 'Platform super admin'
-    : activeRole
-      ? `Organization ${activeRole}`
-      : adapter.localRole;
+    ? 'Platform administrator'
+    : activeRole === 'owner'
+      ? 'Organization owner'
+      : activeRole === 'admin'
+        ? 'Organization administrator'
+        : activeRole === 'viewer'
+          ? 'Read-only access'
+          : 'Team member';
   const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
   const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
   const externalLaunchUrl = baseUrl && /^https?:\/\//i.test(baseUrl) ? baseUrl.replace(/\/+$/, '') : null;
@@ -280,29 +282,29 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
         >
           <div className="pulsedesk-header-top">
             <div style={{ minWidth: 0 }}>
-              <div style={eyebrowStyle}>Healthcare operations command layer</div>
+              <div style={eyebrowStyle}>Healthcare operations coordination</div>
               <h1 style={titleStyle}>PulseDesk</h1>
               <p style={ledeStyle}>
                 Coordinate requests, departments, assets, supplies, facilities, vendors, and reporting from one clinical operations workspace.
               </p>
             </div>
             <div className="pulsedesk-actions">
-              <HeaderLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} testId="pulsedesk-return-command-center" Icon={ArrowLeft}>
-                Command Center
+              <HeaderLink href="#pulsedesk-operations" testId="pulsedesk-open-request-queue" Icon={ClipboardList}>
+                Open request queue
               </HeaderLink>
               {canManageModule && (
                 <HeaderLink href="#pulsedesk-settings" testId="pulsedesk-module-settings-link" Icon={Settings}>
-                  Settings
+                  Manage PulseDesk
                 </HeaderLink>
               )}
               {platformAdmin && (
                 <HeaderLink href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}app/platform/modules/pulsedesk`} testId="pulsedesk-platform-manage-link" Icon={ShieldCheck}>
-                  Platform Command
+                  Platform settings
                 </HeaderLink>
               )}
               {externalLaunchUrl && (
                 <HeaderLink href={externalLaunchUrl} testId="pulsedesk-external-launch-link" Icon={ExternalLink}>
-                  External Module
+                  Open standalone app
                 </HeaderLink>
               )}
             </div>
@@ -311,8 +313,8 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
           <div className="pulsedesk-chip-row">
             <ContextChip label="Organization" value={tenantLabel} tone={hasTenantContext ? colors.blue : colors.red} testId="pulsedesk-tenant-badge" />
             <ContextChip label="Role" value={roleLabel} tone={platformAdmin ? colors.violet : colors.green} testId="pulsedesk-role-badge" />
-            <ContextChip label="Session" value="OperatorOS SSO" tone={colors.green} testId="pulsedesk-session-badge" />
-            <ContextChip label="Host" value={adapter.hostnames.production} tone={colors.amber} testId="pulsedesk-host-badge" />
+            <ContextChip label="Sign-in" value="Protected by OperatorOS" tone={colors.green} testId="pulsedesk-session-badge" />
+            {platformAdmin && <ContextChip label="Module address" value={adapter.hostnames.production} tone={colors.amber} testId="pulsedesk-host-badge" />}
           </div>
         </header>
 
@@ -322,7 +324,7 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
             tone={colors.red}
             Icon={AlertTriangle}
             title="Choose an organization"
-            body="Select an organization in the Command Center to open its healthcare operations workspace."
+            body="Return to My Apps and choose the organization whose operational requests you want to manage."
           />
         )}
 
@@ -410,23 +412,6 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
               </div>
             </section>
 
-            <section className="pulsedesk-panel" style={{ padding: 18 }} data-testid="pulsedesk-empty-state-panel">
-              <SectionHeading
-                Icon={CheckCircle2}
-                title="Workspace ready"
-                subtitle="Your healthcare operations tools are connected and ready for team use."
-              />
-              <div style={emptyStateStyle} data-testid="pulsedesk-empty-state">
-                <HeartPulse size={18} color={colors.green} />
-                <div>
-                  <div style={{ fontWeight: 800 }}>Healthcare operations coordination is ready</div>
-                  <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                    Coordinate facilities, supplies, assets, vendors, and service requests without placing patient records in this workspace.
-                  </div>
-                </div>
-              </div>
-            </section>
-
             <section
               id="pulsedesk-settings"
               className="pulsedesk-panel"
@@ -436,8 +421,8 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
             >
               <SectionHeading
                 Icon={ShieldCheck}
-                title="Settings and Admin"
-                subtitle={canManageModule ? 'Management actions are available for authorized operators.' : 'Management actions are hidden for normal module users.'}
+                title="Access and settings"
+                subtitle={canManageModule ? 'You can manage this tool because you are an organization administrator.' : 'Your administrator controls team access and settings.'}
               />
               <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
                 <AdminRow
@@ -452,7 +437,7 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
                 />
                 <AdminRow
                   label="Current access"
-                  value={canManageModule ? 'Administrative controls visible.' : 'Normal clinical operations view.'}
+                  value={canManageModule ? 'You can manage team access and settings.' : 'You can use the healthcare operations workflows assigned to you.'}
                   tone={canManageModule ? colors.amber : colors.muted}
                 />
               </div>
@@ -463,7 +448,7 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
               tone={colors.amber}
               Icon={AlertTriangle}
               title="Need help?"
-              body="Retry the action first. If access is blocked, ask your workspace administrator to review your PulseDesk permissions."
+              body="Try the action again. If you still cannot open a request, contact your organization administrator. A failed attempt will not change existing requests."
             />
           </section>
         </div>
@@ -712,17 +697,6 @@ const workflowPanelStyle: CSSProperties = {
   padding: 14,
   background: 'rgba(255, 255, 255, 0.78)',
   minWidth: 0,
-};
-
-const emptyStateStyle: CSSProperties = {
-  marginTop: 14,
-  display: 'flex',
-  gap: 10,
-  alignItems: 'flex-start',
-  border: `1px solid rgba(22, 163, 74, 0.35)`,
-  borderRadius: 8,
-  background: 'rgba(22, 163, 74, 0.08)',
-  padding: 14,
 };
 
 const adminRowStyle: CSSProperties = {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Layers3 } from 'lucide-react';
+import { ArrowRight, Layers3, X } from 'lucide-react';
 import { billingApi } from '@/lib/auth';
 import { colors } from './SaasLayout';
 import OperatorMark from './brand/OperatorMark';
@@ -128,19 +128,19 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
             <OperatorMark size={40} glow />
             <div>
             <h2 id="upgrade-modal-title" style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: 0 }}>
-              Increase workspace capacity
+              Compare OperatorOS plans
             </h2>
             {message ? (
               <p style={{ fontSize: 13, color: colors.accentYellow, margin: '8px 0 0' }}>{message}</p>
             ) : (
               <p style={{ fontSize: 13, color: colors.textMuted, margin: '6px 0 0' }}>
-                Adjust project, task, team, workspace, and AI allowances without changing your app access.
+                Compare project, task, team, workspace, and AI limits. Your current tool access will not change on this screen.
               </p>
             )}
             </div>
           </div>
           <button onClick={onClose} data-testid="button-close-upgrade-modal" aria-label="Close upgrade options"
-            style={{ background: 'none', border: 'none', color: colors.textDim, fontSize: 20, cursor: 'pointer', padding: 4 }}>{'\u2715'}</button>
+            style={{ minWidth: 40, minHeight: 40, display: 'grid', placeItems: 'center', background: 'none', border: 'none', color: colors.textDim, cursor: 'pointer', padding: 4 }}><X size={20} aria-hidden="true" /></button>
         </div>
 
         {resource && (
@@ -170,9 +170,9 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
         >
           <Layers3 size={18} color={brand.accentCyan} />
           <div style={{ flex: 1, minWidth: 220 }}>
-            <div style={{ color: '#fff', fontSize: 13, fontWeight: 750 }}>Looking for app or module access?</div>
+            <div style={{ color: '#fff', fontSize: 13, fontWeight: 750 }}>Looking for another business tool?</div>
             <div style={{ color: brand.textSecondary, fontSize: 11, marginTop: 3 }}>
-              Core products, included apps, companion modules, and tenant seats are managed in your ecosystem stack.
+              Tool packages, included tools, add-ons, and team seats are compared on the pricing page.
             </div>
           </div>
           <Link
@@ -180,7 +180,7 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
             onClick={onClose}
             style={{ color: brand.accentCyan, fontSize: 12, fontWeight: 800, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}
           >
-            View app stack <ArrowRight size={13} />
+            Compare tool packages <ArrowRight size={13} />
           </Link>
         </div>
 
@@ -202,25 +202,25 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
 
         {downgradeWarnings.length > 0 && (
           <div style={{ padding: 16, marginBottom: 20, borderRadius: 8, background: 'rgba(210,153,34,0.1)', border: `1px solid ${colors.accentYellow}` }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: colors.accentYellow, marginBottom: 8 }}>Downgrade warning:</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: colors.accentYellow, marginBottom: 8 }}>Reducing capacity will affect new work:</div>
             {downgradeWarnings.map((w, i) => (
               <div key={i} style={{ fontSize: 12, color: colors.text, marginBottom: 4 }}>{w}</div>
             ))}
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button onClick={() => { setDowngradeWarnings([]); setPendingDowngradeSlug(''); }} style={{ padding: '6px 16px', borderRadius: 6, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.text, fontSize: 12, cursor: 'pointer' }}>
-                Cancel
+                Keep current plan
               </button>
               <button onClick={() => {
                 if (pendingDowngradeSlug) confirmDowngrade(pendingDowngradeSlug);
               }} style={{ padding: '6px 16px', borderRadius: 6, border: 'none', background: colors.accentYellow, color: '#000', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                {switching ? 'Processing...' : 'Downgrade anyway'}
+                {switching ? 'Updating plan…' : 'Reduce workspace capacity'}
               </button>
             </div>
           </div>
         )}
 
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: colors.textMuted }}>Loading plans...</div>
+          <div style={{ padding: 40, textAlign: 'center', color: colors.textMuted }}>Loading workspace plans…</div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
             {plans.sort((a: any, b: any) => a.price - b.price).map((p: any) => {
@@ -245,7 +245,7 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
                     }}>Recommended</div>
                   )}
                   <div style={{ fontSize: 10, fontWeight: 800, color: brand.accentCyan, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>
-                    Workspace capacity
+                    OperatorOS plan
                   </div>
                   <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{p.name}</div>
                   <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 12 }}>{p.description}</div>
@@ -304,7 +304,7 @@ export default function UpgradeModal({ isOpen, onClose, onUpgraded, resource, me
                         color: isUpgradeOption ? '#fff' : colors.text,
                         fontSize: 12, fontWeight: 600, cursor: 'pointer', boxSizing: 'border-box',
                       }}>
-                      {switching === p.slug ? 'Processing...' : isUpgradeOption ? 'Increase capacity' : 'Reduce capacity'}
+                      {switching === p.slug ? 'Updating plan…' : isUpgradeOption ? `Increase to ${p.name}` : `Reduce to ${p.name}`}
                     </button>
                   )}
                 </div>

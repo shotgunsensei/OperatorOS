@@ -49,9 +49,9 @@ export const radius = {
 } as const;
 
 export const shadow = {
-  card: '0 1px 2px rgba(0,0,0,0.4)',
-  cardHover: '0 4px 16px rgba(0,0,0,0.5)',
-  popover: '0 8px 24px rgba(0,0,0,0.6)',
+  card: '0 1px 2px rgba(0,0,0,0.28), 0 10px 28px rgba(0,0,0,0.14)',
+  cardHover: '0 4px 18px rgba(0,0,0,0.28)',
+  popover: '0 14px 36px rgba(0,0,0,0.38)',
 } as const;
 
 export const iconSize = {
@@ -63,14 +63,14 @@ export const iconSize = {
 } as const;
 
 export const fontSize = {
-  xs: 11,
-  sm: 12,
-  body: 13,
-  md: 14,
-  lg: 16,
-  xl: 18,
-  h2: 22,
-  h1: 28,
+  xs: 12,
+  sm: 13,
+  body: 14,
+  md: 15,
+  lg: 17,
+  xl: 20,
+  h2: 24,
+  h1: 30,
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────
@@ -119,22 +119,22 @@ export const badgeStyles: Record<BadgeVariant, CSSProperties> = {
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export const buttonStyles: Record<ButtonVariant, CSSProperties> = {
   primary: {
-    padding: '8px 16px', borderRadius: radius.md, border: 'none',
+    minHeight: 40, padding: '8px 16px', borderRadius: radius.md, border: 'none',
     background: semantic.accent, color: '#fff',
     fontSize: fontSize.body, fontWeight: 600, cursor: 'pointer',
   },
   secondary: {
-    padding: '8px 16px', borderRadius: radius.md,
+    minHeight: 40, padding: '8px 16px', borderRadius: radius.md,
     border: `1px solid ${semantic.border}`, background: 'transparent',
     color: semantic.text, fontSize: fontSize.body, fontWeight: 600, cursor: 'pointer',
   },
   ghost: {
-    padding: '6px 10px', borderRadius: radius.sm, border: 'none',
+    minHeight: 36, padding: '6px 10px', borderRadius: radius.sm, border: 'none',
     background: 'transparent', color: semantic.accent,
     fontSize: fontSize.sm, cursor: 'pointer',
   },
   danger: {
-    padding: '8px 16px', borderRadius: radius.md,
+    minHeight: 40, padding: '8px 16px', borderRadius: radius.md,
     border: `1px solid ${semantic.accentDanger}55`, background: 'transparent',
     color: semantic.accentDanger, fontSize: fontSize.body, fontWeight: 600, cursor: 'pointer',
   },

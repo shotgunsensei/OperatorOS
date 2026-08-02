@@ -155,15 +155,15 @@ test('public pricing files do not contain retired packaging copy', () => {
 
 test('signed-in billing separates the app stack from workspace capacity', () => {
   for (const copy of [
-    'Billing & Ecosystem',
-    'Your application stack',
-    'Workspace Capacity',
-    'Review & expand your stack',
+    'Workspace plan and billing',
+    'Your tools and team access',
+    'Compare OperatorOS plans',
+    'Review tool packages',
   ]) {
     assert.match(billingPage, new RegExp(copy));
   }
-  assert.match(upgradeModal, /Increase workspace capacity/);
-  assert.match(upgradeModal, /View app stack/);
-  assert.match(appsPage, /View stack options/);
+  assert.match(upgradeModal, /Compare OperatorOS plans/);
+  assert.match(upgradeModal, /Compare tool packages/);
+  assert.match(appsPage, /View plan options/);
   assert.doesNotMatch(appsPage, /Min plan:/);
 });

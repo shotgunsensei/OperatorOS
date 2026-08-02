@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import { brand, brandCssVariables } from '@/lib/brand';
+import './globals.css';
 
 // Brand typography loaded via next/font so Next self-hosts the files and
 // fully manages the document <head>. Hand-writing <link> tags for Google
@@ -73,8 +74,6 @@ export const viewport: Viewport = {
   themeColor: brand.bgPrimary,
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

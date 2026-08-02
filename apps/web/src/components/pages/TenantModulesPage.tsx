@@ -20,6 +20,7 @@ export default function TenantModulesPage() {
   const [items, setItems] = useState<TenantModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [tenantId, setTenantId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -32,7 +33,7 @@ export default function TenantModulesPage() {
         const data = await tenantApi.listModules(current);
         if (alive) setItems(data.modules ?? []);
       } catch {
-        if (alive) setItems([]);
+        if (alive) { setItems([]); setLoadError(true); }
       } finally {
         if (alive) setLoading(false);
       }
@@ -50,18 +51,25 @@ export default function TenantModulesPage() {
       <header style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
         <Boxes size={24} color={colors.accent} />
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#fff' }}>Organization Apps</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#fff' }}>Tool access</h1>
           <p style={{ color: colors.textMuted, margin: '4px 0 0', fontSize: 13 }}>
-            Review the apps available to your active organization. Platform administrators manage provisioning.
+            Review the tools available to everyone in this organization. Individual access is managed under Team members.
           </p>
         </div>
       </header>
 
       {loading ? (
-        <div style={{ color: colors.textMuted, padding: 24 }} data-testid="modules-loading">Loading organization apps...</div>
+        <div style={{ color: colors.textMuted, padding: 24 }} data-testid="modules-loading">Loading organization tools…</div>
+      ) : loadError ? (
+        <div role="alert" style={{ color: colors.textMuted, padding: 24, border: `1px solid ${colors.border}`, borderRadius: 12, background: colors.bgSecondary }}>
+          <strong style={{ color: '#fff', display: 'block', marginBottom: 6 }}>Tool access could not be loaded</strong>
+          Your organization&apos;s access has not changed. Refresh the page and try again.
+        </div>
       ) : items.length === 0 ? (
-        <div style={{ color: colors.textMuted, padding: 24 }} data-testid="modules-empty">
-          No apps are available to this organization yet. Open the Marketplace or ask a platform administrator for access.
+        <div style={{ color: colors.textMuted, padding: 24, border: `1px dashed ${colors.border}`, borderRadius: 12, background: colors.bgSecondary }} data-testid="modules-empty">
+          <strong style={{ color: '#fff', display: 'block', marginBottom: 6 }}>No organization-wide tools yet</strong>
+          Browse available tools to see pricing and the exact next step.
+          <div style={{ marginTop: 14 }}><a href="/app?page=apps" style={{ minHeight: 40, display: 'inline-flex', alignItems: 'center', padding: '8px 14px', borderRadius: 8, background: colors.accent, color: '#fff', fontWeight: 700, textDecoration: 'none' }}>Browse tools</a></div>
         </div>
       ) : (
         <div style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: 'hidden' }}>
@@ -77,19 +85,19 @@ export default function TenantModulesPage() {
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, color: '#fff', fontWeight: 600 }}>{m.moduleName}</div>
                 <div style={{ fontSize: 11, color: colors.textMuted }}>
-                  {m.moduleSlug} · {m.category ?? 'uncategorized'} · source: {m.source}
+                  {(m.category ?? 'Business tool').replace(/[_-]/g, ' ')} · {m.allowAllMembers ? 'Available to every team member' : 'Assigned individually'}
                 </div>
               </div>
               <span style={{
                 fontSize: 11, padding: '2px 10px', borderRadius: 999,
                 color: statusColor(m.status),
                 border: `1px solid ${statusColor(m.status)}55`,
-              }}>{m.status}</span>
+              }}>{m.status === 'enabled' || m.status === 'purchased' ? 'Available' : m.status === 'trial' ? 'Trial' : m.status === 'beta' ? 'Beta' : 'Unavailable'}</span>
               {m.allowAllMembers && (
                 <span style={{
                   fontSize: 11, padding: '2px 10px', borderRadius: 999,
                   color: colors.accent, border: `1px solid ${colors.accent}55`,
-                }}>open to all members</span>
+                }}>Everyone has access</span>
               )}
             </div>
           ))}
