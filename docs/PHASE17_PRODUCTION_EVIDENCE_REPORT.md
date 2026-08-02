@@ -1,5 +1,9 @@
 # Phase 17 production truth and revenue release evidence
 
+> Historical evidence. Phase 18 activates OutCall in source and supersedes the
+> disabled-OutCall and 12-module assertions below. This report remains valid
+> only for the exact Phase 17 identity recorded here.
+
 - Evidence date: 2026-07-29
 - Branch: `codex/phase-17-production-truth`
 - Audited production commit:

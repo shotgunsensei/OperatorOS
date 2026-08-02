@@ -78,6 +78,11 @@ export function parsePhoneVerification(input: unknown) {
   const verificationCode = text(value.verificationCode, 'verificationCode', 12);
   return { phone, verificationCode, masked: maskPhone(phone) };
 }
+export function parsePhoneVerificationStart(input: unknown) {
+  const value = body(input);
+  const phone = normalizeE164(value.phone, 'phone');
+  return { phone, masked: maskPhone(phone) };
+}
 
 const IMPERSONATION = /\b(911|police|sheriff|fbi|government|hospital|doctor|nurse|school|emergency services?)\b/i;
 
@@ -102,12 +107,14 @@ export function parseProfile(input: unknown) {
 export function parseTrigger(input: unknown) {
   const value = body(input);
   const normalized = normalizeTrigger(value.phrase);
+  const profileId = text(value.profileId, 'profileId', 36);
   const delaySeconds = value.delaySeconds == null ? 0 : Number(value.delaySeconds);
   if (!Number.isInteger(delaySeconds) || delaySeconds < 0 || delaySeconds > 86_400) {
     throw new OutCallValidationError('delaySeconds must be an integer from 0 to 86400', 'OUTCALL_DELAY_INVALID', 'delaySeconds');
   }
   return {
     normalized,
+    profileId,
     digest: fingerprint(`trigger:${normalized}`),
     ciphertext: protect(normalized),
     neutralReply: value.neutralReply == null ? 'Request received.' : text(value.neutralReply, 'neutralReply', 80),
@@ -126,13 +133,16 @@ export function parseSchedule(input: unknown) {
   return { profileId, idempotencyKey, runAt };
 }
 
-export function outCallProviderState() {
-  const test = process.env.APP_ENV === 'test'
-    && process.env.NODE_ENV === 'test'
-    && process.env.OUTCALL_TEST_ADAPTER === 'enabled';
-  return {
-    name: test ? 'test' : 'disabled',
-    ready: test,
-    reason: test ? null : 'Live Twilio Verify, Messaging, and Voice are not configured and validated.',
-  } as const;
+export function parseOutCallReauthentication(input: unknown, deletion = false) {
+  const value = body(input);
+  const password = text(value.password, 'password', 256);
+  const confirmation = deletion ? text(value.confirmation, 'confirmation', 40) : null;
+  if (deletion && confirmation !== 'DELETE OUTCALL') {
+    throw new OutCallValidationError(
+      'Type DELETE OUTCALL to confirm removal of this module data',
+      'OUTCALL_DELETION_CONFIRMATION_REQUIRED',
+      'confirmation',
+    );
+  }
+  return { password, confirmation };
 }

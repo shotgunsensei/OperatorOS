@@ -9,7 +9,7 @@
 - Decide on shared PostgreSQL and a single Replit Reserved VM.
 - Document SSO, data model, security, environment, deployment, and launch gates.
 
-## Phase 12B source/local increment — implemented
+## Phase 12B source/local increment — completed
 
 - ADR-0027 resolves the distinct/merge/cancel decision: OutCall is distinct.
 - OperatorOS opaque-code SSO, entitlement, tenant, write-role, shared jobs,
@@ -17,62 +17,45 @@
 - Safety acknowledgement, globally owned verified phone, encrypted private
   triggers, rescue profiles, verified-self scheduling, cancellation and
   history are persistent.
-- The call adapter is test-only and requires all three explicit test gates.
-- Live provider, trusted contacts, check-ins, duress and location remain
-  fail-closed or absent, never presented as working.
+- The original call adapter is test-only and requires all three explicit test
+  gates. Trusted contacts, check-ins, duress and location remain excluded.
 
-## Next provider increment — identity verification and inbound messaging
+## Phase 18 provider and product increment — completed in source
 
-Complete Twilio Verify, signed inbound SMS, deterministic trigger parsing,
-rate/circuit controls, status callbacks, DTMF and real-number acceptance. Do
-not enable live calls merely because local test-adapter acceptance passes.
+- Twilio Verify starts and confirms verified-self ownership.
+- Signed inbound SMS performs exact normalized trigger matching and replay-safe
+  durable scheduling.
+- Voice placement uses the verified-self destination, recording off, dynamic
+  signed status/DTMF callbacks, one-attempt submission, durable rate limits,
+  safe events, and exactly-once usage.
+- Profile/trigger editing, cancellation, history, private export, and
+  password-confirmed deletion are available in the responsive workspace.
+- Catalog, registry, SSO matrices, verifier, preflight, and release v33 treat
+  OutCall as active while the provider still fails closed when unconfigured.
 
-## Phase 3 — inbound messaging
+## Completed engineering slices
 
-Add raw form capture, canonical Twilio signature validation, verified sender and
-receiver resolution, deterministic normalized trigger matching/time parsing,
-transactional MessageSid idempotency, discreet replies, rate limits, circuit
-breaker, and immediate raw-body purge.
+- Inbound messaging, durable calls, product UI, parent-owned billing/usage,
+  security hardening, production preflight, tests, and release-schema work are
+  implemented in the active shared runtime.
+- Optional trusted contacts, check-ins, duress, location, arbitrary
+  destinations, emergency claims, recording, impersonation, and autonomous or
+  bulk dialing are deliberately outside the approved product.
 
-## Phase 4 — durable calls
+## Remaining deployment and limited-launch gate
 
-Add versioned migrations, job claim/lease/retry/dead-letter logic, worker
-heartbeat, reconciliation, verified-destination enforcement, Twilio Voice/TwiML
-and DTMF, callback idempotency, graceful shutdown, health/readiness, and restart
-tests. Keep recording off.
+1. Commit and review the exact source candidate.
+2. Back up the target database and apply/verify release v33 through the shared
+   readiness-gated supervisor.
+3. Configure the documented Replit protection/provider secrets, DNS/TLS, and
+   exact inbound SMS callback; keep the test adapter absent.
+4. Pass public health/readiness, release identity, 13-module exact-host SSO,
+   denial, deep-link, return, and logout acceptance.
+5. Run one controlled verified-self Verify/SMS/voice/DTMF/status sequence with
+   replay, tamper, cancellation, export, deletion, outage, and recording-off
+   evidence.
+6. Confirm Twilio spend/fraud/geo/concurrency alerts, monitoring, backup,
+   rollback, privacy review, and support procedures before a limited launch.
 
-## Phase 5 — product UI
-
-Build accessible mobile-first onboarding, dashboard, schedules, trigger/profile
-settings, call history, masked privacy mode, error/empty states, and documented
-safety disclaimer using OperatorOS design tokens where applicable.
-
-## Phase 6 — billing and usage
-
-Extend parent Stripe catalog/webhook and entitlement resolver. Add append-only
-usage events, atomic reservation/reconciliation, plan/organization enforcement,
-and billing UI. Never create an unrelated Stripe customer.
-
-## Phase 7 — optional safety workflows
-
-Behind feature flags and entitlements, add consented trusted contacts and
-transactional check-ins. Duress remains separately gated. Location stays off.
-
-## Phase 8 — deployment and operations
-
-Create Reserved VM configuration, locked migrations, domain/TLS, Replit Secrets,
-Twilio/Stripe callback configuration, metrics/alerts, backups, rollback, and
-idempotent scheduled reconciliation.
-
-## Phase 9 — hardening
-
-Perform the requested deep security scan, fix validated issues, add abuse and
-privacy tests, rotate exposed credentials, complete incident/retention/secret
-runbooks, and conduct dependency review.
-
-## Phase 10 — limited launch audit
-
-Run automated, manual, and controlled real-provider tests against approved
-numbers. Activate first for a limited beta only after every critical gate is
-evidenced. Production classification is not permitted from code inspection
-alone.
+Production classification is not permitted from code inspection or local
+test-adapter acceptance alone.

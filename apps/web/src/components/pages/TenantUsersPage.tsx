@@ -81,7 +81,7 @@ export default function TenantUsersPage() {
       } else if (delivery.ok && delivery.provider === 'resend') {
         setStatus({ kind: 'ok', message: 'Invite created and email sent.' });
       } else if (delivery.ok && delivery.provider === 'test') {
-        setStatus({ kind: 'warn', message: 'Invite created using the isolated test email adapter. Use Copy link outside test.' });
+        setStatus({ kind: 'warn', message: 'Email delivery is not active here. Use Copy link to share this invite securely.' });
       } else {
         setStatus({ kind: 'warn', message: 'Invite created, email failed (provider not configured or returned error). Use Copy link.' });
       }
@@ -109,7 +109,7 @@ export default function TenantUsersPage() {
 
   const removeMember = async (userId: string) => {
     if (!tenantId) return;
-    if (!confirm('Remove this member from the tenant?')) return;
+    if (!confirm('Remove this member from the organization?')) return;
     try {
       await tenantApi.removeUser(tenantId, userId);
       await reload(tenantId);
@@ -198,7 +198,7 @@ export default function TenantUsersPage() {
   return (
     <div style={{ padding: 32, maxWidth: 1100, margin: '0 auto' }} data-testid="page-tenant-users">
       <header style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#fff' }}>Tenant Members</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#fff' }}>Organization Members</h1>
         <p style={{ color: colors.textMuted, margin: '4px 0 0', fontSize: 13 }}>
           Invite members, change roles, revoke access, and grant per-module access.
         </p>
@@ -338,7 +338,7 @@ export default function TenantUsersPage() {
                       <div style={{ color: colors.textMuted, fontSize: 12 }}>Loading\u2026</div>
                     ) : !grid || grid.length === 0 ? (
                       <div style={{ color: colors.textMuted, fontSize: 12 }} data-testid={`access-empty-${m.userId}`}>
-                        No modules enabled for this tenant.
+                        No apps are enabled for this organization.
                       </div>
                     ) : (
                       <div style={{ display: 'grid', gap: 6 }}>

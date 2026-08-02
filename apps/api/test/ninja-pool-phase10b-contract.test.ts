@@ -55,15 +55,16 @@ test('Phase 10B UI exposes only implemented modes and durable deep links', () =>
   assert.match(routeMap, /'ninja-pool-hall'/);
   assert.match(routeMap, /resource === 'matches'/);
   assert.doesNotMatch(routeMap, /'\/host'|'\/join'/);
-  assert.match(shell, /Online room intentionally disabled/);
+  assert.match(shell, /Online rooms are coming later/);
+  assert.match(shell, /For now, enjoy CPU and pass-and-play matches/);
   assert.doesNotMatch(shell, /Host online room/);
   assert.doesNotMatch(shell, /Join online room/);
   assert.match(match, /chooseBotShot/);
   assert.match(match, /applyShotResult/);
   assert.match(match, /saveMatchShot/);
   assert.match(match, /client-reported/i);
-  assert.match(match, /physical shot facts originate on this device/i);
-  assert.match(profile, /No unverified leaderboard/i);
+  assert.match(match, /physical shot details come from this device/i);
+  assert.match(profile, /Personal progress, no public leaderboard/i);
 });
 
 test('standalone room identity and child server stay quarantined', () => {

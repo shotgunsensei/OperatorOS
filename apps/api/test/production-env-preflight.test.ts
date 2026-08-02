@@ -117,6 +117,8 @@ test('all readiness profiles pass with live shared-runtime providers', () => {
     OUTCALL_LOOKUP_HMAC_KEY: 'outcall-lookup-hmac-test-key-32-plus',
     TWILIO_VERIFY_SERVICE_SID: 'VAtestplaceholder',
     TWILIO_PHONE_NUMBER: '+15555550101',
+    TWILIO_ALLOWED_COUNTRIES: 'US,CA',
+    OUTCALL_LIVE_PROVIDER: 'enabled',
     OPENAI_API_KEY: 'sk-test-placeholder',
   };
   const profiles = preflight.resolveProfiles(['--all']);

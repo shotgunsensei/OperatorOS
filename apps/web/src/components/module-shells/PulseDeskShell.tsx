@@ -112,10 +112,10 @@ const workflowShortcuts = [
 ];
 
 const readinessRows = [
-  ['SSO', 'OperatorOS managed', colors.green],
-  ['Tenant', 'Scoped at launch', colors.blue],
-  ['Billing', 'Centralized', colors.amber],
-  ['Standalone login', 'Removed', colors.cyan],
+  ['Access', 'Secure', colors.green],
+  ['Departments', 'Connected', colors.blue],
+  ['Operations', 'Shared', colors.amber],
+  ['Sign-in', 'One account', colors.cyan],
 ];
 
 const shellCss = `
@@ -243,9 +243,9 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
   const roleLabel = platformAdmin
     ? 'Platform super admin'
     : activeRole
-      ? `Tenant ${activeRole}`
+      ? `Organization ${activeRole}`
       : adapter.localRole;
-  const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No active tenant';
+  const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
   const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
   const externalLaunchUrl = baseUrl && /^https?:\/\//i.test(baseUrl) ? baseUrl.replace(/\/+$/, '') : null;
 
@@ -257,9 +257,9 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
           <div style={loadingPanelStyle} data-testid="pulsedesk-loading-state" aria-busy="true">
             <Activity size={18} color={colors.blue} />
             <div>
-              <div style={{ fontWeight: 800 }}>Loading PulseDesk context</div>
+              <div style={{ fontWeight: 800 }}>Loading PulseDesk</div>
               <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                OperatorOS is resolving tenant, role, and module entitlement state.
+                Preparing your departments, escalations, equipment, and team access.
               </div>
             </div>
           </div>
@@ -283,7 +283,7 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
               <div style={eyebrowStyle}>Healthcare operations command layer</div>
               <h1 style={titleStyle}>PulseDesk</h1>
               <p style={ledeStyle}>
-                Tenant-scoped clinical operations workspace for requests, departments, assets, supplies, facilities, vendors, and reporting.
+                Coordinate requests, departments, assets, supplies, facilities, vendors, and reporting from one clinical operations workspace.
               </p>
             </div>
             <div className="pulsedesk-actions">
@@ -292,7 +292,7 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
               </HeaderLink>
               {canManageModule && (
                 <HeaderLink href="#pulsedesk-settings" testId="pulsedesk-module-settings-link" Icon={Settings}>
-                  Module Settings
+                  Settings
                 </HeaderLink>
               )}
               {platformAdmin && (
@@ -309,7 +309,7 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
           </div>
 
           <div className="pulsedesk-chip-row">
-            <ContextChip label="Tenant" value={tenantLabel} tone={hasTenantContext ? colors.blue : colors.red} testId="pulsedesk-tenant-badge" />
+            <ContextChip label="Organization" value={tenantLabel} tone={hasTenantContext ? colors.blue : colors.red} testId="pulsedesk-tenant-badge" />
             <ContextChip label="Role" value={roleLabel} tone={platformAdmin ? colors.violet : colors.green} testId="pulsedesk-role-badge" />
             <ContextChip label="Session" value="OperatorOS SSO" tone={colors.green} testId="pulsedesk-session-badge" />
             <ContextChip label="Host" value={adapter.hostnames.production} tone={colors.amber} testId="pulsedesk-host-badge" />
@@ -321,8 +321,8 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
             testId="pulsedesk-no-tenant-state"
             tone={colors.red}
             Icon={AlertTriangle}
-            title="No active tenant context"
-            body="PulseDesk requires an OperatorOS tenant context before healthcare operations workflows can open. Return to the Command Center and select a tenant."
+            title="Choose an organization"
+            body="Select an organization in the Command Center to open its healthcare operations workspace."
           />
         )}
 
@@ -385,8 +385,8 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
                   testId="pulsedesk-operations-no-tenant"
                   tone={colors.red}
                   Icon={AlertTriangle}
-                  title="Select a tenant to open the operations queue"
-                  body="The live PulseDesk queue never loads without an explicit OperatorOS tenant context, including for platform administrators."
+                  title="Select an organization to open the operations queue"
+                  body="Choose the organization whose departments, tickets, and escalations you want to manage."
                 />
               )}
             </section>
@@ -401,7 +401,7 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
               <SectionHeading
                 Icon={HeartPulse}
                 title="Healthcare operations map"
-                subtitle="Each surface below is backed by the persisted service-desk workspace; patient and clinical records remain prohibited."
+                subtitle="Move operational work between departments while keeping patient and clinical records out of PulseDesk."
               />
               <div className="pulsedesk-workflow-grid" style={{ marginTop: 14 }}>
                 {workflowShortcuts.filter(({ id }) => id !== 'tickets').map(({ id, label, summary, Icon, tone }) => (
@@ -413,15 +413,15 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
             <section className="pulsedesk-panel" style={{ padding: 18 }} data-testid="pulsedesk-empty-state-panel">
               <SectionHeading
                 Icon={CheckCircle2}
-                title="Current State"
-                subtitle="No critical operations blockers are surfaced by the OperatorOS adapter."
+                title="Workspace ready"
+                subtitle="Your healthcare operations tools are connected and ready for team use."
               />
               <div style={emptyStateStyle} data-testid="pulsedesk-empty-state">
                 <HeartPulse size={18} color={colors.green} />
                 <div>
-                  <div style={{ fontWeight: 800 }}>PHI-minimized healthcare operations service delivery is active</div>
+                  <div style={{ fontWeight: 800 }}>Healthcare operations coordination is ready</div>
                   <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                    OperatorOS owns the session, tenant, Directory, entitlement, files, and notifications. PulseDesk stores structured operational workflow data only.
+                    Coordinate facilities, supplies, assets, vendors, and service requests without placing patient records in this workspace.
                   </div>
                 </div>
               </div>
@@ -441,13 +441,13 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
               />
               <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
                 <AdminRow
-                  label="OperatorOS authority"
-                  value="Identity, billing, tenant membership, module entitlement, and root admin checks stay centralized."
+                  label="Account and access"
+                  value="OperatorOS manages sign-in, subscription access, and workspace membership."
                   tone={colors.green}
                 />
                 <AdminRow
-                  label="Module-local scope"
-                  value="PulseDesk owns healthcare operations workflows, feature UI, and tenant-scoped module data only."
+                  label="Data boundary"
+                  value="PulseDesk is for operational coordination, not patient charts or clinical records."
                   tone={colors.blue}
                 />
                 <AdminRow
@@ -462,8 +462,8 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
               testId="pulsedesk-error-state"
               tone={colors.amber}
               Icon={AlertTriangle}
-              title="If a feature route fails"
-              body="Keep the user in the OperatorOS shell, show the access problem plainly, and route admin fixes through Platform Command."
+              title="Need help?"
+              body="Retry the action first. If access is blocked, ask your workspace administrator to review your PulseDesk permissions."
             />
           </section>
         </div>
@@ -565,7 +565,7 @@ function WorkflowPanel({
       </div>
       <p style={{ color: colors.muted, fontSize: 13, lineHeight: 1.45, margin: '10px 0 0' }}>{summary}</p>
       <div style={{ marginTop: 12, color: colors.amber, fontSize: 12, fontWeight: 800 }}>
-        Active in the persisted service-desk workspace
+        Available in PulseDesk
       </div>
     </article>
   );

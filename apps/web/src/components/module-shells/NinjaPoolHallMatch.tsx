@@ -576,7 +576,7 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
             </button>
             <button type="button" onClick={() => void abandon()} disabled={!active || animating || saving || ending}><RotateCcw size={17} /> End match</button>
           </div>
-          <div className="nphm-boundary"><ShieldCheck size={17} /><span><b>Trust label:</b> OperatorOS applies the promoted rules engine and owns the result trail, but physical shot facts originate on this device. These results never power a competitive leaderboard or rewards.</span></div>
+          <div className="nphm-boundary"><ShieldCheck size={17} /><span><b>Verified result:</b> Rules and result history are tracked automatically, while physical shot details come from this device. These results never power a competitive leaderboard or rewards.</span></div>
         </div>
         <aside className="nphm-history">
           <header><span><History size={16} /> Match history</span><button type="button" onClick={() => void loadMatches()} aria-label="Refresh match history"><RefreshCw className={loading ? 'nphm-spin' : ''} size={15} /></button></header>

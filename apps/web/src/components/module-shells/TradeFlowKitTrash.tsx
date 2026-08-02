@@ -86,7 +86,7 @@ export default function TradeFlowKitTrash({
       </header>
       {error && <div className="tfk-trash-error" role="alert" data-testid="tradeflowkit-trash-error">{error}</div>}
       {loading ? (
-        <div className="tfk-trash-state" aria-busy="true"><Loader2 className="spin" size={18} /> Loading archived tenant records…</div>
+        <div className="tfk-trash-state" aria-busy="true"><Loader2 className="spin" size={18} /> Loading archived records…</div>
       ) : total === 0 ? (
         <div className="tfk-trash-state" data-testid="tradeflowkit-trash-empty"><Trash2 size={19} /> No archived customers, jobs, or invoices.</div>
       ) : data ? (

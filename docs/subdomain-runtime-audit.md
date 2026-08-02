@@ -3,9 +3,9 @@
 ## Summary
 
 OperatorOS serves the four exact registered platform hosts and thirteen exact
-attached module hosts from a **single Replit deployment** using host-based
-routing. Twelve module clients are enabled; OutCall is attached/reserved but
-planned/disabled. Internally the web app binds to Replit's required public port
+active module hosts from a **single Replit deployment** using host-based
+routing. All thirteen module clients are enabled in the Phase 18 source
+candidate, including OutCall. Internally the web app binds to Replit's required public port
 (for example `5000`); Replit's proxy terminates TLS and forwards the real
 public host in `x-forwarded-host` / `x-forwarded-proto`.
 
@@ -106,7 +106,8 @@ development falls back to loopback.
   permitted.
 - **Module hosts**: the registry maps each of the thirteen exact attached hosts
   to its module; `auth` and `app` are platform surfaces, not modules. OutCall
-  resolves only to a controlled planned/disabled state. Ports are normalized
+  resolves to its active exact-host module session; its Twilio features still
+  fail closed until the explicit live-provider configuration passes. Ports are normalized
   away; an unknown `*.operatoros.net` request that reaches the deployment falls
   through to the controlled unknown-host page without becoming trusted.
 

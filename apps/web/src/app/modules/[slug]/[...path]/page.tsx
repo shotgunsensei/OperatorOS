@@ -43,7 +43,7 @@ export default function ModuleDeepLinkPage({ params }: ModuleDeepLinkPageProps) 
       testId="module-deep-link-not-found"
       eyebrow={`${module.name} / 404`}
       title="That module route is not available."
-      body={`${requestedPath} is not a supported ${module.name} path in the consolidated OperatorOS runtime.`}
+      body={`That ${module.name} page is not available. Return to the module home and choose an available section.`}
       actionHref="/"
       actionLabel={`Open ${module.name}`}
     />

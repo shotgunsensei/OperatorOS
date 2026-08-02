@@ -2261,16 +2261,40 @@ export const moduleShellApi = {
         method: 'POST',
         body: JSON.stringify({ phone, verificationCode }),
       }),
+    startPhoneVerification: (phone: string) =>
+      apiFetch('/modules/outcall/phone-verification/start', {
+        method: 'POST',
+        body: JSON.stringify({ phone }),
+      }),
+    confirmPhoneVerification: (phone: string, verificationCode: string) =>
+      apiFetch('/modules/outcall/phone-verification/confirm', {
+        method: 'POST',
+        body: JSON.stringify({ phone, verificationCode }),
+      }),
     createProfile: (input: { name: string; message: string }) =>
       apiFetch('/modules/outcall/profiles', {
         method: 'POST',
         body: JSON.stringify(input),
       }),
-    createTrigger: (input: { phrase: string; neutralReply: string; delaySeconds: number }) =>
+    updateProfile: (id: string, input: { name: string; message: string }) =>
+      apiFetch(`/modules/outcall/profiles/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      }),
+    deleteProfile: (id: string) =>
+      apiFetch(`/modules/outcall/profiles/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    createTrigger: (input: { profileId: string; phrase: string; neutralReply: string; delaySeconds: number }) =>
       apiFetch('/modules/outcall/triggers', {
         method: 'POST',
         body: JSON.stringify(input),
       }),
+    updateTrigger: (id: string, input: { profileId: string; phrase: string; neutralReply: string; delaySeconds: number }) =>
+      apiFetch(`/modules/outcall/triggers/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      }),
+    deleteTrigger: (id: string) =>
+      apiFetch(`/modules/outcall/triggers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     schedule: (input: { profileId: string; runAt?: string; idempotencyKey: string }) =>
       apiFetch('/modules/outcall/calls', {
         method: 'POST',
@@ -2278,6 +2302,16 @@ export const moduleShellApi = {
       }),
     cancel: (id: string) =>
       apiFetch(`/modules/outcall/calls/${encodeURIComponent(id)}/cancel`, { method: 'POST' }),
+    exportData: (password: string) =>
+      apiFetch('/modules/outcall/data-export', {
+        method: 'POST',
+        body: JSON.stringify({ password }),
+      }),
+    deleteData: (password: string, confirmation: string) =>
+      apiFetch('/modules/outcall/data-deletion', {
+        method: 'POST',
+        body: JSON.stringify({ password, confirmation }),
+      }),
   },
   launchkit: {
     templates: () => apiFetch('/modules/ninja-launch-kit/templates'),

@@ -66,7 +66,7 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
           }}>O</div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Create OperatorOS access</h1>
           <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>
-            Join the parent command layer for tenant-aware modules.
+            Create one account for your organization and its connected apps.
           </p>
         </div>
 

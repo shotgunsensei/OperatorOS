@@ -6,13 +6,13 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '../../..');
 const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 
-test('release v32 extends lead operations with controlled public intake', () => {
+test('release v33 preserves controlled public intake before OutCall product operations', () => {
   const contract = read('apps/api/src/lib/database-release-contract.ts');
   const release = read('apps/api/src/lib/database-release.ts');
   const schema = read('apps/api/src/schema.ts');
   const ddl = read('apps/api/src/lib/tradeflowkit-lead-operations-db-init.ts');
   const publicDdl = read('apps/api/src/lib/tradeflowkit-public-operations-db-init.ts');
-  assert.match(contract, /releaseVersion: 32/);
+  assert.match(contract, /releaseVersion: 33/);
   assert.match(contract, /tradeflowkit_lead_operations/);
   assert.match(contract, /tradeflowkit_public_operations/);
   assert.match(release, /ensureTradeFlowKitLeadOperationsTables/);

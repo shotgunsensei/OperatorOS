@@ -110,12 +110,12 @@ const workflowShortcuts = [
 ];
 
 const readinessRows = [
-  ['SSO', 'OperatorOS handoff', colors.green],
-  ['Tenant', 'Org-linked', colors.blue],
-  ['Billing', 'OperatorOS boundary', colors.gold],
-  ['Manual leads', 'Live workflow', colors.green],
-  ['Standalone login', 'Disabled', colors.blue],
-  ['Provider actions', 'Test adapter verified', colors.gold],
+  ['Leads', 'Ready', colors.green],
+  ['Customers', 'Connected', colors.blue],
+  ['Quotes & invoices', 'Ready', colors.gold],
+  ['Field work', 'Live workflow', colors.green],
+  ['Team access', 'Shared', colors.blue],
+  ['Online payments', 'Setup available', colors.gold],
 ];
 
 const shellCss = `
@@ -243,9 +243,9 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
   const roleLabel = platformAdmin
     ? 'Platform super admin'
     : activeRole
-      ? `Tenant ${activeRole}`
+      ? `Organization ${activeRole}`
       : adapter.localRole;
-  const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No active tenant';
+  const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
   const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
   const externalLaunchUrl = baseUrl && /^https?:\/\//i.test(baseUrl) ? baseUrl.replace(/\/+$/, '') : null;
 
@@ -257,9 +257,9 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
           <div style={loadingPanelStyle} data-testid="tradeflowkit-loading-state" aria-busy="true">
             <Activity size={18} color={colors.green} />
             <div>
-              <div style={{ fontWeight: 800 }}>Loading TradeFlowKit context</div>
+              <div style={{ fontWeight: 800 }}>Loading TradeFlowKit</div>
               <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                OperatorOS is resolving tenant, role, and module entitlement state.
+                Preparing your leads, customers, jobs, invoices, and team access.
               </div>
             </div>
           </div>
@@ -283,7 +283,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               <div style={eyebrowStyle}>Field-service revenue command layer</div>
               <h1 style={titleStyle}>TradeFlowKit</h1>
               <p style={ledeStyle}>
-                Tenant-scoped lead-to-cash workspace for leads, customers, jobs, quotes, invoices, payments, and performance visibility.
+                Move leads into customers, jobs, quotes, invoices, payments, and clear revenue visibility from one workspace.
               </p>
             </div>
             <div className="tfk-actions">
@@ -292,7 +292,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               </HeaderLink>
               {canManageModule && (
                 <HeaderLink href="#tradeflowkit-settings" testId="tradeflowkit-module-settings-link" Icon={Settings}>
-                  Module Settings
+                  Settings
                 </HeaderLink>
               )}
               {platformAdmin && (
@@ -309,7 +309,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
           </div>
 
           <div className="tfk-chip-row">
-            <ContextChip label="Tenant" value={tenantLabel} tone={hasTenantContext ? colors.blue : colors.red} testId="tradeflowkit-tenant-badge" />
+            <ContextChip label="Organization" value={tenantLabel} tone={hasTenantContext ? colors.blue : colors.red} testId="tradeflowkit-tenant-badge" />
             <ContextChip label="Role" value={roleLabel} tone={platformAdmin ? colors.violet : colors.green} testId="tradeflowkit-role-badge" />
             <ContextChip label="Session" value="OperatorOS SSO" tone={colors.green} testId="tradeflowkit-session-badge" />
             <ContextChip label="Host" value={adapter.hostnames.production} tone={colors.gold} testId="tradeflowkit-host-badge" />
@@ -325,8 +325,8 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
             testId="tradeflowkit-no-tenant-state"
             tone={colors.red}
             Icon={AlertTriangle}
-            title="No active tenant context"
-            body="TradeFlowKit requires an OperatorOS tenant context before field-service workflows can open. Return to the Command Center and select a tenant."
+            title="Choose an organization"
+            body="Select an organization in the Command Center to open its sales, job, quote, invoice, and payment workflows."
           />
         )}
 
@@ -412,15 +412,15 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
             <section className="tfk-panel" style={{ padding: 18 }} data-testid="tradeflowkit-empty-state-panel">
               <SectionHeading
                 Icon={CheckCircle2}
-                title="Current State"
-                subtitle="The active runtime is persistent and authorized; Phase 16 parity work remains explicitly tracked."
+                title="Workspace ready"
+                subtitle="Your lead-to-cash and field operations tools are connected and ready for the team."
               />
               <div style={emptyStateStyle} data-testid="tradeflowkit-empty-state">
                 <DollarSign size={18} color={colors.green} />
                 <div>
-                  <div style={{ fontWeight: 800 }}>Lead-to-cash and governed workflow operations are running in the shared tenant runtime</div>
+                  <div style={{ fontWeight: 800 }}>Lead-to-cash operations are ready</div>
                   <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                    Customers, jobs, team task views, workflow templates and stages, quotes, public acceptance, invoice conversion, partial payments, comments, attachments, notifications, activity, and analytics preserve tenant scope and audit history. Remaining Phase 16 gaps and production customer-payment processing stay visibly gated until their acceptance evidence exists.
+                    Manage customers, jobs, team tasks, workflow stages, quotes, approvals, invoices, partial payments, files, notifications, activity, and analytics without leaving the workspace.
                   </div>
                 </div>
               </div>
@@ -440,13 +440,13 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               />
               <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
                 <AdminRow
-                  label="OperatorOS authority"
-                  value="Identity, billing, tenant membership, module entitlement, SSO launch, and root admin checks stay centralized."
+                  label="Account and access"
+                  value="OperatorOS manages sign-in, subscription access, and workspace membership."
                   tone={colors.green}
                 />
                 <AdminRow
-                  label="Module-local scope"
-                  value="TradeFlowKit owns field-service workflows, revenue-flow UI, and tenant-scoped module data only."
+                  label="Business operations"
+                  value="TradeFlowKit keeps field-service work, customer activity, and revenue flow together."
                   tone={colors.blue}
                 />
                 <AdminRow
@@ -461,8 +461,8 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
               testId="tradeflowkit-error-state"
               tone={colors.gold}
               Icon={AlertTriangle}
-              title="If a feature route fails"
-              body="Keep the user in the OperatorOS shell, show the access problem plainly, and route entitlement or billing fixes through Platform Command."
+              title="Need help?"
+              body="Retry the action first. If access or payments are blocked, ask your workspace administrator to review your TradeFlowKit setup."
             />
           </section>
         </div>
@@ -564,7 +564,7 @@ function WorkflowPanel({
       </div>
       <p style={{ color: colors.muted, fontSize: 13, lineHeight: 1.45, margin: '10px 0 0' }}>{summary}</p>
       <div style={{ marginTop: 12, color: colors.green, fontSize: 12, fontWeight: 800 }}>
-        {id === 'payments' ? 'Manual payments live · provider processing gated' : 'Live in shared runtime'}
+        {id === 'payments' ? 'Manual payments available · online processing requires setup' : 'Ready to use'}
       </div>
     </article>
   );

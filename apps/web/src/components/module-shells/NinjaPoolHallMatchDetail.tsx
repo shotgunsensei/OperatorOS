@@ -36,7 +36,7 @@ export default function NinjaPoolHallMatchDetail({ matchId, onBack }: { matchId:
               <div><dt>Winner</dt><dd>{match.winnerSeat === null ? '—' : match.logicalState.players[match.winnerSeat].name}</dd></div>
             </dl>
             {match.finishReason && <p>{match.finishReason}</p>}
-            <div className="trust"><ShieldCheck size={18} /><span>Server-applied rules over client-reported physical events. This record is persistent, tenant/user scoped, and explicitly non-competitive.</span></div>
+            <div className="trust"><ShieldCheck size={18} /><span>Rules, turns, and results are saved with this match. Local play contributes to your personal progress only.</span></div>
           </article>
           <aside>
             <h3>Rule trail</h3>

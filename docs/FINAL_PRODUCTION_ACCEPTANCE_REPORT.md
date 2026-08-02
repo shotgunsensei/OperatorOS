@@ -1,5 +1,10 @@
 # OperatorOS production acceptance report
 
+> Historical Phase 17 report. Phase 18 activates OutCall in source and
+> supersedes the disabled-OutCall and 12-module assertions below. Current
+> release status is maintained in `docs/CURRENT_RELEASE_GATE.md` and
+> `docs/IMPLEMENTATION_STATUS.md`.
+
 - Evidence date: 2026-07-29
 - Candidate branch: `codex/phase-17-production-truth`
 - Decision: **PHASE 17 DEPLOYABLE CANDIDATE; NOT DEPLOYED; RELEASE STOPPED**

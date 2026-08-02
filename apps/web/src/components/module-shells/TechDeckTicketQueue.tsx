@@ -294,7 +294,7 @@ export default function TechDeckTicketQueue({
 
       <div className="techdeck-ticket-heading">
         <div>
-          <div className="techdeck-ticket-eyebrow">Live tenant workflow</div>
+          <div className="techdeck-ticket-eyebrow">Active service workflow</div>
           <h2>Technician Ticket Queue</h2>
           <p>
             Triage, prioritize, assign, and close tenant support work. OperatorOS owns identity, module access, and the active tenant boundary.
@@ -312,7 +312,7 @@ export default function TechDeckTicketQueue({
         <div className="techdeck-ticket-route-context" data-testid="techdeck-ticket-route-context" data-found={Boolean(requestedTicket)}>
           {requestedTicket
             ? <><CheckCircle2 size={17} aria-hidden="true" /><span>Deep-linked ticket: <strong>#{requestedTicket.number} {requestedTicket.title}</strong></span></>
-            : <><AlertTriangle size={17} aria-hidden="true" /><span>The requested ticket is not available in this tenant.</span></>}
+            : <><AlertTriangle size={17} aria-hidden="true" /><span>The requested ticket is not available for this organization.</span></>}
         </div>
       )}
 
@@ -334,7 +334,7 @@ export default function TechDeckTicketQueue({
         <div className="techdeck-ticket-form-title">
           <Plus size={17} aria-hidden="true" />
           <strong>Open a technician ticket</strong>
-          <span>Tenant, creator, and access are assigned by OperatorOS.</span>
+          <span>Ownership and access are assigned automatically.</span>
         </div>
 
         {actionError && !actionError.ticketId && (
@@ -470,7 +470,7 @@ export default function TechDeckTicketQueue({
               <span />
             </div>
           ))}
-          <span className="sr-only">Loading tenant tickets…</span>
+          <span className="sr-only">Loading service tickets…</span>
         </div>
       ) : !loadError && visibleTickets.length === 0 ? (
         <div className="techdeck-ticket-empty" data-testid="techdeck-ticket-empty">

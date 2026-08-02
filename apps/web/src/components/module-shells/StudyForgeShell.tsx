@@ -119,7 +119,7 @@ export default function StudyForgeShell() {
       </nav>
 
       {error && <div role="alert" data-testid="studyforge-error" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger, marginBottom: space.lg }}>{error}</div>}
-      {!data ? <Panel id="studyforge-loading" title="Loading workspace"><p style={{ color: semantic.textMuted }}>Loading tenant-authorized study records…</p></Panel> : (
+      {!data ? <Panel id="studyforge-loading" title="Loading workspace"><p style={{ color: semantic.textMuted }}>Loading your courses and study progress…</p></Panel> : (
         <>
           <Dashboard data={data} />
           <Subjects data={data} mutate={mutate} busy={busy} />
@@ -163,7 +163,7 @@ function Dashboard({ data }: { data: Workspace }) {
     ['Completed sessions', data.dashboard.completedSessions],
   ];
   return (
-    <Panel id="studyforge-dashboard" title="Learning command dashboard" description="Every metric is derived from persisted tenant and learner records.">
+    <Panel id="studyforge-dashboard" title="Learning command dashboard" description="See current subjects, study activity, quiz performance, and upcoming reviews.">
       <Grid>{metrics.map(([label, value]) => <article key={label} style={{ ...cardStyle, borderTop: '3px solid #7c3aed' }}><div style={{ color: semantic.textMuted, fontSize: 13 }}>{label}</div><strong style={{ display: 'block', fontSize: 28, marginTop: 8 }}>{value}</strong></article>)}</Grid>
     </Panel>
   );
@@ -180,7 +180,7 @@ function Subjects({ data, mutate, busy }: { data: Workspace; mutate: (action: ()
     });
   };
   return (
-    <Panel id="studyforge-subjects" title="Subjects and courses" description="Tenant-scoped organization for sources, decks, quizzes, and plans.">
+    <Panel id="studyforge-subjects" title="Subjects and courses" description="Organize source material, flashcard decks, quizzes, and study plans by subject.">
       <form onSubmit={submit} style={{ ...cardStyle, display: 'grid', gridTemplateColumns: 'minmax(180px,2fr) minmax(140px,1fr) auto', gap: 10, marginBottom: space.md }}>
         <input data-testid="input-studyforge-subject-name" aria-label="Subject name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={160} placeholder="Network Fundamentals" style={inputStyle} />
         <input aria-label="Course code" value={code} onChange={(e) => setCode(e.target.value)} maxLength={80} placeholder="NET-201" style={inputStyle} />
@@ -219,7 +219,7 @@ function Sources({ data, mutate, busy }: { data: Workspace; mutate: (action: () 
     setTitle(''); setFile(null);
   };
   return (
-    <Panel id="studyforge-sources" title="Authorized sources" description="Private notes and scanned tenant-authorized documents. No public URLs or fabricated attribution.">
+    <Panel id="studyforge-sources" title="Authorized sources" description="Private notes and approved documents stay protected, with no public links or fabricated attribution.">
       <form onSubmit={createNote} style={{ ...cardStyle, display: 'grid', gap: 10, marginBottom: space.md }}>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
           <input data-testid="input-studyforge-source-title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} placeholder="Source title" style={inputStyle} />
@@ -251,7 +251,7 @@ function Studio({ data, mutate, busy }: { data: Workspace; mutate: (action: () =
     }));
   };
   return (
-    <Panel id="studyforge-studio" title="Source-grounded AI studio" description="The shared server adapter generates draft material only. Exact source excerpts are verified before persistence.">
+    <Panel id="studyforge-studio" title="Source-grounded AI studio" description="AI creates review-ready drafts while every quoted excerpt is checked against your sources before saving.">
       <form onSubmit={submit} style={{ ...cardStyle, display: 'grid', gap: 10 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10 }}>
           <select data-testid="select-studyforge-generation-source" value={sourceId} onChange={(e) => setSourceId(e.target.value)} required style={inputStyle}><option value="">Select source</option>{data.sources.map((source) => <option key={source.id} value={source.id}>{source.title}</option>)}</select>
@@ -264,7 +264,7 @@ function Studio({ data, mutate, busy }: { data: Workspace; mutate: (action: () =
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <button data-testid="button-studyforge-generation-create" disabled={busy || !sourceId} style={buttonStyle}><Sparkles size={14} /> Generate draft</button>
-          <span style={{ color: semantic.textMuted, fontSize: 13 }}>Adapter: {data.ai.name} · monthly limit {data.ai.monthlyLimit} · review required</span>
+          <span style={{ color: semantic.textMuted, fontSize: 13 }}>AI service: {data.ai.name} · monthly limit {data.ai.monthlyLimit} · review required</span>
         </div>
       </form>
     </Panel>
@@ -439,11 +439,11 @@ function PlanSessionEditor({ session, editable, published, busy, mutate }: {
 function Progress({ data }: { data: Workspace }) {
   const due = useMemo(() => data.progress.filter((row) => new Date(row.dueAt) <= new Date()), [data.progress]);
   return (
-    <Panel id="studyforge-analytics" title="Real progress and export" description="Quiz scores, completed sessions, review intervals, and usage are persisted—not estimated counters.">
+    <Panel id="studyforge-analytics" title="Progress and export" description="Review quiz scores, completed sessions, recall intervals, and learning activity over time.">
       <Grid>
         <article style={cardStyle}><h3>Quiz history</h3>{data.attempts.length ? data.attempts.slice(0, 8).map((attempt) => <div key={attempt.id} style={{ padding: '6px 0', borderBottom: `1px solid ${semantic.border}` }}>{attempt.scorePercent}% · {new Date(attempt.completedAt).toLocaleDateString()}</div>) : <p style={{ color: semantic.textMuted }}>No attempts yet.</p>}</article>
         <article style={cardStyle}><h3>Spaced repetition</h3><strong style={{ fontSize: 30 }}>{due.length}</strong><p style={{ color: semantic.textMuted }}>cards currently due</p><div>{data.progress.slice(0, 8).map((item) => <div key={item.id} style={{ fontSize: 13, padding: 4 }}>Interval {item.intervalDays}d · {item.lastRating}</div>)}</div></article>
-        <article style={cardStyle}><h3>Portable exports</h3><p style={{ color: semantic.textMuted }}>Exports contain only records visible to the current tenant and learner.</p><div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><a href="/api/modules/studyforge-ai/export?format=json" style={{ ...subtleButton, textDecoration: 'none' }}><Download size={14} /> JSON</a><a href="/api/modules/studyforge-ai/export?format=csv" style={{ ...subtleButton, textDecoration: 'none' }}><Download size={14} /> CSV</a></div></article>
+        <article style={cardStyle}><h3>Portable exports</h3><p style={{ color: semantic.textMuted }}>Exports include only the learning records you are allowed to view.</p><div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><a href="/api/modules/studyforge-ai/export?format=json" style={{ ...subtleButton, textDecoration: 'none' }}><Download size={14} /> JSON</a><a href="/api/modules/studyforge-ai/export?format=csv" style={{ ...subtleButton, textDecoration: 'none' }}><Download size={14} /> CSV</a></div></article>
       </Grid>
     </Panel>
   );

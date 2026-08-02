@@ -136,11 +136,11 @@ export function validateReleaseIdentity(payload, expectedCommit) {
   }
   if (
     payload?.databaseRelease?.contractVersion !== 1
-    || payload?.databaseRelease?.releaseVersion !== 32
-    || payload?.databaseRelease?.stepCount !== 32
-    || payload?.databaseRelease?.lastStep !== 'tradeflowkit_public_operations'
+    || payload?.databaseRelease?.releaseVersion !== 33
+    || payload?.databaseRelease?.stepCount !== 33
+    || payload?.databaseRelease?.lastStep !== 'outcall_product_operations'
   ) {
-    issues.push('database release identity does not match version 31');
+    issues.push('database release identity does not match version 33');
   }
   return issues;
 }
@@ -284,24 +284,11 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry, exp
   }
 
   const outcall = modules.find((entry) => entry.slug === 'outcall');
-  await runCheck(results, 'outcall disabled registry', async () => {
-    if (!outcall || outcall.enabled !== false) {
-      throw new Error('OutCall must remain disabled in the production registry');
+  await runCheck(results, 'outcall active registry', async () => {
+    if (!outcall || outcall.enabled !== true || outcall.status !== 'active') {
+      throw new Error('OutCall must be active in the production registry');
     }
-    return 'disabled';
-  });
-  await runCheck(results, 'outcall disabled callback', async () => {
-    if (!outcall) throw new Error('OutCall registration is missing');
-    const response = await request(
-      fetchImpl,
-      `${outcall.exactRedirectUris[0]}?code=probe&state=probe`,
-    );
-    if (response.status === 200) {
-      throw new Error('disabled OutCall callback rendered an exchange surface');
-    }
-    requireStatus(response, [302, 303, 307, 308, 403, 404], 'disabled OutCall callback');
-    requireSecurityHeaders(response, 'disabled OutCall callback');
-    return `denied (HTTP ${response.status})`;
+    return 'active';
   });
 
   const passed = results.filter((result) => result.ok).length;

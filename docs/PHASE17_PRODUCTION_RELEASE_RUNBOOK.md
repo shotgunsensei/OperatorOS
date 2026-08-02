@@ -1,5 +1,10 @@
 # Phase 17 production release runbook
 
+> Historical runbook. Phase 18 activates OutCall in source and supersedes the
+> disabled-OutCall assertions below. Do not use this document to deploy the
+> current candidate; follow `docs/outcall/GO_LIVE_CHECKLIST.md`,
+> `docs/CURRENT_RELEASE_GATE.md`, and the Phase 18 steps in `PLANS.md`.
+
 This is the authoritative operator workflow for the Phase 17 release candidate.
 It uses the existing `.replit` build and `scripts/start-unified-runtime.mjs`
 compiled supervisor. It does not authorize a production database restore,

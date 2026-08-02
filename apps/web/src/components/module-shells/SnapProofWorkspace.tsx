@@ -220,7 +220,7 @@ export default function SnapProofWorkspace() {
         <div>
           <div style={{ color: '#2dd4bf', fontSize: 12, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase' }}>Evidence integrity and proof of work</div>
           <h1 style={{ margin: '6px 0', fontSize: 30 }}>SnapProofOS</h1>
-          <p style={{ margin: 0, color: '#94a3b8', maxWidth: 820 }}>Capture private evidence, verify integrity, preserve chain of custody, and issue defensible reports under OperatorOS tenant and role authority.</p>
+          <p style={{ margin: 0, color: '#94a3b8', maxWidth: 820 }}>Capture private evidence, verify integrity, preserve chain of custody, and issue defensible reports with organization and role-based access.</p>
         </div>
         <ShellLiveBadge />
       </header>
@@ -234,7 +234,7 @@ export default function SnapProofWorkspace() {
       </nav>
 
       {error && <div role="alert" style={{ ...cardStyle, background: '#1f0a12', borderColor: '#be123c', color: '#fda4af', marginBottom: space.lg }}>{error}</div>}
-      {loading ? <div style={{ ...cardStyle, background: '#0f172a', color: '#94a3b8' }}>Loading persisted evidence records…</div> : (
+      {loading ? <div style={{ ...cardStyle, background: '#0f172a', color: '#94a3b8' }}>Loading your evidence workspace…</div> : (
         <>
           {tab === 'dashboard' && <Dashboard counts={dashboard.counts || {}} cases={cases} onOpen={selectCase} navigate={navigate} />}
           {tab === 'cases' && <CasesPanel cases={cases} detail={detail} selectedCaseId={selectedCaseId} saving={saving} onSelect={selectCase} mutate={mutate} />}
@@ -256,7 +256,7 @@ function Panel({ id, title, description, children }: { id: string; title: string
 }
 
 function Dashboard({ counts, cases, onOpen, navigate }: { counts: Record<string, number>; cases: SnapProofCase[]; onOpen: (id: string) => void; navigate: (tab: Tab) => void }) {
-  return <Panel id="snapproofos-dashboard" title="Evidence command dashboard" description="All counters derive from tenant-persisted records; no demo or synthetic metrics are rendered.">
+  return <Panel id="snapproofos-dashboard" title="Evidence command dashboard" description="See active cases, captured evidence, review status, findings, and recent custody events.">
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: space.md }}>
       {[
         ['Cases', counts.cases ?? 0],
@@ -268,7 +268,7 @@ function Dashboard({ counts, cases, onOpen, navigate }: { counts: Record<string,
     </div>
     <div style={{ ...cardStyle, background: '#0f172a', marginTop: space.lg }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}><h3 style={{ margin: 0 }}>Recently updated cases</h3><button style={buttonStyle} onClick={() => navigate('cases')}><Plus size={15} /> New case</button></div>
-      {cases.length ? cases.slice(0, 6).map(item => <button key={item.id} onClick={() => onOpen(item.id)} style={{ width: '100%', textAlign: 'left', padding: '12px 0', border: 0, borderTop: '1px solid #1e293b', background: 'transparent', color: '#e2e8f0', cursor: 'pointer' }}><strong>{item.reference} · {item.title}</strong><span style={{ float: 'right', color: '#5eead4' }}>{item.status.replaceAll('_', ' ')}</span></button>) : <Empty text="No evidence cases exist yet. Create the first persisted case." />}
+      {cases.length ? cases.slice(0, 6).map(item => <button key={item.id} onClick={() => onOpen(item.id)} style={{ width: '100%', textAlign: 'left', padding: '12px 0', border: 0, borderTop: '1px solid #1e293b', background: 'transparent', color: '#e2e8f0', cursor: 'pointer' }}><strong>{item.reference} · {item.title}</strong><span style={{ float: 'right', color: '#5eead4' }}>{item.status.replaceAll('_', ' ')}</span></button>) : <Empty text="No evidence cases yet. Create your first case to begin collecting proof." />}
     </div>
   </Panel>;
 }
@@ -285,7 +285,7 @@ function CasesPanel({ cases, detail, selectedCaseId, saving, onSelect, mutate }:
     });
   };
   const selected = detail?.case as SnapProofCase | undefined;
-  return <Panel id="snapproofos-cases" title="Evidence cases" description="Cases are tenant-scoped collections. Reference uniqueness, lifecycle, and optimistic versions are enforced by the server.">
+  return <Panel id="snapproofos-cases" title="Evidence cases" description="Group related evidence, notes, findings, review decisions, and reports under a single case reference.">
     <Form onSubmit={submit}><Field label="Case reference" value={reference} onChange={setReference} required /><Field label="Title" value={title} onChange={setTitle} required /><Field label="Description" value={description} onChange={setDescription} /><Submit saving={saving} label="Create evidence case" /></Form>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,280px),1fr))', gap: space.lg }}>
       <div style={{ display: 'grid', gap: 8, alignContent: 'start' }}>{cases.length ? cases.map(item => <button key={item.id} onClick={() => onSelect(item.id)} style={{ ...subtleButton, textAlign: 'left', borderColor: selectedCaseId === item.id ? '#14b8a6' : '#334155' }}><strong>{item.reference}</strong><div style={{ color: '#94a3b8', marginTop: 4 }}>{item.title}</div><small style={{ color: '#5eead4' }}>{item.status.replaceAll('_', ' ')}</small></button>) : <Empty text="No cases yet." />}</div>
@@ -294,7 +294,7 @@ function CasesPanel({ cases, detail, selectedCaseId, saving, onSelect, mutate }:
         <p style={{ color: '#94a3b8' }}>{selected.description || 'No description recorded.'}</p>
         <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12 }}><Fact label="Evidence" value={String(detail.evidence?.length || 0)} /><Fact label="Findings" value={String(detail.findings?.length || 0)} /><Fact label="Comments" value={String(detail.comments?.length || 0)} /><Fact label="Version" value={String(selected.version)} /></dl>
         {['draft', 'collecting', 'rejected'].includes(selected.status) && <button disabled={saving} style={{ ...buttonStyle, marginTop: 14 }} onClick={() => void mutate(() => moduleShellApi.snapproofos.submitCase(selected.id))}><ClipboardCheck size={15} /> Submit case for review</button>}
-      </div> : <Empty text="Select a case to inspect its persisted records." />}
+      </div> : <Empty text="Select a case to review its evidence and activity." />}
     </div>
   </Panel>;
 }
@@ -325,7 +325,7 @@ function EvidencePanel({ cases, evidence, selectedCaseId, saving, onSelectCase, 
   const download = (item: SnapProofEvidence) => void mutate(async () => {
     downloadBlob(await moduleShellApi.snapproofos.downloadEvidence(item.id), `snapproof-${item.id}`);
   });
-  return <Panel id="snapproofos-evidence" title="Secure evidence capture" description="Uploads remain private, signature checked, scanned, hashed, and available only through an authorized download endpoint.">
+  return <Panel id="snapproofos-evidence" title="Secure evidence capture" description="Uploads remain private, signature checked, scanned, hashed, and available only to authorized users.">
     <Form onSubmit={submit}>
       <Select label="Case" value={selectedCaseId || ''} onChange={onSelectCase} required options={cases.map(item => [item.id, `${item.reference} · ${item.title}`])} />
       <Select label="Evidence type" value={evidenceType} onChange={value => { setEvidenceType(value); if (value === 'note') setFile(null); }} required options={[['note', 'Evidence note'], ['photo', 'Photo'], ['document', 'Document'], ['screenshot', 'Screenshot'], ['log', 'Log file']]} />
@@ -373,7 +373,7 @@ function FindingsPanel({ cases, detail, selectedCaseId, saving, onSelectCase, mu
     <div style={{ height: 12 }} />
     <Form onSubmit={createFinding}><Field label="Finding title" value={title} onChange={setTitle} required /><Field label="Description" value={description} onChange={setDescription} required multiline /><Select label="Severity" value={severity} onChange={setSeverity} required options={['info', 'low', 'medium', 'high', 'critical'].map(value => [value, value])} /><Submit saving={saving} label="Record finding" /></Form>
     <Form onSubmit={addComment}><Field label="Append-only internal note" value={comment} onChange={setComment} required multiline /><Submit saving={saving} label="Add internal note" /></Form>
-    <h3>Persisted findings</h3><CardGrid>{detail?.findings?.length ? detail.findings.map((item: any) => <article key={item.id} style={{ ...cardStyle, background: '#0f172a' }}><strong>{item.title}</strong><Status value={item.severity} /><p style={{ color: '#94a3b8' }}>{item.description}</p></article>) : <Empty text="No findings recorded for this case." />}</CardGrid>
+    <h3>Findings</h3><CardGrid>{detail?.findings?.length ? detail.findings.map((item: any) => <article key={item.id} style={{ ...cardStyle, background: '#0f172a' }}><strong>{item.title}</strong><Status value={item.severity} /><p style={{ color: '#94a3b8' }}>{item.description}</p></article>) : <Empty text="No findings recorded for this case." />}</CardGrid>
     <h3>Append-only comments</h3><div style={{ display: 'grid', gap: 8 }}>{detail?.comments?.length ? detail.comments.map((item: any) => <div key={item.id} style={{ ...cardStyle, background: '#0f172a' }}><small style={{ color: '#5eead4' }}>{item.commentType} · {new Date(item.createdAt).toLocaleString()}</small><p style={{ marginBottom: 0 }}>{item.body}</p></div>) : <Empty text="No internal notes recorded." />}</div>
   </Panel>;
 }
@@ -390,7 +390,7 @@ function ReportsPanel({ cases, reports, selectedCaseId, saving, onSelectCase, mu
 
 function CustodyPanel({ cases, selectedCaseId, events, onSelectCase }: { cases: SnapProofCase[]; selectedCaseId: string | null; events: Array<Record<string, any>>; onSelectCase: (id: string) => void }) {
   const valid = useMemo(() => events.every((event, index) => index === 0 ? event.previousHash === null : event.previousHash === events[index - 1]?.eventHash), [events]);
-  return <Panel id="snapproofos-custody" title="Chain of custody" description="Events are append-only, sequence-locked, and SHA-256 chained. The browser verifies displayed link continuity; the database rejects mutation.">
+  return <Panel id="snapproofos-custody" title="Chain of custody" description="Follow who added, reviewed, or changed each item and verify that the displayed evidence trail remains intact.">
     <Select label="Case" value={selectedCaseId || ''} onChange={onSelectCase} required options={cases.map(item => [item.id, `${item.reference} · ${item.title}`])} />
     <div style={{ ...cardStyle, background: valid ? '#06201b' : '#290b13', borderColor: valid ? '#0f766e' : '#be123c', margin: `${space.md}px 0` }}><ShieldCheck size={18} /> <strong>{valid ? 'Displayed custody links are continuous' : 'Displayed custody chain is discontinuous'}</strong></div>
     <div style={{ display: 'grid', gap: 8 }}>{events.length ? events.map(event => <article key={event.id} style={{ ...cardStyle, background: '#0f172a', display: 'grid', gridTemplateColumns: '60px minmax(0,1fr)', gap: 12 }}><strong style={{ color: '#5eead4' }}>#{event.sequenceNumber}</strong><div><strong>{String(event.eventType).replaceAll('_', ' ')}</strong><div style={{ color: '#94a3b8', fontSize: 12 }}>{new Date(event.createdAt).toLocaleString()}</div><code style={{ display: 'block', color: '#67e8f9', fontSize: 10, wordBreak: 'break-all', marginTop: 6 }}>{event.eventHash}</code></div></article>) : <Empty text="No custody events exist for this case." />}</div>
@@ -414,12 +414,12 @@ function RetentionPanel({ cases, selectedCase, onSelectCase, saving, mutate }: {
 }
 
 function SettingsPanel() {
-  return <Panel id="snapproofos-settings" title="Security and authority boundary" description="SnapProofOS uses shared OperatorOS identity, tenant, entitlement, upload scanning, activity, and navigation contracts.">
+  return <Panel id="snapproofos-settings" title="Privacy and access" description="Review how SnapProofOS protects evidence and limits access across your organization.">
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))', gap: space.md }}>
-      <Info title="Private evidence storage" text="Raw files have no public URLs. Downloads require the active tenant session and entitlement on every request." />
+      <Info title="Private evidence storage" text="Raw files have no public links. Every download requires an active, authorized account." />
       <Info title="Review authority" text="Members may collect and submit. Tenant administrators approve, reject, set legal holds, and archive." />
       <Info title="Accounts and billing" text="Profile, membership, billing, logout, and module access remain in the shared OperatorOS header." />
-      <Info title="External integrations" text="Unreviewed legacy share links and arbitrary provider credentials are disabled. Future providers must use OperatorOS shared adapters." />
+      <Info title="External integrations" text="Only approved sharing and integration options are available; unreviewed connections remain disabled." />
     </div>
   </Panel>;
 }

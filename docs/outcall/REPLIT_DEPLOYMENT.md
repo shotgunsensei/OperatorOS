@@ -1,7 +1,7 @@
 # OutCall Replit Deployment
 
-Status: shared-runtime target design; no Phase 12B production deployment is
-claimed.
+Status: Phase 18 active source/local candidate; no production deployment or
+live-provider acceptance is claimed.
 
 ## Topology
 
@@ -13,8 +13,9 @@ supervisor. A separate OutCall deployment requires a later workload ADR.
 
 Provision Replit managed PostgreSQL only if it is the same approved OperatorOS
 production database or an approved network path to that shared database. The
-recommended choice is shared OperatorOS PostgreSQL with restricted OutCall
-permissions. `DATABASE_URL` is the only database connection variable required.
+supported choice is shared OperatorOS PostgreSQL governed by the single
+ordered release contract. `DATABASE_URL` is the only database connection
+variable; do not run a child migration tool.
 
 ## Build and start contract
 
@@ -34,28 +35,36 @@ provider/configuration gate.
 
 After publishing, add `outcall.operatoros.net` in Replit Domains and copy the
 exact Replit-provided DNS record to the OperatorOS DNS provider. Do not guess
-the target. Verify DNS and TLS before configuring production callbacks. These
-planned endpoints must not be configured in Twilio until their signed
-implementations and controlled acceptance tests exist:
+the target. Verify DNS and TLS before configuring callbacks. Set the Twilio
+number's inbound messaging webhook to:
 
-- `POST https://outcall.operatoros.net/api/outcall/webhooks/twilio/sms`
-- `POST https://outcall.operatoros.net/api/outcall/webhooks/twilio/sms/status`
-- `POST https://outcall.operatoros.net/api/outcall/webhooks/twilio/voice`
-- `POST https://outcall.operatoros.net/api/outcall/webhooks/twilio/voice/gather`
-- `POST https://outcall.operatoros.net/api/outcall/webhooks/twilio/voice/status`
+- `POST https://outcall.operatoros.net/api/modules/outcall/webhooks/twilio/sms`
+
+Voice status and DTMF gather callbacks are generated per call under these
+implemented prefixes and include the server-owned request identifier:
+
+- `POST https://outcall.operatoros.net/api/modules/outcall/webhooks/twilio/voice/status`
+- `POST https://outcall.operatoros.net/api/modules/outcall/webhooks/twilio/voice/gather`
+
+There is no OutCall recording callback, generic voice-inbound route, or SMS
+status route. Do not invent or configure one.
 
 Twilio signature validation must use `OUTCALL_PUBLIC_URL`, not an untrusted Host
 or forwarding header. Production must not trust `replit.dev` preview URLs.
 
 ## Release and rollback
 
-1. Back up/export the database and record the deployed commit.
-2. Acquire a PostgreSQL migration advisory lock and apply backward-compatible
-   migrations before switching traffic.
+1. Back up/export the database and record the exact committed candidate.
+2. Review `corepack pnpm db:plan`, then let the readiness-gated supervisor
+   apply release v33 through the supported guarded path.
 3. Deploy with live provider operations fail-closed; verify health, readiness,
-   worker heartbeat, SSO, tenant isolation and the explicit provider state.
-4. Configure domain and provider callbacks, then grant a limited beta tenant.
-5. Activate registry status only in a separate reviewed release.
+   worker heartbeat, SSO, tenant isolation, active registry state, and the
+   explicit provider state.
+4. Configure the domain and inbound SMS callback, grant only the controlled
+   acceptance tenant, and set `OUTCALL_LIVE_PROVIDER=enabled` for the reviewed
+   test window.
+5. Complete the Verify/SMS/voice/DTMF/replay/tamper/cancellation acceptance and
+   either approve the limited launch or turn the provider flag off.
 
 Rollback application code to the prior deployment while leaving additive
 migrations in place. Destructive schema reversal requires a separately tested

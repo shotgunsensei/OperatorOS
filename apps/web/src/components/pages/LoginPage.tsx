@@ -13,7 +13,7 @@ interface LoginPageProps {
 const PENDING_INVITE_EMAIL_KEY = 'operatoros.pendingInviteEmail';
 
 const BENEFITS = [
-  { icon: KeyRound, title: 'Sign in once', body: 'Your identity and tenant context follow you into every unlocked module.' },
+  { icon: KeyRound, title: 'Sign in once', body: 'Your account and organization access follow you into every unlocked app.' },
   { icon: Layers3, title: 'Keep the stack connected', body: 'Apps, billing, roles, and access stay synchronized from one command layer.' },
   { icon: ShieldCheck, title: 'Operate with confidence', body: 'Server-verified access and auditable handoffs protect every module launch.' },
 ];
@@ -150,7 +150,7 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
             One secure entry to your entire operation.
           </h1>
           <p style={{ margin: 0, maxWidth: 620, color: brand.textSecondary, fontSize: 17, lineHeight: 1.65 }}>
-            Open every approved module with the right tenant, role, and access already in place.
+            Open every approved app with the right organization, role, and access already in place.
           </p>
 
           <div className="operatoros-auth-benefits" style={{
@@ -180,7 +180,7 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
               Enter your command center.
             </h2>
             <p style={{ margin: 0, color: brand.textSecondary, fontSize: 14, lineHeight: 1.6 }}>
-              Your module access and active tenant will be restored automatically.
+              Your app access and active organization will be restored automatically.
             </p>
           </div>
 

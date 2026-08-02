@@ -158,7 +158,7 @@ export default function BrandForgeWorkspace() {
         <div>
           <div style={{ color: '#d946ef', fontSize: 12, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase' }}>Creative campaign operating system</div>
           <h1 style={{ margin: '6px 0', fontSize: 30 }}>BrandForgeOS</h1>
-          <p style={{ margin: 0, color: semantic.textMuted, maxWidth: 760 }}>Build tenant-owned brand systems, campaigns, copy, calendars, and measurable performance without duplicating OperatorOS identity or billing.</p>
+          <p style={{ margin: 0, color: semantic.textMuted, maxWidth: 760 }}>Build reusable brand systems, campaigns, copy, content calendars, and measurable creative performance in one workspace.</p>
         </div>
         <ShellLiveBadge />
       </header>
@@ -172,7 +172,7 @@ export default function BrandForgeWorkspace() {
       </nav>
 
       {error && <div role="alert" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger, marginBottom: space.lg }}>{error}</div>}
-      {loading ? <div style={{ ...cardStyle, color: semantic.textMuted }}>Loading the persisted creative workspace…</div> : (
+      {loading ? <div style={{ ...cardStyle, color: semantic.textMuted }}>Loading your creative workspace…</div> : (
         <>
           {tab === 'dashboard' && <DashboardPanel dashboard={dashboard} campaigns={campaigns} calendar={calendar} navigate={navigate} />}
           {tab === 'brands' && <BrandsPanel brands={brands} saving={saving} mutate={mutate} />}
@@ -195,7 +195,7 @@ function Panel({ id, title, description, children }: { id: string; title: string
 
 function DashboardPanel({ dashboard, campaigns, calendar, navigate }: { dashboard: any; campaigns: BrandForgeCampaign[]; calendar: BrandForgeCalendarItem[]; navigate: (tab: Tab) => void }) {
   const counts = dashboard?.counts ?? {};
-  return <Panel id="brandforgeos-dashboard" title="Creative command dashboard" description="Every number below is derived from persisted tenant records—never sample or random data.">
+  return <Panel id="brandforgeos-dashboard" title="Creative command dashboard" description="See the brands, campaigns, content, and launches your team is actively building.">
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: space.md }}>
       {[['Brand kits', counts.brands ?? 0], ['Personas', counts.personas ?? 0], ['Campaigns', counts.campaigns ?? 0], ['Copy assets', counts.copy_assets ?? 0], ['Calendar', counts.calendar_items ?? 0], ['Generations', counts.generations ?? 0]].map(([label, value]) => <div key={String(label)} style={cardStyle}><div style={{ color: semantic.textMuted, fontSize: 12 }}>{label}</div><div style={{ fontSize: 27, fontWeight: 800, marginTop: 5 }}>{String(value)}</div></div>)}
     </div>
@@ -258,7 +258,7 @@ function AnalyticsPanel({ dashboard, campaigns, saving, mutate }: { dashboard: a
   const [campaignId, setCampaignId] = useState(''); const [impressions, setImpressions] = useState('0'); const [clicks, setClicks] = useState('0'); const [conversions, setConversions] = useState('0');
   const performance = dashboard?.performance ?? {};
   const submit = (event: FormEvent) => { event.preventDefault(); void mutate(() => moduleShellApi.brandforgeos.addMetric(campaignId, { metricDate: new Date().toISOString(), impressions: Number(impressions), clicks: Number(clicks), conversions: Number(conversions), spendCents: 0, revenueCents: 0 })); };
-  return <Panel id="brandforgeos-analytics" title="Persisted analytics" description="Only manually recorded or future verified-provider metrics appear here; sample and random data are prohibited.">
+  return <Panel id="brandforgeos-analytics" title="Campaign analytics" description="Track the performance results your team records for each campaign and channel.">
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: space.md, marginBottom: space.lg }}>{[['Impressions', performance.impressions ?? 0], ['Clicks', performance.clicks ?? 0], ['Conversions', performance.conversions ?? 0], ['Spend', `$${(Number(performance.spend_cents ?? 0) / 100).toFixed(2)}`], ['Revenue', `$${(Number(performance.revenue_cents ?? 0) / 100).toFixed(2)}`]].map(([label, value]) => <div key={String(label)} style={cardStyle}><div style={{ color: semantic.textMuted, fontSize: 12 }}>{label}</div><strong style={{ fontSize: 24 }}>{String(value)}</strong></div>)}</div>
     <CreateGrid onSubmit={submit}><Select label="Campaign" value={campaignId} onChange={setCampaignId} required options={campaigns.map((item) => [item.id, item.name])} /><Field label="Impressions" value={impressions} onChange={setImpressions} type="number" /><Field label="Clicks" value={clicks} onChange={setClicks} type="number" /><Field label="Conversions" value={conversions} onChange={setConversions} type="number" /><Submit saving={saving} label="Record metrics" /></CreateGrid>
     <a href="/api/modules/brandforgeos/export?format=csv" style={{ ...subtleButton, display: 'inline-flex', gap: 7, alignItems: 'center', textDecoration: 'none' }}><Download size={15} /> Download real CSV export</a>
@@ -268,8 +268,8 @@ function AnalyticsPanel({ dashboard, campaigns, saving, mutate }: { dashboard: a
 function GenerationPanel({ generations, brands, campaigns, provider, saving, mutate }: { generations: BrandForgeGeneration[]; brands: BrandForgeBrand[]; campaigns: BrandForgeCampaign[]; provider: { name: string; configured: boolean }; saving: boolean; mutate: (task: () => Promise<unknown>) => Promise<void> }) {
   const [type, setType] = useState('copy'); const [prompt, setPrompt] = useState(''); const [brandId, setBrandId] = useState(''); const [campaignId, setCampaignId] = useState('');
   const submit = (event: FormEvent) => { event.preventDefault(); void mutate(async () => { await moduleShellApi.brandforgeos.generate({ type, prompt, brandId: brandId || null, campaignId: campaignId || null, idempotencyKey: uniqueKey('brandforge-ui') }); setPrompt(''); }); };
-  return <Panel id="brandforgeos-ai" title="AI workflows" description="Provider calls run server-side with fixed safety instructions, idempotency, shared usage accounting, and immutable results.">
-    <div style={{ ...cardStyle, marginBottom: space.lg, borderColor: provider.name === 'disabled' ? semantic.accentDanger : '#a855f7' }}>Provider: <strong>{provider.name}</strong>{provider.name === 'disabled' && <span style={{ color: semantic.accentDanger }}> — generation safely disabled until OperatorOS configures it.</span>}</div>
+  return <Panel id="brandforgeos-ai" title="AI workflows" description="Turn an approved brand and campaign brief into review-ready copy and creative directions.">
+    <div style={{ ...cardStyle, marginBottom: space.lg, borderColor: provider.name === 'disabled' ? semantic.accentDanger : '#a855f7' }}>Creative engine: <strong>{provider.name === 'disabled' ? 'Setup required' : provider.name}</strong>{provider.name === 'disabled' && <span style={{ color: semantic.accentDanger }}> — connect a generation provider to create new assets.</span>}</div>
     <CreateGrid onSubmit={submit}><Select label="Workflow" value={type} onChange={setType} required options={[['copy', 'Copy variants'], ['strategy', 'Campaign strategy'], ['campaign_ideas', 'Campaign ideas']]} /><Field label="Brief" value={prompt} onChange={setPrompt} required multiline /><Select label="Brand kit" value={brandId} onChange={setBrandId} options={brands.map((item) => [item.id, item.name])} /><Select label="Campaign" value={campaignId} onChange={setCampaignId} options={campaigns.map((item) => [item.id, item.name])} /><Submit saving={saving || provider.name === 'disabled'} label="Generate material" /></CreateGrid>
     <div style={{ display: 'grid', gap: space.md }}>{generations.length ? generations.map((generation) => <article key={generation.id} style={cardStyle}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><strong>{generation.generationType.replaceAll('_', ' ')}</strong><span style={{ color: semantic.textMuted, fontSize: 12 }}>{generation.provider} · {generation.tokenCount} tokens</span></div><pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: semantic.textMuted, font: 'inherit', fontSize: 13 }}>{JSON.stringify(generation.output, null, 2)}</pre></article>) : <Empty text="No generation results yet." />}</div>
   </Panel>;
@@ -280,7 +280,7 @@ function SettingsPanel({ workspace, saving, mutate }: { workspace: any; saving: 
   const submit = (event: FormEvent) => { event.preventDefault(); void mutate(() => moduleShellApi.brandforgeos.saveWorkspace({ expectedVersion: workspace.version, completed: true, industry: industry || null, businessType: workspace.profile?.businessType || null, products: products || null, idealCustomer: customer || null, geographicMarket: workspace.profile?.geographicMarket || null, competitors: workspace.profile?.competitors || null, goals: workspace.profile?.goals || [], channels: workspace.profile?.channels || [] })); };
   return <Panel id="brandforgeos-settings" title="Workspace profile" description="These settings guide BrandForgeOS only. Tenant name, members, billing, and entitlements stay in OperatorOS.">
     <CreateGrid onSubmit={submit}><Field label="Industry" value={industry} onChange={setIndustry} /><Field label="Products and services" value={products} onChange={setProducts} multiline /><Field label="Ideal customer" value={customer} onChange={setCustomer} multiline /><Submit saving={saving} label="Save workspace profile" /></CreateGrid>
-    <div style={{ ...cardStyle, color: semantic.textMuted }}>Manage members, profile, billing, support, and module entitlement through the shared OperatorOS header. BrandForgeOS exposes no child plan or account controls.</div>
+    <div style={{ ...cardStyle, color: semantic.textMuted }}>Team access, profile, billing, and support are available from the shared account menu above.</div>
   </Panel>;
 }
 

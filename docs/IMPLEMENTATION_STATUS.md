@@ -1,7 +1,7 @@
 # OperatorOS implementation status
 
 - Last updated: 2026-08-02
-- Phase: **17 — Production Truth and Revenue Release Gate**
+- Phase: **18 — OutCall Activation and Customer Experience Closure**
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -20,8 +20,72 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/tradeflowkit-final-parity`
+- Execution branch: `codex/outcall-checkered-flag`
 - Release gate: **closed**
+
+## 2026-08-02 OutCall live-capable activation and ecosystem UX sweep
+
+OutCall is now an active source/local state-4 candidate instead of a
+planned module. The shared runtime owns its authenticated exact-host launch,
+tenant and entitlement checks, encrypted verified-self phone and trigger
+storage, immediate and scheduled requests, durable rate limits, usage,
+activity, and privacy actions. The explicit live-provider boundary supports
+Twilio Verify, one controlled voice call to the verified self destination,
+private exact-trigger SMS, DTMF acknowledgment, signed callbacks, replay-safe
+receipt processing, and forced-off recording. Private export and
+password-confirmed `DELETE OUTCALL` deletion are implemented without deleting
+central audit or billing-usage records.
+
+Release v33 adds profile-bound triggers, a provider-call uniqueness constraint,
+and persistent tenant/user rate-limit buckets as an ordered additive and
+idempotent step. Public callback signature verification reconstructs the exact
+external `/api/modules/outcall/webhooks/*` URL even though the internal proxy
+rewrites requests to `/v1/*`. Live activation remains fail-closed unless the
+explicit provider flag, exact HTTPS OutCall host, Twilio account, primary auth
+token, Verify service, owned caller number, United States/Canada allowlist, and
+field-protection secrets are present.
+
+The product sweep also replaces migration, adapter, runtime, tenant-context,
+server-scoring, and version-ledger explanations in customer surfaces with
+task-oriented language. OutCall now presents a two-step phone verification,
+profiles, trigger phrases, immediate/scheduled calls, history, cancellation,
+privacy export, and deletion as one coherent personal-safety workspace.
+TechDeck, PulseDesk, TradeFlowKit, FaultlineLab, BrandForgeOS, CallCommand,
+Ninja Pool Hall, TorqueShed, the shared workflow shell, and platform entry
+pages received the same customer-language treatment without changing their
+authorization or persistence boundaries. Browser acceptance additionally
+found and removed CallCommand's globally reused placeholder line: each
+organization now enters its own approved business line, name, and timezone.
+
+| Gate | Result |
+| --- | --- |
+| Focused OutCall/provider/contracts | PASS 44/44; explicit activation, Verify requests, voice callbacks, forced-off recording, public/proxy signature validation, registry, SSO, commercial boundary, preflight, release, and browser-matrix contracts |
+| OutCall PostgreSQL workflow | PASS 5/5 on disposable PostgreSQL 16; verified destination, profile-bound trigger, scheduling, signed/replay-safe status and DTMF, exact-match inbound SMS, export, deletion, authorization, and isolation |
+| Changed customer-copy contracts | PASS 14/14 for Ninja Pool Hall, PulseDesk, and TorqueShed; broader customer-language contracts are included in the aggregate |
+| Full API aggregate | PASS 914, FAIL 0, SKIP 6 intentional HTTP-only cases across 920 tests on a fresh disposable PostgreSQL database |
+| Workspace/type/build | PASS; API, runner, and web TypeScript checks plus production build with Next 15.5.22 and 20/20 generated page entries |
+| Database release | PASS; read-only v33/33 plan, clean apply, and idempotent reapply on disposable PostgreSQL 16; last step `outcall_product_operations` |
+| Compiled first-screen browser | PASS 2/2 in 8.6 seconds on a disposable local database; Elite tenant exercised CallCommand, Ninjamation, OutCall, StudyForge AI, and Ninja Launch Kit, including OutCall safety acceptance, test verification, profile, trigger, schedule, and phone masking; non-entitled tenant received the inaccessible card |
+| Deployment/provider/exact-host browser | NOT RUN; no Replit secret, Twilio verification/SMS/call, production database, public callback, traffic, or deployed browser target was touched |
+
+Exact local commands used were `node --import tsx --test
+--test-concurrency=1` for focused tests and `corepack pnpm --dir apps/api test`
+for the 920-test aggregate, with `APP_ENV=test`, `NODE_ENV=test`, a
+non-production `SESSION_SECRET`, and fresh disposable `DATABASE_URL` values;
+`corepack pnpm db:plan`; `OPERATOROS_DATABASE_RELEASE_MODE=apply corepack pnpm
+db:apply` twice against the clean release database; and
+`INTERNAL_API_URL=http://localhost:5001 corepack pnpm build:production`. The
+compiled browser command was `corepack pnpm --dir apps/web exec playwright test
+e2e/module-shells-first-screens.spec.ts` with loopback `E2E_API_URL` and
+`E2E_WEB_URL`, explicit test-only OutCall/CallCommand adapters, and a separate
+disposable PostgreSQL database.
+
+The release gate remains closed. State 5 requires the exact committed candidate
+to be deployed, release v33 backed up/applied/verified, OutCall secrets added in
+Replit, Twilio callback URLs configured, a real controlled verified-self flow
+accepted end to end, exact-host SSO/denial/logout and every enabled module
+rechecked in a browser, and rollback evidence recorded. Local green evidence
+does not claim that those provider or deployment gates passed.
 
 ## 2026-08-02 TradeFlowKit zero-gap public intake and business payments
 
@@ -1093,12 +1157,15 @@ The clean source is pinned at
 `d49434e1d641d62cc141591c7208539a7afbf11e`; 450 tracked files, 369 retained
 files and 4,436,242 bytes were inventoried with zero high-confidence secret
 findings. The source runtime remains non-executed. ADR-0025 keeps bulk, cold,
-predictive and autonomous dialing out of CallCommand, keeps OutCall disabled
-pending Phase 12B, and excludes child identity/billing/admin, raw provider
+predictive and autonomous dialing out of CallCommand and excludes child
+identity/billing/admin, raw provider
 payloads, transfer execution, recording/transcription/AI summaries, public
 recording URLs, fake delivery and incomplete SIP providers. Shared Directory
 owns contacts; the deterministic importer is commit-pinned, read-only and
 no-apply.
+
+That historical Phase 11E boundary predated ADR-0027 and is superseded by the
+distinct Phase 18 OutCall state recorded at the top of this document.
 
 Fresh closure evidence passes the focused static/domain/import contracts,
 5/5 tenant/authorization/consent/disposition/persistence PostgreSQL checks and
@@ -1818,7 +1885,8 @@ acceptance. Those gates remain explicit blockers.
    any authorized data reconciliation and cutover.
 8. Remaining module parity, provenance, repeatable migration, reconciliation,
    and rollback gaps recorded in `docs/modules/MODULE_PARITY_INDEX.md`.
-9. Ninjamation source/product decision and the disabled OutCall boundary.
+9. Ninjamation source/product decision and the then-disabled OutCall boundary;
+   Phase 18 supersedes that historical OutCall state.
 
 ## Next action
 

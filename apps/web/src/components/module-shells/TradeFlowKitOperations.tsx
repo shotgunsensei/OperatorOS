@@ -168,7 +168,7 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
     <section id="tradeflowkit-operations" className="tfk-panel tfk-ops" data-testid="tradeflowkit-operations" tabIndex={-1}>
       <style>{css}</style>
       <header className="tfk-ops-head">
-        <div><span>Persisted field operations</span><h2>Jobs, tasks, assignments, and cash position</h2><p>Every count comes from tenant-scoped records; reloads and restarts preserve this workspace.</p></div>
+        <div><span>Field operations</span><h2>Jobs, tasks, assignments, and cash position</h2><p>Keep current work, team ownership, delivery status, and cash position visible in one place.</p></div>
         <div className="tfk-ops-actions"><a href="/api/modules/tradeflowkit/exports/customers.csv">Customers CSV</a><a href="/api/modules/tradeflowkit/exports/invoices.csv">Invoices CSV</a><a href="/api/modules/tradeflowkit/exports/payments.csv">Payments CSV</a><button type="button" onClick={() => void load()} disabled={loading || pending}><RefreshCw size={15} /> Refresh</button></div>
       </header>
 
@@ -182,7 +182,7 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
       </div>
 
       <section className="tfk-accounting-exports" data-testid="tradeflowkit-accounting-exports" aria-labelledby="tradeflowkit-accounting-exports-title">
-        <div><Download size={18} /><div><strong id="tradeflowkit-accounting-exports-title">Accounting handoff · format v1</strong><span>Tenant-scoped active customers, invoice lines, and successful payment-ledger entries. Review account and tax mappings in your accounting sandbox before import.</span></div></div>
+        <div><Download size={18} /><div><strong id="tradeflowkit-accounting-exports-title">Accounting export</strong><span>Export active customers, invoice lines, and successful payments. Review account and tax mappings in your accounting test company before importing.</span></div></div>
         <nav aria-label="Accounting exports">
           <a data-testid="tradeflowkit-export-quickbooks-iif" href="/api/modules/tradeflowkit/exports/quickbooks.iif">QuickBooks IIF</a>
           <a href="/api/modules/tradeflowkit/exports/quickbooks/invoices.csv">QuickBooks invoice CSV</a>
@@ -192,7 +192,7 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
         </nav>
       </section>
 
-      {error && <div className={`tfk-ops-alert ${conflict ? 'conflict' : ''}`} role="alert" data-testid={conflict ? 'tradeflowkit-conflict-state' : 'tradeflowkit-operations-error'}><AlertTriangle size={17} /><span>{error}</span>{conflict && <button type="button" onClick={() => void load()}>Reload current version</button>}</div>}
+      {error && <div className={`tfk-ops-alert ${conflict ? 'conflict' : ''}`} role="alert" data-testid={conflict ? 'tradeflowkit-conflict-state' : 'tradeflowkit-operations-error'}><AlertTriangle size={17} /><span>{error}</span>{conflict && <button type="button" onClick={() => void load()}>Refresh latest</button>}</div>}
 
       <div className="tfk-ops-toolbar">
         <label><Search size={15} /><span className="sr-only">Search jobs</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search jobs" maxLength={100} /></label>
@@ -205,7 +205,7 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
         <form onSubmit={saveCurrentView}>
           <Bookmark size={15} />
           <label><span className="sr-only">Saved view name</span><input aria-label="Saved view name" value={viewName} onChange={event => setViewName(event.target.value)} placeholder="Save these job filters as…" minLength={1} maxLength={120} required /></label>
-          {canManage && <label className="tfk-share-view"><input type="checkbox" checked={shareView} onChange={event => setShareView(event.target.checked)} /> <Share2 size={13} /> Share with tenant</label>}
+          {canManage && <label className="tfk-share-view"><input type="checkbox" checked={shareView} onChange={event => setShareView(event.target.checked)} /> <Share2 size={13} /> Share with team</label>}
           <button disabled={viewPending || !viewName.trim()}><Save size={14} /> Save view</button>
         </form>
         {savedViews.length === 0
@@ -214,7 +214,7 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
       </div>
 
       {canManage && data.jobs.length > 0 && <section className="tfk-bulk-bar" data-testid="tradeflowkit-job-bulk-actions" aria-label="Job batch actions">
-        <div><CheckCircle2 size={16} /><span><strong>{selectedJobIds.size} selected</strong><small>Choose up to 25 visible jobs. Every version must still match.</small></span></div>
+        <div><CheckCircle2 size={16} /><span><strong>{selectedJobIds.size} selected</strong><small>Choose up to 25 visible jobs. Each selection must still be current.</small></span></div>
         <select aria-label="Bulk job status" value={bulkStatus} onChange={event => setBulkStatus(event.target.value)}>
           <option value="lead">Lead</option><option value="quoted">Quoted</option><option value="scheduled">Scheduled</option><option value="in_progress">In progress</option><option value="done">Done</option><option value="invoiced">Invoiced</option><option value="paid">Paid</option><option value="canceled">Canceled</option>
         </select>

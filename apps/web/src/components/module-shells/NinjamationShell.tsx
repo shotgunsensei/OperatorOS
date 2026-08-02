@@ -384,7 +384,7 @@ export default function NinjamationShell() {
 
       {loading ? (
         <div data-testid="text-ninjamation-loading" style={{ ...cardStyle, color: semantic.textMuted }}>
-          <Loader2 size={16} /> Loading persistent script library…
+          <Loader2 size={16} /> Loading your script library…
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(230px,0.7fr) minmax(0,2fr)', gap: space.lg }}>

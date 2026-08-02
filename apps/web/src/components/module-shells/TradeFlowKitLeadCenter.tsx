@@ -204,7 +204,7 @@ export default function TradeFlowKitLeadCenter({ tenantKey, canManage }: { tenan
       <style>{leadCenterCss}</style>
       <div className="tfk-lead-heading">
         <div>
-          <div className="tfk-lead-eyebrow">Live tenant workflow</div>
+          <div className="tfk-lead-eyebrow">Active sales workflow</div>
           <h2>Lead Conversion Center</h2>
           <p>
             Capture, qualify, and convert tenant leads into shared-directory customers and numbered jobs. Provider delivery uses the shared notification outbox.
@@ -233,7 +233,7 @@ export default function TradeFlowKitLeadCenter({ tenantKey, canManage }: { tenan
         <div className="tfk-lead-form-title">
           <Plus size={17} aria-hidden="true" />
           <strong>Add a manual lead</strong>
-          <span>Tenant and creator are assigned by OperatorOS.</span>
+          <span>Ownership and access are assigned automatically.</span>
         </div>
         <label>
           <span>Name *</span>
@@ -349,7 +349,7 @@ export default function TradeFlowKitLeadCenter({ tenantKey, canManage }: { tenan
       {loading ? (
         <div className="tfk-lead-state" aria-busy="true" data-testid="tradeflowkit-lead-loading">
           <Loader2 className="tfk-spin" size={19} aria-hidden="true" />
-          Loading tenant leads…
+          Loading leads…
         </div>
       ) : visibleLeads.length === 0 ? (
         <div className="tfk-lead-state" data-testid="tradeflowkit-lead-empty">

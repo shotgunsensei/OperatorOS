@@ -19,14 +19,17 @@ the final framework's public prefix and appear in the explicit safe list only.
 
 ## Twilio
 
-`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_API_KEY_SID`,
+`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, optional `TWILIO_API_KEY_SID` plus
 `TWILIO_API_KEY_SECRET`, `TWILIO_VERIFY_SERVICE_SID`,
-`TWILIO_ALLOWED_COUNTRIES`, `TWILIO_PHONE_NUMBER`,
-`TWILIO_PHONE_NUMBER_SID`, `TWILIO_MESSAGING_SERVICE_SID`,
-`TWILIO_SMS_WEBHOOK_URL`, and `TWILIO_SMS_STATUS_CALLBACK_URL` are server-only.
+`TWILIO_ALLOWED_COUNTRIES`, and `TWILIO_PHONE_NUMBER` are server-only.
 API key credentials should be preferred for supported outbound operations while
 the auth token remains necessary for webhook validation. Validate SID formats,
 E.164 number, exact HTTPS URLs, and a non-empty country allowlist at startup.
+The controlled release supports North American `+1` numbers and requires `US`
+or `CA` in the allowlist. Twilio console callbacks must use:
+
+- `https://outcall.operatoros.net/api/modules/outcall/webhooks/twilio/sms`
+- the voice status and gather URLs generated for each call by OperatorOS.
 
 ## Stripe and protection keys
 
@@ -38,7 +41,8 @@ The active shared-runtime implementation requires independent, versioned
 `OUTCALL_FIELD_ENCRYPTION_KEY` and `OUTCALL_LOOKUP_HMAC_KEY`. The
 `--outcall-ready` production preflight also requires the canonical
 `OUTCALL_PUBLIC_URL`, Twilio account/auth/Verify configuration, and the
-OutCall-owned E.164 number. `OUTCALL_TEST_ADAPTER` must be absent in production.
+OutCall-owned E.164 number. `OUTCALL_LIVE_PROVIDER=enabled` is an explicit
+post-acceptance activation switch. `OUTCALL_TEST_ADAPTER` must be absent in production.
 Production routes fail closed for absent protection values. Document old key
 versions during rotation; never overwrite ciphertext keys without a migration.
 

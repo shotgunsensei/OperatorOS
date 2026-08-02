@@ -50,18 +50,18 @@ export default function TenantModulesPage() {
       <header style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
         <Boxes size={24} color={colors.accent} />
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#fff' }}>Tenant Modules</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#fff' }}>Organization Apps</h1>
           <p style={{ color: colors.textMuted, margin: '4px 0 0', fontSize: 13 }}>
-            Entitlement-driven module access for the active tenant. Platform admins control provisioning from Platform Command.
+            Review the apps available to your active organization. Platform administrators manage provisioning.
           </p>
         </div>
       </header>
 
       {loading ? (
-        <div style={{ color: colors.textMuted, padding: 24 }} data-testid="modules-loading">Loading tenant modules...</div>
+        <div style={{ color: colors.textMuted, padding: 24 }} data-testid="modules-loading">Loading organization apps...</div>
       ) : items.length === 0 ? (
         <div style={{ color: colors.textMuted, padding: 24 }} data-testid="modules-empty">
-          No modules are provisioned for this tenant yet. Open the Marketplace to review available modules or ask a platform admin to provision access.
+          No apps are available to this organization yet. Open the Marketplace or ask a platform administrator for access.
         </div>
       ) : (
         <div style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: 'hidden' }}>

@@ -18,7 +18,7 @@ Commands and Secrets** environment:
 | `INTERNAL_API_URL` | Internal Fastify URL used by the Next proxy |
 | `TRUST_PROXY` | `true` only behind Replit's managed proxy |
 | `ALLOW_LEGACY_SSO_ROLLBACK` | absent or `false` |
-| Thirteen canonical module URL variables | Exact `*.operatoros.net` values from `docs/operatoros-env-vars.md`, including disabled OutCall's controlled host |
+| Thirteen canonical module URL variables | Exact active `*.operatoros.net` values from `docs/operatoros-env-vars.md`, including `OUTCALL_URL=https://outcall.operatoros.net`; provider signature validation separately requires the same origin in `OUTCALL_PUBLIC_URL` |
 
 Stripe platform price IDs and webhook secrets remain OperatorOS-owned. Use the
 existing `STRIPE_PRICE_ADDON_<MODULE>` convention only for purchasable add-ons;
@@ -32,7 +32,8 @@ corepack pnpm preflight:production --all
 ```
 
 Use individual readiness flags while configuring providers:
-`--revenue-ready`, `--email-ready`, `--callcommand-ready`, and `--ai-ready`.
+`--revenue-ready`, `--email-ready`, `--callcommand-ready`, `--outcall-ready`,
+and `--ai-ready`.
 With no flag, the command validates only the core runtime/security authority.
 
 ## Do not copy from child projects
@@ -66,6 +67,7 @@ one shared runtime value per row; do not copy each child project's old secret.
 | Transactional invites | `RESEND_API_KEY` plus `EMAIL_FROM` (or `INVITE_FROM_EMAIL`) | Messages use the log provider; that is not production delivery |
 | Shared AI features | `OPENAI_API_KEY` | Supported surfaces use their explicit mock/fallback behavior; do not market live AI until configured |
 | CallCommand outbound calling | A bound Replit Twilio connector or `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER`; always set `TWILIO_PUBLIC_BASE_URL=https://callcommand-ai.operatoros.net` | Calls stay unavailable/log-only; no call is represented as placed |
+| OutCall verified-self safety calling | `OUTCALL_LIVE_PROVIDER=enabled`, `OUTCALL_PUBLIC_URL=https://outcall.operatoros.net`, independent field-encryption and lookup-HMAC keys, `TWILIO_ACCOUNT_SID`, primary `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SERVICE_SID`, owned `TWILIO_PHONE_NUMBER`, and `TWILIO_ALLOWED_COUNTRIES=US,CA`; optional REST API-key SID/secret may replace the primary token only for outbound REST authentication | Verify, SMS, voice, and DTMF stay unavailable; no external action is represented as completed |
 
 Stripe add-on price variables are needed only for a module sold through the
 legacy individual add-on checkout. The current stack configurator uses
@@ -85,8 +87,9 @@ and an explicit active-runtime environment contract first.
 
 Ninja Pool Hall currently needs no external provider for its local Free Shoot
 workflow. Ninjamation has no additional canonical provider contract. OutCall
-remains planned/disabled; do not provision its Twilio, worker, or billing
-secrets until activation is approved and tested.
+uses the active provider contract above; configure its secrets only in the
+reviewed Replit deployment and run the controlled verified-self acceptance
+before advertising live calling.
 
 Provider values must be module-scoped where active code defines scoped names;
 never invent a new production variable or silently reuse another module's key.

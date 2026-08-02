@@ -40,7 +40,8 @@ new ADR explicitly supersedes it.
 
 ## Required future ADRs
 
-- OutCall live Twilio/consent/abuse-control activation decision after controlled provider acceptance.
+- No additional OutCall product-boundary ADR is required for the Phase 18
+  implementation. A new ADR is required before widening it beyond ADR-0027.
 
 ADRs must state context, decision, consequences, data/security impact,
 migration/rollback implications, and superseded records.
