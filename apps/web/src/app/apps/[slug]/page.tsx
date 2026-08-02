@@ -203,7 +203,7 @@ function InternalAppContent() {
     );
   }
 
-  // Fallback launcher for reserved/planned modules (currently OutCall only).
+  // Fallback launcher for any future reserved module without a dedicated shell.
   const isExternal = mod.baseUrl && /^https?:\/\//i.test(mod.baseUrl);
   return (
     <div style={{ padding: space.xxl, maxWidth: 720, margin: '0 auto' }} data-testid={`app-shell-${mod.slug}`}>

@@ -63,7 +63,7 @@ test('only commercial add-ons declare add-on Stripe environment keys', () => {
 
   const outcall = MODULE_CATALOG.find(module => module.slug === 'outcall');
   assert.equal(outcall?.commercialType, 'addon');
-  assert.equal(outcall?.defaultStatus, 'coming_soon');
+  assert.equal(outcall?.defaultStatus, 'live');
 });
 
 test('billing service rejects canonical core/free modules as individual add-ons', () => {

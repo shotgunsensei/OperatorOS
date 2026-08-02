@@ -286,7 +286,7 @@
     "callbackPath": "/sso",
     "launchPath": "/",
     "healthCheckPath": "/healthz",
-    "enabled": false,
+    "enabled": true,
     "environment": "production",
     "contractVersion": "v1",
     "minimumAuthAdapterVersion": "1.0.0",

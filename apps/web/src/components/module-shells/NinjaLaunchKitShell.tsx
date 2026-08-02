@@ -315,7 +315,7 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
       <section id="launchkit-launches" style={{ marginBottom: space.xl }}>
         <h2 style={{ color: '#fff' }}>Launch workspaces</h2>
         {loading ? (
-          <div data-testid="text-launchkit-loading" style={{ ...cardStyle, color: semantic.textMuted }}>Loading persisted launches…</div>
+          <div data-testid="text-launchkit-loading" style={{ ...cardStyle, color: semantic.textMuted }}>Loading your launches…</div>
         ) : !workspace?.launches?.length ? (
           <div data-testid="text-launchkit-empty" style={{ ...cardStyle, color: semantic.textMuted }}>No launches yet. Complete the brief above to create one.</div>
         ) : (
@@ -437,7 +437,7 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
               ))}
             </div>
             {exportResult && <p data-testid="text-launchkit-export-hash" style={{ color: semantic.textMuted, overflowWrap: 'anywhere' }}>Latest checksum: {exportResult.export?.contentSha256}</p>}
-            {!!workspace.exports?.length && <p style={{ color: semantic.textMuted, marginBottom: 0 }}>{workspace.exports.length} persisted export record(s) for this launch.</p>}
+            {!!workspace.exports?.length && <p style={{ color: semantic.textMuted, marginBottom: 0 }}>{workspace.exports.length} export(s) ready for this launch.</p>}
           </section>
         </>
       )}

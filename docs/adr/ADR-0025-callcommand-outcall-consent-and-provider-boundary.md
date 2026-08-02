@@ -41,11 +41,11 @@ same-purpose consent record, checks the tenant suppression ledger, validates an
 active channel/profile, applies a per-tenant/user rate limit and enforces an
 idempotency key. Suppression always wins over consent.
 
-`OutCall` remains disabled and reserved for a separately approved outbound
-campaign product. Bulk dialing, purchased lists, cold outreach, predictive
-dialing, autonomous campaigns and consent inferred from client input are not
-CallCommand AI features. Phase 12B must either define a lawful campaign
-boundary with independent controls or cancel/merge the reserved module.
+The former `OutCall` reservation in this decision is superseded by ADR-0027.
+OutCall is a separate verified-self exit-assistance and personal-safety
+product, not an outbound campaign product. Bulk dialing, purchased lists, cold
+outreach, predictive dialing, autonomous campaigns and consent inferred from
+client input are not CallCommand AI or OutCall features.
 
 Twilio is the only approved live provider in Phase 11E. Production fails closed
 when it is not configured. The deterministic adapter is enabled only when both

@@ -40,6 +40,7 @@ const SHELL_TEST_IDS: Record<string, string> = {
   'ninja-launch-kit': 'shell-ninja-launch-kit',
   'callcommand-ai': 'shell-callcommand-ai',
   ninjamation: 'shell-ninjamation',
+  outcall: 'shell-outcall',
 };
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -60,8 +61,8 @@ const ENABLED_MODULES = registry
     return { ...entry, shellTestId };
   });
 
-if (ENABLED_MODULES.length !== 12) {
-  throw new Error(`Expected 12 enabled Phase 17 modules, found ${ENABLED_MODULES.length}`);
+if (ENABLED_MODULES.length !== 13) {
+  throw new Error(`Expected 13 enabled Phase 17 modules, found ${ENABLED_MODULES.length}`);
 }
 
 function assertNoCredentialQuery(rawUrl: string) {
@@ -114,7 +115,7 @@ test.describe('Phase 17 deployed production acceptance', () => {
     await login(page, ENTITLED);
     await page.getByTestId('nav-my-apps').click();
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
-    await expect(page.getByTestId('button-launch-outcall')).toHaveCount(0);
+    await expect(page.getByTestId('button-launch-outcall')).toBeVisible();
 
     let lastModulePage: Page | null = null;
     for (const [index, module] of ENABLED_MODULES.entries()) {
@@ -170,7 +171,7 @@ test.describe('Phase 17 deployed production acceptance', () => {
     await assertHostOnlySession(pulseDesk.context(), 'pulsedesk.operatoros.net');
   });
 
-  test('tenant denial and planned OutCall return no authorization handoff', async ({ page }) => {
+  test('tenant denial for TechDeck and OutCall returns no authorization handoff', async ({ page }) => {
     test.setTimeout(60_000);
     await login(page, DENIED);
     const denied = await page.evaluate(async (tenantId) => {
@@ -203,7 +204,7 @@ test.describe('Phase 17 deployed production acceptance', () => {
     expect(denied.tenant.body.code).toBe('MODULE_ACCESS_DENIED');
     expect(denied.tenant.body.launchUrl).toBeUndefined();
     expect(denied.outcall.status).toBe(403);
-    expect(denied.outcall.body.code).toBe('MODULE_UNAVAILABLE');
+    expect(denied.outcall.body.code).toBe('MODULE_ACCESS_DENIED');
     expect(denied.outcall.body.launchUrl).toBeUndefined();
     assertNoCredentialQuery(page.url());
     await assertNoBrowserCredentialStorage(page);

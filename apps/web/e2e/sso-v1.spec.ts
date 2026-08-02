@@ -52,8 +52,8 @@ const ENABLED_MODULES: BrowserModule[] = deploymentRegistry
     };
   });
 
-if (ENABLED_MODULES.length !== 12) {
-  throw new Error(`Expected 12 enabled OperatorOS modules, found ${ENABLED_MODULES.length}`);
+if (ENABLED_MODULES.length !== 13) {
+  throw new Error(`Expected 13 enabled OperatorOS modules, found ${ENABLED_MODULES.length}`);
 }
 
 const PUBLIC_AUTH_HEADERS = {
@@ -1133,7 +1133,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await reopened.close();
   });
 
-  test('tenant entitlement denial and planned OutCall fail closed without issuing a handoff', async ({ page, request }) => {
+  test('tenant entitlement denial fails closed for TechDeck and OutCall without issuing a handoff', async ({ page, request }) => {
     test.setTimeout(90_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
@@ -1191,7 +1191,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(denied.tenant.body.code).not.toMatch(/TOKEN|CREDENTIAL/);
 
     expect(denied.outcall.status).toBe(403);
-    expect(denied.outcall.body.code).toBe('MODULE_UNAVAILABLE');
+    expect(denied.outcall.body.code).toBe('MODULE_ACCESS_DENIED');
     expect(denied.outcall.body.launchUrl).toBeUndefined();
     expect(denied.outcall.body.code).not.toMatch(/TOKEN|CREDENTIAL/);
 

@@ -22,7 +22,7 @@ const moduleLabels: Record<DirectoryModuleSlug, string> = {
 
 function errorMessage(error: unknown) {
   const value = error as ApiError;
-  return value?.error || 'The shared directory request failed. Retry or verify your module access.';
+  return value?.error || 'We could not load the business directory. Check your access and try again.';
 }
 
 function routeSelection(moduleSlug: DirectoryModuleSlug): { tab: Tab; organizationId: string } {
@@ -91,18 +91,18 @@ export default function BusinessDirectory({
     <section className={`directory-root directory-${moduleSlug}`} data-testid={`${moduleSlug}-business-directory`}>
       <style>{directoryCss}</style>
       <header className="directory-header">
-        <div><div className="directory-eyebrow">OperatorOS shared foundation</div><h2>Business Directory</h2><p>One tenant-scoped organization, contact, and site identity shared safely across modules.</p></div>
+        <div><div className="directory-eyebrow">Connected workspace</div><h2>Business Directory</h2><p>Keep organizations, contacts, and sites in one place and reuse them throughout your work.</p></div>
         <button type="button" onClick={() => void load()} disabled={loading || saving}><RefreshCw size={15} /> Refresh</button>
       </header>
       <div className="directory-toolbar">
         <div className="directory-tabs" role="tablist" aria-label="Business Directory records">
           {(['organizations', 'contacts', 'sites'] as Tab[]).map(value => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)}>{value === 'organizations' ? <Building2 size={15} /> : value === 'contacts' ? <ContactRound size={15} /> : <MapPin size={15} />}{value}</button>)}
         </div>
-        <form onSubmit={event => { event.preventDefault(); void load(search); }} className="directory-search"><Search size={15} /><label><span className="sr-only">Search directory</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search this tenant" maxLength={200} /></label><button type="submit">Search</button></form>
+        <form onSubmit={event => { event.preventDefault(); void load(search); }} className="directory-search"><Search size={15} /><label><span className="sr-only">Search directory</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search this workspace" maxLength={200} /></label><button type="submit">Search</button></form>
       </div>
 
       {error && <div className={`directory-state ${denied ? 'denied' : 'error'}`} role="alert"><ShieldAlert size={17} /><div><strong>{denied ? 'Directory access denied' : 'Directory request failed'}</strong><p>{error}</p></div></div>}
-      {loading ? <div className="directory-state" aria-busy="true"><Loader2 className="directory-spin" size={18} /><span>Loading persistent directory data…</span></div> : (
+      {loading ? <div className="directory-state" aria-busy="true"><Loader2 className="directory-spin" size={18} /><span>Loading your business directory…</span></div> : (
         <div className="directory-layout">
           <div className="directory-list" role="tabpanel">
             {tab === 'organizations' && <OrganizationList rows={organizations} selectedId={selectedId} onSelect={setSelectedId} />}
@@ -121,16 +121,16 @@ export default function BusinessDirectory({
 }
 
 function OrganizationList({ rows, selectedId, onSelect }: { rows: DirectoryOrganization[]; selectedId: string; onSelect: (id: string) => void }) {
-  if (!rows.length) return <Empty Icon={Building2} title="No organizations yet" body="Create the first tenant-managed customer, client, vendor, partner, or facility." />;
-  return <>{rows.map(row => <button type="button" className="directory-row" data-active={row.id === selectedId} key={row.id} onClick={() => onSelect(row.id)}><span><strong>{row.name}</strong><small>{row.type} · {row.status} · v{row.version}</small></span><Building2 size={16} /></button>)}</>;
+  if (!rows.length) return <Empty Icon={Building2} title="No organizations yet" body="Create your first customer, client, vendor, partner, or facility." />;
+  return <>{rows.map(row => <button type="button" className="directory-row" data-active={row.id === selectedId} key={row.id} onClick={() => onSelect(row.id)}><span><strong>{row.name}</strong><small>{row.type} · {row.status}</small></span><Building2 size={16} /></button>)}</>;
 }
 function ContactList({ rows }: { rows: DirectoryContact[] }) {
   if (!rows.length) return <Empty Icon={ContactRound} title="No contacts yet" body="Contacts are shared records and can be associated with organizations and sites." />;
-  return <>{rows.map(row => <div className="directory-row static" key={row.id}><span><strong>{row.firstName} {row.lastName}</strong><small>{row.title || 'Contact'}{row.email ? ` · ${row.email}` : ''} · v{row.version}</small></span><ContactRound size={16} /></div>)}</>;
+  return <>{rows.map(row => <div className="directory-row static" key={row.id}><span><strong>{row.firstName} {row.lastName}</strong><small>{row.title || 'Contact'}{row.email ? ` · ${row.email}` : ''}</small></span><ContactRound size={16} /></div>)}</>;
 }
 function SiteList({ rows }: { rows: DirectorySite[] }) {
   if (!rows.length) return <Empty Icon={MapPin} title="No sites yet" body="Sites connect a shared organization to a normalized service location." />;
-  return <>{rows.map(row => <div className="directory-row static" key={row.id}><span><strong>{row.name}</strong><small>{row.organization.name}{row.address ? ` · ${row.address.city}, ${row.address.region}` : ''} · v{row.version}</small></span><MapPin size={16} /></div>)}</>;
+  return <>{rows.map(row => <div className="directory-row static" key={row.id}><span><strong>{row.name}</strong><small>{row.organization.name}{row.address ? ` · ${row.address.city}, ${row.address.region}` : ''}</small></span><MapPin size={16} /></div>)}</>;
 }
 
 function OrganizationEditor(props: {

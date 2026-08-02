@@ -666,12 +666,7 @@ export async function seedModules() {
       if (existingMd.addonPriceCents == null) {
         updates.metadata = { ...existingMd, addonPriceCents: spec.addonPriceCents };
       }
-      if (spec.slug === 'outcall' && spec.defaultStatus === 'coming_soon') {
-        // Phase 17 production truth: OutCall remains explicitly planned and
-        // disabled until its live-provider and deployed acceptance gates are
-        // approved. Reconcile older seeds that incorrectly promoted it.
-        updates.status = 'coming_soon';
-      } else if (spec.defaultStatus === 'live') {
+      if (spec.defaultStatus === 'live') {
         updates.status = 'live';
       }
       // Task #66 catalog rename: existing rows that pre-date the

@@ -168,7 +168,7 @@
       "category": "support",
       "description": "Discreet exit-assistance and personal-safety calling",
       "ecosystemUrl": "https://outcall.operatoros.net",
-      "status": "planned",
+      "status": "active",
       "launchMode": "subdomain",
       "authMode": "sso",
       "billingMode": "operatoros",

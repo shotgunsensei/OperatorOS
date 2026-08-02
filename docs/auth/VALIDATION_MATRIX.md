@@ -1,7 +1,7 @@
 # OperatorOS SSO v1 validation matrix
 
-- Refreshed: 2026-07-29
-- Phase 17 source/isolated-candidate result: **PASS**
+- Refreshed: 2026-08-02
+- Phase 18 source/isolated-candidate result: **PASS FOR CONTRACTS; BROWSER PENDING**
 - Current public baseline: **PASS under the pre-Phase-17 48/48 gate**
 - Phase 17 public candidate gate: **EXPECTED PRE-DEPLOY FAIL 45/48**
 - Overall production gate: **CLOSED**
@@ -13,17 +13,17 @@ CORS origins, session domains, or return targets.
 | Contract | Source/local result | Public result / blocker |
 | --- | --- | --- |
 | One OperatorOS identity | PASS | Current public baseline works; Phase 17 authenticated gate pending deployment |
-| No module-local credentials | PASS | No second login was used in the local 12-module gate |
-| Exact registered clients/callbacks | PASS | Current public callbacks/PKCE pass; Phase 17 reduces enabled child clients to 12 by disabling planned OutCall |
+| No module-local credentials | PASS | Active module source uses only the shared exact-host session and SSO boundary |
+| Exact registered clients/callbacks | PASS | Source contracts cover all 13 active product clients, including exact OutCall callback registration |
 | Opaque single-use code | PASS | Deployed authenticated consume/replay test pending |
 | State and nonce | PASS | Current public authorization entry passes; Phase 17 exact deployed run pending |
 | PKCE S256 | PASS | Current public authorization entry passes; Phase 17 exact deployed run pending |
 | Environment/tenant/module/entitlement binding | PASS | Local Phase 17 tenant-disabled TechDeck returned `MODULE_ACCESS_DENIED`; deployed rerun pending |
 | Replay and expiry rejection | PASS | Deployed authenticated negative tests pending |
-| Host-only secure session | PASS | Current public contract and local Phase 17 12-module gate pass; deployed rerun pending |
+| Host-only secure session | PASS | Current public contract and source tests pass; Phase 18 deployed rerun pending |
 | `SameSite=Lax`, `HttpOnly`, `Secure`, `Path=/` | PASS | Current public contract and local Phase 17 browser checks pass |
 | No parent cookie domain | PASS | Must be rechecked after deployment; never set `COOKIE_DOMAIN` |
-| No credential URL/storage leakage | PASS | Local Phase 17 browser navigation and storage checks passed across all 12 enabled modules |
+| No credential URL/storage leakage | PASS | Existing local browser evidence passes; Phase 18 browser rerun across all 13 active product modules remains pending |
 | Safe return URL/deep link | PASS | Public authenticated return test pending |
 | Open-redirect rejection | PASS | Source tests and local deep-link browser flow passed |
 | Session refresh | PASS | Source/database regression passed |
@@ -33,14 +33,14 @@ CORS origins, session domains, or return targets.
 | Browser refresh | PASS | Every enabled module shell survived reload under its host session |
 | Back navigation / loop prevention | PASS | Browser Back did not restart central authentication |
 | Silent sibling launch | PASS | PulseDesk reused the existing auth-host session without second credential entry |
-| OutCall module boundary | PASS LOCALLY | Canonical catalog is `coming_soon`, registry is disabled, seed reconciles DB status, and SSO issue returns `MODULE_UNAVAILABLE`; old public callback remains enabled until deployment |
+| OutCall module boundary | PASS LOCALLY | Catalog, registry, seed, SSO selector, commercial boundary, and deployed-acceptance contract treat OutCall as active. Non-entitled organizations receive `MODULE_ACCESS_DENIED`; provider features fail closed until exact live configuration is present |
 | Tenant isolation and authorization | PASS | Clean aggregate suite includes cross-tenant denial, viewer write denial, and module-session sealing |
 | Structured safe observability | PASS | Request/correlation context is logged without raw codes, cookies, secrets, or passwords |
 | Health/readiness | PASS LOCALLY; PUBLIC CANDIDATE PENDING | Compiled Phase 17 health/readiness expose Git/build/lock/build time/deploy time/DB v29; current public baseline lacks the two new identity fields |
 
 ## Fresh evidence
 
-### Phase 17 compiled candidate
+### Historical Phase 17 compiled candidate
 
 The Phase 17 candidate ran through the compiled readiness-gated supervisor
 against disposable PostgreSQL 16 and a canonical-host TLS proxy. The complete
@@ -50,7 +50,8 @@ release identity was present on health/readiness. Focused browser runs passed:
   global revocation;
 - 1/1 in 20.1 seconds for TechDeck deep-link return, browser Back, PulseDesk
   silent sibling SSO, persistent workflow, and TechDeck host-local logout;
-- 1/1 in 5.3 seconds for tenant entitlement denial and planned OutCall denial.
+- 1/1 in 5.3 seconds for tenant entitlement denial and the then-disabled
+  OutCall boundary. Phase 18 supersedes that product state.
 
 The post-deploy command is
 `corepack pnpm --dir apps/web test:e2e:phase17-deployed`. It requires two

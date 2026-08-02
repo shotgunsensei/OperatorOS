@@ -52,23 +52,23 @@ test('session refresh preserves scope and revokes the replaced token', async () 
   assert.match(routes, /\/v1\/auth\/refresh/);
 });
 
-test('unfinished TechDeck workflow cards remain visibly disabled', () => {
-  assert.match(
-    read('apps/web/src/components/module-shells/TechDeckShell.tsx'),
-    /Migration pending — disabled/,
-  );
+test('TechDeck presents active workflows without migration or runtime notes', () => {
+  const shell = read('apps/web/src/components/module-shells/TechDeckShell.tsx');
+  assert.match(shell, /Technician workspace for tickets/);
+  assert.match(shell, /Preparing your tickets, systems, documentation, and team access/);
+  assert.doesNotMatch(shell, /Migration pending|shared runtime|module entitlement state/i);
 });
 
-test('completed TradeFlowKit and PulseDesk workflows do not advertise migration placeholders', () => {
+test('TradeFlowKit and PulseDesk present customer workflows without migration notes', () => {
   const completedShells = [
-    ['TradeFlowKitShell.tsx', /Live in shared runtime/],
+    ['TradeFlowKitShell.tsx', /Move leads into customers, jobs, quotes, invoices, payments/],
     ['PulseDeskShell.tsx', /PulseDeskServiceDeskWorkspace/],
   ] as const;
 
   for (const [filename, completedMarker] of completedShells) {
     const shell = read(`apps/web/src/components/module-shells/${filename}`);
     assert.match(shell, completedMarker, filename);
-    assert.doesNotMatch(shell, /Migration pending — disabled/, filename);
+    assert.doesNotMatch(shell, /Migration pending|shared runtime|module entitlement state/i, filename);
   }
 });
 

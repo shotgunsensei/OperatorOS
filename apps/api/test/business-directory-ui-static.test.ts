@@ -16,11 +16,12 @@ test('shared directory UI exposes persistent CRUD, associations, states, and res
     'sites.list', 'sites.create', 'sites.update', 'sites.archive',
     'organizations.associateContact', 'sites.associateContact', 'relationships.create', 'organizations.profile',
   ]) assert.ok(component.includes(`directoryApi.${contract}`), `missing UI contract ${contract}`);
-  assert.match(component, /Loading persistent directory data/);
+  assert.match(component, /Loading your business directory/);
   assert.match(component, /No organizations yet/);
   assert.match(component, /Directory access denied/);
   assert.match(component, /@media\(max-width:760px\)/);
   assert.doesNotMatch(component, /coming soon|mock data|fake counter/i);
+  assert.doesNotMatch(component, /persistent directory data|tenant-managed|· v\{row\.version\}/i);
   assert.match(client, /credentials: 'include'/);
   assert.match(client, /X-Tenant-Id/);
 });

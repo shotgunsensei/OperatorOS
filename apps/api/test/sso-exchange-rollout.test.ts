@@ -36,7 +36,7 @@ test('all active production modules use the code path by default', () => {
       assert.equal(moduleSupportsExchangeCode(slug), true, `${slug} supports opaque-code SSO`);
     }
     assert.equal(moduleSupportsExchangeCode('PulseDesk'), true);
-    assert.equal(moduleSupportsExchangeCode('outcall'), false, 'planned OutCall is not launchable by default');
+    assert.equal(moduleSupportsExchangeCode('outcall'), true, 'active OutCall uses opaque-code SSO by default');
   });
 });
 
@@ -50,9 +50,6 @@ test('operators can enable additional modules via env, case-insensitively', () =
   withEnv('  TechDeck , TRADEFLOWKIT ', () => {
     assert.equal(moduleSupportsExchangeCode('techdeck'), true);
     assert.equal(moduleSupportsExchangeCode('tradeflowkit'), true);
-  });
-  withEnv('outcall', () => {
-    assert.equal(moduleSupportsExchangeCode('outcall'), true, 'the bounded compatibility env can enable a planned client');
   });
 });
 

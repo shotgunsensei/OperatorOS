@@ -43,7 +43,9 @@ entitlements, launch, SSO, and audit.
   APIs pending.
 - `studyforge-ai`, `ninja-launch-kit`, and `callcommand-ai` - add-on source
   snapshots alongside partial native shared-runtime MVPs.
-- `outcall` - planned/disabled architecture placeholder; no product workload.
+- `outcall` - active shared-runtime verified-self exit-assistance workflow plus
+  a read-only migration snapshot. Live Twilio activation remains an explicit
+  deployment/provider gate.
 
 `scripts/import-module-snapshot.ps1` is the required import path for any later
 snapshot. A copied tree is never a production activation: each module still

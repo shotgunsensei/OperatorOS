@@ -91,6 +91,9 @@ export async function ensureSchemaReady() {
   await ensureBrandForgeOsTables();
   const { ensureSharedServiceTables } = await import('../src/lib/shared-services-db-init.js');
   await ensureSharedServiceTables();
+  const { ensureOutCallTables, ensureOutCallProductTables } = await import('../src/lib/outcall-db-init.js');
+  await ensureOutCallTables();
+  await ensureOutCallProductTables();
   const { ensureSnapProofOsTables } = await import('../src/lib/snapproofos-db-init.js');
   await ensureSnapProofOsTables();
   await ensureTestPlans();

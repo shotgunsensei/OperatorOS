@@ -70,7 +70,7 @@ export default function NinjaPoolHallProfile({
             <span><b>{progression.losses}</b>CPU losses</span>
             <span><b>{progression.localMatches}</b>hot-seat</span>
           </div>
-          <div className="notice"><ShieldCheck size={18} /><p><b>No unverified leaderboard.</b> Progress reflects persisted local matches whose rule transitions were applied server-side. OperatorOS does not claim the browser-reported physics facts are anti-cheat proof.</p></div>
+          <div className="notice"><ShieldCheck size={18} /><p><b>Personal progress, no public leaderboard.</b> Your completed local and CPU matches appear here without turning friendly play into a competitive ranking.</p></div>
         </aside>
       </div>
     </section>

@@ -461,7 +461,7 @@ export default function TorqueShedWorkspace() {
       >
         <ShieldCheck size={18} color="#f59e0b" />
         <span>
-          VINs are retained only as a masked suffix plus tenant-scoped fingerprint. Public-build
+          VINs are protected and shown only as a masked suffix. Public-build
           visibility never publishes VINs, maintenance costs, files, or private diagnostics.
         </span>
       </div>
@@ -1531,13 +1531,12 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
 
       {providerDisabled && (
         <div style={{ color: semantic.accentDanger, display: 'flex', gap: 8 }}>
-          <AlertTriangle size={18} /> Torque Assist is disabled until the server-side AI provider is
-          configured. No API key is accepted from this page.
+          <AlertTriangle size={18} /> Torque Assist is unavailable until an administrator connects the AI service.
         </div>
       )}
       {status?.provider.state === 'test' && (
         <div style={{ color: semantic.accentWarning }}>
-          Deterministic test adapter active. This is validation behavior, not a production AI claim.
+          Preview analysis mode is active. Verify every diagnostic recommendation before starting a repair.
         </div>
       )}
       {error && <div style={{ color: semantic.accentDanger }}>{error}</div>}
@@ -1566,7 +1565,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
           </div>
         </div>
         <div style={{ ...cardStyle, padding: 10 }}>
-          <strong>Server estimate</strong>
+          <strong>Estimated total</strong>
           <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
             {(context?.estimatedUnits ?? 0).toLocaleString()} units ·{' '}
             {(context?.contextCharacters ?? 0).toLocaleString()} context characters

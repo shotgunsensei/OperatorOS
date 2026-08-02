@@ -154,7 +154,7 @@ export default function TechDeckOperations({ tenantKey, canWrite, canApprove }: 
     <section id="techdeck-ops" className="techdeck-panel td-workspace" data-testid="techdeck-ops-workspace" tabIndex={-1}>
       <style>{css}</style>
       <header className="td-head">
-        <div><div className="td-kicker">Managed infrastructure + knowledge</div><h2>Operations Workspace</h2><p>Tenant-scoped inventory, network/IPAM, documentation, evidence, reports, and time tied to the shared OperatorOS Directory.</p></div>
+        <div><div className="td-kicker">Managed infrastructure + knowledge</div><h2>Operations Workspace</h2><p>Manage inventory, networks and IP space, documentation, evidence, reports, and technician time from one console.</p></div>
         <button className="td-button td-secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={14} className={loading ? 'td-spin' : ''} />Refresh</button>
       </header>
       <div className="td-boundary"><ShieldCheck size={16} /><span><strong>Documentation-only runbooks.</strong> {data?.execution.reason ?? 'Remote execution is disabled.'}</span></div>

@@ -1,8 +1,8 @@
 # ADR-0027: OutCall personal-safety and provider boundary
 
-- Status: Accepted
+- Status: Accepted; implementation revised for active candidate on 2026-08-02
 - Date: 2026-07-27
-- Phase: 12B
+- Phase: 12B, revised by Phase 18 activation
 - Supersedes: ADR-0006's interim disabled decision and ADR-0025's temporary
   OutCall reservation
 
@@ -28,7 +28,7 @@ OutCall is a distinct OperatorOS add-on. OperatorOS remains the only identity,
 session, tenant, entitlement, billing, module-registry, launch, audit, durable
 job, and shared-usage authority.
 
-The Phase 12B source/local workload owns:
+The active source/local workload owns:
 
 - resumable safety acknowledgement and privacy-first user settings;
 - one globally verified phone owner per OperatorOS user, projected into each
@@ -41,24 +41,25 @@ The Phase 12B source/local workload owns:
 - cancellation, persistent history, safe activity, and append-only usage;
 - a runtime-explicit test adapter only when `APP_ENV=test`, `NODE_ENV=test`,
   and `OUTCALL_TEST_ADAPTER=enabled`.
+- module-scoped Twilio Verify, voice, signed status/DTMF callbacks, and exact-
+  match inbound SMS processing behind an explicit live-provider gate;
+- durable tenant/user rate limits, replay-safe webhook receipts, one-attempt
+  live submissions, password-confirmed private export, and private deletion.
 
 The browser shell never accepts a destination number for a call. The server
 copies the current verified phone fingerprint and masked display into the
 request. Spoken-message validation blocks emergency, government, healthcare,
 school, and law-enforcement impersonation terms. Recording is always false.
 
-Live Twilio Verify, Messaging, Voice, inbound SMS trigger execution, DTMF,
-status reconciliation, trusted contacts, check-ins, duress, location, export,
-deletion workflows, and administrative support are not claimed complete.
-Their UI is absent or explicitly disabled. Production provider operations fail
-closed until exact canonical URL signature validation, replay protection,
-country/spend/rate controls, and controlled real-number acceptance pass.
+Trusted contacts, check-ins, duress, location, and emergency escalation remain
+out of scope. Live Twilio code is complete in the candidate, but production
+provider operations remain gated until exact-host deployment, spend/fraud
+controls, and controlled real-number acceptance pass.
 
 ## Consequences
 
-- OutCall may use the existing OperatorOS SSO client and source/local module
-  shell, but this does not make the deployment or provider path production
-  ready.
+- OutCall is active in the candidate catalog, SSO registry, and launcher. That
+  activation does not make the undeployed provider path production-ready.
 - CallCommand remains business call operations and does not gain personal
   safety triggers, check-ins, or emergency-adjacent language.
 - The shared worker provides lease/retry/restart semantics; OutCall does not
@@ -78,8 +79,9 @@ metadata, URLs, or browser storage.
 
 ## Migration and rollback
 
-Phase 12B adds the ordered, additive, idempotent `outcall_tables` release step
-after Ninjamation. Rollback keeps additive tables and disables OutCall in the
+Phase 12B added `outcall_tables`; Phase 18 adds the ordered, additive,
+idempotent `outcall_product_operations` step as release v33. Rollback keeps
+additive tables and disables OutCall in the
 catalog, SSO client registry, and deployment registry. Destructive schema
 removal or production data deletion requires the documented backup/restore and
 human approval gates.

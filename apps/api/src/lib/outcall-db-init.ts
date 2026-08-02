@@ -127,3 +127,40 @@ export async function ensureOutCallTables(): Promise<void> {
       ON outcall_events(tenant_id,call_request_id,created_at);
   `));
 }
+
+export async function ensureOutCallProductTables(): Promise<void> {
+  await db.execute(sql.raw(`
+    ALTER TABLE outcall_triggers
+      ADD COLUMN IF NOT EXISTS profile_id VARCHAR(36);
+
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid='outcall_triggers'::regclass
+          AND conname='outcall_trigger_profile_fk'
+      ) THEN
+        ALTER TABLE outcall_triggers ADD CONSTRAINT outcall_trigger_profile_fk
+          FOREIGN KEY (tenant_id,profile_id) REFERENCES outcall_profiles(tenant_id,id);
+      END IF;
+    END $$;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_outcall_provider_call_sid
+      ON outcall_call_requests(provider_call_sid)
+      WHERE provider_call_sid IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS outcall_rate_limits (
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      scope_digest CHAR(64) NOT NULL,
+      window_started_at TIMESTAMP NOT NULL,
+      request_count INTEGER NOT NULL DEFAULT 1,
+      expires_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (tenant_id,user_id,scope_digest,window_started_at),
+      CONSTRAINT outcall_rate_limit_count_check CHECK (request_count BETWEEN 1 AND 10000)
+    );
+    CREATE INDEX IF NOT EXISTS idx_outcall_rate_limits_expiry
+      ON outcall_rate_limits(expires_at);
+  `));
+}

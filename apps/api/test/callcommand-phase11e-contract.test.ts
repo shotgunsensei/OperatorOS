@@ -89,6 +89,6 @@ test('Phase 11E shell presents persisted controls without simulated production c
   assert.match(shell, /Suppress number/);
   assert.match(shell, /Operator disposition/);
   assert.match(shell, /Save review draft/);
-  assert.match(shell, /Provider disabled · calls fail closed/);
+  assert.match(shell, /Calling setup required/);
   assert.doesNotMatch(shell, /simulated with a stub|recordingUrl|openExternal\(.*recording/i);
 });

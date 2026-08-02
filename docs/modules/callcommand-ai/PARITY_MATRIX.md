@@ -60,7 +60,7 @@ read-only evidence, not an executable child application.
 | Forged/replayed callbacks | Twilio signature plus shared receipt deduplication/retry |
 | Recording leakage | Recording enablement fails closed; signed callbacks remain disabled and never persist a SID or provider URL |
 | Sensitive logs | Masked phone responses, safe event projections and scrubbed bounded errors |
-| Abusive automation | No campaign/bulk surfaces; OutCall remains disabled |
+| Abusive automation | No campaign/bulk surfaces; OutCall is a separate verified-self product and does not widen CallCommand's business-calling boundary |
 
 ## Reconciliation and cutover gate
 

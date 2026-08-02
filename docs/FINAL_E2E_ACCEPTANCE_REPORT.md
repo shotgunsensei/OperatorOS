@@ -2,8 +2,26 @@
 
 Assessment date: 2026-08-02
 Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
-Scope: Phase 17 OperatorOS release identity and enabled-module SSO gate
+Scope: Phase 18 OutCall source activation and ecosystem release gate
 Verdict: **NOT ACCEPTED — release gate failed**
+
+## Current Phase 18 boundary — 2026-08-02
+
+OutCall is active in the source candidate and has source/local state-4
+functionality: verified-self Twilio Verify, encrypted profiles and exact
+triggers, immediate/scheduled controlled voice, DTMF, private SMS, signed and
+replay-safe callbacks, durable rate limits, history/cancellation, export, and
+password-confirmed deletion. Release v33, focused 44/44 contracts, 5/5
+PostgreSQL workflows, the 914-pass/6-skip aggregate across 920 tests, workspace
+typecheck, production build, and compiled local first-screen browser gate 2/2
+pass. The browser gate covers OutCall safety acceptance, test verification,
+profile, trigger, scheduling, phone masking, and non-entitled denial.
+
+This report still concludes **NOT ACCEPTED** because the Phase 18 candidate was
+not deployed or tested through the exact-host/real-provider browser path, and no Replit secret, Twilio provider action,
+public callback, production database, backup/apply, traffic, or rollback was
+exercised. References below to planned/disabled OutCall or 12 enabled modules
+are preserved historical Phase 17 evidence and do not describe current source.
 
 ## TradeFlowKit zero-gap follow-up — 2026-08-02
 

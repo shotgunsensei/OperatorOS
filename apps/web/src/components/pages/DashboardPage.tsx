@@ -67,7 +67,7 @@ export default function DashboardPage() {
   );
   if (!data) return (
     <div style={{ padding: 40, color: colors.accentRed }}>
-      Unable to load the command center. Refresh the page or try again after the API is reachable.
+      Unable to load the command center. Refresh the page or try again in a moment.
     </div>
   );
 
@@ -78,7 +78,7 @@ export default function DashboardPage() {
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Command Center</h1>
         <p style={{ fontSize: 14, color: colors.textMuted, margin: 0 }}>
-          Parent command layer status for your tenant, plan, and operating workflow.
+          Your organization, plan, apps, and current work at a glance.
           <span style={{
             display: 'inline-block', marginLeft: 10, padding: '2px 10px',
             borderRadius: 20, fontSize: 11, fontWeight: 600,

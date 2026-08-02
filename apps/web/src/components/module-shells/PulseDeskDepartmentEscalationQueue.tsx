@@ -483,7 +483,7 @@ export default function PulseDeskDepartmentEscalationQueue({ tenantKey }: { tena
 
       <header className="pdq-heading">
         <div>
-          <div className="pdq-eyebrow">Live tenant workflow</div>
+          <div className="pdq-eyebrow">Live department workflow</div>
           <h2>Department Escalation Queue</h2>
           <p>
             Coordinate operational intake, department routing, escalation, ownership, and SLA state without storing patient or clinical narratives.
@@ -519,7 +519,7 @@ export default function PulseDeskDepartmentEscalationQueue({ tenantKey }: { tena
           <ClipboardPlus size={18} aria-hidden="true" />
           <div>
             <strong>Operational intake</strong>
-            <span>Tenant, creator, request number, SLA, and initial status are assigned server-side.</span>
+            <span>PulseDesk assigns the request number, owner, SLA target, and starting status automatically.</span>
           </div>
         </div>
 
@@ -926,7 +926,7 @@ function QueueSkeleton() {
           <span />
         </div>
       ))}
-      <span className="pdq-sr-only">Loading tenant operational requests…</span>
+      <span className="pdq-sr-only">Loading operational requests…</span>
     </div>
   );
 }
@@ -1021,7 +1021,7 @@ function RequestDetail({
           <div><dt>Assignee</dt><dd>{request.assignedToName || (request.assignedToUserId ? 'Assigned operator' : 'Unassigned')}</dd></div>
           <div><dt>Location</dt><dd>{request.locationLabel || 'Not specified'}</dd></div>
           <div><dt>Due</dt><dd>{formatDate(request.dueAt)}</dd></div>
-          <div><dt>Version</dt><dd>{request.version}</dd></div>
+          <div><dt>Revision</dt><dd>{request.version}</dd></div>
         </dl>
       </div>
 

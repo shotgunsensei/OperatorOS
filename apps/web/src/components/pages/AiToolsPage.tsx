@@ -874,7 +874,7 @@ function UsagePanel({ usage, tools }: { usage: UsageStats | null; tools: AiTool[
         <span style={{ color: colors.textMuted }}>Provider:</span>
         <span style={{ color: '#fff', fontWeight: 600 }}>{usage.provider.name === 'openai' ? 'OpenAI GPT-4o Mini' : 'Mock (Demo Mode)'}</span>
         {!usage.provider.configured && (
-          <span style={{ color: colors.accentYellow, fontSize: 11 }}> — Add OPENAI_API_KEY for live AI</span>
+          <span style={{ color: colors.accentYellow, fontSize: 11 }}> — AI setup is incomplete; contact your administrator</span>
         )}
       </div>
     </div>

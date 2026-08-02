@@ -1,8 +1,8 @@
 # OperatorOS current release gate
 
-- Evidence date: 2026-08-01
-- Current reviewed base: `main` at `79f8eef8c34434ffaa724b55c53b0a75552ef987`
-- Current source candidate: `codex/tradeflowkit-accounting-exports`; deployment identity pending
+- Evidence date: 2026-08-02
+- Current reviewed base: `main` at `6b50cb9414ebcfe70ae5add630a4414f1eeabd43`
+- Current source candidate: `codex/outcall-checkered-flag`; deployment identity pending
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -14,7 +14,35 @@
   `c49eeb9c-5f0b-40b3-9f31-44813446124c`
 - Overall release decision: **CLOSED — do not promote**
 
-## Current additive release v30 source gate
+## Current Phase 18 OutCall and release v33 source gate
+
+OutCall is active in source as the thirteenth product module and reaches
+source/local consolidation state 4. Its approved verified-self workflow now
+includes Twilio Verify, encrypted profiles and exact triggers,
+immediate/scheduled controlled calls, DTMF acknowledgment, private SMS
+triggering, signed and replay-safe callbacks, persistent rate limits, history,
+cancellation, private export, and password-confirmed deletion. Recording,
+emergency claims, location, duress, trusted-contact escalation, arbitrary
+destinations, impersonation, bulk/autonomous dialing, and child authority
+remain excluded.
+
+The ordered database contract is v33/33. Clean apply and idempotent reapply
+pass on disposable PostgreSQL 16. Focused OutCall/provider/contracts pass
+44/44, OutCall PostgreSQL workflows pass 5/5, the fresh aggregate passes 914
+with 0 failures and 6 intentional HTTP-only skips across 920 tests, and the
+API/runner/web typechecks plus production build pass. The ecosystem customer
+copy sweep is part of the same verified source candidate. A compiled local
+first-screen browser gate also passes 2/2 in 8.6 seconds across CallCommand,
+Ninjamation, OutCall, StudyForge AI, and Ninja Launch Kit, including OutCall's
+test verification/profile/trigger/schedule workflow and non-entitled denial.
+
+No deployed candidate, Replit secret, Twilio request, production database,
+public callback, or traffic was touched. The release remains closed pending a
+final commit/build identity, v33 backup/apply, reviewed provider configuration,
+controlled verified-self provider acceptance, exact-host SSO/denial/logout and
+module browser acceptance, public health/readiness, and rollback evidence.
+
+## Historical additive release v30 source gate
 
 The current Phase 16A increment does not change the v30 database contract. It
 adds bounded format-v1 QuickBooks IIF/invoice CSV and Xero
@@ -50,7 +78,7 @@ committed revision. That revision must still be deployed and pass the
 authenticated live workflow, provider, data-cutover, and rollback gates
 before promotion.
 
-## Phase 17 production truth
+## Historical Phase 17 production truth
 
 The public release now exposes the complete Phase 17 release identity,
 database release v29/29, and planned/disabled OutCall boundary. The current
@@ -151,16 +179,10 @@ Ninjamation stays below state 5 until the exact revision is deployed and an
 authorized source-data reconciliation/cutover and deployed workflow acceptance
 pass.
 
-Phase 12B reconstructs OutCall from the owner's recovered prompt set as a
-distinct verified-self personal-safety exit-assistance workload. It persists
-safety acceptance, global verified-phone ownership, neutral profiles,
-encrypted private triggers, verified-destination immediate/delayed requests,
-safe events, shared jobs/activity and exactly-once usage. The clean aggregate
-passes 839/839, the clean/idempotent release contains 29 steps, compiled
-health/readiness passes, the production-host matrix passes 9/9 across all 13
-enabled modules, and the first-screen suite passes 2/2. Live Twilio
-verification/SMS/voice/DTMF/callbacks, export/deletion UI and deployed
-acceptance remain incomplete, so OutCall is not state 4/5 or production-ready.
+Historical Phase 12B reconstructed OutCall from the owner's recovered prompt
+set as a distinct verified-self personal-safety exit-assistance workload. Its
+original 839-test, 29-step-release, and local browser evidence is superseded by
+the Phase 18 source/local state-4 implementation and v33 evidence above.
 
 The first Phase 15 deployment attempt did not reach the repository build
 command. Replit's automatic `npm install` rejected pnpm-only `parent>child`
@@ -193,14 +215,14 @@ and migration parity remain controlled by the module parity index.
 | Frozen dependency contract | PASS FROM PHASE 0 | Pinned pnpm `10.34.5`; lockfile unchanged by Phase 1 |
 | Production environment contract | PASS | Machine-readable contract plus 7 preflight tests; core CLI preflight passed with exact canonical values and non-secret local test credentials |
 | Unsafe configuration rejection | PASS | Rejects missing/short secrets, legacy `APP_URL`, parent `COOKIE_DOMAIN`, public unified-runtime API URL, unsafe commands, legacy SSO rollback, wildcard/insecure/credentialed/loopback CORS, and drifted module hosts |
-| Database release plan | PASS | Current source declares release v30 with 30 ordered, additive, secret-free steps; clean apply and idempotent reapply passed on disposable PostgreSQL 16. Phase 17 v29 remains the historical deployed baseline. |
+| Database release plan | PASS | Current source declares release v33 with 33 ordered, additive, secret-free steps; clean apply and idempotent reapply passed on disposable PostgreSQL 16. Phase 17 v29 remains a historical deployed baseline. |
 | Backup/restore rehearsal | PASS LOCALLY | Phase 4 custom dump restored in 3.570 s; source/restore matched 94 public tables, 17 TradeFlowKit, 9 Directory, and 10 shared-service tables |
 | Restored data/constraints | PASS | Restored release apply passed; dump SHA-256 `d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82` |
 | Production build | PASS | Current source produced SDK, API, runner gateway, and Next 15.5.22 artifacts after API/runner/web typechecks; 20 page entries generated. The pre-commit identity is validation-only and must be rebuilt at the final commit. |
-| Compiled production supervisor | PASS | Current source compiled the 30-step release idempotently; Fastify, shared worker, and Next reached readiness with database release v30/30 and no `tsx` production runtime. |
+| Compiled production supervisor | PRIOR PASS ONLY | The current Phase 18 source was production-built but not started through the supervisor. The prior v30 candidate reached readiness; it does not prove the v33 candidate runtime. |
 | Local canonical-host health | PASS | HTTPS apex `/healthz` returned 200 with `operatoros-api`; API `/readyz` returned 200 with database/auth/SSO/registry configured |
 | Local public URL diagnostics | PASS | TechDeck diagnostic resolved forwarded exact host, HTTPS origin, module role, and host-only cookie mode |
-| Production-host SSO browser gate | PASS LOCALLY | Phase 17 focused compiled-candidate gates pass 3/3: all 12 enabled modules plus global logout; TechDeck/PulseDesk deep link, sibling SSO and local logout; tenant-denied TechDeck and planned OutCall denial. No credential URL/storage leakage |
+| Production-host SSO browser gate | PARTIAL LOCAL PROOF | Compiled first-screen browser PASS 2/2 covers five add-ons, OutCall's first durable workflow, and non-entitled denial. Phase 18 exact-host SSO/logout across all 13 active product modules and the deployed/authenticated gate remain open. |
 | Focused Phase 1 tests | PASS | 11/11 database-release, preflight, and supervisor contract tests |
 | Focused Phase 2 tests | PASS | 9/9 directory, UI, deep-link, and release-contract tests |
 | Focused Phase 3 tests | PASS | 24/24 shared-service, route, retention, lease-recovery, release, webhook, and provider-state tests on a clean database |
@@ -210,9 +232,9 @@ and migration parity remain controlled by the module parity index.
 | Focused Phase 11B tests | PASS | 17/17 domain/import/database/release/deep-link contracts including private attachment controls, review authority, tenant isolation, viewer denial, append-only custody, report/export, retention and canonical routes |
 | Focused Phase 11E tests | PASS | Static domain/import/release/deep-link contracts plus 5/5 tenant/authorization/consent/disposition/persistence and 4/4 signed callback/inbound/replay/recording-privacy PostgreSQL workflows |
 | Focused Phase 12A tests | PASS | Domain/import/static/release/deep-link contracts plus 4/4 tenant/authorization/version/analysis/approval/download/AI-usage PostgreSQL workflows |
-| Focused Phase 12B tests | PASS | 3/3 OutCall tenant/authorization/encryption/verified-destination/idempotency/usage workflows plus 34/34 registry/release/preflight/SSO contracts |
+| Focused Phase 18 OutCall tests | PASS | 44/44 provider/registry/release/preflight/SSO contracts plus 5/5 PostgreSQL verified-self, scheduling, signed callback, DTMF, private SMS, export/deletion, authorization, and isolation workflows |
 | Phase 2 browser workflow | PASS LOCALLY | 1/1 on compiled artifacts; CRUD, refresh persistence, same organization ID across three modules, and no script-readable auth |
-| Full API regression | PASS | Fresh untouched-schema aggregate on the exact Phase 12B source passed 839/839 with 0 failures, 0 skips and 0 todo |
+| Full API regression | PASS | Fresh disposable-schema aggregate on the Phase 18 working candidate passed 914, failed 0, and skipped 6 intentional HTTP-only cases across 920 tests |
 | Replit automatic npm preinstall | PASS LOCALLY AFTER DEFECT FIX | npm dry-run exits 0; pnpm-only scoped overrides remain in `pnpm-workspace.yaml` |
 | Public read-only runtime verifier | PUBLIC PASS; CURRENT MAIN NOT DEPLOYED | Public release `c29cbca`, build `25095fde5c3543a8aa748634`, passes 48/48 unpinned. Pinning current main `92ca0db` returns 46/48 solely on health/readiness release-commit mismatch |
 | Formatting/lint | NOT DEFINED | Repository has no supported formatting or lint script; no pass is claimed |
@@ -222,7 +244,7 @@ and migration parity remain controlled by the module parity index.
 The last verified 2026-07-31 public release was healthy and identified as
 `c29cbca376525885e906d10b3e2df647cfce6b00`, build
 `25095fde5c3543a8aa748634`. The current verifier passes 48/48 unpinned,
-including complete release/database identity and disabled OutCall behavior.
+including complete release/database identity for that older deployed revision.
 
 The public deployment was not re-verified during the v30 source work. No
 deployment or acceptance of the current candidate is claimed.

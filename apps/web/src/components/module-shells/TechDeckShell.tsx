@@ -91,7 +91,7 @@ const workflowShortcuts = [
     tone: colors.cyan,
   },
   { id: 'runbooks', label: 'Runbooks', summary: 'Approval-controlled, documentation-only procedures.', Icon: ShieldCheck, tone: colors.green },
-  { id: 'evidence', label: 'Evidence', summary: 'Tenant-scoped observations, snapshots, tests, and attachments.', Icon: FileLock2, tone: colors.amber },
+  { id: 'evidence', label: 'Evidence', summary: 'Capture observations, snapshots, tests, and attachments for managed systems.', Icon: FileLock2, tone: colors.amber },
   {
     id: 'reports',
     label: 'Reports',
@@ -104,10 +104,10 @@ const workflowShortcuts = [
 ];
 
 const readinessRows = [
-  ['SSO', 'OperatorOS managed', colors.green],
-  ['Tenant', 'Scoped at launch', colors.cyan],
-  ['Billing', 'Centralized', colors.amber],
-  ['Standalone login', 'Redirected', colors.green],
+  ['Access', 'Secure', colors.green],
+  ['Directory', 'Connected', colors.cyan],
+  ['Operations', 'Shared', colors.amber],
+  ['Sign-in', 'One account', colors.green],
 ];
 
 const shellCss = `
@@ -233,9 +233,9 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
   const roleLabel = platformAdmin
     ? 'Platform super admin'
     : activeRole
-      ? `Tenant ${activeRole}`
+      ? `Organization ${activeRole}`
       : adapter.localRole;
-  const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No active tenant';
+  const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
   const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
   const canWriteModule = platformAdmin || activeRole !== 'viewer';
   const externalLaunchUrl = baseUrl && /^https?:\/\//i.test(baseUrl) ? baseUrl.replace(/\/+$/, '') : null;
@@ -248,9 +248,9 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
           <div style={loadingPanelStyle} data-testid="techdeck-loading-state" aria-busy="true">
             <Gauge size={18} color={colors.cyan} />
             <div>
-              <div style={{ fontWeight: 800 }}>Loading TechDeck context</div>
+              <div style={{ fontWeight: 800 }}>Loading TechDeck</div>
               <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                OperatorOS is resolving tenant, role, and module entitlement state.
+                Preparing your tickets, systems, documentation, and team access.
               </div>
             </div>
           </div>
@@ -283,7 +283,7 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
               </HeaderLink>
               {canManageModule && (
                 <HeaderLink href="#techdeck-settings" testId="techdeck-module-settings-link" Icon={Settings}>
-                  Module Settings
+                  Settings
                 </HeaderLink>
               )}
               {platformAdmin && (
@@ -300,7 +300,7 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
           </div>
 
           <div className="techdeck-chip-row">
-            <ContextChip label="Tenant" value={tenantLabel} tone={hasTenantContext ? colors.cyan : colors.red} testId="techdeck-tenant-badge" />
+            <ContextChip label="Organization" value={tenantLabel} tone={hasTenantContext ? colors.cyan : colors.red} testId="techdeck-tenant-badge" />
             <ContextChip label="Role" value={roleLabel} tone={platformAdmin ? colors.violet : colors.green} testId="techdeck-role-badge" />
             <ContextChip label="Session" value="OperatorOS SSO" tone={colors.green} testId="techdeck-session-badge" />
             <ContextChip label="Host" value={adapter.hostnames.production} tone={colors.amber} testId="techdeck-host-badge" />
@@ -312,8 +312,8 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
             testId="techdeck-no-tenant-state"
             tone={colors.red}
             Icon={AlertTriangle}
-            title="No active tenant context"
-            body="TechDeck requires an OperatorOS tenant context before technician workflows can open. Return to the Command Center and select a tenant."
+            title="Choose an organization"
+            body="Select an organization in the Command Center to open its technician workspace."
           />
         )}
 
@@ -381,14 +381,14 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
               <SectionHeading
                 Icon={CheckCircle2}
                 title="Consolidation boundary"
-                subtitle="OperatorOS provides the active identity, tenant, entitlement, Directory, attachment, and audit controls."
+                subtitle="Your organization, permissions, contacts, attachments, and activity history carry across the workspace."
               />
               <div style={emptyStateStyle} data-testid="techdeck-empty-state">
                 <Sparkles size={18} color={colors.green} />
                 <div>
-                  <div style={{ fontWeight: 800 }}>Integrated local operations workspace</div>
+                  <div style={{ fontWeight: 800 }}>Your IT operations workspace is ready</div>
                   <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                    The shell uses OperatorOS SSO, tenant authority, shared Directory records, and centralized billing. Production readiness still depends on the recorded deployment gates.
+                    Tickets, infrastructure, networks, documentation, evidence, reports, and technician time are available from one connected console.
                   </div>
                 </div>
               </div>
@@ -408,13 +408,13 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
               />
               <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
                 <AdminRow
-                  label="OperatorOS authority"
-                  value="Identity, billing, tenant membership, and entitlements stay centralized."
+                  label="Account and access"
+                  value="OperatorOS manages sign-in, subscription access, and workspace membership."
                   tone={colors.green}
                 />
                 <AdminRow
-                  label="Module-local scope"
-                  value="TechDeck owns tenant-scoped managed-infrastructure documentation workflows and module UI only."
+                  label="Managed operations"
+                  value="TechDeck keeps your technical documentation, infrastructure records, evidence, and support work together."
                   tone={colors.cyan}
                 />
                 <AdminRow
@@ -429,8 +429,8 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
               testId="techdeck-error-state"
               tone={colors.amber}
               Icon={LifeBuoy}
-              title="If a feature route fails"
-              body="Keep the user in the OperatorOS shell, show the access problem plainly, and route admin fixes through Platform Command."
+              title="Need help?"
+              body="Retry the action first. If access is blocked, ask your workspace administrator to review your TechDeck permissions."
             />
           </section>
         </div>
@@ -532,7 +532,7 @@ function WorkflowPanel({
       </div>
       <p style={{ color: colors.muted, fontSize: 13, lineHeight: 1.45, margin: '10px 0 0' }}>{summary}</p>
       <div style={{ marginTop: 12, color: colors.amber, fontSize: 12, fontWeight: 800 }}>
-        Migration pending — disabled
+        Available in Operations Workspace
       </div>
     </article>
   );

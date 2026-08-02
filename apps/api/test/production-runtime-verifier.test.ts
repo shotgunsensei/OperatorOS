@@ -27,8 +27,8 @@ test('production verifier loads OperatorOS plus exactly 13 canonical module regi
   const registry = await verifier.loadRegistry();
   assert.equal(registry.filter((entry: { moduleId: string }) => entry.moduleId === 'operatoros').length, 1);
   assert.equal(registry.filter((entry: { moduleId: string }) => entry.moduleId !== 'operatoros').length, 13);
-  assert.equal(registry.filter((entry: { enabled: boolean }) => entry.enabled).length, 13);
-  assert.equal(registry.find((entry: { slug: string }) => entry.slug === 'outcall')?.enabled, false);
+  assert.equal(registry.filter((entry: { enabled: boolean }) => entry.enabled).length, 14);
+  assert.equal(registry.find((entry: { slug: string }) => entry.slug === 'outcall')?.enabled, true);
 });
 
 test('authorization redirect validator enforces exact PKCE request, safe next, headers, and host-only cookies', () => {
@@ -83,16 +83,16 @@ test('release identity validator requires the intended commit, database release,
     lockfileSha256: 'c'.repeat(64),
     databaseRelease: {
       contractVersion: 1,
-      releaseVersion: 32,
-      stepCount: 32,
-      lastStep: 'tradeflowkit_public_operations',
+      releaseVersion: 33,
+      stepCount: 33,
+      lastStep: 'outcall_product_operations',
     },
   };
   assert.deepEqual(verifier.validateReleaseIdentity(valid, commit), []);
   assert.ok(verifier.validateReleaseIdentity({ ...valid, deployedAt: 'invalid' }, commit).length > 0);
   assert.ok(verifier.validateReleaseIdentity({
     ...valid,
-    databaseRelease: { ...valid.databaseRelease, releaseVersion: 31 },
+    databaseRelease: { ...valid.databaseRelease, releaseVersion: 32 },
   }, commit).length > 0);
   assert.ok(verifier.validateReleaseIdentity(valid, 'd'.repeat(40)).length > 0);
 });

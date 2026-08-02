@@ -199,8 +199,8 @@ export default function TradeFlowKitLeadOperations({
       }, `lead-adapter-${adapterKey}-${crypto.randomUUID()}`);
       const eventResult = await moduleShellApi.tradeflowkit.leadSourceEvents();
       setEvents(Array.isArray(eventResult?.events) ? eventResult.events : []);
-      setNotice(`${adapterKey} payload contract validated. No lead was created and no sample values were retained.`);
-    } catch (requestError) { setError(errorText(requestError, 'Could not validate the adapter contract.')); }
+      setNotice(`${adapterKey} connection check passed. No lead was created and no sample values were retained.`);
+    } catch (requestError) { setError(errorText(requestError, 'Could not validate the integration.')); }
     finally { setBusy(null); }
   }
 
@@ -244,7 +244,7 @@ export default function TradeFlowKitLeadOperations({
           ...(result.adapterSecrets ? { adapterSecrets: result.adapterSecrets } : {}),
         }, null, 2));
       }
-      setNotice(action === 'rotate' ? 'Public intake token rotated. Copy the new URL now.' : action === 'reveal' ? 'Adapter signing secrets revealed for this admin session. Copy them now.' : 'Public intake configuration saved.');
+      setNotice(action === 'rotate' ? 'Public intake token rotated. Copy the new URL now.' : action === 'reveal' ? 'Integration keys revealed for this admin session. Copy them now.' : 'Public intake settings saved.');
     } catch (requestError) { setError(errorText(requestError, 'Could not update public intake.')); }
     finally { setBusy(null); }
   }
@@ -269,12 +269,12 @@ export default function TradeFlowKitLeadOperations({
     <section className="tfk-lead-ops" data-testid="tradeflowkit-lead-operations">
       <style>{leadOperationsCss}</style>
       <header>
-        <div><span>Conversion playbook</span><h3>Lead Operations</h3><p>Configure new-lead follow-ups, privacy-aware public capture, and signed source adapters.</p></div>
+        <div><span>Conversion playbook</span><h3>Lead Operations</h3><p>Configure new-lead follow-ups, privacy-aware public capture, and verified lead-source integrations.</p></div>
         <button type="button" onClick={() => void loadWorkspace()} disabled={!!busy}><RefreshCw size={14} /> Refresh</button>
       </header>
       {error && <div className="tfk-lead-ops-error" role="alert">{error}</div>}
       {notice && <div className="tfk-lead-ops-notice" role="status" data-testid="tradeflowkit-lead-operations-status">{notice}</div>}
-      <div className="tfk-lead-ops-boundary"><ShieldCheck size={17} /><div><strong>Public intake {state.publicIntake.enabled ? 'enabled' : 'disabled'}</strong><span>{state.publicIntake.configured ? 'Token, privacy notice, consent version, distributed rate limits, and signed adapters are configured.' : 'Configure an HTTPS privacy notice, consent text/version, and rotate a token before enabling.'}</span></div></div>
+      <div className="tfk-lead-ops-boundary"><ShieldCheck size={17} /><div><strong>Public intake {state.publicIntake.enabled ? 'enabled' : 'disabled'}</strong><span>{state.publicIntake.configured ? 'Privacy, consent, abuse protection, and approved integrations are configured.' : 'Add a privacy notice and consent version, then create a secure intake link before enabling.'}</span></div></div>
 
       <div className="tfk-lead-ops-grid">
         <article className="tfk-lead-ops-card">
@@ -301,18 +301,18 @@ export default function TradeFlowKitLeadOperations({
         </article>
 
         <article className="tfk-lead-ops-card tfk-lead-ops-wide" data-testid="tradeflowkit-public-intake-settings">
-          <div className="tfk-lead-ops-title"><ShieldCheck size={17} /><div><strong>Public lead intake</strong><span>Opaque link, consent evidence, abuse limits, and optional HMAC-signed adapters.</span></div></div>
+          <div className="tfk-lead-ops-title"><ShieldCheck size={17} /><div><strong>Public lead intake</strong><span>Secure link, recorded consent, abuse protection, and optional verified integrations.</span></div></div>
           <div className="tfk-lead-capture-grid">
             <label>Privacy notice URL<input type="url" placeholder="https://example.com/privacy" value={form.privacyNoticeUrl} maxLength={500} disabled={!canManage} onChange={event => setForm(current => ({ ...current, privacyNoticeUrl: event.target.value }))} /></label>
             <label>Consent version<input placeholder="privacy-2026-08" value={form.consentVersion} maxLength={40} disabled={!canManage} onChange={event => setForm(current => ({ ...current, consentVersion: event.target.value }))} /></label>
-            <label>Signed adapters<input placeholder="n8n, generic-json" value={form.allowedAdapterKeys} maxLength={100} disabled={!canManage} onChange={event => setForm(current => ({ ...current, allowedAdapterKeys: event.target.value }))} /></label>
+            <label>Allowed integrations<input placeholder="n8n, generic-json" value={form.allowedAdapterKeys} maxLength={100} disabled={!canManage} onChange={event => setForm(current => ({ ...current, allowedAdapterKeys: event.target.value }))} /></label>
             <label className="tfk-lead-ops-toggle"><input type="checkbox" checked={form.publicIntakeEnabled} disabled={!canManage} onChange={event => setForm(current => ({ ...current, publicIntakeEnabled: event.target.checked }))} /> Enable public intake</label>
           </div>
           <label>Consent text<textarea rows={2} value={form.consentText} maxLength={1000} disabled={!canManage} onChange={event => setForm(current => ({ ...current, consentText: event.target.value }))} /></label>
           <div className="tfk-lead-ops-actions">
             <button type="button" className="tfk-lead-ops-primary" disabled={!canManage || !!busy} onClick={() => void updatePublicIntake('save')}>Save intake</button>
             <button type="button" disabled={!canManage || !!busy} onClick={() => void updatePublicIntake('rotate')}>Rotate public link</button>
-            <button type="button" disabled={!canManage || !!busy || state.captureForm.allowedAdapterKeys.length === 0} onClick={() => void updatePublicIntake('reveal')}>Reveal adapter secrets</button>
+            <button type="button" disabled={!canManage || !!busy || state.captureForm.allowedAdapterKeys.length === 0} onClick={() => void updatePublicIntake('reveal')}>Reveal integration keys</button>
           </div>
           {secretOutput && <div className="tfk-lead-secret"><strong>One-time secret disclosure</strong><span>Copy these values now. Do not paste them into tickets or client-side code.</span><textarea readOnly rows={5} value={secretOutput} onFocus={event => event.currentTarget.select()} /></div>}
         </article>
@@ -323,14 +323,14 @@ export default function TradeFlowKitLeadOperations({
           {selectedLeadId && followups.length > 0 ? <div className="tfk-lead-followups">{followups.map(item => <div key={item.id} data-testid={`tradeflowkit-followup-${item.id}`}><div><strong>Step {item.stepNumber} · {item.channel.toUpperCase()}</strong><span>{new Date(item.dueAt).toLocaleString()} · {item.status}</span></div>{canManage && ['pending', 'failed'].includes(item.status) ? <div><button type="button" disabled={!!busy} onClick={() => void actionFollowup(item, 'queue')}><Send size={13} /> Queue</button><button type="button" disabled={!!busy} onClick={() => void actionFollowup(item, 'complete')}>Complete</button></div> : canManage && item.status === 'queued' ? <button type="button" disabled={!!busy} onClick={() => void actionFollowup(item, 'complete')}>Mark handled</button> : null}</div>)}</div> : <div className="tfk-lead-ops-empty">{selectedLeadId ? 'No follow-ups are scheduled for this lead. Templates apply to newly created leads.' : 'Create or select a lead to inspect its follow-up plan.'}</div>}
           <div className="tfk-lead-ops-divider" />
           <div className="tfk-lead-ops-title"><Send size={17} /><div><strong>Delivery check</strong><span>Destination is your authenticated OperatorOS email.</span></div></div>
-          <button type="button" disabled={!canManage || !!busy || !state.settings.emailEnabled} onClick={() => void testEmail()} data-testid="tradeflowkit-lead-test-email">{busy === 'test-email' ? <Loader2 className="tfk-spin" size={14} /> : <Send size={14} />} Queue test email</button>
+          <button type="button" disabled={!canManage || !!busy || !state.settings.emailEnabled} onClick={() => void testEmail()} data-testid="tradeflowkit-lead-test-email">{busy === 'test-email' ? <Loader2 className="tfk-spin" size={14} /> : <Send size={14} />} Send test email</button>
           <p className="tfk-lead-ops-note">{state.delivery.note}</p>
         </article>
 
         <article className="tfk-lead-ops-card tfk-lead-ops-wide">
-          <div className="tfk-lead-ops-title"><Cable size={17} /><div><strong>Source contract lab</strong><span>Validate canonical fields before deploying a signed adapter; no lead is created and no sample values are stored.</span></div></div>
+          <div className="tfk-lead-ops-title"><Cable size={17} /><div><strong>Lead source connection check</strong><span>Confirm an integration&apos;s field mapping before turning it on. This check does not create a lead.</span></div></div>
           <div className="tfk-lead-adapters">{adapters.map(adapter => <div key={adapter.key} data-testid={`tradeflowkit-adapter-${adapter.key}`}><div><strong>{adapter.name}</strong><span>{adapter.description}</span></div><button type="button" disabled={!canManage || !!busy} onClick={() => void validateAdapter(adapter.key)}>{busy === `adapter:${adapter.key}` ? <Loader2 className="tfk-spin" size={13} /> : <ShieldCheck size={13} />} Validate</button></div>)}</div>
-          <div className="tfk-lead-events"><strong>Recent source activity</strong>{events.length === 0 ? <span>No validation or configuration events yet.</span> : events.slice(0, 8).map(event => <div key={event.id}><span>{event.adapterKey.replaceAll('-', ' ')} · {event.status}</span><time>{new Date(event.createdAt).toLocaleString()}</time></div>)}</div>
+          <div className="tfk-lead-events"><strong>Recent integration activity</strong>{events.length === 0 ? <span>No connection checks or settings changes yet.</span> : events.slice(0, 8).map(event => <div key={event.id}><span>{event.adapterKey.replaceAll('-', ' ')} · {event.status}</span><time>{new Date(event.createdAt).toLocaleString()}</time></div>)}</div>
         </article>
       </div>
     </section>

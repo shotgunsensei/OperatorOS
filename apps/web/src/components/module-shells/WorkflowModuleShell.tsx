@@ -156,7 +156,7 @@ export default function WorkflowModuleShell({ moduleSlug }: { moduleSlug: Native
 
       <section style={{ display: 'flex', flexWrap: 'wrap', gap: space.lg, alignItems: 'flex-start' }}>
         <form onSubmit={createItem} style={{ ...cardStyle, display: 'grid', gap: space.md, flex: '1 1 290px' }} data-testid={`${moduleSlug}-create-form`}>
-          <div><h2 style={{ margin: 0, color: semantic.text, fontSize: 18 }}>New record</h2><p style={{ color: semantic.textMuted, margin: '5px 0 0', fontSize: fontSize.sm }}>Stored inside the active OperatorOS tenant.</p></div>
+          <div><h2 style={{ margin: 0, color: semantic.text, fontSize: 18 }}>New record</h2><p style={{ color: semantic.textMuted, margin: '5px 0 0', fontSize: fontSize.sm }}>Saved for the selected organization.</p></div>
           <label style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{config.titleLabel}<input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} required placeholder={config.titlePlaceholder} style={{ ...inputStyle, marginTop: 6 }} /></label>
           <label style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{config.summaryLabel}<textarea value={summary} onChange={(e) => setSummary(e.target.value)} maxLength={2000} rows={5} placeholder={config.summaryPlaceholder} style={{ ...inputStyle, marginTop: 6, resize: 'vertical' }} /></label>
           <label style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{config.contextLabel}<input value={context} onChange={(e) => setContext(e.target.value)} maxLength={2000} placeholder={config.contextPlaceholder} style={{ ...inputStyle, marginTop: 6 }} /></label>
@@ -165,8 +165,8 @@ export default function WorkflowModuleShell({ moduleSlug }: { moduleSlug: Native
 
         <div style={{ display: 'grid', gap: space.md, flex: '2 1 360px', minWidth: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><h2 style={{ margin: 0, color: semantic.text, fontSize: 18 }}>Active workflow</h2><span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{items.length} record{items.length === 1 ? '' : 's'}</span></div>
-          {loading ? <div style={{ ...cardStyle, color: semantic.textMuted }}>Loading tenant workflow…</div> : items.length === 0 ? (
-            <div style={{ ...cardStyle, textAlign: 'center', padding: space.xxl, color: semantic.textMuted }} data-testid={`${moduleSlug}-empty-state`}><CheckCircle2 size={28} color={config.accent} style={{ marginBottom: 8 }} /><div>No records yet.</div><div style={{ fontSize: fontSize.sm, marginTop: 4 }}>Create the first tenant-owned workflow record to get started.</div></div>
+          {loading ? <div style={{ ...cardStyle, color: semantic.textMuted }}>Loading your workflow…</div> : items.length === 0 ? (
+            <div style={{ ...cardStyle, textAlign: 'center', padding: space.xxl, color: semantic.textMuted }} data-testid={`${moduleSlug}-empty-state`}><CheckCircle2 size={28} color={config.accent} style={{ marginBottom: 8 }} /><div>No records yet.</div><div style={{ fontSize: fontSize.sm, marginTop: 4 }}>Create the first shared workflow record to get started.</div></div>
           ) : items.map((item) => (
             <article key={item.id} style={{ ...cardStyle, borderLeft: `3px solid ${config.accent}` }} data-testid={`${moduleSlug}-workflow-item`}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: space.md, alignItems: 'flex-start' }}>

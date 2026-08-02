@@ -1,63 +1,70 @@
 # OutCall Go-Live Checklist
 
-The Phase 12B classification is **NOT READY**. Source/local access may remain
-active with provider operations fail-closed, but public promotion and a
-production-ready label require evidence for every applicable item below.
+Current classification: **active source/local release candidate; deployment
+acceptance open**. Catalog and launch activation are implemented in the current
+candidate. Do not call OutCall production-ready until every unchecked target
+gate below is evidenced on the exact deployed revision.
 
-## OperatorOS integration
+## Completed in the candidate
 
-- [ ] Production SSO issuer/audience, one-time consume, session invalidation,
-      suspension, MFA behavior, tenant isolation, and role changes pass tests.
-- [ ] `resolveEntitlements` grants trial/paid/organization access and denies
-      missing, expired, revoked, and suspended access.
-- [ ] Parent Stripe webhook/catalog and usage rules are live; no duplicate
-      customer or child billing authority exists.
-- [ ] Registry status activation is a separate reviewed change.
+- [x] OperatorOS owns identity, host sessions, tenant selection, roles,
+      entitlements, add-on billing, registry, navigation, audit, jobs, and usage.
+- [x] OutCall is active in the catalog, deployment registry, SSO matrix,
+      launcher, production verifier, and add-on readiness checks.
+- [x] Calls can target only the server-recovered verified-self number.
+- [x] Phone and trigger values are independently encrypted/fingerprinted;
+      projections are masked and private phrases are never returned.
+- [x] Emergency/government/healthcare/school impersonation, recording, caller-
+      ID spoofing, arbitrary destinations, location, and emergency contact are
+      excluded or rejected.
+- [x] Immediate, delayed, absolute scheduling, cancellation, history, profile
+      and trigger management, password-confirmed export, and deletion exist.
+- [x] Twilio Verify, voice, DTMF, status, and inbound SMS paths verify the exact
+      canonical public signature and use replay-safe shared receipts.
+- [x] Tenant/user-scoped persistent rate limits, job idempotency, provider-ID
+      uniqueness, one-attempt live submission, and exactly-once usage are wired.
+- [x] Release v33 is additive, ordered, idempotent, and verifies all OutCall
+      product tables.
+- [x] The UI uses customer-facing safety, privacy, scheduling, history, and
+      account controls without exposing provider/developer diagnostics.
 
-## Safety and privacy
+## Replit and provider acceptance
 
-- [ ] Only verified destinations and owned/approved caller IDs can be used.
-- [ ] Emergency/government/healthcare/school impersonation and automatic
-      emergency-service contact are blocked.
-- [ ] Non-911 and delivery-failure disclaimers are visible and accessible.
-- [ ] Phone/trigger encryption, HMAC lookup, masking, reauthentication, export,
-      deletion, and retention jobs are tested.
-- [ ] Raw SMS, OTPs, trigger phrases, full numbers, tokens, and secrets are absent
-      from logs, analytics, error telemetry, and browser history.
-- [ ] Recording is disabled and location is absent from the MVP.
+- [ ] Set every variable in `docs/outcall/ENVIRONMENT.md` as a Replit Secret or
+      reviewed server configuration; confirm `OUTCALL_TEST_ADAPTER` is absent.
+- [ ] Confirm `outcall.operatoros.net` DNS/TLS and that every Twilio callback
+      resolves through the public `/api/modules/outcall/webhooks/...` path.
+- [ ] Confirm the owned Twilio number supports voice and inbound SMS, Verify is
+      active, geo permissions match the allowlist, and messaging compliance is
+      complete.
+- [ ] Run one controlled real Verify, voice, DTMF, status, inbound SMS, retry-
+      avoidance, and cancellation acceptance sequence with recording absent.
+- [ ] Configure Twilio spend alerts, concurrency limits, fraud controls, and an
+      incident stop procedure; record the account/number evidence without
+      storing secret values.
+- [ ] Confirm `STRIPE_PRICE_ADDON_OUTCALL` is a valid live-mode recurring price
+      and exercise add-on checkout, grant, cancellation, and replay behavior.
 
-## Reliability and abuse
+## Deployed OperatorOS acceptance
 
-- [ ] Twilio signatures use the exact canonical URL and original parameters on
-      every SMS/voice route; invalid/replayed callbacks fail closed.
-- [ ] MessageSid, CallSid, webhook, job, and usage idempotency pass concurrent tests.
-- [ ] PostgreSQL queue leases, retry classes, dead letters, recovery,
-      reconciliation, cancellation races, and VM restarts cannot duplicate calls.
-- [ ] Country/premium restrictions, per-user/destination/number/global limits,
-      concurrency caps, circuit breaker, Twilio geo permissions, and spend alerts
-      are configured and tested.
-- [ ] Health, readiness, worker heartbeat, queue age, and failure alerts are live.
-
-## Replit and providers
-
-- [ ] Reserved VM, persistent database, locked migrations, backups, restore test,
-      graceful SIGTERM, rollback, and cost limits are verified.
-- [ ] `outcall.operatoros.net` DNS and TLS are verified; no production callback
-      points at a preview/temporary domain.
-- [ ] Replit Secrets contain every production secret; repository and Git history
-      scans are clean; exposed legacy values are rotated.
-- [ ] Twilio number supports required SMS/voice, Verify and Messaging services are
-      configured, US messaging compliance is complete, and controlled real calls
-      demonstrate DTMF/status callbacks without recording.
-- [ ] Stripe production webhook and redirect URLs are verified.
+- [ ] Deploy the exact reviewed commit and pin the release identity.
+- [ ] Apply release v33 only through the supported release supervisor after a
+      backup; verify health, readiness, release identity, and rollback target.
+- [ ] Pass exact-host SSO issue/exchange, deep links, return navigation, local
+      logout, global logout, suspension, role change, and entitlement removal.
+- [ ] Pass authenticated primary workflow, viewer/write denial, and second-
+      tenant non-enumeration on the deployed host.
+- [ ] Verify queue heartbeat, callback failures, provider outage, rate-limit,
+      spend, and call-failure alerts in the production monitoring path.
+- [ ] Complete backup/restore rehearsal, rollback decision record, customer
+      support runbook, privacy/retention review, and controlled launch approval.
 
 ## Product quality
 
-- [ ] Install, formatting, lint, typecheck, unit, integration, E2E, dependency
-      audit, and production build pass with exact totals.
-- [ ] Onboarding, immediate/delayed/absolute calls, cancellation, history,
-      privacy mode, billing, export/deletion, and admin support pass end to end.
-- [ ] Mobile layouts, keyboard use, focus, labels, contrast, reduced motion, and
-      screen-reader flows pass accessibility review.
-- [ ] Incident response, secret rotation, data retention, provider outage,
-      reconciliation, and customer support runbooks are approved.
+- [ ] Record final committed install, focused/full tests, typecheck, production
+      build/start, health/readiness, and browser totals in the implementation
+      status (the repository has no lint/format command, so none is claimed).
+- [ ] Pass mobile, keyboard, focus, labels, contrast, reduced-motion, and screen-
+      reader review on the deployed OutCall experience.
+- [ ] Confirm customer copy, help text, error recovery, account export/deletion,
+      and non-emergency disclaimers with a product/privacy reviewer.

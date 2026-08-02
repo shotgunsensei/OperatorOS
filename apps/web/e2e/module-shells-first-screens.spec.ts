@@ -207,6 +207,8 @@ async function exerciseShell(page: Page, slug: Slug) {
 
   switch (slug) {
     case 'callcommand-ai': {
+      const channelPhone = `+1555${String(Date.now() % 10_000_000).padStart(7, '0')}`;
+      await page.getByTestId('input-callcommand-channel-phone').fill(channelPhone);
       await page.getByTestId('button-callcommand-create-channel').click();
       await expect(page.locator('#callcommand-configuration')).toContainText('Primary support line');
       await page.getByTestId('button-callcommand-create-profile').click();
@@ -215,12 +217,12 @@ async function exerciseShell(page: Page, slug: Slug) {
       await page.getByTestId('input-callcommand-name').fill('Task73 Caller');
       await page.getByTestId('button-callcommand-grant-consent').click();
       await expect(page.getByTestId('text-callcommand-consent-active')).toBeVisible();
-      if ((await page.getByTestId('banner-callcommand-provider').textContent())?.includes('Local test adapter')) {
+      if ((await page.getByTestId('banner-callcommand-provider').textContent())?.includes('Preview calling is ready')) {
         await page.getByTestId('button-callcommand-place-test-call').click();
         await expect(page.getByTestId('list-callcommand-calls')).toBeVisible({ timeout: 10_000 });
         await expect(page.locator('[data-testid^="row-callcommand-call-"]').first().getByTestId('status-callcommand-completed')).toBeVisible();
       } else {
-        await expect(page.getByTestId('banner-callcommand-provider')).toContainText('fail closed');
+        await expect(page.getByTestId('banner-callcommand-provider')).toContainText('Calling setup required');
       }
       break;
     }

@@ -220,6 +220,8 @@ function checkOutCall(env, issues) {
     'TWILIO_AUTH_TOKEN',
     'TWILIO_VERIFY_SERVICE_SID',
     'TWILIO_PHONE_NUMBER',
+    'TWILIO_ALLOWED_COUNTRIES',
+    'OUTCALL_LIVE_PROVIDER',
   ]);
   for (const name of ['OUTCALL_FIELD_ENCRYPTION_KEY', 'OUTCALL_LOOKUP_HMAC_KEY']) {
     if (isPresent(env, name) && env[name].length < 32) {
@@ -234,6 +236,12 @@ function checkOutCall(env, issues) {
   }
   if (isPresent(env, 'TWILIO_PHONE_NUMBER') && !/^\+[1-9]\d{7,14}$/.test(env.TWILIO_PHONE_NUMBER)) {
     addIssue(issues, 'outcall', 'TWILIO_PHONE_NUMBER', 'must be an E.164 phone number');
+  }
+  if (isPresent(env, 'TWILIO_ALLOWED_COUNTRIES') && !env.TWILIO_ALLOWED_COUNTRIES.split(',').some(value => ['US', 'CA'].includes(value.trim().toUpperCase()))) {
+    addIssue(issues, 'outcall', 'TWILIO_ALLOWED_COUNTRIES', 'must include US or CA for the controlled launch');
+  }
+  if (!['1', 'true', 'enabled'].includes(String(env.OUTCALL_LIVE_PROVIDER).toLowerCase())) {
+    addIssue(issues, 'outcall', 'OUTCALL_LIVE_PROVIDER', 'must be explicitly enabled after controlled provider acceptance');
   }
   if (['1', 'true', 'enabled'].includes(String(env.OUTCALL_TEST_ADAPTER).toLowerCase())) {
     addIssue(issues, 'outcall', 'OUTCALL_TEST_ADAPTER', 'must be disabled in production');

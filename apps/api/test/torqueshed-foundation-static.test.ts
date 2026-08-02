@@ -79,7 +79,7 @@ test('TorqueShed native workspace and durable deep routes are registered', () =>
     'torqueshed-templates',
   ])
     assert.match(workspace, new RegExp(state));
-  assert.match(workspace, /VINs are retained only as a masked suffix/);
+  assert.match(workspace, /VINs are protected and shown only as a masked suffix/);
   assert.match(map, /'\/diagnostics': \{ sectionId: 'torqueshed-diagnostics'/);
   assert.match(map, /resource === 'diagnostics'/);
 });

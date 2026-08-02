@@ -39,6 +39,9 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
   const [data, setData] = useState<Workspace | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
+  const [channelName, setChannelName] = useState('Primary support line');
+  const [channelPhone, setChannelPhone] = useState('');
+  const [channelTimezone, setChannelTimezone] = useState('America/New_York');
   const [phone, setPhone] = useState('+15551234567');
   const [subject, setSubject] = useState('Acceptance caller');
   const [purpose, setPurpose] = useState('support');
@@ -84,10 +87,10 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
   }
 
   const providerLabel = data?.provider.testAdapter
-    ? 'Local test adapter · no external contact'
+    ? 'Preview calling is ready'
     : data?.provider.configured
-      ? `Twilio connected${data.provider.source ? ` · ${data.provider.source}` : ''}`
-      : 'Provider disabled · calls fail closed';
+      ? 'Calling is connected'
+      : 'Calling setup required';
 
   return (
     <main data-testid="shell-callcommand-ai" style={{ padding: space.xxl, maxWidth: 1180, margin: '0 auto', color: semantic.text }}>
@@ -108,7 +111,7 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
         borderColor: data?.provider.configured || data?.provider.testAdapter ? `${semantic.accentSuccess}66` : `${semantic.accentWarning}66` }}>
         <Radio size={16} color={data?.provider.configured || data?.provider.testAdapter ? semantic.accentSuccess : semantic.accentWarning} />
         <strong>{providerLabel}</strong>
-        <span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>Test mode is accepted only when APP_ENV=test.</span>
+        <span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{data?.provider.testAdapter ? 'Preview calls stay inside this safe local workspace.' : data?.provider.configured ? 'Your approved business line is available.' : 'You can prepare profiles and consent records while an administrator connects calling.'}</span>
       </section>
 
       {error && <div data-testid="text-callcommand-error" role="alert" style={{ ...card, color: semantic.accentDanger, marginBottom: space.lg }}>{error}</div>}
@@ -127,12 +130,23 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
           <h2 style={{ marginTop: 0, fontSize: 18 }}>1. Call configuration</h2>
           <p style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>Channels own consent language and recording defaults. Profiles own bounded intake behavior.</p>
           {!activeChannel ? (
-            <button data-testid="button-callcommand-create-channel" style={button} disabled={!!busy}
-              onClick={() => act('channel', () => moduleShellApi.callcommand.createChannel({
-                name: 'Primary support line', phone: '+15550001111', timezone: 'America/New_York',
-                consentScript: 'This call may be recorded only with your consent. You may ask us to stop at any time.',
-                recordingEnabled: false,
-              }))}><Plus size={14}/> Create secure channel</button>
+            <div style={{ display: 'grid', gap: 8 }}>
+              <label style={{ display: 'grid', gap: 5, color: semantic.textMuted, fontSize: fontSize.sm }}>Channel name
+                <input data-testid="input-callcommand-channel-name" style={input} value={channelName} maxLength={120} onChange={event => setChannelName(event.target.value)} />
+              </label>
+              <label style={{ display: 'grid', gap: 5, color: semantic.textMuted, fontSize: fontSize.sm }}>Approved business line
+                <input data-testid="input-callcommand-channel-phone" style={input} type="tel" value={channelPhone} onChange={event => setChannelPhone(event.target.value)} placeholder="+15551234567" />
+              </label>
+              <label style={{ display: 'grid', gap: 5, color: semantic.textMuted, fontSize: fontSize.sm }}>Timezone
+                <input data-testid="input-callcommand-channel-timezone" style={input} value={channelTimezone} maxLength={64} onChange={event => setChannelTimezone(event.target.value)} placeholder="America/New_York" />
+              </label>
+              <button data-testid="button-callcommand-create-channel" style={button} disabled={!!busy || channelName.trim().length < 2 || !/^\+[1-9]\d{7,14}$/.test(channelPhone.trim()) || channelTimezone.trim().length < 2}
+                onClick={() => act('channel', () => moduleShellApi.callcommand.createChannel({
+                  name: channelName.trim(), phone: channelPhone.trim(), timezone: channelTimezone.trim(),
+                  consentScript: 'This call may be recorded only with your consent. You may ask us to stop at any time.',
+                  recordingEnabled: false,
+                }))}><Plus size={14}/> Save business line</button>
+            </div>
           ) : <ConfigRow icon={<PhoneCall size={15}/>} title={activeChannel.name} detail={`${activeChannel.phoneE164 || 'Configured number'} · recordings ${activeChannel.recordingEnabled ? 'enabled' : 'off'}`} />}
           <div style={{ height: 10 }} />
           {!activeProfile ? (
@@ -171,7 +185,7 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
           }));
         }}>
           <h2 style={{ marginTop: 0, fontSize: 18 }}>3. Controlled call</h2>
-          <p style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>The server rechecks consent, suppression, entitlement, provider state, and rate limits before dialing.</p>
+          <p style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>Before dialing, CallCommand confirms consent, calling permissions, service availability, and rate limits.</p>
           <button data-testid="button-callcommand-place-test-call" style={button} disabled={!!busy || !activeChannel || !activeProfile || !matchingConsent}>
             <PhoneCall size={14}/> {data?.provider.testAdapter ? 'Run provider test' : 'Place authorized call'}
           </button>
@@ -185,7 +199,7 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
 
       <section id="callcommand-calls" style={{ marginTop: space.xl }}>
         <h2 style={{ fontSize: 19 }}>Recent calls</h2>
-        {!data ? <div style={card}>Loading persisted call data…</div> : data.calls.length === 0 ? (
+        {!data ? <div style={card}>Loading your call workspace…</div> : data.calls.length === 0 ? (
           <div data-testid="text-callcommand-empty" style={{ ...card, color: semantic.textMuted }}>No calls yet. Configure a channel and profile, record consent, then run the accepted provider workflow.</div>
         ) : (
           <div data-testid="list-callcommand-calls" style={{ display: 'grid', gap: space.sm }}>
@@ -209,7 +223,7 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
             }));
           }}>
             <h2 style={{ marginTop: 0, fontSize: 18 }}>4. Operator disposition</h2>
-            <p style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>Review a persisted call and record its operational outcome. Notes remain tenant-private.</p>
+            <p style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>Review the selected call, record its outcome, and leave a private note for your team.</p>
             <Field label="Call">
               <select data-testid="select-callcommand-review-call" style={input} value={selectedCall?.id ?? ''} onChange={event => setSelectedCallId(event.target.value)}>
                 {data.calls.map(call => <option key={call.id} value={call.id}>{call.subjectName || call.phoneMasked} · {call.purpose}</option>)}
@@ -242,7 +256,7 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
             });
           }}>
             <h2 style={{ marginTop: 0, fontSize: 18 }}>5. Reviewed follow-up</h2>
-            <p style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>Draft only. CallCommand does not send a message or execute a task until a reviewed delivery contract is approved.</p>
+            <p style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>Draft only. CallCommand does not send a message or run an action until a delivery workflow is reviewed and approved.</p>
             <Field label="Channel">
               <select data-testid="select-callcommand-followup-channel" style={input} value={followupChannel} onChange={event => setFollowupChannel(event.target.value)}>
                 <option value="task">Operator task</option>

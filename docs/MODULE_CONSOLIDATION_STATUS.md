@@ -1,6 +1,6 @@
 # OperatorOS module consolidation status
 
-Baseline refreshed: 2026-08-01
+Baseline refreshed: 2026-08-02
 
 This file is the honest source-of-truth for **source ownership and functional
 migration**. A module being registered, entitled, or reachable on an
@@ -17,9 +17,10 @@ OperatorOS is a modular monorepo and shared Replit runtime:
   `operatoros.net`. Host labels normally match the module slug; Ninja Launch
   Kit intentionally uses `ninjalaunchkit.operatoros.net`. These Replit-attached
   subdomains are the production destinations, not an interim migration layer.
-  Standalone branded domains are legacy references only. OutCall's subdomain
-  remains registered but is planned/disabled in the Phase 17 candidate; the
-  old public release remains enabled until that candidate is deployed.
+  Standalone branded domains are legacy references only. OutCall is active in
+  the Phase 18 source candidate; its provider remains fail-closed until the
+  reviewed Replit and Twilio configuration is present and deployed acceptance
+  passes.
 - Module code owns only its product UI, tenant-scoped workflows, module data,
   and operational integrations.
 - A module may become a separately deployed workload only when its runtime or
@@ -41,9 +42,9 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 | SnapProofOS | `snapproofos` | `snapproofos.operatoros.net` | add-on | Clean `C:\Dev\snapproof` and snapshot at `26bded38c13b5b6361d407462c68052b0c30613d` | Phase 11B source/local state-4 candidate: tenant-scoped evidence cases; private note/file capture with signature/MIME validation, shared scan and SHA-256 recheck; member submit/admin review; findings; append-only comments and hash-linked custody; immutable reports; real JSON/CSV exports; retention/legal hold/archive; persisted dashboard and canonical deep links. ADR-0022 excludes child identity/billing, public share/file URLs, fake exports and arbitrary integrations. Clean 24-step release, aggregate 787/787, compiled health/readiness and production-host matrix 6/6 pass locally; deployed acceptance and authorized data reconciliation/cutover still block state 5 |
 | StudyForge AI | `studyforge-ai` | `studyforge-ai.operatoros.net` | add-on | Clean `C:\Dev\Study-Forge` and snapshot at `a607a9f34442b1d0f6bfffbf0293609529494825` | Phase 11C source/local state-4 candidate: tenant-scoped subjects and private note/document sources; source-grounded AI decks, quizzes and plans; editable draft/review/publish lifecycle; server grading; per-user spaced repetition/session completion; shared usage/idempotency/activity; real exports and canonical deep links. ADR-0023 excludes child identity/billing/admin, ungrounded publication and fake analytics. Clean 25-step release, aggregate 801/801, compiled health/readiness and production-host matrix 7/7 pass locally; deployed acceptance and authorized data reconciliation/cutover still block state 5 |
 | Ninja Launch Kit | `ninja-launch-kit` | `ninjalaunchkit.operatoros.net` | add-on | Clean `C:\Dev\Ninja-Launch-Kit` and snapshot at `30bd1abc05846926e97bc7b26c5b7d6625e8f161` | Phase 11D source/local state-4 candidate: tenant-scoped launches, phases, milestones, task dependencies, reviewed campaign artifacts, private shared assets, server-computed readiness, OperatorOS-owned AI/idempotency/usage/activity, audited JSON/Markdown/CSV exports, responsive workspace and canonical deep links. ADR-0024 separates launch execution from BrandForgeOS brand/campaign authority and excludes child identity/billing/admin, legacy URL-token SSO and simulated claims. Clean 26-step release, aggregate 816/816, compiled health/readiness and production-host matrix 8/8 pass locally; deployed acceptance and authorized data reconciliation/cutover still block state 5 |
-| CallCommand AI | `callcommand-ai` | `callcommand-ai.operatoros.net` | add-on | Clean `C:\Dev\Call-Command-AI` and snapshot at `d49434e1d641d62cc141591c7208539a7afbf11e` | Phase 11E source/local state-4 candidate: tenant channels, bounded receptionist/intake profiles, review-only transfer targets, purpose-specific outbound consent, do-not-call suppression, signed inbound DTMF intake, persistent calls/safe events, operator dispositions, reviewed follow-up drafts and record-derived analytics; explicit test-only adapter; fail-closed Twilio provider; replay-safe callbacks; forced-off recording with no SID/URL activation; responsive workspace and canonical deep links. ADR-0025 assigns contacts to Shared Directory and excludes child authority/billing, fake delivery, transfer execution, recording/transcription/AI summaries, incomplete SIP providers and bulk/cold/predictive/autonomous dialing; OutCall remains disabled. Clean 27-step release, aggregate 825/825, compiled health/readiness and production-host matrix 9/9 pass locally; deployed/live-provider acceptance and authorized reconciliation/cutover still block state 5 |
+| CallCommand AI | `callcommand-ai` | `callcommand-ai.operatoros.net` | add-on | Clean `C:\Dev\Call-Command-AI` and snapshot at `d49434e1d641d62cc141591c7208539a7afbf11e` | Phase 11E source/local state-4 candidate: tenant channels, bounded receptionist/intake profiles, review-only transfer targets, purpose-specific outbound consent, do-not-call suppression, signed inbound DTMF intake, persistent calls/safe events, operator dispositions, reviewed follow-up drafts and record-derived analytics; explicit test-only adapter; fail-closed Twilio provider; replay-safe callbacks; forced-off recording with no SID/URL activation; responsive workspace and canonical deep links. ADR-0025 assigns contacts to Shared Directory and excludes child authority/billing, fake delivery, transfer execution, recording/transcription/AI summaries, incomplete SIP providers and bulk/cold/predictive/autonomous dialing; OutCall remains a separate verified-self safety product. Clean 27-step release, aggregate 825/825, compiled health/readiness and production-host matrix 9/9 pass locally; deployed/live-provider acceptance and authorized reconciliation/cutover still block state 5 |
 | Ninjamation | `ninjamation` | `ninjamation.operatoros.net` | add-on | Replit-synced AutomationPacks source at `C:\Dev\Ninjamation`, application commit `cca75338d04ed35b89f28d614eb51559735aa32f`, catalog commit `ca0e55fd086f6751a43964927166bfa69db012b6`; 263 tracked/184 retained files, 2,855,775 bytes, zero high-confidence secret findings | Phase 12A source/local state-4 candidate: tenant-scoped PC automation script authoring; immutable versions; server static analysis; review submission; tenant-admin approve/reject/retire; approved-current-version-only downloads with immutable audit; shared AI drafts with idempotent usage; responsive workspace and canonical deep links. ADR-0026 forbids OperatorOS/browser script execution and excludes child identity/billing/admin/sync. AutoWorkFlowHub is discontinued and excluded. Clean/idempotent 28-step release, aggregate 836/836, compiled health/readiness, production-host matrix 9/9 and first-screen workflows 2/2 pass locally; deployment and authorized reconciliation/cutover still block state 5 |
-| OutCall | `outcall` | `outcall.operatoros.net` | add-on | No canonical source repository recovered; product contract reconstructed from the owner's ten-phase prompt set | Phase 12B bounded source/local code remains preserved, but Phase 17 truthfully marks the product `coming_soon` and disables its launch/callback registration. The idempotent seed reconciles existing rows without deleting data; authenticated SSO returns `MODULE_UNAVAILABLE`. Live Twilio verification/SMS/voice/DTMF/callbacks and deployed acceptance remain gated, so no state 4/5 or production-ready claim is made |
+| OutCall | `outcall` | `outcall.operatoros.net` | add-on | No canonical source repository recovered; product contract reconstructed from the owner's ten-phase prompt set | Phase 18 source/local state-4 candidate: active exact-host launch; verified-self Twilio Verify; encrypted neutral profiles and profile-bound exact triggers; immediate/scheduled durable calls; controlled voice/DTMF; private SMS ingestion; signed/replay-safe callbacks; persistent rate limits; safe history/cancellation; export and password-confirmed deletion; responsive customer workspace and deep links. Release v33 applies cleanly/idempotently. Recording, emergency/duress/location claims, arbitrary destinations, trusted-contact escalation, bulk/autonomous dialing, impersonation, and child authority/billing remain excluded. Replit/provider configuration and deployed browser/provider/backup/rollback acceptance still block state 5 |
 
 ## Current verification boundary
 
@@ -56,14 +57,14 @@ production build/preflight/runtime, HTTP 200 health/readiness, and an
 exact-host browser workflow 1/1 in 20.3 seconds. No public deployment,
 provider enablement, import apply, or cutover is inferred.
 
-Phase 17 does not change any module parity state. It establishes a complete
-release identity and aligns OutCall's planned/disabled policy across the
-catalog, deployment registry, persisted seed, verifier, and browser matrix.
-Fresh candidate evidence passes the idempotent 29-step release, 46/46 focused
-contracts, production build/supervisor, and three focused exact-host browser
-gates across 12 enabled modules. The unchanged public release still exposes
-the old OutCall callback, so this remains source/isolated-candidate evidence
-until the Phase 17 deploy and public 48/48 plus authenticated 3/3 gates pass.
+Phase 18 advances OutCall to source/local state 4 and registers 13 active
+product modules. Fresh evidence passes 44/44 focused OutCall/provider/contracts,
+5/5 PostgreSQL workflows, the 914-pass/6-skip aggregate, the clean and
+idempotent 33-step release, workspace typecheck, and production build. The
+candidate is not deployed and no Twilio request, public callback, production
+database, or traffic was touched. State 5 still requires reviewed Replit
+secrets, v33 backup/apply, real verified-self provider acceptance, authenticated
+exact-host SSO/denial/logout for all enabled modules, and rollback evidence.
 
 Phase 12A adds the ordered `ninjamation_tables` release step and replaces the
 inferred workflow-automation shell with the commit-pinned AutomationPacks
@@ -275,8 +276,10 @@ runtime. Product workflows move through tested, namespaced vertical slices.
    disabled and require TorqueShed live-provider/data/rollback gates.
 4. Reconcile the already-imported add-on source products against the native
    MVP implementations before choosing each vertical slice.
-5. Resolve OutCall through the Phase 12B distinct/merge/cancel ADR; keep it
-   disabled until a deliberate product decision, workload and tests exist.
+5. Deploy and accept the Phase 18 OutCall state-4 candidate only after release
+   v33 backup/apply, reviewed Replit/Twilio configuration, controlled
+   verified-self provider tests, exact-host browser coverage, and rollback
+   evidence pass.
 
 For every module, preserve tenant-scoped data and module permissions while
 removing duplicate identity, platform billing, and entitlement ownership.

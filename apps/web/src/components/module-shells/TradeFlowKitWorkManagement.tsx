@@ -143,7 +143,7 @@ export default function TradeFlowKitWorkManagement({
         <div>
           <div className="tfk-work-eyebrow"><Workflow size={15} /> Restored operations workspace</div>
           <h2>Workflows, team tasks, and activity</h2>
-          <p>Persisted workflow stages coordinate jobs and job-scoped tasks without creating a second tenant or identity system.</p>
+          <p>Coordinate jobs and team tasks through the workflow stages that match how your business delivers work.</p>
         </div>
         <button type="button" onClick={() => void load()} disabled={loading || pending}>Refresh</button>
       </header>
@@ -151,7 +151,7 @@ export default function TradeFlowKitWorkManagement({
       {error && <div className="tfk-work-alert" role="alert" data-testid="tradeflowkit-work-management-error"><AlertTriangle size={17} />{error}</div>}
       {loading ? (
         <div className="tfk-work-state" aria-busy="true" data-testid="tradeflowkit-work-management-loading">
-          <Loader2 className="spin" size={19} /> Loading persisted work management…
+          <Loader2 className="spin" size={19} /> Loading work management…
         </div>
       ) : (
         <>
@@ -163,7 +163,7 @@ export default function TradeFlowKitWorkManagement({
 
           <section className="tfk-work-section" aria-labelledby="tfk-workflow-heading">
             <div className="tfk-work-section-heading">
-              <div><GitBranch size={18} /><div><h3 id="tfk-workflow-heading">Workflow templates</h3><p>Admins define ordered job or task stages; transitions remain version checked and audited.</p></div></div>
+              <div><GitBranch size={18} /><div><h3 id="tfk-workflow-heading">Workflow templates</h3><p>Admins define reusable job or task stages, with every change safely tracked.</p></div></div>
             </div>
 
             {canManage && (
@@ -178,7 +178,7 @@ export default function TradeFlowKitWorkManagement({
             )}
 
             {workflows.length === 0 ? (
-              <div className="tfk-work-state"><GitBranch size={18} /><span>No workflows yet. An authorized tenant admin can create the first real workflow.</span></div>
+              <div className="tfk-work-state"><GitBranch size={18} /><span>No workflows yet. A workspace admin can create the first workflow.</span></div>
             ) : (
               <div className="tfk-workflow-list">
                 {workflows.map(workflow => (
@@ -233,7 +233,7 @@ export default function TradeFlowKitWorkManagement({
 
           <section className="tfk-work-section" aria-labelledby="tfk-job-board-heading">
             <div className="tfk-work-section-heading">
-              <div><Workflow size={18} /><div><h3 id="tfk-job-board-heading">Job workflow board</h3><p>Move persisted jobs through an approved template; mapped stages update canonical job status.</p></div></div>
+              <div><Workflow size={18} /><div><h3 id="tfk-job-board-heading">Job workflow board</h3><p>Move jobs through your approved workflow and keep each job status current.</p></div></div>
             </div>
             {jobs.length === 0 ? <div className="tfk-work-state">No jobs are available for workflow assignment.</div> : (
               <div className="tfk-job-workflow-list">
@@ -259,7 +259,7 @@ export default function TradeFlowKitWorkManagement({
 
           <section className="tfk-work-section" aria-labelledby="tfk-team-task-heading">
             <div className="tfk-work-section-heading">
-              <div><CheckCircle2 size={18} /><div><h3 id="tfk-team-task-heading">Team tasks</h3><p>Search and manage every persisted job task in the current tenant.</p></div></div>
+              <div><CheckCircle2 size={18} /><div><h3 id="tfk-team-task-heading">Team tasks</h3><p>Search, assign, and manage job tasks across the current workspace.</p></div></div>
               <div className="tfk-task-filters">
                 <label><Search size={14} /><input value={taskSearch} onChange={event => setTaskSearch(event.target.value)} placeholder="Search tasks" /></label>
                 <select value={taskStatus} onChange={event => setTaskStatus(event.target.value)}><option value="">All statuses</option>{taskStatuses.map(status => <option key={status} value={status}>{status.replace('_', ' ')}</option>)}</select>
@@ -290,7 +290,7 @@ export default function TradeFlowKitWorkManagement({
 
           <section className="tfk-work-section" aria-labelledby="tfk-activity-heading">
             <div className="tfk-work-section-heading">
-              <div><Activity size={18} /><div><h3 id="tfk-activity-heading">Recent activity</h3><p>Tenant-scoped audit events from real workflow mutations.</p></div></div>
+              <div><Activity size={18} /><div><h3 id="tfk-activity-heading">Recent activity</h3><p>See the latest job, task, and workflow changes made by your team.</p></div></div>
             </div>
             {activity.length === 0 ? <div className="tfk-work-state">No TradeFlowKit activity has been recorded yet.</div> : (
               <div className="tfk-activity-list">

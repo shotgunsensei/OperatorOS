@@ -305,7 +305,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
             <button
               data-testid={`button-manage-${m.slug}`}
               onClick={() => onNavigate ? onNavigate('tenant-modules') : null}
-              title="Manage this module for your tenant"
+              title="Manage this app for your organization"
               style={{
                 padding: '8px 12px', borderRadius: 8,
                 border: `1px solid ${colors.border}`, background: 'transparent',
@@ -371,7 +371,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
                   data-testid={`button-request-${m.slug}`}
                   onClick={() => {
                     setRequested(r => ({ ...r, [m.slug]: true }));
-        toast('Ask a tenant admin to grant this module from Tenant Modules.', 'success');
+        toast('Ask an organization admin to grant this app from Organization Apps.', 'success');
                   }}
                   disabled={sent}
                   style={{
@@ -410,7 +410,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
   if (loading) {
     return (
       <div style={{ padding: 32, color: colors.textMuted, fontSize: 14 }} data-testid="apps-loading">
-        Loading tenant-aware modules...
+        Loading your apps...
       </div>
     );
   }
@@ -422,7 +422,7 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Module Marketplace</h1>
           <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 6 }}>
-            One login into the OperatorOS ecosystem. Access is tenant-aware and entitlement-driven.
+            One login for the OperatorOS ecosystem, with the right apps for your organization and plan.
           </p>
         </div>
       </div>

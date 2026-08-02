@@ -95,12 +95,12 @@ export default function NinjaPoolHallShell(_props: { baseUrl?: string }) {
           <div className="nph-shell-copy">
             <span>SHOTGUN NINJAS // OPERATOR TABLE</span>
             <h1>Ninja <b>Pool Hall</b></h1>
-            <p>Deterministic 8-ball practice, CPU play, and hot-seat matches with OperatorOS-owned persistence.</p>
+            <p>Sharpen your 8-ball game with free practice, CPU matches, local two-player play, and saved progress.</p>
           </div>
-          <div className="nph-shell-badges" aria-label="Runtime boundaries">
-            <span><Gamepad2 size={14} /> Real local gameplay</span>
-            <span><WifiOff size={14} /> Online rooms disabled</span>
-            <span><ShieldCheck size={14} /> Server-applied rules</span>
+          <div className="nph-shell-badges" aria-label="Game features">
+            <span><Gamepad2 size={14} /> Practice and local play</span>
+            <span><WifiOff size={14} /> Online rooms coming later</span>
+            <span><ShieldCheck size={14} /> Rules and results tracked</span>
           </div>
         </header>
 
@@ -121,7 +121,7 @@ export default function NinjaPoolHallShell(_props: { baseUrl?: string }) {
             <div className="nph-home-hero">
               <span>SYS::TABLE_READY</span>
               <h2>Choose your game</h2>
-              <p>Every mode below is functional. Free Shoot saves bounded rack totals; structured matches persist a server-applied logical rules trail without pretending local physics are anti-cheat proof.</p>
+              <p>Practice at your own pace, challenge the CPU, or pass the table to a second local player. Completed sessions update your personal stats.</p>
               <div className="nph-home-stats">
                 <span><b>{profileData.progression.matchesCompleted}</b> matches completed</span>
                 <span><b>{profileData.progression.wins}</b> CPU wins</span>
@@ -129,12 +129,12 @@ export default function NinjaPoolHallShell(_props: { baseUrl?: string }) {
               </div>
             </div>
             <div className="nph-mode-grid">
-              <button type="button" onClick={() => navigate('practice')}><Crosshair size={24} /><strong>Free Shoot</strong><span>No turns. Clear the rack and retain personal summaries.</span></button>
-              <button type="button" onClick={() => navigate('bot')}><Bot size={24} /><strong>Vs CPU</strong><span>Full 8-ball rules against the promoted source bot.</span></button>
-              <button type="button" onClick={() => navigate('local')}><Users size={24} /><strong>Local two-player</strong><span>Pass-and-play 8-ball with durable results.</span></button>
-              <button type="button" onClick={() => navigate('profile')}><Settings size={24} /><strong>Profile & rules</strong><span>Persist table speed, feedback, and optional rule variants.</span></button>
+              <button type="button" onClick={() => navigate('practice')}><Crosshair size={24} /><strong>Free Shoot</strong><span>No turns—clear the rack and save your practice summary.</span></button>
+              <button type="button" onClick={() => navigate('bot')}><Bot size={24} /><strong>Vs CPU</strong><span>Play a complete 8-ball match against the house opponent.</span></button>
+              <button type="button" onClick={() => navigate('local')}><Users size={24} /><strong>Local two-player</strong><span>Pass-and-play 8-ball with saved results.</span></button>
+              <button type="button" onClick={() => navigate('profile')}><Settings size={24} /><strong>Profile & rules</strong><span>Choose table speed, feedback, and optional rule variations.</span></button>
             </div>
-            <div className="nph-online-disabled"><WifiOff size={20} /><div><strong>Online room intentionally disabled</strong><p>The source relay trusts a browser-generated client ID and host browser state. It is not exposed until a separately reviewed authenticated, tenant-aware multiplayer authority exists.</p></div></div>
+            <div className="nph-online-disabled"><WifiOff size={20} /><div><strong>Online rooms are coming later</strong><p>For now, enjoy CPU and pass-and-play matches on this device.</p></div></div>
           </section>
         ) : view === 'practice' ? (
           <NinjaPoolHallPractice />

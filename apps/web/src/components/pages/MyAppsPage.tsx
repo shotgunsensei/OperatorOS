@@ -461,7 +461,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
             Module launch control
           </h1>
           <p style={{ color: semantic.textMuted, margin: '10px 0 0', fontSize: fontSize.md, lineHeight: 1.55, maxWidth: 680 }}>
-            Launch tenant-approved modules through OperatorOS SSO. Access is resolved server-side before every handoff.
+            Open the apps included with your workspace and continue with the same secure sign-in.
           </p>
         </div>
 

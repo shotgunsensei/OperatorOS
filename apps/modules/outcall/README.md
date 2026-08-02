@@ -1,29 +1,36 @@
 # OutCall Module
 
-OutCall is a planned OperatorOS child module for discreet exit assistance and
-personal-safety calling. Phase 1 establishes its integration boundary and
-architecture without presenting unfinished product screens as production-ready.
+OutCall is an active OperatorOS add-on for discreet, verified-self
+exit-assistance calls. The shared Next/Fastify runtime provides the customer
+workspace and persistent product API; the imported `source/` tree remains
+read-only migration evidence and is never started or migrated independently.
 
-## Active Phase 1 Integration
+## Active integration
 
 - Registry slug: `outcall`
 - Canonical host: `outcall.operatoros.net`
-- Source boundary: `apps/modules/outcall/source`
-- OperatorOS adapter: `apps/modules/outcall/adapter.ts`
-- Lifecycle status: `planned`
-- Authentication and billing authority: OperatorOS
+- Customer shell: `apps/web/src/components/module-shells/OutCallShell.tsx`
+- Product API: `apps/api/src/routes/outcall-routes.ts`
+- Ordered database release: v33 step `outcall_product_operations`
+- Lifecycle status: active source/local state 4
+- Authentication, tenant, entitlement, billing, and launch authority:
+  OperatorOS
 
-The shared module catalog drives the ecosystem card, host mapping, database
-module seed, entitlement key, and navigation metadata. Because the module is
-`planned`, normal launch and route access remain unavailable.
+The active workflow supports safety acknowledgement, phone ownership
+verification, encrypted rescue profiles and exact-match private triggers,
+immediate or scheduled calls to the verified number, cancellation and history,
+signed/replay-safe provider callbacks, private export, and
+password-confirmed deletion. Recording, arbitrary destinations, emergency
+dispatch claims, impersonation, and autonomous/bulk dialing remain excluded.
 
-## Ownership Boundary
+## Deployment boundary
 
-OperatorOS owns users, sessions, tenants, memberships, platform roles, module
-entitlements, Stripe customers/subscriptions, SSO handoff issuance, and central
-audit policy. OutCall owns only its safety workflows, verified phone records,
-trigger configuration, calls, schedules, check-ins, trusted contacts, and
-privacy-specific audit details.
+The source candidate fails closed until the reviewed OutCall protection keys,
+explicit live-provider switch, canonical public URL, Twilio account/auth token,
+Verify service, owned caller number, and country allowlist are configured.
+Follow `docs/outcall/GO_LIVE_CHECKLIST.md` for provider and deployed exact-host
+acceptance. Local state 4 is not a claim that the Replit deployment or live
+Twilio flow has passed state 5.
 
-No standalone login, password store, user-supplied tenant authority, local
-Stripe checkout, or production mock provider may be added here.
+No standalone login, password store, client-supplied tenant authority,
+module-local Stripe checkout, or production test provider may be added here.

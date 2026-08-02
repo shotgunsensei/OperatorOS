@@ -28,7 +28,7 @@ import { ensureStudyForgeTables } from './studyforge-db-init.js';
 import { ensureNinjaLaunchKitTables } from './ninja-launch-kit-db-init.js';
 import { ensureCallCommandTables } from './callcommand-db-init.js';
 import { ensureNinjamationTables } from './ninjamation-db-init.js';
-import { ensureOutCallTables } from './outcall-db-init.js';
+import { ensureOutCallProductTables, ensureOutCallTables } from './outcall-db-init.js';
 import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db-init.js';
 import { ensureTradeFlowKitLeadOperationsTables } from './tradeflowkit-lead-operations-db-init.js';
 import { ensureTradeFlowKitPublicOperationsTables } from './tradeflowkit-public-operations-db-init.js';
@@ -75,6 +75,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   tradeflowkit_saved_views: ensureTradeFlowKitSavedViewTables,
   tradeflowkit_lead_operations: ensureTradeFlowKitLeadOperationsTables,
   tradeflowkit_public_operations: ensureTradeFlowKitPublicOperationsTables,
+  outcall_product_operations: ensureOutCallProductTables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -154,6 +155,7 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.outcall_triggers') IS NOT NULL AS outcall_triggers,
       to_regclass('public.outcall_call_requests') IS NOT NULL AS outcall_call_requests,
       to_regclass('public.outcall_events') IS NOT NULL AS outcall_events,
+      to_regclass('public.outcall_rate_limits') IS NOT NULL AS outcall_rate_limits,
       to_regclass('public.operatoros_token_purchase_intents') IS NOT NULL AS operatoros_token_purchase_intents,
       to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
   `);
