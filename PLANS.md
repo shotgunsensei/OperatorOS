@@ -41,7 +41,7 @@ slice is not parity.
 | 15 | Deployed acceptance, release decision, and state-5 certification matrix | All required prior gates | In progress; public commit `c29cbca` / build `25095fde5c3543a8aa748634` passes the current unpinned verifier 48/48. Current main `92ca0db` is newer and correctly returns 46/48 when pinned because its release identity is not deployed. Authenticated test-user, persistence, tenant, authorization, logout, provider, backup/cutover, and State 5 gates remain open. |
 | 16A | Re-baseline TradeFlowKit against the restored full product and close recorded parity gaps | Phase 15 release evidence plus restored-source provenance | Complete source/local at state 4. The executable ledger classifies all 277 capabilities with 145 active, 58 shared replacements, 43 security retirements, 31 product-boundary retirements, zero unclassified, and zero gaps. The final increment adds privacy/consent-bound public lead capture, signed source adapters, and provider-gated Stripe Connect business payments with verified replay-safe settlement under ADR-0032. The full API aggregate passes 908/0/6 across 914 tests, typecheck/build pass, and release v32 applies cleanly/idempotently. No real standalone export, production apply, deployment, reviewed Connect onboarding/payment/refund, browser provider acceptance, rollback rehearsal, traffic cutover, or state-5 promotion is authorized. |
 | 17 | Production truth and revenue release gate | Current cumulative `main` | Production-truth controls are merged and present on public commit `c29cbca`: complete release/DB-v29 identity and disabled OutCall assertions pass within the public 48/48 gate. Later main `92ca0db` is not deployed, and production-safe authenticated 3/3, provider, data, backup/rollback, and State 5 gates remain open. |
-| 18 | OutCall live-capable source activation and customer experience closure | Phase 17 authority and Phase 12B product boundary | Source/local state-4 candidate on `codex/outcall-checkered-flag`: explicit Twilio Verify/voice/SMS/DTMF provider boundary, signed/replay-safe callbacks, durable rate limits, profile-bound triggers, privacy export/deletion, release v33, active registry/SSO coverage, and an ecosystem-wide customer-copy sweep. Focused 44/44, PostgreSQL 5/5, aggregate 914/0/6 across 920 tests, clean/idempotent v33 release, typecheck, production build, and compiled first-screen browser 2/2 pass. Deployment/real-provider/exact-host/backup/rollback gates remain open. |
+| 18 | OutCall live-capable source activation and customer experience closure | Phase 17 authority and Phase 12B product boundary | OutCall implementation merged to `main` at `d96c698`; release-candidate closure is on `codex/phase18-release-candidate-closure`. Explicit Twilio Verify/voice/SMS/DTMF, signed/replay-safe callbacks, durable rate limits, profile-bound triggers, privacy export/deletion, release v33, active registry/SSO coverage, and the ecosystem customer-copy sweep are source/local state 4. Focused 44/44, PostgreSQL 5/5, aggregate 914/0/6 across 920 tests, clean/idempotent v33, typecheck/build, strict compiled supervisor health, local exact-host matrix 12/12, and first-screen 2/2 pass. Deployment/real-provider/production backup-apply/rollback gates remain open. |
 
 ## Phase execution rules
 
@@ -62,8 +62,8 @@ slice is not parity.
 
 Close the Phase 18 deployment/provider gate without widening product scope:
 
-1. Review and merge the final Phase 18 candidate and rebuild from that exact
-   commit.
+1. Review and merge the Phase 18 closure candidate, then rebuild from that
+   exact merged commit.
 2. Confirm the provider-managed database backup, review the v33 plan, and
    apply/verify release v33 through the supported runtime path.
 3. Add the documented OutCall protection and Twilio secret names in Replit;
@@ -78,6 +78,10 @@ Close the Phase 18 deployment/provider gate without widening product scope:
    provider IDs only in the protected evidence location.
 7. Record deployment/build IDs, rollback evidence, and the remaining state-5
    blockers in the authoritative reports.
+
+The operator-facing sequence and checkboxes are maintained in
+`docs/PHASE18_HUMAN_COMPLETION_GUIDE.md` and its validated PDF under
+`output/pdf/`.
 
 Do not claim deployment, provider acceptance, promotion, or module state 5
 until those human-gated actions pass.

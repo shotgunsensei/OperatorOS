@@ -1,18 +1,18 @@
 # OperatorOS current release gate
 
 - Evidence date: 2026-08-02
-- Current reviewed base: `main` at `6b50cb9414ebcfe70ae5add630a4414f1eeabd43`
-- Current source candidate: `codex/outcall-checkered-flag`; deployment identity pending
+- Current reviewed base: `main` at `d96c698d01e14d5f9379837cd0a1f0bbea14f3e2`
+- Current source candidate: `codex/phase18-release-candidate-closure`; final deployment identity pending merge
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
-- Platform and module source/local gate: **PARTIAL; local gates pass, live-provider and deployed gates remain open**
+- Platform and module source/local gate: **PASS; live-provider and deployed gates remain open**
 - Current public release: **commit `c29cbca376525885e906d10b3e2df647cfce6b00`, build `25095fde5c3543a8aa748634`; current unpinned verifier PASS 48/48**
 - Current-main public comparison: **EXPECTED PRE-DEPLOY FAIL 46/48; only health/readiness release-commit identity differs**
 - First deployment attempt: **FAILED BEFORE BUILD** — deployment
   `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd`, build
   `c49eeb9c-5f0b-40b3-9f31-44813446124c`
-- Overall release decision: **CLOSED — do not promote**
+- Overall release decision: **CLOSED — human deployment/provider acceptance required before promotion**
 
 ## Current Phase 18 OutCall and release v33 source gate
 
@@ -27,20 +27,29 @@ destinations, impersonation, bulk/autonomous dialing, and child authority
 remain excluded.
 
 The ordered database contract is v33/33. Clean apply and idempotent reapply
-pass on disposable PostgreSQL 16. Focused OutCall/provider/contracts pass
-44/44, OutCall PostgreSQL workflows pass 5/5, the fresh aggregate passes 914
-with 0 failures and 6 intentional HTTP-only skips across 920 tests, and the
-API/runner/web typechecks plus production build pass. The ecosystem customer
-copy sweep is part of the same verified source candidate. A compiled local
-first-screen browser gate also passes 2/2 in 8.6 seconds across CallCommand,
-Ninjamation, OutCall, StudyForge AI, and Ninja Launch Kit, including OutCall's
-test verification/profile/trigger/schedule workflow and non-entitled denial.
+pass on disposable PostgreSQL 16. Focused release/registry/provider contracts
+pass 45/45, focused OutCall/provider/contracts pass 44/44, OutCall PostgreSQL
+workflows pass 5/5, and the fresh aggregate passes 914 with 0 failures and 6
+intentional HTTP-only skips across 920 tests. API/runner/web typechecks and the
+production build pass. The compiled readiness-gated supervisor reports healthy
+API and web surfaces, configured SSO/worker checks, and database release v33/33
+on merged-main identity `d96c698`, build `50b91a50eab34dcbef995bbe`.
+
+The complete local canonical-host matrix now passes 12/12 in 1.9 minutes. It
+proves one-login launch across all thirteen active modules, host-only Secure
+sessions, no URL/storage credential leakage, deep links, sibling/local/global
+logout, tenant denial for TechDeck and OutCall, and the major persistent module
+workflows. The separate compiled first-screen gate passes 2/2 in 7.4 seconds
+across CallCommand, Ninjamation, OutCall, StudyForge AI, and Ninja Launch Kit,
+including OutCall test verification/profile/trigger/schedule/masking and
+non-entitled denial.
 
 No deployed candidate, Replit secret, Twilio request, production database,
-public callback, or traffic was touched. The release remains closed pending a
-final commit/build identity, v33 backup/apply, reviewed provider configuration,
-controlled verified-self provider acceptance, exact-host SSO/denial/logout and
-module browser acceptance, public health/readiness, and rollback evidence.
+public callback, or traffic was touched. The release remains closed pending the
+final merged commit/build identity, provider-managed backup and production v33
+apply, reviewed provider configuration, controlled verified-self provider
+acceptance, deployed exact-host 3/3 acceptance, public health/readiness and
+48/48 verification, and rollback evidence.
 
 ## Historical additive release v30 source gate
 
@@ -219,10 +228,10 @@ and migration parity remain controlled by the module parity index.
 | Backup/restore rehearsal | PASS LOCALLY | Phase 4 custom dump restored in 3.570 s; source/restore matched 94 public tables, 17 TradeFlowKit, 9 Directory, and 10 shared-service tables |
 | Restored data/constraints | PASS | Restored release apply passed; dump SHA-256 `d2df4f815a5fa678b058e1b602211fd7d8c878b32811807ed96e175130568c82` |
 | Production build | PASS | Current source produced SDK, API, runner gateway, and Next 15.5.22 artifacts after API/runner/web typechecks; 20 page entries generated. The pre-commit identity is validation-only and must be rebuilt at the final commit. |
-| Compiled production supervisor | PRIOR PASS ONLY | The current Phase 18 source was production-built but not started through the supervisor. The prior v30 candidate reached readiness; it does not prove the v33 candidate runtime. |
+| Compiled production supervisor | PASS LOCALLY | The current v33 artifacts started through the readiness-gated supervisor; API/web health, database, SSO, worker and release identity passed on merged-main commit `d96c698`, build `50b91a50eab34dcbef995bbe` |
 | Local canonical-host health | PASS | HTTPS apex `/healthz` returned 200 with `operatoros-api`; API `/readyz` returned 200 with database/auth/SSO/registry configured |
 | Local public URL diagnostics | PASS | TechDeck diagnostic resolved forwarded exact host, HTTPS origin, module role, and host-only cookie mode |
-| Production-host SSO browser gate | PARTIAL LOCAL PROOF | Compiled first-screen browser PASS 2/2 covers five add-ons, OutCall's first durable workflow, and non-entitled denial. Phase 18 exact-host SSO/logout across all 13 active product modules and the deployed/authenticated gate remain open. |
+| Production-host SSO browser gate | PASS LOCALLY | Canonical-host matrix PASS 12/12 across all 13 active modules with persistent workflows, denial, deep links and local/global logout; compiled first-screen PASS 2/2 adds OutCall's first durable workflow. Deployed authenticated 3/3 remains open. |
 | Focused Phase 1 tests | PASS | 11/11 database-release, preflight, and supervisor contract tests |
 | Focused Phase 2 tests | PASS | 9/9 directory, UI, deep-link, and release-contract tests |
 | Focused Phase 3 tests | PASS | 24/24 shared-service, route, retention, lease-recovery, release, webhook, and provider-state tests on a clean database |
@@ -261,7 +270,7 @@ deployment or acceptance of the current candidate is claimed.
    `corepack pnpm verify:production`, and require 48/48 including the exact
    complete identity on health and readiness.
 5. Provision the two synthetic accounts and six `E2E_PHASE17_*` values listed
-   in `docs/PHASE17_PRODUCTION_RELEASE_RUNBOOK.md`, then run
+   in `docs/PHASE18_HUMAN_COMPLETION_GUIDE.md`, then run
    `corepack pnpm --dir apps/web test:e2e:phase17-deployed` and require 3/3.
 6. Record the deployed commit and results in this file and
    `docs/auth/VALIDATION_MATRIX.md`.

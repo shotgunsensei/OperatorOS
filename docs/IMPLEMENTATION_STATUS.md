@@ -20,8 +20,47 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/outcall-checkered-flag`
+- Execution branch: `codex/phase18-release-candidate-closure`
 - Release gate: **closed**
+
+## 2026-08-02 Phase 18 merged-main release-candidate closure
+
+OutCall's implementation is merged to `main` at
+`d96c698d01e14d5f9379837cd0a1f0bbea14f3e2`. The closure branch corrects the
+remaining active planned/disabled copy in the README, Replit contract,
+environment template, and adapter comment, then hardens the canonical-host
+acceptance for the now-active thirteen-module registry. No runtime authority,
+billing, tenant, provider, or schema boundary was weakened.
+
+Fresh disposable PostgreSQL 16 and compiled-artifact evidence:
+
+| Gate | Result |
+| --- | --- |
+| Active registry/release/preflight contracts | PASS 45/45 |
+| Read-only release plan | PASS v33/33; additive, non-destructive; last step `outcall_product_operations` |
+| Clean release and idempotent reapply | PASS in 9.814 seconds and 1.608 seconds |
+| Full API aggregate | PASS 914, FAIL 0, SKIP 6 intentional HTTP-only cases across 920 tests in 356.2 seconds |
+| Core plus OutCall production preflight | PASS with canonical values and test-only placeholder secrets |
+| Production build | PASS for API, runner and Next 15.5.22; 20/20 page entries |
+| Strict compiled supervisor | PASS; API/web healthy, database v33/33 healthy, SSO and shared worker configured on merged-main identity `d96c698`, build `50b91a50eab34dcbef995bbe` |
+| Canonical-host ecosystem browser | PASS 12/12 in 1.9 minutes across all thirteen active modules, including persistence, secure host-only sessions, deep links, denial, and local/global logout |
+| Focused Ninja Pool Hall retest | PASS 1/1 in 13.2 seconds after customer-copy assertion reconciliation |
+| Compiled first-screen browser | PASS 2/2 in 7.4 seconds, including OutCall's deterministic verified-self/profile/trigger/schedule/masking workflow and non-entitled denial |
+
+The initial browser attempts were rejected as evidence while their test
+topology was corrected: the API first used a non-production cookie signal;
+several assertions still expected developer-oriented copy removed by the UX
+sweep; OutCall denial did not disable the newly active entitlement; a fixture
+cast text module IDs as UUIDs; and direct API registrations shared one
+rate-limited test address. No skip, retry, relaxed security assertion, or
+product mock was added. The final result above is one uninterrupted 12/12 run
+with retries disabled.
+
+Local gates are complete. Production remains closed because no Replit secret,
+production database, deploy, DNS/TLS target, public callback, Twilio request,
+Stripe live transaction, OpenAI request, customer data, traffic switch, or
+rollback action was authorized. The remaining human steps are captured in
+`docs/PHASE18_HUMAN_COMPLETION_GUIDE.md` and the matching validated PDF.
 
 ## 2026-08-02 OutCall live-capable activation and ecosystem UX sweep
 
@@ -66,7 +105,8 @@ organization now enters its own approved business line, name, and timezone.
 | Workspace/type/build | PASS; API, runner, and web TypeScript checks plus production build with Next 15.5.22 and 20/20 generated page entries |
 | Database release | PASS; read-only v33/33 plan, clean apply, and idempotent reapply on disposable PostgreSQL 16; last step `outcall_product_operations` |
 | Compiled first-screen browser | PASS 2/2 in 8.6 seconds on a disposable local database; Elite tenant exercised CallCommand, Ninjamation, OutCall, StudyForge AI, and Ninja Launch Kit, including OutCall safety acceptance, test verification, profile, trigger, schedule, and phone masking; non-entitled tenant received the inaccessible card |
-| Deployment/provider/exact-host browser | NOT RUN; no Replit secret, Twilio verification/SMS/call, production database, public callback, traffic, or deployed browser target was touched |
+| Local exact-host browser | PASS 12/12 in 1.9 minutes across all 13 active modules; deployed 3/3 remains open |
+| Deployment/provider | NOT RUN; no Replit secret, Twilio verification/SMS/call, production database, public callback, traffic, or deployed browser target was touched |
 
 Exact local commands used were `node --import tsx --test
 --test-concurrency=1` for focused tests and `corepack pnpm --dir apps/api test`
