@@ -75,10 +75,11 @@ rate-limit assertion also now crosses the five-per-minute boundary even when
 the test begins in a fresh minute.
 
 This closes eleven executable parity gaps at once while leaving the three
-anonymous-intake contracts explicit. Twenty-three total gaps remain. The
-production artifact was built from the working tree and therefore identifies
-the previous commit; a fresh build from the final commit is still required for
-release handoff. Local success does not promote TradeFlowKit beyond
+anonymous-intake contracts explicit. Twenty-three total gaps remain. A clean
+production artifact was rebuilt from the committed candidate after this
+verification record was prepared; release handoff still requires the selected
+deployment head to retain that exact identity. Local success does not promote
+TradeFlowKit beyond
 source/local state 4 or satisfy deployed provider, data, backup/rollback,
 accounting-sandbox, and cutover acceptance.
 
