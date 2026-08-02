@@ -1859,6 +1859,8 @@ export const moduleShellApi = {
       apiFetch('/modules/tradeflowkit/leads/settings') as Promise<any>,
     updateLeadOperationsSettings: (input: Record<string, unknown>): Promise<any> =>
       apiFetch('/modules/tradeflowkit/leads/settings', { method: 'PATCH', body: JSON.stringify(input) }) as Promise<any>,
+    updateLeadCaptureForm: (id: string, input: Record<string, unknown>): Promise<any> =>
+      apiFetch(`/modules/tradeflowkit/leads/capture-form/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<any>,
     applyLeadOperationsTemplate: (input: { templateKey: string; expectedVersion: number; expectedCaptureFormVersion: number }): Promise<any> =>
       apiFetch('/modules/tradeflowkit/leads/settings/apply-template', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
     leadSourceAdapters: (): Promise<any> =>
@@ -1883,6 +1885,16 @@ export const moduleShellApi = {
       apiFetch('/modules/tradeflowkit/leads/test-message', {
         method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ channel: 'email', confirmDelivery: true, expectedVersion }),
       }) as Promise<any>,
+    paymentProvider: (): Promise<any> =>
+      apiFetch('/modules/tradeflowkit/payments/provider') as Promise<any>,
+    authorizePaymentProvider: (): Promise<{ authorizeUrl: string; expiresInSeconds: number }> =>
+      apiFetch('/modules/tradeflowkit/payments/connect/authorize') as Promise<{ authorizeUrl: string; expiresInSeconds: number }>,
+    disconnectPaymentProvider: (): Promise<void> =>
+      apiFetch('/modules/tradeflowkit/payments/connect', { method: 'DELETE' }) as Promise<void>,
+    createPaymentLink: (id: string, expectedVersion: number, key: string): Promise<{ checkoutUrl: string | null; replay: boolean }> =>
+      apiFetch(`/modules/tradeflowkit/invoices/${encodeURIComponent(id)}/payment-link`, {
+        method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ expectedVersion }),
+      }) as Promise<{ checkoutUrl: string | null; replay: boolean }>,
     createCustomer: (input: TradeFlowKitCustomerImportRow): Promise<TradeFlowKitCustomer> =>
       apiFetch('/modules/tradeflowkit/customers', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitCustomer>,
     updateCustomer: (id: string, input: TradeFlowKitCustomerImportRow & { expectedVersion: number }): Promise<TradeFlowKitCustomer> =>

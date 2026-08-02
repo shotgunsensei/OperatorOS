@@ -1,9 +1,39 @@
 # OperatorOS ecosystem final E2E acceptance report
 
-Assessment date: 2026-07-29
+Assessment date: 2026-08-02
 Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: Phase 17 OperatorOS release identity and enabled-module SSO gate
 Verdict: **NOT ACCEPTED — release gate failed**
+
+## TradeFlowKit zero-gap follow-up — 2026-08-02
+
+The Phase 16 ledger now classifies all 277 restored-source capabilities with
+145 active, 58 shared OperatorOS replacements, 43 security retirements, 31
+product-boundary retirements, zero unclassified items, and zero gaps. ADR-0032
+approves controlled public lead intake and Stripe Connect business payments
+without changing OperatorOS authority for identity, tenants, roles,
+entitlements, subscriptions, or platform billing.
+
+The final increment adds an admin-enabled privacy/consent-versioned lead form,
+one-time token rotation, signed source adapters, persistent HMAC-keyed rate
+limits, replay/body-drift protection, and source/consent provenance. Business
+payments add tenant-bound single-use Connect OAuth state, connected-account
+status, server-priced invoice links, a separate signed webhook boundary, and
+row-locked idempotent settlement. No OAuth access/refresh token or raw client
+address is stored.
+
+Fresh local evidence passes 908 API tests with zero failures and six
+intentional HTTP-only skips across 914 tests. The signed webhook workflow
+proves valid settlement, duplicate suppression, and tamper rejection. The
+executable ledger, 15/15 focused safety/integration contracts, workspace typecheck,
+the 20-page production build, and clean plus idempotent v32/32 release apply
+also pass on disposable PostgreSQL 16.
+
+This closes approved source/local parity but does not change the ecosystem
+**NOT ACCEPTED** verdict or promote TradeFlowKit beyond state 4. The reviewed
+revision, target secrets, Connect onboarding/payment/refund/webhook flow,
+public-form browser path, authenticated exact-host acceptance, real data,
+backup/restore, rollback, and cutover have not been exercised on Replit.
 
 ## TorqueShed State 4 follow-up — 2026-07-31
 
@@ -293,10 +323,11 @@ invoice lines, verifies the exact database totals, reports invalid rows,
 suppresses duplicate re-imports, survives refresh, fits a 390-pixel viewport,
 returns to My Apps, and relaunches; 1/1 passed in 9.6 seconds.
 
-This follow-up does not change the ecosystem **NOT ACCEPTED** verdict or claim
-TradeFlowKit state 5. Eight parity gaps remain, and deployed authenticated
-acceptance, live providers, an approved real export/apply/reconciliation,
-rollback rehearsal, and production cutover have not occurred.
+This record-import checkpoint did not change the ecosystem **NOT ACCEPTED**
+verdict or claim TradeFlowKit state 5. Its eight then-remaining parity gaps are
+closed by the zero-gap follow-up at the top of this report; deployed
+authenticated acceptance, live providers, an approved real export/apply/
+reconciliation, rollback rehearsal, and production cutover remain open.
 
 ## Phase 12B follow-up
 

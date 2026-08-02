@@ -20,8 +20,53 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/tradeflowkit-record-imports`
+- Execution branch: `codex/tradeflowkit-final-parity`
 - Release gate: **closed**
+
+## 2026-08-02 TradeFlowKit zero-gap public intake and business payments
+
+TradeFlowKit now closes the final eight source-ledger gaps without creating a
+second identity, tenant, billing, or provider authority. Tenant admins can
+enable a consent-versioned public lead form, rotate its one-time token, select
+an HTTPS privacy notice, and explicitly allow signed source adapters. Public
+submissions are bounded, honeypot-checked, persistently rate-limited using
+HMAC-derived client buckets, replay/body-drift protected, tenant-bound, and
+record consent/source provenance without storing raw client addresses.
+
+Customer business payments remain separate from OperatorOS subscription and
+add-on billing. A tenant admin can connect or disconnect a Stripe Connect
+account through a short-lived, single-use, tenant/user/exact-callback-bound
+OAuth state. Invoice payment links use server-owned amount/currency metadata
+and direct charges on that connected account. A separate Connect webhook
+secret, raw-body signature verification, account/mode binding, the shared
+receipt ledger, and row-locked settlement prevent tampering, replay, cross-
+tenant credit, amount drift, and double settlement. OAuth access/refresh
+tokens are never stored.
+
+Release v32 adds the public-intake rate ledger, payment-provider account and
+OAuth-state tables, consent/provenance fields, provider settlement fields, and
+their constraints/indexes as one additive idempotent step. ADR-0032 supersedes
+the earlier temporary anonymous-intake prohibition and unresolved payment
+boundary only for this controlled design. Automatic lead response, child
+identity/billing, module-owned communication providers, and destructive bulk
+operations remain excluded.
+
+| Gate | Result |
+| --- | --- |
+| Executable source ledger | PASS; 145 active, 58 shared replacements, 0 explicit gaps, 43 security retirements, 31 product-boundary retirements, zero unclassified across 277 capabilities |
+| Focused contracts/integration | PASS 15/15; preflight/static contracts, provider configuration/direct-charge binding, public-intake consent/replay/signed-adapter/rate saturation, and signed webhook settlement |
+| Signed Stripe Connect webhook | PASS 1/1; valid event settles atomically, duplicate delivery is ignored, and payload tampering is rejected |
+| Full API aggregate | PASS 908, FAIL 0, SKIP 6 intentional HTTP-only cases across 914 tests on a fresh disposable PostgreSQL database |
+| Workspace/type/build | PASS; API/runner/web TypeScript checks and production build with Next 15.5.22 and 20/20 generated page entries, including the public TradeFlowKit route |
+| Database release | PASS; read-only v32/32 plan, clean apply, and idempotent reapply on disposable PostgreSQL 16; last step `tradeflowkit_public_operations` |
+| Deployment/provider/browser | NOT RUN for the new public/payment workflows; no Replit secret, Stripe account, real payment, live webhook, production data, traffic, or deployed browser target was touched |
+
+TradeFlowKit now has zero approved source/local parity gaps and remains
+consolidation state 4. State 5 still requires the exact candidate to be
+deployed, configured with reviewed target secrets, exercised through real
+test-mode Connect onboarding/payment/refund/webhook acceptance, verified by
+authenticated exact-host browser E2E, and paired with approved data,
+backup/restore, rollback, and cutover evidence.
 
 ## 2026-08-02 TradeFlowKit bounded record imports and deterministic-scope closure
 
@@ -479,8 +524,9 @@ references make identical replay idempotent and source drift fatal; post-apply
 money totals must exactly reconcile before commit. A synthetic isolated
 PostgreSQL apply/replay/security rehearsal passes. No real standalone export,
 production database mutation, deployment, or traffic cutover occurred.
-Workflow/general-task/contact migration and all remaining ledger gaps are
-still open.
+Workflow/general-task/contact data migration remains open; the later ADR-0032
+increment closes the remaining product-ledger gaps without expanding version
+1 import scope.
 
 ### Phase 16A core CRUD verification record
 

@@ -1,6 +1,6 @@
 # Cross-module readiness report
 
-Assessment updated: 2026-08-01. Scope: OperatorOS and consolidated modules in
+Assessment updated: 2026-08-02. Scope: OperatorOS and consolidated modules in
 the `C:\Dev\OperatorOS` runtime.
 
 ## Release rule
@@ -11,7 +11,7 @@ isolation, production build, live health/readiness, and end-to-end browser
 tests all pass in the target deployment.
 
 Phase 17 changes no readiness label. The compiled candidate now exposes one
-complete Git/build/lock/build-time/deploy-time/DB-v31 identity and passes three
+complete Git/build/lock/build-time/deploy-time/DB-v32 identity and passes three
 focused exact-host browser gates across 12 enabled modules. The unchanged
 public baseline is healthy at `48b8691`, but the strengthened candidate
 verifier returns 45/48 until that identity and planned/disabled OutCall are
@@ -22,7 +22,7 @@ deployed.
 | Module | Real shared-runtime workload | Auth/tenant enforcement | Build | DB tests | Live health | Browser E2E | Readiness |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | OperatorOS | Identity, tenant, entitlement, billing, audit, launcher | Local SSO/RBAC/tenant tests pass | Pass | Pass | Public `c29cbca` health/readiness and unpinned 48/48 pass; later main `92ca0db` is not deployed | Phase 17 focused exact-host gate 3/3 locally across 12 enabled modules; production-safe deployed authenticated gate not run | **Not production-ready** |
-| TradeFlowKit | Source/local state 4 candidate: lead conversion, replay-safe shared-outbox email/consent-gated SMS, versioned lead settings/templates, transactional manually actioned follow-ups, and sanitized adapter validation/history; full customer → job/work order → task single-record CRUD/deep links; shared Directory customers and bounded customer/job/invoice CSV imports; tenant-scoped global search; durable personal/admin-shared job views; format-v1 QuickBooks IIF/invoice CSV and Xero customer/invoice/payment CSV; bounded archived customer/job/invoice restore; admin-only bounded job status and job/invoice restore batches; exact-balance invoice settlement batches; numbered jobs/tasks/dependencies; Workflow Studio; direct and quote-derived invoices; versioned multi-line quote/invoice editing; history-safe archive; idempotent quote-to-job/invoice; payments; portal/documents; settings; analytics | Server guards, server-owned lead and admin-test destinations, SMS consent/opt-out, exact replay/body-drift rejection, deterministic job/invoice duplicate suppression, tenant/customer reconciliation, exact-cent invoice totals, synthetic-paid-history rejection, safe adapter projections, optimistic settings/follow-ups, composite tenant/lead FKs, stable row locking, all-or-nothing optimistic batches, dependency-ordered archive/restore, exact first-class payment rows, bounded escaped search, saved-view input/ownership/share controls, bounded accounting projections, formula neutralization, successful-payment-ledger selection, persistence/restart, viewer denial, safe projections, Directory preservation, and cross-tenant tests pass | Pass | Record-import and revenue UI workflows 6/6; adjacent TradeFlowKit PostgreSQL regression 27/27; final clean aggregate 904 pass, 0 fail, 6 intentional HTTP-only skips across 910 tests | Production build, readiness-gated 31-step compiled runtime, HTTP 200 health/readiness, and v31/31 release plan pass locally; deployment not run | Exact-host customer/job/invoice import acceptance passes 1/1 in 9.6 seconds. Provider delivery and deployed workflow/cutover are not run | **Not production-ready** |
+| TradeFlowKit | Source/local state 4, zero-gap candidate: full lead/revenue/field-service workflows; customer/job/invoice imports; search, saved views, accounting exports, retention and safe bulk; privacy/consent-bound public lead form; signed source adapters; tenant Connect onboarding; server-priced business-payment links; and verified atomic settlement | Trusted session tenant/module/RBAC guards, viewer denial, cross-tenant non-enumeration, consent/provenance, persistent HMAC-keyed rate limits, token rotation, exact replay/body-drift, short-lived tenant/user/callback-bound OAuth state, separate Connect signature secret, provider account/mode binding, amount/currency verification, row locks, receipt deduplication, and platform-vs-business billing separation pass local tests | Pass | Ledger 145 active/58 shared/0 gaps; full aggregate 908 pass, 0 fail, 6 intentional HTTP-only skips across 914 tests; signed webhook settlement/replay/tamper PASS 1/1 | Production build and clean/idempotent 32-step release pass locally; the prior compiled runtime/HTTP readiness evidence predates this increment and deployment was not run | Existing exact-host import acceptance passes 1/1. New public-form and Connect onboarding/payment/refund/webhook browser/provider acceptance are not run | **Not production-ready** |
 | PulseDesk | Source/local state 4 candidate: executable ledger covers 309/309 source capabilities with zero gaps; PHI-minimized Directory clients/facilities/requesters; departments; operational assets; numbered tickets; assignment; notes/replies; shared attachments; time/SLA; vendor, supply and facility coordination; knowledge, configuration, dashboards and source-compatible deep links | Server guards, capability limits, versions, idempotency, privacy validation, internal-note isolation, restart persistence, Directory mapping and cross-tenant tests pass | Pass | Fresh 42/42 non-DB plus 1/1 isolated PostgreSQL workflow | Compiled 29-step shared runtime and HTTP 200 health/readiness pass locally; deployed target not run | Exact-host PulseDesk workflow 1/1 in 17.5 seconds covers SSO, asset-prefilled intake, UI ticket/note persistence, Directory detail, return and local logout; deployed workflow/privacy/cutover not run | **Not production-ready** |
 | TechDeck | Source/local state 4 candidate: executable ledger covers 382/382 source capabilities with zero gaps; Directory clients/sites; tickets/comments/time; configuration inventory; network/IPAM topology; lifecycle; versioned documentation/runbooks/backlinks; private attachments; evidence; reports; dashboards; compatibility and exact record deep links | Server guards, versions, site/client pairing, managed-client Directory profile, document transitions, secret-field rejection, audit, viewer denial, and cross-tenant tests pass | Pass | Final combined TechDeck/Directory gate 43/43; constituent 20/20 non-DB, 14/14 navigation/static, and 3/3 isolated TechDeck PostgreSQL workflows also pass | Compiled 29-step shared runtime and HTTP 200 health/readiness pass locally; deployed target not run | Exact-host TechDeck workflow 1/1 in 20.3 seconds covers SSO, managed infrastructure/docs/evidence/report/time/ticket persistence, exact Directory detail, mobile, return and logout; deployed workflow/provider/cutover not run | **Not production-ready** |
 | TorqueShed | Source/local state 4: Phase 7 automotive foundation; safety-ranked Assist and append-only token accounting; persistent Marketplace/Community, scanned media, blocks, reports and append-only moderation with native UI | Trusted session tenant/module authority, ownership/role checks, viewer denial, cross-tenant non-enumeration, VIN masking, provider/payment authority and append-only accounting pass focused tests; tenant/user transaction advisory locking now serializes concurrent Assist final charges | Pass | Fresh balance-race workflow passes five consecutive repeats plus the 900/0/6 final aggregate; prior foundation/Assist/social workflows pass 3/3 | Production build, core preflight, compiled shared runtime, and web-proxied health/readiness pass locally; deployed target not run | Dedicated exact-host workflow passes 1/1 in 13.8 seconds across diagnostics/evidence, signed test credit, Assist/debit, Marketplace, Community, mobile, return/relaunch, revocation, deep-link reauthentication and local logout | **Not production-ready** |
@@ -61,21 +61,15 @@ data cutover remain open, so readiness stays **not production-ready**.
 
 Phase 16A re-baselines TradeFlowKit against the restored full product and does
 not change its state-4/local-only verdict. The generated ledger now records
-137 active items, 58 shared replacements, 8 explicit gaps, zero unclassified,
-43 security retirements, and 31 product-boundary retirements. The latest
-increments add versioned internal lead settings/capture profile/templates,
-transactional manually actioned follow-ups, sanitized adapter validation and
-history, authenticated-admin delivery checks, and bounded tenant/customer-
-reconciled job plus exact-cent invoice imports. ADR-0031 excludes standalone
-tasks, autonomous scheduling, module-owned communication providers, and
-unreviewed lead AI; ADR-0030 keeps automatic response and anonymous intake
-off. Focused record-import/revenue UI checks pass 6/6; the prior final clean
-aggregate passed 900/0/6 across 906 tests, and v31 compiled readiness plus the
-authenticated exact-host browser gate passed locally. Fresh aggregate/build/
-browser verification for this increment remains open. Deployment, providers,
-real data apply/cutover, rollback rehearsal, and all 8
-remaining ledger gaps keep TradeFlowKit and the ecosystem **not
-production-ready**.
+145 active items, 58 shared replacements, zero gaps/unclassified items, 43
+security retirements, and 31 product-boundary retirements. The final increment
+adds controlled public lead intake, signed adapters, and provider-gated Stripe
+Connect business payments under ADR-0032. Fresh evidence passes the 908/0/6
+aggregate across 914 tests, signed webhook settlement/replay/tamper proof,
+workspace typecheck, production build, and clean/idempotent v32 release.
+Deployment, reviewed provider onboarding/payment/refund, authenticated public/
+payment browser acceptance, real data apply/cutover, and rollback rehearsal
+keep TradeFlowKit and the ecosystem **not production-ready**.
 
 The subsequent core CRUD increment also passes 2/2 focused PostgreSQL checks
 and 1/1 exact-host browser acceptance in 16.4 seconds on the compiled runtime.
