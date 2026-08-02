@@ -16,6 +16,7 @@ import {
   tradeflowkitJobs,
   tradeflowkitLeads,
   tradeflowkitPayments,
+  tradeflowkitPaymentProviderAccounts,
   tradeflowkitQuoteItems,
   tradeflowkitQuotes,
   tradeflowkitSavedViews,
@@ -35,7 +36,10 @@ import {
   requireTenantModuleWriteAccess,
 } from '../lib/tenant-auth.js';
 import { enqueueOutboxMessage } from '../lib/shared-notification-outbox.js';
-import { getTradeFlowKitPaymentProvider } from '../lib/tradeflowkit-payment-provider.js';
+import {
+  getTradeFlowKitPaymentProvider,
+  getTradeFlowKitStripeConnectConfig,
+} from '../lib/tradeflowkit-payment-provider.js';
 import {
   TRADEFLOWKIT_BULK_LIMIT,
   bulkMarkTradeFlowKitInvoicesPaid,
@@ -416,7 +420,7 @@ async function loadAccountingExportData(tenant: string): Promise<AccountingExpor
     currency: settingsRows[0]?.currency || 'USD',
     customers,
     invoices: invoices.map(invoice => ({ ...invoice, items: itemsByInvoice.get(invoice.id) ?? [] })),
-    payments,
+    payments: payments.map(payment => ({ ...payment, paidAt: payment.paidAt! })),
   };
 }
 
@@ -2307,22 +2311,95 @@ export async function registerTradeFlowKitRoutes(app: FastifyInstance): Promise<
     return reply.code(201).send({ ...result, replay: false });
   });
 
-  app.post('/v1/modules/tradeflowkit/invoices/:id/payment-session', { preHandler: [...writeGuards] }, async (request, reply) => {
+  const createPaymentSession = async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
     const tenant = tenantId(request);
     const key = idempotencyKey(request);
     if (!key) return reply.code(400).send({ error: 'A valid Idempotency-Key header is required', code: 'IDEMPOTENCY_KEY_REQUIRED' });
+    let expectedVersion: number | null = null;
+    try {
+      const raw = record(request.body ?? {});
+      if (Object.keys(raw).some(field => field !== 'expectedVersion')) throw new InputError('FIELD_NOT_ALLOWED');
+      expectedVersion = raw.expectedVersion === undefined
+        ? null
+        : integer(raw.expectedVersion, 'expectedVersion', 1, 1_000_000, true)!;
+    } catch (error) { if (inputFailure(reply, error)) return; throw error; }
     const [invoice] = await db.select().from(tradeflowkitInvoices).where(and(eq(tradeflowkitInvoices.id, id), eq(tradeflowkitInvoices.tenantId, tenant), isNull(tradeflowkitInvoices.deletedAt))).limit(1);
     if (!invoice) return reply.code(404).send({ error: 'Invoice not found', code: 'INVOICE_NOT_FOUND' });
+    if (expectedVersion !== null && invoice.version !== expectedVersion) return reply.code(409).send({ error: 'Invoice changed; reload and retry', code: 'INVOICE_VERSION_CONFLICT' });
     if (!['sent','processing'].includes(invoice.status) || invoice.balanceCents <= 0) return reply.code(409).send({ error: 'Invoice is not payable', code: 'INVOICE_NOT_PAYABLE' });
     const provider = getTradeFlowKitPaymentProvider();
     if (!provider.status.configured) return reply.code(503).send({ error: provider.status.reason, code: 'TRADEFLOWKIT_PAYMENT_PROVIDER_DISABLED' });
     const [existing] = await db.select().from(tradeflowkitPayments).where(and(eq(tradeflowkitPayments.tenantId, tenant), eq(tradeflowkitPayments.idempotencyKey, key))).limit(1);
     if (existing) return reply.code(200).send({ payment: existing, checkoutUrl: null, replay: true });
-    const session = await provider.createSession({ tenantId: tenant, invoiceId: id, amountCents: invoice.balanceCents, idempotencyKey: key });
-    const [payment] = await db.insert(tradeflowkitPayments).values({ tenantId: tenant, invoiceId: id, createdByUserId: userId(request), amountCents: invoice.balanceCents, method: 'provider', status: 'pending', provider: session.provider, providerReference: session.providerReference, idempotencyKey: key }).returning();
-    return reply.code(201).send({ payment, checkoutUrl: session.checkoutUrl, replay: false });
-  });
+    const [settings] = await db.select({ currency: tradeflowkitSettings.currency }).from(tradeflowkitSettings)
+      .where(eq(tradeflowkitSettings.tenantId, tenant)).limit(1);
+    let providerAccountId: string | null = null;
+    if (provider.status.kind === 'stripe_connect') {
+      const [account] = await db.select().from(tradeflowkitPaymentProviderAccounts).where(and(
+        eq(tradeflowkitPaymentProviderAccounts.tenantId, tenant),
+        eq(tradeflowkitPaymentProviderAccounts.provider, 'stripe_connect'),
+        eq(tradeflowkitPaymentProviderAccounts.status, 'connected'),
+      )).limit(1);
+      if (!account || !account.chargesEnabled || account.livemode !== (provider.status.mode === 'live')) {
+        return reply.code(409).send({ error: 'A charge-enabled Stripe account matching the current mode is required', code: 'TRADEFLOWKIT_PAYMENT_ACCOUNT_NOT_READY' });
+      }
+      providerAccountId = account.providerAccountId;
+    }
+    const [pending] = await db.insert(tradeflowkitPayments).values({
+      tenantId: tenant,
+      invoiceId: id,
+      createdByUserId: userId(request),
+      amountCents: invoice.balanceCents,
+      method: 'provider',
+      status: 'pending',
+      provider: provider.status.kind,
+      providerAccountId,
+      idempotencyKey: key,
+      paidAt: null,
+    }).returning();
+    const connectConfig = provider.status.kind === 'stripe_connect'
+      ? getTradeFlowKitStripeConnectConfig().config
+      : null;
+    const publicBaseUrl = connectConfig?.publicBaseUrl ?? 'https://payments.test';
+    try {
+      const session = await provider.createSession({
+        tenantId: tenant,
+        invoiceId: id,
+        invoiceNumber: invoice.number,
+        paymentId: pending.id,
+        amountCents: invoice.balanceCents,
+        currency: settings?.currency ?? 'USD',
+        idempotencyKey: key,
+        providerAccountId,
+        successUrl: `${publicBaseUrl}/public/tradeflowkit/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${publicBaseUrl}/public/tradeflowkit/payment/canceled`,
+      });
+      const [payment] = await db.update(tradeflowkitPayments).set({
+        provider: session.provider,
+        providerReference: session.providerReference,
+        providerAccountId: session.providerAccountId,
+        updatedAt: new Date(),
+      }).where(and(
+        eq(tradeflowkitPayments.id, pending.id),
+        eq(tradeflowkitPayments.tenantId, tenant),
+        eq(tradeflowkitPayments.status, 'pending'),
+      )).returning();
+      await audit(db, { tenantId: tenant, userId: userId(request), action: 'payment_link_created', entityType: 'invoice', entityId: id, metadata: { paymentId: payment.id, provider: payment.provider, providerAccountId: payment.providerAccountId } });
+      return reply.code(201).send({ payment, checkoutUrl: session.checkoutUrl, replay: false });
+    } catch (error) {
+      await db.update(tradeflowkitPayments).set({
+        status: 'failed',
+        failureCode: String((error as { code?: string })?.code || 'PROVIDER_SESSION_FAILED').slice(0, 120),
+        updatedAt: new Date(),
+      }).where(and(eq(tradeflowkitPayments.id, pending.id), eq(tradeflowkitPayments.tenantId, tenant)));
+      request.log.error({ err: error, paymentId: pending.id }, 'TradeFlowKit provider session creation failed');
+      return reply.code(502).send({ error: 'The payment provider could not create a checkout session', code: 'PAYMENT_SESSION_FAILED' });
+    }
+  };
+
+  app.post('/v1/modules/tradeflowkit/invoices/:id/payment-session', { preHandler: [...writeGuards] }, createPaymentSession);
+  app.post('/v1/modules/tradeflowkit/invoices/:id/payment-link', { preHandler: [...writeGuards] }, createPaymentSession);
 
   app.post('/v1/modules/tradeflowkit/payments/:id/test-complete', { preHandler: [...writeGuards] }, async (request, reply) => {
     const provider = getTradeFlowKitPaymentProvider();

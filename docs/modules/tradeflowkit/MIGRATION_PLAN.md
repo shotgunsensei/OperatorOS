@@ -24,9 +24,10 @@ It does not import passwords, MFA material, sessions, users, memberships,
 roles, subscriptions, entitlements, Stripe state, public/portal tokens,
 provider identifiers, raw provider/event payloads, or message bodies.
 Standalone recurring jobs/invoices and automation configuration fail closed.
-Workflow templates/stages, restored general work tasks, contacts, and the
-remaining Phase 16 source-ledger gaps require a later export/apply version;
-therefore version 1 is not a complete product cutover by itself.
+Workflow templates/stages, restored general work tasks, contacts, public
+intake configuration, and business-payment provider state require an approved
+later export/apply version. The product ledger has zero source/local gaps, but
+version 1 is not a complete production data cutover by itself.
 
 ## Read-only source snapshot
 
@@ -135,8 +136,8 @@ Production use additionally requires all of the following:
 - deployed revision acceptance, SSO, authorization, tenant isolation,
   persistence, deep-link, logout, health, and related browser E2E;
 - exact independent source totals and post-apply target reconciliation;
-- a written decision for every version 1 exclusion and every remaining Phase
-  16 ledger gap.
+- a written decision for every version 1 exclusion and confirmation that the
+  zero-gap Phase 16 product contract remains satisfied after reconciliation.
 
 Only the authorized operator may then set:
 

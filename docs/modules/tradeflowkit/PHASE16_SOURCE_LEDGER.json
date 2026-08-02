@@ -760,15 +760,18 @@
         "method": "DELETE",
         "path": "/api/stripe/connect",
         "sourcePointer": "server/routes/stripeConnect.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "business_payments",
         "targetPointers": [
-          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+          "apps/api/src/routes/tradeflowkit-payment-routes.ts",
+          "apps/api/src/lib/tradeflowkit-payment-provider.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
         ],
         "evidence": [
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-payment-provider.test.ts",
+          "apps/api/test/tradeflowkit-stripe-settlement.test.ts"
         ],
-        "note": "Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract."
+        "note": "Tenant admins can deauthorize a tenant-bound Standard account; provider credentials remain environment-only and payment history is retained."
       },
       {
         "key": "DELETE /api/trash/customers/:id",
@@ -2081,30 +2084,33 @@
         "method": "GET",
         "path": "/api/stripe/connect/authorize",
         "sourcePointer": "server/routes/stripeConnect.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "business_payments",
         "targetPointers": [
-          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+          "apps/api/src/routes/tradeflowkit-payment-routes.ts",
+          "apps/api/src/lib/tradeflowkit-payment-provider.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
         ],
         "evidence": [
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-payment-provider.test.ts"
         ],
-        "note": "Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract."
+        "note": "Admin-only authorization creates a short-lived, exact-callback, tenant/user-bound single-use state and returns the official Stripe Connect URL."
       },
       {
         "key": "GET /api/stripe/connect/callback",
         "method": "GET",
         "path": "/api/stripe/connect/callback",
         "sourcePointer": "server/routes/stripeConnect.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "business_payments",
         "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-payment-routes.ts",
           "apps/api/src/lib/tradeflowkit-payment-provider.ts"
         ],
         "evidence": [
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-payment-provider.test.ts"
         ],
-        "note": "Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract."
+        "note": "The exact-host callback consumes state once, stores only the connected account identifier/capabilities, and never persists OAuth access or refresh tokens."
       },
       {
         "key": "GET /api/stripe/plans",
@@ -2399,11 +2405,16 @@
         "method": "PATCH",
         "path": "/api/leads/capture-form/:id",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "public_lead_intake",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-public-intake-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitLeadOperations.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-public-intake.test.ts"
+        ],
+        "note": "Tenant admins version-safely configure privacy/consent, adapter allowlists, enablement, one-time public-token rotation, and explicit adapter-secret disclosure."
       },
       {
         "key": "PATCH /api/leads/settings",
@@ -2420,7 +2431,7 @@
           "apps/api/test/tradeflowkit-lead-operations.test.ts",
           "docs/adr/ADR-0030-tradeflowkit-lead-operations-boundary.md"
         ],
-        "note": "Tenant admins can version-safely update scheduling, channel, copy, service-area, source, and internal capture-profile settings; auto-response and public intake remain forced off."
+        "note": "Tenant admins can version-safely update scheduling, channel, copy, service-area, source, and capture-profile settings; automatic unsolicited response remains disabled."
       },
       {
         "key": "PATCH /api/memberships/:userId/role",
@@ -2979,15 +2990,20 @@
         "method": "POST",
         "path": "/api/invoices/:id/payment-link",
         "sourcePointer": "server/routes/invoices.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "business_payments",
         "targetPointers": [
-          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+          "apps/api/src/routes/tradeflowkit-routes.ts",
+          "apps/api/src/routes/tradeflowkit-payment-routes.ts",
+          "apps/api/src/lib/tradeflowkit-payment-provider.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx"
         ],
         "evidence": [
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-state5-workflow.test.ts",
+          "apps/api/test/tradeflowkit-payment-provider.test.ts",
+          "apps/api/test/tradeflowkit-stripe-settlement.test.ts"
         ],
-        "note": "Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract."
+        "note": "A tenant-scoped idempotent direct-charge Checkout Session uses server-authoritative invoice amount/currency and settles only through the separately signed connected-account webhook."
       },
       {
         "key": "POST /api/invoices/:id/send-email",
@@ -3527,22 +3543,32 @@
         "method": "POST",
         "path": "/api/public/lead-capture/:publicToken",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "public_lead_intake",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-public-intake-routes.ts",
+          "apps/web/src/app/public/tradeflowkit/[documentType]/[token]/page.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-public-intake.test.ts"
+        ],
+        "note": "Opaque-token public capture requires current consent, a honeypot, bounded payload, distributed HMAC-keyed rate limits, and shared idempotency before tenant-scoped persistence."
       },
       {
         "key": "POST /api/public/lead-source/:publicToken/:adapterKey",
         "method": "POST",
         "path": "/api/public/lead-source/:publicToken/:adapterKey",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "public_lead_intake",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-public-intake-routes.ts",
+          "apps/api/src/lib/tradeflowkit-public-intake.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-public-intake.test.ts"
+        ],
+        "note": "Allowlisted n8n/generic adapters require a per-tenant derived HMAC-SHA256 signature over the preserved raw body plus consent, rate-limit, and idempotency checks."
       },
       {
         "key": "POST /api/quotes",
@@ -4531,15 +4557,17 @@
         "key": "STRIPE_CLIENT_ID",
         "name": "STRIPE_CLIENT_ID",
         "sourcePointer": "server/routes/stripeConnect.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "business_payments",
         "targetPointers": [
-          "apps/api/src/lib/tradeflowkit-payment-provider.ts"
+          "apps/api/src/lib/tradeflowkit-payment-provider.ts",
+          "apps/api/src/routes/tradeflowkit-payment-routes.ts",
+          "docs/operatoros-env-vars.md"
         ],
         "evidence": [
-          "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+          "apps/api/test/tradeflowkit-payment-provider.test.ts"
         ],
-        "note": "Platform billing is centralized; module business payments remain provider-gated."
+        "note": "The server-only Connect client ID is validated only when the optional tenant business-payment provider is enabled; OperatorOS subscription billing remains separate."
       },
       {
         "key": "TWILIO_ACCOUNT_SID",

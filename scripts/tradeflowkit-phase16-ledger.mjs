@@ -117,6 +117,15 @@ const recordImportEvidence = [
   'apps/api/test/tradeflowkit-record-imports.test.ts',
   'apps/api/test/tradeflowkit-revenue-ui-static.test.ts',
 ];
+const publicIntakeEvidence = [
+  'apps/api/test/tradeflowkit-public-intake.test.ts',
+  'docs/adr/ADR-0032-tradeflowkit-public-intake-and-business-payments.md',
+];
+const businessPaymentEvidence = [
+  'apps/api/test/tradeflowkit-payment-provider.test.ts',
+  'apps/api/test/tradeflowkit-stripe-settlement.test.ts',
+  'docs/adr/ADR-0032-tradeflowkit-public-intake-and-business-payments.md',
+];
 const deterministicSchedulingBoundaryEvidence = [
   'docs/adr/ADR-0011-tradeflowkit-approved-product-scope.md',
   'docs/adr/ADR-0028-tradeflowkit-workflow-studio-boundary.md',
@@ -275,20 +284,20 @@ function classifyApi(method, path) {
   }
   if (path.startsWith('/api/stripe/connect') || path.includes('/payment-link')) {
     return outcome(
-      GAP,
+      ACTIVE,
       'business_payments',
-      ['apps/api/src/lib/tradeflowkit-payment-provider.ts'],
-      ['apps/api/test/tradeflowkit-state5-workflow.test.ts'],
-      'Business payments require a centralized tenant provider-account adapter and signed idempotent webhook contract.',
+      ['apps/api/src/routes/tradeflowkit-payment-routes.ts', 'apps/api/src/lib/tradeflowkit-payment-provider.ts', 'apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx'],
+      businessPaymentEvidence,
+      'Tenant-bound Stripe Connect OAuth, direct-charge Checkout, and separately signed idempotent settlement are active and distinct from platform billing.',
     );
   }
   if (path.startsWith('/api/public/lead-') || path.includes('/capture-form') || path.includes('/source-adapters')) {
     return outcome(
-      GAP,
+      ACTIVE,
       'public_lead_intake',
-      [],
-      [],
-      'Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls.',
+      ['apps/api/src/routes/tradeflowkit-public-intake-routes.ts', 'apps/api/src/lib/tradeflowkit-public-intake.ts', 'apps/web/src/components/module-shells/TradeFlowKitLeadOperations.tsx'],
+      publicIntakeEvidence,
+      'Consent-bound opaque-token intake and allowlisted HMAC-signed adapters use distributed rate limits and shared idempotency.',
     );
   }
   if (path.includes('/score') || path.includes('/provider-status') || path.includes('/production-readiness')) {
@@ -724,13 +733,22 @@ function classifyProvider(name) {
         : 'OperatorOS owns this platform integration/configuration concern.',
     );
   }
+  if (name === 'STRIPE_CLIENT_ID') {
+    return outcome(
+      ACTIVE,
+      'business_payments',
+      ['apps/api/src/lib/tradeflowkit-payment-provider.ts', 'apps/api/src/routes/tradeflowkit-payment-routes.ts', 'docs/operatoros-env-vars.md'],
+      businessPaymentEvidence,
+      'The server-only Connect client ID is validated only when the optional tenant business-payment provider is enabled.',
+    );
+  }
   if (name.startsWith('STRIPE_')) {
     return outcome(
-      GAP,
-      'business_payments',
-      ['apps/api/src/lib/tradeflowkit-payment-provider.ts'],
-      ['apps/api/test/tradeflowkit-state5-workflow.test.ts'],
-      'Platform billing is centralized; module business payments remain provider-gated.',
+      SHARED,
+      'platform_billing',
+      ['apps/api/src/lib/billing-service.ts', 'apps/api/src/lib/tradeflowkit-payment-provider.ts'],
+      businessPaymentEvidence,
+      'OperatorOS owns Stripe credentials and platform billing; the bounded tenant business-payment adapter consumes server-only configuration.',
     );
   }
   if (name.startsWith('OPENAI_')) {

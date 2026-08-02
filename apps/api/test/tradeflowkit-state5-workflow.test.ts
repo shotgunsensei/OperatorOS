@@ -84,11 +84,14 @@ test('customer payment provider fails closed outside the deterministic test envi
   assert.deepEqual(provider.status, {
     kind: 'disabled',
     configured: false,
-    reason: 'Customer payment processing is disabled until a reviewed centralized provider adapter is configured.',
+    reason: 'TRADEFLOWKIT_PAYMENT_PROVIDER is not stripe_connect.',
+    mode: null,
   });
   await assert.rejects(
     () => provider.createSession({
-      tenantId: 'tenant', invoiceId: 'invoice', amountCents: 1, idempotencyKey: 'key',
+      tenantId: 'tenant', invoiceId: 'invoice', invoiceNumber: 1, paymentId: 'payment',
+      amountCents: 1, currency: 'USD', idempotencyKey: 'key', providerAccountId: null,
+      successUrl: 'https://example.test/success', cancelUrl: 'https://example.test/cancel',
     }),
     (error: any) => error?.code === 'TRADEFLOWKIT_PAYMENT_PROVIDER_DISABLED',
   );

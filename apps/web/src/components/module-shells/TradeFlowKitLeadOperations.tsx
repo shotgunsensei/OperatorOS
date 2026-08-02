@@ -19,18 +19,24 @@ type LeadSettingsState = {
     version: number;
   };
   captureForm: {
+    id: string;
     name: string;
     sourceLabel: string;
     defaultService: string | null;
     successMessage: string;
-    publicIntakeEnabled: false;
+    publicIntakeEnabled: boolean;
+    hasPublicToken: boolean;
+    privacyNoticeUrl: string | null;
+    consentText: string | null;
+    consentVersion: string | null;
+    allowedAdapterKeys: string[];
     version: number;
   };
   templates: Array<{ key: string; label: string; description: string; serviceCategories: string[] }>;
   delivery: { mode: string; note: string };
-  publicIntake: { enabled: false; reason: string };
+  publicIntake: { enabled: boolean; configured: boolean; publicPath: string | null; adapterKeys: string[] };
 };
-type SourceAdapter = { key: string; name: string; description: string; publicIngress: false };
+type SourceAdapter = { key: string; name: string; description: string; publicIngress: boolean; validationMode: string };
 type SourceEvent = { id: string; adapterKey: string; eventType: string; status: string; metadata: Record<string, unknown>; createdAt: string };
 type Followup = { id: string; stepNumber: number; channel: 'email' | 'sms'; dueAt: string; status: string; version: number };
 
@@ -58,6 +64,7 @@ export default function TradeFlowKitLeadOperations({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [secretOutput, setSecretOutput] = useState<string | null>(null);
   const [form, setForm] = useState({
     followUpEnabled: false,
     emailEnabled: true,
@@ -70,6 +77,11 @@ export default function TradeFlowKitLeadOperations({
     sourceLabel: '',
     defaultService: '',
     successMessage: '',
+    publicIntakeEnabled: false,
+    privacyNoticeUrl: '',
+    consentText: '',
+    consentVersion: '',
+    allowedAdapterKeys: 'n8n',
   });
 
   function adopt(next: LeadSettingsState) {
@@ -86,6 +98,11 @@ export default function TradeFlowKitLeadOperations({
       sourceLabel: next.captureForm.sourceLabel,
       defaultService: next.captureForm.defaultService ?? '',
       successMessage: next.captureForm.successMessage,
+      publicIntakeEnabled: next.captureForm.publicIntakeEnabled,
+      privacyNoticeUrl: next.captureForm.privacyNoticeUrl ?? '',
+      consentText: next.captureForm.consentText ?? '',
+      consentVersion: next.captureForm.consentVersion ?? '',
+      allowedAdapterKeys: next.captureForm.allowedAdapterKeys.join(', '),
     });
   }
 
@@ -197,6 +214,41 @@ export default function TradeFlowKitLeadOperations({
     finally { setBusy(null); }
   }
 
+  async function updatePublicIntake(action: 'save' | 'rotate' | 'reveal') {
+    if (!canManage || !state || busy) return;
+    setBusy(`public:${action}`); setError(null); setNotice(null); setSecretOutput(null);
+    try {
+      const result = await moduleShellApi.tradeflowkit.updateLeadCaptureForm(state.captureForm.id, {
+        expectedVersion: state.captureForm.version,
+        publicIntakeEnabled: form.publicIntakeEnabled,
+        privacyNoticeUrl: form.privacyNoticeUrl,
+        consentText: form.consentText,
+        consentVersion: form.consentVersion,
+        allowedAdapterKeys: form.allowedAdapterKeys.split(',').map(item => item.trim()).filter(Boolean),
+        rotateToken: action === 'rotate',
+        revealAdapterSecrets: action === 'reveal',
+      });
+      setState(current => current ? {
+        ...current,
+        captureForm: result.captureForm,
+        publicIntake: {
+          enabled: result.captureForm.publicIntakeEnabled,
+          configured: result.captureForm.hasPublicToken && !!result.captureForm.privacyNoticeUrl && !!result.captureForm.consentText && !!result.captureForm.consentVersion,
+          publicPath: result.captureForm.publicPath,
+          adapterKeys: result.captureForm.allowedAdapterKeys,
+        },
+      } : current);
+      if (result.publicToken || result.adapterSecrets) {
+        setSecretOutput(JSON.stringify({
+          ...(result.publicToken ? { publicUrl: `${window.location.origin}/public/tradeflowkit/leads/${result.publicToken}` } : {}),
+          ...(result.adapterSecrets ? { adapterSecrets: result.adapterSecrets } : {}),
+        }, null, 2));
+      }
+      setNotice(action === 'rotate' ? 'Public intake token rotated. Copy the new URL now.' : action === 'reveal' ? 'Adapter signing secrets revealed for this admin session. Copy them now.' : 'Public intake configuration saved.');
+    } catch (requestError) { setError(errorText(requestError, 'Could not update public intake.')); }
+    finally { setBusy(null); }
+  }
+
   async function actionFollowup(item: Followup, action: 'queue' | 'complete') {
     if (!canManage || !selectedLeadId || busy) return;
     setBusy(`${action}:${item.id}`); setError(null); setNotice(null);
@@ -217,12 +269,12 @@ export default function TradeFlowKitLeadOperations({
     <section className="tfk-lead-ops" data-testid="tradeflowkit-lead-operations">
       <style>{leadOperationsCss}</style>
       <header>
-        <div><span>Conversion playbook</span><h3>Lead Operations</h3><p>Configure new-lead follow-ups, validate source contracts, and action each scheduled touch without exposing anonymous intake.</p></div>
+        <div><span>Conversion playbook</span><h3>Lead Operations</h3><p>Configure new-lead follow-ups, privacy-aware public capture, and signed source adapters.</p></div>
         <button type="button" onClick={() => void loadWorkspace()} disabled={!!busy}><RefreshCw size={14} /> Refresh</button>
       </header>
       {error && <div className="tfk-lead-ops-error" role="alert">{error}</div>}
       {notice && <div className="tfk-lead-ops-notice" role="status" data-testid="tradeflowkit-lead-operations-status">{notice}</div>}
-      <div className="tfk-lead-ops-boundary"><ShieldCheck size={17} /><div><strong>Anonymous intake remains off</strong><span>{state.publicIntake.reason}</span></div></div>
+      <div className="tfk-lead-ops-boundary"><ShieldCheck size={17} /><div><strong>Public intake {state.publicIntake.enabled ? 'enabled' : 'disabled'}</strong><span>{state.publicIntake.configured ? 'Token, privacy notice, consent version, distributed rate limits, and signed adapters are configured.' : 'Configure an HTTPS privacy notice, consent text/version, and rotate a token before enabling.'}</span></div></div>
 
       <div className="tfk-lead-ops-grid">
         <article className="tfk-lead-ops-card">
@@ -248,6 +300,23 @@ export default function TradeFlowKitLeadOperations({
           <button type="button" className="tfk-lead-ops-primary" disabled={!canManage || !!busy} onClick={() => void saveSettings()} data-testid="tradeflowkit-lead-settings-save">{busy === 'settings' ? <Loader2 className="tfk-spin" size={14} /> : <CheckCircle2 size={14} />} Save settings</button>
         </article>
 
+        <article className="tfk-lead-ops-card tfk-lead-ops-wide" data-testid="tradeflowkit-public-intake-settings">
+          <div className="tfk-lead-ops-title"><ShieldCheck size={17} /><div><strong>Public lead intake</strong><span>Opaque link, consent evidence, abuse limits, and optional HMAC-signed adapters.</span></div></div>
+          <div className="tfk-lead-capture-grid">
+            <label>Privacy notice URL<input type="url" placeholder="https://example.com/privacy" value={form.privacyNoticeUrl} maxLength={500} disabled={!canManage} onChange={event => setForm(current => ({ ...current, privacyNoticeUrl: event.target.value }))} /></label>
+            <label>Consent version<input placeholder="privacy-2026-08" value={form.consentVersion} maxLength={40} disabled={!canManage} onChange={event => setForm(current => ({ ...current, consentVersion: event.target.value }))} /></label>
+            <label>Signed adapters<input placeholder="n8n, generic-json" value={form.allowedAdapterKeys} maxLength={100} disabled={!canManage} onChange={event => setForm(current => ({ ...current, allowedAdapterKeys: event.target.value }))} /></label>
+            <label className="tfk-lead-ops-toggle"><input type="checkbox" checked={form.publicIntakeEnabled} disabled={!canManage} onChange={event => setForm(current => ({ ...current, publicIntakeEnabled: event.target.checked }))} /> Enable public intake</label>
+          </div>
+          <label>Consent text<textarea rows={2} value={form.consentText} maxLength={1000} disabled={!canManage} onChange={event => setForm(current => ({ ...current, consentText: event.target.value }))} /></label>
+          <div className="tfk-lead-ops-actions">
+            <button type="button" className="tfk-lead-ops-primary" disabled={!canManage || !!busy} onClick={() => void updatePublicIntake('save')}>Save intake</button>
+            <button type="button" disabled={!canManage || !!busy} onClick={() => void updatePublicIntake('rotate')}>Rotate public link</button>
+            <button type="button" disabled={!canManage || !!busy || state.captureForm.allowedAdapterKeys.length === 0} onClick={() => void updatePublicIntake('reveal')}>Reveal adapter secrets</button>
+          </div>
+          {secretOutput && <div className="tfk-lead-secret"><strong>One-time secret disclosure</strong><span>Copy these values now. Do not paste them into tickets or client-side code.</span><textarea readOnly rows={5} value={secretOutput} onFocus={event => event.currentTarget.select()} /></div>}
+        </article>
+
         <article className="tfk-lead-ops-card">
           <div className="tfk-lead-ops-title"><Workflow size={17} /><div><strong>Follow-up queue</strong><span>{pendingCount} ready to action</span></div></div>
           <label>Lead<select value={selectedLeadId} onChange={event => setSelectedLeadId(event.target.value)} disabled={leads.length === 0} data-testid="tradeflowkit-followup-lead-select"><option value="">Select a lead</option>{leads.map(lead => <option key={lead.id} value={lead.id}>{lead.name}</option>)}</select></label>
@@ -259,7 +328,7 @@ export default function TradeFlowKitLeadOperations({
         </article>
 
         <article className="tfk-lead-ops-card tfk-lead-ops-wide">
-          <div className="tfk-lead-ops-title"><Cable size={17} /><div><strong>Source contract lab</strong><span>Authenticated validation only; no lead is created and no sample values are stored.</span></div></div>
+          <div className="tfk-lead-ops-title"><Cable size={17} /><div><strong>Source contract lab</strong><span>Validate canonical fields before deploying a signed adapter; no lead is created and no sample values are stored.</span></div></div>
           <div className="tfk-lead-adapters">{adapters.map(adapter => <div key={adapter.key} data-testid={`tradeflowkit-adapter-${adapter.key}`}><div><strong>{adapter.name}</strong><span>{adapter.description}</span></div><button type="button" disabled={!canManage || !!busy} onClick={() => void validateAdapter(adapter.key)}>{busy === `adapter:${adapter.key}` ? <Loader2 className="tfk-spin" size={13} /> : <ShieldCheck size={13} />} Validate</button></div>)}</div>
           <div className="tfk-lead-events"><strong>Recent source activity</strong>{events.length === 0 ? <span>No validation or configuration events yet.</span> : events.slice(0, 8).map(event => <div key={event.id}><span>{event.adapterKey.replaceAll('-', ' ')} · {event.status}</span><time>{new Date(event.createdAt).toLocaleString()}</time></div>)}</div>
         </article>
@@ -283,6 +352,7 @@ const leadOperationsCss = `
   .tfk-lead-ops-card > label,.tfk-lead-capture-grid label { display:grid; gap:4px; color:#587067; font-size:10px; font-weight:800; } .tfk-lead-ops input,.tfk-lead-ops select,.tfk-lead-ops textarea { width:100%; box-sizing:border-box; border:1px solid rgba(22,101,52,.2); border-radius:6px; padding:8px; background:#fff; color:#10231d; font:inherit; font-size:12px; }
   .tfk-lead-capture-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding:9px; border:1px solid rgba(22,101,52,.12); border-radius:7px; background:#f8fcfa; }
   .tfk-lead-ops-checks { display:flex; flex-wrap:wrap; gap:8px 12px; } .tfk-lead-ops-checks label { display:flex; gap:5px; align-items:center; font-size:10px; color:#365c4e; } .tfk-lead-ops-checks input { width:14px; height:14px; }
+  .tfk-lead-ops-toggle { display:flex!important; align-items:center; gap:7px!important; align-self:end; min-height:34px; } .tfk-lead-ops-toggle input { width:16px; height:16px; } .tfk-lead-ops-actions { display:flex; flex-wrap:wrap; gap:7px; } .tfk-lead-secret { display:grid; gap:5px; padding:9px; border:1px solid #f59e0b; background:#fffbeb; border-radius:7px; color:#854d0e; font-size:11px; } .tfk-lead-secret textarea { font-family:ui-monospace,monospace; font-size:10px; }
   .tfk-lead-followups,.tfk-lead-adapters,.tfk-lead-events { display:grid; gap:6px; } .tfk-lead-followups > div,.tfk-lead-adapters > div { border:1px solid rgba(22,101,52,.12); border-radius:6px; padding:8px; display:flex; gap:8px; justify-content:space-between; align-items:center; } .tfk-lead-followups > div > div,.tfk-lead-adapters > div > div { display:grid; gap:2px; min-width:0; } .tfk-lead-followups span,.tfk-lead-adapters span { color:#587067; font-size:10px; line-height:1.35; }
   .tfk-lead-ops-empty { border:1px dashed rgba(22,101,52,.2); border-radius:6px; padding:14px; color:#587067; font-size:11px; text-align:center; } .tfk-lead-ops-divider { height:1px; background:rgba(22,101,52,.12); margin:2px 0; } .tfk-lead-ops-note { font-size:10px!important; }
   .tfk-lead-events > strong { font-size:11px; } .tfk-lead-events > div { display:flex; justify-content:space-between; gap:8px; border-top:1px solid rgba(22,101,52,.09); padding-top:5px; font-size:10px; } .tfk-lead-events time { color:#789189; }

@@ -83,16 +83,16 @@ test('release identity validator requires the intended commit, database release,
     lockfileSha256: 'c'.repeat(64),
     databaseRelease: {
       contractVersion: 1,
-      releaseVersion: 31,
-      stepCount: 31,
-      lastStep: 'tradeflowkit_lead_operations',
+      releaseVersion: 32,
+      stepCount: 32,
+      lastStep: 'tradeflowkit_public_operations',
     },
   };
   assert.deepEqual(verifier.validateReleaseIdentity(valid, commit), []);
   assert.ok(verifier.validateReleaseIdentity({ ...valid, deployedAt: 'invalid' }, commit).length > 0);
   assert.ok(verifier.validateReleaseIdentity({
     ...valid,
-    databaseRelease: { ...valid.databaseRelease, releaseVersion: 30 },
+    databaseRelease: { ...valid.databaseRelease, releaseVersion: 31 },
   }, commit).length > 0);
   assert.ok(verifier.validateReleaseIdentity(valid, 'd'.repeat(40)).length > 0);
 });

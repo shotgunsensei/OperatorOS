@@ -2218,7 +2218,7 @@ export const brandforgeGenerations = pgTable('brandforge_generations', {
 export const tradeflowkitLeads = pgTable('tradeflowkit_leads', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
   tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
-  createdByUserId: varchar('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
   source: text('source').notNull().default('manual'),
   status: text('status', {
     enum: ['new', 'contacted', 'qualified', 'follow_up', 'converted', 'lost'],
@@ -2244,6 +2244,9 @@ export const tradeflowkitLeads = pgTable('tradeflowkit_leads', {
   nextFollowUpAt: timestamp('next_follow_up_at'),
   lastContactedAt: timestamp('last_contacted_at'),
   sourceId: text('source_id'),
+  captureFormId: varchar('capture_form_id', { length: 36 }),
+  intakeConsentVersion: varchar('intake_consent_version', { length: 40 }),
+  intakeConsentAt: timestamp('intake_consent_at'),
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -2292,6 +2295,12 @@ export const tradeflowkitLeadCaptureForms = pgTable('tradeflowkit_lead_capture_f
   defaultService: varchar('default_service', { length: 160 }),
   successMessage: varchar('success_message', { length: 500 }).notNull().default('Thanks. Your request has been received.'),
   publicIntakeEnabled: boolean('public_intake_enabled').notNull().default(false),
+  publicTokenHash: varchar('public_token_hash', { length: 64 }),
+  privacyNoticeUrl: varchar('privacy_notice_url', { length: 500 }),
+  consentText: varchar('consent_text', { length: 1000 }),
+  consentVersion: varchar('consent_version', { length: 40 }),
+  allowedAdapterKeys: jsonb('allowed_adapter_keys').$type<string[]>().notNull().default([]),
+  tokenRotatedAt: timestamp('token_rotated_at'),
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -2329,8 +2338,8 @@ export const tradeflowkitLeadSourceEvents = pgTable('tradeflowkit_lead_source_ev
   leadId: varchar('lead_id', { length: 36 }).references(() => tradeflowkitLeads.id, { onDelete: 'set null' }),
   createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
   adapterKey: varchar('adapter_key', { length: 40 }).notNull(),
-  eventType: text('event_type', { enum: ['validation', 'configuration'] }).notNull(),
-  status: text('status', { enum: ['validated', 'configured', 'rejected'] }).notNull(),
+  eventType: text('event_type', { enum: ['validation', 'configuration', 'intake'] }).notNull(),
+  status: text('status', { enum: ['validated', 'configured', 'accepted', 'rejected', 'rate_limited'] }).notNull(),
   metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (t) => [
@@ -2607,10 +2616,13 @@ export const tradeflowkitPayments = pgTable('tradeflowkit_payments', {
   status: text('status').notNull().default('succeeded'),
   provider: text('provider'),
   providerReference: text('provider_reference'),
+  providerAccountId: varchar('provider_account_id', { length: 255 }),
+  providerEventId: varchar('provider_event_id', { length: 255 }),
+  failureCode: varchar('failure_code', { length: 120 }),
   reference: text('reference'),
   notes: text('notes'),
   idempotencyKey: varchar('idempotency_key', { length: 200 }).notNull(),
-  paidAt: timestamp('paid_at').defaultNow().notNull(),
+  paidAt: timestamp('paid_at'),
   voidedAt: timestamp('voided_at'),
   version: integer('version').notNull().default(1),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -2621,6 +2633,41 @@ export const tradeflowkitPayments = pgTable('tradeflowkit_payments', {
   uniqueIndex('uq_tfk_payments_provider_ref').on(t.tenantId, t.provider, t.providerReference)
     .where(sql`${t.provider} IS NOT NULL AND ${t.providerReference} IS NOT NULL`),
 ]);
+
+export const tradeflowkitPaymentProviderAccounts = pgTable('tradeflowkit_payment_provider_accounts', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  provider: varchar('provider', { length: 40 }).notNull().default('stripe_connect'),
+  providerAccountId: varchar('provider_account_id', { length: 255 }).notNull(),
+  livemode: boolean('livemode').notNull(),
+  status: varchar('status', { length: 40 }).notNull().default('connected'),
+  chargesEnabled: boolean('charges_enabled').notNull().default(false),
+  payoutsEnabled: boolean('payouts_enabled').notNull().default(false),
+  detailsSubmitted: boolean('details_submitted').notNull().default(false),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  version: integer('version').notNull().default(1),
+  connectedAt: timestamp('connected_at').defaultNow().notNull(),
+  disconnectedAt: timestamp('disconnected_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tfk_payment_provider_tenant').on(t.tenantId, t.provider),
+  uniqueIndex('uq_tfk_payment_provider_account').on(t.provider, t.providerAccountId),
+  index('idx_tfk_payment_provider_status').on(t.tenantId, t.status),
+]);
+
+export const tradeflowkitPaymentOauthStates = pgTable('tradeflowkit_payment_oauth_states', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  stateHash: varchar('state_hash', { length: 64 }).notNull().unique(),
+  redirectUri: varchar('redirect_uri', { length: 1000 }).notNull(),
+  returnPath: varchar('return_path', { length: 500 }).notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  consumedAt: timestamp('consumed_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [index('idx_tfk_payment_oauth_expiry').on(t.expiresAt)]);
 
 export const tradeflowkitComments = pgTable('tradeflowkit_comments', {
   id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),

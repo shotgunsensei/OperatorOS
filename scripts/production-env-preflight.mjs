@@ -140,6 +140,29 @@ function checkRevenue(env, issues) {
       addIssue(issues, 'revenue', name, 'must be a Stripe Price ID');
     }
   }
+  if (isPresent(env, 'TRADEFLOWKIT_PUBLIC_INTAKE_HMAC_SECRET') && env.TRADEFLOWKIT_PUBLIC_INTAKE_HMAC_SECRET.length < 32) {
+    addIssue(issues, 'core', 'TRADEFLOWKIT_PUBLIC_INTAKE_HMAC_SECRET', 'must contain at least 32 characters when configured');
+  }
+  if (env.TRADEFLOWKIT_PAYMENT_PROVIDER === 'stripe_connect') {
+    requirePresent(env, issues, 'revenue', [
+      'STRIPE_CLIENT_ID',
+      'TRADEFLOWKIT_STRIPE_CONNECT_WEBHOOK_SECRET',
+      'TRADEFLOWKIT_STRIPE_CONNECT_REDIRECT_URI',
+      'TRADEFLOWKIT_PUBLIC_BASE_URL',
+    ]);
+    if (isPresent(env, 'STRIPE_CLIENT_ID') && !env.STRIPE_CLIENT_ID.startsWith('ca_')) {
+      addIssue(issues, 'revenue', 'STRIPE_CLIENT_ID', 'must be a Stripe Connect client ID');
+    }
+    if (isPresent(env, 'TRADEFLOWKIT_STRIPE_CONNECT_WEBHOOK_SECRET') && !env.TRADEFLOWKIT_STRIPE_CONNECT_WEBHOOK_SECRET.startsWith('whsec_')) {
+      addIssue(issues, 'revenue', 'TRADEFLOWKIT_STRIPE_CONNECT_WEBHOOK_SECRET', 'must be a separate Stripe Connect webhook signing secret');
+    }
+    if (env.TRADEFLOWKIT_STRIPE_CONNECT_REDIRECT_URI !== 'https://tradeflowkit.operatoros.net/v1/modules/tradeflowkit/payments/connect/callback') {
+      addIssue(issues, 'revenue', 'TRADEFLOWKIT_STRIPE_CONNECT_REDIRECT_URI', 'must equal the exact TradeFlowKit HTTPS callback URL');
+    }
+    if (env.TRADEFLOWKIT_PUBLIC_BASE_URL !== 'https://tradeflowkit.operatoros.net') {
+      addIssue(issues, 'revenue', 'TRADEFLOWKIT_PUBLIC_BASE_URL', 'must equal the exact TradeFlowKit HTTPS origin');
+    }
+  }
 }
 
 function checkEmail(env, issues) {

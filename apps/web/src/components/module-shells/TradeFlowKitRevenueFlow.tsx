@@ -142,12 +142,17 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set());
   const [bulkPaymentMethod, setBulkPaymentMethod] = useState('other');
   const [bulkPaymentReference, setBulkPaymentReference] = useState('');
+  const [paymentProvider, setPaymentProvider] = useState<any>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const next = await moduleShellApi.tradeflowkit.revenue();
+      const [next, provider] = await Promise.all([
+        moduleShellApi.tradeflowkit.revenue(),
+        moduleShellApi.tradeflowkit.paymentProvider(),
+      ]);
       setData(next);
+      setPaymentProvider(provider);
       setSelectedInvoiceIds(new Set());
       const nestedCustomerId = typeof window === 'undefined'
         ? ''
@@ -312,6 +317,19 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
     }, `invoice-bulk-payment:${crypto.randomUUID()}`));
   }
 
+  function connectPaymentProvider() {
+    void run(async () => {
+      const result = await moduleShellApi.tradeflowkit.authorizePaymentProvider();
+      if (!result.authorizeUrl.startsWith('https://connect.stripe.com/')) throw new Error('Stripe authorization URL was not accepted.');
+      window.location.assign(result.authorizeUrl);
+    });
+  }
+
+  function disconnectPaymentProvider() {
+    if (!window.confirm('Disconnect this tenant Stripe account? Existing payment history remains, but new checkout links will stop.')) return;
+    void run(() => moduleShellApi.tradeflowkit.disconnectPaymentProvider());
+  }
+
   const panel: React.CSSProperties = { border: `1px solid ${c.border}`, borderRadius: 10, background: c.panel, padding: 16 };
   const input: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '9px 10px', background: '#fbfefc', color: c.ink };
   const button = (tone = c.green): React.CSSProperties => ({ border: 0, borderRadius: 7, padding: '9px 12px', background: tone, color: '#fff', fontWeight: 800, cursor: pending ? 'wait' : 'pointer', opacity: pending ? .6 : 1 });
@@ -324,6 +342,10 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
       </div>
 
       {error && <div role="alert" style={{ marginTop: 12, padding: 10, borderRadius: 7, color: c.red, background: '#fff1f2', display: 'flex', gap: 8 }}><AlertTriangle size={16} />{error}</div>}
+      {canManage && paymentProvider && <div data-testid="tradeflowkit-payment-provider" style={{ ...panel, marginTop: 12, padding: 12, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div><strong style={{ color: c.ink }}>Business payments · Stripe Connect</strong><div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{paymentProvider.ready ? `Ready for ${paymentProvider.mode} payments on ${paymentProvider.account?.providerAccountId}` : paymentProvider.account ? `Connected account needs attention: charges ${paymentProvider.account.chargesEnabled ? 'enabled' : 'restricted'}; mode ${paymentProvider.mode || 'unset'}.` : paymentProvider.reason || 'Connect a tenant-owned Stripe account to create customer checkout links.'}</div></div>
+        <div style={{ display: 'flex', gap: 7 }}>{paymentProvider.account?.status !== 'disconnected' && paymentProvider.account ? <button type="button" disabled={pending} onClick={disconnectPaymentProvider} style={button(c.red)}>Disconnect</button> : <button type="button" disabled={pending || !paymentProvider.configured} onClick={connectPaymentProvider} style={button(c.blue)}>Connect Stripe</button>}</div>
+      </div>}
       {loading ? <div style={{ color: c.muted, padding: '18px 0' }}>Loading revenue records…</div> : (
         <>
           {canManage ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
@@ -536,6 +558,11 @@ function InvoiceRow({ invoice, customer, customers, jobs, selected, batchSelecte
         <a href={`/invoices/${invoice.id}`} style={{ color: c.blue, fontSize: 12 }}>Record deep link</a>
         {canManage && invoice.status === 'draft' && <><Action disabled={pending} label="Edit" Icon={Pencil} tone={c.gold} onClick={() => setEditing(true)} /><Action disabled={pending} label="Send invoice" onClick={() => void run(() => moduleShellApi.tradeflowkit.transitionInvoice(invoice.id, invoice.version, 'sent'))} /></>}
         {canManage && ['sent', 'processing'].includes(invoice.status) && <Action disabled={pending} label="Record payment" tone={c.green} onClick={() => { const ref = window.prompt('Payment reference (optional)') || undefined; void run(() => moduleShellApi.tradeflowkit.payInvoice(invoice.id, invoice.version, 'other', ref)); }} />}
+        {canManage && payable && <Action disabled={pending} label="Stripe payment link" tone={c.blue} onClick={() => void run(async () => {
+          const result = await moduleShellApi.tradeflowkit.createPaymentLink(invoice.id, invoice.version, `payment-link:${crypto.randomUUID()}`);
+          if (!result.checkoutUrl?.startsWith('https://')) throw new Error(result.replay ? 'This request was already used. Create a new payment link.' : 'Stripe did not return a checkout URL.');
+          window.location.assign(result.checkoutUrl);
+        })} />}
         {canManage && archivable && <Action disabled={pending} label="Archive" Icon={Archive} tone={c.red} onClick={() => {
           if (window.confirm('Archive this unpaid invoice? It will leave the active revenue workspace.')) void run(() => moduleShellApi.tradeflowkit.archiveInvoice(invoice.id, invoice.version));
         }} />}

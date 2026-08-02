@@ -153,9 +153,10 @@ async function lockLeadOperationsConfiguration(executor: LeadOperationsExecutor,
 }
 
 function settingsResponse(state: Awaited<ReturnType<typeof ensureTradeFlowKitLeadOperationDefaults>>) {
+  const { publicTokenHash, ...captureForm } = state.captureForm;
   return {
     settings: state.settings,
-    captureForm: state.captureForm,
+    captureForm: { ...captureForm, hasPublicToken: Boolean(publicTokenHash) },
     templates: TRADEFLOWKIT_LEAD_TEMPLATES.map(({ key, label, description, serviceCategories }) => ({
       key, label, description, serviceCategories,
     })),
@@ -165,8 +166,15 @@ function settingsResponse(state: Awaited<ReturnType<typeof ensureTradeFlowKitLea
       note: 'Follow-ups are queued deliberately through the shared OperatorOS outbox; deployment connectors control final delivery.',
     },
     publicIntake: {
-      enabled: false,
-      reason: 'Anonymous intake is disabled pending consent, privacy, retention, rate-limit, abuse, and deployed-host acceptance.',
+      enabled: state.captureForm.publicIntakeEnabled,
+      configured: Boolean(
+        state.captureForm.publicTokenHash
+        && state.captureForm.privacyNoticeUrl
+        && state.captureForm.consentText
+        && state.captureForm.consentVersion
+      ),
+      publicPath: state.captureForm.publicTokenHash ? '/public/tradeflowkit/leads/{token}' : null,
+      adapterKeys: state.captureForm.allowedAdapterKeys,
     },
   };
 }
@@ -247,7 +255,6 @@ export async function registerTradeFlowKitLeadOperationsRoutes(app: FastifyInsta
       if (capturePatch) {
         [captureForm] = await tx.update(tradeflowkitLeadCaptureForms).set({
           ...capturePatch,
-          publicIntakeEnabled: false,
           updatedByUserId: actor,
           updatedAt: new Date(),
           version: sql`${tradeflowkitLeadCaptureForms.version} + 1`,
@@ -323,7 +330,6 @@ export async function registerTradeFlowKitLeadOperationsRoutes(app: FastifyInsta
         name: `${template.label} lead profile`,
         sourceLabel: template.leadSources.find(source => source !== 'manual') ?? 'website',
         defaultService: template.serviceCategories[0] ?? null,
-        publicIntakeEnabled: false,
         updatedByUserId: actor,
         updatedAt: new Date(),
         version: sql`${tradeflowkitLeadCaptureForms.version} + 1`,
@@ -358,8 +364,8 @@ export async function registerTradeFlowKitLeadOperationsRoutes(app: FastifyInsta
   app.get('/v1/modules/tradeflowkit/leads/source-adapters', { preHandler: [...readGuards] }, async () => ({
     adapters: SOURCE_ADAPTERS.map(adapter => ({
       ...adapter,
-      publicIngress: false,
-      validationMode: 'authenticated_sample_only',
+      publicIngress: adapter.key !== 'website-form',
+      validationMode: adapter.key === 'website-form' ? 'public_form' : 'signed_hmac_sha256',
     })),
   }));
 

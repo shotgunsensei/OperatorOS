@@ -231,7 +231,10 @@ test('adapter validation and test email are replay-safe, sanitized, and server-d
   });
   assert.equal(adaptersResponse.statusCode, 200, adaptersResponse.body);
   assert.equal(adaptersResponse.json().adapters.length, 3);
-  assert.equal(adaptersResponse.json().adapters.every((row: any) => row.publicIngress === false), true);
+  assert.equal(adaptersResponse.json().adapters.find((row: any) => row.key === 'website-form').validationMode, 'public_form');
+  assert.equal(adaptersResponse.json().adapters.filter((row: any) => row.key !== 'website-form').every((row: any) => (
+    row.publicIngress === true && row.validationMode === 'signed_hmac_sha256'
+  )), true);
 
   const validationKey = 'lead-adapter-validation-integration-001';
   const sample = { name: 'Private Validation Value', email: 'private-validation@example.com', serviceType: 'Contract check', consentToSms: false };

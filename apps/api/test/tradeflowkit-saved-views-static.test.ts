@@ -22,7 +22,7 @@ test('TradeFlowKit saved views remain wired through the current release, API, cl
   assert.match(schema, /pgTable\('tradeflowkit_saved_views'/);
   assert.match(init, /tfk_saved_views_filters_check/);
   assert.match(init, /uq_tfk_saved_views_active_name/);
-  assert.match(contract, /releaseVersion: 31/);
+  assert.match(contract, /releaseVersion: 32/);
   assert.match(contract, /tradeflowkit_saved_views/);
   assert.match(release, /ensureTradeFlowKitSavedViewTables/);
   for (const route of [
