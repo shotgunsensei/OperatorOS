@@ -30,6 +30,7 @@ import { ensureCallCommandTables } from './callcommand-db-init.js';
 import { ensureNinjamationTables } from './ninjamation-db-init.js';
 import { ensureOutCallTables } from './outcall-db-init.js';
 import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db-init.js';
+import { ensureTradeFlowKitLeadOperationsTables } from './tradeflowkit-lead-operations-db-init.js';
 import {
   DATABASE_RELEASE_CONTRACT,
   DATABASE_RELEASE_STEPS,
@@ -71,6 +72,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   launch_fix_post_seed: launchFixPostSeed,
   free_account_app_backfill: backfillFreeAccountAppsForAllTenants,
   tradeflowkit_saved_views: ensureTradeFlowKitSavedViewTables,
+  tradeflowkit_lead_operations: ensureTradeFlowKitLeadOperationsTables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -87,6 +89,10 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.tradeflowkit_workflow_stages') IS NOT NULL AS tradeflowkit_workflow_stages,
       to_regclass('public.tradeflowkit_payments') IS NOT NULL AS tradeflowkit_payments,
       to_regclass('public.tradeflowkit_saved_views') IS NOT NULL AS tradeflowkit_saved_views,
+      to_regclass('public.tradeflowkit_lead_settings') IS NOT NULL AS tradeflowkit_lead_settings,
+      to_regclass('public.tradeflowkit_lead_capture_forms') IS NOT NULL AS tradeflowkit_lead_capture_forms,
+      to_regclass('public.tradeflowkit_lead_followups') IS NOT NULL AS tradeflowkit_lead_followups,
+      to_regclass('public.tradeflowkit_lead_source_events') IS NOT NULL AS tradeflowkit_lead_source_events,
       to_regclass('public.techdeck_documents') IS NOT NULL AS techdeck_documents,
       to_regclass('public.techdeck_configuration_relationships') IS NOT NULL AS techdeck_configuration_relationships,
       to_regclass('public.pulsedesk_ticket_messages') IS NOT NULL AS pulsedesk_ticket_messages,

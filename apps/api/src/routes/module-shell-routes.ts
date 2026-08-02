@@ -88,6 +88,8 @@ import { registerNinjaLaunchKitRoutes } from './ninja-launch-kit-routes.js';
 import { registerCallCommandRoutes } from './callcommand-routes.js';
 import { registerNinjamationRoutes } from './ninjamation-routes.js';
 import { registerOutCallRoutes } from './outcall-routes.js';
+import { registerTradeFlowKitLeadOperationsRoutes } from './tradeflowkit-lead-operations-routes.js';
+import { scheduleTradeFlowKitLeadFollowups } from '../lib/tradeflowkit-lead-operations.js';
 
 // Per-module guard chains. `requireTenantMember` confirms the caller belongs
 // to the active tenant; `requireTenantModuleAccess(slug)` then enforces that
@@ -513,6 +515,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerPulseDeskServiceDeskRoutes(app);
   await registerNinjaPoolHallRoutes(app);
   await registerTradeFlowKitRoutes(app);
+  await registerTradeFlowKitLeadOperationsRoutes(app);
   await registerTechDeckRoutes(app);
   await registerTorqueShedRoutes(app);
   await registerTorqueAssistRoutes(app);
@@ -624,6 +627,11 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
           entityId: created.id,
           metadata: { source: created.source, status: created.status, consentToSms: created.consentToSms },
         });
+        await scheduleTradeFlowKitLeadFollowups({
+          tenantId: ctx.tenantId,
+          leadId: created.id,
+          createdAt: created.createdAt,
+        }, tx);
         return created;
       });
       return reply.code(201).send(lead);

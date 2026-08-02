@@ -2254,6 +2254,90 @@ export const tradeflowkitLeads = pgTable('tradeflowkit_leads', {
   index('idx_tradeflowkit_leads_tenant_followup').on(t.tenantId, t.nextFollowUpAt),
 ]);
 
+export type TradeFlowKitLeadFollowupStep = {
+  delayMinutes: number;
+  channel: 'email' | 'sms';
+  template: string;
+};
+
+export const tradeflowkitLeadSettings = pgTable('tradeflowkit_lead_settings', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  followUpEnabled: boolean('follow_up_enabled').notNull().default(false),
+  autoRespond: boolean('auto_respond').notNull().default(false),
+  dryRun: boolean('dry_run').notNull().default(true),
+  emailEnabled: boolean('email_enabled').notNull().default(true),
+  smsEnabled: boolean('sms_enabled').notNull().default(false),
+  tradeTemplate: varchar('trade_template', { length: 60 }).notNull().default('general_contractor'),
+  serviceArea: text('service_area'),
+  emailTemplate: text('email_template').notNull(),
+  smsTemplate: text('sms_template').notNull(),
+  followupSequence: jsonb('followup_sequence').$type<TradeFlowKitLeadFollowupStep[]>().notNull(),
+  leadSources: jsonb('lead_sources').$type<string[]>().notNull(),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tfk_lead_settings_tenant').on(t.tenantId),
+  uniqueIndex('uq_tfk_lead_settings_tenant_id').on(t.tenantId, t.id),
+]);
+
+export const tradeflowkitLeadCaptureForms = pgTable('tradeflowkit_lead_capture_forms', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  updatedByUserId: varchar('updated_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  name: varchar('name', { length: 120 }).notNull().default('Lead capture profile'),
+  sourceLabel: varchar('source_label', { length: 80 }).notNull().default('website'),
+  defaultService: varchar('default_service', { length: 160 }),
+  successMessage: varchar('success_message', { length: 500 }).notNull().default('Thanks. Your request has been received.'),
+  publicIntakeEnabled: boolean('public_intake_enabled').notNull().default(false),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tfk_lead_capture_tenant').on(t.tenantId),
+  uniqueIndex('uq_tfk_lead_capture_tenant_id').on(t.tenantId, t.id),
+]);
+
+export const tradeflowkitLeadFollowups = pgTable('tradeflowkit_lead_followups', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  leadId: varchar('lead_id', { length: 36 }).notNull().references(() => tradeflowkitLeads.id, { onDelete: 'cascade' }),
+  stepNumber: integer('step_number').notNull(),
+  channel: text('channel', { enum: ['email', 'sms'] }).notNull(),
+  dueAt: timestamp('due_at').notNull(),
+  status: text('status', { enum: ['pending', 'queued', 'completed', 'canceled', 'skipped', 'failed'] }).notNull().default('pending'),
+  messageTemplate: text('message_template').notNull(),
+  outboxIdempotencyKey: varchar('outbox_idempotency_key', { length: 160 }),
+  lastAttemptAt: timestamp('last_attempt_at'),
+  completedAt: timestamp('completed_at'),
+  errorCode: varchar('error_code', { length: 80 }),
+  version: integer('version').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_tfk_lead_followups_step').on(t.tenantId, t.leadId, t.stepNumber),
+  uniqueIndex('uq_tfk_lead_followups_tenant_id').on(t.tenantId, t.id),
+  index('idx_tfk_lead_followups_due').on(t.tenantId, t.status, t.dueAt),
+  index('idx_tfk_lead_followups_lead').on(t.tenantId, t.leadId, t.stepNumber),
+]);
+
+export const tradeflowkitLeadSourceEvents = pgTable('tradeflowkit_lead_source_events', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  leadId: varchar('lead_id', { length: 36 }).references(() => tradeflowkitLeads.id, { onDelete: 'set null' }),
+  createdByUserId: varchar('created_by_user_id', { length: 36 }).references(() => users.id, { onDelete: 'set null' }),
+  adapterKey: varchar('adapter_key', { length: 40 }).notNull(),
+  eventType: text('event_type', { enum: ['validation', 'configuration'] }).notNull(),
+  status: text('status', { enum: ['validated', 'configured', 'rejected'] }).notNull(),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  index('idx_tfk_lead_source_events_created').on(t.tenantId, t.createdAt),
+  index('idx_tfk_lead_source_events_adapter').on(t.tenantId, t.adapterKey, t.createdAt),
+]);
+
 export type TradeFlowKitLineItem = {
   description: string;
   quantity: number;
@@ -2646,6 +2730,10 @@ export type PulseDeskRequestRow = typeof pulsedeskRequests.$inferSelect;
 export type PulseDeskRequestEventRow = typeof pulsedeskRequestEvents.$inferSelect;
 export type NinjaPoolPracticeSessionRow = typeof ninjaPoolPracticeSessions.$inferSelect;
 export type TradeFlowKitLeadRow = typeof tradeflowkitLeads.$inferSelect;
+export type TradeFlowKitLeadSettingsRow = typeof tradeflowkitLeadSettings.$inferSelect;
+export type TradeFlowKitLeadCaptureFormRow = typeof tradeflowkitLeadCaptureForms.$inferSelect;
+export type TradeFlowKitLeadFollowupRow = typeof tradeflowkitLeadFollowups.$inferSelect;
+export type TradeFlowKitLeadSourceEventRow = typeof tradeflowkitLeadSourceEvents.$inferSelect;
 export type TradeFlowKitCustomerRow = typeof tradeflowkitCustomers.$inferSelect;
 export type TradeFlowKitJobRow = typeof tradeflowkitJobs.$inferSelect;
 export type TradeFlowKitTaskRow = typeof tradeflowkitTasks.$inferSelect;

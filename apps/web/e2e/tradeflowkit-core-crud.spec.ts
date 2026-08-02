@@ -72,6 +72,10 @@ async function cleanupIdentity(pg: Client, identity: Identity | null) {
       'tradeflowkit_tasks',
       'tradeflowkit_jobs',
       'tradeflowkit_customers',
+      'tradeflowkit_lead_source_events',
+      'tradeflowkit_lead_followups',
+      'tradeflowkit_lead_capture_forms',
+      'tradeflowkit_lead_settings',
       'tradeflowkit_leads',
       'tradeflowkit_saved_views',
       'tradeflowkit_settings',
@@ -134,6 +138,20 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
       page.getByTestId('button-login').click(),
     ]);
 
+    const leadOperations = page.getByTestId('tradeflowkit-lead-operations');
+    await expect(leadOperations).toContainText('Anonymous intake remains off');
+    await page.getByTestId('tradeflowkit-lead-template').selectOption('hvac');
+    await expect(page.getByTestId('tradeflowkit-lead-operations-status')).toContainText('Trade playbook applied');
+    await page.getByTestId('tradeflowkit-adapter-generic-json').getByRole('button', { name: 'Validate' }).click();
+    await expect(page.getByTestId('tradeflowkit-lead-operations-status')).toContainText('payload contract validated');
+    await expect.poll(async () => {
+      const result = await pg.query<{ count: string }>(
+        `select count(*)::text as count from tradeflowkit_lead_source_events where tenant_id = $1 and adapter_key = 'generic-json' and status = 'validated'`,
+        [identity.tenantId],
+      );
+      return Number(result.rows[0].count);
+    }).toBe(1);
+
     const leadForm = page.getByTestId('tradeflowkit-lead-form');
     await leadForm.getByLabel('Name *').fill(leadName);
     await leadForm.getByLabel('Email').fill(leadEmail);
@@ -145,6 +163,13 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
       [identity.tenantId, leadName],
     );
     expect(leadResult.rows).toHaveLength(1);
+    await expect.poll(async () => {
+      const result = await pg.query<{ count: string }>(
+        `select count(*)::text as count from tradeflowkit_lead_followups where tenant_id = $1 and lead_id = $2`,
+        [identity!.tenantId, leadResult.rows[0].id],
+      );
+      return Number(result.rows[0].count);
+    }).toBe(3);
     const leadRow = page.getByTestId(`tradeflowkit-lead-${leadResult.rows[0].id}`);
     await leadRow.getByRole('button', { name: `Queue email to ${leadName}` }).click();
     await expect(page.getByTestId('tradeflowkit-lead-message-status')).toContainText(`Email is queued for ${leadName}`);
@@ -152,6 +177,35 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
       const result = await pg.query<{ count: string }>(
         `select count(*)::text as count from shared_outbox_messages where tenant_id = $1 and channel = 'email' and destination = $2`,
         [identity!.tenantId, leadEmail],
+      );
+      return Number(result.rows[0].count);
+    }).toBe(1);
+
+    await page.getByTestId('tradeflowkit-followup-lead-select').selectOption(leadResult.rows[0].id);
+    const followupResult = await pg.query<{ id: string }>(
+      `select id from tradeflowkit_lead_followups where tenant_id = $1 and lead_id = $2 and step_number = 1`,
+      [identity.tenantId, leadResult.rows[0].id],
+    );
+    expect(followupResult.rows).toHaveLength(1);
+    const followupRow = page.getByTestId(`tradeflowkit-followup-${followupResult.rows[0].id}`);
+    await followupRow.getByRole('button', { name: 'Queue' }).click();
+    await expect(page.getByTestId('tradeflowkit-lead-operations-status')).toContainText('Follow-up queued');
+    await expect.poll(async () => {
+      const result = await pg.query<{ count: string }>(
+        `select count(*)::text as count from shared_outbox_messages
+          where tenant_id = $1 and context_json->>'entityType' = 'lead_followup' and context_json->>'leadId' = $2`,
+        [identity!.tenantId, leadResult.rows[0].id],
+      );
+      return Number(result.rows[0].count);
+    }).toBe(1);
+
+    await page.getByTestId('tradeflowkit-lead-test-email').click();
+    await expect(page.getByTestId('tradeflowkit-lead-operations-status')).toContainText('authenticated OperatorOS email');
+    await expect.poll(async () => {
+      const result = await pg.query<{ count: string }>(
+        `select count(*)::text as count from shared_outbox_messages
+          where tenant_id = $1 and destination = $2 and context_json->>'sourceRoute' = 'test-message'`,
+        [identity!.tenantId, identity!.email],
       );
       return Number(result.rows[0].count);
     }).toBe(1);

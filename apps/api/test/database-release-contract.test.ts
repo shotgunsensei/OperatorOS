@@ -11,17 +11,22 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 30);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 31);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 30);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 30);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 31);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 31);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'tradeflowkit_saved_views');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'tradeflowkit_lead_operations');
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'tradeflowkit_saved_views')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'free_account_app_backfill'),
     'saved views must be a new additive release step instead of changing the v29 TradeFlowKit initializer',
+  );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'tradeflowkit_lead_operations')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'tradeflowkit_saved_views'),
+    'lead operations must be a new additive release step instead of changing the v30 saved-views initializer',
   );
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'directory_tables')
@@ -119,6 +124,10 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_workflow_stages'\)/);
   assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_payments'\)/);
   assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_saved_views'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_lead_settings'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_lead_capture_forms'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_lead_followups'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_lead_source_events'\)/);
   assert.match(releaseSource, /to_regclass\('public\.techdeck_documents'\)/);
   assert.match(releaseSource, /to_regclass\('public\.techdeck_configuration_relationships'\)/);
   assert.match(releaseSource, /to_regclass\('public\.pulsedesk_ticket_messages'\)/);

@@ -75,6 +75,8 @@ export async function ensureSchemaReady() {
   await ensureTradeFlowKitTables();
   const { ensureTradeFlowKitSavedViewTables } = await import('../src/lib/tradeflowkit-saved-views-db-init.js');
   await ensureTradeFlowKitSavedViewTables();
+  const { ensureTradeFlowKitLeadOperationsTables } = await import('../src/lib/tradeflowkit-lead-operations-db-init.js');
+  await ensureTradeFlowKitLeadOperationsTables();
   const { ensureTechDeckTables } = await import('../src/lib/techdeck-db-init.js');
   await ensureTechDeckTables();
   const { ensurePulseDeskTables } = await import('../src/lib/pulsedesk-db-init.js');

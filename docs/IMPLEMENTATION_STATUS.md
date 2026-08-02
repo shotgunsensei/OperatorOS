@@ -20,8 +20,67 @@
 - Phase 11D source provenance: `30bd1abc05846926e97bc7b26c5b7d6625e8f161`
 - Phase 11E source provenance: `d49434e1d641d62cc141591c7208539a7afbf11e`
 - Phase 12A source provenance: application `cca75338d04ed35b89f28d614eb51559735aa32f`; catalog `ca0e55fd086f6751a43964927166bfa69db012b6`
-- Execution branch: `codex/tradeflowkit-safe-bulk-operations`
+- Execution branch: `codex/tradeflowkit-lead-operations`
 - Release gate: **closed**
+
+## 2026-08-01 TradeFlowKit lead-operations restoration and release v31
+
+TradeFlowKit now has a real internal lead-conversion playbook rather than only
+manual lead CRUD. Tenant members can inspect settings, the internal capture
+profile, reviewed trade templates, scheduled follow-ups, safe adapter
+descriptions, and sanitized source history. Tenant owners/admins can apply one
+of seven server-allowlisted trade templates, version-safely edit the service
+area/source/channel/message configuration, validate a bounded adapter sample,
+manually queue or complete a follow-up, and queue a delivery-check email to
+their own authenticated OperatorOS address.
+
+New leads receive the configured follow-up sequence in the same transaction as
+lead creation. Queue actions use the shared OperatorOS outbox, require replay
+keys, derive the destination from the tenant lead, preserve SMS consent and
+channel controls, expose editable message templates only to entitled tenant
+members, and never return adapter sample values in read projections. ADR-0030
+keeps automatic response execution, direct
+provider credentials, public capture tokens, and both anonymous source routes
+disabled until their privacy, consent, retention, rate-limit, abuse, webhook,
+and deployed-host contracts are approved.
+
+Release v31 adds `tradeflowkit_lead_settings`,
+`tradeflowkit_lead_capture_forms`, `tradeflowkit_lead_followups`, and
+`tradeflowkit_lead_source_events` as one additive ordered step. Tenant/lead
+composite foreign keys, optimistic versions, bounded JSON checks, due/source
+indexes, and database checks forcing auto-response/public intake off preserve
+the boundary. Rollback remains restore-to-new-database and switch traffic;
+application rollback retains the additive data.
+
+| Gate | Result |
+| --- | --- |
+| Focused static contracts | PASS 4/4; v31 release/schema, route guards, shared delivery/idempotency, UI controls, ADR, and executable-ledger mapping |
+| Focused isolated PostgreSQL workflows | PASS 2/2, including a repeat with `DATABASE_POOL_MAX=1`; defaults, admin/viewer gates, atomic dual-version conflicts, template scheduling, non-enumerating tenant isolation, outbox replay, SMS/channel controls, sanitized adapter history, server-owned test destination, and absent anonymous route |
+| Adjacent TradeFlowKit regression | PASS 27/27 across lead operations/messaging, retention, revenue, safe bulk, saved views, work management, and the state-5 workflow |
+| Full API aggregate | PASS 900, FAIL 0, SKIP 6 intentional HTTP-only cases across 906 tests on a fresh disposable database |
+| Executable source ledger | PASS; 135 active, 53 shared replacements, 23 explicit gaps, 43 security retirements, 23 product-boundary retirements, zero unclassified |
+| Database release | PASS; v31/31 plan, clean apply, and idempotent reapply on disposable PostgreSQL 16; last step `tradeflowkit_lead_operations` |
+| Workspace/type/build | PASS; API/runner/web typecheck and production build with Next 15.5.22 and 20/20 generated page entries |
+| Production-mode runtime | PASS; core preflight and readiness-gated supervisor returned HTTP 200 with database/auth/SSO/registry/worker/release identity configured and database release v31/31 |
+| Exact-host TradeFlowKit browser | PASS 1/1 in 21.8 seconds; real PKCE login, template apply, sanitized adapter validation, transactional follow-up scheduling, shared-outbox follow-up and admin delivery check, then the existing customer/job/task/edit/archive workflow |
+| Deployment/providers/data cutover | NOT RUN; all credentials and data were disposable local test values, external providers remained disabled, and no Replit deployment or production traffic/data was touched |
+
+The aggregate exposed an adjacent Torque Assist token race: two provider
+completions could reserve the same append-only balance before either final
+debit committed. Balance reservation and final charging now take the same
+transaction-scoped tenant/user advisory lock plus the durable user-row lock.
+The concurrency workflow passed five consecutive repetitions, its combined
+static/workflow gate passed 4/4, and the final aggregate remained green. The
+rate-limit assertion also now crosses the five-per-minute boundary even when
+the test begins in a fresh minute.
+
+This closes eleven executable parity gaps at once while leaving the three
+anonymous-intake contracts explicit. Twenty-three total gaps remain. The
+production artifact was built from the working tree and therefore identifies
+the previous commit; a fresh build from the final commit is still required for
+release handoff. Local success does not promote TradeFlowKit beyond
+source/local state 4 or satisfy deployed provider, data, backup/rollback,
+accounting-sandbox, and cutover acceptance.
 
 ## 2026-08-01 TradeFlowKit safe bulk-operation restoration
 

@@ -463,7 +463,9 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
   assert.equal(raceMath.rows[0]!.debits, 1);
 
   let rateLimited = false;
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  // Six attempts guarantee that the sixth request crosses the five-per-minute
+  // user limit even when this assertion begins on a fresh minute boundary.
+  for (let attempt = 0; attempt < 6; attempt += 1) {
     const response = await inject(
       'POST',
       '/v1/modules/torqueshed/torque-assist',

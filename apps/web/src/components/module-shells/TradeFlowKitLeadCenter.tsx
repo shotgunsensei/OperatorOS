@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, Loader2, Mail, MessageSquare, Plus, Search, Trash2, UserRound } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
+import TradeFlowKitLeadOperations from './TradeFlowKitLeadOperations';
 
 type LeadStatus = 'new' | 'contacted' | 'qualified' | 'follow_up' | 'converted' | 'lost';
 type LeadUrgency = 'normal' | 'urgent' | 'emergency';
@@ -204,7 +205,7 @@ export default function TradeFlowKitLeadCenter({ tenantKey, canManage }: { tenan
       <div className="tfk-lead-heading">
         <div>
           <div className="tfk-lead-eyebrow">Live tenant workflow</div>
-          <h2>Manual Lead Center</h2>
+          <h2>Lead Conversion Center</h2>
           <p>
             Capture, qualify, and convert tenant leads into shared-directory customers and numbered jobs. Provider delivery uses the shared notification outbox.
           </p>
@@ -225,6 +226,8 @@ export default function TradeFlowKitLeadCenter({ tenantKey, canManage }: { tenan
         </div>
       )}
       {notice && <div className="tfk-lead-notice" role="status" data-testid="tradeflowkit-lead-message-status">{notice}</div>}
+
+      <TradeFlowKitLeadOperations tenantKey={tenantKey} canManage={canManage} leads={leads} />
 
       {canManage ? <form className="tfk-lead-form" onSubmit={createLead} data-testid="tradeflowkit-lead-form">
         <div className="tfk-lead-form-title">
