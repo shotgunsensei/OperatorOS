@@ -28,7 +28,7 @@ OperatorOS is the central login, tenant, entitlement, billing, and module runtim
 | Add-on | Ninja Launch Kit | `ninjalaunchkit.operatoros.net` | Enabled |
 | Add-on | CallCommand AI | `callcommand-ai.operatoros.net` | Enabled |
 | Add-on | Ninjamation | `ninjamation.operatoros.net` | Enabled |
-| Add-on | OutCall | `outcall.operatoros.net` | Planned and disabled |
+| Add-on | OutCall | `outcall.operatoros.net` | Enabled; live provider gated |
 
 The attached Replit domains are the canonical application paths. Historical standalone product domains are not active launch, SSO callback, logout, CORS, or return-to destinations.
 

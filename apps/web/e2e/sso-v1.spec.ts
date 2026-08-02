@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = process.env.E2E_ROOT_URL || 'https://operatoros.net';
 const API = process.env.E2E_API_URL || 'http://127.0.0.1:5001';
 const PASSWORD = 'OperatorOS-E2E-Only-94!';
+let registrationSequence = 0;
 
 const SHELL_TEST_IDS: Record<string, string> = {
   tradeflowkit: 'tradeflowkit-module-shell',
@@ -91,8 +92,9 @@ async function registerAndSeed(
 ): Promise<SeededIdentity> {
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const email = `sso-v1-${suffix}@example.com`;
+  const registrationIp = `10.78.0.${10 + (registrationSequence++ % 200)}`;
   const response = await request.post(`${API}/v1/auth/register`, {
-    headers: PUBLIC_AUTH_HEADERS,
+    headers: { ...PUBLIC_AUTH_HEADERS, 'x-forwarded-for': registrationIp },
     data: { email, password: PASSWORD, name: 'SSO V1 Browser Gate' },
   });
   expect(response.status(), `register: ${await response.text()}`).toBe(202);
@@ -411,7 +413,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await pg.end().catch(() => undefined);
   });
 
-  test('one credential entry establishes the canonical app host then silently launches all twelve enabled modules', async ({ page, request }) => {
+  test('one credential entry establishes the canonical app host then silently launches all thirteen enabled modules', async ({ page, request }) => {
     test.setTimeout(180_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
@@ -932,7 +934,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(timeline).toContainText('Cylinder 2 compression', { timeout: 30_000 });
 
     const assist = page.getByTestId('torqueshed-torque-assist');
-    await expect(assist).toContainText('Deterministic test adapter active', { timeout: 30_000 });
+    await expect(assist).toContainText('Preview analysis mode is active', { timeout: 30_000 });
     await assist.locator('summary').click();
     const purchaseResponse = page.waitForResponse(response =>
       response.request().method() === 'POST'
@@ -1139,15 +1141,15 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const identity = await registerAndSeed(request, pg);
     identities.push(identity);
 
-    const techdeck = await pg.query<{ id: string }>(
-      `select id from modules where slug = 'techdeck' limit 1`,
+    const deniedModules = await pg.query<{ id: string; slug: string }>(
+      `select id, slug from modules where slug in ('techdeck', 'outcall') order by slug`,
     );
-    expect(techdeck.rows).toHaveLength(1);
+    expect(deniedModules.rows).toHaveLength(2);
     await pg.query(
       `update tenant_modules
           set status = 'disabled', updated_at = now()
-        where tenant_id = $1 and module_id = $2`,
-      [identity.tenantId, techdeck.rows[0].id],
+        where tenant_id = $1 and module_id = any($2::text[])`,
+      [identity.tenantId, deniedModules.rows.map(module => module.id)],
     );
 
     await page.goto(`${ROOT}/app`);
@@ -1241,7 +1243,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     }
     await submission.locator('textarea[name="remediation"]').fill('Apply the validated corrective action and verify the original symptom no longer reproduces.');
     await submission.locator('textarea[name="proofNote"]').fill('Phase 10A production-host browser acceptance.');
-    await submission.getByRole('button', { name: 'Submit for server scoring' }).click();
+    await submission.getByRole('button', { name: 'Submit for scoring' }).click();
     const score = modulePage.getByTestId('faultlinelab-server-score');
     await expect(score).toBeVisible();
     const scoreValue = (await score.locator('h2').innerText()).trim();
@@ -1786,9 +1788,10 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('button-launch-callcommand-ai').click();
     const modulePage = await popupPromise;
     await expect(modulePage.getByTestId('shell-callcommand-ai')).toBeVisible({ timeout: 30_000 });
-    await expect(modulePage.getByTestId('banner-callcommand-provider')).toContainText('Local test adapter');
+    await expect(modulePage.getByTestId('banner-callcommand-provider')).toContainText('Preview calling is ready');
     assertNoCredentialQuery(modulePage.url());
 
+    await modulePage.getByTestId('input-callcommand-channel-phone').fill('+15551234567');
     await modulePage.getByTestId('button-callcommand-create-channel').click();
     await expect(modulePage.locator('#callcommand-configuration')).toContainText('Primary support line');
     await modulePage.getByTestId('button-callcommand-create-profile').click();
@@ -2076,7 +2079,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const modulePage = await popupPromise;
     await expect(modulePage.getByTestId('ninja-pool-hall-shell')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.getByTestId('ninja-pool-dashboard')).toBeVisible();
-    await expect(modulePage.getByText('Online room intentionally disabled')).toBeVisible();
+    await expect(modulePage.getByText('Online rooms are coming later', { exact: true })).toBeVisible();
     assertNoCredentialQuery(modulePage.url());
 
     await modulePage.getByRole('button', { name: 'Profile', exact: true }).click();

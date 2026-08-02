@@ -1,5 +1,5 @@
 /**
- * OperatorOS boundary for the planned OutCall child module.
+ * OperatorOS boundary for the active OutCall product module.
  *
  * This adapter is deliberately data-only. OperatorOS remains authoritative
  * for the authenticated user, active tenant, role, and entitlement snapshot.

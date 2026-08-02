@@ -46,7 +46,7 @@ be assumed to carry into the deployment.
       production platform override.
 - [ ] Run `npm run preflight:production -- --all` in the production
       environment. It reports `PASS` for `core`, `revenue`, `email`,
-      `callcommand`, and `ai` without printing secret values. If a deliberately
+      `callcommand`, `outcall`, and `ai` without printing secret values. If a deliberately
       degraded provider is not part of the launch claim, run only its applicable
       readiness flags and record the excluded capability.
 - [ ] Revenue-ready: `STRIPE_MODE=live`, the live Stripe secret and webhook
@@ -56,6 +56,10 @@ be assumed to carry into the deployment.
 - [ ] CallCommand-ready: a bound Replit Twilio connector or the three canonical
       Twilio credential variables are present, and
       `TWILIO_PUBLIC_BASE_URL=https://callcommand-ai.operatoros.net`.
+- [ ] OutCall-ready: independent encryption/HMAC keys, canonical public URL,
+      Twilio auth/Verify configuration, the owned E.164 line, controlled
+      country allowlist, and explicit post-acceptance activation pass the
+      `--outcall-ready` profile. `OUTCALL_TEST_ADAPTER` is absent.
 - [ ] AI-ready: `OPENAI_API_KEY` is present before any shared-runtime feature is
       marketed as live AI rather than fallback/mock behavior.
 - [ ] Do not paste secret values into this checklist, deployment logs,

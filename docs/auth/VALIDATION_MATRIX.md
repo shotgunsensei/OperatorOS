@@ -1,7 +1,7 @@
 # OperatorOS SSO v1 validation matrix
 
 - Refreshed: 2026-08-02
-- Phase 18 source/isolated-candidate result: **PASS FOR CONTRACTS; BROWSER PENDING**
+- Phase 18 source/isolated-candidate result: **PASS FOR CONTRACTS AND LOCAL BROWSER**
 - Current public baseline: **PASS under the pre-Phase-17 48/48 gate**
 - Phase 17 public candidate gate: **EXPECTED PRE-DEPLOY FAIL 45/48**
 - Overall production gate: **CLOSED**
@@ -18,12 +18,12 @@ CORS origins, session domains, or return targets.
 | Opaque single-use code | PASS | Deployed authenticated consume/replay test pending |
 | State and nonce | PASS | Current public authorization entry passes; Phase 17 exact deployed run pending |
 | PKCE S256 | PASS | Current public authorization entry passes; Phase 17 exact deployed run pending |
-| Environment/tenant/module/entitlement binding | PASS | Local Phase 17 tenant-disabled TechDeck returned `MODULE_ACCESS_DENIED`; deployed rerun pending |
+| Environment/tenant/module/entitlement binding | PASS | Fresh Phase 18 local gate returned `MODULE_ACCESS_DENIED` for tenant-disabled TechDeck and OutCall; deployed rerun pending |
 | Replay and expiry rejection | PASS | Deployed authenticated negative tests pending |
-| Host-only secure session | PASS | Current public contract and source tests pass; Phase 18 deployed rerun pending |
-| `SameSite=Lax`, `HttpOnly`, `Secure`, `Path=/` | PASS | Current public contract and local Phase 17 browser checks pass |
+| Host-only secure session | PASS | Fresh local Phase 18 canonical-host checks pass across platform and module sessions; deployed rerun pending |
+| `SameSite=Lax`, `HttpOnly`, `Secure`, `Path=/` | PASS | Fresh local Phase 18 browser checks pass |
 | No parent cookie domain | PASS | Must be rechecked after deployment; never set `COOKIE_DOMAIN` |
-| No credential URL/storage leakage | PASS | Existing local browser evidence passes; Phase 18 browser rerun across all 13 active product modules remains pending |
+| No credential URL/storage leakage | PASS | Fresh Phase 18 local browser evidence passes across all 13 active product modules; deployed rerun remains pending |
 | Safe return URL/deep link | PASS | Public authenticated return test pending |
 | Open-redirect rejection | PASS | Source tests and local deep-link browser flow passed |
 | Session refresh | PASS | Source/database regression passed |
@@ -36,9 +36,31 @@ CORS origins, session domains, or return targets.
 | OutCall module boundary | PASS LOCALLY | Catalog, registry, seed, SSO selector, commercial boundary, and deployed-acceptance contract treat OutCall as active. Non-entitled organizations receive `MODULE_ACCESS_DENIED`; provider features fail closed until exact live configuration is present |
 | Tenant isolation and authorization | PASS | Clean aggregate suite includes cross-tenant denial, viewer write denial, and module-session sealing |
 | Structured safe observability | PASS | Request/correlation context is logged without raw codes, cookies, secrets, or passwords |
-| Health/readiness | PASS LOCALLY; PUBLIC CANDIDATE PENDING | Compiled Phase 17 health/readiness expose Git/build/lock/build time/deploy time/DB v29; current public baseline lacks the two new identity fields |
+| Health/readiness | PASS LOCALLY; PUBLIC CANDIDATE PENDING | Strict compiled supervisor reports healthy API/web, configured SSO/worker, and DB v33/33 on merged-main identity `d96c698`; current public deployment remains older |
 
 ## Fresh evidence
+
+### Phase 18 merged-main local release closure
+
+The compiled v33 candidate started through the production readiness-gated
+supervisor on merged-main identity `d96c698`, build
+`50b91a50eab34dcbef995bbe`. API and web health were healthy, the database was
+healthy at release v33/33, and SSO encryption plus the shared worker were
+configured.
+
+`E2E_PRODUCTION_HOSTS=1 corepack pnpm --dir apps/web test:e2e:sso` passed
+12/12 in 1.9 minutes on one uninterrupted run. The registry-derived gate
+covered the auth/app hosts and all 13 active module hosts, one credential entry,
+PKCE/state/nonce, exact callbacks, Secure host-only cookies, no credential
+query/storage leakage, persistence, direct deep links, browser Back, silent
+sibling launch, local/global logout, and tenant denial for TechDeck and
+OutCall. A separate compiled first-screen run passed 2/2 in 7.4 seconds and
+exercised OutCall's deterministic verified-self workflow without external
+traffic.
+
+This is local evidence only. The production-safe deployed 3/3 gate, exact
+public release identity, real provider acceptance, backup/apply and rollback
+remain human-gated.
 
 ### Historical Phase 17 compiled candidate
 

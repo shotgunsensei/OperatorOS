@@ -80,8 +80,8 @@ NINJAMATION_URL = "https://ninjamation.operatoros.net"
 OUTCALL_URL = "https://outcall.operatoros.net"
 API_PORT = "5001"
 PORT = "5000"
-# Host attachment only. OutCall remains catalog `coming_soon` / registry
-# `planned` and cannot launch or be purchased until explicitly activated.
+# OutCall is an active module. Live provider operations remain fail-closed until
+# the documented protection, Twilio, and public callback secrets are configured.
 
 [userenv.development]
 OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL = "john@shotgunninjas.com"
