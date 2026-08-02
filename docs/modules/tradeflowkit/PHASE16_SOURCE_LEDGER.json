@@ -1577,11 +1577,17 @@
         "method": "GET",
         "path": "/api/leads/:id/followups",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-lead-operations-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitLeadOperations.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-operations.test.ts",
+          "apps/api/test/tradeflowkit-lead-operations-static.test.ts"
+        ],
+        "note": "Tenant-scoped scheduled follow-ups are readable and manually queueable through the shared outbox with optimistic versions, replay safety, server-owned destinations, and SMS consent enforcement."
       },
       {
         "key": "GET /api/leads/health",
@@ -1664,33 +1670,51 @@
         "method": "GET",
         "path": "/api/leads/settings",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-lead-operations-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitLeadOperations.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-operations.test.ts",
+          "apps/api/test/tradeflowkit-lead-operations-static.test.ts"
+        ],
+        "note": "Authenticated members receive tenant lead settings, capture-profile state, seven reviewed trade templates, and explicit delivery/public-ingress boundaries."
       },
       {
         "key": "GET /api/leads/source-adapters",
         "method": "GET",
         "path": "/api/leads/source-adapters",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "public_lead_intake",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "Public intake remains disabled pending consent, privacy, retention, abuse, and rate-limit controls."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-lead-operations-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitLeadOperations.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-operations.test.ts",
+          "docs/adr/ADR-0030-tradeflowkit-lead-operations-boundary.md"
+        ],
+        "note": "Three safe adapter descriptions and authenticated sample validation are active; every projection states that public ingress is disabled and no sample values are retained."
       },
       {
         "key": "GET /api/leads/source-events",
         "method": "GET",
         "path": "/api/leads/source-events",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-lead-operations-routes.ts",
+          "apps/api/src/schema.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-operations.test.ts",
+          "apps/api/test/tradeflowkit-lead-operations-static.test.ts"
+        ],
+        "note": "Bounded tenant-scoped source configuration and adapter-validation history persists only safe metadata and never raw lead samples."
       },
       {
         "key": "GET /api/leads/stats",
@@ -2368,11 +2392,17 @@
         "method": "PATCH",
         "path": "/api/leads/settings",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-lead-operations-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitLeadOperations.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-operations.test.ts",
+          "docs/adr/ADR-0030-tradeflowkit-lead-operations-boundary.md"
+        ],
+        "note": "Tenant admins can version-safely update scheduling, channel, copy, service-area, source, and internal capture-profile settings; auto-response and public intake remain forced off."
       },
       {
         "key": "PATCH /api/memberships/:userId/role",
@@ -3228,22 +3258,35 @@
         "method": "POST",
         "path": "/api/leads/settings/apply-template",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "targetPointers": [
+          "apps/api/src/lib/tradeflowkit-lead-operations.ts",
+          "apps/api/src/routes/tradeflowkit-lead-operations-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitLeadOperations.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-operations.test.ts",
+          "apps/api/test/tradeflowkit-lead-operations-static.test.ts"
+        ],
+        "note": "Seven server-allowlisted trade playbooks atomically configure tenant copy, sources, capture profile, and the follow-up sequence used by newly created leads."
       },
       {
         "key": "POST /api/leads/test-message",
         "method": "POST",
         "path": "/api/leads/test-message",
         "sourcePointer": "server/routes/leads.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "This lead workflow extension is not yet equivalent in the shared runtime."
+        "targetPointers": [
+          "apps/api/src/routes/tradeflowkit-lead-operations-routes.ts",
+          "apps/web/src/components/module-shells/TradeFlowKitLeadOperations.tsx"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-operations.test.ts",
+          "docs/adr/ADR-0030-tradeflowkit-lead-operations-boundary.md"
+        ],
+        "note": "Explicit tenant-admin test email queues replay-safely through the shared outbox to the authenticated admin account email; client destinations and direct provider credentials are rejected."
       },
       {
         "key": "POST /api/operations/companies",
@@ -4016,41 +4059,66 @@
         "key": "lead_capture_forms",
         "table": "lead_capture_forms",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "The full retained lead extension is not yet equivalent."
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-lead-operations-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-operations.test.ts",
+          "apps/api/test/tradeflowkit-lead-operations-static.test.ts"
+        ],
+        "note": "Versioned tenant capture profiles persist deployment-facing labels and copy while a database constraint keeps anonymous public intake disabled."
       },
       {
         "key": "lead_followup_tasks",
         "table": "lead_followup_tasks",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "The full retained lead extension is not yet equivalent."
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-lead-operations-db-init.ts",
+          "apps/api/src/lib/tradeflowkit-lead-operations.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-operations.test.ts",
+          "apps/api/test/tradeflowkit-lead-operations-static.test.ts"
+        ],
+        "note": "Tenant/lead composite foreign keys, due/status indexes, optimistic versions, and outbox replay keys support durable manually actioned follow-ups."
       },
       {
         "key": "lead_settings",
         "table": "lead_settings",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "The full retained lead extension is not yet equivalent."
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-lead-operations-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-operations.test.ts",
+          "apps/api/test/tradeflowkit-lead-operations-static.test.ts"
+        ],
+        "note": "One versioned settings row per tenant persists reviewed templates, channel preferences, sources, service area, and a bounded follow-up sequence with auto-response forced off."
       },
       {
         "key": "lead_source_events",
         "table": "lead_source_events",
         "sourcePointer": "shared/schema.ts",
-        "disposition": "phase16_gap",
+        "disposition": "active",
         "domain": "lead_operations_extensions",
-        "targetPointers": [],
-        "evidence": [],
-        "note": "The full retained lead extension is not yet equivalent."
+        "targetPointers": [
+          "apps/api/src/schema.ts",
+          "apps/api/src/lib/tradeflowkit-lead-operations-db-init.ts"
+        ],
+        "evidence": [
+          "apps/api/test/tradeflowkit-lead-operations.test.ts",
+          "apps/api/test/tradeflowkit-lead-operations-static.test.ts"
+        ],
+        "note": "Tenant-scoped configuration and adapter-validation events retain bounded safe metadata only; raw adapter sample values are never stored."
       },
       {
         "key": "leads",

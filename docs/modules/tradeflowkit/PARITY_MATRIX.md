@@ -237,7 +237,7 @@ out of 693 in 346.8 seconds.
 
 The earlier approved-scope implementation remains a state 4 candidate. Phase
 16 full-product parity is not complete: the machine-readable ledger currently
-contains 34 explicit gaps. Workflow Studio, team job-task views, job
+contains 23 explicit gaps. Workflow Studio, team job-task views, job
 transitions, activity, direct invoice creation, versioned quote/invoice draft
 editing, guarded archive, idempotent quote-to-job, schema readiness, and
 focused persistence/isolation coverage are now real active increments.
@@ -257,13 +257,16 @@ outbox with server-owned destinations; provider delivery remains a separate
 deployment gate. Durable personal/admin-shared saved job views and bounded
 format-v1 QuickBooks/Xero accounting exports are active locally; vendor
 account/tax mapping review and deployed download acceptance remain open.
-Phase 16A also adds a read-only
-legacy snapshot tool and a bounded, guarded, atomic version 1 core-data apply
-path with idempotent migration references and financial reconciliation. Its
-synthetic isolated-database rehearsal is not evidence that real customer data
-has moved. These increments do not erase provider, invoice import/bulk,
-scheduling, public-intake, remaining retention extensions,
-accounting-export, or remaining lead-extension gaps.
+Versioned internal lead settings/capture profile/templates, transactional
+manually actioned follow-ups, sanitized adapter validation/history, and an
+authenticated-admin delivery check are active; ADR-0030 keeps automatic
+response, direct provider credentials, and anonymous/public intake disabled.
+Phase 16A also adds a read-only legacy snapshot tool and a bounded, guarded,
+atomic version 1 core-data apply path with idempotent migration references and
+financial reconciliation. Its synthetic isolated-database rehearsal is not
+evidence that real customer data has moved. These increments do not erase
+provider, invoice import/bulk, scheduling, public-intake, remaining retention,
+or remaining lead-extension gaps.
 
 State 5 additionally requires the cumulative revision to be deployed, public
 verification, authenticated deployed TradeFlowKit browser workflow,

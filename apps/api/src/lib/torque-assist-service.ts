@@ -54,7 +54,19 @@ function balanceCaseSql() {
     ELSE -units END),0)::bigint`;
 }
 
-async function lockTorqueBalance(executor: Executor, userId: string): Promise<void> {
+async function lockTorqueBalance(
+  executor: Executor,
+  tenantId: string,
+  userId: string,
+): Promise<void> {
+  // The ledger has no mutable balance row to lock. Use a transaction-scoped,
+  // tenant/user advisory lock so the balance read and append-only debit are one
+  // serialized operation even while multiple provider completions finish at once.
+  await executor.execute(sql`
+    SELECT pg_advisory_xact_lock(
+      hashtextextended(${`torqueshed:token-balance:${tenantId}:${userId}`}, 0)
+    )
+  `);
   await executor.execute(sql`SELECT id FROM users WHERE id=${userId} FOR UPDATE`);
 }
 
@@ -446,7 +458,7 @@ export async function runTorqueAssist(input: {
         subjectId: input.userId,
         limit: TORQUE_ASSIST_USER_LIMIT_PER_MINUTE,
       });
-      await lockTorqueBalance(tx, input.userId);
+      await lockTorqueBalance(tx, input.tenantId, input.userId);
       const balance = await torqueTokenBalance(
         { tenantId: input.tenantId, userId: input.userId, moduleId: module.id },
         tx,
@@ -532,7 +544,7 @@ export async function runTorqueAssist(input: {
     const actualUnits = Math.max(1, Math.floor(completion.tokenCount));
     const acceptedStatus = result.status === 'follow_up_required' ? 'follow_up' : 'complete';
     const final = await db.transaction(async (tx) => {
-      await lockTorqueBalance(tx, input.userId);
+      await lockTorqueBalance(tx, input.tenantId, input.userId);
       const balance = await torqueTokenBalance(
         { tenantId: input.tenantId, userId: input.userId, moduleId: module.id },
         tx,

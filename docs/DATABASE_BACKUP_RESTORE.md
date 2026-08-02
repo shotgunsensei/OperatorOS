@@ -254,6 +254,22 @@ No archive left the local container and no provider traffic was enabled.
 This is current local restore evidence, not authorization to back up, restore,
 or switch a production database.
 
+## Phase 16A v31 additive release rehearsal
+
+On 2026-08-01 the v31 release plan, clean apply, and idempotent reapply passed
+against disposable PostgreSQL 16. The final step adds only
+`tradeflowkit_lead_settings`, `tradeflowkit_lead_capture_forms`,
+`tradeflowkit_lead_followups`, and `tradeflowkit_lead_source_events`; release
+verification requires all four tables and reports v31/31 with
+`tradeflowkit_lead_operations` last.
+
+This rehearsal used synthetic data and did not touch a persistent or
+production database, so it did not create a new backup/restore artifact. A
+production apply still requires an approved fresh provider snapshot and
+logical backup, checksum verification, restore into a new database, v31
+release verification, row/reference reconciliation, authenticated browser
+acceptance, and an explicit traffic-switch/rollback decision.
+
 ## Production recovery
 
 1. Freeze writes and preserve the failed database as read-only when safe.

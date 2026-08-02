@@ -35,10 +35,12 @@ test('Torque Assist uses trusted session context, shared adapters, and transacti
   assert.match(routes, /requireTenantModuleWriteAccess/);
   assert.match(routes, /diagnosticSessionId \?\? input\.sessionId/);
   assert.match(service, /getSharedAiProviderAdapter/);
+  assert.match(service, /pg_advisory_xact_lock/);
+  assert.match(service, /torqueshed:token-balance:/);
   assert.match(service, /SELECT id FROM users WHERE id=\$\{userId\} FOR UPDATE/);
   assert.ok(
-    (service.match(/lockTorqueBalance\(tx, input\.userId\)/g) ?? []).length >= 2,
-    'balance reservation and final charge must use the same durable user-row lock',
+    (service.match(/lockTorqueBalance\(tx, input\.tenantId, input\.userId\)/g) ?? []).length >= 2,
+    'balance reservation and final charge must use the same tenant/user advisory and durable user-row locks',
   );
   assert.match(service, /recordUsageEvent/);
   assert.match(service, /completeIdempotentOperation/);

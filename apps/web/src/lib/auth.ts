@@ -1839,6 +1839,34 @@ export const moduleShellApi = {
       apiFetch(`/modules/tradeflowkit/leads/${encodeURIComponent(id)}/send-${channel}`, {
         method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify(input),
       }) as Promise<{ status: 'queued'; duplicate: boolean }>,
+    leadOperationsSettings: (): Promise<any> =>
+      apiFetch('/modules/tradeflowkit/leads/settings') as Promise<any>,
+    updateLeadOperationsSettings: (input: Record<string, unknown>): Promise<any> =>
+      apiFetch('/modules/tradeflowkit/leads/settings', { method: 'PATCH', body: JSON.stringify(input) }) as Promise<any>,
+    applyLeadOperationsTemplate: (input: { templateKey: string; expectedVersion: number; expectedCaptureFormVersion: number }): Promise<any> =>
+      apiFetch('/modules/tradeflowkit/leads/settings/apply-template', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    leadSourceAdapters: (): Promise<any> =>
+      apiFetch('/modules/tradeflowkit/leads/source-adapters') as Promise<any>,
+    validateLeadSourceAdapter: (adapterKey: string, sample: Record<string, unknown>, key: string): Promise<any> =>
+      apiFetch(`/modules/tradeflowkit/leads/source-adapters/${encodeURIComponent(adapterKey)}/validate`, {
+        method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ sample }),
+      }) as Promise<any>,
+    leadSourceEvents: (): Promise<any> =>
+      apiFetch('/modules/tradeflowkit/leads/source-events?limit=20') as Promise<any>,
+    leadFollowups: (leadId: string): Promise<any> =>
+      apiFetch(`/modules/tradeflowkit/leads/${encodeURIComponent(leadId)}/followups`) as Promise<any>,
+    queueLeadFollowup: (leadId: string, followupId: string, expectedVersion: number, key: string): Promise<any> =>
+      apiFetch(`/modules/tradeflowkit/leads/${encodeURIComponent(leadId)}/followups/${encodeURIComponent(followupId)}/queue`, {
+        method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ expectedVersion }),
+      }) as Promise<any>,
+    completeLeadFollowup: (leadId: string, followupId: string, expectedVersion: number): Promise<any> =>
+      apiFetch(`/modules/tradeflowkit/leads/${encodeURIComponent(leadId)}/followups/${encodeURIComponent(followupId)}/complete`, {
+        method: 'POST', body: JSON.stringify({ expectedVersion }),
+      }) as Promise<any>,
+    testLeadOperationsEmail: (expectedVersion: number, key: string): Promise<any> =>
+      apiFetch('/modules/tradeflowkit/leads/test-message', {
+        method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ channel: 'email', confirmDelivery: true, expectedVersion }),
+      }) as Promise<any>,
     createCustomer: (input: TradeFlowKitCustomerImportRow): Promise<TradeFlowKitCustomer> =>
       apiFetch('/modules/tradeflowkit/customers', { method: 'POST', body: JSON.stringify(input) }) as Promise<TradeFlowKitCustomer>,
     updateCustomer: (id: string, input: TradeFlowKitCustomerImportRow & { expectedVersion: number }): Promise<TradeFlowKitCustomer> =>

@@ -126,9 +126,9 @@ approved-scope snapshot as full-product parity. The executable source ledger
 inventories 35 pages, 194 API routes, 40 tables, and 8 provider/config
 references with zero unclassified items. After the Workflow Studio,
 revenue-document, customer-import, core-record editing, global-search,
-retention, lead-messaging, saved-view, accounting-export, and safe-bulk
-increments, 124 items are active, 53 use shared OperatorOS replacements, and 34 remain
-explicit Phase 16 gaps.
+retention, lead-messaging, saved-view, accounting-export, safe-bulk, and
+lead-operations increments, 135 items are active, 53 use shared OperatorOS
+replacements, and 23 remain explicit Phase 16 gaps.
 
 The current revenue increment adds persistent direct invoice creation;
 optimistically versioned, multi-line draft editing for quotes and invoices;
@@ -182,6 +182,16 @@ wording, changed-message idempotency-key reuse fails, and the shared outbox
 records queue state. The Lead Center exposes responsive queue actions and a
 viewer read-only state while accurately leaving delivery to the shared worker.
 
+The lead-operations increment adds versioned tenant settings, an internal
+capture profile, seven server-allowlisted trade templates, transactional
+follow-up scheduling, manually actioned shared-outbox delivery, safe adapter
+contract validation, sanitized source history, and an admin-only delivery
+check bound to the authenticated OperatorOS email. ADR-0030 keeps automatic
+response execution, direct provider credentials, and anonymous/public intake
+disabled. Release v31 adds four tenant-scoped tables with composite tenant/lead
+foreign keys, optimistic versions, bounded JSON, and database checks that keep
+automatic response and public intake off.
+
 The safe-bulk increment restores the non-destructive batch workflows under
 ADR-0029: owner/admin job-status updates, archived job/invoice restore, and
 exact-remaining-balance invoice settlement, each bounded to 25 versioned
@@ -198,6 +208,17 @@ typecheck, production build, core preflight, compiled v30/30 readiness, and
 persists a job-status batch, archives the dependent records in order, and
 restores the job through the batch UI. This is local evidence only; providers
 were disabled and deployment/cutover were not run.
+
+Fresh lead-operations evidence on 2026-08-01 passes 6/6 focused static and
+isolated PostgreSQL checks, 27/27 adjacent TradeFlowKit regressions, workspace
+typecheck, production build, core preflight, clean/idempotent v31/31 release,
+compiled readiness, and 1/1 exact-host Chrome in 21.8 seconds. The final clean
+API aggregate passes 900, fails 0, and intentionally skips 6 HTTP-only cases
+across 906 tests. The aggregate also exposed and closed a Torque Assist balance
+race by serializing each tenant/user balance read and append-only debit under a
+transaction advisory lock; its concurrency workflow passed five consecutive
+repeats plus the final aggregate. External providers remained disabled and no
+deployment, live traffic, or production data mutation was performed.
 
 Fresh local evidence adds a 2/2 PostgreSQL workflow and a 1/1 exact-host Chrome
 workflow in 16.4 seconds against the production build and readiness-gated
@@ -248,7 +269,7 @@ and a count-only check confirmed no synthetic import-gate identity remained.
 The clean rebuilt runtime and core production preflight both pass.
 
 This follow-up does not change the ecosystem **NOT ACCEPTED** verdict or claim
-TradeFlowKit state 5. Thirty-four parity gaps remain, and deployed authenticated
+TradeFlowKit state 5. Twenty-three parity gaps remain, and deployed authenticated
 acceptance, live providers, an approved real export/apply/reconciliation,
 rollback rehearsal, and production cutover have not occurred.
 

@@ -8,7 +8,7 @@ async function source(path: string) {
   return readFile(new URL(path, root), 'utf8');
 }
 
-test('TradeFlowKit saved views are wired through schema, v30 release, API, client, UI, and ledger', async () => {
+test('TradeFlowKit saved views remain wired through the current release, API, client, UI, and ledger', async () => {
   const [schema, init, contract, release, routes, client, ui, ledger] = await Promise.all([
     source('apps/api/src/schema.ts'),
     source('apps/api/src/lib/tradeflowkit-saved-views-db-init.ts'),
@@ -22,7 +22,7 @@ test('TradeFlowKit saved views are wired through schema, v30 release, API, clien
   assert.match(schema, /pgTable\('tradeflowkit_saved_views'/);
   assert.match(init, /tfk_saved_views_filters_check/);
   assert.match(init, /uq_tfk_saved_views_active_name/);
-  assert.match(contract, /releaseVersion: 30/);
+  assert.match(contract, /releaseVersion: 31/);
   assert.match(contract, /tradeflowkit_saved_views/);
   assert.match(release, /ensureTradeFlowKitSavedViewTables/);
   for (const route of [
