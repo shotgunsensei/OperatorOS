@@ -118,9 +118,10 @@ test('six representative customer workflows expose a plain first action and trus
   const catalog = read('apps/web/src/components/pages/AppsPage.tsx');
   const billing = read('apps/web/src/components/pages/BillingPage.tsx');
 
-  assert.match(home, /Get organization setup help/);
-  assert.match(home, /link-workspace-setup-help/);
-  assert.doesNotMatch(home, /onNavigate\('settings'\).*organization setup/s);
+  assert.match(home, /Finish organization setup/);
+  assert.match(home, /button-finish-organization-setup/);
+  assert.match(home, /tenantApi\.ensurePersonal/);
+  assert.doesNotMatch(home, /Get organization setup help|operatoros\.net\/john/);
 
   assert.match(tradeFlowKit, /Start with a lead/);
   assert.match(tradeFlowKit, /Protected by OperatorOS/);
@@ -161,4 +162,14 @@ test('customer surfaces do not expose provider or migration implementation langu
     'hashed-link',
     'STRIPE_PRICE_',
   ]) assert.ok(!combined.includes(phrase), phrase);
+});
+
+test('provider-disabled publish explanation fails closed without an unfinished HTTP status', () => {
+  const api = read('apps/api/src/index.ts');
+  const start = api.indexOf("'/v1/publish/explain'");
+  const end = api.indexOf("app.get<{ Params: { workspaceId: string } }>", start);
+  const route = api.slice(start, end);
+  assert.match(route, /status\(503\)/);
+  assert.match(route, /AI_PROVIDER_DISABLED/);
+  assert.doesNotMatch(route, /status\(501\)|not configured' \}\)/);
 });

@@ -111,8 +111,17 @@ test('database provisioning restores unmarked legacy grants exactly once', () =>
 });
 
 test('all creation/boot paths provision free apps while SSO remains tenant gated', () => {
+  const authRoutes = readRepoFile('apps/api/src/routes/auth-routes.ts');
   const platformRoutes = readRepoFile('apps/api/src/routes/platform-routes.ts');
   const moduleRegistry = readRepoFile('packages/modules/registry.ts');
+
+  const registerRoute = authRoutes.indexOf("app.post('/v1/auth/register'");
+  const registerTransaction = authRoutes.indexOf('db.transaction(async tx', registerRoute);
+  const personalTenant = authRoutes.indexOf('ensurePersonalTenantWithDatabase(tx, createdUser)', registerTransaction);
+  const registrationGrant = authRoutes.indexOf('ensureFreeAccountAppsWithDatabase(tx, tenant.id, createdUser.id)', personalTenant);
+  assert.ok(registerRoute >= 0 && registerTransaction > registerRoute, 'registration must provision inside one transaction');
+  assert.ok(personalTenant > registerTransaction && registrationGrant > personalTenant, 'registration must commit identity, tenant, owner, and free grants together');
+  assert.doesNotMatch(authRoutes.slice(registerRoute, authRoutes.indexOf("app.post('/v1/auth/login'")), /provisioning hiccup|catch \(err\)/);
 
   const createRoute = platformRoutes.indexOf("app.post('/v1/platform/tenants'");
   const transaction = platformRoutes.indexOf('db.transaction(async (tx)', createRoute);

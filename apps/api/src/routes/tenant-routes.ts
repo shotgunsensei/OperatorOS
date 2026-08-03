@@ -19,8 +19,54 @@ import { tenants, tenantUsers, users } from '../schema.js';
 import { authenticate } from '../lib/auth.js';
 import { requireSuperAdmin, requireTenantMember } from '../lib/tenant-auth.js';
 import { hasPlatformAdminAuthority } from '../lib/rbac.js';
+import { checkRateLimit } from '../lib/rate-limiter.js';
+import {
+  ensureFreeAccountAppsWithDatabase,
+  ensurePersonalTenantWithDatabase,
+} from '../lib/saas-db-init.js';
+import { writeAudit } from '../lib/audit.js';
+
+const PERSONAL_TENANT_REPAIR_LIMIT = 5;
+const PERSONAL_TENANT_REPAIR_WINDOW_MS = 15 * 60 * 1000;
 
 export async function registerTenantRoutes(app: FastifyInstance) {
+  // Idempotent recovery for an account created before transactional personal-
+  // tenant provisioning existed. The client supplies no tenant identifier:
+  // the server derives the collision-safe personal slug from the session user.
+  app.post('/v1/me/tenant/ensure', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+    const key = `personal-tenant:${user.id}:${request.ip ?? 'unknown'}`;
+    if (!checkRateLimit(key, PERSONAL_TENANT_REPAIR_LIMIT, PERSONAL_TENANT_REPAIR_WINDOW_MS)) {
+      return reply.code(429).send({ error: 'Too many organization setup attempts. Please try again later.', code: 'RATE_LIMITED' });
+    }
+
+    const result = await db.transaction(async tx => {
+      const ensured = await ensurePersonalTenantWithDatabase(tx, user);
+      await ensureFreeAccountAppsWithDatabase(tx, ensured.tenant.id, user.id);
+      await writeAudit({
+        actorUserId: user.id,
+        tenantId: ensured.tenant.id,
+        targetType: 'tenant',
+        targetId: ensured.tenant.id,
+        action: ensured.created ? 'personal_tenant_created' : 'personal_tenant_reconciled',
+        after: { type: 'personal', freeAccountAppsEnsured: true },
+        ipAddress: request.ip,
+      }, request, tx);
+      return ensured;
+    });
+
+    return reply.code(result.created ? 201 : 200).send({
+      ok: true,
+      created: result.created,
+      tenant: {
+        id: result.tenant.id,
+        slug: result.tenant.slug,
+        name: result.tenant.name,
+        type: result.tenant.type,
+      },
+    });
+  });
+
   // ──────────────────────────────────────────────────────────────────────
   // Platform: list every tenant (super_admin only).
   // ──────────────────────────────────────────────────────────────────────

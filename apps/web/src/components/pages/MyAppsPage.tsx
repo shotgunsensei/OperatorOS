@@ -30,7 +30,7 @@ import {
   space,
 } from '@/lib/design-tokens';
 import { isSuperAdmin, isTenantAdmin as hasTenantAdminRole } from '@/lib/rbac';
-import { modulesApi } from '@/lib/auth';
+import { modulesApi, tenantApi } from '@/lib/auth';
 import {
   COMMAND_CENTER_MODULES,
   type OperatorOSModuleRegistryEntry,
@@ -326,6 +326,7 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
   const [launchErrors, setLaunchErrors] = useState<Record<string, string>>({});
   const [recentSlugs, setRecentSlugs] = useState<string[]>([]);
   const [switchingTenant, setSwitchingTenant] = useState(false);
+  const [repairingTenant, setRepairingTenant] = useState(false);
 
   const userIsPlatformAdmin = isSuperAdmin((user as any)?.platformRole);
   const userIsTenantAdmin = hasTenantAdminRole(activeRole, (user as any)?.platformRole);
@@ -391,13 +392,28 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
   ];
   const activationComplete = activationSteps.filter((step) => step.complete).length;
   const nextActivationAction = !activeTenant?.id
-    ? { label: 'Get organization setup help', href: 'https://operatoros.net/john' }
+    ? { label: 'Finish organization setup', setup: true as const }
     : activeCards.length === 0
       ? { label: 'Compare plans and tools', page: 'billing' }
       : recentCards.length === 0
         ? { label: 'Choose your first tool', page: 'apps' }
         : { label: 'Browse more tools', page: 'apps' };
   const showSetup = activationComplete < activationSteps.length;
+
+  const repairOrganization = async () => {
+    setRepairingTenant(true);
+    try {
+      const response = await tenantApi.ensurePersonal();
+      const tenantId = response?.tenant?.id;
+      if (!tenantId) throw new Error('Organization setup did not return an organization.');
+      toast(response.created ? 'Your organization is ready.' : 'Your organization access was restored.', 'success');
+      await switchTenant(tenantId);
+    } catch {
+      toast('Organization setup could not be completed. Nothing changed. Retry in a moment or open Help and support.', 'error');
+    } finally {
+      setRepairingTenant(false);
+    }
+  };
 
   const launch = async (card: LaunchpadModule) => {
     if (!activeTenant?.id && card.registry.requiresTenant) {
@@ -581,20 +597,23 @@ export default function MyAppsPage({ onNavigate }: MyAppsPageProps) {
             ))}
           </div>
         </div>
-        {'href' in nextActivationAction ? (
-          <a
-            data-testid="link-workspace-setup-help"
-            href={nextActivationAction.href}
+        {'setup' in nextActivationAction ? (
+          <button
+            type="button"
+            data-testid="button-finish-organization-setup"
+            disabled={repairingTenant}
+            onClick={() => void repairOrganization()}
             style={{
               ...buttonStyles.primary,
               minHeight: 40,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               background: 'linear-gradient(135deg, #58a6ff, #bc8cff)',
-              whiteSpace: 'nowrap', textDecoration: 'none',
+              whiteSpace: 'nowrap',
             }}
           >
-            {nextActivationAction.label} <ArrowRight size={14} />
-          </a>
+            {repairingTenant ? <Loader2 size={14} className="spin" /> : <ArrowRight size={14} />}
+            {repairingTenant ? 'Finishing setup…' : nextActivationAction.label}
+          </button>
         ) : (
           <button
             data-testid="button-ecosystem-next-action"

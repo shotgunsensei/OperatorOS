@@ -16,7 +16,10 @@ import {
   sessionNeedsRefresh,
 } from '../lib/auth.js';
 import { checkRateLimit } from '../lib/rate-limiter.js';
-import { ensurePersonalTenant, ensureFreeAccountApps } from '../lib/saas-db-init.js';
+import {
+  ensureFreeAccountAppsWithDatabase,
+  ensurePersonalTenantWithDatabase,
+} from '../lib/saas-db-init.js';
 import {
   getSessionClearCookieOptions,
   getSessionCookieOptions,
@@ -87,27 +90,28 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     const passwordHash = await hashPassword(password);
-    const [user] = await db.insert(users).values({
-      email: normalizedEmail,
-      passwordHash,
-      name: name.trim(),
-      role: 'user',
-      status: 'active',
-    }).returning();
+    const user = await db.transaction(async tx => {
+      const [createdUser] = await tx.insert(users).values({
+        email: normalizedEmail,
+        passwordHash,
+        name: name.trim(),
+        role: 'user',
+        status: 'active',
+      }).onConflictDoNothing({ target: users.email }).returning();
+
+      // A concurrent request may have won the unique-email race. Preserve
+      // the non-enumerating response without mutating that existing account.
+      if (!createdUser) return null;
+
+      const { tenant } = await ensurePersonalTenantWithDatabase(tx, createdUser);
+      await ensureFreeAccountAppsWithDatabase(tx, tenant.id, createdUser.id);
+      return createdUser;
+    });
+
+    if (!user) return reply.code(202).send({ ok: true });
 
     await logUserActivity(user.id, 'registered', 'user', user.id);
     await logAudit(user.id, 'user_registered', user.id, { email: normalizedEmail });
-
-    // Task #139: provision the new free account's personal tenant and grant
-    // the three free-with-any-account apps immediately. Wrapped in try/catch so
-    // a provisioning hiccup never blocks account creation — the boot-time
-    // backfill (`backfillPersonalTenants`) heals any gap on the next restart.
-    try {
-      const { tenant } = await ensurePersonalTenant(user);
-      await ensureFreeAccountApps(tenant.id, user.id);
-    } catch (err) {
-      request.log?.error({ err, userId: user.id }, 'failed to provision personal tenant + free apps on register');
-    }
 
     return reply.code(202).send({ ok: true });
   });

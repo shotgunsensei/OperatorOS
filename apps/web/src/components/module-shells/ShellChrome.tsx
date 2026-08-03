@@ -3,23 +3,17 @@
 /**
  * Task #66 — shared chrome for module shells.
  *
- * Three pieces every module shell now renders so the launch experience
- * is honest:
+ * Shared module-shell status and canonical launch controls.
  *
  *   • <ShellLiveBadge />     — green "Live" pill next to the title.
- *   • <ShellMvpNotice />     — explicit "MVP module shell — deeper AI
- *                              workflows not yet implemented" banner so
- *                              users aren't tricked into thinking the
- *                              shell renders the full product.
  *   • <ShellLaunchButton />  — primary CTA that becomes a disabled
- *                              "Coming soon" pill when the module's
- *                              external base URL is unset (replaces the
- *                              previous href="#" sham link).
+ *                              unavailable state when the module's
+ *                              canonical base URL is absent.
  */
 
 import React from 'react';
 import { ArrowRight, Clock } from 'lucide-react';
-import { semantic, space, fontSize, radius } from '@/lib/design-tokens';
+import { semantic, fontSize, radius } from '@/lib/design-tokens';
 
 export function ShellLiveBadge() {
   return (
@@ -39,26 +33,6 @@ export function ShellLiveBadge() {
   );
 }
 
-export function ShellMvpNotice() {
-  return (
-    <div
-      data-testid="text-shell-mvp-notice"
-      role="note"
-      style={{
-        marginBottom: space.lg,
-        padding: '10px 14px',
-        borderRadius: radius.sm,
-        background: 'rgba(210,153,34,0.08)',
-        border: '1px solid rgba(210,153,34,0.35)',
-        color: '#d29922',
-        fontSize: fontSize.body,
-      }}
-    >
-      MVP module shell — deeper AI workflows not yet implemented.
-    </div>
-  );
-}
-
 export function ShellLaunchButton({
   baseUrl,
   testId,
@@ -72,7 +46,7 @@ export function ShellLaunchButton({
   if (!live) {
     return (
       <span
-        data-testid={`${testId}-coming-soon`}
+        data-testid={`${testId}-unavailable`}
         aria-disabled="true"
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -84,7 +58,7 @@ export function ShellLaunchButton({
           cursor: 'not-allowed',
         }}
       >
-        <Clock size={14} /> Coming soon
+        <Clock size={14} /> Launch unavailable
       </span>
     );
   }

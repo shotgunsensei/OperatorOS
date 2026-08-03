@@ -1795,11 +1795,12 @@ export async function backfillFreeAccountAppsForAllTenants(): Promise<void> {
  * Personal-tenant slug convention: `personal-<userId>`. Race-safe: parallel
  * callers converge on the same globally-unique slug/tenant row.
  */
-export async function ensurePersonalTenant(
+export async function ensurePersonalTenantWithDatabase(
+  database: FreeAccountDatabase,
   user: { id: string; email: string; currentTenantId: string | null },
 ): Promise<{ tenant: typeof tenants.$inferSelect; created: boolean }> {
   const slug = `personal-${user.id}`;
-  const insertedTenant = await db.insert(tenants).values({
+  const insertedTenant = await database.insert(tenants).values({
     name: `${user.email} Personal`,
     slug,
     type: 'personal',
@@ -1808,11 +1809,11 @@ export async function ensurePersonalTenant(
   let tenant = insertedTenant[0];
   const created = !!tenant;
   if (!tenant) {
-    [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
+    [tenant] = await database.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
   }
 
   // Owner membership — race-safe via composite UNIQUE(tenant_id, user_id).
-  await db.insert(tenantUsers).values({
+  await database.insert(tenantUsers).values({
     tenantId: tenant.id,
     userId: user.id,
     role: 'owner',
@@ -1820,12 +1821,18 @@ export async function ensurePersonalTenant(
 
   // Set current_tenant_id only if unset; never stomp an explicit choice.
   if (!user.currentTenantId) {
-    await db.update(users)
+    await database.update(users)
       .set({ currentTenantId: tenant.id, updatedAt: new Date() })
       .where(eq(users.id, user.id));
   }
 
   return { tenant, created };
+}
+
+export async function ensurePersonalTenant(
+  user: { id: string; email: string; currentTenantId: string | null },
+): Promise<{ tenant: typeof tenants.$inferSelect; created: boolean }> {
+  return ensurePersonalTenantWithDatabase(db, user);
 }
 
 /**

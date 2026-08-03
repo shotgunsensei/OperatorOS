@@ -1415,7 +1415,12 @@ app.post<{ Body: { workspaceId: string; planId: string } }>(
   { preHandler: [authenticate] },
   async (req, reply) => {
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return reply.status(501).send({ error: 'OPENAI_API_KEY not configured' });
+    if (!apiKey) {
+      return reply.status(503).send({
+        error: 'AI explanation is unavailable until the shared provider is configured.',
+        code: 'AI_PROVIDER_DISABLED',
+      });
+    }
 
     const { workspaceId, planId } = req.body;
     if (!workspaceId) return reply.status(400).send({ error: 'workspaceId is required' });

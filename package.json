@@ -10,6 +10,7 @@
     "verify:tradeflowkit:phase16": "node scripts/tradeflowkit-phase16-ledger.mjs",
     "verify:pulsedesk:source": "node scripts/pulsedesk-source-ledger.mjs",
     "verify:techdeck:source": "node scripts/techdeck-source-ledger.mjs",
+    "verify:public-launch": "node scripts/public-launch-capability-matrix.mjs && node scripts/tradeflowkit-phase16-ledger.mjs && node scripts/techdeck-source-ledger.mjs && node scripts/pulsedesk-source-ledger.mjs",
     "db:plan": "tsx apps/api/src/scripts/database-release.ts --plan",
     "db:apply": "tsx apps/api/src/scripts/database-release.ts --apply",
     "export:tradeflowkit:snapshot": "tsx apps/api/src/scripts/tradeflowkit-export.ts --read-only",
