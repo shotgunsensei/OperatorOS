@@ -1069,7 +1069,7 @@
       "requiredEntitlement": "techdeck",
       "billingBoundary": "OperatorOS plan entitlement; no child platform billing.",
       "privacyOrSafetyBoundary": "Tenant isolation, non-enumeration, safe runbook drafting, no unauthorized remote execution.",
-      "status": "FIX_NOW",
+      "status": "ACTIVE_AND_PROVEN",
       "testEvidence": [
         "apps/api/test/techdeck-state5-workflow.test.ts",
         "apps/api/test/techdeck-ops-workflows.test.ts",
@@ -1078,7 +1078,7 @@
       "browserEvidence": [
         "apps/web/e2e/operatoros-final-acceptance.spec.ts"
       ],
-      "remainingAction": "Restore the canonical Return to My Apps control required by apps/api/test/techdeck-import-static.test.ts, rerun the focused contract, then run a new clean-database API aggregate."
+      "remainingAction": "No source/local action."
     },
     {
       "capabilityId": "module-pulsedesk",
@@ -1201,7 +1201,7 @@
       "requiredEntitlement": "pulsedesk",
       "billingBoundary": "OperatorOS plan entitlement; no child billing.",
       "privacyOrSafetyBoundary": "PHI-minimized inputs, tenant isolation, auditable history, non-destructive retention.",
-      "status": "FIX_NOW",
+      "status": "ACTIVE_AND_PROVEN",
       "testEvidence": [
         "apps/api/test/pulsedesk-state5-workflow.test.ts",
         "apps/api/test/pulsedesk-service-desk-domain.test.ts",
@@ -1210,7 +1210,7 @@
       "browserEvidence": [
         "apps/web/e2e/operatoros-final-acceptance.spec.ts"
       ],
-      "remainingAction": "Restore the deliberate PulseDesk empty-organization state marker required by apps/api/test/pulsedesk-queue-ui-static.test.ts, rerun the focused contract, then run a new clean-database API aggregate."
+      "remainingAction": "No source/local action."
     },
     {
       "capabilityId": "module-torqueshed",
@@ -9353,13 +9353,6 @@
     {
       "type": "provider",
       "key": "NODE_ENV",
-      "source": "apps/api/src/lib/outcall-provider.ts",
-      "line": 40,
-      "ownerCapabilityId": "module-outcall"
-    },
-    {
-      "type": "provider",
-      "key": "NODE_ENV",
       "source": "apps/api/src/lib/outcall.ts",
       "line": 41,
       "ownerCapabilityId": "module-outcall"
@@ -11044,7 +11037,7 @@
     },
     {
       "source": "apps/api/src/lib/outcall-provider.ts",
-      "line": 106,
+      "line": 105,
       "term": "disabled",
       "classification": "reviewed-runtime-language",
       "status": "APPROVED_PRODUCT_BOUNDARY",

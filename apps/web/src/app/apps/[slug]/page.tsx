@@ -177,9 +177,9 @@ function InternalAppContent() {
         >
           <AlertTriangle size={18} color={semantic.accentDanger} />
           <div>
-            <div style={{ color: semantic.accentDanger, fontWeight: 600 }}>
+            <h1 style={{ color: semantic.accentDanger, fontWeight: 600, fontSize: fontSize.lg, margin: 0 }}>
               {err ? 'This tool could not be opened' : 'This tool is not available for this organization'}
-            </div>
+            </h1>
             <div style={{ color: semantic.textMuted, fontSize: fontSize.sm, marginTop: 4 }}>
               {err ?? 'Browse other tools or ask your organization administrator to add access. OperatorOS checks access again every time a tool opens.'}
             </div>

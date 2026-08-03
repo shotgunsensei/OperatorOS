@@ -37,7 +37,6 @@ function enabled(value: string | undefined): boolean {
 
 function testAdapterEnabled(): boolean {
   return process.env.APP_ENV === 'test'
-    && process.env.NODE_ENV === 'test'
     && process.env.OUTCALL_TEST_ADAPTER === 'enabled';
 }
 

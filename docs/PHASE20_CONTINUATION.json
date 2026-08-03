@@ -1,133 +1,74 @@
 {
   "schemaVersion": 1,
   "phase": 20,
-  "declaration": "SOURCE/LOCAL PUBLIC-LAUNCH FUNCTIONAL CLOSURE: HOLD",
-  "recordedAtUtc": "2026-08-03T04:38:46Z",
+  "declaration": "SOURCE/LOCAL PUBLIC-LAUNCH FUNCTIONAL CLOSURE: PASS",
+  "recordedAtUtc": "2026-08-03T14:20:00Z",
   "repository": "C:/Dev/OperatorOS",
-  "branch": "codex/phase20-public-launch-closure-final",
-  "baseCommit": "9ffad1e3e43abf20b700bf33de2ad6b265602af1",
+  "branch": "codex/phase20-public-launch-closure-final2",
+  "baseCommit": "a146be3b2d00ff1dfe3c365f4d8a9f6ae2f40b57",
   "productionTouched": false,
-  "disposableDatabase": {
+  "databaseRelease": {
+    "version": 33,
+    "steps": 33,
     "container": "operatoros-phase20-db",
-    "releaseDatabase": "operatoros_phase20",
-    "aggregateDatabases": [
-      "operatoros_phase20_api",
-      "operatoros_phase20_api2",
-      "operatoros_phase20_api3",
-      "operatoros_phase20_api4"
-    ],
+    "aggregateDatabase": "operatoros_phase20_api5",
+    "restoredDatabase": "operatoros_phase20_restore3",
     "host": "127.0.0.1",
-    "port": 55432
+    "port": 55432,
+    "tableCount": 239,
+    "invalidForeignKeys": 0,
+    "backupTocEntries": 2109,
+    "backupSha256": "511feaeea698f2573f4a980089d69e37e3c4688a21e7a7492495a3dc19918d3d"
   },
-  "completedEvidence": [
-    {
-      "command": "corepack pnpm verify:public-launch",
-      "result": "PASS before final blocker classification; 13 modules, 30 capabilities, 827 API declarations, 23 UI routes, 133 database objects, 141 provider variables, 16 billing products, 1162 placeholder occurrences, zero unclassified"
-    },
-    {
-      "command": "corepack pnpm typecheck",
-      "result": "PASS for API, runner-gateway, and web"
-    },
-    {
-      "command": "corepack pnpm db:apply (twice) against operatoros_phase20",
-      "result": "PASS; release v33 clean apply and idempotent reapply"
-    },
-    {
-      "command": "tsx --test --test-concurrency=1 apps/api/test/tenant-routes.test.ts apps/api/test/auth-security.test.ts",
-      "result": "PASS 12/12"
-    },
-    {
-      "command": "tsx --test apps/api/test/tradeflowkit-import-static.test.ts",
-      "result": "PASS 5/5 after restoring canonical return and empty-state contracts"
-    },
-    {
-      "command": "node_modules/.bin/tsx.cmd --test apps/api/test/torqueshed-foundation-static.test.ts apps/api/test/torque-assist-static.test.ts",
-      "result": "PASS 7/7 after restoring explicit VIN protection and ledger-computed balance language"
-    }
+  "capabilityCounts": {
+    "ACTIVE_AND_PROVEN": 20,
+    "SHARED_OPERATOROS_REPLACEMENT": 0,
+    "APPROVED_SECURITY_RETIREMENT": 0,
+    "APPROVED_PRODUCT_BOUNDARY": 0,
+    "HUMAN_PHASE18": 10,
+    "FIX_NOW": 0,
+    "UNCLASSIFIED": 0
+  },
+  "sourceLedgerCounts": {
+    "TradeFlowKit": { "active": 145, "shared": 58, "security": 43, "productBoundary": 31, "gaps": 0, "unclassified": 0 },
+    "TechDeck": { "active": 91, "shared": 109, "security": 48, "productBoundary": 134, "gaps": 0, "unclassified": 0 },
+    "PulseDesk": { "active": 91, "shared": 74, "security": 53, "productBoundary": 91, "gaps": 0, "unclassified": 0 }
+  },
+  "finalEvidence": [
+    { "command": "corepack pnpm verify:public-launch", "result": "PASS; 13 modules, 30 capabilities, 140 provider variables, 20 ACTIVE_AND_PROVEN, 10 HUMAN_PHASE18, zero FIX_NOW/unclassified" },
+    { "command": "corepack pnpm --dir apps/api test", "result": "PASS; 930 total, 924 pass, 0 fail, 6 intentional HTTP-only skips on operatoros_phase20_api5" },
+    { "command": "corepack pnpm typecheck", "result": "PASS; API, runner-gateway, web" },
+    { "command": "corepack pnpm build:production", "result": "PASS; build 312564d8a52867e6caba7eab" },
+    { "command": "node scripts/start-unified-runtime.mjs", "result": "PASS; health healthy, readiness true, web 200, release v33/33, clean shutdown" },
+    { "command": "corepack pnpm --dir apps/web test:e2e:sso", "result": "PASS 14/14 in 3.2 minutes against compiled exact-host HTTPS topology" },
+    { "command": "playwright test e2e/tradeflowkit-core-crud.spec.ts", "result": "PASS 1/1 in 35.2 seconds" },
+    { "command": "corepack pnpm audit --prod", "result": "PASS; no known vulnerabilities" },
+    { "command": "phase14 load baseline", "result": "PASS 600/600, zero failures, every p95 below 750 ms" },
+    { "command": "git diff --check", "result": "PASS" }
   ],
-  "rejectedOrFailedRuns": [
-    {
-      "kind": "invalid_intermediate",
-      "command": "corepack pnpm --dir apps/api test",
-      "database": "operatoros_phase20",
-      "reason": "Release-seeded canonical module rows collided with test-owned canonical fixtures; this database was not an empty aggregate database."
-    },
-    {
-      "kind": "correction_round_1",
-      "command": "corepack pnpm --dir apps/api test",
-      "database": "operatoros_phase20_api",
-      "result": "FAIL",
-      "blocker": "TradeFlowKit canonical return and empty-state static contract"
-    },
-    {
-      "kind": "correction_round_2",
-      "command": "corepack pnpm --dir apps/api test",
-      "database": "operatoros_phase20_api2",
-      "result": "FAIL",
-      "blocker": "TorqueShed VIN privacy assurance static contract"
-    },
-    {
-      "kind": "invalid_continuation_harness",
-      "command": "corepack pnpm --dir apps/api test",
-      "database": "operatoros_phase20_api3",
-      "result": "INVALID",
-      "reason": "The first continuation invocation used an incorrect host password and reached no application assertions. The disposable database was reassigned to a dedicated test role before the valid run."
-    },
-    {
-      "kind": "continuation_correction_round_1",
-      "command": "corepack pnpm --dir apps/api test",
-      "database": "operatoros_phase20_api3",
-      "result": "FAIL",
-      "blocker": "Torque Assist UI omitted the required Ledger-computed balance label; the combined TorqueShed focused contracts now pass 7/7."
-    },
-    {
-      "kind": "continuation_correction_round_2",
-      "command": "corepack pnpm --dir apps/api test",
-      "database": "operatoros_phase20_api4",
-      "result": "FAIL",
-      "blocker": "PulseDesk empty-organization state marker and TechDeck canonical Return to My Apps control remain absent; focused confirmation passes 9 and fails 2."
-    }
+  "browserEvidence": {
+    "activeModuleWorkflows": 13,
+    "ssoAggregate": "14/14",
+    "tradeflowkitVertical": "1/1",
+    "distinctScreenshots": 28,
+    "representativeWidths": [390, 768, 1440],
+    "artifactRoots": [
+      "apps/web/test-results/playwright",
+      "apps/web/test-results/phase20-tradeflowkit"
+    ]
+  },
+  "invalidOrCorrectedIntermediateRuns": [
+    "Release-seeded database aggregate was rejected as an invalid harness because canonical fixtures collided.",
+    "A wrong disposable database password was rejected before application assertions.",
+    "Valid correction aggregates exposed and drove TradeFlowKit, TorqueShed, TechDeck, and PulseDesk fixes.",
+    "The first expanded screenshot aggregate was 13/14 and exposed the entitlement-denial semantic-heading defect; the corrected full rerun passed 14/14.",
+    "The first exact-revision aggregate on the reused disposable database passed 923 and failed one seed-order-dependent launchpad assertion when a canonical free companion was correctly present; the strengthened focused test passed 1/1 and the final aggregate passed 924/0/6."
   ],
-  "currentBlockers": [
-    {
-      "blockerId": "PHASE20-TECHDECK-RETURN-NAVIGATION",
-      "capabilityId": "module-techdeck",
-      "status": "FIX_NOW",
-      "failingTest": "apps/api/test/techdeck-import-static.test.ts:260",
-      "expectedEvidence": "TechDeckShell.tsx exposes a techdeck-return-command-center control that routes to canonical My Apps",
-      "currentEvidence": [
-        "TechDeck has an external standalone-launch control",
-        "TechDeck has a no-tenant state",
-        "The required canonical Return to My Apps control is absent"
-      ],
-      "nextAction": "Replace the circular standalone-launch action with a canonical Return to My Apps control without weakening tenant or entitlement gates.",
-      "focusedRerun": "node_modules/.bin/tsx.cmd --test apps/api/test/techdeck-import-static.test.ts"
-    },
-    {
-      "blockerId": "PHASE20-PULSEDESK-EMPTY-ORGANIZATION-STATE",
-      "capabilityId": "module-pulsedesk",
-      "status": "FIX_NOW",
-      "failingTest": "apps/api/test/pulsedesk-queue-ui-static.test.ts:21",
-      "expectedEvidence": "PulseDeskShell.tsx exposes a deliberate pulsedesk-empty-state when organization context is absent",
-      "currentEvidence": [
-        "PulseDesk has a loading state",
-        "PulseDesk has a no-tenant state under the older marker",
-        "The required deliberate empty-state marker is absent"
-      ],
-      "nextAction": "Restore the deliberate empty-organization state marker while preserving PHI-minimized language and server-derived tenant context.",
-      "focusedRerun": "node_modules/.bin/tsx.cmd --test apps/api/test/pulsedesk-queue-ui-static.test.ts"
-    }
-  ],
-  "aggregateRerun": "After both focused contracts pass, create a new empty disposable database owned by the dedicated test role and run corepack pnpm --dir apps/api test serially.",
-  "gatesNotRunBecauseApiAggregateIsRed": [
-    "frozen install and dependency audit final run",
-    "database backup, readable TOC, checksum, restore, and restored reconciliation",
-    "production build and compiled supervisor",
-    "health and readiness identity verification",
-    "thirteen independent local Chromium vertical workflows",
-    "route/control sweep and screenshots",
-    "browser accessibility acceptance",
-    "load and reliability final run"
-  ],
-  "humanPhase18Status": "Not reached. Source/local work remains and must not be moved into the human handoff."
+  "currentBlockers": [],
+  "humanPhase18": {
+    "status": "READY_FOR_OWNER_OPERATED_GATES",
+    "guide": "docs/PHASE18_HUMAN_COMPLETION_GUIDE.md",
+    "remainingSteps": 10,
+    "scope": "Candidate freeze, account decisions, production secrets, preflight, backup, deploy, public identity and 48/48, authenticated 3/3, controlled provider acceptance, and final promotion/rollback decision."
+  }
 }

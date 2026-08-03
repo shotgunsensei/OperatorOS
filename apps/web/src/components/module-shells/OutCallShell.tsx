@@ -238,7 +238,7 @@ export default function OutCallShell() {
         </section>
       </div>
 
-      <section style={{ ...cardStyle, marginTop: space.lg }}>
+      <section id="outcall-privacy" tabIndex={-1} style={{ ...cardStyle, marginTop: space.lg }}>
         <h2 style={{ marginTop: 0, fontSize: 18 }}>Your privacy</h2>
         <p style={{ color: semantic.textMuted }}>Download a private copy of your OutCall data or remove it from this workspace. Your password is required for either action.</p>
         <label>Password<input type="password" autoComplete="current-password" style={{ ...input, maxWidth: 420 }} value={privacyPassword} onChange={event => setPrivacyPassword(event.target.value)} /></label>

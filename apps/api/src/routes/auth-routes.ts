@@ -67,7 +67,7 @@ function validateName(name: string): string | null {
 
 export async function registerAuthRoutes(app: FastifyInstance) {
   app.post('/v1/auth/register', async (request, reply) => {
-    if (!enforcePlatformPublicAuthHost(request, reply)) return;
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const ip = getIp(request);
     if (!checkRateLimit(`register:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
       return reply.code(429).send({ error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' });
@@ -117,7 +117,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   app.post('/v1/auth/login', async (request, reply) => {
-    if (!enforcePlatformPublicAuthHost(request, reply)) return;
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const ip = getIp(request);
     if (!checkRateLimit(`login:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
       return reply.code(429).send({ error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' });
@@ -291,7 +291,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.post('/api/auth/refresh', { preHandler: [authenticate] }, refreshHandler);
 
   app.post('/v1/auth/forgot-password', async (request, reply) => {
-    if (!enforcePlatformPublicAuthHost(request, reply)) return;
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const ip = getIp(request);
     if (!checkRateLimit(`forgot:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
       return reply.code(429).send({ error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' });
@@ -321,7 +321,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   app.post('/v1/auth/reset-password', async (request, reply) => {
-    if (!enforcePlatformPublicAuthHost(request, reply)) return;
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const { token, newPassword } = request.body as any;
     if (!token || typeof token !== 'string') {
       return reply.code(400).send({ error: 'Reset token is required', code: 'VALIDATION_ERROR' });
@@ -351,7 +351,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   app.put('/v1/auth/profile', { preHandler: [authenticate] }, async (request, reply) => {
-    if (!enforcePlatformPublicAuthHost(request, reply)) return;
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const user = (request as any).user;
     const { name, avatarUrl } = request.body as any;
     const updates: any = { updatedAt: new Date() };
@@ -369,7 +369,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   app.put('/v1/auth/change-password', { preHandler: [authenticate] }, async (request, reply) => {
-    if (!enforcePlatformPublicAuthHost(request, reply)) return;
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     setAuthResponseHeaders(reply);
     const user = (request as any).user;
     const { currentPassword, newPassword } = request.body as any;
@@ -413,7 +413,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   app.put('/v1/auth/change-email', { preHandler: [authenticate] }, async (request, reply) => {
-    if (!enforcePlatformPublicAuthHost(request, reply)) return;
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     setAuthResponseHeaders(reply);
     const user = (request as any).user;
     const { newEmail, password } = request.body as any;
@@ -462,7 +462,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   app.post('/v1/auth/request-deletion', { preHandler: [authenticate] }, async (request, reply) => {
-    if (!enforcePlatformPublicAuthHost(request, reply)) return;
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const user = (request as any).user;
     const { password } = request.body as any;
 

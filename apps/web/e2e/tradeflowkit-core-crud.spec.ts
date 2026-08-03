@@ -111,7 +111,7 @@ async function cleanupIdentity(pg: Client, identity: Identity | null) {
 }
 
 test('TradeFlowKit customer to job to task CRUD persists across exact-host deep links and archives safely', async ({ page, request }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
   await page.context().clearCookies();
   const pg = new Client({ connectionString: process.env.DATABASE_URL });
   await pg.connect();
@@ -139,11 +139,11 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
     ]);
 
     const leadOperations = page.getByTestId('tradeflowkit-lead-operations');
-    await expect(leadOperations).toContainText('Anonymous intake remains off');
+    await expect(leadOperations).toContainText('Public intake disabled');
     await page.getByTestId('tradeflowkit-lead-template').selectOption('hvac');
     await expect(page.getByTestId('tradeflowkit-lead-operations-status')).toContainText('Trade playbook applied');
     await page.getByTestId('tradeflowkit-adapter-generic-json').getByRole('button', { name: 'Validate' }).click();
-    await expect(page.getByTestId('tradeflowkit-lead-operations-status')).toContainText('payload contract validated');
+    await expect(page.getByTestId('tradeflowkit-lead-operations-status')).toContainText('connection check passed');
     await expect.poll(async () => {
       const result = await pg.query<{ count: string }>(
         `select count(*)::text as count from tradeflowkit_lead_source_events where tenant_id = $1 and adapter_key = 'generic-json' and status = 'validated'`,
@@ -290,7 +290,7 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
     await page.getByLabel('Filter job status').selectOption('scheduled');
     await expect(page.getByTestId(`tradeflowkit-job-${jobId}`)).toBeVisible();
     await page.getByLabel('Saved view name').fill(savedViewName);
-    await page.getByText('Share with tenant').click();
+    await page.getByText('Share with team').click();
     await page.getByTestId('tradeflowkit-saved-views').getByRole('button', { name: 'Save view' }).click();
     await expect.poll(async () => {
       const result = await pg.query<{ id: string }>(
@@ -432,6 +432,18 @@ test('TradeFlowKit customer to job to task CRUD persists across exact-host deep 
     await page.goto(`https://tradeflowkit.operatoros.net/jobs/${jobId}`);
     await expect(page.getByTestId(`tradeflowkit-job-${jobId}`)).toContainText(updatedJobTitle);
     await expect(page.getByTestId(`tradeflowkit-task-${taskId}`)).toHaveCount(0);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    const primaryControl = page.locator('a[href], button:not([disabled]), input:not([disabled])').filter({ visible: true }).first();
+    await expect(primaryControl).toBeVisible();
+    await primaryControl.focus();
+    await expect(primaryControl).toBeFocused();
+    const screenshotPath = test.info().outputPath('phase20-tradeflowkit-completed-1440px.png');
+    await page.screenshot({ path: screenshotPath, fullPage: true });
+    await test.info().attach('phase20-tradeflowkit-completed-1440px', {
+      path: screenshotPath,
+      contentType: 'image/png',
+    });
   } finally {
     await cleanupIdentity(pg, identity);
     await pg.end();

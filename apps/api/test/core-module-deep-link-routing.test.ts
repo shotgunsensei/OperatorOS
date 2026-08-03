@@ -88,6 +88,14 @@ test('core module deep links resolve only to live native shell sections', () => 
   assert.equal(resolveCoreModuleDeepLink('ninjamation', ['scripts'])?.sectionId, 'ninjamation-scripts');
   assert.equal(resolveCoreModuleDeepLink('ninjamation', ['scripts', 'script-123'])?.sectionId, 'ninjamation-editor');
   assert.equal(resolveCoreModuleDeepLink('ninjamation', ['execute']), null);
+  for (const path of ['dashboard', 'readiness']) assert.equal(resolveCoreModuleDeepLink('outcall', [path])?.sectionId, 'outcall-readiness');
+  assert.equal(resolveCoreModuleDeepLink('outcall', ['setup'])?.sectionId, 'outcall-setup');
+  assert.equal(resolveCoreModuleDeepLink('outcall', ['profiles'])?.sectionId, 'outcall-profiles');
+  assert.equal(resolveCoreModuleDeepLink('outcall', ['triggers'])?.sectionId, 'outcall-triggers');
+  assert.equal(resolveCoreModuleDeepLink('outcall', ['calls'])?.sectionId, 'outcall-schedule');
+  assert.equal(resolveCoreModuleDeepLink('outcall', ['calls', 'call-123'])?.sectionId, 'outcall-schedule');
+  assert.equal(resolveCoreModuleDeepLink('outcall', ['privacy'])?.sectionId, 'outcall-privacy');
+  assert.equal(resolveCoreModuleDeepLink('outcall', ['unknown']), null);
 });
 
 test('pending, nested, malformed, and non-core module paths fail closed', () => {
@@ -140,6 +148,7 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
   const pulseDeskShell = readRepoFile('apps/web/src/components/module-shells/PulseDeskShell.tsx');
   const faultlineLabWorkspace = readRepoFile('apps/web/src/components/module-shells/FaultlineLabWorkspace.tsx');
   const ninjamationShell = readRepoFile('apps/web/src/components/module-shells/NinjamationShell.tsx');
+  const outCallShell = readRepoFile('apps/web/src/components/module-shells/OutCallShell.tsx');
 
   assert.match(catchAllPage, /resolveCoreModuleDeepLink/);
   assert.match(catchAllPage, /initialSectionId=\{target\.sectionId\}/);
@@ -189,6 +198,12 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
     [ninjamationShell, 'ninjamation-review'],
     [ninjamationShell, 'ninjamation-generations'],
     [ninjamationShell, 'ninjamation-downloads'],
+    [outCallShell, 'outcall-readiness'],
+    [outCallShell, 'outcall-setup'],
+    [outCallShell, 'outcall-profiles'],
+    [outCallShell, 'outcall-triggers'],
+    [outCallShell, 'outcall-schedule'],
+    [outCallShell, 'outcall-privacy'],
   ] as const) {
     assert.ok(source.includes(`id="${targetId}"`), `missing focus target ${targetId}`);
   }

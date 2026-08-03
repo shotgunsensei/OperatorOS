@@ -141,6 +141,17 @@ test('global account mutations are unavailable on child module hosts', () => {
   }
 });
 
+test('rejected public auth hosts return the sent reply without a second response attempt', () => {
+  const source = readFileSync(resolve(repoRoot, 'apps/api/src/routes/auth-routes.ts'), 'utf8');
+  const guardedRoutes = source.match(/if \(!enforcePlatformPublicAuthHost\(request, reply\)\) return reply;/g) ?? [];
+  assert.equal(guardedRoutes.length, 8, 'every public auth host guard must return the already-sent reply');
+  assert.doesNotMatch(
+    source,
+    /if \(!enforcePlatformPublicAuthHost\(request, reply\)\) return;/,
+    'returning undefined after reply.send can make Fastify attempt a second response',
+  );
+});
+
 test('public auth routes reject child and unknown production hosts before validation or DB work', async () => {
   const previous = {
     appEnv: process.env.APP_ENV,

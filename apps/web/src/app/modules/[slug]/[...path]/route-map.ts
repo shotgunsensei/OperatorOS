@@ -175,6 +175,15 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/generations': { sectionId: 'ninjamation-generations', label: 'AI Draft Generator' },
     '/downloads': { sectionId: 'ninjamation-downloads', label: 'Download Audit' },
   },
+  outcall: {
+    '/dashboard': { sectionId: 'outcall-readiness', label: 'Readiness and Safety' },
+    '/readiness': { sectionId: 'outcall-readiness', label: 'Readiness and Safety' },
+    '/setup': { sectionId: 'outcall-setup', label: 'Verified Mobile' },
+    '/profiles': { sectionId: 'outcall-profiles', label: 'Rescue Profiles' },
+    '/triggers': { sectionId: 'outcall-triggers', label: 'Private SMS Triggers' },
+    '/calls': { sectionId: 'outcall-schedule', label: 'Scheduled Calls' },
+    '/privacy': { sectionId: 'outcall-privacy', label: 'Privacy Controls' },
+  },
 };
 
 const SAFE_PATH_SEGMENT = /^[a-z0-9-]+$/;
@@ -221,6 +230,9 @@ export function resolveCoreModuleDeepLink(
     const [resource] = pathSegments;
     if (resource === 'tickets' || resource === 'requests') return { sectionId: 'pulsedesk-operations', label: 'Ticket Record' };
     if (resource === 'clients') return { sectionId: 'pulsedesk-directory', label: 'Service Client Record' };
+  }
+  if (slug === 'outcall' && pathSegments.length === 2 && pathSegments[0] === 'calls') {
+    return { sectionId: 'outcall-schedule', label: 'Scheduled Call Record' };
   }
   if (
     slug === 'pulsedesk' &&

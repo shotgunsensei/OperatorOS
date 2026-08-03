@@ -10,6 +10,15 @@ const requestCount = boundedInteger('PHASE14_LOAD_REQUESTS', 100, 10, 2_000);
 const concurrency = boundedInteger('PHASE14_LOAD_CONCURRENCY', 10, 1, 50);
 const p95LimitMs = boundedInteger('PHASE14_LOAD_P95_LIMIT_MS', 750, 50, 30_000);
 const bootstrap = process.env.PHASE14_LOAD_BOOTSTRAP_TEST_USER === '1';
+const authHost = process.env.PHASE14_LOAD_AUTH_HOST?.trim() || 'auth.operatoros.net';
+if (!/^[a-z0-9.-]+$/i.test(authHost)) {
+  throw new Error('PHASE14_LOAD_AUTH_HOST must be a hostname without a scheme, port, or path');
+}
+const authHeaders = {
+  host: authHost,
+  'x-forwarded-host': authHost,
+  'x-forwarded-proto': 'https',
+};
 
 function boundedInteger(name, fallback, minimum, maximum) {
   const raw = process.env[name]?.trim();
@@ -48,6 +57,7 @@ async function sessionCookie() {
     password = `Phase14!${crypto.randomUUID()}Aa1`;
     const register = await request('/v1/auth/register', {
       method: 'POST',
+      headers: authHeaders,
       body: JSON.stringify({ email, password, name: 'Phase 14 Load User' }),
     });
     if (register.status !== 202) {
@@ -58,6 +68,7 @@ async function sessionCookie() {
 
   const login = await request('/v1/auth/login', {
     method: 'POST',
+    headers: authHeaders,
     body: JSON.stringify({ email, password }),
   });
   if (login.status !== 200) throw new Error(`Load-test login failed with HTTP ${login.status}`);
