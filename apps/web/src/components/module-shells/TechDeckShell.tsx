@@ -202,7 +202,7 @@ const shellCss = `
   }
 `;
 
-export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
+export default function TechDeckShell(_props: TechDeckShellProps) {
   const { user, loading: authLoading } = useAuth();
   const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
   const fallbackTenantId = user?.currentTenantId ?? getActiveTenantId();
@@ -239,7 +239,6 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
   const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
   const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
   const canWriteModule = platformAdmin || activeRole !== 'viewer';
-  const externalLaunchUrl = baseUrl && /^https?:\/\//i.test(baseUrl) ? baseUrl.replace(/\/+$/, '') : null;
 
   if (isLoading) {
     return (
@@ -292,11 +291,9 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
                   Platform settings
                 </HeaderLink>
               )}
-              {externalLaunchUrl && (
-                <HeaderLink href={externalLaunchUrl} testId="techdeck-external-launch-link" Icon={ExternalLink}>
-                  Open standalone app
-                </HeaderLink>
-              )}
+              <HeaderLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} testId="techdeck-return-command-center" Icon={ExternalLink}>
+                Return to My Apps
+              </HeaderLink>
             </div>
           </div>
 
@@ -310,7 +307,7 @@ export default function TechDeckShell({ baseUrl }: TechDeckShellProps) {
 
         {!hasTenantContext && (
           <StatePanel
-            testId="techdeck-no-tenant-state"
+            testId="techdeck-empty-state"
             tone={colors.red}
             Icon={AlertTriangle}
             title="Choose an organization"

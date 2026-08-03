@@ -1,9 +1,30 @@
 # OperatorOS ecosystem final E2E acceptance report
 
-Assessment date: 2026-08-02
+Assessment date: 2026-08-03
 Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
-Scope: Phase 18 OutCall source activation and ecosystem release gate
+Scope: Phase 20 source/local public-launch functional closure
 Verdict: **LOCALLY ACCEPTED — production release remains human-gated**
+
+## Current Phase 20 boundary — 2026-08-03
+
+All 13 active modules pass one meaningful persistent exact-host browser
+workflow. The final aggregate is 14/14 in 3.2 minutes plus the independent
+TradeFlowKit vertical 1/1 in 35.2 seconds. It proves one-login launch,
+host-only Secure sessions, entitlement denial, current deep links, refresh,
+canonical return, local/global logout, reauthentication, and the approved
+module workflows. The run retains 28 distinct screenshots covering catalog,
+denial, every module's first useful state, and every module's completed primary
+workflow at representative 390/768/1440 widths. Browser semantic/focus/overflow
+checks found one missing denial-state heading; the corrected full rerun is the
+reported 14/14 result.
+
+The final isolated PostgreSQL API aggregate passes 924/0/6 across 930 tests.
+Release v33/33 apply/reapply and 239-table backup/restore reconciliation,
+workspace typecheck, production build `312564d8a52867e6caba7eab`, compiled
+health/readiness/web checks, exact-host rejection resilience, load baseline,
+and clean shutdown pass. No production target or real provider was exercised;
+the owner-operated Phase 18 deployment, public 48/48, authenticated 3/3,
+provider, rollback, and promotion gates remain open.
 
 ## Current Phase 18 boundary — 2026-08-02
 

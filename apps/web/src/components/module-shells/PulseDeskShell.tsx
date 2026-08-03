@@ -110,7 +110,7 @@ const workflowShortcuts = [
 ];
 
 const readinessRows = [
-  ['Sign-in', 'Protected', colors.green],
+  ['Sign-in', 'One account', colors.green],
   ['Operational data', 'Organization-only', colors.blue],
   ['Patient charts', 'Not stored here', colors.amber],
   ['Team access', 'Based on role', colors.cyan],
@@ -291,7 +291,7 @@ const shellCss = `
   }
 `;
 
-export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
+export default function PulseDeskShell(_props: PulseDeskShellProps) {
   const { user, loading: authLoading } = useAuth();
   const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
   const fallbackTenantId = user?.currentTenantId ?? getActiveTenantId();
@@ -327,7 +327,6 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
           : 'Team member';
   const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
   const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
-  const externalLaunchUrl = baseUrl && /^https?:\/\//i.test(baseUrl) ? baseUrl.replace(/\/+$/, '') : null;
 
   if (isLoading) {
     return (
@@ -380,11 +379,9 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
                   Platform settings
                 </HeaderLink>
               )}
-              {externalLaunchUrl && (
-                <HeaderLink href={externalLaunchUrl} testId="pulsedesk-external-launch-link" Icon={ExternalLink}>
-                  Open standalone app
-                </HeaderLink>
-              )}
+              <HeaderLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} testId="pulsedesk-return-command-center" Icon={ExternalLink}>
+                Return to My Apps
+              </HeaderLink>
             </div>
           </div>
 
@@ -398,7 +395,7 @@ export default function PulseDeskShell({ baseUrl }: PulseDeskShellProps) {
 
         {!hasTenantContext && (
           <StatePanel
-            testId="pulsedesk-no-tenant-state"
+            testId="pulsedesk-empty-state"
             tone={colors.red}
             Icon={AlertTriangle}
             title="Choose an organization"

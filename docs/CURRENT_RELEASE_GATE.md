@@ -1,18 +1,29 @@
 # OperatorOS current release gate
 
-## Current source/local gate - Phase 20 HOLD (2026-08-03)
+## Current source/local gate - Phase 20 PASS (2026-08-03)
 
-Release v33 remains the current ordered database contract. Phase 20 has not
-reached owner-operated activation: the second valid continuation aggregate
-still fails the TechDeck canonical-return and PulseDesk empty-organization
-contracts, and the root capability matrix therefore contains two `FIX_NOW`
-items. Do not run the Phase 18 production steps,
-deploy, promote, or enable real providers/payments from this candidate. The
-exact continuation is `docs/PHASE20_CONTINUATION.json`.
+`SOURCE/LOCAL PUBLIC-LAUNCH FUNCTIONAL CLOSURE: PASS`. Release v33 remains the
+current ordered database contract. The executable matrix contains 20
+`ACTIVE_AND_PROVEN`, 10 `HUMAN_PHASE18`, zero `FIX_NOW`, and zero unclassified
+capabilities across all 13 active modules. The fresh PostgreSQL API aggregate
+passes 924/0/6 across 930 tests, the compiled exact-host browser aggregate
+passes 14/14 plus the independent TradeFlowKit vertical 1/1, and the final
+production artifact reports build `312564d8a52867e6caba7eab`, healthy API,
+ready=true, web 200, and release v33/33 before a clean shutdown.
+
+This working tree is source/local evidence, not a frozen deployable identity:
+the release metadata still identifies base commit
+`a146be3b2d00ff1dfe3c365f4d8a9f6ae2f40b57` because the corrections are
+uncommitted. No production environment or provider was touched. The owner may
+begin the Phase 18 guide only after freezing the exact merged commit; deployment,
+public 48/48, authenticated 3/3, controlled real-provider acceptance, rollback,
+and the final PROMOTE/HOLD/ROLLBACK decision remain human gates. Exact evidence
+is in `docs/PHASE20_PUBLIC_LAUNCH_FUNCTIONAL_CLOSURE.md` and
+`docs/PHASE20_CONTINUATION.json`.
 
 - Evidence date: 2026-08-03
-- Current reviewed base: `main` at `d96c698d01e14d5f9379837cd0a1f0bbea14f3e2`
-- Current source candidate: `codex/phase18-release-candidate-closure`; final deployment identity pending merge
+- Current reviewed base: `a146be3b2d00ff1dfe3c365f4d8a9f6ae2f40b57`
+- Current source candidate: `codex/phase20-public-launch-closure-final2`; final deployment identity pending commit/merge
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`
 - Phase 1 implementation commit: `50d3b616ed2af8f50c983d29e161baf3c943130f`
 - Phase 1 closure commit: `c3e55f7`
@@ -22,7 +33,7 @@ exact continuation is `docs/PHASE20_CONTINUATION.json`.
 - First deployment attempt: **FAILED BEFORE BUILD** — deployment
   `0a34bd3d-5706-434d-87ee-fffd3bf6e5cd`, build
   `c49eeb9c-5f0b-40b3-9f31-44813446124c`
-- Overall release decision: **CLOSED — human deployment/provider acceptance required before promotion**
+- Overall release decision: **SOURCE/LOCAL PASS — human Phase 18 deployment/provider acceptance required before promotion**
 
 ## Current Phase 18 OutCall and release v33 source gate
 
@@ -39,20 +50,21 @@ remain excluded.
 The ordered database contract is v33/33. Clean apply and idempotent reapply
 pass on disposable PostgreSQL 16. Focused release/registry/provider contracts
 pass 45/45, focused OutCall/provider/contracts pass 44/44, OutCall PostgreSQL
-workflows pass 5/5, and the fresh aggregate passes 914 with 0 failures and 6
-intentional HTTP-only skips across 920 tests. API/runner/web typechecks and the
-production build pass. The compiled readiness-gated supervisor reports healthy
-API and web surfaces, configured SSO/worker checks, and database release v33/33
-on merged-main identity `d96c698`, build `50b91a50eab34dcbef995bbe`.
+workflows pass 5/5, and the Phase 20 final aggregate passes 924 with 0 failures
+and 6 intentional HTTP-only skips across 930 tests. API/runner/web typechecks
+and the production build pass. The compiled readiness-gated supervisor reports
+healthy API, ready=true, web 200, configured SSO/worker checks, and database
+release v33/33 on base identity `a146be3`, build
+`312564d8a52867e6caba7eab`.
 
-The complete local canonical-host matrix now passes 12/12 in 1.9 minutes. It
+The complete local canonical-host matrix now passes 14/14 in 3.2 minutes. It
 proves one-login launch across all thirteen active modules, host-only Secure
 sessions, no URL/storage credential leakage, deep links, sibling/local/global
 logout, tenant denial for TechDeck and OutCall, and the major persistent module
-workflows. The separate compiled first-screen gate passes 2/2 in 7.4 seconds
-across CallCommand, Ninjamation, OutCall, StudyForge AI, and Ninja Launch Kit,
-including OutCall test verification/profile/trigger/schedule/masking and
-non-entitled denial.
+workflows. TradeFlowKit's independent customer/job/task archive/restore vertical
+passes 1/1 in 35.2 seconds. The gate retains 28 distinct screenshots across
+390/768/1440 widths for every module's first useful and completed workflow,
+plus catalog and entitlement denial.
 
 No deployed candidate, Replit secret, Twilio request, production database,
 public callback, or traffic was touched. The release remains closed pending the

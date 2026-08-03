@@ -1,6 +1,7 @@
 /**
  * Task #27 — End-to-end: a brand-new user can register, accept an invite,
- * log in, and see ONLY the modules granted to them on the launchpad.
+ * log in, and see only their explicit grant plus canonical free-account apps
+ * on the launchpad.
  *
  * This test stitches together the real HTTP surface (auth + tenant-admin +
  * module-routes) into a single Fastify instance and drives the journey
@@ -21,8 +22,9 @@
  *   6. New user switches to the invited tenant, matching the browser invite
  *      flow before it reloads My Apps.
  *   7. Owner POST .../users/:userId/module-access for grantedMod (level=user).
- *   8. New user GET /v1/me/modules with the cookie from step 4 → asserts
- *      exactly {grantedMod} appears (withheldMod absent, otherTenantMod absent).
+ *   8. New user GET /v1/me/modules with the cookie from step 4 → asserts the
+ *      explicit grant plus only canonical free companions appear
+ *      (withheldMod absent, otherTenantMod absent).
  */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -33,6 +35,7 @@ import {
   tenantModules, tenantUserModuleAccess,
 } from '../src/schema.js';
 import { signToken } from '../src/lib/auth.js';
+import { FREE_ACCOUNT_APP_SLUGS } from '../src/lib/free-account-apps.js';
 import {
   ensureSchemaReady, createTestUser, createTestModule,
   cleanupUser, cleanupModule, uniqueId,
@@ -126,7 +129,7 @@ const ownerBearer = () => ({
   authorization: `Bearer ${signToken({ userId: owner.id, email: owner.email, role: owner.role, sessionType: 'platform' })}`,
 });
 
-test('owner→invite→register→login→accept→launchpad shows only granted module', async () => {
+test('owner→invite→register→login→accept→launchpad shows the grant and only canonical free companions', async () => {
   inviteeEmail = `${uniqueId('e2e-invitee')}@test.local`;
 
   // 1. Owner creates an invite for the future member.
@@ -207,11 +210,17 @@ test('owner→invite→register→login→accept→launchpad shows only granted 
   assert.equal(launchRes.statusCode, 200, `launchpad: ${launchRes.body}`);
   const slugs: string[] = launchRes.json().modules.map((m: any) => m.slug);
 
-  // Strict "only their apps" contract: the launchpad must list EXACTLY the
-  // single granted module — no extra rows, no withheld sibling, no
-  // cross-tenant leak.
-  assert.deepEqual(slugs.slice().sort(), [grantedMod.slug],
-    `launchpad must contain exactly [${grantedMod.slug}]; got ${JSON.stringify(slugs)}`);
+  // Strict "only their apps" contract: the explicit grant must be present and
+  // any additional launcher must be one of the product-owned free companions.
+  // Which free rows exist is deliberately seed-order independent so this test
+  // proves the real persisted policy on both a fresh and a reused disposable
+  // database without weakening withheld/cross-tenant assertions.
+  assert.ok(slugs.includes(grantedMod.slug),
+    `launchpad must contain explicit grant ${grantedMod.slug}; got ${JSON.stringify(slugs)}`);
+  const allowed = new Set<string>([grantedMod.slug, ...FREE_ACCOUNT_APP_SLUGS]);
+  const unexpected = slugs.filter(slug => !allowed.has(slug));
+  assert.deepEqual(unexpected, [],
+    `launchpad contains unauthorized modules ${JSON.stringify(unexpected)}; got ${JSON.stringify(slugs)}`);
   assert.ok(!slugs.includes(withheldMod.slug),
     `withheld module ${withheldMod.slug} must NOT appear; got ${JSON.stringify(slugs)}`);
   assert.ok(!slugs.includes(otherTenantMod.slug),

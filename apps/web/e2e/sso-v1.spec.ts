@@ -336,6 +336,34 @@ async function assertNoBrowserCredentialStorage(page: Page) {
   }
 }
 
+async function capturePhase20Evidence(
+  page: Page,
+  label: string,
+  viewport: { width: number; height: number },
+) {
+  await page.setViewportSize(viewport);
+  await expect(page.locator('body')).toBeVisible();
+  await expect(page.locator('h1, h2').filter({ visible: true }).first()).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    `${label} must not overflow horizontally at ${viewport.width}px`,
+  ).toBe(true);
+
+  const primaryControl = page.locator('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])')
+    .filter({ visible: true })
+    .first();
+  await expect(primaryControl, `${label} must expose a keyboard-focusable primary control`).toBeVisible();
+  await primaryControl.focus();
+  await expect(primaryControl).toBeFocused();
+
+  const screenshotPath = test.info().outputPath(`phase20-${label}-${viewport.width}px.png`);
+  await page.screenshot({ path: screenshotPath, fullPage: true });
+  await test.info().attach(`phase20-${label}-${viewport.width}px`, {
+    path: screenshotPath,
+    contentType: 'image/png',
+  });
+}
+
 async function browserJson<T = Record<string, unknown>>(
   page: Page,
   path: string,
@@ -450,8 +478,14 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     await page.getByTestId('nav-my-apps').click();
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
+    await capturePhase20Evidence(page, 'platform-tool-catalog', { width: 1440, height: 1000 });
 
     let lastModulePage: Page | null = null;
+    const evidenceViewports = [
+      { width: 390, height: 844 },
+      { width: 768, height: 1024 },
+      { width: 1440, height: 1000 },
+    ] as const;
     for (const [index, module] of ENABLED_MODULES.entries()) {
       const collection = navigationCollector(context);
       const popupPromise = page.waitForEvent('popup');
@@ -485,6 +519,11 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       await expect(modulePage.getByTestId(module.shellTestId)).toBeVisible({ timeout: 20_000 });
       expect(new URL(modulePage.url()).hostname).toBe(module.host);
       assertNoCredentialQuery(modulePage.url());
+      await capturePhase20Evidence(
+        modulePage,
+        `${module.slug}-first-useful`,
+        evidenceViewports[index % evidenceViewports.length],
+      );
 
       if (index < ENABLED_MODULES.length - 1) {
         await modulePage.close();
@@ -644,6 +683,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const directory = sibling.getByTestId('pulsedesk-business-directory');
     await expect(directory).toBeVisible({ timeout: 30_000 });
     await expect(directory.locator('.directory-row[data-active="true"]').filter({ hasText: clientName })).toBeVisible();
+    await capturePhase20Evidence(sibling, 'pulsedesk-completed', { width: 1440, height: 1000 });
 
     await page.goto('https://techdeck.operatoros.net/logout');
     await expect(page).toHaveURL(/^https:\/\/operatoros\.net\/signed-out\?signed_out=local$/);
@@ -836,6 +876,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.goto('https://techdeck.operatoros.net/m/time');
     await expect(page.locator('#techdeck-time')).toBeVisible({ timeout: 30_000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await capturePhase20Evidence(page, 'techdeck-completed', { width: 390, height: 844 });
 
     await page.getByTestId('techdeck-return-command-center').click();
     await expect(page).toHaveURL(/^https:\/\/app\.operatoros\.net\//, { timeout: 30_000 });
@@ -879,7 +920,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await assertNoBrowserCredentialStorage(page);
     assertNoCredentialQuery(page.url());
 
-    await page.getByRole('button', { name: 'Garage', exact: true }).click();
+    await page.getByRole('button', { name: 'Vehicles', exact: true }).click();
     const vehicleForm = page.getByTestId('torqueshed-garage').locator('form').first();
     await vehicleForm.getByLabel('Year').fill('2018');
     await vehicleForm.getByLabel('Nickname').fill(vehicleName);
@@ -1099,6 +1140,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.reload();
     await expect(page.getByTestId('torqueshed-community')).toBeVisible({ timeout: 30_000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await capturePhase20Evidence(page, 'torqueshed-completed', { width: 390, height: 844 });
 
     const logoutAll = await browserJson(page, '/api/auth/logout-all', 'POST', {});
     expect(logoutAll.status, JSON.stringify(logoutAll.body)).toBe(200);
@@ -1118,7 +1160,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     await Promise.all([
       page.waitForURL(/^https:\/\/app\.operatoros\.net\//, { timeout: 30_000 }),
-      page.getByTestId('link-back-to-apps').click(),
+      page.getByRole('link', { name: 'My Apps' }).first().click(),
     ]);
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
     const popupPromise = page.waitForEvent('popup');
@@ -1197,6 +1239,9 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(denied.outcall.body.launchUrl).toBeUndefined();
     expect(denied.outcall.body.code).not.toMatch(/TOKEN|CREDENTIAL/);
 
+    await page.goto('https://app.operatoros.net/app/apps/techdeck');
+    await expect(page.getByTestId('app-shell-not-accessible')).toBeVisible({ timeout: 30_000 });
+    await capturePhase20Evidence(page, 'entitlement-denial', { width: 768, height: 1024 });
     assertNoCredentialQuery(page.url());
     await assertNoBrowserCredentialStorage(page);
   });
@@ -1283,6 +1328,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.reload();
     await expect(modulePage.getByTestId('faultlinelab-server-score').locator('h2')).toHaveText(scoreValue);
     await expect(modulePage.getByTestId('faultlinelab-server-score').locator('strong')).toHaveText(scoreSummary);
+    await capturePhase20Evidence(modulePage, 'faultlinelab-completed', { width: 768, height: 1024 });
     await assertHostOnlySession(modulePage.context(), 'faultlinelab.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
@@ -1432,6 +1478,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.getByRole('heading', { name: campaignName })).toBeVisible();
     await modulePage.reload();
     await expect(modulePage.getByRole('heading', { name: campaignName })).toBeVisible();
+    await capturePhase20Evidence(modulePage, 'brandforgeos-completed', { width: 1440, height: 1000 });
     await assertHostOnlySession(modulePage.context(), 'brandforgeos.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
@@ -1623,6 +1670,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.reload();
     await expect(modulePage).toHaveURL(deckUrl);
     await expect(modulePage.getByRole('heading', { name: deckTitle })).toBeVisible();
+    await capturePhase20Evidence(modulePage, 'studyforge-ai-completed', { width: 768, height: 1024 });
     await assertHostOnlySession(modulePage.context(), 'studyforge-ai.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
@@ -1759,6 +1807,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     ]);
     await expect(modulePage.getByText(launchTitle, { exact: true }).first()).toBeVisible();
     await expect(modulePage.getByTestId('text-launchkit-readiness')).toHaveText('100%');
+    await capturePhase20Evidence(modulePage, 'ninja-launch-kit-completed', { width: 1440, height: 1000 });
     await assertHostOnlySession(modulePage.context(), 'ninjalaunchkit.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
@@ -1862,6 +1911,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     );
     await modulePage.setViewportSize({ width: 390, height: 844 });
     await expect(modulePage.locator('#callcommand-calls')).toBeVisible();
+    await capturePhase20Evidence(modulePage, 'callcommand-ai-completed', { width: 390, height: 844 });
     await assertHostOnlySession(modulePage.context(), 'callcommand-ai.operatoros.net');
 
     await Promise.all([
@@ -1998,9 +2048,12 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.getByRole('button', { name: 'Submit case for review' }).click();
     await modulePage.getByRole('button', { name: 'Review', exact: true }).click();
     await modulePage.getByRole('button', { name: 'Approve case' }).click();
+    await expect(modulePage.getByRole('button', { name: 'Approve case' })).toBeHidden({ timeout: 30_000 });
 
     await modulePage.getByRole('button', { name: 'Reports', exact: true }).click();
-    await modulePage.getByLabel('Report title').fill(reportTitle);
+    const reportTitleInput = modulePage.getByLabel('Report title');
+    await reportTitleInput.fill(reportTitle);
+    await expect(reportTitleInput).toHaveValue(reportTitle);
     await modulePage.getByRole('button', { name: 'Create report snapshot' }).click();
     const reportCard = modulePage.locator('article').filter({ has: modulePage.getByRole('heading', { name: reportTitle }) });
     await expect(reportCard).toBeVisible();
@@ -2052,6 +2105,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.getByText('approved', { exact: true }).last()).toBeVisible();
     await modulePage.reload();
     await expect(modulePage.getByRole('heading', { name: caseTitle })).toBeVisible();
+    await capturePhase20Evidence(modulePage, 'snapproofos-completed', { width: 768, height: 1024 });
     await assertHostOnlySession(modulePage.context(), 'snapproofos.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
@@ -2149,8 +2203,153 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       modulePage.getByTestId('button-login').click(),
     ]);
     await expect(modulePage.getByLabel('Display name')).toHaveValue('Phase 10B Table Ninja');
+    await capturePhase20Evidence(modulePage, 'ninja-pool-hall-completed', { width: 390, height: 844 });
     await assertHostOnlySession(modulePage.context(), 'ninja-pool-hall.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
+  });
+
+  test('Ninjamation persists reviewed automation, audits the approved download, and survives deep-link reauthentication', async ({ page, request }) => {
+    test.setTimeout(180_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+    const suffix = Date.now().toString(36);
+    const scriptName = `E2E inventory check ${suffix}`;
+
+    await page.goto(`${ROOT}/app`);
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await page.getByTestId('nav-my-apps').click();
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByTestId('button-launch-ninjamation').click();
+    const modulePage = await popupPromise;
+    await expect(modulePage.getByTestId('shell-ninjamation')).toBeVisible({ timeout: 30_000 });
+    await expect(modulePage.getByTestId('notice-ninjamation-no-execution')).toContainText('never executes these scripts');
+
+    await modulePage.getByTestId('button-ninjamation-new').click();
+    await modulePage.getByTestId('input-ninjamation-name').fill(scriptName);
+    await modulePage.getByTestId('select-ninjamation-language').selectOption('powershell');
+    await modulePage.getByTestId('select-ninjamation-risk').selectOption('low');
+    await modulePage.getByTestId('textarea-ninjamation-content').fill('Get-Process | Select-Object -First 5');
+    await modulePage.getByTestId('button-ninjamation-save').click();
+    await expect(modulePage.getByTestId('text-ninjamation-notice')).toContainText('Draft created.');
+
+    const script = await pg.query<{ id: string; status: string }>(
+      `select id, status from ninjamation_scripts where tenant_id = $1 and name = $2 and deleted_at is null`,
+      [identity.tenantId, scriptName],
+    );
+    expect(script.rows).toHaveLength(1);
+    const scriptId = script.rows[0].id;
+    await modulePage.getByTestId('button-ninjamation-submit-review').click();
+    await expect(modulePage.getByTestId('text-ninjamation-notice')).toContainText('Submitted for tenant-admin review.');
+    await modulePage.getByTestId('button-ninjamation-approve').click();
+    await expect(modulePage.getByTestId('text-ninjamation-notice')).toContainText('Approved current version');
+    const downloadPromise = modulePage.waitForEvent('download');
+    await modulePage.getByTestId('button-ninjamation-download').click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/\.ps1$/);
+    await expect.poll(async () => {
+      const result = await pg!.query<{ count: string }>(
+        `select count(*)::text as count from ninjamation_downloads where tenant_id = $1 and script_id = $2`,
+        [identity.tenantId, scriptId],
+      );
+      return Number(result.rows[0]?.count ?? 0);
+    }).toBe(1);
+
+    const deepUrl = `https://ninjamation.operatoros.net/scripts/${scriptId}`;
+    await modulePage.goto(deepUrl);
+    await modulePage.reload();
+    await expect(modulePage.getByTestId(`button-ninjamation-script-${scriptId}`)).toContainText(scriptName, { timeout: 30_000 });
+    await capturePhase20Evidence(modulePage, 'ninjamation-completed', { width: 768, height: 1024 });
+    await Promise.all([
+      modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      modulePage.getByRole('link', { name: 'My Apps' }).first().click(),
+    ]);
+    const logoutAll = await browserJson(modulePage, '/api/auth/logout-all', 'POST', {});
+    expect(logoutAll.status, JSON.stringify(logoutAll.body)).toBe(200);
+    await modulePage.goto(deepUrl);
+    await expect(modulePage).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await modulePage.getByTestId('input-email').fill(identity.email);
+    await modulePage.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      modulePage.waitForURL(deepUrl, { timeout: 30_000 }),
+      modulePage.getByTestId('button-login').click(),
+    ]);
+    await expect(modulePage.getByTestId(`button-ninjamation-script-${scriptId}`)).toContainText(scriptName, { timeout: 30_000 });
+    await assertHostOnlySession(modulePage.context(), 'ninjamation.operatoros.net');
+    await assertNoBrowserCredentialStorage(modulePage);
+    assertNoCredentialQuery(modulePage.url());
+  });
+
+  test('OutCall persists verified safety setup, a private trigger, and a durable test call across deep-link reauthentication', async ({ page, request }) => {
+    test.setTimeout(180_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+    const suffix = Date.now().toString(36);
+    const profileName = `E2E trusted exit ${suffix}`;
+
+    await page.goto('https://outcall.operatoros.net/setup');
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL('https://outcall.operatoros.net/setup', { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await expect(page.getByTestId('shell-outcall')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('Calls ready', { exact: true }).first()).toBeVisible();
+    await page.getByTestId('button-outcall-accept-safety').click();
+    await expect(page.getByText('Safety acknowledgement saved.', { exact: true })).toBeVisible();
+    await page.getByTestId('input-outcall-phone').fill('+15551234567');
+    await page.getByTestId('button-outcall-verify-phone').click();
+    await expect(page.getByText('Phone ownership verified.', { exact: true })).toBeVisible();
+    await page.getByTestId('input-outcall-profile-name').fill(profileName);
+    await page.getByTestId('input-outcall-profile-message').fill('Please call me with a neutral reminder that my scheduled appointment is ready.');
+    await page.getByTestId('button-outcall-create-profile').click();
+    await expect(page.getByText('Rescue profile created.', { exact: true })).toBeVisible();
+    await page.getByTestId('input-outcall-trigger').fill(`private-${suffix}`);
+    await page.getByTestId('button-outcall-create-trigger').click();
+    await expect(page.getByText('Private trigger created.', { exact: true })).toBeVisible();
+    await page.getByTestId('button-outcall-schedule').click();
+    await expect(page.getByText('Durable call request scheduled.', { exact: true })).toBeVisible();
+
+    const call = await pg.query<{ id: string; status: string; destination_masked: string }>(
+      `select id, status, destination_masked from outcall_call_requests
+       where tenant_id = $1 and user_id = $2 order by created_at desc limit 1`,
+      [identity.tenantId, identity.userId],
+    );
+    expect(call.rows).toHaveLength(1);
+    expect(call.rows[0].destination_masked).not.toContain('5551234567');
+    const deepUrl = `https://outcall.operatoros.net/calls/${call.rows[0].id}`;
+    await page.goto(deepUrl);
+    await page.reload();
+    await expect(page.getByTestId('shell-outcall')).toContainText(profileName, { timeout: 30_000 });
+    await capturePhase20Evidence(page, 'outcall-completed', { width: 1440, height: 1000 });
+    await expect(page.getByTestId('shell-outcall')).toContainText(call.rows[0].destination_masked);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByRole('link', { name: 'My Apps' }).first().click(),
+    ]);
+    const logoutAll = await browserJson(page, '/api/auth/logout-all', 'POST', {});
+    expect(logoutAll.status, JSON.stringify(logoutAll.body)).toBe(200);
+    await page.goto(deepUrl);
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(deepUrl, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+    await expect(page.getByTestId('shell-outcall')).toContainText(profileName, { timeout: 30_000 });
+    await assertHostOnlySession(page.context(), 'outcall.operatoros.net');
+    await assertNoBrowserCredentialStorage(page);
+    assertNoCredentialQuery(page.url());
   });
 });
