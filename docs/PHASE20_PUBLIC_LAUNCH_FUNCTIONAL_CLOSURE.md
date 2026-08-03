@@ -9,21 +9,22 @@ Replit deployment, provider account, or real payment path was touched.
 
 ## Executive result
 
-The phase established an executable root capability matrix and corrected four
-functional defects, but the second clean-database full API correction round
-still fails one TorqueShed customer-privacy UI contract. Per the bounded
-acceptance loop, later gates were not run and no completion claim is allowed.
+The phase established an executable root capability matrix and corrected the
+initial platform, TradeFlowKit, and TorqueShed defects. The resumed bounded
+acceptance loop then exposed two additional customer-shell contracts in
+TechDeck and PulseDesk. The second valid continuation aggregate remains red,
+so later gates were not run and no completion claim is allowed.
 
 Root capability counts at HOLD:
 
 | Status | Count |
 | --- | ---: |
-| ACTIVE_AND_PROVEN | 19 |
+| ACTIVE_AND_PROVEN | 18 |
 | SHARED_OPERATOROS_REPLACEMENT | 241 source-ledger entries |
 | APPROVED_SECURITY_RETIREMENT | 144 source-ledger entries |
 | APPROVED_PRODUCT_BOUNDARY | 256 source-ledger entries plus 221 placeholder-audit classifications |
 | HUMAN_PHASE18 | 10 |
-| FIX_NOW | 1 |
+| FIX_NOW | 2 |
 | UNCLASSIFIED | 0 |
 
 The mature source-ledger counts above are TradeFlowKit, TechDeck, and PulseDesk
@@ -46,12 +47,16 @@ aggregates. Their executable verifiers remain green with zero restoration gaps.
 - Module-shell truth: the unused MVP/not-implemented banner was removed and a
   missing canonical launch URL now reads Launch unavailable instead of
   advertising an active module as coming soon.
+- TorqueShed privacy and billing truth: the garage now states that VINs are
+  protected and shown only as a masked suffix, and Torque Assist labels its
+  displayed credits as a ledger-computed balance. The combined focused
+  contracts pass 7/7.
 
 ## Executable inventory
 
 `corepack pnpm verify:public-launch` verifies the root matrix, the active
 catalog, exact source artifacts, placeholder classifications, and all three
-mature source ledgers. Before recording the final TorqueShed blocker it proved:
+mature source ledgers. The refreshed inventory proves:
 
 - 13 active catalog modules;
 - 30 platform/module/human capabilities;
@@ -64,8 +69,8 @@ mature source ledgers. Before recording the final TorqueShed blocker it proved:
 - 1,162 exact placeholder/dead-control occurrences;
 - zero unclassified occurrences.
 
-The matrix now deliberately reports one `FIX_NOW`, so the verification command
-fails until the TorqueShed blocker is corrected.
+The matrix deliberately reports two `FIX_NOW` items, so the verification
+command fails until the TechDeck and PulseDesk shell contracts are corrected.
 
 ## Commerce boundaries
 
@@ -91,6 +96,8 @@ Final passing runs:
 - focused customer/free-account/TradeFlowKit static tests - 18/18 pass in the
   final focused rerun.
 - focused TradeFlowKit source contract after correction - 5/5 pass.
+- combined TorqueShed foundation and Torque Assist static contracts after
+  correction - 7/7 pass.
 - three module source-ledger verifiers - zero gaps/unclassified.
 - `git diff --check` - pass at the final HOLD checkpoint.
 
@@ -101,9 +108,13 @@ Rejected or failing evidence:
   test-owned fixtures.
 - Clean aggregate round 1 failed the TradeFlowKit return/empty-state contract;
   the product was corrected and the focused test is green.
-- Clean aggregate round 2 failed
-  `apps/api/test/torqueshed-foundation-static.test.ts` because the UI omits the
-  explicit VIN masking/privacy assurance. This is the current blocker.
+- Clean aggregate round 2 failed the TorqueShed VIN privacy contract. The
+  resumed first valid aggregate exposed the adjacent Torque Assist balance
+  label contract; both are now green in the 7/7 focused run.
+- The second valid continuation aggregate on fresh
+  `operatoros_phase20_api4` remains red. Focused confirmation passes 9 and
+  fails 2: PulseDesk lacks `pulsedesk-empty-state`, and TechDeck lacks
+  `techdeck-return-command-center`. These are the current blockers.
 
 Not run because the authoritative API aggregate remains red:
 
