@@ -1,16 +1,17 @@
 # OperatorOS module parity index
 
-## Phase 20 closure overlay - HOLD (2026-08-02)
+## Phase 20 closure overlay - HOLD (2026-08-03)
 
 All 13 canonical catalog modules are inventoried in
 `PUBLIC_LAUNCH_CAPABILITY_MATRIX.json`. TradeFlowKit, TechDeck, and PulseDesk
-source ledgers still report zero gaps. TorqueShed is the sole current
-`FIX_NOW`: its persisted API masks VINs correctly, but its workspace omits the
-explicit customer-visible masking/privacy assurance required by the active
-static contract. Until that focused contract and a fresh complete API
-aggregate pass, no module-wide source/local public-launch closure is claimed.
+source ledgers still report zero restoration gaps. TorqueShed's VIN privacy and
+ledger-balance contracts now pass 7/7. TechDeck and PulseDesk are the current
+`FIX_NOW` items because their shells omit the canonical return control and
+deliberate empty-organization marker required by their active contracts. Until
+both focused contracts and a fresh complete API aggregate pass, no module-wide
+source/local public-launch closure is claimed.
 
-- Assessment date: 2026-08-02
+- Assessment date: 2026-08-03
 - Phase 5 base commit: `9ba9d09`
 
 Rule: the state is the highest fully satisfied consolidation state, not the

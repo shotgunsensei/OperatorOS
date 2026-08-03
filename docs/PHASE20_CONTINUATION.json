@@ -2,17 +2,19 @@
   "schemaVersion": 1,
   "phase": 20,
   "declaration": "SOURCE/LOCAL PUBLIC-LAUNCH FUNCTIONAL CLOSURE: HOLD",
-  "recordedAtUtc": "2026-08-03T01:22:08Z",
+  "recordedAtUtc": "2026-08-03T04:38:46Z",
   "repository": "C:/Dev/OperatorOS",
-  "branch": "codex/phase20-public-launch-functional-closure",
-  "baseCommit": "9807890fec20b25eec5f6803603868439dfa40c5",
+  "branch": "codex/phase20-public-launch-closure-final",
+  "baseCommit": "9ffad1e3e43abf20b700bf33de2ad6b265602af1",
   "productionTouched": false,
   "disposableDatabase": {
     "container": "operatoros-phase20-db",
     "releaseDatabase": "operatoros_phase20",
     "aggregateDatabases": [
       "operatoros_phase20_api",
-      "operatoros_phase20_api2"
+      "operatoros_phase20_api2",
+      "operatoros_phase20_api3",
+      "operatoros_phase20_api4"
     ],
     "host": "127.0.0.1",
     "port": 55432
@@ -37,6 +39,10 @@
     {
       "command": "tsx --test apps/api/test/tradeflowkit-import-static.test.ts",
       "result": "PASS 5/5 after restoring canonical return and empty-state contracts"
+    },
+    {
+      "command": "node_modules/.bin/tsx.cmd --test apps/api/test/torqueshed-foundation-static.test.ts apps/api/test/torque-assist-static.test.ts",
+      "result": "PASS 7/7 after restoring explicit VIN protection and ledger-computed balance language"
     }
   ],
   "rejectedOrFailedRuns": [
@@ -59,25 +65,60 @@
       "database": "operatoros_phase20_api2",
       "result": "FAIL",
       "blocker": "TorqueShed VIN privacy assurance static contract"
+    },
+    {
+      "kind": "invalid_continuation_harness",
+      "command": "corepack pnpm --dir apps/api test",
+      "database": "operatoros_phase20_api3",
+      "result": "INVALID",
+      "reason": "The first continuation invocation used an incorrect host password and reached no application assertions. The disposable database was reassigned to a dedicated test role before the valid run."
+    },
+    {
+      "kind": "continuation_correction_round_1",
+      "command": "corepack pnpm --dir apps/api test",
+      "database": "operatoros_phase20_api3",
+      "result": "FAIL",
+      "blocker": "Torque Assist UI omitted the required Ledger-computed balance label; the combined TorqueShed focused contracts now pass 7/7."
+    },
+    {
+      "kind": "continuation_correction_round_2",
+      "command": "corepack pnpm --dir apps/api test",
+      "database": "operatoros_phase20_api4",
+      "result": "FAIL",
+      "blocker": "PulseDesk empty-organization state marker and TechDeck canonical Return to My Apps control remain absent; focused confirmation passes 9 and fails 2."
     }
   ],
   "currentBlockers": [
     {
-      "blockerId": "PHASE20-TORQUESHED-VIN-PRIVACY-UI",
-      "capabilityId": "module-torqueshed",
+      "blockerId": "PHASE20-TECHDECK-RETURN-NAVIGATION",
+      "capabilityId": "module-techdeck",
       "status": "FIX_NOW",
-      "failingTest": "apps/api/test/torqueshed-foundation-static.test.ts:82",
-      "expectedEvidence": "TorqueShedWorkspace.tsx contains customer-visible language: VINs are protected and shown only as a masked suffix",
+      "failingTest": "apps/api/test/techdeck-import-static.test.ts:260",
+      "expectedEvidence": "TechDeckShell.tsx exposes a techdeck-return-command-center control that routes to canonical My Apps",
       "currentEvidence": [
-        "API stores VIN SHA-256 plus last-six only and projects vinMasked",
-        "PARITY_MATRIX.md documents fingerprint plus masked suffix only",
-        "UI says VIN masked after save but omits the required explicit privacy assurance"
+        "TechDeck has an external standalone-launch control",
+        "TechDeck has a no-tenant state",
+        "The required canonical Return to My Apps control is absent"
       ],
-      "nextAction": "Add the exact customer-visible privacy assurance near the VIN input or garage privacy notice without exposing plaintext VINs.",
-      "focusedRerun": "node_modules/.bin/tsx.cmd --test apps/api/test/torqueshed-foundation-static.test.ts",
-      "aggregateRerun": "Create a new empty disposable database, set DATABASE_URL/APP_ENV=test/NODE_ENV=test and test-only signing secrets, then run corepack pnpm --dir apps/api test serially."
+      "nextAction": "Replace the circular standalone-launch action with a canonical Return to My Apps control without weakening tenant or entitlement gates.",
+      "focusedRerun": "node_modules/.bin/tsx.cmd --test apps/api/test/techdeck-import-static.test.ts"
+    },
+    {
+      "blockerId": "PHASE20-PULSEDESK-EMPTY-ORGANIZATION-STATE",
+      "capabilityId": "module-pulsedesk",
+      "status": "FIX_NOW",
+      "failingTest": "apps/api/test/pulsedesk-queue-ui-static.test.ts:21",
+      "expectedEvidence": "PulseDeskShell.tsx exposes a deliberate pulsedesk-empty-state when organization context is absent",
+      "currentEvidence": [
+        "PulseDesk has a loading state",
+        "PulseDesk has a no-tenant state under the older marker",
+        "The required deliberate empty-state marker is absent"
+      ],
+      "nextAction": "Restore the deliberate empty-organization state marker while preserving PHI-minimized language and server-derived tenant context.",
+      "focusedRerun": "node_modules/.bin/tsx.cmd --test apps/api/test/pulsedesk-queue-ui-static.test.ts"
     }
   ],
+  "aggregateRerun": "After both focused contracts pass, create a new empty disposable database owned by the dedicated test role and run corepack pnpm --dir apps/api test serially.",
   "gatesNotRunBecauseApiAggregateIsRed": [
     "frozen install and dependency audit final run",
     "database backup, readable TOC, checksum, restore, and restored reconciliation",

@@ -470,7 +470,8 @@ export default function TorqueShedWorkspace() {
       >
         <ShieldCheck size={18} color="#f59e0b" />
         <span>
-          Private by default: shared build pages never show VINs, maintenance costs, files, or private diagnostic notes.
+          Private by default: VINs are protected and shown only as a masked suffix. Shared build pages never show
+          maintenance costs, files, or private diagnostic notes.
         </span>
       </div>
 
@@ -1548,7 +1549,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
             <Coins size={17} /> {(ledger?.balance ?? status?.balance ?? 0).toLocaleString()} units
           </strong>
           <span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-            Credits available
+            Ledger-computed balance · Credits available
           </span>
         </div>
       </div>

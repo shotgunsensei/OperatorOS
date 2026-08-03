@@ -1,15 +1,16 @@
 # OperatorOS current release gate
 
-## Current source/local gate - Phase 20 HOLD (2026-08-02)
+## Current source/local gate - Phase 20 HOLD (2026-08-03)
 
 Release v33 remains the current ordered database contract. Phase 20 has not
-reached owner-operated activation: the full clean-database API aggregate still
-fails the TorqueShed VIN privacy UI contract, and the root capability matrix
-therefore contains one `FIX_NOW`. Do not run the Phase 18 production steps,
+reached owner-operated activation: the second valid continuation aggregate
+still fails the TechDeck canonical-return and PulseDesk empty-organization
+contracts, and the root capability matrix therefore contains two `FIX_NOW`
+items. Do not run the Phase 18 production steps,
 deploy, promote, or enable real providers/payments from this candidate. The
 exact continuation is `docs/PHASE20_CONTINUATION.json`.
 
-- Evidence date: 2026-08-02
+- Evidence date: 2026-08-03
 - Current reviewed base: `main` at `d96c698d01e14d5f9379837cd0a1f0bbea14f3e2`
 - Current source candidate: `codex/phase18-release-candidate-closure`; final deployment identity pending merge
 - Phase 0 base: `a4598f6ae3dcc16896a48b05962f9a0002071363`

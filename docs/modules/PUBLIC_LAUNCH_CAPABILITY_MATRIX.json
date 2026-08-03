@@ -804,7 +804,7 @@
       "browserEvidence": [
         "apps/web/e2e/operatoros-final-acceptance.spec.ts"
       ],
-      "remainingAction": "No source/local action."
+      "remainingAction": "Restore the canonical Return to My Apps control required by apps/api/test/techdeck-import-static.test.ts, rerun the focused contract, then run a new clean-database API aggregate."
     },
     {
       "capabilityId": "module-tradeflowkit",
@@ -1069,7 +1069,7 @@
       "requiredEntitlement": "techdeck",
       "billingBoundary": "OperatorOS plan entitlement; no child platform billing.",
       "privacyOrSafetyBoundary": "Tenant isolation, non-enumeration, safe runbook drafting, no unauthorized remote execution.",
-      "status": "ACTIVE_AND_PROVEN",
+      "status": "FIX_NOW",
       "testEvidence": [
         "apps/api/test/techdeck-state5-workflow.test.ts",
         "apps/api/test/techdeck-ops-workflows.test.ts",
@@ -1078,7 +1078,7 @@
       "browserEvidence": [
         "apps/web/e2e/operatoros-final-acceptance.spec.ts"
       ],
-      "remainingAction": "No source/local action."
+      "remainingAction": "Restore the canonical Return to My Apps control required by apps/api/test/techdeck-import-static.test.ts, rerun the focused contract, then run a new clean-database API aggregate."
     },
     {
       "capabilityId": "module-pulsedesk",
@@ -1201,7 +1201,7 @@
       "requiredEntitlement": "pulsedesk",
       "billingBoundary": "OperatorOS plan entitlement; no child billing.",
       "privacyOrSafetyBoundary": "PHI-minimized inputs, tenant isolation, auditable history, non-destructive retention.",
-      "status": "ACTIVE_AND_PROVEN",
+      "status": "FIX_NOW",
       "testEvidence": [
         "apps/api/test/pulsedesk-state5-workflow.test.ts",
         "apps/api/test/pulsedesk-service-desk-domain.test.ts",
@@ -1210,7 +1210,7 @@
       "browserEvidence": [
         "apps/web/e2e/operatoros-final-acceptance.spec.ts"
       ],
-      "remainingAction": "No source/local action."
+      "remainingAction": "Restore the deliberate PulseDesk empty-organization state marker required by apps/api/test/pulsedesk-queue-ui-static.test.ts, rerun the focused contract, then run a new clean-database API aggregate."
     },
     {
       "capabilityId": "module-torqueshed",
@@ -1344,16 +1344,18 @@
       "requiredEntitlement": "torqueshed; purchased credits for Torque Assist consumption",
       "billingBoundary": "Credit purchase is a separate OperatorOS-owned purchase type with signed webhook crediting.",
       "privacyOrSafetyBoundary": "No guaranteed diagnosis, safe mechanical guidance, tenant/user credit ownership, replay-safe financial effects.",
-      "status": "FIX_NOW",
+      "status": "ACTIVE_AND_PROVEN",
       "testEvidence": [
         "apps/api/test/torqueshed-foundation-workflow.test.ts",
         "apps/api/test/torqueshed-social-workflow.test.ts",
-        "apps/api/test/torque-assist-workflow.test.ts"
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-static.test.ts",
+        "apps/api/test/torque-assist-static.test.ts"
       ],
       "browserEvidence": [
         "apps/web/e2e/operatoros-final-acceptance.spec.ts"
       ],
-      "remainingAction": "Restore the customer-visible VIN masking/privacy assurance required by apps/api/test/torqueshed-foundation-static.test.ts, rerun that focused contract, then rerun the full clean-database API aggregate before any browser or release claim."
+      "remainingAction": "No remaining TorqueShed source action; include it in the next clean aggregate and later browser acceptance."
     },
     {
       "capabilityId": "module-faultlinelab",
@@ -16178,7 +16180,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 662,
+      "line": 663,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -16186,7 +16188,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 675,
+      "line": 676,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -16194,7 +16196,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 815,
+      "line": 816,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -16202,7 +16204,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 863,
+      "line": 864,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -16210,7 +16212,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 974,
+      "line": 975,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -16218,7 +16220,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 1029,
+      "line": 1030,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -16226,19 +16228,11 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 1240,
+      "line": 1241,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
       "rationale": "Permission, validation, busy-state, or provider fail-closed guard."
-    },
-    {
-      "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 1276,
-      "term": "placeholder",
-      "classification": "input-guidance",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Form hint text; the control has a real handler or mutation."
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
@@ -16258,7 +16252,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 1331,
+      "line": 1279,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -16274,7 +16268,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 1334,
+      "line": 1333,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -16290,7 +16284,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 1338,
+      "line": 1336,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -16306,7 +16300,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 1341,
+      "line": 1340,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -16314,11 +16308,11 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 1456,
-      "term": "disabled",
-      "classification": "fail-closed-or-busy-guard",
+      "line": 1342,
+      "term": "placeholder",
+      "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Permission, validation, busy-state, or provider fail-closed guard."
+      "rationale": "Form hint text; the control has a real handler or mutation."
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
@@ -16330,7 +16324,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 1622,
+      "line": 1458,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -16338,7 +16332,15 @@
     },
     {
       "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
-      "line": 1721,
+      "line": 1623,
+      "term": "disabled",
+      "classification": "fail-closed-or-busy-guard",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Permission, validation, busy-state, or provider fail-closed guard."
+    },
+    {
+      "source": "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx",
+      "line": 1722,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
