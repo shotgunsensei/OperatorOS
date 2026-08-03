@@ -91,6 +91,17 @@ WCAG 2.2 AA conformance, authenticated deployed acceptance, live provider
 acceptance, database apply, backup/restore, cutover, rollback, or module State
 5. Those gates remain exactly as recorded by Phase 18.
 
+### 2026-08-02 TradeFlowKit and PulseDesk dark-surface correction
+
+Direct customer feedback identified an inconsistent light canvas under controls
+and cards that read as dark-mode components. TradeFlowKit now uses a deep
+green-black canvas with dark green panels; PulseDesk uses a clinical navy
+canvas with dark blue panels. Headers, rails, readiness cards, workflow cards,
+forms, data rows, selected states, Business Directory surfaces, loading states,
+empty states, and recovery states inherit the matching dark boundary. Product
+accent colors, workflows, tenant authority, roles, entitlements, and APIs are
+unchanged. The source contract now rejects the retired light canvas tokens.
+
 ## 2026-08-02 Phase 18 merged-main release-candidate closure
 
 OutCall's implementation is merged to `main` at

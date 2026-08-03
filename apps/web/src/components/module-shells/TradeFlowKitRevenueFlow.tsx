@@ -17,7 +17,7 @@ import {
   type TradeFlowKitRevenueResponse,
 } from '@/lib/auth';
 
-const c = { ink: '#10231d', muted: '#587067', panel: '#fff', soft: '#eef8f2', border: 'rgba(22,101,52,.18)', green: '#059669', blue: '#0284c7', red: '#dc2626', gold: '#b7791f' };
+const c = { ink: '#eaf7f0', muted: '#9ab6aa', panel: '#0f1b17', soft: '#14241e', border: 'rgba(134,239,172,.18)', green: '#34d399', blue: '#38bdf8', red: '#fb7185', gold: '#fbbf24' };
 const empty: TradeFlowKitRevenueResponse = { customers: [], jobs: [], quotes: [], invoices: [] };
 const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 const customerImportColumns = ['name', 'email', 'phone', 'address', 'notes'] as const;
@@ -331,17 +331,17 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
   }
 
   const panel: React.CSSProperties = { border: `1px solid ${c.border}`, borderRadius: 10, background: c.panel, padding: 16 };
-  const input: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '9px 10px', background: '#fbfefc', color: c.ink };
+  const input: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '9px 10px', background: '#0b1512', color: c.ink };
   const button = (tone = c.green): React.CSSProperties => ({ border: 0, borderRadius: 7, padding: '9px 12px', background: tone, color: '#fff', fontWeight: 800, cursor: pending ? 'wait' : 'pointer', opacity: pending ? .6 : 1 });
 
   return (
-    <section id="tradeflowkit-revenue-flow" data-testid="tradeflowkit-revenue-flow" style={{ ...panel, marginTop: 18, background: 'linear-gradient(135deg,#fff,#f3fbf6)' }} tabIndex={-1}>
+    <section id="tradeflowkit-revenue-flow" data-testid="tradeflowkit-revenue-flow" style={{ ...panel, marginTop: 18, background: 'linear-gradient(135deg,#0f1b17,#0a1511)' }} tabIndex={-1}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div><div style={{ color: c.green, fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 1 }}>Native revenue workflow</div><h2 style={{ margin: '4px 0 0', color: c.ink, fontSize: 20 }}>Customer → job → quote → invoice → payment</h2><p style={{ color: c.muted, margin: '6px 0 0', fontSize: 13 }}>Customer payments stay distinct from OperatorOS subscription billing.</p></div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><Stat Icon={Users} label="Customers" value={data.customers.length} /><Stat Icon={BriefcaseBusiness} label="Jobs" value={data.jobs.length} /><Stat Icon={FileText} label="Quotes" value={data.quotes.length} /><Stat Icon={Receipt} label="Invoices" value={data.invoices.length} /></div>
       </div>
 
-      {error && <div role="alert" style={{ marginTop: 12, padding: 10, borderRadius: 7, color: c.red, background: '#fff1f2', display: 'flex', gap: 8 }}><AlertTriangle size={16} />{error}</div>}
+      {error && <div role="alert" style={{ marginTop: 12, padding: 10, borderRadius: 7, color: c.red, background: 'rgba(251,113,133,.10)', border: `1px solid ${c.red}55`, display: 'flex', gap: 8 }}><AlertTriangle size={16} />{error}</div>}
       {canManage && paymentProvider && <div data-testid="tradeflowkit-payment-provider" style={{ ...panel, marginTop: 12, padding: 12, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <div><strong style={{ color: c.ink }}>Business payments · Stripe Connect</strong><div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{paymentProvider.ready ? `Ready for ${paymentProvider.mode} payments on ${paymentProvider.account?.providerAccountId}` : paymentProvider.account ? `Connected account needs attention: charges ${paymentProvider.account.chargesEnabled ? 'enabled' : 'restricted'}; mode ${paymentProvider.mode || 'unset'}.` : paymentProvider.reason || 'Connect a tenant-owned Stripe account to create customer checkout links.'}</div></div>
         <div style={{ display: 'flex', gap: 7 }}>{paymentProvider.account?.status !== 'disconnected' && paymentProvider.account ? <button type="button" disabled={pending} onClick={disconnectPaymentProvider} style={button(c.red)}>Disconnect</button> : <button type="button" disabled={pending || !paymentProvider.configured} onClick={connectPaymentProvider} style={button(c.blue)}>Connect Stripe</button>}</div>
@@ -413,7 +413,7 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
           </div>
 
           <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
-            {canManage && data.invoices.some(invoice => ['sent', 'processing'].includes(invoice.status) && invoice.balanceCents > 0) && <section data-testid="tradeflowkit-invoice-bulk-payment" aria-label="Invoice batch payment" style={{ border: '1px solid rgba(3,105,161,.22)', borderRadius: 8, background: '#f0f9ff', padding: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {canManage && data.invoices.some(invoice => ['sent', 'processing'].includes(invoice.status) && invoice.balanceCents > 0) && <section data-testid="tradeflowkit-invoice-bulk-payment" aria-label="Invoice batch payment" style={{ border: '1px solid rgba(56,189,248,.28)', borderRadius: 8, background: 'rgba(56,189,248,.08)', padding: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 220px', display: 'grid', color: c.ink }}><strong>{selectedInvoiceIds.size} payable invoices selected</strong><span style={{ color: c.muted, fontSize: 11 }}>Records the exact current balance as first-class offline payment history. Maximum 25.</span></div>
               <select aria-label="Bulk payment method" value={bulkPaymentMethod} onChange={event => setBulkPaymentMethod(event.target.value)} style={{ ...input, flex: '0 1 150px' }}><option value="other">Other</option><option value="cash">Cash</option><option value="check">Check</option><option value="card_external">External card</option><option value="bank_transfer">Bank transfer</option></select>
               <input aria-label="Bulk payment reference" value={bulkPaymentReference} onChange={event => setBulkPaymentReference(event.target.value)} maxLength={200} placeholder="Reference (optional)" style={{ ...input, flex: '1 1 180px' }} />
@@ -449,8 +449,8 @@ function CustomerRow({ customer, selected, pending, canManage, run, onSelect }: 
     setNotes(customer.notes ?? '');
   }, [customer]);
 
-  const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '8px 9px', background: '#fff', color: c.ink };
-  const frame: React.CSSProperties = { border: `1px solid ${selected ? c.green : c.border}`, borderRadius: 8, padding: 12, background: selected ? '#f0fdf4' : '#fff', boxShadow: selected ? `inset 3px 0 ${c.green}` : 'none' };
+  const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '8px 9px', background: '#0b1512', color: c.ink };
+  const frame: React.CSSProperties = { border: `1px solid ${selected ? c.green : c.border}`, borderRadius: 8, padding: 12, background: selected ? 'rgba(52,211,153,.10)' : c.panel, boxShadow: selected ? `inset 3px 0 ${c.green}` : 'none' };
 
   if (editing) {
     return <form data-testid={`tradeflowkit-customer-editor-${customer.id}`} style={{ ...frame, display: 'grid', gap: 8 }} onSubmit={event => {
@@ -511,7 +511,7 @@ function QuoteRow({ quote, customer, job, customers, jobs, hasInvoice, selected,
   }
   const archivable = ['draft', 'declined', 'expired', 'void'].includes(quote.status) && !hasInvoice;
   return (
-    <div data-testid={`tradeflowkit-quote-${quote.id}`} style={{ border: `1px solid ${selected ? c.green : c.border}`, borderRadius: 8, padding: 12, background: selected ? '#f0fdf4' : '#fff', boxShadow: selected ? `inset 3px 0 ${c.green}` : 'none', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+    <div data-testid={`tradeflowkit-quote-${quote.id}`} style={{ border: `1px solid ${selected ? c.green : c.border}`, borderRadius: 8, padding: 12, background: selected ? 'rgba(52,211,153,.10)' : c.panel, boxShadow: selected ? `inset 3px 0 ${c.green}` : 'none', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
       <div>
         <strong style={{ color: c.ink }}>Quote {quote.number ? `#${quote.number}` : ''} · {customer?.name ?? 'Customer'}</strong>
         <div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{job?.title ?? 'Unlinked quote'} · {money(quote.totalCents)} · <b>{quote.status}</b> · v{quote.version}</div>
@@ -546,7 +546,7 @@ function InvoiceRow({ invoice, customer, customers, jobs, selected, batchSelecte
   const archivable = ['draft', 'void'].includes(invoice.status) && invoice.paidCents === 0;
   const payable = ['sent', 'processing'].includes(invoice.status) && invoice.balanceCents > 0;
   return (
-    <div data-testid={`tradeflowkit-invoice-${invoice.id}`} style={{ border: `1px solid ${selected ? c.green : c.border}`, borderRadius: 8, padding: 12, background: selected ? '#f0fdf4' : '#f8fcfa', boxShadow: selected ? `inset 3px 0 ${c.green}` : 'none', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+    <div data-testid={`tradeflowkit-invoice-${invoice.id}`} style={{ border: `1px solid ${selected ? c.green : c.border}`, borderRadius: 8, padding: 12, background: selected ? 'rgba(52,211,153,.10)' : c.panel, boxShadow: selected ? `inset 3px 0 ${c.green}` : 'none', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
       <div style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
         {canManage && payable && <input type="checkbox" aria-label={`Select invoice ${invoice.number ?? invoice.id} for batch payment`} checked={batchSelected} disabled={pending || (!batchSelected && batchSelectionFull)} onChange={onToggleBatch} style={{ marginTop: 3, accentColor: c.green }} />}
         <div>
@@ -596,7 +596,7 @@ function DocumentEditor({ kind, document, customers, jobs, pending, onCancel, on
   const rawDate = kind === 'quote' ? document.expiresAt : (document as TradeFlowKitInvoice).dueDate;
   const [documentDate, setDocumentDate] = useState(rawDate?.slice(0, 10) ?? '');
   const availableJobs = jobs.filter((job) => job.customerId === customerId);
-  const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '8px 9px', background: '#fbfefc', color: c.ink };
+  const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', border: `1px solid ${c.border}`, borderRadius: 7, padding: '8px 9px', background: '#0b1512', color: c.ink };
   const updateLine = (index: number, patch: Partial<EditableLineItem>) => setLineItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   const valid = !!customerId && lineItems.length > 0 && lineItems.every((item) =>
     item.description.trim().length > 0 && Number.isInteger(Number(item.quantity)) &&
@@ -620,7 +620,7 @@ function DocumentEditor({ kind, document, customers, jobs, pending, onCancel, on
         discountCents: Math.round(Number(discount) * 100),
         notes: notes || undefined, documentDate: documentDate || undefined,
       });
-    }} style={{ border: `1px solid ${c.gold}`, borderRadius: 8, padding: 12, background: '#fffaf0', display: 'grid', gap: 9 }}>
+    }} style={{ border: `1px solid ${c.gold}`, borderRadius: 8, padding: 12, background: 'rgba(251,191,36,.08)', display: 'grid', gap: 9 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <strong style={{ color: c.ink }}>Edit {kind} #{document.number ?? document.id.slice(0, 8)}</strong>
         <button type="button" aria-label="Cancel editing" onClick={onCancel} style={{ border: 0, background: 'transparent', color: c.muted, cursor: 'pointer' }}><X size={18} /></button>
@@ -635,7 +635,7 @@ function DocumentEditor({ kind, document, customers, jobs, pending, onCancel, on
           <input aria-label={`Line ${index + 1} description`} required maxLength={500} value={item.description} onChange={(event) => updateLine(index, { description: event.target.value })} style={{ ...inputStyle, flex: '3 1 180px' }} />
           <input aria-label={`Line ${index + 1} quantity`} type="number" min="1" max="10000" step="1" value={item.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} style={{ ...inputStyle, flex: '1 1 90px' }} />
           <input aria-label={`Line ${index + 1} unit price`} type="number" min="0" step="0.01" value={item.unitPrice} onChange={(event) => updateLine(index, { unitPrice: event.target.value })} style={{ ...inputStyle, flex: '1 1 120px' }} />
-          <button type="button" aria-label={`Remove line ${index + 1}`} disabled={lineItems.length === 1} onClick={() => setLineItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} style={{ border: `1px solid ${c.border}`, borderRadius: 7, background: '#fff', color: c.red, opacity: lineItems.length === 1 ? .4 : 1 }}><Trash2 size={14} /></button>
+          <button type="button" aria-label={`Remove line ${index + 1}`} disabled={lineItems.length === 1} onClick={() => setLineItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} style={{ border: `1px solid ${c.border}`, borderRadius: 7, background: c.soft, color: c.red, opacity: lineItems.length === 1 ? .4 : 1 }}><Trash2 size={14} /></button>
         </div>
       ))}
       <button type="button" onClick={() => setLineItems((current) => [...current, { description: '', quantity: '1', unitPrice: '0.00' }])} style={{ justifySelf: 'start', border: `1px solid ${c.border}`, borderRadius: 7, padding: '7px 10px', background: c.soft, color: c.ink, fontWeight: 800 }}><Plus size={13} /> Add line item</button>
@@ -645,7 +645,7 @@ function DocumentEditor({ kind, document, customers, jobs, pending, onCancel, on
         <input aria-label="Edit document notes" maxLength={4000} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Notes" style={{ ...inputStyle, flex: '3 1 240px' }} />
       </div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button type="button" onClick={onCancel} style={{ border: `1px solid ${c.border}`, borderRadius: 7, padding: '8px 11px', background: '#fff', color: c.ink, fontWeight: 800 }}>Cancel</button>
+        <button type="button" onClick={onCancel} style={{ border: `1px solid ${c.border}`, borderRadius: 7, padding: '8px 11px', background: c.soft, color: c.ink, fontWeight: 800 }}>Cancel</button>
         <button disabled={pending || !valid} style={{ border: 0, borderRadius: 7, padding: '8px 11px', background: c.green, color: '#fff', fontWeight: 800, opacity: pending || !valid ? .55 : 1 }}>Save {kind}</button>
       </div>
     </form>

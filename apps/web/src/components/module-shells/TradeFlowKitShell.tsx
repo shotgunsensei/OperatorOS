@@ -39,19 +39,19 @@ interface TradeFlowKitShellProps {
 }
 
 const colors = {
-  bg: '#f6fbf8',
-  ink: '#10231d',
-  muted: '#587067',
-  dim: '#789189',
-  panel: '#ffffff',
-  panelSoft: '#eef8f2',
-  border: 'rgba(22, 101, 52, 0.16)',
-  borderStrong: 'rgba(5, 150, 105, 0.34)',
-  green: '#059669',
-  blue: '#0284c7',
-  gold: '#b7791f',
-  red: '#dc2626',
-  violet: '#6d28d9',
+  bg: '#07110e',
+  ink: '#eaf7f0',
+  muted: '#9ab6aa',
+  dim: '#6f8b80',
+  panel: '#0f1b17',
+  panelSoft: '#14241e',
+  border: 'rgba(134, 239, 172, 0.16)',
+  borderStrong: 'rgba(52, 211, 153, 0.38)',
+  green: '#34d399',
+  blue: '#38bdf8',
+  gold: '#fbbf24',
+  red: '#fb7185',
+  violet: '#c4b5fd',
 };
 
 const workflowShortcuts = [
@@ -116,11 +116,12 @@ const readinessRows = [
 const shellCss = `
   .tfk-shell {
     min-height: 100vh;
+    color-scheme: dark;
     color: ${colors.ink};
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(246, 251, 248, 0.96)),
-      radial-gradient(circle at 12% 0%, rgba(5, 150, 105, 0.16), transparent 30%),
-      radial-gradient(circle at 88% 2%, rgba(2, 132, 199, 0.12), transparent 28%),
+      radial-gradient(circle at 10% -4%, rgba(52, 211, 153, 0.18), transparent 31%),
+      radial-gradient(circle at 92% 4%, rgba(56, 189, 248, 0.11), transparent 28%),
+      linear-gradient(180deg, #091612 0%, ${colors.bg} 58%, #050b09 100%),
       ${colors.bg};
     padding: 24px;
   }
@@ -132,12 +133,12 @@ const shellCss = `
   }
   .tfk-header {
     border: 1px solid ${colors.borderStrong};
-    background: rgba(255, 255, 255, 0.92);
+    background: linear-gradient(135deg, rgba(15, 27, 23, 0.97), rgba(8, 18, 14, 0.98));
     border-radius: 8px;
     padding: 22px;
     display: grid;
     gap: 18px;
-    box-shadow: 0 20px 54px rgba(17, 76, 57, 0.10);
+    box-shadow: 0 22px 58px rgba(0, 0, 0, 0.30);
   }
   .tfk-header-top,
   .tfk-actions,
@@ -157,7 +158,7 @@ const shellCss = `
   .tfk-rail,
   .tfk-panel {
     border: 1px solid ${colors.border};
-    background: rgba(255, 255, 255, 0.90);
+    background: rgba(15, 27, 23, 0.94);
     border-radius: 8px;
   }
   .tfk-rail {
@@ -171,6 +172,83 @@ const shellCss = `
     display: grid;
     gap: 16px;
     min-width: 0;
+  }
+  .tfk-shell .directory-tradeflowkit {
+    --d-bg: #0b1512;
+    --d-panel: #14241e;
+    --d-text: #eaf7f0;
+    --d-muted: #9ab6aa;
+    --d-border: rgba(134, 239, 172, 0.18);
+    --d-accent: #34d399;
+    --d-danger: #fb7185;
+  }
+  .tfk-shell :is(input, select, textarea) {
+    color-scheme: dark;
+  }
+  .tfk-shell :is(input, select, textarea)::placeholder {
+    color: #6f8b80;
+  }
+  .tfk-shell :is(.tfk-lead-center, .tfk-ops, .tfk-work, .tfk-trash, .directory-root) {
+    color: ${colors.ink};
+  }
+  .tfk-shell :is(.tfk-lead-center, .tfk-ops, .tfk-work, .tfk-trash, .directory-root)
+    :is(h2, h3, h4, strong, summary) {
+    color: ${colors.ink};
+  }
+  .tfk-shell :is(input, select, textarea) {
+    background: #0b1512 !important;
+    color: ${colors.ink} !important;
+    border-color: ${colors.border} !important;
+  }
+  .tfk-shell :is(
+    .tfk-lead-form,
+    .tfk-work-form,
+    .tfk-work-state,
+    .tfk-work-metrics > div,
+    .tfk-saved-views,
+    .tfk-accounting-exports,
+    .tfk-bulk-bar,
+    .tfk-task-board,
+    .tfk-trash-state,
+    .tfk-trash-groups > section,
+    .tfk-global-search form,
+    .tfk-global-search-empty
+  ) {
+    background: ${colors.panelSoft} !important;
+    border-color: ${colors.border} !important;
+  }
+  .tfk-shell :is(
+    .tfk-lead-metrics > div,
+    .tfk-lead-row,
+    .tfk-workflow-card,
+    .tfk-job-workflow-list > div,
+    .tfk-team-tasks article,
+    .tfk-ops-metrics > div,
+    .tfk-ops-layout aside button,
+    .tfk-task,
+    .tfk-record-editor,
+    .tfk-global-search-results section,
+    .tfk-trash,
+    .tfk-trash article
+  ) {
+    background: ${colors.panel} !important;
+    border-color: ${colors.border} !important;
+  }
+  .tfk-shell :is(.tfk-lead-row.selected, .tfk-ops-layout aside button.active, .tfk-task.selected, .tfk-record-editor.selected) {
+    background: rgba(52, 211, 153, 0.10) !important;
+    border-color: ${colors.green} !important;
+  }
+  .tfk-shell :is(.tfk-work button, .tfk-trash button, .tfk-lead-delete button, .tfk-ops-actions a, .tfk-accounting-exports a) {
+    background: ${colors.panelSoft};
+    color: ${colors.ink};
+    border-color: ${colors.border};
+  }
+  .tfk-shell :is(.tfk-lead-heading p, .tfk-work p, .tfk-ops-head p, .tfk-task-title p, .tfk-trash small, .tfk-trash .empty, .tfk-trash .bounded) {
+    color: ${colors.muted};
+  }
+  .tfk-shell :is(.tfk-lead-notice, .tfk-lead-read-only) {
+    background: rgba(52, 211, 153, 0.10);
+    color: #a7f3d0;
   }
   .tfk-card-grid {
     display: grid;
@@ -623,7 +701,7 @@ const headerLinkStyle: CSSProperties = {
   borderRadius: 8,
   padding: '9px 12px',
   color: colors.ink,
-  background: 'rgba(255, 255, 255, 0.84)',
+  background: 'rgba(20, 36, 30, 0.92)',
   textDecoration: 'none',
   fontSize: 13,
   fontWeight: 800,
@@ -658,7 +736,7 @@ const railLinkStyle: CSSProperties = {
 const metricTileStyle: CSSProperties = {
   border: `1px solid ${colors.border}`,
   borderRadius: 8,
-  background: 'rgba(255, 255, 255, 0.90)',
+  background: 'rgba(15, 27, 23, 0.96)',
   padding: 14,
   minHeight: 96,
 };
@@ -691,7 +769,7 @@ const workflowPanelStyle: CSSProperties = {
   border: `1px solid ${colors.border}`,
   borderRadius: 8,
   padding: 14,
-  background: 'rgba(255, 255, 255, 0.78)',
+  background: 'rgba(15, 27, 23, 0.86)',
   minWidth: 0,
 };
 
@@ -708,7 +786,7 @@ const adminRowStyle: CSSProperties = {
 
 const loadingPanelStyle: CSSProperties = {
   border: `1px solid ${colors.borderStrong}`,
-  background: 'rgba(255, 255, 255, 0.92)',
+  background: 'rgba(15, 27, 23, 0.96)',
   borderRadius: 8,
   padding: 18,
   display: 'flex',

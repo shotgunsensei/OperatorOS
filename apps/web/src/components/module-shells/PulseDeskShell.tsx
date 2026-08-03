@@ -34,20 +34,20 @@ interface PulseDeskShellProps {
 }
 
 const colors = {
-  bg: '#f5f9fc',
-  ink: '#102033',
-  muted: '#5b7087',
-  dim: '#7f91a6',
-  panel: '#ffffff',
-  panelSoft: '#eef6fb',
-  border: 'rgba(34, 86, 120, 0.16)',
-  borderStrong: 'rgba(14, 116, 144, 0.34)',
-  blue: '#0ea5e9',
-  cyan: '#0891b2',
-  green: '#16a34a',
-  amber: '#d97706',
-  red: '#dc2626',
-  violet: '#7c3aed',
+  bg: '#07111b',
+  ink: '#eaf4ff',
+  muted: '#9bb0c6',
+  dim: '#6e849b',
+  panel: '#0e1a27',
+  panelSoft: '#132536',
+  border: 'rgba(125, 211, 252, 0.16)',
+  borderStrong: 'rgba(56, 189, 248, 0.38)',
+  blue: '#38bdf8',
+  cyan: '#22d3ee',
+  green: '#4ade80',
+  amber: '#fbbf24',
+  red: '#fb7185',
+  violet: '#c4b5fd',
 };
 
 const workflowShortcuts = [
@@ -119,11 +119,12 @@ const readinessRows = [
 const shellCss = `
   .pulsedesk-shell {
     min-height: 100vh;
+    color-scheme: dark;
     color: ${colors.ink};
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(245, 249, 252, 0.96)),
-      radial-gradient(circle at 12% 0%, rgba(14, 165, 233, 0.18), transparent 30%),
-      radial-gradient(circle at 88% 4%, rgba(22, 163, 74, 0.10), transparent 28%),
+      radial-gradient(circle at 10% -4%, rgba(56, 189, 248, 0.20), transparent 31%),
+      radial-gradient(circle at 90% 4%, rgba(74, 222, 128, 0.08), transparent 28%),
+      linear-gradient(180deg, #0a1825 0%, ${colors.bg} 58%, #050b12 100%),
       ${colors.bg};
     padding: 24px;
   }
@@ -135,12 +136,12 @@ const shellCss = `
   }
   .pulsedesk-header {
     border: 1px solid ${colors.borderStrong};
-    background: rgba(255, 255, 255, 0.92);
+    background: linear-gradient(135deg, rgba(14, 26, 39, 0.97), rgba(7, 17, 27, 0.98));
     border-radius: 8px;
     padding: 22px;
     display: grid;
     gap: 18px;
-    box-shadow: 0 20px 54px rgba(15, 54, 77, 0.10);
+    box-shadow: 0 22px 58px rgba(0, 0, 0, 0.30);
   }
   .pulsedesk-header-top,
   .pulsedesk-actions,
@@ -160,7 +161,7 @@ const shellCss = `
   .pulsedesk-rail,
   .pulsedesk-panel {
     border: 1px solid ${colors.border};
-    background: rgba(255, 255, 255, 0.90);
+    background: rgba(14, 26, 39, 0.94);
     border-radius: 8px;
   }
   .pulsedesk-rail {
@@ -174,6 +175,83 @@ const shellCss = `
     display: grid;
     gap: 16px;
     min-width: 0;
+  }
+  .pulsedesk-shell .directory-pulsedesk {
+    --d-bg: #0a1520;
+    --d-panel: #132536;
+    --d-text: #eaf4ff;
+    --d-muted: #9bb0c6;
+    --d-border: rgba(125, 211, 252, 0.18);
+    --d-accent: #38bdf8;
+    --d-danger: #fb7185;
+  }
+  .pulsedesk-shell :is(input, select, textarea) {
+    color-scheme: dark;
+  }
+  .pulsedesk-shell :is(input, select, textarea)::placeholder {
+    color: #6e849b;
+  }
+  .pulsedesk-shell :is(.pds, .pdq-root, .directory-root) {
+    color: ${colors.ink};
+  }
+  .pulsedesk-shell :is(.pds, .pdq-root, .directory-root) :is(h2, h3, h4, strong, summary) {
+    color: ${colors.ink};
+  }
+  .pulsedesk-shell :is(input, select, textarea) {
+    background: #0a1520 !important;
+    color: ${colors.ink} !important;
+    border-color: ${colors.border} !important;
+  }
+  .pulsedesk-shell :is(
+    .pds-card,
+    .pds-metrics article,
+    .pds-ticket,
+    .pds-row-button,
+    .pdq-intake,
+    .pdq-departments,
+    .pdq-list,
+    .pdq-detail,
+    .pdq-card,
+    .pdq-manager-controls,
+    .pdq-timeline,
+    .directory-root
+  ) {
+    background: ${colors.panel} !important;
+    color: ${colors.ink} !important;
+    border-color: ${colors.border} !important;
+  }
+  .pulsedesk-shell :is(
+    .pds-form,
+    .pds-empty,
+    .pds-config div,
+    .pds-message,
+    .pds-chips span,
+    .pds-route-context,
+    .pdq-filters,
+    .pdq-empty,
+    .pdq-detail-empty,
+    .pdq-department-body,
+    .pdq-timeline-empty
+  ) {
+    background: ${colors.panelSoft} !important;
+    color: ${colors.muted} !important;
+    border-color: ${colors.border} !important;
+  }
+  .pulsedesk-shell :is(.pds-ticket.selected, .pdq-card[aria-pressed='true']) {
+    background: rgba(56, 189, 248, 0.10) !important;
+    border-color: ${colors.blue} !important;
+  }
+  .pulsedesk-shell :is(.pds-secondary, .pdq-secondary) {
+    background: ${colors.panelSoft} !important;
+    color: ${colors.ink} !important;
+    border-color: ${colors.border} !important;
+  }
+  .pulsedesk-shell :is(.pds-heading p, .pds-row small, .pds-ticket small, .pds-description, .pds-config span, .pdq-heading p, .pdq-card-context, .pdq-card-footer) {
+    color: ${colors.muted} !important;
+  }
+  .pulsedesk-shell .pds-ack {
+    background: rgba(251, 191, 36, 0.10);
+    color: #fde68a;
   }
   .pulsedesk-card-grid {
     display: grid;
@@ -627,7 +705,7 @@ const headerLinkStyle: CSSProperties = {
   borderRadius: 8,
   padding: '9px 12px',
   color: colors.ink,
-  background: 'rgba(255, 255, 255, 0.82)',
+  background: 'rgba(19, 37, 54, 0.92)',
   textDecoration: 'none',
   fontSize: 13,
   fontWeight: 800,
@@ -662,7 +740,7 @@ const railLinkStyle: CSSProperties = {
 const metricTileStyle: CSSProperties = {
   border: `1px solid ${colors.border}`,
   borderRadius: 8,
-  background: 'rgba(255, 255, 255, 0.90)',
+  background: 'rgba(14, 26, 39, 0.96)',
   padding: 14,
   minHeight: 96,
 };
@@ -695,7 +773,7 @@ const workflowPanelStyle: CSSProperties = {
   border: `1px solid ${colors.border}`,
   borderRadius: 8,
   padding: 14,
-  background: 'rgba(255, 255, 255, 0.78)',
+  background: 'rgba(14, 26, 39, 0.86)',
   minWidth: 0,
 };
 
@@ -712,7 +790,7 @@ const adminRowStyle: CSSProperties = {
 
 const loadingPanelStyle: CSSProperties = {
   border: `1px solid ${colors.borderStrong}`,
-  background: 'rgba(255, 255, 255, 0.92)',
+  background: 'rgba(14, 26, 39, 0.96)',
   borderRadius: 8,
   padding: 18,
   display: 'flex',

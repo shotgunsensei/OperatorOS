@@ -111,6 +111,7 @@ test('every module receives organization context and customer-facing account nav
 test('six representative customer workflows expose a plain first action and trust boundary', () => {
   const home = read('apps/web/src/components/pages/MyAppsPage.tsx');
   const tradeFlowKit = read('apps/web/src/components/module-shells/TradeFlowKitShell.tsx');
+  const tradeFlowKitRevenue = read('apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx');
   const torqueShed = read('apps/web/src/components/module-shells/TorqueShedWorkspace.tsx');
   const pulseDesk = read('apps/web/src/components/module-shells/PulseDeskShell.tsx');
   const techDeck = read('apps/web/src/components/module-shells/TechDeckShell.tsx');
@@ -123,10 +124,17 @@ test('six representative customer workflows expose a plain first action and trus
 
   assert.match(tradeFlowKit, /Start with a lead/);
   assert.match(tradeFlowKit, /Protected by OperatorOS/);
+  assert.match(tradeFlowKit, /bg: '#07110e'/);
+  assert.match(tradeFlowKit, /color-scheme: dark/);
+  assert.match(tradeFlowKitRevenue, /panel: '#0f1b17'/);
+  assert.doesNotMatch(tradeFlowKit, /bg: '#f6fbf8'/);
   assert.match(torqueShed, /Start diagnostic/);
   assert.match(torqueShed, /More tools/);
   assert.match(pulseDesk, /Open request queue/);
   assert.match(pulseDesk, /not patient charts or clinical records/);
+  assert.match(pulseDesk, /bg: '#07111b'/);
+  assert.match(pulseDesk, /color-scheme: dark/);
+  assert.doesNotMatch(pulseDesk, /bg: '#f5f9fc'/);
   assert.match(techDeck, /Open ticket queue/);
   assert.match(techDeck, /Protected by OperatorOS/);
 
