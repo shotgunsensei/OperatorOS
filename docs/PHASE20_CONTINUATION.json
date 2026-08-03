@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "phase": 20,
+  "declaration": "SOURCE/LOCAL PUBLIC-LAUNCH FUNCTIONAL CLOSURE: HOLD",
+  "recordedAtUtc": "2026-08-03T01:22:08Z",
+  "repository": "C:/Dev/OperatorOS",
+  "branch": "codex/phase20-public-launch-functional-closure",
+  "baseCommit": "9807890fec20b25eec5f6803603868439dfa40c5",
+  "productionTouched": false,
+  "disposableDatabase": {
+    "container": "operatoros-phase20-db",
+    "releaseDatabase": "operatoros_phase20",
+    "aggregateDatabases": [
+      "operatoros_phase20_api",
+      "operatoros_phase20_api2"
+    ],
+    "host": "127.0.0.1",
+    "port": 55432
+  },
+  "completedEvidence": [
+    {
+      "command": "corepack pnpm verify:public-launch",
+      "result": "PASS before final blocker classification; 13 modules, 30 capabilities, 827 API declarations, 23 UI routes, 133 database objects, 141 provider variables, 16 billing products, 1162 placeholder occurrences, zero unclassified"
+    },
+    {
+      "command": "corepack pnpm typecheck",
+      "result": "PASS for API, runner-gateway, and web"
+    },
+    {
+      "command": "corepack pnpm db:apply (twice) against operatoros_phase20",
+      "result": "PASS; release v33 clean apply and idempotent reapply"
+    },
+    {
+      "command": "tsx --test --test-concurrency=1 apps/api/test/tenant-routes.test.ts apps/api/test/auth-security.test.ts",
+      "result": "PASS 12/12"
+    },
+    {
+      "command": "tsx --test apps/api/test/tradeflowkit-import-static.test.ts",
+      "result": "PASS 5/5 after restoring canonical return and empty-state contracts"
+    }
+  ],
+  "rejectedOrFailedRuns": [
+    {
+      "kind": "invalid_intermediate",
+      "command": "corepack pnpm --dir apps/api test",
+      "database": "operatoros_phase20",
+      "reason": "Release-seeded canonical module rows collided with test-owned canonical fixtures; this database was not an empty aggregate database."
+    },
+    {
+      "kind": "correction_round_1",
+      "command": "corepack pnpm --dir apps/api test",
+      "database": "operatoros_phase20_api",
+      "result": "FAIL",
+      "blocker": "TradeFlowKit canonical return and empty-state static contract"
+    },
+    {
+      "kind": "correction_round_2",
+      "command": "corepack pnpm --dir apps/api test",
+      "database": "operatoros_phase20_api2",
+      "result": "FAIL",
+      "blocker": "TorqueShed VIN privacy assurance static contract"
+    }
+  ],
+  "currentBlockers": [
+    {
+      "blockerId": "PHASE20-TORQUESHED-VIN-PRIVACY-UI",
+      "capabilityId": "module-torqueshed",
+      "status": "FIX_NOW",
+      "failingTest": "apps/api/test/torqueshed-foundation-static.test.ts:82",
+      "expectedEvidence": "TorqueShedWorkspace.tsx contains customer-visible language: VINs are protected and shown only as a masked suffix",
+      "currentEvidence": [
+        "API stores VIN SHA-256 plus last-six only and projects vinMasked",
+        "PARITY_MATRIX.md documents fingerprint plus masked suffix only",
+        "UI says VIN masked after save but omits the required explicit privacy assurance"
+      ],
+      "nextAction": "Add the exact customer-visible privacy assurance near the VIN input or garage privacy notice without exposing plaintext VINs.",
+      "focusedRerun": "node_modules/.bin/tsx.cmd --test apps/api/test/torqueshed-foundation-static.test.ts",
+      "aggregateRerun": "Create a new empty disposable database, set DATABASE_URL/APP_ENV=test/NODE_ENV=test and test-only signing secrets, then run corepack pnpm --dir apps/api test serially."
+    }
+  ],
+  "gatesNotRunBecauseApiAggregateIsRed": [
+    "frozen install and dependency audit final run",
+    "database backup, readable TOC, checksum, restore, and restored reconciliation",
+    "production build and compiled supervisor",
+    "health and readiness identity verification",
+    "thirteen independent local Chromium vertical workflows",
+    "route/control sweep and screenshots",
+    "browser accessibility acceptance",
+    "load and reliability final run"
+  ],
+  "humanPhase18Status": "Not reached. Source/local work remains and must not be moved into the human handoff."
+}

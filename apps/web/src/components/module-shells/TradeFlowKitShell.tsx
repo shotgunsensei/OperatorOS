@@ -288,7 +288,7 @@ const shellCss = `
   }
 `;
 
-export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
+export default function TradeFlowKitShell(_props: TradeFlowKitShellProps) {
   const { user, loading: authLoading } = useAuth();
   const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
   const fallbackTenantId = user?.currentTenantId ?? getActiveTenantId();
@@ -324,7 +324,6 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
           : 'Team member';
   const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
   const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
-  const externalLaunchUrl = baseUrl && /^https?:\/\//i.test(baseUrl) ? baseUrl.replace(/\/+$/, '') : null;
 
   if (isLoading) {
     return (
@@ -377,11 +376,9 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
                   Platform settings
                 </HeaderLink>
               )}
-              {externalLaunchUrl && (
-                <HeaderLink href={externalLaunchUrl} testId="tradeflowkit-external-launch-link" Icon={ExternalLink}>
-                  Open standalone app
-                </HeaderLink>
-              )}
+              <HeaderLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} testId="tradeflowkit-return-command-center" Icon={ExternalLink}>
+                Return to My Apps
+              </HeaderLink>
             </div>
           </div>
 
@@ -399,7 +396,7 @@ export default function TradeFlowKitShell({ baseUrl }: TradeFlowKitShellProps) {
 
         {!hasTenantContext && (
           <StatePanel
-            testId="tradeflowkit-no-tenant-state"
+            testId="tradeflowkit-empty-state"
             tone={colors.red}
             Icon={AlertTriangle}
             title="Choose an organization"

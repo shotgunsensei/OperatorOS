@@ -193,6 +193,7 @@ export const meApi = {
 };
 
 export const tenantApi = {
+  ensurePersonal: () => apiFetch('/me/tenant/ensure', { method: 'POST' }),
   // Member listing + role/remove mutations.
   listUsers: (tenantId: string) => apiFetch(`/tenants/${tenantId}/users`),
   updateUser: (tenantId: string, userId: string, role: 'owner' | 'admin' | 'member') =>

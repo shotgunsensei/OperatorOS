@@ -26,6 +26,7 @@ let bob: any;
 let superAdmin: any;
 let tenantA: any;
 let tenantB: any;
+let orphan: any;
 
 before(async () => {
   await ensureSchemaReady();
@@ -34,6 +35,13 @@ before(async () => {
   bob = await createTestUser();
   superAdmin = await createTestUser();
   await db.update(users).set({ platformRole: 'super_admin' }).where(eq(users.id, superAdmin.id));
+  [orphan] = await db.insert(users).values({
+    email: `tenant-repair-${Date.now()}@test.local`,
+    passwordHash: 'x',
+    name: 'Tenant Repair',
+    role: 'user',
+    status: 'active',
+  }).returning();
 
   [tenantA] = await db.insert(tenants).values({
     name: 'Tenant A', slug: `tr-a-${alice.id}`, type: 'company', ownerUserId: alice.id,
@@ -62,7 +70,7 @@ after(async () => {
     try { await db.delete(tenantUsers).where(eq(tenantUsers.tenantId, t.id)); } catch {}
     try { await db.delete(tenants).where(eq(tenants.id, t.id)); } catch {}
   }
-  for (const u of [alice, bob, superAdmin]) if (u) await cleanupUser(u.id);
+  for (const u of [alice, bob, superAdmin, orphan]) if (u) await cleanupUser(u.id);
 });
 
 function bearer(u: any) {
@@ -159,4 +167,29 @@ test('POST /v1/tenants/:tenantId/switch is allowed for super_admin (cross-tenant
   });
   assert.equal(res.statusCode, 200);
   assert.equal(res.json().currentTenantId, tenantB.id);
+});
+
+test('POST /v1/me/tenant/ensure creates and idempotently reconciles a server-owned personal tenant', async () => {
+  const first = await app.inject({
+    method: 'POST',
+    url: '/v1/me/tenant/ensure',
+    headers: bearer(orphan),
+  });
+  assert.equal(first.statusCode, 201, first.body);
+  assert.equal(first.json().created, true);
+  assert.equal(first.json().tenant.slug, `personal-${orphan.id}`);
+
+  const second = await app.inject({
+    method: 'POST',
+    url: '/v1/me/tenant/ensure',
+    headers: bearer(orphan),
+  });
+  assert.equal(second.statusCode, 200, second.body);
+  assert.equal(second.json().created, false);
+  assert.equal(second.json().tenant.id, first.json().tenant.id);
+
+  const [membership] = await db.select().from(tenantUsers).where(eq(tenantUsers.userId, orphan.id)).limit(1);
+  const [reloaded] = await db.select().from(users).where(eq(users.id, orphan.id)).limit(1);
+  assert.equal(membership.role, 'owner');
+  assert.equal(reloaded.currentTenantId, first.json().tenant.id);
 });
