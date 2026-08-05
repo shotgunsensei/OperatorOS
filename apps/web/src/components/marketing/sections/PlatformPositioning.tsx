@@ -59,7 +59,7 @@ const CARDS: PositioningCard[] = [
   {
     icon: Bot,
     title: 'AI Automation',
-    outcome: 'Automate repetitive handoffs without separating them from tenants, roles, and access.',
+    outcome: 'Automate repetitive handoffs without separating them from organizations, roles, and access.',
     accent: brand.accentRed,
   },
 ];
@@ -74,7 +74,7 @@ const CAPABILITIES: PositioningCard[] = [
   {
     icon: Building2,
     title: 'Tenant management',
-    outcome: 'Teams, roles, memberships, and tenant context stay explicit across the platform.',
+    outcome: 'Teams, roles, memberships, and organization context stay explicit across the platform.',
     accent: brand.accentGreen,
   },
   {
@@ -236,7 +236,7 @@ export default function PlatformPositioning() {
             </h2>
             <p style={{ fontSize: 16, lineHeight: 1.7, color: brand.textSecondary, margin: '0 0 26px', maxWidth: 620 }}>
               Pick the operations you actually run. OperatorOS gives each one a focused
-              module while the parent platform keeps identity, billing, tenants, and
+              module while the parent platform keeps identity, billing, organizations, and
               access under command.
             </p>
             <div style={{ display: 'grid', gap: 10 }}>

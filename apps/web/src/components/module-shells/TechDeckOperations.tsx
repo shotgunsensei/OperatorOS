@@ -161,7 +161,7 @@ export default function TechDeckOperations({ tenantKey, canWrite, canApprove }: 
       {requestedRecordState && <div className="td-route-context" data-testid="techdeck-route-record-context" data-found={requestedRecordState.found}>
         {requestedRecordState.found
           ? <><CheckCircle2 size={16} /><span>Deep-linked {requestedRecordState.kind}: <strong>{requestedRecordState.label}</strong></span></>
-          : <><AlertTriangle size={16} /><span>The requested {requestedRecordState.kind} is not available in this tenant.</span></>}
+          : <><AlertTriangle size={16} /><span>The requested {requestedRecordState.kind} is not available in this organization.</span></>}
       </div>}
       {error && <div className="td-error" role="alert"><AlertTriangle size={16} />{error}</div>}
 
@@ -188,7 +188,7 @@ export default function TechDeckOperations({ tenantKey, canWrite, canApprove }: 
             <div><strong>{row.name}</strong><small>{row.type.replaceAll('_', ' ')} · {organizationName(row.directoryOrganizationId)} · {row.hostname || row.ipAddress || row.cidr || row.serialNumber || 'details incomplete'} · v{row.version}</small></div>
             {canWrite ? <select aria-label={`Health for ${row.name}`} value={row.health} disabled={busy === `item-${row.id}`} onChange={event => setHealth(row, event.target.value as TechDeckAssetHealth)}>{healthOptions.map(value => <option key={value}>{value}</option>)}</select> : <Status value={row.health} />}
           </article>)}
-          {!data?.configurationItems.length && <Empty text="No configuration items registered for this tenant." />}
+          {!data?.configurationItems.length && <Empty text="No configuration items registered for this organization." />}
         </div>
       </Panel>
 

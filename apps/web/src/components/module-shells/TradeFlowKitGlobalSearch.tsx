@@ -141,12 +141,12 @@ export default function TradeFlowKitGlobalSearch({ tenantKey }: { tenantKey: str
       </form>
 
       <div className="tfk-global-search-status" aria-live="polite">
-        {loading ? 'Searching tenant records…' : result ? `${result.total} result${result.total === 1 ? '' : 's'} for “${result.query}”` : ''}
+        {loading ? 'Searching organization records…' : result ? `${result.total} result${result.total === 1 ? '' : 's'} for “${result.query}”` : ''}
       </div>
       {error && <div className="tfk-global-search-error" role="alert" data-testid="tradeflowkit-global-search-error">{error}</div>}
       {result && !loading && result.total === 0 && (
         <div className="tfk-global-search-empty" data-testid="tradeflowkit-global-search-empty">
-          No active tenant records match “{result.query}”.
+          No active organization records match “{result.query}”.
         </div>
       )}
       {resultGroups.length > 0 && (

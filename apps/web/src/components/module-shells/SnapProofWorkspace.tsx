@@ -25,6 +25,7 @@ import {
   type SnapProofReport,
 } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
+import { EmptyState, LoadingState } from '@/components/ExperiencePrimitives';
 import { ShellLiveBadge } from './ShellChrome';
 
 type Tab = 'dashboard' | 'cases' | 'evidence' | 'review' | 'findings' | 'reports' | 'custody' | 'retention' | 'settings';
@@ -42,9 +43,9 @@ const tabs: Array<{ id: Tab; label: string; Icon: typeof LayoutDashboard }> = [
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  border: '1px solid #334155',
-  background: '#0b1220',
-  color: '#e2e8f0',
+  border: `1px solid ${semantic.border}`,
+  background: semantic.bg,
+  color: semantic.text,
   borderRadius: radius.sm,
   padding: '10px 12px',
   font: 'inherit',
@@ -53,26 +54,26 @@ const inputStyle: React.CSSProperties = {
 const buttonStyle: React.CSSProperties = {
   border: 0,
   borderRadius: radius.sm,
-  background: 'linear-gradient(135deg,#0ea5e9,#14b8a6)',
-  color: '#f8fafc',
+  background: semantic.accent,
+  color: semantic.text,
   fontWeight: 750,
   padding: '10px 15px',
   cursor: 'pointer',
 };
 const subtleButton: React.CSSProperties = {
   ...buttonStyle,
-  background: '#111827',
-  border: '1px solid #334155',
-  color: '#cbd5e1',
+  background: semantic.bgPanel,
+  border: `1px solid ${semantic.border}`,
+  color: semantic.textMuted,
 };
 const dangerButton: React.CSSProperties = {
   ...subtleButton,
-  borderColor: '#7f1d1d',
-  color: '#fca5a5',
+  borderColor: `${semantic.accentDanger}66`,
+  color: semantic.accentDanger,
 };
 
 function errorText(error: any) {
-  return error?.error || error?.message || 'SnapProofOS request failed';
+  return error?.error || error?.message || "We couldn't process that in SnapProof. Please try again.";
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -211,14 +212,14 @@ export default function SnapProofWorkspace() {
       tabIndex={-1}
       style={{
         minHeight: '100vh',
-        background: 'radial-gradient(circle at 75% 0%,rgba(14,165,233,.13),transparent 35%),linear-gradient(180deg,#07101c,#05080f)',
-        color: '#e2e8f0',
+        background: semantic.bg,
+        color: semantic.text,
         padding: `0 ${space.xxl}px ${space.xxl}px`,
       }}
     >
       <header style={{ display: 'flex', justifyContent: 'space-between', gap: space.lg, alignItems: 'flex-end', flexWrap: 'wrap', padding: `${space.xl}px 0` }}>
         <div>
-          <div style={{ color: '#2dd4bf', fontSize: 12, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase' }}>Evidence integrity and proof of work</div>
+          <div style={{ color: semantic.accentSuccess, fontSize: fontSize.xs, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase' }}>Evidence integrity and proof of work</div>
           <h1 style={{ margin: '6px 0', fontSize: 30 }}>SnapProofOS</h1>
           <p style={{ margin: 0, color: '#94a3b8', maxWidth: 820 }}>Capture private evidence, verify integrity, preserve chain of custody, and issue defensible reports with organization and role-based access.</p>
         </div>
@@ -351,7 +352,7 @@ function ReviewPanel({ caseDetail, evidence, reports, saving, mutate }: { caseDe
   const pendingEvidence = evidence.filter(item => item.status === 'in_review');
   const pendingReports = reports.filter(item => item.status === 'in_review');
   const currentCase = caseDetail?.case as SnapProofCase | undefined;
-  return <Panel id="snapproofos-review" title="Reviewer queue" description="Tenant administrators approve or reject on the server; opening this UI never grants review authority.">
+  return <Panel id="snapproofos-review" title="Reviewer queue" description="Organization administrators approve or reject on the server; opening this UI never grants review authority.">
     <h3>Evidence awaiting decision</h3>
     <CardGrid>{pendingEvidence.length ? pendingEvidence.map(item => <article key={item.id} style={{ ...cardStyle, background: '#0f172a' }}><h4>{item.title}</h4><p style={{ color: '#94a3b8' }}>{item.caseReference} · {item.evidenceType}</p><div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><button disabled={saving} style={buttonStyle} onClick={() => void mutate(() => moduleShellApi.snapproofos.decideEvidence(item.id, { expectedVersion: item.version, decision: 'approve' }))}><CheckCircle2 size={14} /> Verify</button><button disabled={saving} style={dangerButton} onClick={() => void mutate(() => moduleShellApi.snapproofos.decideEvidence(item.id, { expectedVersion: item.version, decision: 'reject', reason: 'Reviewer rejected evidence' }))}>Reject</button></div></article>) : <Empty text="No evidence is awaiting review." />}</CardGrid>
     <h3 style={{ marginTop: space.xl }}>Case decision</h3>
@@ -393,14 +394,14 @@ function CustodyPanel({ cases, selectedCaseId, events, onSelectCase }: { cases: 
   return <Panel id="snapproofos-custody" title="Chain of custody" description="Follow who added, reviewed, or changed each item and verify that the displayed evidence trail remains intact.">
     <Select label="Case" value={selectedCaseId || ''} onChange={onSelectCase} required options={cases.map(item => [item.id, `${item.reference} · ${item.title}`])} />
     <div style={{ ...cardStyle, background: valid ? '#06201b' : '#290b13', borderColor: valid ? '#0f766e' : '#be123c', margin: `${space.md}px 0` }}><ShieldCheck size={18} /> <strong>{valid ? 'Displayed custody links are continuous' : 'Displayed custody chain is discontinuous'}</strong></div>
-    <div style={{ display: 'grid', gap: 8 }}>{events.length ? events.map(event => <article key={event.id} style={{ ...cardStyle, background: '#0f172a', display: 'grid', gridTemplateColumns: '60px minmax(0,1fr)', gap: 12 }}><strong style={{ color: '#5eead4' }}>#{event.sequenceNumber}</strong><div><strong>{String(event.eventType).replaceAll('_', ' ')}</strong><div style={{ color: '#94a3b8', fontSize: 12 }}>{new Date(event.createdAt).toLocaleString()}</div><code style={{ display: 'block', color: '#67e8f9', fontSize: 10, wordBreak: 'break-all', marginTop: 6 }}>{event.eventHash}</code></div></article>) : <Empty text="No custody events exist for this case." />}</div>
+    <div style={{ display: 'grid', gap: 8 }}>{events.length ? events.map(event => <article key={event.id} style={{ ...cardStyle, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}><strong style={{ color: semantic.accentSuccess }}>Event {event.sequenceNumber}</strong><div><strong>{String(event.eventType).replaceAll('_', ' ')}</strong><div style={{ color: semantic.textMuted, fontSize: fontSize.xs }}>{new Date(event.createdAt).toLocaleString()}</div><code style={{ display: 'block', color: semantic.accentInfo, fontSize: 10, wordBreak: 'break-all', marginTop: 6 }}>{event.eventHash}</code></div></article>) : <Empty text="No custody events exist for this case." />}</div>
   </Panel>;
 }
 
 function RetentionPanel({ cases, selectedCase, onSelectCase, saving, mutate }: { cases: SnapProofCase[]; selectedCase?: SnapProofCase; onSelectCase: (id: string) => void; saving: boolean; mutate: (task: () => Promise<unknown>) => Promise<void> }) {
   const [retentionDate, setRetentionDate] = useState('');
   useEffect(() => setRetentionDate(selectedCase?.retentionUntil ? selectedCase.retentionUntil.slice(0, 10) : ''), [selectedCase?.retentionUntil]);
-  return <Panel id="snapproofos-retention" title="Retention, legal hold, and archive" description="Tenant administrators control retention. Legal hold blocks archive and future purge eligibility.">
+  return <Panel id="snapproofos-retention" title="Retention, legal hold, and archive" description="Organization administrators control retention. Legal hold blocks archive and future purge eligibility.">
     <Select label="Case" value={selectedCase?.id || ''} onChange={onSelectCase} required options={cases.map(item => [item.id, `${item.reference} · ${item.title}`])} />
     {selectedCase ? <div style={{ ...cardStyle, background: '#0f172a', marginTop: space.md }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 12, alignItems: 'end' }}>
@@ -417,7 +418,7 @@ function SettingsPanel() {
   return <Panel id="snapproofos-settings" title="Privacy and access" description="Review how SnapProofOS protects evidence and limits access across your organization.">
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))', gap: space.md }}>
       <Info title="Private evidence storage" text="Raw files have no public links. Every download requires an active, authorized account." />
-      <Info title="Review authority" text="Members may collect and submit. Tenant administrators approve, reject, set legal holds, and archive." />
+      <Info title="Review authority" text="Members may collect and submit. Organization administrators approve, reject, set legal holds, and archive." />
       <Info title="Accounts and billing" text="Profile, membership, billing, logout, and module access remain in the shared OperatorOS header." />
       <Info title="External integrations" text="Only approved sharing and integration options are available; unreviewed connections remain disabled." />
     </div>

@@ -37,12 +37,12 @@ const ITEMS: readonly TrustItem[] = [
   {
     icon: Users,
     title: 'Tenant-aware by design',
-    body: 'Every record, module grant, and audit row is scoped to a tenant. The API is built to keep tenant data separated.',
+    body: 'Every record, module grant, and audit row is scoped to your organization. Your business data stays separated.',
   },
   {
     icon: KeyRound,
     title: 'Module entitlement model',
-    body: 'Module access is granted per tenant and per user. Designed to revoke access when a subscription ends.',
+    body: 'Module access is granted per organization and per user. Access can be revoked when a subscription ends.',
   },
   {
     icon: LogIn,
@@ -52,7 +52,7 @@ const ITEMS: readonly TrustItem[] = [
   {
     icon: FileSearch,
     title: 'Audit-friendly workflows',
-    body: 'Sensitive mutations write to a centralized audit trail with actor, target, and tenant context for later review.',
+    body: 'Sensitive changes write to a centralized audit trail with the person, target, and organization context for later review.',
   },
   {
     icon: Target,
@@ -63,7 +63,7 @@ const ITEMS: readonly TrustItem[] = [
 
 export default function TrustSection({
   heading = 'Built with security-conscious workflows in mind.',
-  subheading = 'Multi-tenant from day one. Role-aware on every action. Designed for teams that move fast without losing control.',
+  subheading = 'Organization-aware from day one. Role-aware on every action. Built for teams that move quickly without losing control.',
   testId = 'marketing-trust-section',
 }: {
   heading?: string;

@@ -88,7 +88,7 @@ export default function TradeFlowKitLeadCenter({ tenantKey, canManage }: { tenan
         if (!cancelled) setLeads(Array.isArray(response?.leads) ? response.leads : []);
       })
       .catch((requestError) => {
-        if (!cancelled) setError(errorMessage(requestError, 'Could not load tenant leads.'));
+        if (!cancelled) setError(errorMessage(requestError, 'Could not load organization leads.'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -207,7 +207,7 @@ export default function TradeFlowKitLeadCenter({ tenantKey, canManage }: { tenan
           <div className="tfk-lead-eyebrow">Active sales workflow</div>
           <h2>Lead Conversion Center</h2>
           <p>
-            Capture, qualify, and convert tenant leads into shared-directory customers and numbered jobs. Provider delivery uses the shared notification outbox.
+            Capture, qualify, and convert organization leads into shared-directory customers and numbered jobs. Provider delivery uses the shared notification outbox.
           </p>
         </div>
         <div className="tfk-lead-metrics" aria-label="Lead pipeline summary">
@@ -323,7 +323,7 @@ export default function TradeFlowKitLeadCenter({ tenantKey, canManage }: { tenan
             {submitting ? 'Saving…' : 'Add lead'}
           </button>
         </div>
-      </form> : <div className="tfk-lead-read-only" data-testid="tradeflowkit-lead-read-only">Viewer access is read only. Lead and message actions require operator access.</div>}
+      </form> : <div className="tfk-lead-read-only" data-testid="tradeflowkit-lead-read-only">You’re viewing this workspace. Lead and message actions are available to operators.</div>}
 
       <div className="tfk-lead-toolbar">
         <label className="tfk-lead-search">

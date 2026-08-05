@@ -8,6 +8,7 @@ import {
 } from '@/lib/design-tokens';
 import { billingApi, meApi, modulesApi } from '@/lib/auth';
 import { COMPANION_MODULES, CORE_PRODUCTS_BY_KEY } from '@operatoros/sdk';
+import { LoadingState } from '../ExperiencePrimitives';
 
 interface AddonRow {
   module: { slug: string; name: string };
@@ -128,7 +129,7 @@ export default function TenantBillingPage() {
       </header>
 
       {loading ? (
-        <div style={{ color: semantic.textMuted, padding: space.xl }} data-testid="tenant-billing-loading">Loading organization billing…</div>
+        <div data-testid="tenant-billing-loading"><LoadingState label="Loading organization billing…" /></div>
       ) : (
         <>
           <div

@@ -177,7 +177,7 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
                 padding: (!isMobile && collapsed) ? '10px 14px' : '10px 12px',
                 margin: '1px 0',
                 border: 'none',
-                borderRadius: 8,
+                 borderRadius: 8,
                 background: isActive ? colors.bgHover : 'transparent',
                 color: isActive ? colors.accent : colors.text,
                 cursor: 'pointer',
@@ -237,7 +237,7 @@ export default function SaasLayout({ activePage, onNavigate, children, tenantRol
           <div style={{
             position: 'absolute', bottom: '100%', left: 8, right: 8,
             background: colors.bgSecondary, border: `1px solid ${colors.border}`,
-            borderRadius: 8, padding: 4, marginBottom: 4, zIndex: 100,
+             borderRadius: 8, padding: 4, marginBottom: 4, zIndex: 100,
           }} role="menu" aria-label="Account actions">
             <button
               role="menuitem"

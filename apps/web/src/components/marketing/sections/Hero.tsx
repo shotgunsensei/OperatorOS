@@ -25,11 +25,11 @@ const VALUE_STRIP = [
 
 const STACK_LAYERS = [
   { label: 'Core products', value: 'TradeFlowKit · PulseDesk · TechDeck', accent: brand.accentCyan },
-  { label: 'Free with any account', value: 'TorqueShed · FaultlineLab · Ninja Pool Hall', accent: brand.accentGreen },
-  { label: 'Companion modules', value: 'SnapProofOS · BrandForgeOS · Ninjamation', accent: brand.accentViolet },
+  { label: 'Free with every account', value: 'TorqueShed · FaultlineLab · Ninja Pool Hall', accent: brand.accentGreen },
+  { label: 'Companion modules', value: 'SnapProof · BrandForge · Ninjamation', accent: brand.accentViolet },
 ];
 
-const COMMAND_SIGNALS = ['Login', 'Billing', 'Tenants', 'SSO', 'Modules'];
+const COMMAND_SIGNALS = ['Sign-in', 'Billing', 'Organizations', 'Access', 'Modules'];
 
 export default function Hero() {
   const { user, loading } = useAuth();
@@ -317,7 +317,7 @@ export default function Hero() {
 
           <img
             src="/media/operatoros/operatoros-command-nexus.png"
-            alt="Cinematic OperatorOS command nexus connecting modules through glowing SSO, billing, tenant, and entitlement rails."
+          alt="Cinematic OperatorOS command nexus connecting modules through identity, billing, and access rails."
             onError={(event) => {
               event.currentTarget.src = '/media/operatoros/operatoros-hero.png';
             }}

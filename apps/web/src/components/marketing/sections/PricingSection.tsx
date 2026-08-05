@@ -165,7 +165,7 @@ export default function PricingSection() {
           <div>
             <div style={{ color: brand.accentCyan, fontWeight: 750, fontSize: 14 }}>OperatorOS command layer — $0</div>
             <p style={{ color: brand.textSecondary, fontSize: 14, lineHeight: 1.55, margin: '8px 0 0' }}>
-              The parent authority stays free while your tenant pays only for the applications it operates.
+              The parent authority stays free while your organization pays only for the applications it operates.
             </p>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 22px', alignContent: 'center' }}>
@@ -296,7 +296,7 @@ export default function PricingSection() {
       <section className="pricing-shell" style={{ paddingTop: 88, paddingBottom: 72 }}>
         <header style={{ marginBottom: 30, display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div>
-            <h2 style={sectionHeadingStyle}>Free with any account</h2>
+            <h2 style={sectionHeadingStyle}>Free with every account</h2>
             <p style={sectionCopyStyle}>These three apps come with every OperatorOS account at no cost — no paid core product required.</p>
           </div>
           {!user && (

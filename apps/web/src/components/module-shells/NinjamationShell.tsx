@@ -15,7 +15,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
-import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
+import { cardStyle, fontSize, inputStyle, radius, semantic, space } from '@/lib/design-tokens';
+import { EmptyState, ErrorState, LoadingState } from '@/components/ExperiencePrimitives';
 import { ShellLiveBadge } from './ShellChrome';
 
 type Row = Record<string, any>;
@@ -32,17 +33,6 @@ type Detail = {
   versions: Row[];
   reviews: Row[];
   executionSupported: false;
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  boxSizing: 'border-box',
-  color: semantic.text,
-  background: semantic.bg,
-  border: `1px solid ${semantic.border}`,
-  borderRadius: radius.sm,
-  padding: '10px 12px',
-  fontSize: fontSize.body,
 };
 
 const buttonStyle: React.CSSProperties = {
@@ -81,7 +71,7 @@ function badge(status: string): React.CSSProperties {
   const color = status === 'approved'
     ? semantic.accentSuccess
     : status === 'review'
-      ? '#d29922'
+      ? semantic.accentWarning
       : status === 'retired'
         ? semantic.textMuted
         : semantic.accent;
@@ -229,7 +219,7 @@ export default function NinjamationShell() {
       if (action === 'reject') await moduleShellApi.ninjamation.reject(id, version, 'Changes requested');
       if (action === 'retire') await moduleShellApi.ninjamation.retire(id, version);
       setNotice(
-        action === 'review' ? 'Submitted for tenant-admin review.'
+        action === 'review' ? 'Submitted for organization-admin review.'
           : action === 'approve' ? 'Approved current version for audited download.'
             : action === 'reject' ? 'Returned to draft.'
               : 'Script retired.',
@@ -281,7 +271,7 @@ export default function NinjamationShell() {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      setNotice('Approved version downloaded and recorded in the tenant audit trail.');
+      setNotice('Approved version downloaded and recorded in the organization audit trail.');
       await load(detail.script.id);
     } catch (caught) {
       setError(message(caught, 'Could not download the approved script'));
@@ -301,11 +291,11 @@ export default function NinjamationShell() {
         <FileCode2 size={30} color={semantic.accent} />
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h1 style={{ margin: 0, color: semantic.text, fontSize: 28 }}>Ninjamation</h1>
+          <h1 style={{ margin: 0, color: semantic.text, fontSize: fontSize.h1 }}>Ninjamation</h1>
             <ShellLiveBadge />
           </div>
           <p style={{ margin: '4px 0 0', color: semantic.textMuted }}>
-            Build, review, approve, and download tenant-owned PC automation scripts.
+            Build, review, approve, and download organization-owned PC automation scripts.
           </p>
         </div>
         <button
@@ -324,8 +314,8 @@ export default function NinjamationShell() {
         style={{
           ...cardStyle,
           marginBottom: space.lg,
-          color: '#d29922',
-          borderColor: '#d2992266',
+          color: semantic.accentWarning,
+          borderColor: `${semantic.accentWarning}66`,
           display: 'flex',
           alignItems: 'flex-start',
           gap: 10,
@@ -334,18 +324,18 @@ export default function NinjamationShell() {
         <ShieldCheck size={19} />
         <span>
           OperatorOS never executes these scripts. AI and manual scripts remain drafts until
-          static analysis and tenant-admin approval are complete; only the approved current
+          static analysis and organization-admin approval are complete; only the approved current
           version can be downloaded.
         </span>
       </div>
 
       {error && (
-        <div
-          role="alert"
-          data-testid="text-ninjamation-error"
-          style={{ ...cardStyle, color: semantic.accentDanger, marginBottom: space.lg }}
-        >
-          {error}
+        <div data-testid="text-ninjamation-error" style={{ marginBottom: space.lg }}>
+          <ErrorState
+            title="We couldn't load your scripts"
+            description="Check your connection and try again."
+            technicalDetails={error}
+          />
         </div>
       )}
       {notice && (
@@ -383,8 +373,8 @@ export default function NinjamationShell() {
       </section>
 
       {loading ? (
-        <div data-testid="text-ninjamation-loading" style={{ ...cardStyle, color: semantic.textMuted }}>
-          <Loader2 size={16} /> Loading your script library…
+        <div data-testid="text-ninjamation-loading">
+          <LoadingState label="Loading your script library…" />
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(230px,0.7fr) minmax(0,2fr)', gap: space.lg }}>
@@ -393,9 +383,9 @@ export default function NinjamationShell() {
               Script library
             </h2>
             {(workspace?.scripts?.length ?? 0) === 0 ? (
-              <p data-testid="text-ninjamation-empty" style={{ color: semantic.textMuted }}>
-                No scripts yet. Create a manual draft or generate one with the testable AI workflow.
-              </p>
+              <div data-testid="text-ninjamation-empty">
+                <EmptyState title="No scripts yet" description="Create a manual draft or generate one with the testable AI workflow." />
+              </div>
             ) : (
               <div data-testid="list-ninjamation-scripts" style={{ display: 'grid', gap: 8 }}>
                 {workspace!.scripts.map((row) => (
@@ -523,7 +513,7 @@ export default function NinjamationShell() {
                   <span style={{ color: semantic.accentDanger }}>
                     {detail.script.staticAnalysis?.criticalCount ?? 0} critical
                   </span>
-                  <span style={{ color: '#d29922' }}>
+                  <span style={{ color: semantic.accentWarning }}>
                     {detail.script.staticAnalysis?.warningCount ?? 0} warnings
                   </span>
                 </div>
@@ -537,7 +527,7 @@ export default function NinjamationShell() {
                       <div
                         key={finding.code}
                         style={{
-                          borderLeft: `3px solid ${finding.severity === 'critical' ? semantic.accentDanger : '#d29922'}`,
+                          borderLeft: `3px solid ${finding.severity === 'critical' ? semantic.accentDanger : semantic.accentWarning}`,
                           paddingLeft: 9,
                           color: semantic.textMuted,
                         }}
@@ -569,7 +559,7 @@ export default function NinjamationShell() {
                         disabled={!!busy}
                         style={buttonStyle}
                       >
-                        <ShieldCheck size={14} /> Tenant admin approve
+                        <ShieldCheck size={14} /> Organization admin approve
                       </button>
                       <button
                         type="button"

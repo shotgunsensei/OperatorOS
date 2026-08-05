@@ -10,7 +10,7 @@ const COL_PRODUCT = [
   { href: '/modules', label: 'Modules' },
   { href: '/ecosystem', label: 'Ecosystem' },
   { href: '/pricing', label: 'Pricing' },
-  { href: '/how-it-works', label: 'How It Works' },
+  { href: '/how-it-works', label: 'How it works' },
 ];
 
 const COL_MODULES = [
@@ -21,9 +21,9 @@ const COL_MODULES = [
 ];
 
 const COL_ACTIONS = [
-  { href: '/login', label: 'Login' },
-  { href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, label: 'Operator Console' },
-  { href: '/modules', label: 'View Modules' },
+  { href: '/login', label: 'Sign in' },
+  { href: DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl, label: 'Open console' },
+  { href: '/modules', label: 'View modules' },
   { href: 'https://operatoros.net/john', label: 'Contact', external: true },
 ];
 
@@ -64,8 +64,8 @@ export default function MarketingFooter() {
               maxWidth: 320,
             }}
           >
-            Parent command layer for a modular business operating system.
-            One login. Every operation.
+            One calm command layer for your business tools.
+            One sign-in. Every operation.
           </p>
         </div>
 

@@ -326,7 +326,7 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
   }
 
   function disconnectPaymentProvider() {
-    if (!window.confirm('Disconnect this tenant Stripe account? Existing payment history remains, but new checkout links will stop.')) return;
+    if (!window.confirm('Disconnect this organization’s Stripe account? Existing payment history remains, but new checkout links will stop.')) return;
     void run(() => moduleShellApi.tradeflowkit.disconnectPaymentProvider());
   }
 
@@ -343,7 +343,7 @@ export default function TradeFlowKitRevenueFlow({ tenantKey, canManage }: { tena
 
       {error && <div role="alert" style={{ marginTop: 12, padding: 10, borderRadius: 7, color: c.red, background: 'rgba(251,113,133,.10)', border: `1px solid ${c.red}55`, display: 'flex', gap: 8 }}><AlertTriangle size={16} />{error}</div>}
       {canManage && paymentProvider && <div data-testid="tradeflowkit-payment-provider" style={{ ...panel, marginTop: 12, padding: 12, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        <div><strong style={{ color: c.ink }}>Business payments · Stripe Connect</strong><div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{paymentProvider.ready ? `Ready for ${paymentProvider.mode} payments on ${paymentProvider.account?.providerAccountId}` : paymentProvider.account ? `Connected account needs attention: charges ${paymentProvider.account.chargesEnabled ? 'enabled' : 'restricted'}; mode ${paymentProvider.mode || 'unset'}.` : paymentProvider.reason || 'Connect a tenant-owned Stripe account to create customer checkout links.'}</div></div>
+              <div><strong style={{ color: c.ink }}>Business payments · Stripe Connect</strong><div style={{ color: c.muted, fontSize: 12, marginTop: 3 }}>{paymentProvider.ready ? `Ready for ${paymentProvider.mode} payments` : paymentProvider.account ? `Connected account needs attention: charges ${paymentProvider.account.chargesEnabled ? 'enabled' : 'restricted'}.` : paymentProvider.reason || 'Connect an organization-owned Stripe account to create customer checkout links.'}</div></div>
         <div style={{ display: 'flex', gap: 7 }}>{paymentProvider.account?.status !== 'disconnected' && paymentProvider.account ? <button type="button" disabled={pending} onClick={disconnectPaymentProvider} style={button(c.red)}>Disconnect</button> : <button type="button" disabled={pending || !paymentProvider.configured} onClick={connectPaymentProvider} style={button(c.blue)}>Connect Stripe</button>}</div>
       </div>}
       {loading ? <div style={{ color: c.muted, padding: '18px 0' }}>Loading revenue records…</div> : (

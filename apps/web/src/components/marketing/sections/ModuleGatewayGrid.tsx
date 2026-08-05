@@ -29,7 +29,7 @@ const PACKAGE_ORDER: MarketingPackageType[] = ['core', 'included', 'companion'];
 
 export default function ModuleGatewayGrid({
   heading = 'Tenant-aware modules under one parent platform.',
-  subheading = 'Core products, bundled apps, and companion modules all launch through the same OperatorOS command layer.',
+  subheading = 'Core products, bundled apps, and companion modules all launch through the same clear OperatorOS command layer.',
   testId = 'marketing-module-grid',
   headingLevel = 'h2',
 }: ModuleGatewayGridProps) {

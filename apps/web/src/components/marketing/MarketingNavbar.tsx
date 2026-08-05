@@ -19,7 +19,7 @@ const NAV_LINKS: NavLink[] = [
   { href: '/', label: 'Platform' },
   { href: '/modules', label: 'Modules' },
   { href: '/ecosystem', label: 'Ecosystem' },
-  { href: '/how-it-works', label: 'How It Works' },
+  { href: '/how-it-works', label: 'How it works' },
   { href: '/pricing', label: 'Pricing' },
   { href: 'https://operatoros.net/john', label: 'Contact', external: true },
 ];

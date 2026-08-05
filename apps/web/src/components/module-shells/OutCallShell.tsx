@@ -209,7 +209,7 @@ export default function OutCallShell() {
               setEditingTriggerId('');
               setTrigger({ profileId: '', phrase: '', neutralReply: 'Request received.', delaySeconds: 0 });
             }, editingTriggerId ? 'Private trigger updated.' : 'Private trigger created.')}>
-            <Plus size={16} /> {editingTriggerId ? 'Save trigger changes' : 'Save private trigger'}
+            <Plus size={16} /> Save trigger
           </button>
           <ActionList rows={workspace.triggers} empty="No private triggers yet." render={row => `Hidden phrase · ${row.delaySeconds}s delay · ${row.enabled ? 'enabled' : 'disabled'}`}
             secondaryActionLabel="Edit trigger" onSecondaryAction={row => {

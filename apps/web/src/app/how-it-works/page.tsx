@@ -55,8 +55,8 @@ export default function MarketingHowItWorksPage() {
           Pick a plan, light up your modules, run your business from one console.
         </h1>
         <p style={{ fontSize: 17, color: brand.textSecondary, margin: '0 auto', maxWidth: 620 }}>
-          Auth, billing, tenants, and entitlements are already wired together.
-          Modules just plug in.
+          Sign-in, billing, organizations, and access are already connected.
+          Your team can focus on the work, not the setup.
         </p>
       </header>
       <HowItWorks />

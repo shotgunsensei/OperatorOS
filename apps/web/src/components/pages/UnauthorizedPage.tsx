@@ -1,6 +1,7 @@
 'use client';
 
 import { colors } from '../SaasLayout';
+import { buttonStyles } from '@/lib/design-tokens';
 
 interface UnauthorizedPageProps {
   onGoBack: () => void;
@@ -15,10 +16,10 @@ export default function UnauthorizedPage({ onGoBack, message }: UnauthorizedPage
         background: 'rgba(210,153,34,0.15)', border: `1px solid ${colors.accentYellow}`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 32,
-      }}>🔒</div>
+      }}>!</div>
 
       <h1 data-testid="unauthorized-title" style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 12px' }}>
-        Access Denied
+        Access denied
       </h1>
 
       <p style={{ fontSize: 14, color: colors.textMuted, margin: '0 0 32px', lineHeight: 1.6 }}>
@@ -29,9 +30,7 @@ export default function UnauthorizedPage({ onGoBack, message }: UnauthorizedPage
         data-testid="button-go-back"
         onClick={onGoBack}
         style={{
-          padding: '12px 32px', borderRadius: 8, border: 'none',
-          background: colors.accent, color: '#fff',
-          fontSize: 14, fontWeight: 600, cursor: 'pointer',
+          ...buttonStyles.primary,
         }}
       >Go to Dashboard</button>
     </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../AuthProvider';
 import { colors } from '../SaasLayout';
+import { brand } from '@/lib/brand';
 
 interface RegisterPageProps {
   onSwitch: (page: 'login') => void;
@@ -50,23 +51,23 @@ export default function RegisterPage({ onSwitch }: RegisterPageProps) {
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: colors.bg, padding: 20,
+      background: brand.bgPrimary, padding: 'clamp(16px, 4vw, 32px)',
     }}>
       <div style={{
-        width: '100%', maxWidth: 420, background: colors.bgSecondary,
-        border: `1px solid ${colors.border}`, borderRadius: 16,
+        width: '100%', maxWidth: 440, background: brand.bgSecondary,
+        border: `1px solid ${brand.borderSoft}`, borderRadius: 16,
         padding: 'clamp(24px, 7vw, 40px)', boxSizing: 'border-box',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
             width: 48, height: 48, borderRadius: 12, margin: '0 auto 16px',
-            background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)',
+            background: `linear-gradient(135deg, ${brand.accentCyan} 0%, ${brand.accentViolet} 100%)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 24, fontWeight: 800, color: '#fff',
+            fontSize: 24, fontWeight: 800, color: brand.accentInk,
           }}>O</div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Create OperatorOS access</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: brand.textPrimary, margin: 0 }}>Create your OperatorOS account</h1>
           <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>
-            Create one account for your organization and its connected apps.
+            Set up one account for your organization and connected apps.
           </p>
         </div>
 

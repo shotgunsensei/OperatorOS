@@ -1,5 +1,17 @@
 import type { ReactNode } from 'react';
-import { AlertCircle, Inbox } from 'lucide-react';
+import { AlertCircle, Inbox, Loader2 } from 'lucide-react';
+
+export function LoadingState({ label = 'Loading…' }: { label?: string }) {
+  return (
+    <div className="ops-state-panel" role="status" aria-live="polite">
+      <div>
+        <Loader2 size={24} aria-hidden="true" style={{ animation: 'ops-spin 0.9s linear infinite' }} />
+        <p style={{ marginTop: 10 }}>{label}</p>
+      </div>
+      <style>{`@keyframes ops-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 export function PageHeader({
   eyebrow,

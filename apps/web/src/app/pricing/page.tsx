@@ -17,7 +17,7 @@ export default function MarketingPricingPage() {
         <PricingFaq />
         <TrustSection
           heading="Operators trust OperatorOS with the work that has to stay running."
-          subheading="Designed for teams that need role-aware access, tenant-scoped data, and an audit trail they can show their customers."
+          subheading="Designed for teams that need role-aware access, organization-scoped data, and an audit trail they can share with customers."
         />
         <FinalCta />
       </div>

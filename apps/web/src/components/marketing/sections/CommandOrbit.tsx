@@ -129,7 +129,7 @@ export default function CommandOrbit() {
           One command core. Every module in formation.
         </h2>
         <p style={{ color: brand.textSecondary, fontSize: 16, lineHeight: 1.65, margin: '0 auto', maxWidth: 760 }}>
-          OperatorOS sits in the center while product access, tenant context, billing state,
+          OperatorOS sits in the center while product access, organization context, billing state,
           and child-app launch rails stay synchronized across the ecosystem.
         </p>
       </div>

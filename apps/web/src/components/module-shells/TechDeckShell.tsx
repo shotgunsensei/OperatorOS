@@ -142,7 +142,7 @@ const shellCss = `
   }
   .techdeck-body {
     display: grid;
-    grid-template-columns: 236px minmax(0, 1fr);
+    grid-template-columns: minmax(180px, 236px) minmax(0, 1fr);
     gap: 16px;
     align-items: start;
   }

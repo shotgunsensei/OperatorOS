@@ -154,7 +154,7 @@ const shellCss = `
   }
   .pulsedesk-body {
     display: grid;
-    grid-template-columns: 236px minmax(0, 1fr);
+    grid-template-columns: minmax(180px, 236px) minmax(0, 1fr);
     gap: 16px;
     align-items: start;
   }
@@ -251,7 +251,7 @@ const shellCss = `
   }
   .pulsedesk-shell .pds-ack {
     background: rgba(251, 191, 36, 0.10);
-    color: #fde68a;
+    color: ${colors.amber};
   }
   .pulsedesk-card-grid {
     display: grid;

@@ -5,6 +5,7 @@ import { BarChart3, BookTemplate, History, Zap } from 'lucide-react';
 import { colors } from '../SaasLayout';
 import { useToast } from '../Toast';
 import { aiApi } from '@/lib/auth';
+import { LoadingState, PageHeader } from '../ExperiencePrimitives';
 
 interface AiTool {
   type: string;
@@ -180,11 +181,7 @@ export default function AiToolsPage() {
   if (loading) {
     return (
       <div style={{ padding: 'clamp(16px, 3vw, 40px)' }} data-testid="ai-tools-page">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', paddingTop: 80 }}>
-          <div style={{ width: 40, height: 40, border: `3px solid ${colors.border}`, borderTop: `3px solid ${colors.accent}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          <div style={{ color: colors.textMuted, fontSize: 14 }}>Loading AI tools…</div>
-        </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <LoadingState label="Loading AI tools…" />
       </div>
     );
   }

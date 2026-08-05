@@ -297,7 +297,7 @@ export default function TechDeckTicketQueue({
           <div className="techdeck-ticket-eyebrow">Active service workflow</div>
           <h2>Technician Ticket Queue</h2>
           <p>
-            Triage, prioritize, assign, and close tenant support work. OperatorOS owns identity, module access, and the active tenant boundary.
+            Triage, prioritize, assign, and close organization support work. OperatorOS owns identity, module access, and the active organization boundary.
           </p>
         </div>
         <div className="techdeck-ticket-metrics" aria-label="Ticket queue summary">
@@ -479,7 +479,7 @@ export default function TechDeckTicketQueue({
             <strong>{tickets.length === 0 ? 'No technician tickets yet' : 'No tickets match this view'}</strong>
             <span>
               {tickets.length === 0
-                ? 'Open the first tenant ticket and assign clear ownership.'
+                ? 'Open the first organization ticket and assign clear ownership.'
                 : 'Clear the current search and filters to restore the full queue.'}
             </span>
           </div>
@@ -666,7 +666,7 @@ const ticketQueueCss = `
   .techdeck-ticket-priority-low { color: #bbf7d0; background: rgba(22,163,74,.2); }
   .techdeck-ticket-status-pill { color: #cbd5e1; background: rgba(100,116,139,.22); }
   .techdeck-ticket-status-in_progress { color: #bae6fd; background: rgba(2,132,199,.2); }
-  .techdeck-ticket-status-waiting_on_client { color: #fde68a; background: rgba(202,138,4,.2); }
+  .techdeck-ticket-status-waiting_on_client { color: #fbbf24; background: rgba(202,138,4,.2); }
   .techdeck-ticket-status-resolved, .techdeck-ticket-status-closed { color: #bbf7d0; background: rgba(22,163,74,.2); }
   .techdeck-ticket-card h3 { margin: 8px 0 0; color: #e5eefc; font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; text-wrap: balance; }
   .techdeck-ticket-card h3 span { color: #38bdf8; font-variant-numeric: tabular-nums; }

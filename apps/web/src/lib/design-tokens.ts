@@ -140,6 +140,21 @@ export const buttonStyles: Record<ButtonVariant, CSSProperties> = {
   },
 };
 
+// Shared text-input chrome. Pages/module shells should spread this and only
+// override what is genuinely different (e.g. width) so inputs read the same
+// everywhere.
+export const inputStyle: CSSProperties = {
+  minHeight: 40,
+  padding: '8px 12px',
+  borderRadius: radius.md,
+  border: `1px solid ${semantic.border}`,
+  background: semantic.bg,
+  color: semantic.text,
+  fontSize: fontSize.body,
+  outline: 'none',
+  boxSizing: 'border-box',
+};
+
 // Brand palette + CSS variables live in `./brand.ts` (server-safe,
 // no client-component imports) so root server components can dot into
 // them. Re-exported here for convenience so client surfaces only need

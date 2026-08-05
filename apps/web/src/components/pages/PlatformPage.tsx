@@ -390,7 +390,7 @@ function Dashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
         <Card data-testid="card-stripe" onClick={() => onNavigate({ kind: 'health' })} style={{ cursor: 'pointer' }}>
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Stripe</div>
           <div style={{ fontSize: 16 }}><Pill tone={h.stripe?.live ? 'green' : 'yellow'}>{h.stripe?.mode ?? 'unknown'}</Pill></div>
-          <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>last webhook: {h.stripe?.lastSuccessfulWebhookAt ? new Date(h.stripe.lastSuccessfulWebhookAt).toLocaleString() : '—'}</div>
+          <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>Last billing sync: {h.stripe?.lastSuccessfulWebhookAt ? new Date(h.stripe.lastSuccessfulWebhookAt).toLocaleString() : '—'}</div>
         </Card>
         <Card data-testid="card-db" onClick={() => onNavigate({ kind: 'health' })} style={{ cursor: 'pointer' }}>
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Infrastructure</div>
@@ -816,7 +816,7 @@ function DeleteTenantDialog({
           cannot be undone.
         </p>
         <p style={{ margin: '0 0 6px 0', fontSize: 13 }}>
-          Type the tenant slug <code>{tenant.slug}</code> to enable the delete button:
+          Type <code>{tenant.slug}</code> to confirm you want to delete this organization:
         </p>
         <input
           data-testid="input-confirm-slug"

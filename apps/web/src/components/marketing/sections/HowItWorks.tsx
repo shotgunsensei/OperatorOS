@@ -13,7 +13,7 @@ const STEPS: Step[] = [
   {
     cmd: '> operator login',
     title: 'Sign in once.',
-    body: 'One account, one tenant, every module. Roles and permissions follow you everywhere.',
+    body: 'One account, one organization, every module. Roles and permissions follow you everywhere.',
   },
   {
     cmd: '> operator modules enable',

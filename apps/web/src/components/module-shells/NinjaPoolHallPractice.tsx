@@ -817,7 +817,7 @@ export default function NinjaPoolHallPractice() {
             </div>
           )}
           <div className="nph-history-note">
-            <ShieldCheck size={15} /> Only your sessions in the active tenant are returned.
+            <ShieldCheck size={15} /> Only your sessions in the active organization are returned.
           </div>
         </aside>
       </div>

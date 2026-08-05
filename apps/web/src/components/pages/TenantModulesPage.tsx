@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Boxes } from 'lucide-react';
 import { colors } from '@/lib/design-tokens';
 import { tenantApi, meApi } from '@/lib/auth';
+import { EmptyState, ErrorState, LoadingState } from '../ExperiencePrimitives';
 
 interface TenantModule {
   tenantModuleId: string;
@@ -59,18 +60,11 @@ export default function TenantModulesPage() {
       </header>
 
       {loading ? (
-        <div style={{ color: colors.textMuted, padding: 24 }} data-testid="modules-loading">Loading organization tools…</div>
+        <div data-testid="modules-loading"><LoadingState label="Loading organization tools…" /></div>
       ) : loadError ? (
-        <div role="alert" style={{ color: colors.textMuted, padding: 24, border: `1px solid ${colors.border}`, borderRadius: 12, background: colors.bgSecondary }}>
-          <strong style={{ color: '#fff', display: 'block', marginBottom: 6 }}>Tool access could not be loaded</strong>
-          Your organization&apos;s access has not changed. Refresh the page and try again.
-        </div>
+        <ErrorState title="Tool access is unavailable" description="Your organization’s access has not changed. Refresh the page and try again." />
       ) : items.length === 0 ? (
-        <div style={{ color: colors.textMuted, padding: 24, border: `1px dashed ${colors.border}`, borderRadius: 12, background: colors.bgSecondary }} data-testid="modules-empty">
-          <strong style={{ color: '#fff', display: 'block', marginBottom: 6 }}>No organization-wide tools yet</strong>
-          Browse available tools to see pricing and the exact next step.
-          <div style={{ marginTop: 14 }}><a href="/app?page=apps" style={{ minHeight: 40, display: 'inline-flex', alignItems: 'center', padding: '8px 14px', borderRadius: 8, background: colors.accent, color: '#fff', fontWeight: 700, textDecoration: 'none' }}>Browse tools</a></div>
-        </div>
+        <div data-testid="modules-empty"><EmptyState title="No organization-wide tools yet" description="Browse available tools to see pricing and the next step." /></div>
       ) : (
         <div style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: 'hidden' }}>
           {items.map(m => (

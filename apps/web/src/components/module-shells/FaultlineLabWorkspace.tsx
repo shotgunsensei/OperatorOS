@@ -387,7 +387,7 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
       );
       setDraft(null);
       setAuthorContent(JSON.stringify(AUTHOR_TEMPLATE, null, 2));
-      setNotice('Challenge published to this tenant. Existing sessions remain pinned to their original version.');
+      setNotice('Challenge published to this organization. Existing sessions remain pinned to their original version.');
       await load();
       setTab('catalog');
     } catch (next) {

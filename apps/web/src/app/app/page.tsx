@@ -135,23 +135,23 @@ function AppContent() {
       case 'command-center':
         return userIsTenantAdmin
           ? <TenantCommandCenterPage onNavigate={handleNavigate} />
-          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can access the Command Center." />;
+          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only organization owners or admins can access the Command Center." />;
       case 'tenant-users':
         return userIsTenantAdmin
           ? <TenantUsersPage />
-          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can manage members." />;
+          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only organization owners or admins can manage members." />;
       case 'tenant-modules':
         return userIsTenantAdmin
           ? <TenantModulesPage />
-          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can view tenant modules." />;
+          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only organization owners or admins can view organization tools." />;
       case 'tenant-billing':
         return userIsTenantAdmin
           ? <TenantBillingPage />
-          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can view tenant billing." />;
+          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only organization owners or admins can view organization billing." />;
       case 'tenant-settings':
         return userIsTenantAdmin
           ? <TenantSettingsPage />
-          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only tenant owners or admins can edit tenant settings." />;
+          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only organization owners or admins can edit organization settings." />;
       case 'platform':
         return userIsSuperAdmin
           ? <PlatformPage />

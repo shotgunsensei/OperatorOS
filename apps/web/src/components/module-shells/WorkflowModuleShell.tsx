@@ -1,8 +1,9 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, ArrowLeft, CheckCircle2, FileCheck2, Plus, Trash2, Wrench, type LucideIcon } from 'lucide-react';
-import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
+import { ArrowLeft, FileCheck2, Plus, Trash2, Wrench, type LucideIcon } from 'lucide-react';
+import { cardStyle, fontSize, inputStyle, radius, semantic, space } from '@/lib/design-tokens';
+import { EmptyState, ErrorState, LoadingState } from '@/components/ExperiencePrimitives';
 import {
   moduleShellApi,
   type ModuleWorkflowItem,
@@ -122,11 +123,7 @@ export default function WorkflowModuleShell({ moduleSlug }: { moduleSlug: Native
   }
 
   const Icon = config.Icon;
-  const inputStyle: React.CSSProperties = {
-    width: '100%', boxSizing: 'border-box', borderRadius: radius.sm,
-    border: `1px solid ${semantic.border}`, background: semantic.bg,
-    color: semantic.text, padding: '10px 12px', fontSize: fontSize.body,
-  };
+  const fieldStyle: React.CSSProperties = { ...inputStyle, width: '100%' };
 
   return (
     <main data-testid={`${moduleSlug}-module-shell`} style={{ padding: space.xxl, maxWidth: 1180, margin: '0 auto' }}>
@@ -152,21 +149,21 @@ export default function WorkflowModuleShell({ moduleSlug }: { moduleSlug: Native
         </a>
       </header>
 
-      {error && <div role="alert" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger, marginBottom: space.lg, display: 'flex', gap: 8 }}><AlertTriangle size={18} />{error}</div>}
+      {error && <ErrorState title="We couldn't update this workflow" description="Refresh and try again. Your existing records are still safe." technicalDetails={error} />}
 
       <section style={{ display: 'flex', flexWrap: 'wrap', gap: space.lg, alignItems: 'flex-start' }}>
         <form onSubmit={createItem} style={{ ...cardStyle, display: 'grid', gap: space.md, flex: '1 1 290px' }} data-testid={`${moduleSlug}-create-form`}>
           <div><h2 style={{ margin: 0, color: semantic.text, fontSize: 18 }}>New record</h2><p style={{ color: semantic.textMuted, margin: '5px 0 0', fontSize: fontSize.sm }}>Saved for the selected organization.</p></div>
-          <label style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{config.titleLabel}<input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} required placeholder={config.titlePlaceholder} style={{ ...inputStyle, marginTop: 6 }} /></label>
-          <label style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{config.summaryLabel}<textarea value={summary} onChange={(e) => setSummary(e.target.value)} maxLength={2000} rows={5} placeholder={config.summaryPlaceholder} style={{ ...inputStyle, marginTop: 6, resize: 'vertical' }} /></label>
-          <label style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{config.contextLabel}<input value={context} onChange={(e) => setContext(e.target.value)} maxLength={2000} placeholder={config.contextPlaceholder} style={{ ...inputStyle, marginTop: 6 }} /></label>
+          <label style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{config.titleLabel}<input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} required placeholder={config.titlePlaceholder} style={{ ...fieldStyle, marginTop: 6 }} /></label>
+          <label style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{config.summaryLabel}<textarea value={summary} onChange={(e) => setSummary(e.target.value)} maxLength={2000} rows={5} placeholder={config.summaryPlaceholder} style={{ ...fieldStyle, marginTop: 6, resize: 'vertical' }} /></label>
+          <label style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{config.contextLabel}<input value={context} onChange={(e) => setContext(e.target.value)} maxLength={2000} placeholder={config.contextPlaceholder} style={{ ...fieldStyle, marginTop: 6 }} /></label>
           <button type="submit" disabled={saving || title.trim().length < 2} style={{ border: 0, borderRadius: radius.sm, background: config.accent, color: '#071017', padding: '11px 16px', fontWeight: 800, cursor: saving ? 'wait' : 'pointer', opacity: saving || title.trim().length < 2 ? 0.55 : 1, display: 'inline-flex', justifyContent: 'center', gap: 8 }}><Plus size={17} />{saving ? 'Saving…' : 'Create record'}</button>
         </form>
 
         <div style={{ display: 'grid', gap: space.md, flex: '2 1 360px', minWidth: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><h2 style={{ margin: 0, color: semantic.text, fontSize: 18 }}>Active workflow</h2><span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>{items.length} record{items.length === 1 ? '' : 's'}</span></div>
-          {loading ? <div style={{ ...cardStyle, color: semantic.textMuted }}>Loading your workflow…</div> : items.length === 0 ? (
-            <div style={{ ...cardStyle, textAlign: 'center', padding: space.xxl, color: semantic.textMuted }} data-testid={`${moduleSlug}-empty-state`}><CheckCircle2 size={28} color={config.accent} style={{ marginBottom: 8 }} /><div>No records yet.</div><div style={{ fontSize: fontSize.sm, marginTop: 4 }}>Create the first shared workflow record to get started.</div></div>
+          {loading ? <LoadingState label="Loading your workflow…" /> : items.length === 0 ? (
+            <div data-testid={`${moduleSlug}-empty-state`}><EmptyState title="No workflow records yet" description="Create the first record to give your team a shared place to track this work." /></div>
           ) : items.map((item) => (
             <article key={item.id} style={{ ...cardStyle, borderLeft: `3px solid ${config.accent}` }} data-testid={`${moduleSlug}-workflow-item`}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: space.md, alignItems: 'flex-start' }}>
