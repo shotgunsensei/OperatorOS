@@ -84,6 +84,14 @@ INVITE_FROM_EMAIL = "john@shotgunninjas.com"
 OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL = "john@shotgunninjas.com"
 OUTCALL_PUBLIC_URL = "https://outcall.operatoros.net"
 TWILIO_ALLOWED_COUNTRIES = "US"
+STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY = "price_1U1ur3Lb6JkgBESXeCTVX6gb"
+STRIPE_PRICE_ADDON_NINJA_LAUNCH_KIT = "price_1U1ur3Lb6JkgBESXY9rfrLRs"
+STRIPE_PRICE_ADDON_OUTCALL = "price_1U1ur5Lb6JkgBESXtVDywhtW"
+STRIPE_PRICE_ADDON_STUDYFORGE_AI = "price_1U1ur4Lb6JkgBESX0Q85nIuj"
+STRIPE_PRICE_COMPANION_MODULE_MONTHLY = "price_1U1ur2Lb6JkgBESXix4w0nFg"
+STRIPE_PRICE_PULSEDESK_MONTHLY = "price_1U1ur1Lb6JkgBESXB7rWCTPj"
+STRIPE_PRICE_TECHDECK_MONTHLY = "price_1U1ur2Lb6JkgBESXQoZAKtj7"
+STRIPE_PRICE_TRADEFLOWKIT_MONTHLY = "price_1U1ur1Lb6JkgBESXhGexJoSZ"
 # OutCall is an active module. Live provider operations remain fail-closed until
 # the documented protection, Twilio, and public callback secrets are configured.
 
