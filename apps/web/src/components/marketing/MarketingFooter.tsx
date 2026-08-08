@@ -27,6 +27,11 @@ const COL_ACTIONS = [
   { href: 'https://operatoros.net/john', label: 'Contact', external: true },
 ];
 
+const COL_LEGAL = [
+  { href: '/msg_privacy', label: 'Messaging privacy' },
+  { href: '/msg_terms', label: 'Messaging terms' },
+];
+
 /**
  * MarketingFooter — closes the public layout with brand identity,
  * link columns, and the "Powered by Shotgun Ninjas Productions" attribution.
@@ -49,7 +54,7 @@ export default function MarketingFooter() {
           margin: '0 auto',
           padding: '48px 24px 24px',
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 2fr) repeat(3, minmax(0, 1fr))',
+           gridTemplateColumns: 'minmax(0, 1.7fr) repeat(4, minmax(0, 1fr))',
           gap: 32,
         }}
       >
@@ -71,7 +76,8 @@ export default function MarketingFooter() {
 
         <FooterColumn title="Product" links={COL_PRODUCT} />
         <FooterColumn title="Modules" links={COL_MODULES} />
-        <FooterColumn title="Actions" links={COL_ACTIONS} />
+         <FooterColumn title="Actions" links={COL_ACTIONS} />
+         <FooterColumn title="Legal" links={COL_LEGAL} />
       </div>
 
       <div
