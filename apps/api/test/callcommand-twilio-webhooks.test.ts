@@ -83,10 +83,40 @@ after(async () => {
     await db.execute(sql`DELETE FROM callcommand_profiles WHERE tenant_id=${user.currentTenantId}`);
     await db.execute(sql`DELETE FROM callcommand_channels WHERE tenant_id=${user.currentTenantId}`);
     await db.execute(sql`DELETE FROM shared_webhook_receipts WHERE tenant_id=${user.currentTenantId} AND module_id=${moduleRow.id}`);
+    await db.execute(sql`DELETE FROM operatoros_sms_consent_events WHERE consent_record_id IN (SELECT id FROM operatoros_sms_consent_records WHERE phone_e164='+15551234567')`);
+    await db.execute(sql`DELETE FROM operatoros_sms_consent_records WHERE phone_e164='+15551234567'`);
     await db.delete(tenantModules).where(eq(tenantModules.tenantId, user.currentTenantId));
     await cleanupUser(user.id);
   }
   if (createdModule && moduleRow) await cleanupModule(moduleRow.id);
+});
+
+test('signed platform messaging callback records STOP while a forged callback fails closed', async () => {
+  const path = '/v1/modules/callcommand-ai/webhooks/twilio/messaging';
+  const url = `${BASE}${path}`;
+  const body = {
+    MessageSid: `SM${'d'.repeat(30)}`,
+    From: '+15551234567',
+    To: process.env.TWILIO_FROM_NUMBER!,
+    Body: 'STOP',
+    OptOutType: 'STOP',
+  };
+  const forged = await app.inject({
+    method: 'POST', url: path,
+    headers: { 'x-twilio-signature': 'forged', 'content-type': 'application/json' }, payload: body,
+  });
+  assert.equal(forged.statusCode, 403, forged.body);
+  const signed = await app.inject({
+    method: 'POST', url: path,
+    headers: { 'x-twilio-signature': sign(url, body), 'content-type': 'application/json' }, payload: body,
+  });
+  assert.equal(signed.statusCode, 200, signed.body);
+  assert.equal(signed.body, '<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+  const record = await db.execute(sql`SELECT status,revoked_at,revocation_mechanism FROM operatoros_sms_consent_records WHERE phone_e164='+15551234567'`);
+  assert.equal(record.rows.length, 1);
+  assert.equal(record.rows[0].status, 'revoked');
+  assert.ok(record.rows[0].revoked_at);
+  assert.equal(record.rows[0].revocation_mechanism, 'twilio_keyword');
 });
 
 test('signed status callbacks transition once and replay safely', async () => {

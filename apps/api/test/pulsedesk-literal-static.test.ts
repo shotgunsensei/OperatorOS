@@ -35,7 +35,7 @@ test('Phase 27 public intake is bounded, rate limited, and rejects sensitive cli
 test('Phase 27 release v36 appends provider and intake persistence after TechDeck v35',()=>{
   const contract=read('apps/api/src/lib/database-release-contract.ts');
   const ddl=read('apps/api/src/lib/pulsedesk-literal-db-init.ts');
-  assert.match(contract,/releaseVersion: 36/);
+  assert.ok(Number(contract.match(/releaseVersion:\s*(\d+)/)?.[1] ?? 0) >= 36);
   assert.ok(contract.indexOf("{ id: 'pulsedesk_literal_tables'")>contract.indexOf("{ id: 'techdeck_literal_tables'"));
   for(const table of ['pulsedesk_mail_connectors','pulsedesk_connector_events','pulsedesk_inbound_messages','pulsedesk_public_intake_policies']) assert.match(ddl,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
 });

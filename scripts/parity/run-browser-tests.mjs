@@ -40,6 +40,7 @@ try {
       '--dir', 'apps/web', 'exec', 'playwright', 'test',
       'e2e/sso-v1.spec.ts',
       'e2e/parity-route-control.spec.ts',
+      'e2e/twilio-compliance.spec.ts',
     ];
     const focusedPattern = process.env.PARITY_BROWSER_GREP?.trim();
     if (focusedPattern) browserArgs.push('--grep', focusedPattern);

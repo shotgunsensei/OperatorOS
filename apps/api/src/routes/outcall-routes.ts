@@ -34,6 +34,7 @@ import { receiveVerifiedWebhook, registerSharedWebhookHandler } from '../lib/sha
 import { verifyPassword } from '../lib/auth.js';
 import { writeAudit } from '../lib/audit.js';
 import { resolveEntitlements } from '../lib/entitlement-resolver.js';
+import { recordOperatorOsMessagingKeyword } from '../lib/operatoros-messaging-compliance.js';
 
 const readGuards = [requireTenantModuleAccess('outcall')];
 const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
@@ -1045,6 +1046,29 @@ export async function registerOutCallRoutes(app: FastifyInstance) {
       if (!normalized || normalized.length > 120 || !isOutCallInboundNumber(to)) throw new Error('invalid sms');
     } catch {
       return twiml(reply, '<Message>Request received.</Message>');
+    }
+    const keyword = await recordOperatorOsMessagingKeyword({
+      phoneNumber: from,
+      body: body.Body,
+      optOutType: body.OptOutType,
+      providerEventId: messageSid,
+      sourceUrl: `${process.env.OUTCALL_PUBLIC_URL?.replace(/\/$/, '') || 'https://outcall.operatoros.net'}/api/modules/outcall/webhooks/twilio/sms`,
+      provider: 'twilio-outcall',
+      clientAddress: request.ip,
+      userAgent: request.headers['user-agent'],
+    });
+    if (keyword.handled) {
+      if (body.OptOutType) return twiml(reply, '');
+      if (keyword.type === 'HELP') {
+        return twiml(reply, '<Message>OperatorOS: Help is available at operatoros.net/john or john@shotgunninjas.com. Reply STOP to unsubscribe.</Message>');
+      }
+      if (keyword.type === 'START' && keyword.changed) {
+        return twiml(reply, '<Message>OperatorOS: You are resubscribed to service messages. Reply STOP to unsubscribe or HELP for help.</Message>');
+      }
+      if (keyword.type === 'STOP') {
+        return twiml(reply, '<Message>OperatorOS: You have been unsubscribed and will receive no further messages from this program.</Message>');
+      }
+      return twiml(reply, '');
     }
     const phoneDigest = fingerprint(`phone:${from}`);
     const triggerDigest = fingerprint(`trigger:${normalized}`);

@@ -12,6 +12,7 @@ import {
   safeFailureCode,
   sanitizeSharedMetadata,
 } from './shared-service-safety.js';
+import { isOperatorOsSmsRevoked } from './operatoros-messaging-compliance.js';
 
 type Executor = Pick<typeof db, 'execute'>;
 type Channel = 'email' | 'sms' | 'in_app';
@@ -363,6 +364,23 @@ export async function processOutboxMessage(row: Record<string, unknown>, executo
       await recordNotificationAttempt(row, {
         adapterName: 'operatoros-in-app', externalDelivery: false, resultState: 'delivered_internal',
       }, executor);
+      return;
+    }
+
+    if (channel === 'sms' && await isOperatorOsSmsRevoked(String(row.destination), executor)) {
+      await recordNotificationAttempt(row, {
+        adapterName: 'operatoros-suppression',
+        externalDelivery: false,
+        resultState: 'suppressed',
+        errorCode: 'OPERATOROS_SMS_CONSENT_REVOKED',
+      }, executor);
+      await executor.execute(sql`
+        UPDATE shared_outbox_messages
+        SET status='cancelled',attempt_count=attempt_count+1,lease_owner=NULL,lease_expires_at=NULL,
+          last_error_code='OPERATOROS_SMS_CONSENT_REVOKED',updated_at=NOW()
+        WHERE id=${String(row.id)} AND tenant_id=${String(row.tenant_id)}
+          AND status='processing' AND lease_owner=${String(row.lease_owner)}
+      `);
       return;
     }
 

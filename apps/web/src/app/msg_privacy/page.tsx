@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import LegalMessagingPage from '@/components/marketing/LegalMessagingPage';
+import OperatorOsPolicyPage from '@/components/marketing/OperatorOsPolicyPage';
 
 export const metadata: Metadata = {
   title: 'SMS/MMS Messaging Privacy Policy | OperatorOS',
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function MessagingPrivacyPage() {
-  return <LegalMessagingPage kind="privacy" />;
+  return <OperatorOsPolicyPage kind="privacy" />;
 }

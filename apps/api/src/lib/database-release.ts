@@ -32,6 +32,7 @@ import { ensureNinjaLaunchKitTables } from './ninja-launch-kit-db-init.js';
 import { ensureCallCommandTables } from './callcommand-db-init.js';
 import { ensureNinjamationTables } from './ninjamation-db-init.js';
 import { ensureOutCallProductTables, ensureOutCallTables } from './outcall-db-init.js';
+import { ensureOperatorOsMessagingComplianceTables } from './operatoros-messaging-compliance-db-init.js';
 import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db-init.js';
 import { ensureTradeFlowKitLeadOperationsTables } from './tradeflowkit-lead-operations-db-init.js';
 import { ensureTradeFlowKitPublicOperationsTables } from './tradeflowkit-public-operations-db-init.js';
@@ -82,6 +83,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   tradeflowkit_lead_operations: ensureTradeFlowKitLeadOperationsTables,
   tradeflowkit_public_operations: ensureTradeFlowKitPublicOperationsTables,
   outcall_product_operations: ensureOutCallProductTables,
+  operatoros_messaging_compliance_tables: ensureOperatorOsMessagingComplianceTables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -175,7 +177,10 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.outcall_events') IS NOT NULL AS outcall_events,
       to_regclass('public.outcall_rate_limits') IS NOT NULL AS outcall_rate_limits,
       to_regclass('public.operatoros_token_purchase_intents') IS NOT NULL AS operatoros_token_purchase_intents,
-      to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens
+      to_regclass('public.sso_handoff_tokens') IS NOT NULL AS sso_handoff_tokens,
+      to_regclass('public.operatoros_sms_consent_records') IS NOT NULL AS operatoros_sms_consent_records,
+      to_regclass('public.operatoros_sms_consent_events') IS NOT NULL AS operatoros_sms_consent_events,
+      to_regclass('public.operatoros_sms_consent_rate_limits') IS NOT NULL AS operatoros_sms_consent_rate_limits
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
   const missing = Object.entries(row ?? {})
