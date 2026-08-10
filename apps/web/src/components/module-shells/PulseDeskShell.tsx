@@ -27,6 +27,7 @@ import { createPulseDeskAdapterContext } from '../../../../../apps/modules/pulse
 import PulseDeskDepartmentEscalationQueue from './PulseDeskDepartmentEscalationQueue';
 import PulseDeskServiceDeskWorkspace from './PulseDeskServiceDeskWorkspace';
 import BusinessDirectory from './BusinessDirectory';
+import PulseDeskConnectorConsole from './PulseDeskConnectorConsole';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
 interface PulseDeskShellProps {
@@ -424,6 +425,10 @@ export default function PulseDeskShell(_props: PulseDeskShellProps) {
               <Settings size={15} color={colors.amber} />
               <span>Settings</span>
             </a>
+            <a href="#pulsedesk-connectors" style={railLinkStyle} data-testid="pulsedesk-sidebar-connectors">
+              <Inbox size={15} color={colors.cyan} />
+              <span>Email connectors</span>
+            </a>
           </nav>
 
           <section className="pulsedesk-main">
@@ -473,6 +478,8 @@ export default function PulseDeskShell(_props: PulseDeskShellProps) {
                 <BusinessDirectory moduleSlug="pulsedesk" tenantKey={adapter.tenantId} canArchive={canManageModule} />
               </section>
             )}
+
+            {adapter.tenantId && canManageModule && <PulseDeskConnectorConsole />}
 
             <section className="pulsedesk-panel" style={{ padding: 18 }} data-testid="pulsedesk-workflow-map">
               <SectionHeading

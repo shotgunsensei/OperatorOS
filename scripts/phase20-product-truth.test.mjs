@@ -82,6 +82,12 @@ test('retirement labels stay blocked unless a later literal-restoration contract
         assert.ok(capability.automatedEvidence.includes('apps/api/test/techdeck-literal-product.test.ts'));
         continue;
       }
+      if (module.moduleSlug === 'pulsedesk') {
+        assert.ok(['ACTIVE_NATIVE', 'ACTIVE_SHARED_EQUIVALENT'].includes(capability.state));
+        assert.equal(capability.blockerCode, null);
+        assert.ok(capability.automatedEvidence.includes('apps/api/test/pulsedesk-literal-product.test.ts'));
+        continue;
+      }
       assert.equal(capability.state, 'BLOCKED');
       assert.ok(['BLOCKED_REVIEW', 'SOURCE_IMPLEMENTATION_POINTER_MISSING'].includes(capability.blockerCode));
       if (capability.blockerCode === 'SOURCE_IMPLEMENTATION_POINTER_MISSING') {
@@ -95,6 +101,14 @@ test('retirement labels stay blocked unless a later literal-restoration contract
   assert.equal(techdeck.capabilities.length, 1309);
   assert.equal(techdeck.typeCounts.api_endpoint, 195);
   assert.equal(techdeck.typeCounts.integration, 44);
+  const pulsedesk = json('docs/parity/modules/pulsedesk.json');
+  assert.equal(pulsedesk.stateCounts.BLOCKED, 0);
+  assert.equal(pulsedesk.stateCounts.OWNER_WAIVED, 0);
+  assert.equal(pulsedesk.capabilities.length, 840);
+  const restoredPulseDeskRetirements = pulsedesk.capabilities.filter((capability) =>
+    ['retired_security', 'retired_product_boundary'].includes(capability.priorDisposition));
+  assert.ok(restoredPulseDeskRetirements.length >= 138);
+  assert.ok(restoredPulseDeskRetirements.every((capability) => capability.automatedEvidence.includes('apps/api/test/pulsedesk-literal-product.test.ts')));
   const tradeflowkit = json('docs/parity/modules/tradeflowkit.json');
   const visual = tradeflowkit.capabilities.find((capability) => capability.type === 'visual_contract');
   assert.equal(visual?.state, 'ACTIVE_NATIVE');

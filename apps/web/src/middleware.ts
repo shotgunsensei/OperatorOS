@@ -108,6 +108,11 @@ function techDeckPublicDestination(pathname: string): string | null {
   return null;
 }
 
+function pulseDeskPublicDestination(pathname: string): string | null {
+  const intake = /^\/submit\/([a-z0-9-]{8,64})\/?$/.exec(pathname);
+  return intake ? `/public/pulsedesk/intake/${intake[1]}` : null;
+}
+
 function isSsoCallbackPath(pathname: string): boolean {
   return pathname === '/sso' || pathname.startsWith('/sso/');
 }
@@ -406,6 +411,10 @@ export async function middleware(req: NextRequest) {
   }
   if (context.module?.slug === 'techdeck') {
     const destination = techDeckPublicDestination(pathname);
+    if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));
+  }
+  if (context.module?.slug === 'pulsedesk') {
+    const destination = pulseDeskPublicDestination(pathname);
     if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));
   }
 

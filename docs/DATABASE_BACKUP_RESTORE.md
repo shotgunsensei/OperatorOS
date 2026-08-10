@@ -276,6 +276,25 @@ logical backup, checksum verification, restore into a new database, v31
 release verification, row/reference reconciliation, authenticated browser
 acceptance, and an explicit traffic-switch/rollback decision.
 
+## Phase 27 v36 additive release rehearsal
+
+On 2026-08-10 the 36-step release plan, apply, and immediate idempotent reapply
+passed against the disposable loopback PostgreSQL 16 database retained from
+the Phase 26 rehearsal. The final step, `pulsedesk_literal_tables`, follows the
+Phase 26 `techdeck_literal_tables` step and verifies the tenant-scoped
+connector, safe-event, inbound-message, and public-intake tables.
+
+The focused Phase 27 database journey used synthetic users and messages only.
+It verified four provider adapters, tenant isolation, OAuth state/revocation,
+message replay protection, authenticity rejection, quarantine before ticket
+creation, sender hashing, sensitive-summary rejection, and public intake. No
+production database, standalone PulseDesk export, provider traffic, or
+customer data was touched, so this additive source rehearsal did not create a
+new backup artifact. Production apply still requires a fresh provider
+snapshot and logical backup, checksum and restore verification, privacy-
+reviewed reconciliation, real-provider acceptance, authenticated/public
+browser acceptance, and an explicit cutover/rollback decision.
+
 ## Production recovery
 
 1. Freeze writes and preserve the failed database as read-only when safe.

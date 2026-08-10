@@ -11,13 +11,13 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 35);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 36);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 35);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 35);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 36);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 36);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'techdeck_literal_tables');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'pulsedesk_literal_tables');
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'tradeflowkit_saved_views')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'free_account_app_backfill'),
@@ -42,6 +42,11 @@ test('database release plan is explicit, ordered, additive, and reusable by star
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'techdeck_literal_tables')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'outcall_product_operations'),
     'TechDeck literal restoration must remain a new additive release step after v34',
+  );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'pulsedesk_literal_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'techdeck_literal_tables'),
+    'PulseDesk literal restoration must remain a new additive release step after v35',
   );
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'directory_tables')
@@ -164,6 +169,7 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.techdeck_intake_requests'\)/);
   assert.match(releaseSource, /to_regclass\('public\.pulsedesk_ticket_messages'\)/);
   assert.match(releaseSource, /to_regclass\('public\.pulsedesk_sla_policies'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.pulsedesk_mail_connectors'\)/);
   assert.match(releaseSource, /to_regclass\('public\.torqueshed_vehicles'\)/);
   assert.match(releaseSource, /to_regclass\('public\.torqueshed_diagnostic_entries'\)/);
   assert.match(releaseSource, /to_regclass\('public\.torqueshed_assist_requests'\)/);
