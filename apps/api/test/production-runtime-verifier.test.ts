@@ -83,7 +83,7 @@ test('release identity validator requires the intended commit, database release,
     lockfileSha256: 'c'.repeat(64),
     databaseRelease: {
       contractVersion: 1,
-      releaseVersion: 33,
+      releaseVersion: 37,
       stepCount: 33,
       lastStep: 'outcall_product_operations',
     },
@@ -92,7 +92,7 @@ test('release identity validator requires the intended commit, database release,
   assert.ok(verifier.validateReleaseIdentity({ ...valid, deployedAt: 'invalid' }, commit).length > 0);
   assert.ok(verifier.validateReleaseIdentity({
     ...valid,
-    databaseRelease: { ...valid.databaseRelease, releaseVersion: 32 },
+    databaseRelease: { ...valid.databaseRelease, releaseVersion: 36 },
   }, commit).length > 0);
   assert.ok(verifier.validateReleaseIdentity(valid, 'd'.repeat(40)).length > 0);
 });

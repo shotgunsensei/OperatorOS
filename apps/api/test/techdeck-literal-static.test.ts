@@ -51,7 +51,7 @@ test('TechDeck public status and intake routes bypass sign-in only through bound
 test('TechDeck release v35 remains additive and provisions literal tables last', () => {
   const contract = read('apps/api/src/lib/database-release-contract.ts');
   const release = read('apps/api/src/lib/database-release.ts');
-  assert.match(contract, /releaseVersion: 35/);
+  assert.ok(Number(contract.match(/releaseVersion:\s*(\d+)/)?.[1] ?? 0) >= 35);
   assert.match(contract, /outcall_product_operations[\s\S]*techdeck_literal_tables/);
   assert.match(release, /techdeck_literal_tables: ensureTechDeckLiteralTables/);
   assert.match(release, /to_regclass\('public\.techdeck_intake_requests'\)/);

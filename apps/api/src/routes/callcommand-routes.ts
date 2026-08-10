@@ -24,12 +24,14 @@ import {
   isTelephonyConfigured,
   mapTwilioStatus,
   placeTwilioCall,
+  resolveTelephonyConfig,
   verifyTwilioSignature,
 } from '../lib/telephony.js';
 import {
   receiveVerifiedWebhook,
   registerSharedWebhookHandler,
 } from '../lib/shared-webhooks.js';
+import { recordOperatorOsMessagingKeyword } from '../lib/operatoros-messaging-compliance.js';
 import { appendActivityEvent } from '../lib/shared-usage-activity.js';
 
 const reads = [requireTenantModuleAccess('callcommand-ai')];
@@ -554,6 +556,46 @@ export async function registerCallCommandRoutes(app: FastifyInstance) {
         + `<Say>${greeting} Press 1 for support, 2 for an appointment, or 3 for a service callback.</Say>`
         + '</Gather><Say>No selection was received. Goodbye.</Say><Hangup/>',
     );
+  });
+
+  app.post('/v1/modules/callcommand-ai/webhooks/twilio/messaging', async (request, reply) => {
+    const body = webhookBody(request);
+    const signature = request.headers['x-twilio-signature'] as string | undefined;
+    if (!(await verifyTwilioSignature(canonicalWebhookUrl(request), body, signature))) {
+      return reply.code(403).send({ error: 'Invalid signature', code: 'CALLCOMMAND_SIGNATURE_INVALID' });
+    }
+    let from: string;
+    let to: string;
+    try {
+      if (!/^SM[a-zA-Z0-9]{8,}$/.test(body.MessageSid || '')) throw new Error('invalid sid');
+      from = normalizeE164(body.From, 'From');
+      to = normalizeE164(body.To, 'To');
+      const configured = await resolveTelephonyConfig();
+      if (!configured || to !== configured.fromNumber) throw new Error('invalid receiver');
+    } catch {
+      return sendTwiml(reply, '');
+    }
+    const keyword = await recordOperatorOsMessagingKeyword({
+      phoneNumber: from,
+      body: body.Body,
+      optOutType: body.OptOutType,
+      providerEventId: body.MessageSid,
+      sourceUrl: canonicalWebhookUrl(request),
+      provider: 'twilio-operatoros',
+      clientAddress: request.ip,
+      userAgent: request.headers['user-agent'],
+    });
+    if (!keyword.handled || body.OptOutType) return sendTwiml(reply, '');
+    if (keyword.type === 'HELP') {
+      return sendTwiml(reply, '<Message>OperatorOS: Help is available at operatoros.net/john or john@shotgunninjas.com. Reply STOP to unsubscribe.</Message>');
+    }
+    if (keyword.type === 'START' && keyword.changed) {
+      return sendTwiml(reply, '<Message>OperatorOS: You are resubscribed to service messages. Reply STOP to unsubscribe or HELP for help.</Message>');
+    }
+    if (keyword.type === 'STOP') {
+      return sendTwiml(reply, '<Message>OperatorOS: You have been unsubscribed and will receive no further messages from this program.</Message>');
+    }
+    return sendTwiml(reply, '');
   });
 
   app.post('/v1/modules/callcommand-ai/webhooks/twilio/intake', async (request, reply) => {

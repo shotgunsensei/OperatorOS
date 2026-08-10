@@ -12,7 +12,7 @@ test('release v33 preserves controlled public intake before OutCall product oper
   const schema = read('apps/api/src/schema.ts');
   const ddl = read('apps/api/src/lib/tradeflowkit-lead-operations-db-init.ts');
   const publicDdl = read('apps/api/src/lib/tradeflowkit-public-operations-db-init.ts');
-  assert.match(contract, /releaseVersion: 33/);
+  assert.ok(Number(contract.match(/releaseVersion:\s*(\d+)/)?.[1] ?? 0) >= 33);
   assert.match(contract, /tradeflowkit_lead_operations/);
   assert.match(contract, /tradeflowkit_public_operations/);
   assert.match(release, /ensureTradeFlowKitLeadOperationsTables/);

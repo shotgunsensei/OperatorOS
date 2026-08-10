@@ -28,8 +28,9 @@ const COL_ACTIONS = [
 ];
 
 const COL_LEGAL = [
-  { href: '/msg_privacy', label: 'Messaging privacy' },
-  { href: '/msg_terms', label: 'Messaging terms' },
+  { href: '/privacy', label: 'Privacy' },
+  { href: '/terms', label: 'Terms' },
+  { href: '/messaging', label: 'SMS Communications' },
 ];
 
 /**
