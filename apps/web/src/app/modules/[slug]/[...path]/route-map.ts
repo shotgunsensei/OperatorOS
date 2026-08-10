@@ -63,6 +63,19 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/clients': { sectionId: 'techdeck-directory', label: 'Shared Clients' },
     '/sites': { sectionId: 'techdeck-directory', label: 'Shared Sites' },
     '/contacts': { sectionId: 'techdeck-directory', label: 'Shared Contacts' },
+    '/calendar': { sectionId: 'techdeck-calendar', label: 'Service Calendar' },
+    '/recurring-tickets': { sectionId: 'techdeck-calendar', label: 'Recurring Tickets' },
+    '/portal': { sectionId: 'techdeck-portal', label: 'Client Portal' },
+    '/portal/tickets': { sectionId: 'techdeck-portal', label: 'Portal Tickets' },
+    '/portal/evidence': { sectionId: 'techdeck-portal', label: 'Portal Evidence' },
+    '/licenses': { sectionId: 'techdeck-licenses', label: 'License Server' },
+    '/licenses/developer': { sectionId: 'techdeck-licenses', label: 'License Validation' },
+    '/webhooks': { sectionId: 'techdeck-webhooks', label: 'Outbound Webhooks' },
+    '/api-tokens': { sectionId: 'techdeck-api-tokens', label: 'Scoped API Tokens' },
+    '/status-admin': { sectionId: 'techdeck-status', label: 'Status Administration' },
+    '/secure-intake': { sectionId: 'techdeck-secure-intake', label: 'Secure Intake' },
+    '/compliance-packets': { sectionId: 'techdeck-compliance', label: 'Compliance Packets' },
+    '/itops': { sectionId: 'techdeck-compliance', label: 'IT Operations Guidance' },
     '/settings': { sectionId: 'techdeck-settings', label: 'Settings' },
   },
   pulsedesk: {
@@ -231,6 +244,10 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'clients') return { sectionId: 'techdeck-directory', label: 'Managed Client Record' };
     if (resource === 'evidence') return { sectionId: 'techdeck-evidence', label: 'Evidence Record' };
     if (resource === 'reports') return { sectionId: 'techdeck-reports', label: 'Report Snapshot' };
+    if (resource === 'appointments' || resource === 'recurring-tickets') return { sectionId: 'techdeck-calendar', label: 'Calendar Record' };
+    if (resource === 'licenses') return { sectionId: 'techdeck-licenses', label: 'License Product' };
+    if (resource === 'status-admin') return { sectionId: 'techdeck-status', label: 'Status Record' };
+    if (resource === 'secure-intake') return { sectionId: 'techdeck-secure-intake', label: 'Intake Record' };
   }
   if (
     slug === 'techdeck' &&

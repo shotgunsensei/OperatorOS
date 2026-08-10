@@ -1180,6 +1180,18 @@ export interface TechDeckWorkspaceResponse {
   incomplete: TechDeckAsset[];
   execution: { enabled: false; reason: string };
 }
+export interface TechDeckLiteralWorkspaceResponse {
+  appointments: Array<Record<string, any>>;
+  schedules: Array<Record<string, any>>;
+  portalAssignments: Array<Record<string, any>>;
+  licenseProducts: Array<Record<string, any>>;
+  statusPages: Array<Record<string, any>>;
+  intakeSpaces: Array<Record<string, any>>;
+  intakeRequests: Array<Record<string, any>>;
+  apiTokens: Array<Record<string, any>>;
+  webhooks: Array<Record<string, any>>;
+  exports: Array<Record<string, any>>;
+}
 export interface TradeFlowKitPayment { id: string; invoiceId: string; amountCents: number; method: string; status: string; paidAt: string; }
 export interface TradeFlowKitSettings {
   tenantId: string; jobPrefix: string; quotePrefix: string; invoicePrefix: string;
@@ -1814,6 +1826,17 @@ export const moduleShellApi = {
   techdeck: {
     getWorkspace: (): Promise<TechDeckWorkspaceResponse> =>
       apiFetch('/modules/techdeck/workspace') as Promise<TechDeckWorkspaceResponse>,
+    getLiteralWorkspace: (): Promise<TechDeckLiteralWorkspaceResponse> =>
+      apiFetch('/modules/techdeck/literal-workspace') as Promise<TechDeckLiteralWorkspaceResponse>,
+    literalAction: (
+      path: string,
+      input: Record<string, unknown>,
+      options?: { method?: 'POST' | 'PUT' | 'PATCH'; idempotencyKey?: string },
+    ): Promise<Record<string, any>> => apiFetch(`/modules/techdeck/${path.replace(/^\/+/, '')}`, {
+      method: options?.method ?? 'POST',
+      headers: options?.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : undefined,
+      body: JSON.stringify(input),
+    }) as Promise<Record<string, any>>,
     createConfigurationItem: (input: Partial<TechDeckAsset> & { name: string; type: TechDeckAssetType }): Promise<TechDeckAsset> =>
       apiFetch('/modules/techdeck/configuration-items', { method: 'POST', body: JSON.stringify(input) }) as Promise<TechDeckAsset>,
     updateConfigurationItem: (id: string, input: Record<string, unknown> & { expectedVersion: number }): Promise<TechDeckAsset> =>

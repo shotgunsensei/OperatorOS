@@ -22,7 +22,7 @@ slice is not parity.
 | 2 | OperatorOS-owned shared Business Directory for organizations, contacts, sites, addresses, and module profiles | Phase 1 | Source/local accepted on `codex/phase-2-shared-business-directory` by explicit owner direction; not deployed |
 | 3 | Shared attachments, notifications, providers, jobs/outbox, webhook idempotency, usage ledger, and activity timeline | Phase 2 | Source/local accepted on `codex/phase-3-shared-services` by explicit owner direction; public gate remains closed |
 | 4 | TradeFlowKit state 5 | Phases 2-3 | Source/local state 4 candidate on `codex/phase-4-tradeflowkit-state-5`; state 5 blocked on deployed workflow/cutover evidence |
-| 5 | TechDeck state 5 | Phases 2-3 | Source/local state 4 zero-gap rebaseline on `codex/techdeck-zero-gap-restoration`: executable ledger classifies 382/382 source capabilities with zero gaps; focused, isolated PostgreSQL, release, compiled-runtime, and exact-host browser gates pass. State 5 remains blocked on reviewed deployment, provider, and data-cutover evidence |
+| 5 | TechDeck state 5 | Phases 2-3 | Historical source/local state 4 baseline on `codex/techdeck-zero-gap-restoration`: its hand ledger classified 382 claims. Phase 26 supersedes that count with 354 pinned-source primary records and 1,309 exhaustive facets after removing 28 non-source claims. State 5 remains blocked on reviewed deployment, provider, and data-cutover evidence |
 | 6 | PulseDesk state 5 with healthcare-operations/PHI boundary resolved | Phases 2-3 | Source/local state 4 candidate on `codex/phase-6-pulsedesk-state-5`; state 5 blocked on deployed workflow, privacy-reviewed data apply, reconciliation and cutover evidence |
 | 7 | TorqueShed vehicle, maintenance, diagnostic, repair, and verification foundation | Phases 2-3 | Complete in the cumulative source/local State 4 candidate on `codex/torqueshed-state4-acceptance`: the foundation PostgreSQL workflow, release v29, compiled runtime/health, exact-host diagnostics/deep-link browser path, and tenant/ownership guards pass locally |
 | 8 | Torque Assist deterministic adapter, safety controls, metering, and append-only token ledger | Phases 3 and 7 | Complete in the cumulative source/local State 4 candidate: the signed test-payment, provider safety, append-only accounting/refund/concurrency workflow and exact one-credit/one-debit browser path pass locally. Live Stripe/OpenAI and deployed acceptance remain State 5 gates |
@@ -44,6 +44,7 @@ slice is not parity.
 | 18 | OutCall live-capable source activation and customer experience closure | Phase 17 authority and Phase 12B product boundary | OutCall implementation merged to `main` at `d96c698`; release-candidate closure is on `codex/phase18-release-candidate-closure`. Explicit Twilio Verify/voice/SMS/DTMF, signed/replay-safe callbacks, durable rate limits, profile-bound triggers, privacy export/deletion, release v33, active registry/SSO coverage, and the ecosystem customer-copy sweep are source/local state 4. Focused 44/44, PostgreSQL 5/5, aggregate 914/0/6 across 920 tests, clean/idempotent v33, typecheck/build, strict compiled supervisor health, local exact-host matrix 12/12, and first-screen 2/2 pass. Deployment/real-provider/production backup-apply/rollback gates remain open. |
 | 20 | Product truth reset and source recovery | Current `main`, imported source trees, Phase 17 and TechDeck restoration evidence | Baseline generated on `codex/phase-20-product-truth-reset`: 13 fingerprints, 6,646 stable capabilities, 276 native, 181 shared-equivalent, 0 owner-waived, 6,189 blocked, and 0 unclassified. The strict pointer check found 113 facets in the three old source ledgers whose claimed implementation paths are absent from the pinned imports. Phase 20 is not complete while any required item remains blocked. OutCall source recovery, exact source-to-target/evidence mapping, former-retirement review, FaultlineLab's 52 missing runnable cases, TradeFlowKit visual fidelity, and TorqueShed native mobile parity are explicit entry blockers for later restoration phases. |
 | 21 | Executable parity compiler and fail-closed release gate | Phase 20 source manifest and module ledgers | Infrastructure implemented on `codex/phase-21-executable-parity-gate`: deterministic source/target discovery, compiled evidence/test IDs, per-module JSON/Markdown/HTML reports, negative fixtures, route/control and three-viewport visual contracts, root quality/release orchestration, and clean-checkout disposable-PostgreSQL CI. The gate is intentionally red: 6,289 strict parity failures, 74 static route/control failures, and 40 visual-contract failures. Typecheck, lint, 31/31 unit contracts, production build, v33 read-only plan, and core preflight pass; no full release pass or module completion is claimed. |
+| 26 | TechDeck literal product restoration | Phase 22 shared services and pinned TechDeck source | Source/local implementation on `codex/phase-26-techdeck-literal-restoration`: corrected pinned-source inventory 354 primary records and 1,309 exhaustive facets; all 182 historical retirements reopened as 84 native and 98 shared-equivalent primary outcomes; zero TechDeck blockers, waivers, or strict compiler issues. Release v35, restored UI/API/public/headless surfaces, deterministic compliance ZIPs, isolated PostgreSQL, typecheck/lint/build, and local exact-host desktop/public/mobile/accessibility acceptance pass. The root strict gate remains red only on non-TechDeck inventory. Production backup/apply, live-provider delivery, deployed exact-host verification, data cutover, rollback, and deployment remain gates. |
 
 ## Phase execution rules
 
@@ -62,15 +63,17 @@ slice is not parity.
 
 ## Immediate next gate
 
-Use the Phase 21 compiler output to triage the Phase 20 blocked inventory before
+Use the Phase 21 compiler output to triage the remaining non-TechDeck Phase 20 blocked inventory before
 resuming deployment promotion or broad product work:
 
 1. Resolve source authority for OutCall and the newer/divergent TorqueShed
    candidates without replacing the pinned snapshots blindly.
 2. Review the highest-value `SOURCE_CAPABILITY_UNMAPPED` records and add exact
    OperatorOS targets plus automated compatibility evidence.
-3. Review all `BLOCKED_REVIEW` records individually. Implement a native/shared
-   equivalent or obtain an exact owner waiver; do not waive categories.
+3. Review all remaining `BLOCKED_REVIEW` records individually. TechDeck's 182
+   historical retirements are closed by Phase 26; implement a native/shared
+   equivalent or obtain an exact owner waiver for other modules; do not waive
+   categories.
 4. Restore the 52 missing runnable FaultlineLab cases, TradeFlowKit's
    orange/navy visual contract, and TorqueShed's Expo product in scoped later
    phases with their required security, tenant, visual, and browser evidence.

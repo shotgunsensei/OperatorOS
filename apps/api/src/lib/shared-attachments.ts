@@ -62,6 +62,7 @@ export function detectAttachmentMimeType(content: Buffer, declaredMimeType?: str
   if (content.length >= 3 && content[0] === 0xff && content[1] === 0xd8 && content[2] === 0xff) return 'image/jpeg';
   if (content.length >= 12 && content.subarray(0, 4).toString('ascii') === 'RIFF' && content.subarray(8, 12).toString('ascii') === 'WEBP') return 'image/webp';
   if (content.length >= 6 && ['GIF87a', 'GIF89a'].includes(content.subarray(0, 6).toString('ascii'))) return 'image/gif';
+  if (content.length >= 4 && content.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]))) return 'application/zip';
   const declared = declaredMimeType?.split(';')[0]?.trim().toLowerCase();
   if (declared === 'application/json' && looksLikeUtf8Text(content)) {
     try { JSON.parse(content.toString('utf8')); return 'application/json'; } catch { /* reject below */ }
@@ -76,6 +77,7 @@ function assertDeclaredMimeMatches(declared: string | null | undefined, detected
   const aliases: Record<string, string[]> = {
     'image/jpeg': ['image/jpeg', 'image/jpg'],
     'text/csv': ['text/csv', 'application/csv', 'application/vnd.ms-excel'],
+    'application/zip': ['application/zip', 'application/x-zip-compressed'],
   };
   if (normalized !== detected && !(aliases[detected] || []).includes(normalized)) {
     throw Object.assign(new Error('Declared MIME type does not match the file signature'), { code: 'ATTACHMENT_MIME_MISMATCH' });

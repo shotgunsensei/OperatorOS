@@ -1,6 +1,6 @@
 export const DATABASE_RELEASE_CONTRACT = Object.freeze({
   contractVersion: 1,
-  releaseVersion: 34,
+  releaseVersion: 35,
   mode: 'idempotent-apply',
   destructive: false,
   rollback: 'restore-to-new-database-and-switch-traffic',
@@ -41,4 +41,5 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'tradeflowkit_lead_operations', kind: 'ddl' },
   { id: 'tradeflowkit_public_operations', kind: 'ddl' },
   { id: 'outcall_product_operations', kind: 'ddl' },
+  { id: 'techdeck_literal_tables', kind: 'ddl' },
 ] as const);

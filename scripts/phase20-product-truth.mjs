@@ -862,6 +862,84 @@ function specialCapabilities(definition, sourceRoot) {
 }
 
 function applyCurrentRestorationMappings(definition, capabilities) {
+  if (definition.slug === 'techdeck') {
+    const nativeTargets = [
+      'apps/api/src/lib/techdeck-db-init.ts',
+      'apps/api/src/lib/techdeck-literal-db-init.ts',
+      'apps/api/src/routes/techdeck-routes.ts',
+      'apps/api/src/routes/techdeck-literal-routes.ts',
+      'apps/web/src/components/module-shells/TechDeckOperations.tsx',
+      'apps/web/src/components/module-shells/TechDeckLiteralConsole.tsx',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/business-directory.ts',
+      'apps/api/src/lib/shared-platform-control-plane.ts',
+      'apps/api/src/lib/shared-schedules-exports.ts',
+      'apps/api/src/lib/shared-outbound-webhooks.ts',
+      'apps/api/src/routes/techdeck-literal-routes.ts',
+      'apps/web/src/components/module-shells/TechDeckLiteralConsole.tsx',
+    ];
+    const uiRouteTargets = [
+      'apps/web/src/app/modules/[slug]/page.tsx',
+      'apps/web/src/app/modules/[slug]/[...path]/page.tsx',
+    ];
+    const nativeSchemaTargets = [
+      'apps/api/src/lib/saas-db-init.ts',
+      'apps/api/src/lib/techdeck-db-init.ts',
+      'apps/api/src/lib/techdeck-literal-db-init.ts',
+    ];
+    const sharedSchemaTargets = [
+      'apps/api/src/lib/directory-db-init.ts',
+      'apps/api/src/lib/saas-db-init.ts',
+      'apps/api/src/lib/shared-platform-db-init.ts',
+      'apps/api/src/lib/shared-services-db-init.ts',
+    ];
+    const evidence = [
+      'apps/api/test/techdeck-state5-workflow.test.ts',
+      'apps/api/test/techdeck-literal-product.test.ts',
+      'apps/api/test/techdeck-literal-static.test.ts',
+    ];
+    const sharedBoundary = /(?:auth|session|tenant|role|identity|user-management|billing|subscription|entitlement|invoice|stripe|operatoros|provider|secret|webhook|recurr|schedule|api.?token|directory|\/clients(?:\/|\b)|\/sites(?:\/|\b)|\/contacts(?:\/|\b)|client[_ -]?portal|account|reviewer|mfa|login|register|logout|csrf|demo|conversation|generate[_ -]?image|usage|invitation)/iu;
+    return capabilities
+      // The old hand-maintained ledger named an operations route file and two
+      // integration tests that do not exist in the pinned source tree. Phase
+      // 26 regenerates from the pinned source and does not count those 28
+      // duplicate claims as source capabilities.
+      .filter((capability) => capability.missingSourcePointers.length === 0)
+      .map((capability) => {
+        const sourceText = [capability.title, capability.canonicalSourceIdentity, ...capability.sourcePointers].join(' ');
+        const alreadyActive = capability.state === 'ACTIVE_NATIVE' || capability.state === 'ACTIVE_SHARED_EQUIVALENT';
+        const shared = alreadyActive
+          ? capability.state === 'ACTIVE_SHARED_EQUIVALENT'
+          : capability.type === 'integration' || capability.type === 'background_process' || sharedBoundary.test(sourceText);
+        const state = shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE';
+        const typedTargets = capability.type === 'ui_route'
+          ? uiRouteTargets
+          : capability.type === 'database_table'
+            ? (shared ? sharedSchemaTargets : nativeSchemaTargets)
+            : [];
+        return {
+          ...capability,
+          state,
+          blockerCode: null,
+          currentTargets: [...new Set([
+            ...capability.currentTargets,
+            ...(shared ? sharedTargets : nativeTargets),
+            ...typedTargets,
+          ])].sort(),
+          automatedEvidence: [...new Set([...capability.automatedEvidence, ...evidence])].sort(),
+          note: [
+            capability.note,
+            !alreadyActive && shared
+              ? 'Phase 26 re-opened this source outcome through the tenant-scoped OperatorOS Directory, identity, entitlement, secret, scheduler, token, webhook, or export control plane.'
+              : !alreadyActive
+                ? 'Phase 26 re-opened this source outcome through the literal TechDeck API, additive v35 schema, consolidated native shell, source-compatible deep links, and database-backed acceptance workflow.'
+                : null,
+          ].filter(Boolean).join(' '),
+        };
+      });
+  }
   if (definition.slug !== 'tradeflowkit') return capabilities;
   const recurringOutcomeTitles = new Set([
     '/jobs?status=scheduled',

@@ -1,5 +1,49 @@
 # OperatorOS implementation status
 
+## Phase 26 TechDeck literal product restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-10)
+
+Phase 26 preserves the valid merged TechDeck state-4 work and re-opens every
+historical security/product-boundary retirement. The corrected pinned-source
+inventory removes 28 old active/shared claims whose stated implementation
+files never existed in the selected tree; it retains and resolves all 182
+retired primary records. The exhaustive generated ledger now contains 1,309
+facets: 764 native, 545 shared-equivalent, zero owner-waived, and zero blocked.
+All 182 retired primary records are re-opened as 84 native and 98 shared
+equivalents.
+
+Additive release v35 supplies tenant-scoped portal assignments, appointments,
+license products/hashed keys/activation history, public status components and
+incident updates, secure evidence-intake spaces/requests/files/audit, and
+evidence-file links. Shared schedules, encrypted secret references, HMAC/SSRF-
+safe webhooks, hash-only scoped API tokens, private scanned attachments, shared
+AI adapters, jobs, exports, usage, and activity remain OperatorOS authorities.
+The deterministic TechDeck compliance exporter emits a stored ZIP with stable
+entry ordering/timestamps, per-entry SHA-256 values, and a manifest. The IT Ops
+source outcome is documentation-only; no arbitrary script execution was added
+to the web or API process.
+
+The consolidated shell exposes calendar/recurrence, client portal, license
+server, public status, webhooks, API tokens, secure intake, compliance packets,
+and reviewed IT Ops alongside the existing ticket, inventory/network/lifecycle,
+documentation/runbook, evidence, report, time, Directory, search, settings, and
+admin outcomes. Exact public `/status/:slug` and opaque `/t/upload/:token`
+paths bypass sign-in only through bounded TechDeck-host middleware rules.
+
+Fresh local evidence: API and web TypeScript pass; Phase 26 static contracts
+pass 4/4; the isolated PostgreSQL literal workflow passes 1/1; the pre-existing
+TechDeck state-5 PostgreSQL workflow passes 1/1; the database-release contract
+passes 2/2; the parity generator is reproducible with zero validation failures;
+the item-level Phase 26 report regenerates 182/182 decisions with zero TechDeck
+blockers; the strict compiler reports zero TechDeck route, schema, target,
+evidence, waiver, or required-state issues (the root gate remains red only on
+non-TechDeck inventory); release v35 applies cleanly twice; full lint and
+production build pass; and the production-style local HTTPS exact-host
+desktop/public/mobile and accessibility flow passes 1/1 in 10.9 seconds.
+Production backup/apply,
+live provider delivery, deployed exact-host/public verification, data cutover,
+and rollback remain open, so this revision is not state 5 or production-ready. See
+`docs/phase-26/TECHDECK-LITERAL-PARITY-REPORT.md`.
+
 ## Phase 24 TradeFlowKit product restoration - PARTIAL IMPLEMENTATION / ZERO-GAP BLOCKED (2026-08-09)
 
 Phase 24 retains the merged Phase 16/17 TradeFlowKit work and adds a real

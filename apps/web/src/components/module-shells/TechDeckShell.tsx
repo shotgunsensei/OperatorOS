@@ -27,6 +27,7 @@ import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js
 import { createTechDeckAdapterContext } from '../../../../../apps/modules/techdeck/adapter.js';
 import TechDeckTicketQueue from './TechDeckTicketQueue';
 import TechDeckOperations from './TechDeckOperations';
+import TechDeckLiteralConsole from './TechDeckLiteralConsole';
 import BusinessDirectory from './BusinessDirectory';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 
@@ -98,6 +99,12 @@ const workflowShortcuts = [
   },
   { id: 'time', label: 'Time', summary: 'Technician work tied to tickets, clients, sites, and configuration items.', Icon: Gauge, tone: colors.violet },
   { id: 'clients', label: 'Clients', summary: 'Shared OperatorOS clients, sites, contacts, and managed-service profiles.', Icon: Network, tone: colors.cyan },
+  { id: 'calendar', label: 'Calendar', summary: 'Appointments and scheduler-backed recurring service tickets.', Icon: Activity, tone: colors.green },
+  { id: 'portal', label: 'Client portal', summary: 'Assigned client and site visibility for ticket collaboration.', Icon: ShieldCheck, tone: colors.cyan },
+  { id: 'licenses', label: 'Licensing', summary: 'Key issue, activation validation, revocation, and audit history.', Icon: LockKeyhole, tone: colors.amber },
+  { id: 'status', label: 'Public status', summary: 'Components, incidents, updates, and public history.', Icon: Gauge, tone: colors.green },
+  { id: 'secure-intake', label: 'Secure intake', summary: 'Rate-limited, validated evidence uploads with retention.', Icon: FileLock2, tone: colors.violet },
+  { id: 'compliance', label: 'Compliance', summary: 'Deterministic packets, checksums, and audit trail.', Icon: ClipboardList, tone: colors.amber },
 ];
 
 const readinessRows = [
@@ -366,6 +373,15 @@ export default function TechDeckShell(_props: TechDeckShellProps) {
                 tenantKey={adapter.tenantId}
                 canWrite={canWriteModule}
                 canApprove={canManageModule}
+              />
+            )}
+
+            {hasTenantContext && adapter.tenantId && (
+              <TechDeckLiteralConsole
+                key={`literal-${adapter.tenantId}`}
+                tenantKey={adapter.tenantId}
+                canWrite={canWriteModule}
+                canManage={canManageModule}
               />
             )}
 

@@ -70,12 +70,18 @@ test('TradeFlowKit recurring-work source outcomes map to the persisted Phase 24 
   assert.ok(mapped.every((capability) => capability.automatedEvidence.includes('apps/api/test/tradeflowkit-recurring-jobs.test.ts')));
 });
 
-test('retirement labels remain blocked while explicit visual/mobile contracts reflect current evidence', () => {
+test('retirement labels stay blocked unless a later literal-restoration contract supplies executable evidence', () => {
   const manifest = json('docs/parity/source-manifest.json');
   for (const module of manifest.modules) {
     const ledger = json(module.ledger);
     for (const capability of ledger.capabilities.filter((item) =>
       ['retired_security', 'retired_product_boundary'].includes(item.priorDisposition))) {
+      if (module.moduleSlug === 'techdeck') {
+        assert.ok(['ACTIVE_NATIVE', 'ACTIVE_SHARED_EQUIVALENT'].includes(capability.state));
+        assert.equal(capability.blockerCode, null);
+        assert.ok(capability.automatedEvidence.includes('apps/api/test/techdeck-literal-product.test.ts'));
+        continue;
+      }
       assert.equal(capability.state, 'BLOCKED');
       assert.ok(['BLOCKED_REVIEW', 'SOURCE_IMPLEMENTATION_POINTER_MISSING'].includes(capability.blockerCode));
       if (capability.blockerCode === 'SOURCE_IMPLEMENTATION_POINTER_MISSING') {
@@ -83,6 +89,12 @@ test('retirement labels remain blocked while explicit visual/mobile contracts re
       }
     }
   }
+  const techdeck = json('docs/parity/modules/techdeck.json');
+  assert.equal(techdeck.stateCounts.BLOCKED, 0);
+  assert.equal(techdeck.stateCounts.OWNER_WAIVED, 0);
+  assert.equal(techdeck.capabilities.length, 1309);
+  assert.equal(techdeck.typeCounts.api_endpoint, 195);
+  assert.equal(techdeck.typeCounts.integration, 44);
   const tradeflowkit = json('docs/parity/modules/tradeflowkit.json');
   const visual = tradeflowkit.capabilities.find((capability) => capability.type === 'visual_contract');
   assert.equal(visual?.state, 'ACTIVE_NATIVE');

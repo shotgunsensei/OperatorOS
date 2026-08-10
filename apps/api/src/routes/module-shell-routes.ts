@@ -81,6 +81,7 @@ import { registerPulseDeskServiceDeskRoutes } from './pulsedesk-service-desk-rou
 import { registerNinjaPoolHallRoutes } from './ninja-pool-hall-routes.js';
 import { allocateTradeFlowKitNumber, registerTradeFlowKitRoutes } from './tradeflowkit-routes.js';
 import { registerTechDeckRoutes } from './techdeck-routes.js';
+import { registerTechDeckLiteralRoutes } from './techdeck-literal-routes.js';
 import { registerTorqueShedRoutes } from './torqueshed-routes.js';
 import { registerTorqueAssistRoutes } from './torque-assist-routes.js';
 import { registerTorqueShedSocialRoutes } from './torqueshed-social-routes.js';
@@ -578,6 +579,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerTradeFlowKitPaymentRoutes(app);
   await registerTradeFlowKitRecurringRoutes(app);
   await registerTechDeckRoutes(app);
+  await registerTechDeckLiteralRoutes(app);
   await registerTorqueShedRoutes(app);
   await registerTorqueAssistRoutes(app);
   await registerTorqueShedSocialRoutes(app);

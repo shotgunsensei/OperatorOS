@@ -100,6 +100,14 @@ function isPublicTradeFlowKitDocumentPath(pathname: string): boolean {
   return /^\/public\/tradeflowkit\/(quotes|invoices|customers)\/[A-Za-z0-9_-]{32,64}$/.test(pathname);
 }
 
+function techDeckPublicDestination(pathname: string): string | null {
+  const status = /^\/status\/([a-z0-9-]{1,120})\/?$/.exec(pathname);
+  if (status) return `/public/techdeck/status/${status[1]}`;
+  const intake = /^\/t\/upload\/(tdi_[A-Za-z0-9_-]{24,200})\/?$/.exec(pathname);
+  if (intake) return `/public/techdeck/intake/${intake[1]}`;
+  return null;
+}
+
 function isSsoCallbackPath(pathname: string): boolean {
   return pathname === '/sso' || pathname.startsWith('/sso/');
 }
@@ -395,6 +403,10 @@ export async function middleware(req: NextRequest) {
   if (isOperationalExempt(pathname)) return withAuthSecurityHeaders(NextResponse.next());
   if (isPublicTradeFlowKitDocumentPath(pathname) && context.module?.slug === 'tradeflowkit') {
     return withAuthSecurityHeaders(NextResponse.next());
+  }
+  if (context.module?.slug === 'techdeck') {
+    const destination = techDeckPublicDestination(pathname);
+    if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));
   }
 
   if (context.surface === 'auth' && pathname === '/') {

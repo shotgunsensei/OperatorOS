@@ -16,15 +16,15 @@
   },
   "totals": {
     "modules": 13,
-    "capabilities": 6646,
+    "capabilities": 6618,
     "stateCounts": {
-      "ACTIVE_NATIVE": 336,
-      "ACTIVE_SHARED_EQUIVALENT": 181,
+      "ACTIVE_NATIVE": 1027,
+      "ACTIVE_SHARED_EQUIVALENT": 625,
       "OWNER_WAIVED": 0,
-      "BLOCKED": 6129
+      "BLOCKED": 4966
     },
     "typeCounts": {
-      "api_endpoint": 990,
+      "api_endpoint": 964,
       "asset": 141,
       "background_process": 24,
       "component_action": 2076,
@@ -32,7 +32,7 @@
       "database_table": 238,
       "export_flow": 49,
       "import_flow": 26,
-      "integration": 367,
+      "integration": 365,
       "mobile_product": 1,
       "mobile_pwa_surface": 40,
       "playable_case": 56,
@@ -460,22 +460,22 @@
         "fileCount": 302,
         "totalBytes": 13929944
       },
-      "capabilityDigestSha256": "94b9341fa2b0478a3e65d970b9b80dc2875dfcb729dc725e8140232a99a9e411",
+      "capabilityDigestSha256": "d02105574e0c2d18a30c6be897645d6d57ace0bfd4d5a5e10db4f13184e15936",
       "stateCounts": {
-        "ACTIVE_NATIVE": 73,
-        "ACTIVE_SHARED_EQUIVALENT": 101,
+        "ACTIVE_NATIVE": 764,
+        "ACTIVE_SHARED_EQUIVALENT": 545,
         "OWNER_WAIVED": 0,
-        "BLOCKED": 1163
+        "BLOCKED": 0
       },
       "typeCounts": {
-        "api_endpoint": 221,
+        "api_endpoint": 195,
         "asset": 8,
         "background_process": 5,
         "component_action": 448,
         "database_column": 438,
         "database_table": 45,
         "import_flow": 4,
-        "integration": 46,
+        "integration": 44,
         "mobile_pwa_surface": 8,
         "public_flow": 35,
         "source_test": 14,
@@ -562,9 +562,9 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "81c63c362772b35a4c5f531591d5ed56f438fa0aa8161d41c399565ca9c97509",
-        "fileCount": 321,
-        "totalBytes": 7881072
+        "treeSha256": "4b106379857991f39b87503d66fc0a51e138866e2309c3bee97563983d013f08",
+        "fileCount": 322,
+        "totalBytes": 7883812
       },
       "capabilityDigestSha256": "62550d030cf7c8a1ca35195bcb5011b7d21abbd1b25323c10fdcedb1c904bb8d",
       "stateCounts": {

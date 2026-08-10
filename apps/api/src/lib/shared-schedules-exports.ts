@@ -9,7 +9,7 @@ export const SHARED_EXPORT_JOB = 'shared.export.generate.v1';
 
 export interface SharedExportOutput {
   filename: string;
-  mimeType: 'application/json' | 'text/csv';
+  mimeType: 'application/json' | 'text/csv' | 'application/zip';
   content: Buffer;
 }
 
@@ -18,7 +18,7 @@ export type SharedExporter = (input: {
   moduleId: string;
   requestedByUserId: string;
   exportId: string;
-  format: 'json' | 'csv';
+  format: 'json' | 'csv' | 'zip';
   filters: Record<string, unknown>;
 }) => Promise<SharedExportOutput>;
 
@@ -60,7 +60,7 @@ export async function requestSharedExport(input: {
   moduleId: string;
   requestedByUserId: string;
   exportType: string;
-  format: 'json' | 'csv';
+  format: 'json' | 'csv' | 'zip';
   filters?: Record<string, unknown>;
   idempotencyKey: string;
   correlationId?: string | null;
@@ -122,7 +122,7 @@ async function generateExportJob(context: SharedJobContext): Promise<void> {
       moduleId: context.moduleId,
       requestedByUserId: String(row.requested_by_user_id),
       exportId,
-      format: String(row.format) as 'json' | 'csv',
+      format: String(row.format) as 'json' | 'csv' | 'zip',
       filters: (row.filters_json ?? {}) as Record<string, unknown>,
     });
     const attachment = await createAttachment({

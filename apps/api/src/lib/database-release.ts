@@ -19,6 +19,7 @@ import { ensureSharedServiceTables } from './shared-services-db-init.js';
 import { ensureSharedPlatformTables } from './shared-platform-db-init.js';
 import { ensureTradeFlowKitTables } from './tradeflowkit-db-init.js';
 import { ensureTechDeckTables } from './techdeck-db-init.js';
+import { ensureTechDeckLiteralTables } from './techdeck-literal-db-init.js';
 import { ensurePulseDeskTables } from './pulsedesk-db-init.js';
 import { ensureTorqueShedTables } from './torqueshed-db-init.js';
 import { ensureFaultlineLabTables } from './faultlinelab-db-init.js';
@@ -59,6 +60,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   brandforgeos_tables: ensureBrandForgeOsTables,
   shared_service_tables: ensureSharedServiceTables,
   shared_platform_tables: ensureSharedPlatformTables,
+  techdeck_literal_tables: ensureTechDeckLiteralTables,
   snapproofos_tables: ensureSnapProofOsTables,
   studyforge_tables: ensureStudyForgeTables,
   ninja_launch_kit_tables: ensureNinjaLaunchKitTables,
@@ -108,6 +110,12 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.tradeflowkit_payment_oauth_states') IS NOT NULL AS tradeflowkit_payment_oauth_states,
       to_regclass('public.techdeck_documents') IS NOT NULL AS techdeck_documents,
       to_regclass('public.techdeck_configuration_relationships') IS NOT NULL AS techdeck_configuration_relationships,
+      to_regclass('public.techdeck_portal_assignments') IS NOT NULL AS techdeck_portal_assignments,
+      to_regclass('public.techdeck_appointments') IS NOT NULL AS techdeck_appointments,
+      to_regclass('public.techdeck_license_products') IS NOT NULL AS techdeck_license_products,
+      to_regclass('public.techdeck_status_pages') IS NOT NULL AS techdeck_status_pages,
+      to_regclass('public.techdeck_intake_requests') IS NOT NULL AS techdeck_intake_requests,
+      to_regclass('public.techdeck_evidence_file_links') IS NOT NULL AS techdeck_evidence_file_links,
       to_regclass('public.pulsedesk_ticket_messages') IS NOT NULL AS pulsedesk_ticket_messages,
       to_regclass('public.pulsedesk_sla_policies') IS NOT NULL AS pulsedesk_sla_policies,
       to_regclass('public.torqueshed_vehicles') IS NOT NULL AS torqueshed_vehicles,

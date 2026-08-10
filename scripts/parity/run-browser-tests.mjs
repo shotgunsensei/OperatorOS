@@ -36,11 +36,14 @@ try {
       logPath: join(BUILD_ROOT, 'exact-host-proxy.log'),
     });
     await waitForPort(443);
-    exitCode = run(PNPM, [
+    const browserArgs = [
       '--dir', 'apps/web', 'exec', 'playwright', 'test',
       'e2e/sso-v1.spec.ts',
       'e2e/parity-route-control.spec.ts',
-    ], {
+    ];
+    const focusedPattern = process.env.PARITY_BROWSER_GREP?.trim();
+    if (focusedPattern) browserArgs.push('--grep', focusedPattern);
+    exitCode = run(PNPM, browserArgs, {
       cwd: REPOSITORY_ROOT,
       env: {
         ...runtimeEnv,

@@ -146,6 +146,32 @@ async function cleanupIdentity(pg: Client, identity: SeededIdentity | null) {
   if (!identity) return;
   const { userId, tenantId } = identity;
   const tenantTables = [
+    'techdeck_intake_audit_events',
+    'techdeck_intake_files',
+    'techdeck_intake_requests',
+    'techdeck_intake_spaces',
+    'techdeck_intake_policies',
+    'techdeck_intake_rate_limits',
+    'techdeck_status_incident_updates',
+    'techdeck_status_incidents',
+    'techdeck_status_components',
+    'techdeck_status_subscriptions',
+    'techdeck_status_pages',
+    'techdeck_license_activations',
+    'techdeck_license_keys',
+    'techdeck_license_products',
+    'techdeck_license_rate_limits',
+    'techdeck_evidence_file_links',
+    'techdeck_appointments',
+    'techdeck_portal_assignments',
+    'shared_delivery_attempts',
+    'shared_webhook_deliveries',
+    'shared_webhook_endpoints',
+    'shared_api_tokens',
+    'shared_service_identities',
+    'shared_exports',
+    'shared_schedules',
+    'shared_secret_references',
     'outcall_events',
     'outcall_call_requests',
     'outcall_triggers',
@@ -891,6 +917,120 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(reopened).toHaveURL(/^https:\/\/operatoros\.net\/signed-out\?signed_out=local$/);
     expect((await sessionCookies(context)).some(cookie => cookie.domain === 'techdeck.operatoros.net')).toBe(false);
     await reopened.close();
+  });
+
+  test('TechDeck literal restoration is usable across exact-host desktop, public, and mobile surfaces', async ({ browser, page, request }) => {
+    test.setTimeout(180_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+
+    await page.goto('https://techdeck.operatoros.net/calendar');
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/techdeck\.operatoros\.net\/calendar(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+
+    const literal = page.getByTestId('techdeck-literal-workspace');
+    await expect(literal).toBeVisible({ timeout: 30_000 });
+    for (const id of [
+      'techdeck-calendar', 'techdeck-portal', 'techdeck-licenses', 'techdeck-status',
+      'techdeck-webhooks', 'techdeck-api-tokens', 'techdeck-secure-intake', 'techdeck-compliance',
+    ]) await expect(page.locator(`#${id}`)).toBeVisible();
+
+    const suffix = Date.now().toString(36);
+    const appointmentTitle = `Phase 26 review ${suffix}`;
+    const startsAt = new Date(Date.now() + 3_600_000);
+    const endsAt = new Date(startsAt.getTime() + 1_800_000);
+    const localDateTime = (value: Date) => new Date(value.getTime() - value.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+    const calendar = page.locator('#techdeck-calendar');
+    await calendar.getByPlaceholder('Appointment title').fill(appointmentTitle);
+    await calendar.getByLabel('Starts at').fill(localDateTime(startsAt));
+    await calendar.getByLabel('Ends at').fill(localDateTime(endsAt));
+    await calendar.getByRole('button', { name: 'Schedule' }).click();
+    await expect(calendar).toContainText(appointmentTitle, { timeout: 30_000 });
+
+    const productName = `Phase 26 Agent ${suffix}`;
+    const licenses = page.locator('#techdeck-licenses');
+    await licenses.getByPlaceholder('Product name').fill(productName);
+    await licenses.getByPlaceholder('product-slug').fill(`phase-26-agent-${suffix}`);
+    await licenses.getByPlaceholder('License purpose').fill('Exact-host browser acceptance product.');
+    await licenses.getByRole('button', { name: 'Add product' }).click();
+    const productRow = licenses.locator('li').filter({ hasText: productName });
+    await expect(productRow).toBeVisible({ timeout: 30_000 });
+    await productRow.getByRole('button', { name: 'Issue key' }).click();
+    await expect(literal.locator('.tdl-secret code')).toContainText(/^tdk_/, { timeout: 30_000 });
+
+    const statusTitle = `Phase 26 Status ${suffix}`;
+    const statusSlug = `phase-26-status-${suffix}`;
+    const status = page.locator('#techdeck-status');
+    await status.getByPlaceholder('Status page title').fill(statusTitle);
+    await status.getByPlaceholder('public-slug').fill(statusSlug);
+    await status.getByPlaceholder('Public summary').fill('Public Phase 26 service status.');
+    await status.getByRole('button', { name: 'Publish page' }).click();
+    await expect(status).toContainText(statusTitle, { timeout: 30_000 });
+
+    const tokens = page.locator('#techdeck-api-tokens');
+    await tokens.getByPlaceholder('Service identity').fill(`phase26-agent-${suffix}`);
+    await tokens.getByPlaceholder('Token label').fill('Exact-host read token');
+    await tokens.getByRole('button', { name: 'Issue read token' }).click();
+    await expect(literal.locator('.tdl-secret code')).not.toBeEmpty({ timeout: 30_000 });
+
+    const intakeName = `Phase 26 Intake ${suffix}`;
+    const intake = page.locator('#techdeck-secure-intake');
+    await intake.getByPlaceholder('Intake space').fill(intakeName);
+    await intake.getByPlaceholder('intake-slug').fill(`phase-26-intake-${suffix}`);
+    await intake.getByPlaceholder('Uploader instructions').fill('Upload bounded test evidence.');
+    await intake.getByRole('button', { name: 'Create space' }).click();
+    const intakeRow = intake.locator('li').filter({ hasText: intakeName });
+    await expect(intakeRow).toBeVisible({ timeout: 30_000 });
+    await intakeRow.getByRole('button', { name: 'Create request' }).click();
+    const intakePath = await literal.locator('.tdl-secret code').textContent();
+    expect(intakePath).toMatch(/^\/t\/upload\/tdi_/);
+
+    const webhooks = page.locator('#techdeck-webhooks');
+    await webhooks.getByPlaceholder('Endpoint name').fill('Blocked loopback endpoint');
+    await webhooks.getByPlaceholder('https://receiver.example/hook').fill('https://127.0.0.1/hook');
+    await webhooks.getByPlaceholder('Signing secret').fill('phase26-browser-signing-secret');
+    await webhooks.getByRole('button', { name: 'Add endpoint' }).click();
+    await expect(literal.getByRole('alert')).toContainText(/hostname is not public|address is not public|SSRF/i, { timeout: 30_000 });
+
+    const compliance = page.locator('#techdeck-compliance');
+    await compliance.getByRole('button', { name: 'Build deterministic ZIP packet' }).click();
+    await expect(compliance).toContainText(/queued|integrity artifact ready/i, { timeout: 30_000 });
+
+    const anonymous = await browser.newContext({ ignoreHTTPSErrors: true });
+    try {
+      const publicStatus = await anonymous.newPage();
+      await publicStatus.goto(`https://techdeck.operatoros.net/status/${statusSlug}`);
+      await expect(publicStatus.getByTestId('techdeck-public-status')).toContainText(statusTitle, { timeout: 30_000 });
+      await expect(publicStatus.getByText('Public, no sign-in')).toBeVisible();
+
+      const publicIntake = await anonymous.newPage();
+      await publicIntake.goto(`https://techdeck.operatoros.net${intakePath}`);
+      await expect(publicIntake.getByTestId('techdeck-public-intake')).toContainText(`Evidence request for ${intakeName}`, { timeout: 30_000 });
+      await expect(publicIntake.getByLabel('Evidence file')).toBeVisible();
+    } finally {
+      await anonymous.close();
+    }
+
+    const interactive = literal.locator('button,input,textarea,select,a');
+    const unnamed = await interactive.evaluateAll(elements => elements.filter(element => {
+      const html = element as HTMLElement;
+      const input = element as HTMLInputElement;
+      const visible = getComputedStyle(html).display !== 'none' && html.getBoundingClientRect().width > 0 && html.getBoundingClientRect().height > 0;
+      return visible && !(html.getAttribute('aria-label') || html.textContent?.trim() || input.placeholder);
+    }).length);
+    expect(unnamed, 'literal restoration controls need accessible names').toBe(0);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('https://techdeck.operatoros.net/compliance-packets');
+    await expect(page.getByTestId('techdeck-literal-workspace')).toBeVisible({ timeout: 30_000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await capturePhase20Evidence(page, 'techdeck-phase26-literal-mobile', { width: 390, height: 844 });
   });
 
   test('TorqueShed persists diagnostics, signed Assist accounting, Marketplace, and Community across deep-link reauthentication', async ({ page, request }) => {

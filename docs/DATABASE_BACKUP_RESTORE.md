@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 33 ordered step identifiers without secrets
+`db:plan` is read-only and prints 35 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -39,6 +39,12 @@ The release is idempotent and additive. Do not run imported child migrations,
 `drizzle-kit push`, or an ad hoc SQL directory against OperatorOS. There is no
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
+
+Release v35 appends `techdeck_literal_tables` after the prior v34 plan. Before
+applying it, require a verified backup that covers the new TechDeck portal,
+appointment, license, status, secure-intake, evidence-link, shared schedule,
+shared API-token/webhook, and export records. Rollback remains restore-and-
+switch; there is no destructive down migration.
 
 ## Deployment order
 
