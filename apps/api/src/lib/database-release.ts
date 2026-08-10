@@ -21,6 +21,7 @@ import { ensureTradeFlowKitTables } from './tradeflowkit-db-init.js';
 import { ensureTechDeckTables } from './techdeck-db-init.js';
 import { ensureTechDeckLiteralTables } from './techdeck-literal-db-init.js';
 import { ensurePulseDeskTables } from './pulsedesk-db-init.js';
+import { ensurePulseDeskLiteralTables } from './pulsedesk-literal-db-init.js';
 import { ensureTorqueShedTables } from './torqueshed-db-init.js';
 import { ensureFaultlineLabTables } from './faultlinelab-db-init.js';
 import { ensureNinjaPoolHallTables } from './ninja-pool-hall-db-init.js';
@@ -54,6 +55,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   tradeflowkit_tables: ensureTradeFlowKitTables,
   techdeck_tables: ensureTechDeckTables,
   pulsedesk_tables: ensurePulseDeskTables,
+  pulsedesk_literal_tables: ensurePulseDeskLiteralTables,
   torqueshed_tables: ensureTorqueShedTables,
   faultlinelab_tables: ensureFaultlineLabTables,
   ninja_pool_hall_tables: ensureNinjaPoolHallTables,
@@ -118,6 +120,7 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.techdeck_evidence_file_links') IS NOT NULL AS techdeck_evidence_file_links,
       to_regclass('public.pulsedesk_ticket_messages') IS NOT NULL AS pulsedesk_ticket_messages,
       to_regclass('public.pulsedesk_sla_policies') IS NOT NULL AS pulsedesk_sla_policies,
+      to_regclass('public.pulsedesk_mail_connectors') IS NOT NULL AS pulsedesk_mail_connectors,
       to_regclass('public.torqueshed_vehicles') IS NOT NULL AS torqueshed_vehicles,
       to_regclass('public.torqueshed_diagnostic_entries') IS NOT NULL AS torqueshed_diagnostic_entries,
       to_regclass('public.torqueshed_assist_requests') IS NOT NULL AS torqueshed_assist_requests,

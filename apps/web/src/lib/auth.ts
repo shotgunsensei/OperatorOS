@@ -1698,6 +1698,14 @@ export const moduleShellApi = {
       }) as Promise<TorqueAssistResponse>,
   },
   pulsedesk: {
+    listConnectors: () => apiFetch('/modules/pulsedesk/connectors') as Promise<any>,
+    createConnector: (input: unknown) => apiFetch('/modules/pulsedesk/connectors', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    startConnectorOauth: (id: string) => apiFetch(`/modules/pulsedesk/connectors/${encodeURIComponent(id)}/oauth/start`, { method: 'POST', body: JSON.stringify({}) }) as Promise<any>,
+    completeConnectorOauth: (id: string, input: unknown) => apiFetch(`/modules/pulsedesk/connectors/${encodeURIComponent(id)}/oauth/callback`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    pollConnector: (id: string) => apiFetch(`/modules/pulsedesk/connectors/${encodeURIComponent(id)}/poll`, { method: 'POST', body: JSON.stringify({}) }) as Promise<any>,
+    testIngestConnector: (id: string, input: unknown) => apiFetch(`/modules/pulsedesk/connectors/${encodeURIComponent(id)}/test-ingest`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    revokeConnector: (id: string) => apiFetch(`/modules/pulsedesk/connectors/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<any>,
+    createPublicIntakePolicy: (input: unknown) => apiFetch('/modules/pulsedesk/public-intake-policies', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
     getServiceDeskDashboard: (): Promise<PulseDeskServiceDashboard> =>
       apiFetch('/modules/pulsedesk/dashboard') as Promise<PulseDeskServiceDashboard>,
     listServiceTickets: (query = ''): Promise<{ tickets: PulseDeskServiceTicket[]; pagination: { limit: number; offset: number; total: number } }> =>

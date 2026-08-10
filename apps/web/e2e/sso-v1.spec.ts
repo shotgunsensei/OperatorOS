@@ -693,6 +693,41 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(sibling.getByTestId('pulsedesk-tab-dashboard')).toHaveAttribute('aria-selected', 'true');
     await sibling.goto('https://pulsedesk.operatoros.net/service-desk-admin');
     await expect(sibling.getByTestId('pulsedesk-tab-admin')).toHaveAttribute('aria-selected', 'true');
+    const connectorLabel = `E2E SendGrid ${Date.now()}`;
+    const connectorConsole = sibling.getByTestId('pulsedesk-connector-console');
+    await expect(connectorConsole).toBeVisible({ timeout: 30_000 });
+    await connectorConsole.locator('input[name="label"]').fill(connectorLabel);
+    await connectorConsole.locator('input[name="mailboxAddress"]').fill(`phase27-${Date.now()}@example.invalid`);
+    await connectorConsole.locator('input[name="secretReference"]').fill('e2e-encrypted-reference-only');
+    await connectorConsole.getByRole('button', { name: 'Save connector' }).click();
+    await expect(connectorConsole.getByText(connectorLabel, { exact: true })).toBeVisible({ timeout: 30_000 });
+    await connectorConsole.getByRole('button', { name: 'Test intake' }).click();
+    await expect(connectorConsole.getByRole('status')).toContainText('Deterministic ingestion completed.', { timeout: 30_000 });
+
+    const publicPolicy = await sibling.evaluate(async () => {
+      const response = await fetch('/api/modules/pulsedesk/public-intake-policies', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maxRequestsPerHour: 3 }),
+      });
+      return { status: response.status, body: await response.json() };
+    });
+    expect(publicPolicy.status, JSON.stringify(publicPolicy.body)).toBe(201);
+    const intakePage = await context.newPage();
+    await intakePage.goto(`https://pulsedesk.operatoros.net/submit/${publicPolicy.body.public_slug}`);
+    await expect(intakePage.getByTestId('pulsedesk-public-intake')).toBeVisible({ timeout: 30_000 });
+    await expect(intakePage.locator('aside').filter({ hasText: 'Do not include patient names' })).toBeVisible();
+    const serviceWorkerArtifact = await intakePage.evaluate(async () => {
+      const response = await fetch('/pulsedesk-sw.js', { cache: 'no-store' });
+      return { status: response.status, body: await response.text() };
+    });
+    expect(serviceWorkerArtifact.status).toBe(200);
+    expect(serviceWorkerArtifact.body).toContain("request.method !== 'GET'");
+    await intakePage.setViewportSize({ width: 390, height: 844 });
+    await expect(intakePage.getByRole('heading', { name: 'Report an operational issue' })).toBeVisible();
+    await expect(intakePage.getByRole('button', { name: 'Submit issue' })).toBeVisible();
+    await intakePage.close();
 
     const clientName = `E2E Service Client ${Date.now()}`;
     const client = await sibling.evaluate(async (name) => {

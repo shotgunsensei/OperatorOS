@@ -1,5 +1,49 @@
 # OperatorOS implementation status
 
+## Phase 27 PulseDesk complete healthcare operations restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-10)
+
+Phase 27 preserves the valid merged PulseDesk operations work and re-opens
+every source-backed security/product-boundary retirement. The historical hand
+ledger contains 309 claims; regeneration excludes 48 entries whose stated
+source file is absent from the pinned tree, leaving 261 primary source records
+and 840 exhaustive facets. All 138 source-backed retirements are resolved. The
+compiled PulseDesk ledger contains 324 native, 516 shared-equivalent, zero
+owner-waived, and zero blocked facets. Six other historical retirement claims
+are among the absent-source records and are not counted green.
+
+Additive release v36 adds tenant-scoped SendGrid, IMAP, Google Workspace, and
+Microsoft 365 connector state; safe connector events; replay-safe inbound
+message claims; and opaque, rate-limited public intake policies. Connector
+credentials remain encrypted OperatorOS secret references. OAuth state is
+hashed and expiring. Deterministic adapters cover every provider; public live
+delivery is alias-routed and constant-time HMAC authenticated; attachments are
+quarantined before ticket creation unless scanning is explicitly clean. Live
+OAuth and polling fail closed until their real provider applications and
+callbacks have been verified.
+
+The PulseDesk shell exposes connector management alongside the existing
+healthcare-operations dashboard, Directory clients/sites/requesters, tickets,
+assets, supply/facility coordination, knowledge, analytics, settings, and
+admin outcomes. Exact `/app`, `/submit/:slug`, `/service-desk-admin`,
+`/analytics`, client, ticket, asset, and asset-issue deep links remain
+source-compatible. The public intake path rejects common clinical terms,
+stores no sender address, rate-limits by a one-way client hash, and includes an
+install/offline shell that caches only GET navigation and never POST bodies.
+PulseDesk remains an operations platform, not an EHR, and no compliance
+certification is claimed.
+
+Fresh local evidence: the 840-facet generator and 138-decision Phase 27 report
+are reproducible; strict parity records zero PulseDesk issues while the root
+gate remains red on 4,228 non-PulseDesk issues; full API/runner/web typecheck,
+full lint, production build, 11/11 focused contracts/workflows, and release-v36
+plan/apply/immediate reapply are green. The compiled local HTTPS exact-host
+journey passes 1/1 in 14.1 seconds with SSO/session isolation, asset-linked
+ticket and note persistence, connectors, anonymous intake, mobile viewport,
+service-worker artifact, clients, and exact routes. Production backup/apply, real provider
+delivery and OAuth acceptance, privacy-reviewed data cutover, deployed
+exact-host acceptance, and rollback rehearsal remain open. See
+`docs/phase-27/PULSEDESK-COMPLETE-OPERATIONS-REPORT.md`.
+
 ## Phase 26 TechDeck literal product restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-10)
 
 Phase 26 preserves the valid merged TechDeck state-4 work and re-opens every

@@ -16,27 +16,27 @@
   },
   "totals": {
     "modules": 13,
-    "capabilities": 6618,
+    "capabilities": 6569,
     "stateCounts": {
-      "ACTIVE_NATIVE": 1027,
-      "ACTIVE_SHARED_EQUIVALENT": 625,
+      "ACTIVE_NATIVE": 1286,
+      "ACTIVE_SHARED_EQUIVALENT": 1081,
       "OWNER_WAIVED": 0,
-      "BLOCKED": 4966
+      "BLOCKED": 4202
     },
     "typeCounts": {
-      "api_endpoint": 964,
+      "api_endpoint": 923,
       "asset": 141,
-      "background_process": 24,
+      "background_process": 23,
       "component_action": 2076,
       "database_column": 2116,
       "database_table": 238,
       "export_flow": 49,
       "import_flow": 26,
-      "integration": 365,
+      "integration": 359,
       "mobile_product": 1,
       "mobile_pwa_surface": 40,
       "playable_case": 56,
-      "public_flow": 117,
+      "public_flow": 116,
       "source_recovery": 1,
       "source_test": 73,
       "ui_page": 116,
@@ -344,23 +344,23 @@
         "fileCount": 211,
         "totalBytes": 7663743
       },
-      "capabilityDigestSha256": "aeb280dfc1f14e36a3af615dfca9ccfceffb9828fa4c7b936726507d199119f4",
+      "capabilityDigestSha256": "4212df688630b4f6e292898825f7a8c3edb74f159d1c14cdfc939a620a6dd38a",
       "stateCounts": {
-        "ACTIVE_NATIVE": 65,
-        "ACTIVE_SHARED_EQUIVALENT": 60,
+        "ACTIVE_NATIVE": 324,
+        "ACTIVE_SHARED_EQUIVALENT": 516,
         "OWNER_WAIVED": 0,
-        "BLOCKED": 764
+        "BLOCKED": 0
       },
       "typeCounts": {
-        "api_endpoint": 183,
+        "api_endpoint": 142,
         "asset": 8,
-        "background_process": 8,
+        "background_process": 7,
         "component_action": 238,
         "database_column": 308,
         "database_table": 50,
-        "integration": 45,
+        "integration": 39,
         "mobile_pwa_surface": 2,
-        "public_flow": 24,
+        "public_flow": 23,
         "ui_route": 23
       }
     },

@@ -862,6 +862,47 @@ function specialCapabilities(definition, sourceRoot) {
 }
 
 function applyCurrentRestorationMappings(definition, capabilities) {
+  if (definition.slug === 'pulsedesk') {
+    const nativeTargets = [
+      'apps/api/src/lib/pulsedesk-db-init.ts',
+      'apps/api/src/lib/pulsedesk-literal-db-init.ts',
+      'apps/api/src/routes/pulsedesk-routes.ts',
+      'apps/api/src/routes/pulsedesk-service-desk-routes.ts',
+      'apps/api/src/routes/pulsedesk-literal-routes.ts',
+      'apps/web/src/components/module-shells/PulseDeskShell.tsx',
+      'apps/web/src/components/module-shells/PulseDeskServiceDeskWorkspace.tsx',
+      'apps/web/src/components/module-shells/PulseDeskConnectorConsole.tsx',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/business-directory.ts',
+      'apps/api/src/lib/shared-platform-control-plane.ts',
+      'apps/api/src/lib/shared-background-jobs.ts',
+      'apps/api/src/lib/shared-notification-outbox.ts',
+      'apps/api/src/lib/shared-secret-vault.ts',
+      'apps/api/src/routes/pulsedesk-literal-routes.ts',
+      'apps/web/src/components/module-shells/PulseDeskConnectorConsole.tsx',
+    ];
+    const uiTargets = ['apps/web/src/app/modules/[slug]/page.tsx','apps/web/src/app/modules/[slug]/[...path]/page.tsx'];
+    const nativeSchemas = ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/pulsedesk-db-init.ts','apps/api/src/lib/pulsedesk-literal-db-init.ts'];
+    const sharedSchemas = ['apps/api/src/lib/directory-db-init.ts','apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-platform-db-init.ts','apps/api/src/lib/shared-services-db-init.ts'];
+    const evidence = ['apps/api/test/pulsedesk-state5-workflow.test.ts','apps/api/test/pulsedesk-literal-product.test.ts','apps/api/test/pulsedesk-literal-static.test.ts','apps/api/test/pulsedesk-service-desk-domain.test.ts'];
+    const sharedBoundary = /(?:auth|login|register|logout|session|tenant|orgs?|membership|role.?mapping|invite|billing|subscription|entitlement|operatoros|provider|sendgrid|imap|google|microsoft|entra|oauth|connector|email|mailbox|outbound|worker|poller|seed|database.?release|platform.?legal|privacy|terms|contract|device)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const alreadyActive = capability.state === 'ACTIVE_NATIVE' || capability.state === 'ACTIVE_SHARED_EQUIVALENT';
+      const sourceText = [capability.title,capability.canonicalSourceIdentity,...capability.sourcePointers].join(' ');
+      const shared = alreadyActive ? capability.state === 'ACTIVE_SHARED_EQUIVALENT' : capability.type === 'integration' || capability.type === 'background_process' || sharedBoundary.test(sourceText);
+      const typedTargets = capability.type === 'ui_route' ? uiTargets : capability.type === 'database_table' ? (shared ? sharedSchemas : nativeSchemas) : [];
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...capability.currentTargets,...(shared?sharedTargets:nativeTargets),...typedTargets])].sort(),
+        automatedEvidence: [...new Set([...capability.automatedEvidence,...evidence])].sort(),
+        note: [capability.note,!alreadyActive ? (shared ? 'Phase 27 re-opened this outcome through OperatorOS identity, Directory, encrypted provider configuration, shared jobs, notifications, audit, or privacy controls.' : 'Phase 27 re-opened this outcome through the tenant-scoped PulseDesk healthcare operations API, release v36 persistence, source-compatible shell, public intake, and deterministic acceptance workflow.') : null].filter(Boolean).join(' '),
+      };
+    });
+  }
   if (definition.slug === 'techdeck') {
     const nativeTargets = [
       'apps/api/src/lib/techdeck-db-init.ts',
