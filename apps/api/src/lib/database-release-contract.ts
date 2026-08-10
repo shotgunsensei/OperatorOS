@@ -1,6 +1,6 @@
 export const DATABASE_RELEASE_CONTRACT = Object.freeze({
   contractVersion: 1,
-  releaseVersion: 33,
+  releaseVersion: 34,
   mode: 'idempotent-apply',
   destructive: false,
   rollback: 'restore-to-new-database-and-switch-traffic',
@@ -21,6 +21,7 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'ninja_pool_hall_tables', kind: 'ddl' },
   { id: 'brandforgeos_tables', kind: 'ddl' },
   { id: 'shared_service_tables', kind: 'ddl' },
+  { id: 'shared_platform_tables', kind: 'ddl' },
   { id: 'snapproofos_tables', kind: 'ddl' },
   { id: 'studyforge_tables', kind: 'ddl' },
   { id: 'ninja_launch_kit_tables', kind: 'ddl' },

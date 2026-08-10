@@ -16,6 +16,7 @@ import {
 import { launchFixPostSeed, launchFixPreSeed } from './launch-fix-init.js';
 import { ensureDirectoryTables } from './directory-db-init.js';
 import { ensureSharedServiceTables } from './shared-services-db-init.js';
+import { ensureSharedPlatformTables } from './shared-platform-db-init.js';
 import { ensureTradeFlowKitTables } from './tradeflowkit-db-init.js';
 import { ensureTechDeckTables } from './techdeck-db-init.js';
 import { ensurePulseDeskTables } from './pulsedesk-db-init.js';
@@ -57,6 +58,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   ninja_pool_hall_tables: ensureNinjaPoolHallTables,
   brandforgeos_tables: ensureBrandForgeOsTables,
   shared_service_tables: ensureSharedServiceTables,
+  shared_platform_tables: ensureSharedPlatformTables,
   snapproofos_tables: ensureSnapProofOsTables,
   studyforge_tables: ensureStudyForgeTables,
   ninja_launch_kit_tables: ensureNinjaLaunchKitTables,
@@ -87,6 +89,11 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.directory_organizations') IS NOT NULL AS directory_organizations,
       to_regclass('public.shared_outbox_messages') IS NOT NULL AS shared_outbox_messages,
       to_regclass('public.shared_usage_events') IS NOT NULL AS shared_usage_events,
+      to_regclass('public.shared_provider_configs') IS NOT NULL AS shared_provider_configs,
+      to_regclass('public.shared_webhook_deliveries') IS NOT NULL AS shared_webhook_deliveries,
+      to_regclass('public.shared_exports') IS NOT NULL AS shared_exports,
+      to_regclass('public.shared_api_tokens') IS NOT NULL AS shared_api_tokens,
+      to_regclass('public.shared_search_documents') IS NOT NULL AS shared_search_documents,
       to_regclass('public.tradeflowkit_tasks') IS NOT NULL AS tradeflowkit_tasks,
       to_regclass('public.tradeflowkit_workflows') IS NOT NULL AS tradeflowkit_workflows,
       to_regclass('public.tradeflowkit_workflow_stages') IS NOT NULL AS tradeflowkit_workflow_stages,

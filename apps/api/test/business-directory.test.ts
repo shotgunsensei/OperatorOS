@@ -87,7 +87,7 @@ after(async () => {
   for (const module of modules) await cleanupModule(module.id);
 });
 
-test('shared organizations, contacts, sites, relationships, tags, and profiles persist without duplication', async () => {
+test('P22-ADAPTER-DIRECTORY-001: shared organizations, contacts, sites, relationships, tags, and profiles persist without duplication', async () => {
   const createOrg = await app.inject({ method: 'POST', url: url('tradeflowkit', '/organizations'), headers: headers(ownerA, ownerA.currentTenantId), payload: { name: 'Acme Health Systems', type: 'facility', website: 'https://acme.test' } });
   assert.equal(createOrg.statusCode, 201, createOrg.body);
   const organization = createOrg.json();

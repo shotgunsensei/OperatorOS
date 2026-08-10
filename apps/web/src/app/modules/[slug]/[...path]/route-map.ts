@@ -3,6 +3,8 @@ export interface CoreModuleDeepLinkTarget {
   sectionId: string;
   /** Operator-facing name used by tests and future recovery navigation. */
   label: string;
+  /** Optional source-compatibility redirect to the canonical active route. */
+  redirectPath?: string;
 }
 
 type CoreModuleDeepLinkMap = Readonly<
@@ -21,6 +23,7 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
   tradeflowkit: {
     '/dashboard': { sectionId: 'tradeflowkit-overview', label: 'Overview' },
     '/leads': { sectionId: 'tradeflowkit-lead-center', label: 'Lead Center' },
+    '/leads/demo': { sectionId: 'tradeflowkit-lead-center', label: 'Lead Center', redirectPath: '/leads' },
     '/customers': { sectionId: 'tradeflowkit-revenue-flow', label: 'Customers' },
     '/directory': { sectionId: 'tradeflowkit-directory', label: 'Business Directory' },
     '/contacts': { sectionId: 'tradeflowkit-directory', label: 'Shared Contacts' },
@@ -28,7 +31,9 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/jobs': { sectionId: 'tradeflowkit-operations', label: 'Jobs' },
     '/tasks': { sectionId: 'tradeflowkit-operations', label: 'Tasks' },
     '/quotes': { sectionId: 'tradeflowkit-revenue-flow', label: 'Quotes' },
+    '/quotes/new': { sectionId: 'tradeflowkit-revenue-flow', label: 'New Quote' },
     '/invoices': { sectionId: 'tradeflowkit-revenue-flow', label: 'Invoices' },
+    '/invoices/new': { sectionId: 'tradeflowkit-revenue-flow', label: 'New Invoice' },
     '/payments': { sectionId: 'tradeflowkit-revenue-flow', label: 'Payments' },
     '/analytics': { sectionId: 'tradeflowkit-operations', label: 'Operational Analytics' },
     '/trash': { sectionId: 'tradeflowkit-trash', label: 'Archived Records' },
@@ -202,6 +207,15 @@ export function resolveCoreModuleDeepLink(
   const routePath = `/${pathSegments.join('/')}`;
   const exact = CORE_MODULE_DEEP_LINKS[slug]?.[routePath];
   if (exact) return exact;
+  if (slug === 'tradeflowkit' && pathSegments.length === 3) {
+    const [resource, id, action] = pathSegments;
+    if (resource === 'quotes' && (action === 'edit' || action === 'view')) {
+      return { sectionId: 'tradeflowkit-revenue-flow', label: 'Quote Record', redirectPath: `/quotes/${encodeURIComponent(id)}` };
+    }
+    if (resource === 'invoices' && (action === 'edit' || action === 'pay')) {
+      return { sectionId: 'tradeflowkit-revenue-flow', label: 'Invoice Record', redirectPath: `/invoices/${encodeURIComponent(id)}` };
+    }
+  }
   if (slug === 'tradeflowkit' && pathSegments.length === 2) {
     const [resource] = pathSegments;
     if (resource === 'jobs' || resource === 'tasks') return { sectionId: 'tradeflowkit-operations', label: resource === 'jobs' ? 'Job Record' : 'Task Record' };

@@ -24,7 +24,21 @@ function message(error: unknown): string {
   return 'TradeFlowKit operation failed.';
 }
 
-export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenantKey: string; canManage: boolean }) {
+export type TradeFlowKitOperationsView = 'full' | 'dashboard' | 'jobs' | 'analytics' | 'settings';
+
+export default function TradeFlowKitOperations({
+  tenantKey,
+  canManage,
+  view = 'full',
+  recordId,
+  routePrefix = '',
+}: {
+  tenantKey: string;
+  canManage: boolean;
+  view?: TradeFlowKitOperationsView;
+  recordId?: string;
+  routePrefix?: string;
+}) {
   const [data, setData] = useState(empty);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
@@ -49,7 +63,7 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
       const next = await moduleShellApi.tradeflowkit.operations({ search: search || undefined, status: status || undefined });
       setData(next);
       setSelectedJobIds(new Set());
-      const nestedJobId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/jobs\/([a-z0-9-]+)$/i)?.[1] || '';
+      const nestedJobId = recordId || (typeof window === 'undefined' ? '' : window.location.pathname.match(/\/jobs\/([a-z0-9-]+)$/i)?.[1] || '');
       const nestedTaskId = typeof window === 'undefined' ? '' : window.location.pathname.match(/\/tasks\/([a-z0-9-]+)$/i)?.[1] || '';
       const taskJobId = next.tasks.find(task => task.id === nestedTaskId)?.jobId || '';
       setSelectedJobId(current => {
@@ -61,7 +75,7 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
       } else setSettings(next.settings);
     } catch (requestError) { setError(message(requestError)); }
     finally { setLoading(false); }
-  }, [canManage, search, status]);
+  }, [canManage, recordId, search, status]);
 
   useEffect(() => { void load(); }, [load, tenantKey]);
 
@@ -165,10 +179,10 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
   }
 
   return (
-    <section id="tradeflowkit-operations" className="tfk-panel tfk-ops" data-testid="tradeflowkit-operations" tabIndex={-1}>
+    <section id="tradeflowkit-operations" className="tfk-panel tfk-ops" data-testid="tradeflowkit-operations" data-view={view} tabIndex={-1}>
       <style>{css}</style>
       <header className="tfk-ops-head">
-        <div><span>Field operations</span><h2>Jobs, tasks, assignments, and cash position</h2><p>Keep current work, team ownership, delivery status, and cash position visible in one place.</p></div>
+        <div><span>{view === 'dashboard' ? 'Live operations' : 'Field operations'}</span><h2>{view === 'dashboard' ? 'Operations at a glance' : 'Jobs, tasks, assignments, and cash position'}</h2><p>{view === 'dashboard' ? 'These totals are calculated from this organization’s persisted service and revenue records.' : 'Keep current work, team ownership, delivery status, and cash position visible in one place.'}</p></div>
         <div className="tfk-ops-actions"><a href="/api/modules/tradeflowkit/exports/customers.csv">Customers CSV</a><a href="/api/modules/tradeflowkit/exports/invoices.csv">Invoices CSV</a><a href="/api/modules/tradeflowkit/exports/payments.csv">Payments CSV</a><button type="button" onClick={() => void load()} disabled={loading || pending}><RefreshCw size={15} /> Refresh</button></div>
       </header>
 
@@ -233,14 +247,15 @@ export default function TradeFlowKitOperations({ tenantKey, canManage }: { tenan
             </aside>
             <div className="tfk-task-board">
               {selectedJob && <>
-                <JobEditor job={selectedJob} settings={settings} pending={pending} canManage={canManage} activeTaskCount={tasks.length} run={run} />
+                <JobEditor job={selectedJob} settings={settings} pending={pending} canManage={canManage} activeTaskCount={tasks.length} run={run} routePrefix={routePrefix} />
                 {canManage && <form onSubmit={addTask} className="tfk-task-form"><input aria-label="New task title" required value={taskTitle} onChange={event => setTaskTitle(event.target.value)} placeholder="Add a job task" maxLength={200} /><select aria-label="Task priority" value={taskPriority} onChange={event => setTaskPriority(event.target.value)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select><button disabled={pending || !taskTitle.trim()}><Plus size={15} /> Add task</button></form>}
-                {tasks.length === 0 ? <div className="tfk-task-empty"><ListChecks size={18} /> No tasks yet. Add the first work step above.</div> : <div className="tfk-task-list">{tasks.map(task => <TaskRow key={task.id} task={task} selected={task.id === deepTaskId} pending={pending} canManage={canManage} run={run} />)}</div>}
+                {tasks.length === 0 ? <div className="tfk-task-empty"><ListChecks size={18} /> No tasks yet. Add the first work step above.</div> : <div className="tfk-task-list">{tasks.map(task => <TaskRow key={task.id} task={task} selected={task.id === deepTaskId} pending={pending} canManage={canManage} run={run} routePrefix={routePrefix} />)}</div>}
               </>}
             </div>
           </div>}
 
       {canManage && settings && <form id="tradeflowkit-operating-settings" className="tfk-settings" onSubmit={saveSettings} data-testid="tradeflowkit-operating-settings"><div><Settings2 size={18} /><div><strong>Operating defaults</strong><span>Number prefixes, tax, labor rate, terms, currency, and timezone.</span></div></div><label>Job prefix<input value={settings.jobPrefix} onChange={event => setSettings({ ...settings, jobPrefix: event.target.value.toUpperCase() })} maxLength={12} /></label><label>Quote prefix<input value={settings.quotePrefix} onChange={event => setSettings({ ...settings, quotePrefix: event.target.value.toUpperCase() })} maxLength={12} /></label><label>Invoice prefix<input value={settings.invoicePrefix} onChange={event => setSettings({ ...settings, invoicePrefix: event.target.value.toUpperCase() })} maxLength={12} /></label><label>Default tax %<input type="number" min="0" max="100" step="0.01" value={settings.defaultTaxRateBps / 100} onChange={event => setSettings({ ...settings, defaultTaxRateBps: Math.round(Number(event.target.value) * 100) })} /></label><label>Payment terms days<input type="number" min="0" max="365" value={settings.paymentTermsDays} onChange={event => setSettings({ ...settings, paymentTermsDays: Number(event.target.value) })} /></label><label>Timezone<input value={settings.timezone} onChange={event => setSettings({ ...settings, timezone: event.target.value })} maxLength={80} /></label><button disabled={pending}>Save defaults · v{settings.version}</button></form>}
+      {view === 'settings' && !canManage && <div className="tfk-ops-state" data-testid="tradeflowkit-settings-read-only">Operating defaults are available to workspace administrators.</div>}
     </section>
   );
 }
@@ -255,9 +270,9 @@ function JobButton({ job, active, onClick, settings }: { job: TradeFlowKitJob; a
   return <button type="button" className={active ? 'active' : ''} onClick={onClick}><span>{formatJobNumber(job, settings)}</span><strong>{job.title}</strong><small>{job.status.replaceAll('_', ' ')} · {job.priority}</small></button>;
 }
 
-function JobEditor({ job, settings, pending, canManage, activeTaskCount, run }: {
+function JobEditor({ job, settings, pending, canManage, activeTaskCount, run, routePrefix }: {
   job: TradeFlowKitJob; settings: TradeFlowKitSettings | null; pending: boolean; canManage: boolean;
-  activeTaskCount: number; run: (operation: () => Promise<unknown>) => Promise<void>;
+  activeTaskCount: number; run: (operation: () => Promise<unknown>) => Promise<void>; routePrefix: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(job.title);
@@ -290,14 +305,14 @@ function JobEditor({ job, settings, pending, canManage, activeTaskCount, run }: 
     </form>;
   }
 
-  return <div className="tfk-task-title" data-testid={`tradeflowkit-job-${job.id}`}><div><span>{formatJobNumber(job, settings)}</span><h3>{job.title}</h3><p>{job.status.replaceAll('_', ' ')} · {job.priority} priority · v{job.version}</p>{job.description && <p className="tfk-record-description">{job.description}</p>}</div><div className="tfk-record-actions"><a href={`/jobs/${job.id}`}>Record deep link</a>{canManage && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={14} /> Edit</button>}{canManage && <button type="button" className="danger" disabled={pending} onClick={() => {
+  return <div className="tfk-task-title" data-testid={`tradeflowkit-job-${job.id}`}><div><span>{formatJobNumber(job, settings)}</span><h3>{job.title}</h3><p>{job.status.replaceAll('_', ' ')} · {job.priority} priority · v{job.version}</p>{job.description && <p className="tfk-record-description">{job.description}</p>}</div><div className="tfk-record-actions"><a href={`${routePrefix}/jobs/${job.id}`}>Record deep link</a>{canManage && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={14} /> Edit</button>}{canManage && <button type="button" className="danger" disabled={pending} onClick={() => {
     if (window.confirm(`Archive this job? ${activeTaskCount ? 'Archive its active tasks first.' : 'It will leave the active workspace.'}`)) void run(() => moduleShellApi.tradeflowkit.archiveJob(job.id, job.version));
   }}><Archive size={14} /> Archive</button>}</div></div>;
 }
 
-function TaskRow({ task, selected, pending, canManage, run }: {
+function TaskRow({ task, selected, pending, canManage, run, routePrefix }: {
   task: TradeFlowKitTask; selected: boolean; pending: boolean; canManage: boolean;
-  run: (operation: () => Promise<unknown>) => Promise<void>;
+  run: (operation: () => Promise<unknown>) => Promise<void>; routePrefix: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
@@ -334,7 +349,7 @@ function TaskRow({ task, selected, pending, canManage, run }: {
     </form>;
   }
 
-  return <article className={`tfk-task tfk-task-${task.status} ${selected ? 'selected' : ''}`} id={`tradeflowkit-task-${task.id}`} data-testid={`tradeflowkit-task-${task.id}`}><Icon size={18} /><div><strong>{task.title}</strong><span>{task.priority} priority{task.dueAt ? ` · due ${new Date(task.dueAt).toLocaleDateString()}` : ''} · v{task.version}</span>{task.description && <span>{task.description}</span>}</div><div className="tfk-record-actions"><a href={`/tasks/${task.id}`}>Deep link</a>{canManage && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={13} /> Edit</button>}{canManage && <button type="button" className="danger" disabled={pending} onClick={() => {
+  return <article className={`tfk-task tfk-task-${task.status} ${selected ? 'selected' : ''}`} id={`tradeflowkit-task-${task.id}`} data-testid={`tradeflowkit-task-${task.id}`}><Icon size={18} /><div><strong>{task.title}</strong><span>{task.priority} priority{task.dueAt ? ` · due ${new Date(task.dueAt).toLocaleDateString()}` : ''} · v{task.version}</span>{task.description && <span>{task.description}</span>}</div><div className="tfk-record-actions"><a href={`${routePrefix}/tasks/${task.id}`}>Deep link</a>{canManage && <button type="button" className="edit" disabled={pending} onClick={() => setEditing(true)}><Pencil size={13} /> Edit</button>}{canManage && <button type="button" className="danger" disabled={pending} onClick={() => {
     if (window.confirm('Archive this task? It will leave the active job board.')) void run(() => moduleShellApi.tradeflowkit.archiveTask(task.id, task.version));
   }}><Archive size={13} /> Archive</button>}</div></article>;
 }
@@ -342,13 +357,13 @@ function TaskRow({ task, selected, pending, canManage, run }: {
 const css = `
   .tfk-ops { margin-top:18px; padding:18px; display:grid; gap:15px; }
   .tfk-ops-head { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; }
-  .tfk-ops-head span { color:#059669; font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+  .tfk-ops-head span { color:var(--tfk-primary); font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
   .tfk-ops-head h2 { margin:4px 0; font-size:20px; color:#10231d; }
   .tfk-ops-head p { margin:0; color:#587067; font-size:13px; }
-  .tfk-ops-head button,.tfk-task-form button,.tfk-settings button { border:0; border-radius:7px; background:#047857; color:white; padding:9px 12px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; }
-  .tfk-ops-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }.tfk-ops-actions a { border:1px solid rgba(5,150,105,.25); border-radius:7px; color:#047857; padding:8px 9px; font-size:11px; font-weight:800; text-decoration:none; background:white; }
+  .tfk-ops-head button,.tfk-task-form button,.tfk-settings button { border:0; border-radius:7px; background:var(--tfk-primary-hover); color:white; padding:9px 12px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; }
+  .tfk-ops-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }.tfk-ops-actions a { border:1px solid color-mix(in srgb, var(--tfk-primary) 25%, transparent); border-radius:7px; color:var(--tfk-primary-hover); padding:8px 9px; font-size:11px; font-weight:800; text-decoration:none; background:white; }
   .tfk-ops-metrics { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; }
-  .tfk-ops-metrics div { border:1px solid rgba(22,101,52,.14); background:#f4fbf7; border-radius:8px; padding:10px; display:grid; gap:3px; }
+  .tfk-ops-metrics div { border:1px solid color-mix(in srgb, var(--tfk-primary) 14%, transparent); background:var(--tfk-card); border-radius:8px; padding:10px; display:grid; gap:3px; }
   .tfk-ops-metrics span { color:#6d847c; font-size:10px; font-weight:800; text-transform:uppercase; }
   .tfk-ops-metrics strong { color:#10231d; font-size:15px; }
   .tfk-accounting-exports { border:1px solid rgba(3,105,161,.18); background:#f0f9ff; border-radius:8px; padding:11px; display:grid; gap:10px; }
@@ -359,15 +374,15 @@ const css = `
   .tfk-ops-alert.conflict { background:#fff7ed; color:#9a3412; }
   .tfk-ops-toolbar { display:grid; grid-template-columns:minmax(220px,1fr) 180px; gap:8px; }
   .tfk-ops-toolbar label { position:relative; }.tfk-ops-toolbar svg { position:absolute; left:10px; top:10px; color:#789189; }
-  .tfk-ops input,.tfk-ops select { box-sizing:border-box; width:100%; border:1px solid rgba(22,101,52,.2); border-radius:7px; padding:9px 10px; background:white; color:#10231d; font:inherit; font-size:13px; }
+  .tfk-ops input,.tfk-ops select { box-sizing:border-box; width:100%; border:1px solid color-mix(in srgb, var(--tfk-primary) 20%, transparent); border-radius:7px; padding:9px 10px; background:white; color:#10231d; font:inherit; font-size:13px; }
   .tfk-ops-toolbar input { padding-left:33px; }
-  .tfk-saved-views { border:1px solid rgba(22,101,52,.14); background:#f8fcfa; border-radius:8px; padding:9px; display:grid; gap:8px; }
-  .tfk-saved-views form { display:grid; grid-template-columns:auto minmax(180px,1fr) auto auto; gap:8px; align-items:center; color:#047857; }
+  .tfk-saved-views { border:1px solid color-mix(in srgb, var(--tfk-primary) 14%, transparent); background:var(--tfk-card); border-radius:8px; padding:9px; display:grid; gap:8px; }
+  .tfk-saved-views form { display:grid; grid-template-columns:auto minmax(180px,1fr) auto auto; gap:8px; align-items:center; color:var(--tfk-primary-hover); }
   .tfk-saved-views form > label { position:static; }.tfk-saved-views form input { padding:8px 9px; }
-  .tfk-saved-views form button { border:0; border-radius:7px; background:#047857; color:white; padding:8px 10px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; gap:5px; cursor:pointer; }
+  .tfk-saved-views form button { border:0; border-radius:7px; background:var(--tfk-primary-hover); color:white; padding:8px 10px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; gap:5px; cursor:pointer; }
   .tfk-saved-views .tfk-share-view { color:#425e55; font-size:11px; font-weight:800; display:flex; align-items:center; gap:5px; white-space:nowrap; }.tfk-saved-views .tfk-share-view input { width:auto; }
-  .tfk-saved-chips { display:flex; gap:6px; flex-wrap:wrap; }.tfk-saved-chips > div { display:inline-flex; border:1px solid rgba(5,150,105,.22); border-radius:999px; overflow:hidden; background:white; }
-  .tfk-saved-chips button { border:0; background:transparent; color:#047857; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:4px; }.tfk-saved-chips .tfk-saved-delete { color:#b91c1c; padding-left:6px; border-left:1px solid rgba(5,150,105,.14); }
+  .tfk-saved-chips { display:flex; gap:6px; flex-wrap:wrap; }.tfk-saved-chips > div { display:inline-flex; border:1px solid color-mix(in srgb, var(--tfk-primary) 22%, transparent); border-radius:999px; overflow:hidden; background:white; }
+  .tfk-saved-chips button { border:0; background:transparent; color:var(--tfk-primary-hover); padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:4px; }.tfk-saved-chips .tfk-saved-delete { color:#b91c1c; padding-left:6px; border-left:1px solid color-mix(in srgb, var(--tfk-primary) 14%, transparent); }
   .tfk-saved-empty { color:#6d847c; font-size:11px; }
   .tfk-bulk-bar { border:1px solid rgba(3,105,161,.2); border-radius:8px; background:#f0f9ff; padding:9px; display:grid; grid-template-columns:minmax(190px,1fr) minmax(150px,190px) auto auto; gap:8px; align-items:center; }
   .tfk-bulk-bar>div { display:flex; gap:8px; align-items:center; color:#0369a1; }.tfk-bulk-bar>div span { display:grid; }.tfk-bulk-bar small { color:#526b76; font-size:10px; }
@@ -375,20 +390,26 @@ const css = `
   .tfk-ops-layout { display:grid; grid-template-columns:minmax(210px,280px) minmax(0,1fr); gap:12px; min-height:280px; }
   .tfk-ops-layout aside { display:grid; align-content:start; gap:6px; max-height:520px; overflow:auto; }
   .tfk-job-choice { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:6px; }.tfk-job-choice>input { width:auto; margin:0 0 0 3px; }
-  .tfk-ops-layout aside button { width:100%; text-align:left; border:1px solid rgba(22,101,52,.14); border-radius:7px; background:white; padding:10px; display:grid; gap:3px; cursor:pointer; color:#10231d; }
-  .tfk-ops-layout aside button.active { border-color:#059669; background:#ecfdf5; box-shadow:inset 3px 0 #059669; }
-  .tfk-ops-layout aside span,.tfk-task-title span { color:#047857; font-size:10px; font-weight:900; text-transform:uppercase; }
+  .tfk-ops-layout aside button { width:100%; text-align:left; border:1px solid color-mix(in srgb, var(--tfk-primary) 14%, transparent); border-radius:7px; background:white; padding:10px; display:grid; gap:3px; cursor:pointer; color:#10231d; }
+  .tfk-ops-layout aside button.active { border-color:var(--tfk-primary); background:var(--tfk-primary-soft); box-shadow:inset 3px 0 var(--tfk-primary); }
+  .tfk-ops-layout aside span,.tfk-task-title span { color:var(--tfk-primary-hover); font-size:10px; font-weight:900; text-transform:uppercase; }
   .tfk-ops-layout aside small { color:#6d847c; text-transform:capitalize; }
-  .tfk-task-board { border:1px solid rgba(22,101,52,.14); border-radius:9px; padding:14px; background:#fbfefc; }
+  .tfk-task-board { border:1px solid color-mix(in srgb, var(--tfk-primary) 14%, transparent); border-radius:9px; padding:14px; background:var(--tfk-card); }
   .tfk-task-title { display:flex; justify-content:space-between; gap:12px; align-items:start; }.tfk-task-title h3 { margin:3px 0; }.tfk-task-title p { margin:0; color:#587067; font-size:12px; text-transform:capitalize; }.tfk-task-title .tfk-record-description { margin-top:6px; max-width:620px; text-transform:none; }.tfk-task-title a { font-size:12px; color:#0369a1; }
   .tfk-task-form { display:grid; grid-template-columns:minmax(0,1fr) 130px auto; gap:8px; margin-top:13px; }
-  .tfk-task-list { display:grid; gap:7px; margin-top:12px; }.tfk-task { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:9px; align-items:center; background:white; border:1px solid rgba(22,101,52,.13); border-radius:7px; padding:10px; }.tfk-task.selected,.tfk-record-editor.selected { border-color:#059669; box-shadow:inset 3px 0 #059669; background:#f0fdf4; }.tfk-task > div { display:grid; gap:2px; }.tfk-task span { color:#6d847c; font-size:11px; }.tfk-task-completed strong { text-decoration:line-through; color:#6d847c; }.tfk-task-completed > svg { color:#059669; }
-  .tfk-record-actions { display:flex; gap:6px; align-items:center; justify-content:flex-end; flex-wrap:wrap; }.tfk-record-actions a { color:#0369a1; font-size:11px; font-weight:800; }.tfk-record-actions button { border:0; border-radius:6px; padding:7px 9px; background:#047857; color:white; font-weight:800; display:inline-flex; gap:5px; align-items:center; cursor:pointer; }.tfk-record-actions button.edit { background:#b7791f; }.tfk-record-actions button.danger { background:#dc2626; }.tfk-record-actions button.secondary { background:#64748b; }
-  .tfk-record-editor { border:1px solid rgba(22,101,52,.18); border-radius:8px; background:white; padding:11px; display:grid; gap:9px; }.tfk-record-editor label { color:#587067; font-size:11px; font-weight:700; display:grid; gap:4px; }.tfk-record-editor textarea { box-sizing:border-box; width:100%; border:1px solid rgba(22,101,52,.2); border-radius:7px; padding:9px 10px; background:white; color:#10231d; font:inherit; font-size:13px; resize:vertical; }.tfk-editor-grid { display:grid; grid-template-columns:minmax(200px,2fr) minmax(130px,1fr) minmax(120px,1fr); gap:8px; }.tfk-editor-grid.task { grid-template-columns:minmax(180px,2fr) repeat(3,minmax(115px,1fr)); }
-  .tfk-task-empty,.tfk-ops-state { min-height:90px; display:flex; align-items:center; justify-content:center; gap:9px; color:#587067; border:1px dashed rgba(22,101,52,.2); border-radius:7px; margin-top:12px; }.tfk-ops-state div { display:grid; gap:3px; }.tfk-ops-state span { font-size:12px; }
-  .tfk-settings { border-top:1px solid rgba(22,101,52,.14); padding-top:15px; display:grid; grid-template-columns:1.4fr repeat(3,minmax(100px,1fr)); gap:9px; align-items:end; }.tfk-settings > div { display:flex; gap:8px; align-items:start; }.tfk-settings > div div { display:grid; }.tfk-settings > div span,.tfk-settings label { color:#587067; font-size:11px; }.tfk-settings label { display:grid; gap:4px; }.tfk-settings button { grid-column:4; }
+  .tfk-task-list { display:grid; gap:7px; margin-top:12px; }.tfk-task { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:9px; align-items:center; background:white; border:1px solid color-mix(in srgb, var(--tfk-primary) 13%, transparent); border-radius:7px; padding:10px; }.tfk-task.selected,.tfk-record-editor.selected { border-color:var(--tfk-primary); box-shadow:inset 3px 0 var(--tfk-primary); background:var(--tfk-primary-soft); }.tfk-task > div { display:grid; gap:2px; }.tfk-task span { color:#6d847c; font-size:11px; }.tfk-task-completed strong { text-decoration:line-through; color:#6d847c; }.tfk-task-completed > svg { color:var(--tfk-primary); }
+  .tfk-record-actions { display:flex; gap:6px; align-items:center; justify-content:flex-end; flex-wrap:wrap; }.tfk-record-actions a { color:#0369a1; font-size:11px; font-weight:800; }.tfk-record-actions button { border:0; border-radius:6px; padding:7px 9px; background:var(--tfk-primary-hover); color:white; font-weight:800; display:inline-flex; gap:5px; align-items:center; cursor:pointer; }.tfk-record-actions button.edit { background:#b7791f; }.tfk-record-actions button.danger { background:#dc2626; }.tfk-record-actions button.secondary { background:#64748b; }
+  .tfk-record-editor { border:1px solid color-mix(in srgb, var(--tfk-primary) 18%, transparent); border-radius:8px; background:white; padding:11px; display:grid; gap:9px; }.tfk-record-editor label { color:#587067; font-size:11px; font-weight:700; display:grid; gap:4px; }.tfk-record-editor textarea { box-sizing:border-box; width:100%; border:1px solid color-mix(in srgb, var(--tfk-primary) 20%, transparent); border-radius:7px; padding:9px 10px; background:white; color:#10231d; font:inherit; font-size:13px; resize:vertical; }.tfk-editor-grid { display:grid; grid-template-columns:minmax(200px,2fr) minmax(130px,1fr) minmax(120px,1fr); gap:8px; }.tfk-editor-grid.task { grid-template-columns:minmax(180px,2fr) repeat(3,minmax(115px,1fr)); }
+  .tfk-task-empty,.tfk-ops-state { min-height:90px; display:flex; align-items:center; justify-content:center; gap:9px; color:#587067; border:1px dashed color-mix(in srgb, var(--tfk-primary) 20%, transparent); border-radius:7px; margin-top:12px; }.tfk-ops-state div { display:grid; gap:3px; }.tfk-ops-state span { font-size:12px; }
+  .tfk-settings { border-top:1px solid color-mix(in srgb, var(--tfk-primary) 14%, transparent); padding-top:15px; display:grid; grid-template-columns:1.4fr repeat(3,minmax(100px,1fr)); gap:9px; align-items:end; }.tfk-settings > div { display:flex; gap:8px; align-items:start; }.tfk-settings > div div { display:grid; }.tfk-settings > div span,.tfk-settings label { color:#587067; font-size:11px; }.tfk-settings label { display:grid; gap:4px; }.tfk-settings button { grid-column:4; }
   .spin { animation:tfk-ops-spin 1s linear infinite; } @keyframes tfk-ops-spin { to { transform:rotate(360deg); } }
   .sr-only { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0; }
+  .tfk-ops[data-view="dashboard"] :is(.tfk-accounting-exports,.tfk-ops-toolbar,.tfk-saved-views,.tfk-bulk-bar,.tfk-ops-layout,.tfk-ops-state,.tfk-settings),
+  .tfk-ops[data-view="analytics"] :is(.tfk-ops-toolbar,.tfk-saved-views,.tfk-bulk-bar,.tfk-ops-layout,.tfk-ops-state,.tfk-settings),
+  .tfk-ops[data-view="jobs"] :is(.tfk-accounting-exports,.tfk-settings),
+  .tfk-ops[data-view="settings"] :is(.tfk-ops-head,.tfk-ops-metrics,.tfk-accounting-exports,.tfk-ops-toolbar,.tfk-saved-views,.tfk-bulk-bar,.tfk-ops-layout,.tfk-ops-state) { display:none!important; }
+  .tfk-ops[data-view="settings"] { padding:18px; }
+  .tfk-ops[data-view="dashboard"] .tfk-ops-actions a { display:none; }
   @media(max-width:960px){.tfk-ops-metrics{grid-template-columns:repeat(3,1fr)}.tfk-settings{grid-template-columns:repeat(2,1fr)}.tfk-settings>div{grid-column:1/-1}.tfk-settings button{grid-column:auto}}
   @media(max-width:700px){.tfk-ops-head{display:grid}.tfk-ops-toolbar,.tfk-ops-layout,.tfk-bulk-bar{grid-template-columns:1fr}.tfk-saved-views form{grid-template-columns:auto minmax(0,1fr)}.tfk-saved-views form button{grid-column:1/-1}.tfk-ops-layout aside{display:flex;overflow:auto}.tfk-job-choice{min-width:220px}.tfk-ops-layout aside button{min-width:190px}.tfk-task-title{display:grid}.tfk-task-form,.tfk-editor-grid,.tfk-editor-grid.task{grid-template-columns:1fr}.tfk-task{grid-template-columns:auto minmax(0,1fr)}.tfk-task>.tfk-record-actions{grid-column:1/-1}.tfk-settings{grid-template-columns:1fr}.tfk-ops-metrics{grid-template-columns:repeat(2,1fr)}}
 `;

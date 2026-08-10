@@ -1,6 +1,210 @@
 # OperatorOS implementation status
 
-## Phase 20 source/local public-launch functional closure - PASS (2026-08-03)
+## Phase 24 TradeFlowKit product restoration - PARTIAL IMPLEMENTATION / ZERO-GAP BLOCKED (2026-08-09)
+
+Phase 24 retains the merged Phase 16/17 TradeFlowKit work and adds a real
+recurring-job vertical slice through the Phase 22 typed shared scheduler.
+Tenant admins can create, inspect, pause, and resume schedules against persisted
+customers; due runs create one audited scheduled job with deterministic series/
+run identity, scheduled start/end, optimistic concurrency, and idempotent
+replay. API and web TypeScript pass, and the disposable PostgreSQL journey
+passes 1/1 with viewer denial, second-tenant non-enumeration, stale conflict,
+worker execution, replay protection, and persistence checks.
+
+The source-derived ledger closes exactly seven recurring-work capability IDs.
+TradeFlowKit now has 1,116 records: 142 native, 20 shared-equivalent, 0 waived,
+and 954 blocked. The fresh global strict gate correctly fails with 6,229 issues
+(6,129 required blockers, 61 route mappings, 39 schema mappings). Phase 24 is
+therefore not zero-gap or production-ready. Exact IDs, commands, results,
+rollback, and remaining blocker classes are in
+`docs/phase-24/TRADEFLOWKIT-ZERO-GAP-REPORT.md`.
+
+## Phase 23 TradeFlowKit visual parity - SOURCE/LOCAL IMPLEMENTED / RELEASE BROWSER PENDING (2026-08-09)
+
+TradeFlowKit now uses source-mapped, module-scoped orange/navy light/dark
+tokens, the preserved source logo, route-aware responsive navigation, real
+active workflow screens, public quote/invoice branding, compatibility routes,
+keyboard/reduced-motion/touch/overflow contracts, and a fail-closed detector
+for reintroduced green shell literals. The OperatorOS ecosystem header remains
+unchanged. Static visual contracts pass 9/9, focused API/web TypeScript passes,
+and an in-app desktop journey exercised persisted lead, customer, job, quote,
+invoice, and public invoice state. The cumulative release-run visual/browser
+suite at 1440/1024/390 remains pending on the final revision. Exact tokens,
+routes, screenshots, exclusions, and commands are recorded in
+`docs/phase-23/TRADEFLOWKIT-VISUAL-PARITY-REPORT.md`.
+
+## Phase 25 FaultlineLab full catalog - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-09)
+
+Phase 25 replaces the artificial four-case initializer with a deterministic
+compiler that executes the pinned source `allCases` export without installing
+or running the child application. The compiler discovers exact case/category/
+difficulty counts, validates IDs, slugs, evidence references/reachability,
+aliases, hints, scoring, root causes, assets, and schema shape, and records
+deterministic repairs rather than silently excluding an authored case. The
+generated manifest is keyed by source/content hashes; tenant initialization
+reuses matching immutable versions and appends changed versions without
+rewriting historical attempts.
+
+The persisted catalog now exposes database-derived totals/facets plus source
+pack metadata and supports search, category/difficulty filters, source/featured,
+title, difficulty, personal-score and newest sorting. The player presents real
+start/resume/retry, daily, standard and Chaos entry points. The existing
+server-owned command/event/ticket/evidence/hint/submission/scoring/debrief,
+assignment, progress/badge/streak, analytics/export and shared scanned-storage
+workflows remain authoritative. Authoring now exposes validate, immutable
+revision, preview, publish, retirement, JSON import/export, and private scanned
+author assets. Certificate copy remains explicitly unsupported because the
+source contains badges/completion evidence, not a credential system.
+
+Fresh evidence on the disposable PostgreSQL 16 database:
+
+- `node --test scripts/faultlinelab/compile-source-cases.test.mjs`: PASS 4/4,
+  including controlled duplicate-ID, invalid-reference, and source-drift
+  failures.
+- `tsx --test --test-concurrency=1 test/faultlinelab-full-catalog.test.ts`:
+  PASS 1/1 in 115.8 seconds; every compiler-discovered case imported twice
+  idempotently, started, performed an evidence action, submitted, received a
+  server score, reloaded, and survived an app restart with zero exclusions.
+- `faultlinelab-workflow.test.ts`, bundled from the same TypeScript source with
+  esbuild and executed through `node --test`: PASS 1/1 in 12.4 seconds; viewer
+  denial, second-tenant 404, idempotent replay, assignment visibility, stale
+  conflict, append-only evidence, server scoring, and restart persistence pass.
+- API TypeScript and web TypeScript: PASS after the compiler, route, contract,
+  and UI changes.
+- `node scripts/faultlinelab/report-full-catalog.mjs`: PASS; the Markdown and
+  machine-readable reports list every source ID, target identity formula,
+  immutable content hash, source hash, and test evidence.
+
+The cumulative production build, clean database release apply/reapply, exact-
+host authenticated browser journeys at desktop/mobile widths, visual/
+accessibility gate, full API aggregate, and deployed target remain to be run on
+this working revision. Phase 25 is therefore not promoted to production-ready.
+Exact inventory and repair evidence are in
+`docs/phase-25/FAULTLINELAB-FULL-CATALOG-REPORT.md`.
+
+## Phase 22 shared platform services - IMPLEMENTED / RELEASE BLOCKED (2026-08-08)
+
+Phase 22 adds release v34 and a typed, tenant-scoped shared-platform control
+plane for encrypted provider references/readiness, notification suppression and
+delivery evidence, outbound HMAC webhooks with SSRF protection, schedules,
+exports/signed retrieval, service identities/API tokens, feature flags,
+tenant-safe search, and legacy references. Existing exact-host SSO, tenant/RBAC,
+billing/entitlement, Directory, attachment, audit, usage, outbox, and job
+authorities remain canonical.
+
+The tenant-admin Shared Services console is backed by real durable APIs and is
+owner/admin/platform-admin gated and audited. Test adapters for email, SMS,
+AI, storage, webhooks, and OAuth explicitly return `recorded_not_delivered`
+with `externalDelivery=false`; missing live credentials/callbacks remain
+blocked. A generated executable contract maps all 181 Phase 20
+`ACTIVE_SHARED_EQUIVALENT` records to an original outcome, compatibility
+assertion, adapter, and exact behavior test.
+
+Fresh source/local evidence: API/runner/web typecheck 3/3 and root lint pass;
+root unit tests pass 33/33; root integration performs a clean v34 apply,
+idempotent reapply, and passes 28/28 database/route/UI/isolation tests with no
+skip/todo; unchanged shared-service contracts pass 13/13; the adapter map
+verifies 181/181 with 2/2 contract tests; production build
+`2b8c99fd90d1652027d7bd4e` and synthetic core preflight pass. The bounded full
+API aggregate did not emit final telemetry within 604.1 seconds and therefore
+is not reported as pass or fail. The full repository release remains blocked
+by the existing Phase 20/21 strict parity, route/control, and visual failures;
+live providers and deployed browser acceptance were not inferred. Exact
+contracts, commands, threat boundaries, failure fixtures, and migration strategy are in
+`docs/phase-22/SHARED-SERVICE-CONTRACT-REPORT.md`.
+
+## Phase 21 executable parity/release gate - IMPLEMENTED / RELEASE BLOCKED (2026-08-08)
+
+Phase 21 compiles the Phase 20 manifest and 13 ledgers into live release
+contracts. Source and target discovery now resolve stable capabilities against
+hashed implementation files, Fastify/Next routes, schema declarations, and
+runnable automated test IDs; shared equivalents must retain the original user
+outcome and a compatibility assertion. Per-module JSON, Markdown, and HTML
+reports are generated under `build/parity/reports/`.
+
+The fresh cumulative strict gate correctly returns non-zero with **6,229** failures:
+6,129 required `BLOCKED` items, 61 active route records without an exact
+discoverable target route, and 39 active database records without an exact
+discoverable schema. The independent static route/control gate reports 74
+failures, and the visual gate reports 40 unapproved/missing source-faithful
+contracts. These are current release blockers, not skipped tests or historical
+exceptions.
+
+Root `lint`, `test`, `test:unit`, `test:api`, `test:integration`, `test:e2e`,
+`test:visual`, `verify:parity`, and `verify:release` commands now exist without
+removing the prior production commands. The clean-checkout GitHub workflow
+provisions disposable PostgreSQL, uses the pinned package manager/browser,
+captures migration/release metadata, and uploads parity and Playwright evidence
+on failure. Database runners require an explicit disposable marker, and reset
+additionally requires a loopback host plus a test-only database name; selected
+Node and Playwright release tests fail on skips.
+
+Fresh component evidence: Phase 20 source reproducibility passes with zero
+drift; the final Phase 21/20 unit suite passes 31/31 with 0 fail/skip/todo; API,
+runner, and web typechecks pass 3/3; root lint passes with zero warnings/errors;
+the unchanged production build passes as build
+`a4e35a7bac1506e0f809abc7`; release v33 remains a non-destructive 33/33 plan;
+and the synthetic core preflight passes. The complete release story stopped at
+the first broken boundary, strict parity, so no clean database apply/reapply or
+browser pass is inferred. Exact commands, negative fixtures, current failures,
+and rollback notes are in
+`docs/phase-21/EXECUTABLE-RELEASE-GATE-REPORT.md`.
+
+## Phase 20 product truth reset - BASELINE GENERATED / RELEASE BLOCKED (2026-08-08)
+
+Phase 20 replaces documentation-driven completion with the source-derived,
+executable baseline in `docs/parity/source-manifest.json`. Across all 13
+modules it records **6,646** stable capability IDs: **276 ACTIVE_NATIVE**,
+**181 ACTIVE_SHARED_EQUIVALENT**, **0 OWNER_WAIVED**, and **6,129 BLOCKED**,
+with **0 unclassified**. A phase containing a required `BLOCKED` item is not
+complete. The earlier Phase 20 `PASS`, "zero gap", retirement, and
+consolidation-state claims below remain historical verification evidence; they
+do not override this current release truth.
+
+The baseline keeps **469** capability facets carrying former
+`retired_security` or `retired_product_boundary` labels blocked: 462 are
+`BLOCKED_REVIEW` and 7 have the stricter
+`SOURCE_IMPLEMENTATION_POINTER_MISSING` blocker. It also exposes 113 total
+facets whose old ledger source paths are absent from the pinned imported trees.
+There are no implicit retirements and no blanket waivers. An exclusion becomes
+`OWNER_WAIVED` only when its exact stable capability ID appears with complete,
+explicit owner approval metadata in `docs/parity/OWNER_WAIVERS.yml`.
+
+Known product-truth corrections are now explicit: FaultlineLab has 4 mapped
+runnable cases and 52 source-runnable cases blocked; TradeFlowKit's preserved
+orange/navy identity is blocked against the current green shell, while the
+Phase 17 branch remains evidence of its earlier 57-gap restoration state;
+TorqueShed's Expo iOS/Android product is not covered by web-only evidence; and
+OutCall remains source-recovery blocked because its imported boundary contains
+only a README and no canonical launchable source was recovered.
+
+Authoritative Phase 20 artifacts and exact counts are in
+`docs/phase-20/PRODUCT-TRUTH-REPORT.md`. The generator is
+`scripts/phase20-product-truth.mjs`; `corepack pnpm verify:parity` fails closed
+for stale artifacts, invalid states, missing active evidence, malformed
+waivers, implicit waivers, and unknown waived capability IDs.
+
+Fresh Phase 20 verification on 2026-08-08: frozen install passed after the
+managed non-interactive/network setup was corrected; parity generation/check
+passed with 0 failures; Phase 20 tests passed 5/5 with 0 fail/skip/todo; the
+historical public-launch matrix initially exposed 131 stale generated records,
+then its supported deterministic refresh and unchanged verifier passed with 0
+failures; all three source-ledger verifiers passed with 0 unclassified; API,
+runner, and web typechecks passed 3/3; SDK/API/runner and Next production builds
+passed after font-fetch access; core preflight passed with a synthetic
+non-secret contract fixture; and the read-only release v33 plan reported 33/33
+non-destructive ordered steps. A stale TradeFlowKit customer-copy assertion was
+updated to match the current `organization leads` text and its focused file
+passed 8/8. The first post-assertion clean PostgreSQL aggregate ran 930 tests
+with 923 pass, 1 Torque Assist concurrency failure, and 6 skip; that failure
+reproduced once in isolation, followed by five consecutive focused passes with
+no Torque runtime diff retained. A newly recreated final disposable database
+then produced PASS: 930 total, 924 pass, 0 fail, 6 skip, 0 todo. The disposable
+container was deleted afterward; no persistent database was substituted. Exact
+commands, environment-only setup failures, counts, and rollback notes are in
+the Phase 20 report.
+
+## Historical: Phase 20 source/local public-launch functional closure - PASS (2026-08-03; superseded)
 
 `SOURCE/LOCAL PUBLIC-LAUNCH FUNCTIONAL CLOSURE: PASS`. The executable root
 matrix covers 13 active modules with 20 `ACTIVE_AND_PROVEN`, 10

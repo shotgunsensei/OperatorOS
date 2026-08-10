@@ -44,11 +44,18 @@ import {
   pickFaultlineDailyChallenge,
   publicFaultlineSession,
 } from '../lib/faultlinelab-service.js';
+import {
+  FAULTLINELAB_STARTER_CHALLENGES,
+  faultlineStarterManifest,
+} from '../lib/faultlinelab-starter-content.js';
 
 const readGuards = [requireTenantMember, requireTenantModuleAccess('faultlinelab')];
 const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
 const adminGuards = [...writeGuards, requireTenantAdmin];
 const attachmentBodyLimit = Math.ceil(getMaxAttachmentBytes() * 1.38) + 16_384;
+const sourceCatalogById = new Map(
+  FAULTLINELAB_STARTER_CHALLENGES.map((challenge) => [challenge.sourceId, challenge.catalog]),
+);
 
 type Context = {
   tenantId: string;
@@ -256,20 +263,47 @@ async function audit(
   );
 }
 
+async function dailyEligibleChallenges(tenantId: string) {
+  const rows = faultlineRows(
+    await db.execute(sql`
+      SELECT c.id, c.slug, c.title, c.category, c.difficulty,
+        c.published_version_number, m.source_id
+      FROM faultlinelab_challenges c
+      JOIN faultlinelab_migration_refs m
+        ON m.tenant_id=c.tenant_id AND m.target_type='challenge'
+        AND m.target_id=c.id AND m.source_type='starter_challenge'
+      WHERE c.tenant_id=${tenantId} AND c.scope='tenant' AND c.status='published'
+        AND c.archived_at IS NULL
+      ORDER BY c.id
+    `),
+  );
+  return rows.filter((row) => sourceCatalogById.get(String(row.sourceId))?.isDailyEligible === true);
+}
+
 export async function registerFaultlineLabRoutes(app: FastifyInstance): Promise<void> {
   app.get(
     '/v1/modules/faultlinelab/policy',
     { preHandler: readGuards },
-    async () => ({
-      authority: 'operatoros',
-      scoring: 'server-only',
-      certificates: {
-        available: false,
-        reason:
-          'FaultlineLab records badges and completion evidence but does not issue identity-verified credentials or certificates.',
-      },
-      plannedCatalogEntriesArePlayable: false,
-    }),
+    async () => {
+      const manifest = faultlineStarterManifest();
+      return {
+        authority: 'operatoros',
+        scoring: 'server-only',
+        certificates: {
+          available: false,
+          reason:
+            'FaultlineLab records badges and completion evidence but does not issue identity-verified credentials or certificates.',
+        },
+        authoredValidCasesArePlayable: true,
+        plannedCatalogEntriesArePlayable: true,
+        sourceCatalog: {
+          sourceCommit: manifest.sourceCommit,
+          sourceManifestHash: manifest.sourceManifestHash,
+          discoveredCount: manifest.discoveredCount,
+          compilerManaged: true,
+        },
+      };
+    },
   );
 
   app.get(
@@ -286,18 +320,25 @@ export async function registerFaultlineLabRoutes(app: FastifyInstance): Promise<
         const difficulty = query.difficulty
           ? faultlineText(query.difficulty, 'difficulty', 20, { required: true, singleLine: true })
           : null;
+        const sort = query.sort
+          ? faultlineText(query.sort, 'sort', 30, { required: true, singleLine: true })
+          : 'featured';
         if (category && !FAULTLINE_CATEGORIES.includes(category as any)) {
           throw new FaultlineValidationError('Invalid category', 'FAULTLINE_CATEGORY_INVALID', 400, 'category');
         }
         if (difficulty && !FAULTLINE_DIFFICULTIES.includes(difficulty as any)) {
           throw new FaultlineValidationError('Invalid difficulty', 'FAULTLINE_DIFFICULTY_INVALID', 400, 'difficulty');
         }
+        if (!['featured', 'title', 'difficulty', 'newest', 'best-score'].includes(sort!)) {
+          throw new FaultlineValidationError('Invalid sort', 'FAULTLINE_SORT_INVALID', 400, 'sort');
+        }
         const includeDrafts = query.includeDrafts === 'true' && canManage(request);
-        const rows = faultlineRows(
+        const rawRows = faultlineRows(
           await db.execute(sql`
             SELECT c.id, c.slug, c.title, c.category, c.difficulty, c.scope,
               c.status, c.owner_user_id, c.current_version_number,
               c.published_version_number, c.version, c.published_at, c.updated_at,
+              m.source_id,
               COALESCE(p.attempt_count,0) AS attempt_count,
               COALESCE(p.pass_count,0) AS pass_count,
               p.best_score, p.best_percentage, p.best_tier, p.last_completed_at
@@ -305,6 +346,9 @@ export async function registerFaultlineLabRoutes(app: FastifyInstance): Promise<
             LEFT JOIN faultlinelab_user_challenge_progress p
               ON p.tenant_id=c.tenant_id AND p.challenge_id=c.id
               AND p.user_id=${user(request)}
+            LEFT JOIN faultlinelab_migration_refs m
+              ON m.tenant_id=c.tenant_id AND m.target_type='challenge'
+              AND m.target_id=c.id AND m.source_type='starter_challenge'
             WHERE c.tenant_id=${tenant(request)} AND c.archived_at IS NULL
               AND (
                 (c.scope='tenant' AND c.status='published')
@@ -315,11 +359,46 @@ export async function registerFaultlineLabRoutes(app: FastifyInstance): Promise<
               AND (${difficulty}::text IS NULL OR c.difficulty=${difficulty})
               AND (${search}::text IS NULL OR c.title ILIKE ${search ? `%${search}%` : null} OR c.slug ILIKE ${search ? `%${search}%` : null})
             ORDER BY CASE WHEN c.status='published' THEN 0 ELSE 1 END,
+              CASE WHEN ${sort}='title' THEN c.title END ASC,
+              CASE WHEN ${sort}='difficulty' THEN
+                CASE c.difficulty WHEN 'beginner' THEN 1 WHEN 'intermediate' THEN 2 WHEN 'advanced' THEN 3 ELSE 4 END
+              END ASC,
+              CASE WHEN ${sort}='best-score' THEN p.best_percentage END DESC NULLS LAST,
+              CASE WHEN ${sort}='newest' THEN c.published_at END DESC NULLS LAST,
               c.updated_at DESC, c.title
             LIMIT 200
           `),
         );
-        return { challenges: rows, total: rows.length };
+        const rows = rawRows.map((row) => {
+          const catalog = row.sourceId ? sourceCatalogById.get(String(row.sourceId)) : null;
+          return catalog ? { ...row, ...catalog } : row;
+        });
+        const countRows = faultlineRows(
+          await db.execute(sql`
+            SELECT category, difficulty, COUNT(*)::int AS count
+            FROM faultlinelab_challenges
+            WHERE tenant_id=${tenant(request)} AND scope='tenant'
+              AND status='published' AND archived_at IS NULL
+            GROUP BY category, difficulty
+          `),
+        );
+        const facets = countRows.reduce(
+          (result, row) => {
+            const count = Number(row.count);
+            result.total += count;
+            result.categories[String(row.category)] =
+              (result.categories[String(row.category)] ?? 0) + count;
+            result.difficulties[String(row.difficulty)] =
+              (result.difficulties[String(row.difficulty)] ?? 0) + count;
+            return result;
+          },
+          {
+            total: 0,
+            categories: {} as Record<string, number>,
+            difficulties: {} as Record<string, number>,
+          },
+        );
+        return { challenges: rows, total: rows.length, facets };
       } catch (error) {
         if (handleFaultlineError(reply, error)) return;
         throw error;
@@ -381,6 +460,25 @@ export async function registerFaultlineLabRoutes(app: FastifyInstance): Promise<
         });
         if (!current) return notFound(reply, 'Challenge version');
         return { challenge, content: current.content, versions };
+      } catch (error) {
+        if (handleFaultlineError(reply, error)) return;
+        throw error;
+      }
+    },
+  );
+
+  app.post(
+    '/v1/modules/faultlinelab/authoring/validate',
+    { preHandler: writeGuards },
+    async (request, reply) => {
+      try {
+        const content = parseFaultlineChallengeContent(body(request).content);
+        const validation = validateFaultlineChallengeContent(content);
+        return {
+          valid: validation.valid,
+          validation,
+          contentHash: faultlineContentHash(content),
+        };
       } catch (error) {
         if (handleFaultlineError(reply, error)) return;
         throw error;
@@ -658,15 +756,7 @@ export async function registerFaultlineLabRoutes(app: FastifyInstance): Promise<
     async (request) => {
       await ensureFaultlineStarterContent(tenant(request), user(request));
       const date = faultlineUtcDate();
-      const challenges = faultlineRows(
-        await db.execute(sql`
-          SELECT id, slug, title, category, difficulty, published_version_number
-          FROM faultlinelab_challenges
-          WHERE tenant_id=${tenant(request)} AND scope='tenant' AND status='published'
-            AND archived_at IS NULL
-          ORDER BY id
-        `),
-      ) as Array<{
+      const challenges = await dailyEligibleChallenges(tenant(request)) as Array<{
         id: string;
         slug: string;
         title: string;
@@ -720,13 +810,10 @@ export async function registerFaultlineLabRoutes(app: FastifyInstance): Promise<
         let assignmentId: string | null = null;
         if (mode === 'daily') {
           const date = faultlineUtcDate();
-          const challenges = faultlineRows(
-            await db.execute(sql`
-              SELECT id, published_version_number FROM faultlinelab_challenges
-              WHERE tenant_id=${tenant(request)} AND scope='tenant' AND status='published'
-                AND archived_at IS NULL ORDER BY id
-            `),
-          ) as Array<{ id: string; publishedVersionNumber: number }>;
+          const challenges = await dailyEligibleChallenges(tenant(request)) as Array<{
+            id: string;
+            publishedVersionNumber: number;
+          }>;
           const chosen = pickFaultlineDailyChallenge(challenges, tenant(request), date);
           if (!chosen) throw new FaultlineValidationError('No published challenge is available', 'FAULTLINE_CATALOG_EMPTY', 409);
           challengeId = String(chosen.id);

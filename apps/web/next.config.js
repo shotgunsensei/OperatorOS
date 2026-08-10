@@ -49,8 +49,8 @@ const nextConfig = {
   // `useEslintrc`/`extensions`). The authoritative checks already run in
   // dev/CI via the mandatory `pnpm typecheck` step in
   // `pnpm build:production`, so we skip the redundant Next pass here to keep the
-  // production build reproducible. The repository has no lint command and no
-  // lint pass is claimed.
+  // production build reproducible. The authoritative root `lint` and
+  // `typecheck` commands run before this production build in the release gate.
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   // The transpiled `@operatoros/sdk` package is authored as ESM TypeScript

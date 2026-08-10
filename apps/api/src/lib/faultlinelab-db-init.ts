@@ -60,6 +60,8 @@ export async function ensureFaultlineLabTables(): Promise<void> {
       CONSTRAINT faultlinelab_version_hash_check CHECK (content_sha256 ~ '^[0-9a-f]{64}$')
     );
     CREATE INDEX IF NOT EXISTS idx_faultlinelab_versions_challenge ON faultlinelab_challenge_versions(tenant_id, challenge_id, version_number DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_faultlinelab_version_content_hash
+      ON faultlinelab_challenge_versions(tenant_id, challenge_id, content_sha256);
 
     CREATE TABLE IF NOT EXISTS faultlinelab_assignments (
       id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),

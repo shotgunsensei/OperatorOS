@@ -11,6 +11,7 @@ const coreEnv = {
   DATABASE_URL: 'postgresql://example.invalid/operatoros',
   SESSION_SECRET: 'test-only-session-secret-32-plus',
   SSO_CODE_ENCRYPTION_SECRET: 'test-only-code-encryption-secret-32-plus',
+  SHARED_SECRET_ENCRYPTION_KEY: 'abababababababababababababababababababababababababababababababab',
   APP_ENV: 'production',
   NODE_ENV: 'production',
   OPERATOROS_BASE_URL: 'https://operatoros.net',
@@ -75,6 +76,18 @@ test('production preflight defaults to core and rejects unsafe authority configu
       'ALLOW_UNSAFE_COMMANDS',
     ],
   );
+});
+
+test('P22-PREFLIGHT-001: core readiness requires an exact 32-byte shared secret encryption key', () => {
+  const missing = { ...coreEnv } as Record<string, string>;
+  delete missing.SHARED_SECRET_ENCRYPTION_KEY;
+  const missingReport = preflight.evaluateProductionEnvironment(missing);
+  assert.equal(missingReport.ok, false);
+  assert.deepEqual(missingReport.issues.map((issue: { name: string }) => issue.name), ['SHARED_SECRET_ENCRYPTION_KEY']);
+
+  const malformed = preflight.evaluateProductionEnvironment({ ...coreEnv, SHARED_SECRET_ENCRYPTION_KEY: 'x'.repeat(64) });
+  assert.equal(malformed.ok, false);
+  assert.ok(malformed.issues.some((issue: { name: string }) => issue.name === 'SHARED_SECRET_ENCRYPTION_KEY'));
 });
 
 test('production preflight rejects wildcard, insecure, credentialed, and localhost CORS origins', () => {

@@ -9,6 +9,7 @@ export interface SharedJobContext {
   id: string;
   tenantId: string;
   moduleId: string;
+  requestedByUserId: string | null;
   payload: Record<string, unknown>;
   correlationId: string | null;
 }
@@ -93,6 +94,7 @@ export async function processSharedJob(row: Record<string, unknown>, executor: E
       id: String(row.id),
       tenantId: String(row.tenant_id),
       moduleId: String(row.module_id),
+      requestedByUserId: row.requested_by_user_id ? String(row.requested_by_user_id) : null,
       payload: (row.payload_json ?? {}) as Record<string, unknown>,
       correlationId: row.correlation_id ? String(row.correlation_id) : null,
     });

@@ -3,6 +3,7 @@
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  Archive,
   BarChart3,
   Beaker,
   BookOpenCheck,
@@ -18,6 +19,7 @@ import {
   Lightbulb,
   Play,
   RefreshCw,
+  Search,
   Send,
   ShieldCheck,
   Upload,
@@ -114,6 +116,15 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
   const { activeRole } = useTenant();
   const [tab, setTab] = useState<Tab>('catalog');
   const [challenges, setChallenges] = useState<FaultlineChallengeSummary[]>([]);
+  const [catalogFacets, setCatalogFacets] = useState<{
+    total: number;
+    categories: Record<string, number>;
+    difficulties: Record<string, number>;
+  }>({ total: 0, categories: {}, difficulties: {} });
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [catalogCategory, setCatalogCategory] = useState('');
+  const [catalogDifficulty, setCatalogDifficulty] = useState('');
+  const [catalogSort, setCatalogSort] = useState('featured');
   const [sessions, setSessions] = useState<FaultlineSessionBundle['session'][]>([]);
   const [assignments, setAssignments] = useState<FaultlineAssignment[]>([]);
   const [progress, setProgress] = useState<Record<string, any>>({});
@@ -123,6 +134,7 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
   const [challengeDetail, setChallengeDetail] = useState<Record<string, any> | null>(null);
   const [session, setSession] = useState<FaultlineSessionBundle | null>(null);
   const [attachments, setAttachments] = useState<Array<Record<string, any>>>([]);
+  const [challengeAttachments, setChallengeAttachments] = useState<Array<Record<string, any>>>([]);
   const [draft, setDraft] = useState<Record<string, any> | null>(null);
   const [authorContent, setAuthorContent] = useState(JSON.stringify(AUTHOR_TEMPLATE, null, 2));
   const [loading, setLoading] = useState(true);
@@ -149,6 +161,7 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
         moduleShellApi.faultlinelab.daily(),
       ]);
       setChallenges(catalog.challenges);
+      setCatalogFacets(catalog.facets);
       setSessions(recent.sessions);
       setProgress(nextProgress);
       setAssignments(nextAssignments.assignments);
@@ -213,7 +226,36 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
     else if (/\/(?:dashboard|challenges|daily)(?:\/|$)/.test(path)) setTab('catalog');
   }, [openChallenge, openSession]);
 
-  const published = useMemo(() => challenges.filter((item) => item.status === 'published'), [challenges]);
+  const allPublished = useMemo(
+    () => challenges.filter((item) => item.status === 'published'),
+    [challenges],
+  );
+  const published = useMemo(() => {
+    const query = catalogSearch.trim().toLowerCase();
+    return allPublished
+      .filter((item) => !catalogCategory || item.category === catalogCategory)
+      .filter((item) => !catalogDifficulty || item.difficulty === catalogDifficulty)
+      .filter((item) => {
+        if (!query) return true;
+        return [
+          item.title,
+          item.slug,
+          item.shortSummary,
+          item.sourceProductId,
+          ...(item.tags ?? []),
+        ].some((value) => value?.toLowerCase().includes(query));
+      })
+      .sort((left, right) => {
+        if (catalogSort === 'title') return left.title.localeCompare(right.title);
+        if (catalogSort === 'difficulty') {
+          const rank = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 } as Record<string, number>;
+          return (rank[left.difficulty] ?? 99) - (rank[right.difficulty] ?? 99) || left.title.localeCompare(right.title);
+        }
+        if (catalogSort === 'best-score') return (right.bestPercentage ?? -1) - (left.bestPercentage ?? -1) || left.title.localeCompare(right.title);
+        if (catalogSort === 'newest') return String(right.publishedAt ?? '').localeCompare(String(left.publishedAt ?? ''));
+        return Number(right.isFeatured) - Number(left.isFeatured) || (left.sortOrder ?? 9999) - (right.sortOrder ?? 9999) || left.title.localeCompare(right.title);
+      });
+  }, [allPublished, catalogCategory, catalogDifficulty, catalogSearch, catalogSort]);
   const drafts = useMemo(() => challenges.filter((item) => item.status !== 'published'), [challenges]);
 
   async function startSession(input: Record<string, unknown>) {
@@ -335,6 +377,8 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
       const next = await moduleShellApi.faultlinelab.getAuthoringChallenge(id);
       setDraft(next);
       setAuthorContent(JSON.stringify(next.content, null, 2));
+      const files = await moduleShellApi.faultlinelab.listChallengeAttachments(id).catch(() => ({ attachments: [] }));
+      setChallengeAttachments(files.attachments);
       setTab('authoring');
     } catch (next) {
       setError(errorText(next));
@@ -390,6 +434,103 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
       setNotice('Challenge published to this organization. Existing sessions remain pinned to their original version.');
       await load();
       setTab('catalog');
+    } catch (next) {
+      setError(errorText(next));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function validateDraft() {
+    setBusy('validate');
+    setError('');
+    try {
+      const content = JSON.parse(authorContent);
+      const result = await moduleShellApi.faultlinelab.validateChallenge(content);
+      setNotice(`Validation passed. Content hash ${result.contentHash.slice(0, 12)}…`);
+    } catch (next) {
+      setError(next instanceof SyntaxError ? 'Challenge content must be valid JSON.' : errorText(next));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function previewDraft() {
+    if (!draft) {
+      setError('Save the draft before starting a version-pinned preview.');
+      return;
+    }
+    await startSession({ challengeId: draft.challenge.id, mode: 'preview' });
+  }
+
+  async function exportDraft() {
+    if (!draft) return;
+    setBusy('export-draft');
+    try {
+      const value = await moduleShellApi.faultlinelab.exportChallenge(draft.challenge.id);
+      const blob = new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' });
+      downloadBlob(blob, `${draft.challenge.slug}-v${draft.challenge.currentVersionNumber}.json`);
+    } catch (next) {
+      setError(errorText(next));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function retireDraft() {
+    if (!draft || !window.confirm('Retire this published challenge? Existing attempt evidence remains immutable.')) return;
+    setBusy('retire');
+    try {
+      await moduleShellApi.faultlinelab.retireChallenge(draft.challenge.id, draft.challenge.version);
+      setDraft(null);
+      setChallengeAttachments([]);
+      setAuthorContent(JSON.stringify(AUTHOR_TEMPLATE, null, 2));
+      setNotice('Challenge retired. Existing sessions and scores remain available.');
+      await load();
+    } catch (next) {
+      setError(errorText(next));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function importDraftFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    setError('');
+    try {
+      const value = JSON.parse(await file.text());
+      const content = value?.content ?? value;
+      await moduleShellApi.faultlinelab.validateChallenge(content);
+      setDraft(null);
+      setChallengeAttachments([]);
+      setAuthorContent(JSON.stringify(content, null, 2));
+      setNotice('Validated challenge JSON imported into a new draft. Review metadata, then save to persist it.');
+    } catch (next) {
+      setError(next instanceof SyntaxError ? 'Imported challenge must be valid JSON.' : errorText(next));
+    } finally {
+      event.currentTarget.value = '';
+    }
+  }
+
+  async function uploadAuthorAsset(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!draft) return;
+    const form = event.currentTarget;
+    const input = form.elements.namedItem('authorAsset') as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    setBusy('author-asset');
+    try {
+      await moduleShellApi.faultlinelab.uploadChallengeAttachment(draft.challenge.id, {
+        originalName: file.name,
+        declaredMimeType: file.type || 'application/octet-stream',
+        contentBase64: await fileBase64(file),
+      });
+      const files = await moduleShellApi.faultlinelab.listChallengeAttachments(draft.challenge.id);
+      setChallengeAttachments(files.attachments);
+      form.reset();
+      setNotice('Author asset stored privately and queued for malware scanning.');
     } catch (next) {
       setError(errorText(next));
     } finally {
@@ -471,7 +612,13 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
         {!loading && tab === 'catalog' && (
           <section id="faultlinelab-challenges" tabIndex={-1} className="fl-grid">
             <div className="fl-main">
-              <div className="fl-section-head"><div><span>LIVE CONTENT</span><h2>Challenge board</h2></div><strong>{published.length} playable</strong></div>
+              <div className="fl-section-head"><div><span>COMPILER-PUBLISHED CONTENT</span><h2>Challenge board</h2></div><strong>{published.length} shown · {catalogFacets.total} playable</strong></div>
+              <div className="fl-card fl-catalog-tools" role="search" aria-label="Filter the challenge catalog">
+                <label className="fl-search"><Search size={15} aria-hidden="true" /><span>Search cases</span><input value={catalogSearch} onChange={(event) => setCatalogSearch(event.target.value)} placeholder="Title, pack, tag, or slug" /></label>
+                <label><span>Category</span><select value={catalogCategory} onChange={(event) => setCatalogCategory(event.target.value)}><option value="">All categories ({catalogFacets.total})</option>{Object.entries(catalogFacets.categories).sort(([left], [right]) => left.localeCompare(right)).map(([value, count]) => <option value={value} key={value}>{value} ({count})</option>)}</select></label>
+                <label><span>Difficulty</span><select value={catalogDifficulty} onChange={(event) => setCatalogDifficulty(event.target.value)}><option value="">All difficulties</option>{Object.entries(catalogFacets.difficulties).map(([value, count]) => <option value={value} key={value}>{value} ({count})</option>)}</select></label>
+                <label><span>Sort</span><select value={catalogSort} onChange={(event) => setCatalogSort(event.target.value)}><option value="featured">Featured / source order</option><option value="title">Title</option><option value="difficulty">Difficulty</option><option value="best-score">My best score</option><option value="newest">Newest</option></select></label>
+              </div>
               {daily.challenge && (
                 <article className="fl-card fl-daily">
                   <div><span>UTC DAILY // {daily.date}</span><h3>{daily.challenge.title}</h3><p>{daily.outcome ? `Recorded score: ${daily.outcome.score}` : 'One server-selected outcome counts per UTC day.'}</p></div>
@@ -479,20 +626,26 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
                 </article>
               )}
               <div className="fl-card-grid">
-                {published.map((challenge) => (
-                  <article className="fl-card" key={challenge.id} data-testid="faultlinelab-challenge-card">
-                    <div className="fl-card-meta"><span>{challenge.category}</span><span>{challenge.difficulty}</span></div>
-                    <h3>{challenge.title}</h3>
-                    <p>{challenge.attemptCount ?? 0} attempts · best {challenge.bestPercentage ?? '—'}%</p>
-                    <div className="fl-actions">
-                      <button onClick={() => void openChallenge(challenge.id)}><Eye size={14} /> Inspect</button>
-                      <button disabled={!canAttempt || busy === 'start'} onClick={() => void startSession({ challengeId: challenge.id, mode: 'standard' })}><Play size={14} /> Standard</button>
-                      <button disabled={!canAttempt || busy === 'start'} onClick={() => void startSession({ challengeId: challenge.id, mode: 'chaos', chaosIntensity: 2 })}><FlaskConical size={14} /> Chaos</button>
-                    </div>
-                  </article>
-                ))}
+                {published.map((challenge) => {
+                  const previous = sessions.find((item) => item.challengeId === challenge.id);
+                  const active = previous?.state === 'active' ? previous : null;
+                  return (
+                    <article className="fl-card" key={challenge.id} data-testid="faultlinelab-challenge-card" data-challenge-id={challenge.id} data-source-case-id={challenge.sourceId}>
+                      <div className="fl-card-meta"><span>{challenge.category}</span><span>{challenge.difficulty}</span></div>
+                      <h3>{challenge.title}</h3>
+                      <p>{challenge.shortSummary ?? `${challenge.attemptCount ?? 0} attempts recorded.`}</p>
+                      <div className="fl-card-facts"><span>{challenge.estimatedMinutes ? `~${challenge.estimatedMinutes} min` : 'Self-paced'}</span><span>{challenge.sourceProductId?.replace(/^pack-/, '') ?? 'standalone'}</span>{challenge.isFeatured && <span>featured</span>}</div>
+                      <p>{challenge.attemptCount ?? 0} attempts · best {challenge.bestPercentage ?? '—'}%</p>
+                      <div className="fl-actions">
+                        <button onClick={() => void openChallenge(challenge.id)}><Eye size={14} /> Inspect</button>
+                        {active ? <button disabled={!canAttempt || busy === 'session'} onClick={() => void openSession(active.id)}><Play size={14} /> Resume</button> : <button disabled={!canAttempt || busy === 'start'} onClick={() => void startSession({ challengeId: challenge.id, mode: 'standard' })}><Play size={14} /> {previous ? 'Retry' : 'Start'}</button>}
+                        <button disabled={!canAttempt || busy === 'start'} onClick={() => void startSession({ challengeId: challenge.id, mode: 'chaos', chaosIntensity: 2 })}><FlaskConical size={14} /> Chaos</button>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
-              {published.length === 0 && <div className="fl-card fl-empty">No validated published challenges are available.</div>}
+              {published.length === 0 && <div className="fl-card fl-empty">No published challenge matches these filters.</div>}
             </div>
             <aside className="fl-side">
               {challengeDetail ? (
@@ -567,7 +720,7 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
         {!loading && tab === 'assignments' && (
           <section id="faultlinelab-assignments" tabIndex={-1} className="fl-grid">
             <div className="fl-main"><div className="fl-section-head"><div><span>TEAM QUEUE</span><h2>Assignments</h2></div><strong>{assignments.length}</strong></div>{assignments.map((item) => <article className="fl-card fl-row" key={item.id}><div><h3>{item.title || item.challengeTitle}</h3><p>{item.instructions || `${item.challengeTitle} · ${item.status}`}</p><small>{item.dueAt ? `Due ${new Date(item.dueAt).toLocaleString()}` : 'No due date'}</small></div><div className="fl-actions">{['assigned', 'in_progress'].includes(item.status) && item.assigneeUserId === user?.id && <button onClick={() => void startSession({ mode: 'assignment', assignmentId: item.id })}><Play size={14} /> Start</button>}{canManage && ['assigned', 'in_progress'].includes(item.status) && <button className="danger" onClick={async () => { await moduleShellApi.faultlinelab.cancelAssignment(item.id, item.version); await load(); }}>Cancel</button>}</div></article>)}{assignments.length === 0 && <div className="fl-card fl-empty">No assignments are waiting.</div>}</div>
-            <aside className="fl-side">{canManage ? <form className="fl-card fl-form" onSubmit={createAssignment}><span>MANAGER CONTROL</span><h3>Assign published challenge</h3><label>Challenge<select name="challengeId" required><option value="">Select challenge</option>{published.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Team member<select name="assigneeUserId" required><option value="">Select member</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label><label>Assignment title<input name="title" maxLength={200} /></label><label>Instructions<textarea name="instructions" rows={4} maxLength={5000} /></label><label>Due date<input name="dueAt" type="datetime-local" /></label><button disabled={busy === 'assignment'}><Users size={14} /> Create assignment</button></form> : <div className="fl-card"><ShieldCheck size={20} /><h3>Participant view</h3><p>Workspace owners and managers create assignments; participants can focus on completing them.</p></div>}</aside>
+            <aside className="fl-side">{canManage ? <form className="fl-card fl-form" onSubmit={createAssignment}><span>MANAGER CONTROL</span><h3>Assign published challenge</h3><label>Challenge<select name="challengeId" required><option value="">Select challenge</option>{allPublished.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Team member<select name="assigneeUserId" required><option value="">Select member</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name} · {member.role}</option>)}</select></label><label>Assignment title<input name="title" maxLength={200} /></label><label>Instructions<textarea name="instructions" rows={4} maxLength={5000} /></label><label>Due date<input name="dueAt" type="datetime-local" /></label><button disabled={busy === 'assignment'}><Users size={14} /> Create assignment</button></form> : <div className="fl-card"><ShieldCheck size={20} /><h3>Participant view</h3><p>Workspace owners and managers create assignments; participants can focus on completing them.</p></div>}</aside>
           </section>
         )}
 
@@ -584,9 +737,9 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
               <div className="fl-section-head"><div><span>CHALLENGE EDITOR</span><h2>{draft ? `Edit ${draft.challenge.title}` : 'New challenge draft'}</h2></div>{draft && <strong>revision {draft.challenge.currentVersionNumber}</strong>}</div>
               <div className="fl-two"><label>Slug<input name="slug" required pattern="[a-z0-9][a-z0-9-]{0,119}" defaultValue={draft?.challenge?.slug ?? ''} /></label><label>Title<input name="title" required minLength={2} maxLength={200} defaultValue={draft?.challenge?.title ?? ''} /></label><label>Category<select name="category" defaultValue={draft?.challenge?.category ?? 'mixed'}>{['windows-ad','networking','automotive','electronics','servers','mixed','healthcare-imaging'].map((value) => <option key={value}>{value}</option>)}</select></label><label>Difficulty<select name="difficulty" defaultValue={draft?.challenge?.difficulty ?? 'intermediate'}>{['beginner','intermediate','advanced','expert'].map((value) => <option key={value}>{value}</option>)}</select></label><label>Scope<select name="scope" defaultValue={draft?.challenge?.scope ?? 'personal'}><option value="personal">Personal draft</option>{canManage && <option value="tenant">Team draft</option>}</select></label><label>Change note<input name="changeNote" maxLength={500} placeholder="What changed in this revision?" /></label></div>
               <label>Challenge JSON<textarea className="fl-json" value={authorContent} onChange={(event) => setAuthorContent(event.target.value)} rows={26} spellCheck={false} /></label>
-              <div className="fl-actions"><button disabled={busy === 'save-draft'}><FileJson2 size={14} /> {draft ? 'Save revision' : 'Create draft'}</button>{draft && canManage && <button type="button" onClick={() => void publishDraft()} disabled={busy === 'publish'}><CheckCircle2 size={14} /> Publish current revision</button>}<button type="button" onClick={() => { setDraft(null); setAuthorContent(JSON.stringify(AUTHOR_TEMPLATE, null, 2)); }}>Reset editor</button></div>
+              <div className="fl-actions"><button disabled={busy === 'save-draft'}><FileJson2 size={14} /> {draft ? 'Save revision' : 'Create draft'}</button><button type="button" onClick={() => void validateDraft()} disabled={busy === 'validate'}><ShieldCheck size={14} /> Validate</button>{draft && <button type="button" onClick={() => void previewDraft()} disabled={busy === 'start'}><Eye size={14} /> Preview</button>}{draft && <button type="button" onClick={() => void exportDraft()} disabled={busy === 'export-draft'}><Download size={14} /> Export</button>}{draft && canManage && <button type="button" onClick={() => void publishDraft()} disabled={busy === 'publish'}><CheckCircle2 size={14} /> Publish current revision</button>}{draft?.challenge?.status === 'published' && canManage && <button type="button" className="danger" onClick={() => void retireDraft()} disabled={busy === 'retire'}><Archive size={14} /> Retire</button>}<label className="fl-import"><Upload size={14} /> Import JSON<input type="file" accept="application/json,.json" onChange={(event) => void importDraftFile(event)} /></label><button type="button" onClick={() => { setDraft(null); setChallengeAttachments([]); setAuthorContent(JSON.stringify(AUTHOR_TEMPLATE, null, 2)); }}>Reset editor</button></div>
             </form>
-            <aside className="fl-side"><article className="fl-card"><span>DRAFTS</span>{drafts.map((item) => <button className="fl-list-button" key={item.id} onClick={() => void openDraft(item.id)}><span>{item.title}</span><b>{item.status} · revision {item.currentVersionNumber}</b></button>)}{drafts.length === 0 && <p>No drafts are available.</p>}</article><article className="fl-card"><History size={20} /><h3>Revision history</h3><p>Every save preserves the previous content. Publishing locks the selected revision for active attempts.</p>{(draft?.versions ?? []).map((item: any) => <small key={item.id}>Revision {item.versionNumber} · {item.changeNote || 'No change note'}</small>)}</article></aside>
+            <aside className="fl-side"><article className="fl-card"><span>DRAFTS</span>{drafts.map((item) => <button className="fl-list-button" key={item.id} onClick={() => void openDraft(item.id)}><span>{item.title}</span><b>{item.status} · revision {item.currentVersionNumber}</b></button>)}{drafts.length === 0 && <p>No drafts are available.</p>}</article><article className="fl-card"><History size={20} /><h3>Revision history</h3><p>Every save preserves the previous content. Publishing locks the selected revision for active attempts.</p>{(draft?.versions ?? []).map((item: any) => <small key={item.id}>Revision {item.versionNumber} · {item.changeNote || 'No change note'}</small>)}</article>{draft && <form className="fl-card fl-form" onSubmit={uploadAuthorAsset}><span>PRIVATE AUTHOR ASSETS</span><h3>Attach proof material</h3><p>Assets remain tenant-private and unavailable until the shared storage malware scan passes.</p><input name="authorAsset" type="file" required accept="image/png,image/jpeg,image/webp,application/pdf,text/plain,application/json" /><button disabled={busy === 'author-asset'}><Upload size={14} /> Upload for scanning</button>{challengeAttachments.map((item) => <small key={String(item.id)}>{String(item.originalName)} · {String(item.scanStatus)}</small>)}</form>}</aside>
           </section>
         )}
       </div>
@@ -595,6 +748,6 @@ export default function FaultlineLabWorkspace(_props: { baseUrl?: string }) {
 }
 
 const styles = `
-  .fl-shell{min-height:100vh;padding:24px;color:#e8eaff;background:radial-gradient(circle at 12% 0%,rgba(139,92,246,.2),transparent 28%),radial-gradient(circle at 90% 12%,rgba(34,211,238,.1),transparent 24%),linear-gradient(180deg,#080711,#030308 72%);font-family:Inter,ui-sans-serif,sans-serif}.fl-wrap{max-width:1420px;margin:0 auto;display:grid;gap:16px}.fl-hero{border:1px solid rgba(167,139,250,.3);background:linear-gradient(120deg,rgba(24,20,45,.96),rgba(7,9,18,.96));box-shadow:0 30px 90px rgba(0,0,0,.38);border-radius:20px;padding:22px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:18px;align-items:center;overflow:hidden}.fl-mark{width:62px;height:62px;display:grid;place-items:center;border:1px solid rgba(167,139,250,.55);color:#c4b5fd;background:rgba(91,33,182,.2);transform:rotate(45deg);box-shadow:0 0 36px rgba(139,92,246,.18)}.fl-mark svg{transform:rotate(-45deg)}.fl-hero span,.fl-card>span,.fl-section-head span{color:#a78bfa;font:800 10px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}.fl-hero h1{margin:6px 0;font-size:clamp(25px,4vw,43px);line-height:1;letter-spacing:-.04em}.fl-hero h1 b{color:#67e8f9}.fl-hero p,.fl-card p{color:#9ca3b9;line-height:1.55;margin:7px 0}.fl-boundaries{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;max-width:360px}.fl-boundaries span,.fl-chip-row span{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid rgba(167,139,250,.2);border-radius:999px;background:rgba(15,23,42,.7);color:#cbd5e1;font-size:10px}.fl-tabs{display:flex;gap:7px;flex-wrap:wrap;padding:8px;border:1px solid rgba(148,163,184,.13);border-radius:14px;background:rgba(8,10,20,.86);position:sticky;top:8px;z-index:5}.fl-tabs button,.fl-actions button,.fl-card button,.fl-inline-form button{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid rgba(167,139,250,.26);border-radius:9px;background:rgba(76,29,149,.2);color:#ddd6fe;padding:9px 11px;font-weight:750;cursor:pointer}.fl-tabs button[aria-current=page],.fl-card button:hover{background:rgba(124,58,237,.34);border-color:rgba(196,181,253,.55)}button:disabled{opacity:.45!important;cursor:not-allowed!important}.fl-alert{display:flex;align-items:center;gap:8px;padding:11px 14px;border-radius:10px}.fl-alert.error{border:1px solid rgba(248,113,113,.4);background:rgba(127,29,29,.2);color:#fca5a5}.fl-alert.success{border:1px solid rgba(52,211,153,.35);background:rgba(6,78,59,.22);color:#6ee7b7}.fl-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,.8fr);gap:16px;align-items:start}.fl-main,.fl-side{display:grid;gap:14px;min-width:0}.fl-card{border:1px solid rgba(148,163,184,.15);border-radius:16px;background:linear-gradient(145deg,rgba(17,20,36,.95),rgba(8,10,20,.96));padding:17px;box-shadow:0 15px 44px rgba(0,0,0,.2);min-width:0}.fl-card h2,.fl-card h3,.fl-card h4{margin:5px 0 8px}.fl-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.fl-card-meta,.fl-actions,.fl-chip-row,.fl-inline-form,.fl-section-head,.fl-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.fl-card-meta{justify-content:space-between;color:#67e8f9;font:700 10px ui-monospace,monospace;text-transform:uppercase}.fl-actions{margin-top:12px}.fl-actions .danger,.fl-card .danger{color:#fca5a5;border-color:rgba(248,113,113,.3);background:rgba(127,29,29,.16)}.fl-section-head{justify-content:space-between}.fl-section-head h2{margin:4px 0}.fl-section-head strong{color:#67e8f9;font:700 11px ui-monospace,monospace}.fl-daily{border-color:rgba(34,211,238,.32);display:flex;justify-content:space-between;align-items:center;gap:12px}.fl-detail ul{padding-left:18px;color:#cbd5e1}.fl-detail li{margin:7px 0}.fl-safe{display:flex;gap:7px;color:#67e8f9!important}.fl-list-button{width:100%;justify-content:space-between!important;margin-top:7px;text-align:left}.fl-list-button b{font-size:10px;color:#67e8f9}.fl-inline-form input{flex:1;min-width:220px}.fl-chip-row{align-items:stretch}.fl-chip-row button{font-size:11px}.fl-terminal div{border-top:1px solid rgba(148,163,184,.12);padding:10px 0}.fl-terminal span{color:#67e8f9;font:700 10px ui-monospace,monospace}.fl-terminal pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#cbd5e1;background:#05060b;border-radius:8px;padding:10px;max-height:240px;overflow:auto}.fl-form{display:grid;gap:11px}.fl-form label,.fl-form legend{display:grid;gap:6px;color:#aab1c5;font-size:12px}.fl-form input,.fl-form select,.fl-form textarea,.fl-inline-form input{box-sizing:border-box;width:100%;border:1px solid rgba(148,163,184,.22);border-radius:9px;background:#080a12;color:#eef2ff;padding:10px;font:inherit}.fl-form fieldset{border:1px solid rgba(148,163,184,.16);border-radius:10px}.fl-check{display:flex!important;grid-template-columns:auto 1fr;align-items:flex-start}.fl-check input{width:auto;margin-top:4px}.fl-check span{display:grid}.fl-check small{color:#9ca3b9}.fl-evidence{padding:10px 0;border-bottom:1px solid rgba(148,163,184,.12);display:grid;gap:3px}.fl-evidence small{color:#67e8f9;text-transform:uppercase}.fl-score{border-color:rgba(52,211,153,.35)}.fl-score>h2{font-size:42px;color:#6ee7b7}.fl-row{justify-content:space-between}.fl-row>div:first-child{flex:1}.fl-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.fl-metrics article{border:1px solid rgba(167,139,250,.2);border-radius:14px;background:rgba(17,20,36,.9);padding:15px;display:grid;gap:5px}.fl-metrics span{color:#9ca3b9;font-size:11px}.fl-metrics b{font-size:28px;color:#67e8f9}.fl-progress-row{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid rgba(148,163,184,.12)}.fl-progress-row b{color:#a78bfa}.fl-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.fl-json{font-family:ui-monospace,SFMono-Regular,Consolas,monospace!important;font-size:11px!important;line-height:1.5}.fl-loading,.fl-empty{text-align:center;color:#9ca3b9;padding:34px}.fl-side small{display:block;color:#9ca3b9;margin-top:7px}
-  @media(max-width:900px){.fl-grid{grid-template-columns:1fr}.fl-side{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}.fl-boundaries{grid-column:1/-1;justify-content:flex-start;max-width:none}.fl-hero{grid-template-columns:auto 1fr}.fl-metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.fl-shell{padding:10px}.fl-hero{padding:16px}.fl-mark{width:48px;height:48px}.fl-tabs{position:static}.fl-tabs button{flex:1 1 130px}.fl-card-grid,.fl-two,.fl-metrics{grid-template-columns:1fr}.fl-daily,.fl-row,.fl-section-head{align-items:flex-start;flex-direction:column}.fl-actions button{flex:1 1 130px}}
+  .fl-shell{min-height:100vh;padding:24px;color:#e8eaff;background:radial-gradient(circle at 12% 0%,rgba(139,92,246,.2),transparent 28%),radial-gradient(circle at 90% 12%,rgba(34,211,238,.1),transparent 24%),linear-gradient(180deg,#080711,#030308 72%);font-family:Inter,ui-sans-serif,sans-serif}.fl-wrap{max-width:1420px;margin:0 auto;display:grid;gap:16px}.fl-hero{border:1px solid rgba(167,139,250,.3);background:linear-gradient(120deg,rgba(24,20,45,.96),rgba(7,9,18,.96));box-shadow:0 30px 90px rgba(0,0,0,.38);border-radius:20px;padding:22px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:18px;align-items:center;overflow:hidden}.fl-mark{width:62px;height:62px;display:grid;place-items:center;border:1px solid rgba(167,139,250,.55);color:#c4b5fd;background:rgba(91,33,182,.2);transform:rotate(45deg);box-shadow:0 0 36px rgba(139,92,246,.18)}.fl-mark svg{transform:rotate(-45deg)}.fl-hero span,.fl-card>span,.fl-section-head span{color:#a78bfa;font:800 10px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}.fl-hero h1{margin:6px 0;font-size:clamp(25px,4vw,43px);line-height:1;letter-spacing:-.04em}.fl-hero h1 b{color:#67e8f9}.fl-hero p,.fl-card p{color:#9ca3b9;line-height:1.55;margin:7px 0}.fl-boundaries{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;max-width:360px}.fl-boundaries span,.fl-chip-row span,.fl-card-facts span{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid rgba(167,139,250,.2);border-radius:999px;background:rgba(15,23,42,.7);color:#cbd5e1;font-size:10px}.fl-tabs{display:flex;gap:7px;flex-wrap:wrap;padding:8px;border:1px solid rgba(148,163,184,.13);border-radius:14px;background:rgba(8,10,20,.86);position:sticky;top:8px;z-index:5}.fl-tabs button,.fl-actions button,.fl-card button,.fl-inline-form button,.fl-import{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid rgba(167,139,250,.26);border-radius:9px;background:rgba(76,29,149,.2);color:#ddd6fe;padding:9px 11px;font-weight:750;cursor:pointer}.fl-tabs button[aria-current=page],.fl-card button:hover,.fl-import:hover{background:rgba(124,58,237,.34);border-color:rgba(196,181,253,.55)}button:disabled{opacity:.45!important;cursor:not-allowed!important}.fl-alert{display:flex;align-items:center;gap:8px;padding:11px 14px;border-radius:10px}.fl-alert.error{border:1px solid rgba(248,113,113,.4);background:rgba(127,29,29,.2);color:#fca5a5}.fl-alert.success{border:1px solid rgba(52,211,153,.35);background:rgba(6,78,59,.22);color:#6ee7b7}.fl-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,.8fr);gap:16px;align-items:start}.fl-main,.fl-side{display:grid;gap:14px;min-width:0}.fl-card{border:1px solid rgba(148,163,184,.15);border-radius:16px;background:linear-gradient(145deg,rgba(17,20,36,.95),rgba(8,10,20,.96));padding:17px;box-shadow:0 15px 44px rgba(0,0,0,.2);min-width:0}.fl-card h2,.fl-card h3,.fl-card h4{margin:5px 0 8px}.fl-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.fl-card-meta,.fl-card-facts,.fl-actions,.fl-chip-row,.fl-inline-form,.fl-section-head,.fl-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.fl-card-meta{justify-content:space-between;color:#67e8f9;font:700 10px ui-monospace,monospace;text-transform:uppercase}.fl-card-facts{margin:10px 0}.fl-actions{margin-top:12px}.fl-actions .danger,.fl-card .danger{color:#fca5a5;border-color:rgba(248,113,113,.3);background:rgba(127,29,29,.16)}.fl-import input{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.fl-section-head{justify-content:space-between}.fl-section-head h2{margin:4px 0}.fl-section-head strong{color:#67e8f9;font:700 11px ui-monospace,monospace}.fl-catalog-tools{display:grid;grid-template-columns:minmax(220px,2fr) repeat(3,minmax(130px,1fr));gap:10px}.fl-catalog-tools label{display:grid;gap:6px;color:#aab1c5;font-size:11px}.fl-catalog-tools input,.fl-catalog-tools select{box-sizing:border-box;width:100%;border:1px solid rgba(148,163,184,.22);border-radius:9px;background:#080a12;color:#eef2ff;padding:10px;font:inherit}.fl-search{grid-template-columns:auto 1fr!important;align-items:center}.fl-search span{grid-column:1/-1}.fl-search input{grid-column:1/-1}.fl-daily{border-color:rgba(34,211,238,.32);display:flex;justify-content:space-between;align-items:center;gap:12px}.fl-detail ul{padding-left:18px;color:#cbd5e1}.fl-detail li{margin:7px 0}.fl-safe{display:flex;gap:7px;color:#67e8f9!important}.fl-list-button{width:100%;justify-content:space-between!important;margin-top:7px;text-align:left}.fl-list-button b{font-size:10px;color:#67e8f9}.fl-inline-form input{flex:1;min-width:220px}.fl-chip-row{align-items:stretch}.fl-chip-row button{font-size:11px}.fl-terminal div{border-top:1px solid rgba(148,163,184,.12);padding:10px 0}.fl-terminal span{color:#67e8f9;font:700 10px ui-monospace,monospace}.fl-terminal pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#cbd5e1;background:#05060b;border-radius:8px;padding:10px;max-height:240px;overflow:auto}.fl-form{display:grid;gap:11px}.fl-form label,.fl-form legend{display:grid;gap:6px;color:#aab1c5;font-size:12px}.fl-form input,.fl-form select,.fl-form textarea,.fl-inline-form input{box-sizing:border-box;width:100%;border:1px solid rgba(148,163,184,.22);border-radius:9px;background:#080a12;color:#eef2ff;padding:10px;font:inherit}.fl-form fieldset{border:1px solid rgba(148,163,184,.16);border-radius:10px}.fl-check{display:flex!important;grid-template-columns:auto 1fr;align-items:flex-start}.fl-check input{width:auto;margin-top:4px}.fl-check span{display:grid}.fl-check small{color:#9ca3b9}.fl-evidence{padding:10px 0;border-bottom:1px solid rgba(148,163,184,.12);display:grid;gap:3px}.fl-evidence small{color:#67e8f9;text-transform:uppercase}.fl-score{border-color:rgba(52,211,153,.35)}.fl-score>h2{font-size:42px;color:#6ee7b7}.fl-row{justify-content:space-between}.fl-row>div:first-child{flex:1}.fl-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.fl-metrics article{border:1px solid rgba(167,139,250,.2);border-radius:14px;background:rgba(17,20,36,.9);padding:15px;display:grid;gap:5px}.fl-metrics span{color:#9ca3b9;font-size:11px}.fl-metrics b{font-size:28px;color:#67e8f9}.fl-progress-row{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid rgba(148,163,184,.12)}.fl-progress-row b{color:#a78bfa}.fl-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.fl-json{font-family:ui-monospace,SFMono-Regular,Consolas,monospace!important;font-size:11px!important;line-height:1.5}.fl-loading,.fl-empty{text-align:center;color:#9ca3b9;padding:34px}.fl-side small{display:block;color:#9ca3b9;margin-top:7px}
+  @media(max-width:900px){.fl-grid{grid-template-columns:1fr}.fl-side{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}.fl-boundaries{grid-column:1/-1;justify-content:flex-start;max-width:none}.fl-hero{grid-template-columns:auto 1fr}.fl-metrics{grid-template-columns:repeat(2,1fr)}.fl-catalog-tools{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.fl-shell{padding:10px}.fl-hero{padding:16px}.fl-mark{width:48px;height:48px}.fl-tabs{position:static}.fl-tabs button{flex:1 1 130px}.fl-card-grid,.fl-two,.fl-metrics,.fl-catalog-tools{grid-template-columns:1fr}.fl-daily,.fl-row,.fl-section-head{align-items:flex-start;flex-direction:column}.fl-actions button,.fl-import{flex:1 1 130px}}
 `;

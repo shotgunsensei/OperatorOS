@@ -65,7 +65,17 @@ function money(cents: number | null): string {
   }).format(cents / 100);
 }
 
-export default function TradeFlowKitLeadCenter({ tenantKey, canManage }: { tenantKey: string; canManage: boolean }) {
+export default function TradeFlowKitLeadCenter({
+  tenantKey,
+  canManage,
+  view = 'leads',
+  routePrefix = '',
+}: {
+  tenantKey: string;
+  canManage: boolean;
+  view?: 'leads' | 'settings';
+  routePrefix?: string;
+}) {
   const [leads, setLeads] = useState<TradeFlowKitLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -199,6 +209,19 @@ export default function TradeFlowKitLeadCenter({ tenantKey, canManage }: { tenan
     } finally { setMessagingId(null); }
   }
 
+  if (view === 'settings') {
+    return (
+      <section id="tradeflowkit-leads" className="tfk-panel tfk-lead-center" data-testid="tradeflowkit-lead-settings">
+        <style>{leadCenterCss}</style>
+        <div className="tfk-lead-heading">
+          <div><div className="tfk-lead-eyebrow">Lead intake and follow-up</div><h2>Lead operations settings</h2><p>Configure privacy-aware capture, follow-up scheduling, and provider readiness for persisted leads.</p></div>
+        </div>
+        {error && <div className="tfk-lead-error" role="alert"><AlertTriangle size={17} />{error}</div>}
+        <TradeFlowKitLeadOperations tenantKey={tenantKey} canManage={canManage} leads={leads} />
+      </section>
+    );
+  }
+
   return (
     <section id="tradeflowkit-leads" className="tfk-panel tfk-lead-center" data-testid="tradeflowkit-lead-center">
       <style>{leadCenterCss}</style>
@@ -226,8 +249,6 @@ export default function TradeFlowKitLeadCenter({ tenantKey, canManage }: { tenan
         </div>
       )}
       {notice && <div className="tfk-lead-notice" role="status" data-testid="tradeflowkit-lead-message-status">{notice}</div>}
-
-      <TradeFlowKitLeadOperations tenantKey={tenantKey} canManage={canManage} leads={leads} />
 
       {canManage ? <form className="tfk-lead-form" onSubmit={createLead} data-testid="tradeflowkit-lead-form">
         <div className="tfk-lead-form-title">
@@ -404,7 +425,7 @@ export default function TradeFlowKitLeadCenter({ tenantKey, canManage }: { tenan
               </label>
               <div className="tfk-lead-delete">
                 {lead.status === 'converted' && lead.jobId ? (
-                  <a className="tfk-converted-link" href={`/jobs/${lead.jobId}`}>Job <ArrowRight size={14} /></a>
+                  <a className="tfk-converted-link" href={`${routePrefix}/jobs/${lead.jobId}`}>Job <ArrowRight size={14} /></a>
                 ) : !canManage ? (
                   <span className="tfk-lead-read-only-label">Read only</span>
                 ) : pendingDeleteId === lead.id ? (
@@ -440,54 +461,54 @@ const leadCenterCss = `
   .tfk-lead-heading { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
   .tfk-lead-heading h2 { margin: 4px 0 0; font-size: 20px; }
   .tfk-lead-heading p { margin: 6px 0 0; max-width: 720px; color: #587067; font-size: 13px; line-height: 1.5; }
-  .tfk-lead-eyebrow { color: #059669; font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+  .tfk-lead-eyebrow { color: var(--tfk-primary); font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
   .tfk-lead-metrics { display: grid; grid-template-columns: repeat(4, minmax(82px, auto)); gap: 8px; }
-  .tfk-lead-metrics > div { border: 1px solid rgba(22,101,52,.16); border-radius: 7px; padding: 9px 11px; background: #f6fbf8; display: grid; gap: 2px; }
+  .tfk-lead-metrics > div { border: 1px solid color-mix(in srgb, var(--tfk-primary) 16%, transparent); border-radius: 7px; padding: 9px 11px; background: var(--tfk-card); display: grid; gap: 2px; }
   .tfk-lead-metrics span { color: #789189; font-size: 10px; text-transform: uppercase; font-weight: 800; }
   .tfk-lead-metrics strong { color: #10231d; font-size: 14px; }
   .tfk-lead-error { border: 1px solid rgba(220,38,38,.35); background: rgba(254,242,242,.9); color: #991b1b; border-radius: 7px; padding: 10px 12px; display: flex; gap: 9px; align-items: center; font-size: 13px; }
   .tfk-lead-error span { flex: 1; }
   .tfk-lead-error button { border: 0; background: transparent; color: #991b1b; font-weight: 800; cursor: pointer; }
-  .tfk-lead-notice, .tfk-lead-read-only { border: 1px solid rgba(5,150,105,.25); background: #f0fdf4; color: #166534; border-radius: 7px; padding: 10px 12px; font-size: 12px; }
-  .tfk-lead-form { border: 1px solid rgba(5,150,105,.24); background: #eef8f2; border-radius: 8px; padding: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
+  .tfk-lead-notice, .tfk-lead-read-only { border: 1px solid color-mix(in srgb, var(--tfk-primary) 25%, transparent); background: var(--tfk-primary-soft); color: #166534; border-radius: 7px; padding: 10px 12px; font-size: 12px; }
+  .tfk-lead-form { border: 1px solid color-mix(in srgb, var(--tfk-primary) 24%, transparent); background: var(--tfk-primary-soft); border-radius: 8px; padding: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
   .tfk-lead-form-title { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; color: #10231d; }
   .tfk-lead-form-title span { color: #587067; font-size: 12px; margin-left: auto; }
   .tfk-lead-form label, .tfk-lead-toolbar label { display: grid; gap: 5px; min-width: 0; }
   .tfk-lead-form label > span { color: #587067; font-size: 11px; font-weight: 800; }
-  .tfk-lead-form input, .tfk-lead-form select, .tfk-lead-form textarea, .tfk-lead-toolbar input, .tfk-lead-toolbar select, .tfk-lead-status select { width: 100%; box-sizing: border-box; border: 1px solid rgba(22,101,52,.2); background: #fff; color: #10231d; border-radius: 6px; padding: 9px 10px; font: inherit; font-size: 13px; }
-  .tfk-lead-form input:focus, .tfk-lead-form select:focus, .tfk-lead-form textarea:focus, .tfk-lead-toolbar input:focus, .tfk-lead-toolbar select:focus, .tfk-lead-status select:focus { outline: 2px solid rgba(5,150,105,.28); border-color: #059669; }
+  .tfk-lead-form input, .tfk-lead-form select, .tfk-lead-form textarea, .tfk-lead-toolbar input, .tfk-lead-toolbar select, .tfk-lead-status select { width: 100%; box-sizing: border-box; border: 1px solid color-mix(in srgb, var(--tfk-primary) 20%, transparent); background: #fff; color: #10231d; border-radius: 6px; padding: 9px 10px; font: inherit; font-size: 13px; }
+  .tfk-lead-form input:focus, .tfk-lead-form select:focus, .tfk-lead-form textarea:focus, .tfk-lead-toolbar input:focus, .tfk-lead-toolbar select:focus, .tfk-lead-status select:focus { outline: 2px solid color-mix(in srgb, var(--tfk-primary) 28%, transparent); border-color: var(--tfk-primary); }
   .tfk-lead-form textarea { resize: vertical; }
   .tfk-lead-form .tfk-lead-consent { grid-column: span 1; display: flex; flex-direction: row; align-items: center; gap: 8px; }
   .tfk-lead-form .tfk-lead-consent input { width: 16px; height: 16px; flex: 0 0 auto; }
   .tfk-lead-form-wide { grid-column: span 2; }
   .tfk-lead-form-action { display: flex; align-items: end; }
-  .tfk-lead-form-action button { width: 100%; min-height: 38px; border: 0; border-radius: 6px; background: #059669; color: white; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-weight: 800; cursor: pointer; }
+  .tfk-lead-form-action button { width: 100%; min-height: 38px; border: 0; border-radius: 6px; background: var(--tfk-primary); color: white; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-weight: 800; cursor: pointer; }
   .tfk-lead-form-action button:disabled { opacity: .55; cursor: not-allowed; }
   .tfk-lead-toolbar { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(150px, auto); gap: 10px; }
   .tfk-lead-search { position: relative; }
   .tfk-lead-search > svg { position: absolute; top: 10px; left: 10px; color: #789189; z-index: 1; }
   .tfk-lead-search input { padding-left: 34px; }
   .tfk-lead-list { display: grid; gap: 8px; }
-  .tfk-lead-row { border: 1px solid rgba(22,101,52,.14); border-radius: 7px; background: #fff; padding: 11px; display: grid; grid-template-columns: minmax(150px, 1.2fr) minmax(150px, 1fr) minmax(115px, .65fr) 130px auto; gap: 12px; align-items: center; }
-  .tfk-lead-row.selected { border-color: #059669; background: #f0fdf4; box-shadow: inset 3px 0 #059669; }
+  .tfk-lead-row { border: 1px solid color-mix(in srgb, var(--tfk-primary) 14%, transparent); border-radius: 7px; background: #fff; padding: 11px; display: grid; grid-template-columns: minmax(150px, 1.2fr) minmax(150px, 1fr) minmax(115px, .65fr) 130px auto; gap: 12px; align-items: center; }
+  .tfk-lead-row.selected { border-color: var(--tfk-primary); background: var(--tfk-primary-soft); box-shadow: inset 3px 0 var(--tfk-primary); }
   .tfk-lead-identity { min-width: 0; }
   .tfk-lead-identity h3 { margin: 3px 0 0; font-size: 14px; overflow-wrap: anywhere; }
   .tfk-lead-identity p, .tfk-lead-contact span, .tfk-lead-value span { margin: 3px 0 0; color: #587067; font-size: 11px; overflow-wrap: anywhere; }
   .tfk-lead-contact, .tfk-lead-value { display: grid; gap: 2px; min-width: 0; }
   .tfk-lead-message-actions { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
-  .tfk-lead-message-actions button { border: 1px solid rgba(5,150,105,.25); border-radius: 5px; padding: 5px 7px; background: #f0fdf4; color: #047857; display: inline-flex; gap: 4px; align-items: center; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
+  .tfk-lead-message-actions button { border: 1px solid color-mix(in srgb, var(--tfk-primary) 25%, transparent); border-radius: 5px; padding: 5px 7px; background: var(--tfk-primary-soft); color: var(--tfk-primary-hover); display: inline-flex; gap: 4px; align-items: center; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
   .tfk-lead-message-actions button:disabled { opacity: .45; cursor: not-allowed; }
   .tfk-lead-value strong { font-size: 13px; }
-  .tfk-lead-urgency { display: inline-block; width: fit-content; font-size: 9px; font-weight: 900; text-transform: uppercase; border-radius: 999px; padding: 2px 6px; background: #e8f5ed; color: #047857; }
+  .tfk-lead-urgency { display: inline-block; width: fit-content; font-size: 9px; font-weight: 900; text-transform: uppercase; border-radius: 999px; padding: 2px 6px; background: #e8f5ed; color: var(--tfk-primary-hover); }
   .tfk-lead-urgency-urgent { color: #a16207; background: #fef3c7; }
   .tfk-lead-urgency-emergency { color: #b91c1c; background: #fee2e2; }
   .tfk-lead-delete { display: flex; gap: 5px; justify-content: flex-end; }
-  .tfk-lead-delete button { border: 1px solid rgba(22,101,52,.16); background: white; color: #587067; border-radius: 5px; padding: 7px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  .tfk-lead-delete button { border: 1px solid color-mix(in srgb, var(--tfk-primary) 16%, transparent); background: white; color: #587067; border-radius: 5px; padding: 7px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
   .tfk-lead-delete .tfk-danger { color: #b91c1c; border-color: rgba(220,38,38,.3); font-weight: 800; }
-  .tfk-lead-delete .tfk-convert { color:#047857; border-color:rgba(5,150,105,.28); font-weight:800; gap:4px; white-space:nowrap; }
-  .tfk-lead-delete .tfk-converted-link { display:inline-flex; align-items:center; gap:4px; color:#047857; font-size:12px; font-weight:800; text-decoration:none; padding:6px; }
+  .tfk-lead-delete .tfk-convert { color:var(--tfk-primary-hover); border-color:color-mix(in srgb, var(--tfk-primary) 28%, transparent); font-weight:800; gap:4px; white-space:nowrap; }
+  .tfk-lead-delete .tfk-converted-link { display:inline-flex; align-items:center; gap:4px; color:var(--tfk-primary-hover); font-size:12px; font-weight:800; text-decoration:none; padding:6px; }
   .tfk-lead-read-only-label { color: #789189; font-size: 11px; font-weight: 800; }
-  .tfk-lead-state { border: 1px dashed rgba(22,101,52,.24); border-radius: 7px; min-height: 90px; display: flex; align-items: center; justify-content: center; gap: 10px; color: #587067; font-size: 13px; text-align: left; }
+  .tfk-lead-state { border: 1px dashed color-mix(in srgb, var(--tfk-primary) 24%, transparent); border-radius: 7px; min-height: 90px; display: flex; align-items: center; justify-content: center; gap: 10px; color: #587067; font-size: 13px; text-align: left; }
   .tfk-lead-state > div { display: grid; gap: 3px; }
   .tfk-lead-state strong { color: #10231d; }
   .tfk-lead-state span { display: block; }

@@ -6,6 +6,7 @@ import ModuleState from './ModuleState';
 interface ModuleHostProps {
   slug: string;
   initialSectionId?: string;
+  initialRoutePath?: string;
   requestedHost?: string;
 }
 
@@ -13,6 +14,7 @@ interface ModuleHostProps {
 export default function ModuleHost({
   slug,
   initialSectionId,
+  initialRoutePath,
   requestedHost,
 }: ModuleHostProps) {
   const module = getModuleBySlug(slug);
@@ -44,7 +46,7 @@ export default function ModuleHost({
   }
 
   return (
-    <ModuleDeepLinkTargetProvider initialSectionId={initialSectionId}>
+    <ModuleDeepLinkTargetProvider initialSectionId={initialSectionId} initialRoutePath={initialRoutePath}>
       <InternalAppPage />
     </ModuleDeepLinkTargetProvider>
   );

@@ -47,7 +47,7 @@ interface UserModuleSummary {
   reason?: string;
 }
 
-const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string }>> = {
+const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string; routePath?: string }>> = {
   'techdeck':         TechDeckShell,
   'pulsedesk':        PulseDeskShell,
   'tradeflowkit':     TradeFlowKitShell,
@@ -66,7 +66,8 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string }>>
 function InternalAppContent() {
   const params = useParams<{ slug: string }>();
   const slug = params?.slug;
-  const initialSectionId = useModuleDeepLinkTarget();
+  const deepLinkTarget = useModuleDeepLinkTarget();
+  const initialSectionId = deepLinkTarget.sectionId;
   const [mod, setMod] = useState<UserModuleSummary['module'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -202,7 +203,7 @@ function InternalAppContent() {
     return (
       <div>
         <OperatorOSEcosystemHeader moduleName={mod.name} moduleSlug={mod.slug} />
-        <Shell baseUrl={mod.baseUrl ?? undefined} />
+        <Shell baseUrl={mod.baseUrl ?? undefined} routePath={deepLinkTarget.routePath} />
       </div>
     );
   }

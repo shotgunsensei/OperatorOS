@@ -58,6 +58,18 @@ function checkCore(env, issues, warnings) {
       addIssue(issues, 'core', name, `must contain at least ${minimum} characters`);
     }
   }
+  if (isPresent(env, 'SHARED_SECRET_ENCRYPTION_KEY')) {
+    const encoded = env.SHARED_SECRET_ENCRYPTION_KEY.trim();
+    let decoded = null;
+    try {
+      decoded = /^[0-9a-f]{64}$/i.test(encoded) ? Buffer.from(encoded, 'hex') : Buffer.from(encoded, 'base64');
+    } catch {
+      decoded = null;
+    }
+    if (!decoded || decoded.length !== 32) {
+      addIssue(issues, 'core', 'SHARED_SECRET_ENCRYPTION_KEY', 'must be 64 hex characters or base64 encoding of exactly 32 bytes');
+    }
+  }
   for (const [name, expected] of Object.entries(contract.exact)) {
     if (env[name] !== expected) {
       addIssue(issues, 'core', name, `must equal ${expected}`);

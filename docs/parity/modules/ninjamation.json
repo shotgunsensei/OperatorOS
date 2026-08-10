@@ -1,0 +1,3646 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/phase20-product-truth.mjs",
+  "moduleSlug": "ninjamation",
+  "moduleName": "Ninjamation",
+  "sourceRoot": "apps/modules/ninjamation/source",
+  "provenance": {
+    "selectedKind": "composite_imported_snapshot",
+    "remote": "https://github.com/shotgunsensei/AutomationPacks.git",
+    "commit": "cca75338d04ed35b89f28d614eb51559735aa32f",
+    "ref": "master",
+    "additionalSource": {
+      "commit": "ca0e55fd086f6751a43964927166bfa69db012b6",
+      "ref": "main",
+      "purpose": "script catalog"
+    },
+    "remoteVerification": "master and main matched selected application/catalog commits on 2026-08-08",
+    "recoveryCandidates": [
+      {
+        "commit": "1b8818afbc261f70e60584979e3e4efe550630c8",
+        "ref": "codex/create-gui-for-script-selection-and-execution",
+        "disposition": "retained_for_evidence",
+        "note": "Older 35-entry catalog-only tree with no common ancestor to the application commit; not a fuller application baseline."
+      }
+    ]
+  },
+  "sourceFingerprint": {
+    "algorithm": "sha256(path NUL uint64be(size) content)",
+    "treeSha256": "4c50291fa06582d0b8a5ecdd86f294bec94bd9282ac4774a2ac6ae00dabb6e3b",
+    "fileCount": 185,
+    "totalBytes": 2867510
+  },
+  "stateCounts": {
+    "ACTIVE_NATIVE": 0,
+    "ACTIVE_SHARED_EQUIVALENT": 0,
+    "OWNER_WAIVED": 0,
+    "BLOCKED": 189
+  },
+  "typeCounts": {
+    "api_endpoint": 29,
+    "asset": 7,
+    "background_process": 1,
+    "component_action": 67,
+    "database_column": 26,
+    "database_table": 3,
+    "export_flow": 2,
+    "integration": 32,
+    "public_flow": 3,
+    "ui_page": 10,
+    "ui_route": 9
+  },
+  "capabilityDigestSha256": "af4ee46d00411516b4548f5d05260910671ec56efff4c7818eea5f5f822c4fe8",
+  "capabilities": [
+    {
+      "capabilityId": "ninjamation.api_endpoint.073046af189ad689",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#POST /mobile-auth/logout",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 272,
+      "title": "POST /mobile-auth/logout",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.0cdb208317be7c68",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/scripts.ts#GET /scripts/:id/download",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 105,
+      "title": "GET /scripts/:id/download",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.1177240b217a58f8",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/admin.ts#DELETE /admin/scripts/:id",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/admin.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 148,
+      "title": "DELETE /admin/scripts/:id",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.11b338d1475e1e1f",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#GET /auth/user",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 93,
+      "title": "GET /auth/user",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.19ec527f3e852952",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#GET /login",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 101,
+      "title": "GET /login",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.20b5c47a51fbe075",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/subscription.ts#POST /subscription/checkout",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/subscription.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 83,
+      "title": "POST /subscription/checkout",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.225682ec0d85f127",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/admin.ts#GET /admin/scripts",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/admin.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 106,
+      "title": "GET /admin/scripts",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.2c2a1d5bdaee8fee",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/admin.ts#GET /admin/check",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/admin.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 197,
+      "title": "GET /admin/check",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.2c88f2a363813f70",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#GET /logout",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 198,
+      "title": "GET /logout",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.32a4c45d6b186033",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/scripts.ts#GET /scripts",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 57,
+      "title": "GET /scripts",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.50935db1cd745f4a",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/admin.ts#GET /admin/users",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/admin.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 33,
+      "title": "GET /admin/users",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.5afc92736d641a10",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/scripts.ts#POST /scripts/sync",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 126,
+      "title": "POST /scripts/sync",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.62ec679c030ce8d9",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/health.ts#GET /healthz",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/health.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 6,
+      "title": "GET /healthz",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.64b48ac8e3e3b33c",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/admin.ts#DELETE /admin/users/:id",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/admin.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 87,
+      "title": "DELETE /admin/users/:id",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.68b81a467d055962",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/admin.ts#PATCH /admin/users/:id",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/admin.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 64,
+      "title": "PATCH /admin/users/:id",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.68eaa157cb792117",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/scripts.ts#GET /scripts/:id",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 84,
+      "title": "GET /scripts/:id",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.6a41daa50330f77e",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/subscription.ts#GET /subscription/plans",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/subscription.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 197,
+      "title": "GET /subscription/plans",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.828f0d992a348987",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/admin.ts#PATCH /admin/scripts/:id",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/admin.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 125,
+      "title": "PATCH /admin/scripts/:id",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.93408760f3eb13f1",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/scripts.ts#GET /scripts/formats",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 47,
+      "title": "GET /scripts/formats",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.94e6ffd8a0798ddd",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#POST /mobile-auth/token-exchange",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 213,
+      "title": "POST /mobile-auth/token-exchange",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.97238dcb028eef2a",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#GET /callback",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 132,
+      "title": "GET /callback",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.a13de8bb305ffb01",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/subscription.ts#POST /subscription/portal",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/subscription.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 121,
+      "title": "POST /subscription/portal",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.a330a6898ba0e7c0",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/subscription.ts#GET /subscription/status",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/subscription.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 16,
+      "title": "GET /subscription/status",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.aa66da8b72c237f1",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/generate.ts#POST /scripts/generate",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/generate.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 86,
+      "title": "POST /scripts/generate",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.ad85df7390b59fc5",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/admin.ts#GET /admin/stats",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/admin.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 23,
+      "title": "GET /admin/stats",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.ae6bae1f64ad4cb6",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/admin.ts#GET /admin/users/:id",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/admin.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 50,
+      "title": "GET /admin/users/:id",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.b1d484440be7077d",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app.ts#POST /api/stripe/webhook",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/app.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 32,
+      "title": "POST /api/stripe/webhook",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.dbf700d592f5a60f",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/admin.ts#POST /admin/scripts",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/admin.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 164,
+      "title": "POST /admin/scripts",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.api_endpoint.f19c079e5dd3549d",
+      "moduleSlug": "ninjamation",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/admin.ts#POST /admin/sync-github",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/admin.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 187,
+      "title": "POST /admin/sync-github",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.asset.159de0cc3d66597d",
+      "moduleSlug": "ninjamation",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/automation-station/public/images/hero-bg.png",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/public/images/hero-bg.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/automation-station/public/images/hero-bg.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninjamation.asset.3b036523a86d0c3d",
+      "moduleSlug": "ninjamation",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/automation-station/public/opengraph.jpg",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/public/opengraph.jpg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/automation-station/public/opengraph.jpg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninjamation.asset.3feecb4a5b9f9d56",
+      "moduleSlug": "ninjamation",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/automation-station/public/images/ninja-head.png",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/public/images/ninja-head.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/automation-station/public/images/ninja-head.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninjamation.asset.ac64a535c166a3e1",
+      "moduleSlug": "ninjamation",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/automation-station/public/images/ninjamation-logo-full.png",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/public/images/ninjamation-logo-full.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/automation-station/public/images/ninjamation-logo-full.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninjamation.asset.ca52ffbf36b6639b",
+      "moduleSlug": "ninjamation",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/automation-station/public/favicon.svg",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/public/favicon.svg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/automation-station/public/favicon.svg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninjamation.asset.cce16a40185b8b68",
+      "moduleSlug": "ninjamation",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/automation-station/public/images/logo.png",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/public/images/logo.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/automation-station/public/images/logo.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninjamation.asset.e0f9486e1bc33448",
+      "moduleSlug": "ninjamation",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/automation-station/public/images/ninja-head-64.png",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/public/images/ninja-head-64.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/automation-station/public/images/ninja-head-64.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninjamation.background_process.d09373bdc0301a2a",
+      "moduleSlug": "ninjamation",
+      "type": "background_process",
+      "canonicalSourceIdentity": "artifacts/api-server/src/index.ts#setInterval:runGithubSync",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 61,
+      "title": "setInterval runGithubSync",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.03d752d929b76c66",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Library.tsx#button:onClick:() => setCategory(\"\"):All Categories#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Library.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 65,
+      "title": "All Categories",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.077f501c24ae4215",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/GenerateAI.tsx#button:onClick:handleNewScript:Generate Another#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/GenerateAI.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 150,
+      "title": "Generate Another",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.07d1cd7dd4b1fa60",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/ScriptDetail.tsx#Link:navigate:/library:Return to Library#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/ScriptDetail.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 40,
+      "title": "Return to Library",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.0b4c5b397036af40",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#form:onSubmit:handleSearch:#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 137,
+      "title": "form onSubmit",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.0de32743cab351fb",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:handleSaveUser:Save#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 260,
+      "title": "Save",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.0e498938160ced90",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#motion.div:onClick:e => e.stopPropagation():#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 207,
+      "title": "motion.div onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.171e1b1b9bdd6778",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Library.tsx#button:onClick:() => setFormat(f):#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Library.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 51,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.1d3476beb513518f",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/GenerateAI.tsx#button:onClick:() => setFormat(f.id):#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/GenerateAI.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 187,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.210965481f50ea8c",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Navbar.tsx#button:onClick:logout:Logout#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Navbar.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 132,
+      "title": "Logout",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.26bb18be1d35bdba",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Navbar.tsx#Link:navigate:/:#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Navbar.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 103,
+      "title": "/",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.2a386bb7b53b06fc",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:handleSaveScript:Save#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 439,
+      "title": "Save",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.2f78bf41538b10c5",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:() => handleDeleteScript(s.id):#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 374,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.3a1f5dc844a36521",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Navbar.tsx#Link:onClick:isMobile ? () => setMobileOpen(false) : undefined:#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Navbar.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 72,
+      "title": "item.path",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.42d548c60fae9eb7",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:() => setEditingUser(null):Cancel#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 259,
+      "title": "Cancel",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.4ad21f47f8be4372",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/GenerateAI.tsx#form:onSubmit:handleGenerate:#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/GenerateAI.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 177,
+      "title": "form onSubmit",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.4afe66a272d3bd81",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Navbar.tsx#button:onClick:() => setMobileOpen(!mobileOpen):#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Navbar.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 149,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.53edf6f02d8eb0ab",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Footer.tsx#Link:navigate:/account:Manage Subscription#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Footer.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 30,
+      "title": "Manage Subscription",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.58f62f07299cdcc9",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Library.tsx#Link:navigate:`/scripts/${script.id}`:#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Library.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 122,
+      "title": "`/scripts/${script.id}`",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.64608b0f098c4533",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:() => handleDeleteUser(u.id):Delete user#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 180,
+      "title": "Delete user",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.64f60689c0794083",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/CheckoutCancel.tsx#Link:navigate:/pricing:Return to Pricing#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/CheckoutCancel.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 21,
+      "title": "Return to Pricing",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.6db932cdd25fa787",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Account.tsx#button:onClick:handleManageBilling:Manage Billing#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Account.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 77,
+      "title": "Manage Billing",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.725508c81ee446e7",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Footer.tsx#Link:navigate:/:#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Footer.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 9,
+      "title": "/",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.7b531d69a4287ad7",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Home.tsx#Link:navigate:/library:Try Demo Environment#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Home.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 333,
+      "title": "Try Demo Environment",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.811ebfa62054401b",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/ScriptDetail.tsx#button:onClick:handleDownload:Download Script#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/ScriptDetail.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 70,
+      "title": "Download Script",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.81b315ca09d924a0",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/CheckoutCancel.tsx#Link:navigate:/:Go Home#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/CheckoutCancel.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 24,
+      "title": "Go Home",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.828b94c03cfeaeae",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/not-found.tsx#Link:navigate:/:Return Home#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/not-found.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 18,
+      "title": "Return Home",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.88071e559c2f2eb5",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/ProtectedRoute.tsx#button:onClick:() => setLocation(\"/pricing\"):Upgrade Now#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/ProtectedRoute.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 46,
+      "title": "Upgrade Now",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.8811449f560ecede",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:() => setEditingUser(null):#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 216,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.9e0b76231f156a6d",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:activate::Search#2",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 341,
+      "title": "Search",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.9e3c2cc5a0332a26",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Home.tsx#Link:navigate:/pricing:Launch Your First Automation#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Home.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 134,
+      "title": "Launch Your First Automation",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.a2652f574f4cab2b",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/GenerateAI.tsx#button:onClick:handleDownload:Download script#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/GenerateAI.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 133,
+      "title": "Download script",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.a69f67e04d54c778",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/GenerateAI.tsx#button:onClick:handleCopy:Copy to clipboard#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/GenerateAI.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 126,
+      "title": "Copy to clipboard",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.aad4af8383d57e8c",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Footer.tsx#Link:navigate:/pricing:Pricing#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Footer.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 24,
+      "title": "Pricing",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.ab1a05ad5b101b64",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#motion.div:onClick:() => setEditingScript(null):#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 394,
+      "title": "motion.div onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.abee2953a389f63c",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:() => setEditingScript(null):#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 410,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.ad7ca3680e69e0b3",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:() => setTab(t.id):#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 504,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.aea4b1da36e56fc9",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Account.tsx#a:navigate:/pricing:View Plans#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Account.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 93,
+      "title": "View Plans",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.b2a62d0963be9ff8",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Navbar.tsx#Link:navigate:/account:#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Navbar.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 122,
+      "title": "/account",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.b449266ee237d524",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/GenerateAI.tsx#a:navigate:/pricing:Upgrade to Pro for $20/mo#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/GenerateAI.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 82,
+      "title": "Upgrade to Pro for $20/mo",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.b7a4701238574d13",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Home.tsx#Link:navigate:/pricing:#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Home.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 303,
+      "title": "/pricing",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.b899961abb698652",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:activate::Search#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 147,
+      "title": "Search",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.be8b49aea7407ab4",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Footer.tsx#Link:navigate:/generate:AI Generator#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Footer.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 23,
+      "title": "AI Generator",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.c9fdc7b388675970",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:() => setEditingUser({ ...u }):Edit user#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 179,
+      "title": "Edit user",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.d073e780e35616d0",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#motion.div:onClick:e => e.stopPropagation():#2",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 401,
+      "title": "motion.div onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.d0d66bf8c6ecfe1d",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Library.tsx#button:onClick:() => setCategory(c):#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Library.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 72,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.d329bc6e3cba5d76",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#form:onSubmit:handleSearch:#2",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 331,
+      "title": "form onSubmit",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.d3ee2708a741960e",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Home.tsx#Link:navigate:/library:View Live Demo#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Home.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 137,
+      "title": "View Live Demo",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.d49eeb11ab16a7f0",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/GenerateAI.tsx#button:activate::#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/GenerateAI.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 235,
+      "title": "button activate",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.d4ba04c543512a4e",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:() => setEditingScript({ ...s }):Edit script#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 373,
+      "title": "Edit script",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.dc225dea54b3269a",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Library.tsx#button:onClick:() => setFormat(\"\"):All Formats#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Library.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 44,
+      "title": "All Formats",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.ddf3a0a04613adf3",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:() => setPage(p => Math.max(1, p - 1)):#2",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 386,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.e03429324309caf5",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/ScriptDetail.tsx#Link:navigate:/library:Back to Library#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/ScriptDetail.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 48,
+      "title": "Back to Library",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.e0544f27b01aab96",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/CheckoutSuccess.tsx#Link:navigate:/library:Go to Library#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/CheckoutSuccess.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 20,
+      "title": "Go to Library",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.e2826257e0f376dd",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:() => setEditingScript(null):Cancel#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 438,
+      "title": "Cancel",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.e481bbf7bfb72379",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:() => setPage(p => Math.max(1, p - 1)):#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 192,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.e642b8902a22d72d",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:() => setPage(p => Math.min(totalPages, p + 1)):#2",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 388,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.e821248802115c94",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:() => setPage(p => Math.min(totalPages, p + 1)):#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 194,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.e970a803a91f3dbf",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Navbar.tsx#button:onClick:login:Sign In#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Navbar.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 141,
+      "title": "Sign In",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.eaf130695afe60e0",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Footer.tsx#a:navigate:#:Terms of Service#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Footer.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 31,
+      "title": "Terms of Service",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.eb1921cda82f9b91",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Navbar.tsx#button:onClick:() => { handleSmoothScroll(item.sectionId); if (isMobile) setMobileOpen(false); }:#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Navbar.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 58,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.ede6e9c2dbfc28b6",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#button:onClick:handleSync:Sync GitHub#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 343,
+      "title": "Sync GitHub",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.f084b515a8f8cde3",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Home.tsx#Link:navigate:/pricing:Start Automating Now#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Home.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 330,
+      "title": "Start Automating Now",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.f0c7e457b8a41a7e",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Pricing.tsx#button:onClick:() => handleSubscribe(plan.priceId):#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Pricing.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 94,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.f511382fd2a4380e",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Footer.tsx#Link:navigate:/library:Script Library#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Footer.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 22,
+      "title": "Script Library",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.f875227bbdd90627",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx#motion.div:onClick:() => setEditingUser(null):#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 200,
+      "title": "motion.div onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.fa1cf198424eb36d",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/components/Footer.tsx#a:navigate:#:Privacy Policy#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/components/Footer.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 32,
+      "title": "Privacy Policy",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.component_action.fe27827cb05cd3d5",
+      "moduleSlug": "ninjamation",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/GenerateAI.tsx#Link:navigate:`/scripts/${generatedScript.id}`:View in Library#1",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/GenerateAI.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 156,
+      "title": "View in Library",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.032810f0acecab5f",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#users.id",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 15,
+      "title": "users.id",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.0d021987c0eeecd6",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/scripts.ts#scripts.fileName",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 10,
+      "title": "scripts.fileName",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.0d2e8bc04060bfe8",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/scripts.ts#scripts.downloadCount",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 15,
+      "title": "scripts.downloadCount",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.0dbd40e209247d48",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/scripts.ts#scripts.githubPath",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 14,
+      "title": "scripts.githubPath",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.2684e8e862b8cdcc",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/scripts.ts#scripts.createdAt",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 16,
+      "title": "scripts.createdAt",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.348d703638473a0d",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#sessions.sess",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 8,
+      "title": "sessions.sess",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.3beded32ab6ee1fd",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#users.subscriptionTier",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 22,
+      "title": "users.subscriptionTier",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.47ae250af7bfca6b",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#users.lastName",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 18,
+      "title": "users.lastName",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.4d51b6103d03165b",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#users.email",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 16,
+      "title": "users.email",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.5771a3283e4e3a65",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/scripts.ts#scripts.description",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 8,
+      "title": "scripts.description",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.6a6addf7adf4764f",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/scripts.ts#scripts.format",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 11,
+      "title": "scripts.format",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.6e955347d9216d0f",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/scripts.ts#scripts.updatedAt",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 17,
+      "title": "scripts.updatedAt",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.7897e6698cece194",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#users.updatedAt",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 25,
+      "title": "users.updatedAt",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.8389f37ac5e3422a",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#users.stripeSubscriptionId",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 21,
+      "title": "users.stripeSubscriptionId",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.93964652af21801b",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#users.stripeCustomerId",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 20,
+      "title": "users.stripeCustomerId",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.982d8ca7d35da511",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/scripts.ts#scripts.category",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 12,
+      "title": "scripts.category",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.9e39c8d16eb9f40a",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#users.profileImageUrl",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 19,
+      "title": "users.profileImageUrl",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.a74ad0f163a0d5b1",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#users.isAdmin",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 23,
+      "title": "users.isAdmin",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.aad7300fd6940909",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#sessions.sid",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 7,
+      "title": "sessions.sid",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.b604e2e376b4afc1",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/scripts.ts#scripts.content",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 9,
+      "title": "scripts.content",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.bea17b9bcdb8dbf3",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/scripts.ts#scripts.name",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 7,
+      "title": "scripts.name",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.c537d26dae374b1a",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#sessions.expire",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 9,
+      "title": "sessions.expire",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.cf228fa08088dba6",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/scripts.ts#scripts.id",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 6,
+      "title": "scripts.id",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.e1f4596095f6e6b2",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#users.firstName",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 17,
+      "title": "users.firstName",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.f3dda46b90766f0c",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#users.createdAt",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 24,
+      "title": "users.createdAt",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_column.f3e0f93b9f9e5e12",
+      "moduleSlug": "ninjamation",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/scripts.ts#scripts.source",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 13,
+      "title": "scripts.source",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_table.0bba1057ea44523f",
+      "moduleSlug": "ninjamation",
+      "type": "database_table",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#users",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 14,
+      "title": "users",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_table.6c6b8f0f307f7672",
+      "moduleSlug": "ninjamation",
+      "type": "database_table",
+      "canonicalSourceIdentity": "lib/db/src/schema/scripts.ts#scripts",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 5,
+      "title": "scripts",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.database_table.7c62c9a69ed61cfb",
+      "moduleSlug": "ninjamation",
+      "type": "database_table",
+      "canonicalSourceIdentity": "lib/db/src/schema/auth.ts#sessions",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/schema/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 4,
+      "title": "sessions",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.export_flow.4c03177e84936503",
+      "moduleSlug": "ninjamation",
+      "type": "export_flow",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/scripts.ts#GET /scripts/:id/download",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/scripts.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 105,
+      "title": "GET /scripts/:id/download",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.export_flow.4fcc2a3e2060acab",
+      "moduleSlug": "ninjamation",
+      "type": "export_flow",
+      "canonicalSourceIdentity": "lib/api-client-react/src/generated/api.ts#function:useDownloadScript",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/api-client-react/src/generated/api.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1214,
+      "title": "useDownloadScript",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.05378f9ffd087d8c",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/automation-station/vite.config.ts#env:NODE_ENV",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/vite.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 35,
+      "title": "NODE_ENV",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.05e7c9603ca375c7",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/stripeClient.ts#env:REPL_IDENTITY",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/stripeClient.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 17,
+      "title": "REPL_IDENTITY",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.14691ea44f346ddd",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "lib/integrations-openai-ai-server/src/image/client.ts#env:AI_INTEGRATIONS_OPENAI_API_KEY",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/integrations-openai-ai-server/src/image/client.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 11,
+      "title": "AI_INTEGRATIONS_OPENAI_API_KEY",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.1c42b2aaafefd065",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app.ts#env:REPLIT_DOMAINS",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/app.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 60,
+      "title": "REPLIT_DOMAINS",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.1f36d10004a9bd2c",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/lib/auth.ts#env:REPL_ID",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/lib/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 25,
+      "title": "REPL_ID",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.27a4abb093ec7173",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/automation-station/vite.config.ts#env:REPL_ID",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/vite.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 36,
+      "title": "REPL_ID",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.2ce2df59209039ad",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "scripts/src/stripeClient.ts#env:REPLIT_CONNECTORS_HOSTNAME",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/scripts/src/stripeClient.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 15,
+      "title": "REPLIT_CONNECTORS_HOSTNAME",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.3942aa2ed5a33c84",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/lib/logger.ts#env:NODE_ENV",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/lib/logger.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 3,
+      "title": "NODE_ENV",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.396650c1abe50b94",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/index.ts#env:DATABASE_URL",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 8,
+      "title": "DATABASE_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.49dfd37ce8b4ed3f",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#env:ADMIN_USERNAMES",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 71,
+      "title": "ADMIN_USERNAMES",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.4a171c445d1ad259",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "lib/db/drizzle.config.ts#env:DATABASE_URL",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/drizzle.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 4,
+      "title": "DATABASE_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.52aa45aca4267ddd",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "lib/integrations-openai-ai-server/src/client.ts#env:AI_INTEGRATIONS_OPENAI_BASE_URL",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/integrations-openai-ai-server/src/client.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 3,
+      "title": "AI_INTEGRATIONS_OPENAI_BASE_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.5590522139ca11b0",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "scripts/src/stripeClient.ts#env:REPL_IDENTITY",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/scripts/src/stripeClient.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 16,
+      "title": "REPL_IDENTITY",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.64444f6cf9f6f1b9",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/subscription.ts#env:REPLIT_DOMAINS",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/subscription.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 105,
+      "title": "REPLIT_DOMAINS",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.773cddf9fb7efcb3",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/automation-station/vite.config.ts#env:PORT",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/vite.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 7,
+      "title": "PORT",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.79a3e7b6081a9671",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/automation-station/vite.config.ts#env:BASE_PATH",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/vite.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 21,
+      "title": "BASE_PATH",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.8f13f31acacd5607",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/index.ts#env:REPLIT_DOMAINS",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 21,
+      "title": "REPLIT_DOMAINS",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.93ba96cc2c17ab71",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "lib/db/src/index.ts#env:DATABASE_URL",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/db/src/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 7,
+      "title": "DATABASE_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.96b98d9f4abefecb",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "lib/integrations-openai-ai-server/src/audio/client.ts#env:AI_INTEGRATIONS_OPENAI_BASE_URL",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/integrations-openai-ai-server/src/audio/client.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 9,
+      "title": "AI_INTEGRATIONS_OPENAI_BASE_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.a0dfbf0c51b1cbd9",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/stripeClient.ts#env:WEB_REPL_RENEWAL",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/stripeClient.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 19,
+      "title": "WEB_REPL_RENEWAL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.ab2ac2dd1ca7d997",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/stripeClient.ts#env:REPLIT_DEPLOYMENT",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/stripeClient.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 28,
+      "title": "REPLIT_DEPLOYMENT",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.ac8783811210ef32",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/index.ts#env:PORT",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 65,
+      "title": "PORT",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.b0a2052976e4ff2e",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/lib/logger.ts#env:LOG_LEVEL",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/lib/logger.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 6,
+      "title": "LOG_LEVEL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.b0d4dfe0b2c223e3",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "lib/integrations-openai-ai-server/src/image/client.ts#env:AI_INTEGRATIONS_OPENAI_BASE_URL",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/integrations-openai-ai-server/src/image/client.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 5,
+      "title": "AI_INTEGRATIONS_OPENAI_BASE_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.b20108828f3d672e",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "lib/integrations-openai-ai-server/src/client.ts#env:AI_INTEGRATIONS_OPENAI_API_KEY",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/integrations-openai-ai-server/src/client.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 9,
+      "title": "AI_INTEGRATIONS_OPENAI_API_KEY",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.d429e84736629d55",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "lib/integrations-openai-ai-server/src/audio/client.ts#env:AI_INTEGRATIONS_OPENAI_API_KEY",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/lib/integrations-openai-ai-server/src/audio/client.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 15,
+      "title": "AI_INTEGRATIONS_OPENAI_API_KEY",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.dac6e4ba47f538cc",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/lib/auth.ts#env:ISSUER_URL",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/lib/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 8,
+      "title": "ISSUER_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.db7b2c2100602863",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/stripeClient.ts#env:REPLIT_CONNECTORS_HOSTNAME",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/stripeClient.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 16,
+      "title": "REPLIT_CONNECTORS_HOSTNAME",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.e88935ef8796e79d",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/stripeClient.ts#env:DATABASE_URL",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/stripeClient.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 79,
+      "title": "DATABASE_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.ec198a8e1467b889",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "scripts/src/stripeClient.ts#env:WEB_REPL_RENEWAL",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/scripts/src/stripeClient.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 18,
+      "title": "WEB_REPL_RENEWAL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.fa4bad9893a5de11",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#env:REPL_ID",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 206,
+      "title": "REPL_ID",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.integration.fe2466d8ec759811",
+      "moduleSlug": "ninjamation",
+      "type": "integration",
+      "canonicalSourceIdentity": "scripts/src/stripeClient.ts#env:REPLIT_DEPLOYMENT",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/scripts/src/stripeClient.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 27,
+      "title": "REPLIT_DEPLOYMENT",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.public_flow.41ec85c620395a78",
+      "moduleSlug": "ninjamation",
+      "type": "public_flow",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#GET /login",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 101,
+      "title": "GET /login",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.public_flow.674d3ae182b795e6",
+      "moduleSlug": "ninjamation",
+      "type": "public_flow",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#GET /auth/user",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 93,
+      "title": "GET /auth/user",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.public_flow.ee811129cd6af5f1",
+      "moduleSlug": "ninjamation",
+      "type": "public_flow",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/subscription.ts#POST /subscription/portal",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/api-server/src/routes/subscription.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 121,
+      "title": "POST /subscription/portal",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_page.13aaf4b98102fbdf",
+      "moduleSlug": "ninjamation",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Pricing.tsx",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Pricing.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "Pricing.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_page.21a8b95421d2fae0",
+      "moduleSlug": "ninjamation",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/GenerateAI.tsx",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/GenerateAI.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "GenerateAI.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_page.29cd59ed380442f6",
+      "moduleSlug": "ninjamation",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/ScriptDetail.tsx",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/ScriptDetail.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "ScriptDetail.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_page.7b4cb8c424290626",
+      "moduleSlug": "ninjamation",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/not-found.tsx",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/not-found.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "not-found.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_page.af44333e91fc6bb0",
+      "moduleSlug": "ninjamation",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Library.tsx",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Library.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "Library.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_page.bba851b1c115e165",
+      "moduleSlug": "ninjamation",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/CheckoutSuccess.tsx",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/CheckoutSuccess.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "CheckoutSuccess.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_page.bef25ff59504159d",
+      "moduleSlug": "ninjamation",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Account.tsx",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Account.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "Account.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_page.d561e3fb8d72d599",
+      "moduleSlug": "ninjamation",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/CheckoutCancel.tsx",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/CheckoutCancel.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "CheckoutCancel.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_page.dc4c050387fd37e0",
+      "moduleSlug": "ninjamation",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Home.tsx",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Home.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "Home.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_page.f8e9cbdf5e768895",
+      "moduleSlug": "ninjamation",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/pages/Admin.tsx",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/pages/Admin.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "Admin.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_route.3623b0a450bab858",
+      "moduleSlug": "ninjamation",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/App.tsx#/checkout/success",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 58,
+      "title": "/checkout/success",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_route.42a6f72933f7e096",
+      "moduleSlug": "ninjamation",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/App.tsx#/pricing",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 32,
+      "title": "/pricing",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_route.4ae4e37aabc4dcd0",
+      "moduleSlug": "ninjamation",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/App.tsx#/",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 31,
+      "title": "/",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_route.65fc700fb87ae291",
+      "moduleSlug": "ninjamation",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/App.tsx#/library",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 34,
+      "title": "/library",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_route.707c40b1921e0924",
+      "moduleSlug": "ninjamation",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/App.tsx#/account",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 52,
+      "title": "/account",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_route.a99f16a796c762c5",
+      "moduleSlug": "ninjamation",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/App.tsx#/scripts/:id",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 40,
+      "title": "/scripts/:id",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_route.bd30496a3ce1a01c",
+      "moduleSlug": "ninjamation",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/App.tsx#/generate",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 46,
+      "title": "/generate",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_route.f35e18a808393107",
+      "moduleSlug": "ninjamation",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/App.tsx#/admin",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 70,
+      "title": "/admin",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninjamation.ui_route.f7ca76923045572a",
+      "moduleSlug": "ninjamation",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/automation-station/src/App.tsx#/checkout/cancel",
+      "sourcePointers": [
+        "apps/modules/ninjamation/source/artifacts/automation-station/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 64,
+      "title": "/checkout/cancel",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    }
+  ]
+}

@@ -1,4 +1,13 @@
-# FaultlineLab Phase 10A parity matrix
+# FaultlineLab Phase 25 parity matrix
+
+## Phase 25 executable catalog notice (2026-08-09)
+
+Current release truth is generated in `docs/parity/modules/faultlinelab.json`.
+Every playable case reachable from the pinned source `allCases` export is now
+mapped to the deterministic compiler, immutable-version initializer, player,
+and full-catalog automated iteration. Exact counts come from the compiler
+manifest and database, never this Markdown file. See
+`docs/phase-25/FAULTLINELAB-FULL-CATALOG-REPORT.md`.
 
 Assessment date: 2026-07-18
 
@@ -11,13 +20,15 @@ tracked source files, 451 retained files, and the exclusions applied during
 import. No fetch, install, child migration, child server, source write, or
 standalone database access was performed.
 
-The source is a browser troubleshooting simulator with four implemented cases
-and 52 planned catalog entries. The four implemented cases cover Windows/AD,
-networking/VPN, automotive, and electronics/sensor scenarios. A case contains
+The source is a browser troubleshooting simulator with standalone and authored
+pack cases across Windows/AD, networking, automotive, electronics, servers,
+mixed cascades, and healthcare imaging. Every `allCases` entry has a complete
+runnable definition; older OperatorOS documentation incorrectly classified
+pack entries as metadata-only. A case contains
 symptoms, one root cause, evidence, four hint tiers, terminal commands, event
 logs, ticket history, remediation, preventative measures, and a 100-point
-score definition. Planned catalog cards are not runnable content and are not
-counted as parity.
+score definition. The Phase 25 compiler validates or explicitly repairs the
+authored definitions and imports all valid output as playable versions.
 
 The product audit covered the frontend domain types, case registry/catalog,
 authoring schemas and validation, four composed case definitions, simulation
@@ -37,8 +48,7 @@ cloud profile. Team case drafts are unversioned JSON rows; the apparent
 | --- | --- | --- | --- |
 | Standalone Clerk/OperatorOS JWT identities, local users, roles, linked accounts, sessions, and password/account flows | Duplicate authority; legacy SSO places a JWT in a query string and creates a child cookie | Excluded. OperatorOS exact-host SSO, session, tenant, membership, role, and module guards remain the only authority | Existing SSO/RBAC negatives plus module workflow tests |
 | Standalone Stripe catalog, subscription, purchase, store, pricing, and product recommendations | Child platform billing and client upsell behavior | Excluded. FaultlineLab remains a free OperatorOS module; no local checkout, entitlement grant, or product-recommendation authority is mounted | Static route/schema scan and commercial-boundary tests |
-| Four playable troubleshooting cases | Static TypeScript definitions composed through the authoring validator | Import as deterministic, repeatable starter-content initialization into tenant-scoped, versioned challenge records | Stable manifest/hash tests, idempotent initialization, catalog/detail API |
-| Fifty-two planned catalog cases | Metadata only; no runnable definitions | Retain only as migration evidence. Do not advertise as playable or count as migrated functionality | Catalog contains only valid published versions |
+| Complete `allCases` authored catalog | Static TypeScript definitions composed from standalone cases plus every authored pack | Deterministically compile every reachable definition, repair invalid authored records explicitly, and import by source hash into tenant-scoped published immutable versions | Compiler negative fixtures plus zero-exclusion full-catalog start/action/submit/score/reload test |
 | Case authoring | Validated draft form backed by one unversioned JSON row per id | Versioned tenant/personal drafts, immutable version snapshots, validation results, optimistic concurrency, preview, publish, retire, and superseding-version history | Author/admin role, stale-write, immutability, publish and prior-version tests |
 | Sandbox authoring and preview | Browser-local custom scenarios converted into runnable cases | Personal draft challenges with server validation and preview sessions; tenant publication requires tenant admin/owner authority | Owner privacy, admin publish, preview isolation and persistence tests |
 | Challenge types | Standard case, daily challenge, sandbox preview, optional Chaos mode | Server-owned `standard`, `daily`, `preview`, `assignment`, and deterministic `chaos` sessions bound to one immutable challenge version | Start-mode validation, version pinning and replay tests |
@@ -78,7 +88,7 @@ rather than carrying the source test count forward.
 ## Completion boundary
 
 State 4 requires every approved row above to run from the OperatorOS workload,
-the starter-content initializer/import dry-run to reconcile deterministically,
+the source compiler and content-hash initializer to reconcile deterministically,
 and clean isolated-database tests to prove persistence, tenant/user/role
 isolation, optimistic concurrency, attempt integrity and server scoring.
 State 5 additionally requires the production build and supervisor, health and

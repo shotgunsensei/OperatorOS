@@ -9,7 +9,9 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   timeout: 60_000,
   expect: { timeout: 15_000 },
-  reporter: process.env.CI ? [['line'], ['html', { open: 'never' }]] : 'line',
+  reporter: process.env.CI
+    ? [['line'], ['html', { open: 'never' }], ['./e2e/fail-on-skipped-reporter.ts']]
+    : [['line'], ['./e2e/fail-on-skipped-reporter.ts']],
   outputDir: 'test-results/playwright',
   use: {
     ...devices['Desktop Chrome'],

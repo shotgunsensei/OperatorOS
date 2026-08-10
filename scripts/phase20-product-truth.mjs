@@ -1,0 +1,1097 @@
+import { createHash } from 'node:crypto';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { dirname, extname, join, posix, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const parityRoot = join(root, 'docs', 'parity');
+const moduleOutputRoot = join(parityRoot, 'modules');
+const sourceManifestPath = join(parityRoot, 'source-manifest.json');
+const waiversPath = join(parityRoot, 'OWNER_WAIVERS.yml');
+const generatorPath = 'scripts/phase20-product-truth.mjs';
+const args = new Set(process.argv.slice(2));
+const write = args.has('--write');
+
+const allowedStates = new Set([
+  'ACTIVE_NATIVE',
+  'ACTIVE_SHARED_EQUIVALENT',
+  'OWNER_WAIVED',
+  'BLOCKED',
+]);
+
+const sourceDefinitions = [
+  {
+    slug: 'brandforgeos',
+    name: 'BrandForgeOS',
+    provenance: {
+      selectedKind: 'imported_snapshot',
+      remote: 'https://github.com/shotgunsensei/BrandForge-OS.git',
+      commit: '5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e',
+      ref: 'main',
+      remoteVerification: 'refs/heads/main matched selected commit on 2026-08-08',
+    },
+  },
+  {
+    slug: 'callcommand-ai',
+    name: 'CallCommand AI',
+    provenance: {
+      selectedKind: 'imported_snapshot',
+      remote: 'https://github.com/shotgunsensei/Call-Command-AI.git',
+      commit: 'd49434e1d641d62cc141591c7208539a7afbf11e',
+      ref: 'main',
+      remoteVerification: 'refs/heads/main matched selected commit on 2026-08-08',
+    },
+  },
+  {
+    slug: 'faultlinelab',
+    name: 'FaultlineLab',
+    provenance: {
+      selectedKind: 'imported_snapshot',
+      remote: 'https://github.com/shotgunsensei/Faultline-Lab.git',
+      commit: '46877aae35565149ccf4f4988dd94627fc6bb92b',
+      ref: 'main',
+      remoteVerification: 'refs/heads/main matched selected commit on 2026-08-08',
+      truthNote: 'The source allCases export is compiler-discovered; every valid authored definition initializes as a published immutable OperatorOS challenge version.',
+    },
+  },
+  {
+    slug: 'ninja-launch-kit',
+    name: 'Ninja Launch Kit',
+    provenance: {
+      selectedKind: 'imported_snapshot',
+      remote: 'https://github.com/shotgunsensei/Ninja-Launch-Kit.git',
+      commit: '30bd1abc05846926e97bc7b26c5b7d6625e8f161',
+      ref: 'main',
+      remoteVerification: 'refs/heads/main matched selected commit on 2026-08-08',
+    },
+  },
+  {
+    slug: 'ninja-pool-hall',
+    name: 'Ninja Pool Hall',
+    provenance: {
+      selectedKind: 'imported_snapshot',
+      remote: 'https://github.com/shotgunsensei/Shotgun-ninja-pool-hall.git',
+      commit: '62439c4018ec551ce2891800351200c8ab2cb9e7',
+      ref: 'main',
+      remoteVerification: 'refs/heads/main matched selected commit on 2026-08-08',
+    },
+  },
+  {
+    slug: 'ninjamation',
+    name: 'Ninjamation',
+    provenance: {
+      selectedKind: 'composite_imported_snapshot',
+      remote: 'https://github.com/shotgunsensei/AutomationPacks.git',
+      commit: 'cca75338d04ed35b89f28d614eb51559735aa32f',
+      ref: 'master',
+      additionalSource: {
+        commit: 'ca0e55fd086f6751a43964927166bfa69db012b6',
+        ref: 'main',
+        purpose: 'script catalog',
+      },
+      remoteVerification: 'master and main matched selected application/catalog commits on 2026-08-08',
+      recoveryCandidates: [
+        {
+          commit: '1b8818afbc261f70e60584979e3e4efe550630c8',
+          ref: 'codex/create-gui-for-script-selection-and-execution',
+          disposition: 'retained_for_evidence',
+          note: 'Older 35-entry catalog-only tree with no common ancestor to the application commit; not a fuller application baseline.',
+        },
+      ],
+    },
+  },
+  {
+    slug: 'outcall',
+    name: 'OutCall',
+    provenance: {
+      selectedKind: 'missing_source',
+      remote: null,
+      commit: null,
+      ref: null,
+      remoteVerification: 'No OutCall repository in the owner public repository list; direct shotgunsensei/OutCall probe returned repository not found on 2026-08-08.',
+      recoverySearch: [
+        'apps/modules/outcall/source contains only README.md',
+        'No matching source in C:/Dev sibling repositories',
+        'No matching entry in C:/Dev/OperatorOS.zip or C:/Dev/TorqueShed.zip',
+      ],
+    },
+  },
+  {
+    slug: 'pulsedesk',
+    name: 'PulseDesk',
+    legacyLedger: 'docs/modules/pulsedesk/SOURCE_LEDGER.json',
+    provenance: {
+      selectedKind: 'imported_snapshot',
+      remote: 'https://github.com/shotgunsensei/PulseDesk.git',
+      commit: '937849471e489ed23db2a263d04160a388402740',
+      ref: 'main',
+      remoteVerification: 'refs/heads/main matched selected commit on 2026-08-08',
+    },
+  },
+  {
+    slug: 'snapproofos',
+    name: 'SnapProofOS',
+    provenance: {
+      selectedKind: 'imported_snapshot',
+      remote: 'https://github.com/shotgunsensei/snapproof.git',
+      commit: '26bded38c13b5b6361d407462c68052b0c30613d',
+      ref: 'main',
+      remoteVerification: 'refs/heads/main matched selected commit on 2026-08-08',
+    },
+  },
+  {
+    slug: 'studyforge-ai',
+    name: 'StudyForge AI',
+    provenance: {
+      selectedKind: 'imported_snapshot',
+      remote: 'https://github.com/shotgunsensei/Study-Forge.git',
+      commit: 'a607a9f34442b1d0f6bfffbf0293609529494825',
+      ref: 'main',
+      remoteVerification: 'refs/heads/main matched selected commit on 2026-08-08',
+    },
+  },
+  {
+    slug: 'techdeck',
+    name: 'TechDeck',
+    legacyLedger: 'docs/modules/techdeck/SOURCE_LEDGER.json',
+    provenance: {
+      selectedKind: 'imported_snapshot',
+      remote: 'https://github.com/shotgunsensei/Tech-Deck.git',
+      commit: '8125f8d89d8d39d60a50c8061a26133a0c917792',
+      ref: 'main',
+      remoteVerification: 'refs/heads/main matched selected commit on 2026-08-08',
+    },
+  },
+  {
+    slug: 'torqueshed',
+    name: 'TorqueShed',
+    provenance: {
+      selectedKind: 'imported_snapshot',
+      remote: 'https://github.com/shotgunsensei/TorqueShed-Codex.git',
+      commit: 'c33ade5cef525d62d371a63946b814c58a72a4a7',
+      ref: 'historical snapshot',
+      remoteVerification: 'Selected snapshot remains resolvable but remote main advanced.',
+      recoveryCandidates: [
+        {
+          commit: '508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75',
+          ref: 'main',
+          disposition: 'BLOCKED_REVIEW',
+          note: 'Three commits and 34 files beyond the imported snapshot; adds product API/schema, web work, billing and tests.',
+        },
+        {
+          commit: '68da4548f6650cfb11eb19ee133643a110ccf084',
+          path: 'C:/Dev/TorqueShed-Codex',
+          disposition: 'retained_for_evidence',
+          note: 'Dirty local checkout with extensive uncommitted product, security and mobile work; not deterministic provenance.',
+        },
+        {
+          commit: 'a81ffcfc81cc87008e2fb531a99d55cbcfcfa9cc',
+          path: 'C:/Dev/TorqueShed',
+          disposition: 'BLOCKED_REVIEW',
+          note: 'Separate clean web-product repository requiring an owner source-authority decision.',
+        },
+      ],
+    },
+  },
+  {
+    slug: 'tradeflowkit',
+    name: 'TradeFlowKit',
+    legacyLedger: 'docs/modules/tradeflowkit/PHASE16_SOURCE_LEDGER.json',
+    provenance: {
+      selectedKind: 'imported_restored_snapshot',
+      remote: 'https://github.com/shotgunsensei/TradeFlowKit.git',
+      commit: '37aa67f1da804fc3ac56f36e50e01362077d7a26',
+      ref: 'codex/restore-production-app (captured, no longer present on remote)',
+      remoteVerification: 'Remote exposes only main at 6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55; restored commit was not remotely resolvable on 2026-08-08. The imported tree fingerprint is the repeatable baseline.',
+      recoveryCandidates: [
+        {
+          commit: '6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55',
+          ref: 'main',
+          disposition: 'retained_for_evidence',
+          note: 'Original public baseline; older than the imported restored snapshot.',
+        },
+      ],
+    },
+  },
+];
+
+const assetExtensions = new Set([
+  '.avif', '.gif', '.ico', '.jpeg', '.jpg', '.mp3', '.mp4', '.ogg', '.otf',
+  '.pdf', '.png', '.svg', '.ttf', '.wav', '.webm', '.webp', '.woff', '.woff2',
+]);
+const codeExtensions = new Set(['.cjs', '.js', '.jsx', '.mjs', '.ts', '.tsx']);
+const testPattern = /(?:^|\/)(?:e2e|test|tests)(?:\/|$)|\.(?:spec|test)\.[cm]?[jt]sx?$/iu;
+const mobilePattern = /(?:^|\/)(?:android|ios|mobile)(?:\/|$)|(?:^|\/)(?:app|eas)\.json$|capacitor|expo|manifest\.(?:json|webmanifest)$|service[-_.]?worker|(?:^|\/)sw\.[cm]?[jt]s$/iu;
+const publicFlowPattern = /\/(?:auth|login|register|signup|landing|public|portal|quote|invoice|privacy|terms)(?:\/|$)|(?:^|\/)(?:landing|auth-page|public)[^/]*\.[jt]sx?$/iu;
+
+function normalizePath(value) {
+  return value.replaceAll('\\', '/');
+}
+
+function repoPath(absolute) {
+  return normalizePath(relative(root, absolute));
+}
+
+function sha256(value) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function walk(directory) {
+  if (!existsSync(directory)) return [];
+  const files = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const absolute = join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...walk(absolute));
+    else if (entry.isFile()) files.push(absolute);
+  }
+  return files.sort((left, right) => normalizePath(left).localeCompare(normalizePath(right)));
+}
+
+function sourceFingerprint(sourceRoot) {
+  const files = walk(sourceRoot);
+  const hash = createHash('sha256');
+  let totalBytes = 0;
+  for (const file of files) {
+    const bytes = readFileSync(file);
+    const path = normalizePath(relative(sourceRoot, file));
+    const pathBytes = Buffer.from(path, 'utf8');
+    const length = Buffer.alloc(8);
+    length.writeBigUInt64BE(BigInt(bytes.length));
+    hash.update(pathBytes);
+    hash.update(Buffer.from([0]));
+    hash.update(length);
+    hash.update(bytes);
+    totalBytes += bytes.length;
+  }
+  return {
+    algorithm: 'sha256(path NUL uint64be(size) content)',
+    treeSha256: hash.digest('hex'),
+    fileCount: files.length,
+    totalBytes,
+  };
+}
+
+function literal(node) {
+  if (!node) return null;
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  return null;
+}
+
+function normalizedText(node, sourceFile, limit = 240) {
+  if (!node) return '';
+  return node.getText(sourceFile).replace(/\s+/gu, ' ').trim().slice(0, limit);
+}
+
+function lineOf(sourceFile, node) {
+  return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+}
+
+function attribute(opening, sourceFile, name) {
+  const property = opening.attributes?.properties?.find((item) => {
+    if (!ts.isJsxAttribute(item)) return false;
+    return item.name.getText(sourceFile) === name;
+  });
+  if (!property || !ts.isJsxAttribute(property) || !property.initializer) return null;
+  if (ts.isStringLiteral(property.initializer)) return property.initializer.text;
+  if (ts.isJsxExpression(property.initializer)) {
+    const direct = literal(property.initializer.expression);
+    return direct ?? normalizedText(property.initializer.expression, sourceFile);
+  }
+  return normalizedText(property.initializer, sourceFile);
+}
+
+function jsxLabel(node, sourceFile) {
+  const opening = ts.isJsxElement(node) ? node.openingElement : node;
+  for (const name of ['aria-label', 'label', 'title']) {
+    const value = attribute(opening, sourceFile, name);
+    if (value) return value.replace(/\s+/gu, ' ').trim().slice(0, 120);
+  }
+  if (ts.isJsxElement(node)) {
+    const text = node.children
+      .filter(ts.isJsxText)
+      .map((child) => child.text)
+      .join(' ')
+      .replace(/\s+/gu, ' ')
+      .trim();
+    if (text) return text.slice(0, 120);
+  }
+  return '';
+}
+
+function scriptKind(path) {
+  const extension = extname(path).toLowerCase();
+  if (extension === '.tsx') return ts.ScriptKind.TSX;
+  if (extension === '.jsx') return ts.ScriptKind.JSX;
+  if (extension === '.js' || extension === '.mjs' || extension === '.cjs') return ts.ScriptKind.JS;
+  return ts.ScriptKind.TS;
+}
+
+function stateCounts(capabilities) {
+  return Object.fromEntries([...allowedStates].map((state) => [
+    state,
+    capabilities.filter((capability) => capability.state === state).length,
+  ]));
+}
+
+function typeCounts(capabilities) {
+  const types = [...new Set(capabilities.map((capability) => capability.type))].sort();
+  return Object.fromEntries(types.map((type) => [
+    type,
+    capabilities.filter((capability) => capability.type === type).length,
+  ]));
+}
+
+function makeCapability(moduleSlug, input) {
+  const canonicalSourceIdentity = input.canonicalSourceIdentity;
+  const id = `${moduleSlug}.${input.type}.${sha256(`${moduleSlug}|${input.type}|${canonicalSourceIdentity}`).slice(0, 16)}`;
+  return {
+    capabilityId: id,
+    moduleSlug,
+    type: input.type,
+    canonicalSourceIdentity,
+    sourcePointers: [...new Set(input.sourcePointers ?? [])].sort(),
+    missingSourcePointers: [...new Set(input.missingSourcePointers ?? [])].sort(),
+    sourceLine: input.sourceLine ?? null,
+    title: input.title,
+    state: input.state ?? 'BLOCKED',
+    blockerCode: input.blockerCode ?? (input.state === 'BLOCKED' || !input.state ? 'SOURCE_CAPABILITY_UNMAPPED' : null),
+    currentTargets: [...new Set(input.currentTargets ?? [])].sort(),
+    automatedEvidence: [...new Set(input.automatedEvidence ?? [])].sort(),
+    ownerWaiverId: input.ownerWaiverId ?? null,
+    priorDisposition: input.priorDisposition ?? null,
+    note: input.note ?? null,
+  };
+}
+
+function legacyCapabilities(definition) {
+  if (!definition.legacyLedger) return [];
+  const ledger = JSON.parse(readFileSync(join(root, definition.legacyLedger), 'utf8'));
+  const typeMap = {
+    pages: 'ui_route',
+    apiRoutes: 'api_endpoint',
+    tables: 'database_table',
+    providers: 'integration',
+    backgroundProcesses: 'background_process',
+  };
+  const capabilities = [];
+  for (const [collection, items] of Object.entries(ledger.inventory ?? {})) {
+    if (!Array.isArray(items) || !typeMap[collection]) continue;
+    for (const item of items) {
+      const claimedSourcePointers = [item.sourcePointer, ...(item.sourcePointers ?? [])]
+        .filter(Boolean)
+        .map((pointer) => `apps/modules/${definition.slug}/source/${normalizePath(pointer)}`);
+      const missingSourcePointers = claimedSourcePointers.filter((pointer) => !existsSync(join(root, pointer)));
+      const sourcePointers = claimedSourcePointers.filter((pointer) => existsSync(join(root, pointer)));
+      if (missingSourcePointers.length > 0) sourcePointers.push(definition.legacyLedger);
+      const currentTargets = (item.targetPointers ?? []).filter((pointer) => existsSync(join(root, pointer)));
+      const automatedEvidence = (item.evidence ?? []).filter((pointer) =>
+        existsSync(join(root, pointer)) && testPattern.test(normalizePath(pointer)));
+      let state = 'BLOCKED';
+      let blockerCode = 'BLOCKED_REVIEW';
+      if (item.disposition === 'active' || item.disposition === 'shared_replacement') {
+        if (currentTargets.length > 0 && automatedEvidence.length > 0) {
+          state = item.disposition === 'active' ? 'ACTIVE_NATIVE' : 'ACTIVE_SHARED_EQUIVALENT';
+          blockerCode = null;
+        } else {
+          blockerCode = 'MISSING_CURRENT_TARGET_OR_AUTOMATED_EVIDENCE';
+        }
+      } else if (item.disposition === 'phase16_gap' || item.disposition === 'restoration_gap') {
+        blockerCode = 'SOURCE_PARITY_GAP';
+      }
+      if (missingSourcePointers.length > 0) {
+        state = 'BLOCKED';
+        blockerCode = 'SOURCE_IMPLEMENTATION_POINTER_MISSING';
+      }
+      capabilities.push(makeCapability(definition.slug, {
+        type: typeMap[collection],
+        canonicalSourceIdentity: `legacy-ledger:${collection}:${item.key}|${claimedSourcePointers.join('|')}`,
+        sourcePointers,
+        missingSourcePointers,
+        title: item.key,
+        state,
+        blockerCode,
+        currentTargets,
+        automatedEvidence,
+        priorDisposition: item.disposition,
+        note: [
+          item.note ?? null,
+          missingSourcePointers.length > 0
+            ? `Legacy ledger claims source paths absent from the pinned imported tree: ${missingSourcePointers.join(', ')}`
+            : null,
+        ].filter(Boolean).join(' ') || null,
+      }));
+      if (publicFlowPattern.test(item.key)) {
+        capabilities.push(makeCapability(definition.slug, {
+          type: 'public_flow',
+          canonicalSourceIdentity: `legacy-ledger:${collection}:public-flow:${item.key}|${claimedSourcePointers.join('|')}`,
+          sourcePointers,
+          missingSourcePointers,
+          title: item.key,
+          state,
+          blockerCode,
+          currentTargets,
+          automatedEvidence,
+          priorDisposition: item.disposition,
+          note: [
+            item.note ?? null,
+            missingSourcePointers.length > 0
+              ? `Legacy ledger claims source paths absent from the pinned imported tree: ${missingSourcePointers.join(', ')}`
+              : null,
+          ].filter(Boolean).join(' ') || null,
+        }));
+      }
+    }
+  }
+  return capabilities;
+}
+
+function discoverRawCapabilities(definition, sourceRoot) {
+  const capabilities = [];
+  const seen = new Set();
+  const duplicateActions = new Map();
+  const ledgerCovered = Boolean(definition.legacyLedger);
+
+  function add(input) {
+    const identity = `${input.type}|${input.canonicalSourceIdentity}`;
+    if (seen.has(identity)) return;
+    seen.add(identity);
+    capabilities.push(makeCapability(definition.slug, input));
+  }
+
+  for (const absolute of walk(sourceRoot)) {
+    const relativeSource = normalizePath(relative(sourceRoot, absolute));
+    const pointer = repoPath(absolute);
+    const extension = extname(absolute).toLowerCase();
+    if (assetExtensions.has(extension)) {
+      add({
+        type: 'asset',
+        canonicalSourceIdentity: relativeSource,
+        sourcePointers: [pointer],
+        title: relativeSource,
+        note: 'Source asset has no verified visual-equivalence mapping in the Phase 20 baseline.',
+      });
+    }
+    if (testPattern.test(relativeSource)) {
+      add({
+        type: 'source_test',
+        canonicalSourceIdentity: relativeSource,
+        sourcePointers: [pointer],
+        title: relativeSource,
+        note: 'Source test expectation is inventoried but not yet mapped to an OperatorOS compatibility test.',
+      });
+    }
+    if (mobilePattern.test(relativeSource)) {
+      add({
+        type: 'mobile_pwa_surface',
+        canonicalSourceIdentity: relativeSource,
+        sourcePointers: [pointer],
+        title: relativeSource,
+        blockerCode: 'MOBILE_OR_PWA_PARITY_UNPROVEN',
+      });
+    }
+    if (!codeExtensions.has(extension) && extension !== '.sql') continue;
+
+    const text = readFileSync(absolute, 'utf8');
+    if (extension === '.sql') {
+      for (const match of text.matchAll(/CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?\s+["`]?([A-Za-z0-9_.-]+)["`]?\s*\(([\s\S]*?)\);/giu)) {
+        const table = match[1];
+        if (!ledgerCovered) {
+          add({
+            type: 'database_table',
+            canonicalSourceIdentity: `${relativeSource}#${table}`,
+            sourcePointers: [pointer],
+            title: table,
+          });
+        }
+        for (const rawLine of match[2].split(/\r?\n/gu)) {
+          const line = rawLine.trim().replace(/,$/u, '');
+          const column = line.match(/^["`]?([A-Za-z_][A-Za-z0-9_]*)["`]?\s+/u)?.[1];
+          if (!column || /^(?:CHECK|CONSTRAINT|FOREIGN|PRIMARY|UNIQUE)$/iu.test(column)) continue;
+          add({
+            type: 'database_column',
+            canonicalSourceIdentity: `${relativeSource}#${table}.${column}`,
+            sourcePointers: [pointer],
+            title: `${table}.${column}`,
+          });
+        }
+      }
+      continue;
+    }
+
+    const sourceFile = ts.createSourceFile(pointer, text, ts.ScriptTarget.Latest, true, scriptKind(absolute));
+    const routeFromPage = relativeSource.match(/(?:^|\/)app\/(.*)\/page\.tsx$/u);
+    if (routeFromPage && !ledgerCovered) {
+      const route = `/${routeFromPage[1]}`
+        .replace(/\/(?:\([^/]+\))(?=\/|$)/gu, '')
+        .replace(/\[\.\.\.([^\]]+)\]/gu, ':$1*')
+        .replace(/\[([^\]]+)\]/gu, ':$1')
+        .replace(/\/+/gu, '/');
+      add({
+        type: 'ui_route',
+        canonicalSourceIdentity: `${relativeSource}#${route}`,
+        sourcePointers: [pointer],
+        sourceLine: 1,
+        title: route,
+      });
+    }
+    if (/(?:^|\/)pages\/[^/]+\.[jt]sx?$/iu.test(relativeSource) && !ledgerCovered) {
+      add({
+        type: 'ui_page',
+        canonicalSourceIdentity: relativeSource,
+        sourcePointers: [pointer],
+        sourceLine: 1,
+        title: relativeSource.split('/').at(-1),
+      });
+    }
+    if (/export|download/iu.test(relativeSource)) {
+      add({
+        type: 'export_flow',
+        canonicalSourceIdentity: `file:${relativeSource}`,
+        sourcePointers: [pointer],
+        sourceLine: 1,
+        title: relativeSource,
+      });
+    }
+    if (/import|upload/iu.test(relativeSource)) {
+      add({
+        type: 'import_flow',
+        canonicalSourceIdentity: `file:${relativeSource}`,
+        sourcePointers: [pointer],
+        sourceLine: 1,
+        title: relativeSource,
+      });
+    }
+    if (/worker|scheduler|queue|cron|background|job-runner/iu.test(relativeSource) && !testPattern.test(relativeSource)) {
+      if (!ledgerCovered) {
+        add({
+          type: 'background_process',
+          canonicalSourceIdentity: `file:${relativeSource}`,
+          sourcePointers: [pointer],
+          sourceLine: 1,
+          title: relativeSource,
+        });
+      }
+    }
+
+    function visit(node) {
+      if (ts.isCallExpression(node)) {
+        const expression = node.expression;
+        if (ts.isPropertyAccessExpression(expression)) {
+          const method = expression.name.text.toUpperCase();
+          const route = literal(node.arguments[0]);
+          if (!ledgerCovered && ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'].includes(method) && route?.startsWith('/')) {
+            add({
+              type: 'api_endpoint',
+              canonicalSourceIdentity: `${relativeSource}#${method} ${route}`,
+              sourcePointers: [pointer],
+              sourceLine: lineOf(sourceFile, node),
+              title: `${method} ${route}`,
+            });
+            if (/export|download/iu.test(route)) {
+              add({
+                type: 'export_flow',
+                canonicalSourceIdentity: `${relativeSource}#${method} ${route}`,
+                sourcePointers: [pointer],
+                sourceLine: lineOf(sourceFile, node),
+                title: `${method} ${route}`,
+              });
+            }
+            if (/import|upload/iu.test(route)) {
+              add({
+                type: 'import_flow',
+                canonicalSourceIdentity: `${relativeSource}#${method} ${route}`,
+                sourcePointers: [pointer],
+                sourceLine: lineOf(sourceFile, node),
+                title: `${method} ${route}`,
+              });
+            }
+            if (publicFlowPattern.test(route)) {
+              add({
+                type: 'public_flow',
+                canonicalSourceIdentity: `${relativeSource}#${method} ${route}`,
+                sourcePointers: [pointer],
+                sourceLine: lineOf(sourceFile, node),
+                title: `${method} ${route}`,
+              });
+            }
+          }
+        }
+        const callee = ts.isIdentifier(expression)
+          ? expression.text
+          : ts.isPropertyAccessExpression(expression)
+            ? expression.name.text
+            : '';
+        if (['pgTable', 'sqliteTable', 'mysqlTable'].includes(callee)) {
+          const table = literal(node.arguments[0]);
+          if (table) {
+            if (!ledgerCovered) {
+              add({
+                type: 'database_table',
+                canonicalSourceIdentity: `${relativeSource}#${table}`,
+                sourcePointers: [pointer],
+                sourceLine: lineOf(sourceFile, node),
+                title: table,
+              });
+            }
+            const columns = node.arguments[1];
+            if (columns && ts.isObjectLiteralExpression(columns)) {
+              for (const property of columns.properties) {
+                if (!ts.isPropertyAssignment(property) && !ts.isShorthandPropertyAssignment(property)) continue;
+                const column = property.name?.getText(sourceFile).replaceAll(/["']/gu, '');
+                if (!column) continue;
+                add({
+                  type: 'database_column',
+                  canonicalSourceIdentity: `${relativeSource}#${table}.${column}`,
+                  sourcePointers: [pointer],
+                  sourceLine: lineOf(sourceFile, property),
+                  title: `${table}.${column}`,
+                });
+              }
+            }
+          }
+        }
+        if (!ledgerCovered && ['setInterval', 'schedule', 'cron', 'enqueue', 'queueJob', 'addJob'].includes(callee)) {
+          add({
+            type: 'background_process',
+            canonicalSourceIdentity: `${relativeSource}#${callee}:${normalizedText(node.arguments[0], sourceFile)}`,
+            sourcePointers: [pointer],
+            sourceLine: lineOf(sourceFile, node),
+            title: `${callee} ${normalizedText(node.arguments[0], sourceFile, 80)}`.trim(),
+          });
+        }
+      }
+
+      if (!ledgerCovered && ts.isPropertyAccessExpression(node)
+        && ts.isPropertyAccessExpression(node.expression)
+        && node.expression.expression.getText(sourceFile) === 'process'
+        && node.expression.name.text === 'env') {
+        const name = node.name.text;
+        add({
+          type: 'integration',
+          canonicalSourceIdentity: `${relativeSource}#env:${name}`,
+          sourcePointers: [pointer],
+          sourceLine: lineOf(sourceFile, node),
+          title: name,
+        });
+      }
+      if (!ledgerCovered && ts.isElementAccessExpression(node)
+        && ts.isPropertyAccessExpression(node.expression)
+        && node.expression.expression.getText(sourceFile) === 'process'
+        && node.expression.name.text === 'env') {
+        const name = literal(node.argumentExpression);
+        if (name) {
+          add({
+            type: 'integration',
+            canonicalSourceIdentity: `${relativeSource}#env:${name}`,
+            sourcePointers: [pointer],
+            sourceLine: lineOf(sourceFile, node),
+            title: name,
+          });
+        }
+      }
+
+      if (!ledgerCovered && (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node))) {
+        const opening = ts.isJsxElement(node) ? node.openingElement : node;
+        const tag = opening.tagName.getText(sourceFile);
+        if (tag === 'Route' || tag.endsWith('.Route')) {
+          const route = attribute(opening, sourceFile, 'path');
+          if (route?.startsWith('/')) {
+            add({
+              type: 'ui_route',
+              canonicalSourceIdentity: `${relativeSource}#${route}`,
+              sourcePointers: [pointer],
+              sourceLine: lineOf(sourceFile, node),
+              title: route,
+            });
+            if (publicFlowPattern.test(route)) {
+              add({
+                type: 'public_flow',
+                canonicalSourceIdentity: `${relativeSource}#${route}`,
+                sourcePointers: [pointer],
+                sourceLine: lineOf(sourceFile, node),
+                title: route,
+              });
+            }
+          }
+        }
+      }
+
+      if ((ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node))
+        && !/(?:^|\/)components\/ui\//u.test(relativeSource)
+        && !testPattern.test(relativeSource)) {
+        const opening = ts.isJsxElement(node) ? node.openingElement : node;
+        const tag = opening.tagName.getText(sourceFile);
+        const onClick = attribute(opening, sourceFile, 'onClick');
+        const onSubmit = attribute(opening, sourceFile, 'onSubmit');
+        const href = attribute(opening, sourceFile, 'href') ?? attribute(opening, sourceFile, 'to');
+        const isAction = Boolean(onClick || onSubmit || href || ['button', 'Button', 'form', 'Form', 'a', 'Link'].includes(tag));
+        if (isAction) {
+          const event = onClick ? 'onClick' : onSubmit ? 'onSubmit' : href ? 'navigate' : tag.toLowerCase() === 'form' ? 'submit' : 'activate';
+          const handler = onClick ?? onSubmit ?? href ?? '';
+          const label = jsxLabel(node, sourceFile);
+          const base = `${relativeSource}#${tag}:${event}:${handler}:${label}`;
+          const occurrence = (duplicateActions.get(base) ?? 0) + 1;
+          duplicateActions.set(base, occurrence);
+          add({
+            type: 'component_action',
+            canonicalSourceIdentity: `${base}#${occurrence}`,
+            sourcePointers: [pointer],
+            sourceLine: lineOf(sourceFile, node),
+            title: label || href || `${tag} ${event}`,
+          });
+        }
+      }
+
+      if (ts.isFunctionDeclaration(node) && node.name && /export|download/iu.test(node.name.text)) {
+        add({
+          type: 'export_flow',
+          canonicalSourceIdentity: `${relativeSource}#function:${node.name.text}`,
+          sourcePointers: [pointer],
+          sourceLine: lineOf(sourceFile, node),
+          title: node.name.text,
+        });
+      }
+      if (ts.isFunctionDeclaration(node) && node.name && /import|upload/iu.test(node.name.text)) {
+        add({
+          type: 'import_flow',
+          canonicalSourceIdentity: `${relativeSource}#function:${node.name.text}`,
+          sourcePointers: [pointer],
+          sourceLine: lineOf(sourceFile, node),
+          title: node.name.text,
+        });
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(sourceFile);
+  }
+  return capabilities;
+}
+
+function specialCapabilities(definition, sourceRoot) {
+  const capabilities = [];
+  if (definition.slug === 'outcall') {
+    capabilities.push(makeCapability(definition.slug, {
+      type: 'source_recovery',
+      canonicalSourceIdentity: 'canonical-launchable-source-application',
+      sourcePointers: ['apps/modules/outcall/source/README.md'],
+      title: 'Recover the canonical OutCall source application',
+      state: 'BLOCKED',
+      blockerCode: 'SOURCE_RECOVERY_REQUIRED',
+      note: 'The current source boundary is one README and no owner repository or local/archive implementation was found.',
+    }));
+  }
+  if (definition.slug === 'tradeflowkit') {
+    capabilities.push(makeCapability(definition.slug, {
+      type: 'visual_contract',
+      canonicalSourceIdentity: 'brand-identity:orange-navy',
+      sourcePointers: [
+        'apps/modules/tradeflowkit/source/client/src/index.css',
+        'apps/modules/tradeflowkit/source/client/src/pages/auth-page.tsx',
+      ],
+      title: 'Orange and navy TradeFlowKit product identity',
+      state: 'ACTIVE_NATIVE',
+      blockerCode: null,
+      currentTargets: [
+        'apps/web/src/components/module-shells/TradeFlowKitShell.tsx',
+        'apps/web/src/components/module-shells/TradeFlowKitShell.module.css',
+        'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+      ],
+      automatedEvidence: [
+        'scripts/phase23/tradeflowkit-visual-contract.test.mjs',
+        'apps/web/e2e/tradeflowkit-phase23-visual.spec.ts',
+      ],
+      note: 'Phase 23 scopes the pinned source orange/navy light/dark tokens to the TradeFlowKit product shell, retains the OperatorOS header, removes the legacy green shell palette, and maps active deep routes plus desktop/tablet/mobile visual and accessibility contracts.',
+    }));
+  }
+  if (definition.slug === 'torqueshed') {
+    capabilities.push(makeCapability(definition.slug, {
+      type: 'mobile_product',
+      canonicalSourceIdentity: 'expo-ios-android-product',
+      sourcePointers: [
+        'apps/modules/torqueshed/source/artifacts/torqueshed-mobile/app.json',
+        'apps/modules/torqueshed/source/artifacts/torqueshed-mobile/src/app/(tabs)/_layout.tsx',
+      ],
+      title: 'Expo iOS and Android TorqueShed product',
+      state: 'BLOCKED',
+      blockerCode: 'NATIVE_MOBILE_PARITY_REQUIRED',
+      note: 'Web-only evidence does not prove the imported Expo iOS/Android workflows, navigation, SSO or assets.',
+    }));
+  }
+  if (definition.slug === 'faultlinelab') {
+    const caseRoot = join(sourceRoot, 'artifacts', 'faultline-lab', 'src', 'data', 'cases');
+    const caseById = new Map();
+    for (const file of walk(caseRoot).filter((path) => path.endsWith('.ts'))) {
+      const text = readFileSync(file, 'utf8');
+      for (const match of text.matchAll(/\bid:\s*['"](case-[^'"]+)['"]/gu)) {
+        if (!caseById.has(match[1])) caseById.set(match[1], repoPath(file));
+      }
+    }
+    for (const [caseId, pointer] of [...caseById].sort(([left], [right]) => left.localeCompare(right))) {
+      capabilities.push(makeCapability(definition.slug, {
+        type: 'playable_case',
+        canonicalSourceIdentity: caseId,
+        sourcePointers: [pointer],
+        title: caseId,
+        state: 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [
+          'apps/api/src/generated/faultlinelab-source-catalog.ts',
+          'apps/api/src/lib/faultlinelab-starter-content.ts',
+          'apps/api/src/routes/faultlinelab-routes.ts',
+          'apps/web/src/components/module-shells/FaultlineLabWorkspace.tsx',
+        ],
+        automatedEvidence: [
+          'scripts/faultlinelab/compile-source-cases.test.mjs',
+          'apps/api/test/faultlinelab-full-catalog.test.ts',
+          'apps/api/test/faultlinelab-domain.test.ts',
+          'apps/api/test/faultlinelab-workflow.test.ts',
+        ],
+        note: 'The source compiler discovers this authored case from allCases, validates or explicitly repairs it, and initializes it as a hash-keyed published immutable challenge version. The full-catalog test starts, acts, submits, scores, reloads, and restart-reloads every discovered case with zero exclusions.',
+      }));
+    }
+  }
+  return capabilities;
+}
+
+function applyCurrentRestorationMappings(definition, capabilities) {
+  if (definition.slug !== 'tradeflowkit') return capabilities;
+  const recurringOutcomeTitles = new Set([
+    '/jobs?status=scheduled',
+    'Recurring',
+    'jobs.isRecurring',
+    'jobs.recurringFrequency',
+    'jobs.recurringSeriesId',
+    'jobs.scheduledStart',
+    'jobs.scheduledEnd',
+  ]);
+  return capabilities.map((capability) => {
+    if (!recurringOutcomeTitles.has(capability.title)) return capability;
+    return {
+      ...capability,
+      state: 'ACTIVE_NATIVE',
+      blockerCode: null,
+      currentTargets: [
+        'apps/api/src/lib/shared-schedules-exports.ts',
+        'apps/api/src/routes/tradeflowkit-recurring-routes.ts',
+        'apps/api/src/schema.ts',
+        'apps/web/src/components/module-shells/TradeFlowKitWorkManagement.tsx',
+      ],
+      automatedEvidence: [
+        'apps/api/test/tradeflowkit-recurring-jobs.test.ts',
+      ],
+      note: 'Phase 24 restores recurring job creation through the typed shared scheduler. The TradeFlowKit adapter preserves due times, recurrence, series identity, scheduled start/end, tenant scope, audit, idempotent replay, optimistic updates, and an accessible persisted management surface.',
+    };
+  });
+}
+
+function readWaivers() {
+  const failures = [];
+  let data;
+  try {
+    data = JSON.parse(readFileSync(waiversPath, 'utf8'));
+  } catch (error) {
+    return { data: null, failures: [`OWNER_WAIVERS.yml must be strict JSON-compatible YAML: ${error.message}`] };
+  }
+  const topLevel = Object.keys(data).sort();
+  const expectedTopLevel = ['$schema', 'schemaVersion', 'waivers'].sort();
+  if (JSON.stringify(topLevel) !== JSON.stringify(expectedTopLevel)) failures.push('OWNER_WAIVERS.yml has unknown or missing top-level fields');
+  if (data.schemaVersion !== 1) failures.push('OWNER_WAIVERS.yml schemaVersion must equal 1');
+  if (!Array.isArray(data.waivers)) failures.push('OWNER_WAIVERS.yml waivers must be an array');
+  const ids = new Set();
+  const required = [
+    'waiverId', 'capabilityIds', 'lostUserOutcomes', 'rationale', 'securityConsequences',
+    'architectureConsequences', 'approvedBy', 'approvedAt', 'expiresAt', 'approvalEvidence',
+  ].sort();
+  for (const waiver of data.waivers ?? []) {
+    const fields = Object.keys(waiver).sort();
+    if (JSON.stringify(fields) !== JSON.stringify(required)) failures.push(`waiver ${waiver.waiverId ?? '<missing>'} has unknown or missing fields`);
+    if (!/^OW-[0-9]{4}-[0-9]{3}$/u.test(waiver.waiverId ?? '')) failures.push(`invalid waiverId ${waiver.waiverId ?? '<missing>'}`);
+    if (ids.has(waiver.waiverId)) failures.push(`duplicate waiverId ${waiver.waiverId}`);
+    ids.add(waiver.waiverId);
+    if (!Array.isArray(waiver.capabilityIds) || waiver.capabilityIds.length === 0) failures.push(`${waiver.waiverId}: capabilityIds must be non-empty`);
+    if (Array.isArray(waiver.capabilityIds) && new Set(waiver.capabilityIds).size !== waiver.capabilityIds.length) failures.push(`${waiver.waiverId}: capabilityIds must be unique`);
+    for (const field of ['lostUserOutcomes', 'rationale', 'securityConsequences', 'architectureConsequences', 'approvedBy', 'approvedAt', 'approvalEvidence']) {
+      if (typeof waiver[field] !== 'string' || waiver[field].trim().length === 0) failures.push(`${waiver.waiverId}: ${field} is required`);
+    }
+    if (typeof waiver.approvedAt === 'string' && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.test(waiver.approvedAt) || Number.isNaN(Date.parse(waiver.approvedAt)))) failures.push(`${waiver.waiverId}: approvedAt must be an ISO date-time`);
+    if (waiver.expiresAt !== null && (typeof waiver.expiresAt !== 'string' || waiver.expiresAt.trim().length === 0)) failures.push(`${waiver.waiverId}: expiresAt must be null or an ISO date string`);
+    if (typeof waiver.expiresAt === 'string' && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.test(waiver.expiresAt) || Number.isNaN(Date.parse(waiver.expiresAt)))) failures.push(`${waiver.waiverId}: expiresAt must be an ISO date-time`);
+  }
+  return { data, failures };
+}
+
+function validateModule(moduleDocument, waivers) {
+  const failures = [];
+  const ids = new Set();
+  const waiverByCapability = new Map();
+  for (const waiver of waivers.waivers ?? []) {
+    for (const capabilityId of waiver.capabilityIds) {
+      if (waiverByCapability.has(capabilityId)) failures.push(`${capabilityId}: multiple owner waivers`);
+      waiverByCapability.set(capabilityId, waiver.waiverId);
+    }
+  }
+  for (const capability of moduleDocument.capabilities) {
+    if (ids.has(capability.capabilityId)) failures.push(`${capability.capabilityId}: duplicate capability ID`);
+    ids.add(capability.capabilityId);
+    if (!allowedStates.has(capability.state)) failures.push(`${capability.capabilityId}: invalid state ${capability.state}`);
+    if (!capability.canonicalSourceIdentity || !capability.type || !capability.title) failures.push(`${capability.capabilityId}: incomplete source identity`);
+    if (capability.sourcePointers.length === 0) failures.push(`${capability.capabilityId}: missing source pointer`);
+    for (const pointer of capability.sourcePointers) {
+      if (!existsSync(join(root, pointer))) failures.push(`${capability.capabilityId}: missing source pointer ${pointer}`);
+    }
+    for (const pointer of capability.missingSourcePointers) {
+      if (existsSync(join(root, pointer))) failures.push(`${capability.capabilityId}: stale missing-source annotation ${pointer}`);
+    }
+    for (const pointer of capability.currentTargets) {
+      if (!existsSync(join(root, pointer))) failures.push(`${capability.capabilityId}: missing current target ${pointer}`);
+    }
+    for (const pointer of capability.automatedEvidence) {
+      if (!existsSync(join(root, pointer))) failures.push(`${capability.capabilityId}: missing automated evidence ${pointer}`);
+    }
+    if (capability.state === 'ACTIVE_NATIVE' || capability.state === 'ACTIVE_SHARED_EQUIVALENT') {
+      if (capability.currentTargets.length === 0) failures.push(`${capability.capabilityId}: active capability lacks a current target`);
+      if (capability.automatedEvidence.length === 0) failures.push(`${capability.capabilityId}: active capability lacks automated evidence`);
+    }
+    if (capability.state === 'BLOCKED' && !capability.blockerCode) failures.push(`${capability.capabilityId}: blocked capability lacks blockerCode`);
+    if (capability.state === 'OWNER_WAIVED') {
+      const waiverId = waiverByCapability.get(capability.capabilityId);
+      if (!waiverId || waiverId !== capability.ownerWaiverId) failures.push(`${capability.capabilityId}: OWNER_WAIVED lacks an exact approved waiver`);
+    } else if (capability.ownerWaiverId) {
+      failures.push(`${capability.capabilityId}: non-waived capability carries ownerWaiverId`);
+    }
+  }
+  return failures;
+}
+
+function stableDocument(document) {
+  return `${JSON.stringify(document, null, 2)}\n`;
+}
+
+function compareOrWrite(path, document, failures) {
+  const expected = stableDocument(document);
+  if (write) {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, expected, 'utf8');
+    return;
+  }
+  if (!existsSync(path)) {
+    failures.push(`missing generated artifact ${repoPath(path)}`);
+    return;
+  }
+  const current = readFileSync(path, 'utf8').replaceAll('\r\n', '\n');
+  if (current !== expected) failures.push(`stale generated artifact ${repoPath(path)}; run corepack pnpm parity:write`);
+}
+
+const waiverResult = readWaivers();
+const failures = [...waiverResult.failures];
+const waiverData = waiverResult.data ?? { waivers: [] };
+const waiverByCapability = new Map();
+for (const waiver of waiverData.waivers ?? []) {
+  for (const capabilityId of waiver.capabilityIds) waiverByCapability.set(capabilityId, waiver);
+}
+const moduleDocuments = [];
+
+for (const definition of sourceDefinitions) {
+  const sourceRoot = join(root, 'apps', 'modules', definition.slug, 'source');
+  if (!existsSync(sourceRoot)) {
+    failures.push(`${definition.slug}: missing source directory`);
+    continue;
+  }
+  const capabilities = applyCurrentRestorationMappings(definition, [
+    ...legacyCapabilities(definition),
+    ...discoverRawCapabilities(definition, sourceRoot),
+    ...specialCapabilities(definition, sourceRoot),
+  ]).sort((left, right) => left.capabilityId.localeCompare(right.capabilityId));
+  const uniqueCapabilities = [...new Map(capabilities.map((capability) => [capability.capabilityId, capability])).values()]
+    .map((capability) => {
+      const waiver = waiverByCapability.get(capability.capabilityId);
+      if (!waiver) return capability;
+      return {
+        ...capability,
+        state: 'OWNER_WAIVED',
+        blockerCode: null,
+        ownerWaiverId: waiver.waiverId,
+        note: [capability.note, `Explicit owner waiver: ${waiver.waiverId}.`].filter(Boolean).join(' '),
+      };
+    });
+  const fingerprint = sourceFingerprint(sourceRoot);
+  const moduleDocument = {
+    schemaVersion: 1,
+    generatedBy: generatorPath,
+    moduleSlug: definition.slug,
+    moduleName: definition.name,
+    sourceRoot: `apps/modules/${definition.slug}/source`,
+    provenance: definition.provenance,
+    sourceFingerprint: fingerprint,
+    stateCounts: stateCounts(uniqueCapabilities),
+    typeCounts: typeCounts(uniqueCapabilities),
+    capabilityDigestSha256: sha256(JSON.stringify(uniqueCapabilities)),
+    capabilities: uniqueCapabilities,
+  };
+  failures.push(...validateModule(moduleDocument, waiverData));
+  moduleDocuments.push(moduleDocument);
+  compareOrWrite(join(moduleOutputRoot, `${definition.slug}.json`), moduleDocument, failures);
+}
+
+const allCapabilities = moduleDocuments.flatMap((module) => module.capabilities);
+const manifest = {
+  schemaVersion: 1,
+  generatedBy: generatorPath,
+  stateModel: [...allowedStates],
+  blockedReviewRule: 'retired_security, retired_product_boundary, planned and undocumented exclusions map to BLOCKED unless an exact owner waiver exists; BLOCKED_REVIEW is used unless a stricter evidence/provenance blocker applies',
+  missingSourcePointerRule: 'a legacy-ledger implementation path absent from the pinned imported source tree is preserved in missingSourcePointers and forced to BLOCKED plus blockerCode=SOURCE_IMPLEMENTATION_POINTER_MISSING',
+  ownerWaivers: {
+    path: 'docs/parity/OWNER_WAIVERS.yml',
+    count: waiverData.waivers?.length ?? 0,
+    implicitWaivers: 0,
+  },
+  totals: {
+    modules: moduleDocuments.length,
+    capabilities: allCapabilities.length,
+    stateCounts: stateCounts(allCapabilities),
+    typeCounts: typeCounts(allCapabilities),
+    unclassified: allCapabilities.filter((capability) => !allowedStates.has(capability.state)).length,
+  },
+  modules: moduleDocuments.map((module) => ({
+    moduleSlug: module.moduleSlug,
+    moduleName: module.moduleName,
+    ledger: `docs/parity/modules/${module.moduleSlug}.json`,
+    sourceRoot: module.sourceRoot,
+    provenance: module.provenance,
+    sourceFingerprint: module.sourceFingerprint,
+    capabilityDigestSha256: module.capabilityDigestSha256,
+    stateCounts: module.stateCounts,
+    typeCounts: module.typeCounts,
+  })),
+};
+
+for (const waiver of waiverData.waivers ?? []) {
+  for (const capabilityId of waiver.capabilityIds) {
+    if (!allCapabilities.some((capability) => capability.capabilityId === capabilityId)) failures.push(`${waiver.waiverId}: unknown capability ${capabilityId}`);
+  }
+}
+compareOrWrite(sourceManifestPath, manifest, failures);
+
+const result = {
+  mode: write ? 'write' : 'check',
+  manifest: repoPath(sourceManifestPath),
+  modules: manifest.totals.modules,
+  capabilities: manifest.totals.capabilities,
+  stateCounts: manifest.totals.stateCounts,
+  unclassified: manifest.totals.unclassified,
+  ownerWaivers: manifest.ownerWaivers.count,
+  failures: failures.length,
+};
+process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+if (failures.length > 0) {
+  process.stderr.write(`${failures.join('\n')}\n`);
+  process.exitCode = 1;
+}

@@ -1,0 +1,2437 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/phase20-product-truth.mjs",
+  "moduleSlug": "torqueshed",
+  "moduleName": "TorqueShed",
+  "sourceRoot": "apps/modules/torqueshed/source",
+  "provenance": {
+    "selectedKind": "imported_snapshot",
+    "remote": "https://github.com/shotgunsensei/TorqueShed-Codex.git",
+    "commit": "c33ade5cef525d62d371a63946b814c58a72a4a7",
+    "ref": "historical snapshot",
+    "remoteVerification": "Selected snapshot remains resolvable but remote main advanced.",
+    "recoveryCandidates": [
+      {
+        "commit": "508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75",
+        "ref": "main",
+        "disposition": "BLOCKED_REVIEW",
+        "note": "Three commits and 34 files beyond the imported snapshot; adds product API/schema, web work, billing and tests."
+      },
+      {
+        "commit": "68da4548f6650cfb11eb19ee133643a110ccf084",
+        "path": "C:/Dev/TorqueShed-Codex",
+        "disposition": "retained_for_evidence",
+        "note": "Dirty local checkout with extensive uncommitted product, security and mobile work; not deterministic provenance."
+      },
+      {
+        "commit": "a81ffcfc81cc87008e2fb531a99d55cbcfcfa9cc",
+        "path": "C:/Dev/TorqueShed",
+        "disposition": "BLOCKED_REVIEW",
+        "note": "Separate clean web-product repository requiring an owner source-authority decision."
+      }
+    ]
+  },
+  "sourceFingerprint": {
+    "algorithm": "sha256(path NUL uint64be(size) content)",
+    "treeSha256": "babeb43df2beb6200c4afc68383ca51fdfbabdfb0d6c250dbb54959ba289e366",
+    "fileCount": 149,
+    "totalBytes": 7946844
+  },
+  "stateCounts": {
+    "ACTIVE_NATIVE": 0,
+    "ACTIVE_SHARED_EQUIVALENT": 0,
+    "OWNER_WAIVED": 0,
+    "BLOCKED": 125
+  },
+  "typeCounts": {
+    "api_endpoint": 8,
+    "asset": 17,
+    "component_action": 52,
+    "database_column": 17,
+    "database_table": 2,
+    "integration": 21,
+    "mobile_product": 1,
+    "mobile_pwa_surface": 3,
+    "public_flow": 3,
+    "ui_page": 1
+  },
+  "capabilityDigestSha256": "4caf9a85f4d26d9237d57b4a61a6499a5b7e37cf42eacf7e027f3c0b216683d8",
+  "capabilities": [
+    {
+      "capabilityId": "torqueshed.api_endpoint.31c3c86a5e338702",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app.ts#GET /.well-known/apple-app-site-association",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 71,
+      "title": "GET /.well-known/apple-app-site-association",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.api_endpoint.50e42d82ad348f8d",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/health.ts#GET /healthz",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/health.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 6,
+      "title": "GET /healthz",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.api_endpoint.8133612133650885",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app.ts#GET /{*path}",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 124,
+      "title": "GET /{*path}",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.api_endpoint.b266e52d17f83113",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app.ts#GET /sso",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 69,
+      "title": "GET /sso",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.api_endpoint.c0638deb1cc3456a",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app.ts#GET /.well-known/assetlinks.json",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 92,
+      "title": "GET /.well-known/assetlinks.json",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.api_endpoint.c2e9a41e84939fb2",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#GET /auth/me",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 407,
+      "title": "GET /auth/me",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.api_endpoint.d9ab9b43f7a5ab2b",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#POST /auth/operatoros",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 439,
+      "title": "POST /auth/operatoros",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.api_endpoint.ef147fad5b5b37c8",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#POST /auth/logout",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 418,
+      "title": "POST /auth/logout",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.asset.178dcefa0457e416",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/assets/hero.png",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/assets/hero.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed-mobile/assets/hero.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.29b86ab97b50692b",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed/public/marketplace/high-steer-source.jpg",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/public/marketplace/high-steer-source.jpg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed/public/marketplace/high-steer-source.jpg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.4f784c46182b5e4f",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/assets/timing.jpg",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/assets/timing.jpg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed-mobile/assets/timing.jpg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.541692f20368d5f9",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed/public/torqueshed-logo.png",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/public/torqueshed-logo.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed/public/torqueshed-logo.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.55a20330fe378b0d",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed/public/og.png",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/public/og.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed/public/og.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.6cac4504a51b6672",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed/public/marketplace/ls-engine-mounts-source.jpg",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/public/marketplace/ls-engine-mounts-source.jpg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed/public/marketplace/ls-engine-mounts-source.jpg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.6fef7a19f904cb70",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/assets/logo.png",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/assets/logo.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed-mobile/assets/logo.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.7b2ec1de2e8d8d51",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed/public/marketplace/efi-controller-source.jpg",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/public/marketplace/efi-controller-source.jpg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed/public/marketplace/efi-controller-source.jpg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.90e2ef0c704cce69",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed/public/torqueshed-feature.png",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/public/torqueshed-feature.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed/public/torqueshed-feature.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.9938f3e0f87a2340",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/assets/throttle.jpg",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/assets/throttle.jpg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed-mobile/assets/throttle.jpg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.a6bf63a124cdab05",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/assets/efi.jpg",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/assets/efi.jpg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed-mobile/assets/efi.jpg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.a72a359fe37d951b",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/assets/icon.png",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/assets/icon.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed-mobile/assets/icon.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.c120714e9205630f",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed/public/marketplace/gauge-pod-source.jpg",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/public/marketplace/gauge-pod-source.jpg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed/public/marketplace/gauge-pod-source.jpg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.dcb0970ecc7f7bb8",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/assets/splash.png",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/assets/splash.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed-mobile/assets/splash.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.eb514902080ebc91",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed/public/favicon.svg",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/public/favicon.svg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed/public/favicon.svg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.fbdf07bc3e8cb17f",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed/public/opengraph.jpg",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/public/opengraph.jpg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed/public/opengraph.jpg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.asset.ff95bc5f9c7c9599",
+      "moduleSlug": "torqueshed",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/assets/engine.jpg",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/assets/engine.jpg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed-mobile/assets/engine.jpg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.0f5e195cb5287eb2",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => requireAccount(() => setNotice(\"Collection added to your reference shelf.\")):Browse collection →#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 383,
+      "title": "Browse collection →",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.12c25b017b8dc38d",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => navigate(\"community\"):TorqueShed home#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 223,
+      "title": "TorqueShed home",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.2798153f86bc96d4",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/src/components/Screens.tsx#Button:activate::result ? \"REFRESH TEST PLAN\" : \"BUILD MY TEST PLAN\"#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/src/components/Screens.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 61,
+      "title": "result ? \"REFRESH TEST PLAN\" : \"BUILD MY TEST PLAN\"",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.2a6fabe35c0f316e",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setShowComposer(false):Close#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 413,
+      "title": "Close",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.32da499e7c22c197",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setNotice(\"Diagnostic saved to your 1994 Civic build timeline.\"):Save to build history#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 370,
+      "title": "Save to build history",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.33bb47b3e6043267",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setShowListing(false):Close#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 417,
+      "title": "Close",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.34cb51722b14bf0e",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => navigate(\"garage\"):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 244,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.3ace90187f119fc4",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:analyze:#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 358,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.407e7fb626b3df43",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/src/components/Screens.tsx#Button:activate::OPEN BUILD JOURNAL#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/src/components/Screens.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 67,
+      "title": "OPEN BUILD JOURNAL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.41db20350fe01462",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => requireAccount(() => setNotice(\"Saved to your garage reference shelf.\")):Save#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 313,
+      "title": "Save",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.4e0221c84374e3c1",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/src/components/Screens.tsx#Button:activate::CONTINUE WITH OPERATOROS#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/src/components/Screens.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 76,
+      "title": "CONTINUE WITH OPERATOROS",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.525586c90ebf14e9",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:activate::`More options for ${post.title}`#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 305,
+      "title": "`More options for ${post.title}`",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.560f20938119fff7",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setFeedFilter(filter):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 288,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.57849525007aff39",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#form:onSubmit:submitChat:#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 336,
+      "title": "form onSubmit",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.57f249811298ac5a",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => requireAccount(() => setShowComposer(true)):New post#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 284,
+      "title": "New post",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.6d77507086f66188",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => requireAccount(() => setShowListing(true)):List an item#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 390,
+      "title": "List an item",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.70955bac16556fd6",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => void onSignOut():Sign out#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 399,
+      "title": "Sign out",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.7f4e0c8736cbc053",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setNotice(\"Checkout is awaiting the production payment provider connection.\"):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 415,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.81bd939b77dd5ce6",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/src/components/Screens.tsx#Button:activate::user ? \"POST YOUR BUILD\" : \"CONTINUE WITH OPERATOROS\"#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/src/components/Screens.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 40,
+      "title": "user ? \"POST YOUR BUILD\" : \"CONTINUE WITH OPERATOROS\"",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.81f4f827ed06afcb",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setShowJoin(false):Close#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 411,
+      "title": "Close",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.8288c8898edc65b8",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:activate::Send message#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 336,
+      "title": "Send message",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.8dfe0682e7f04c3f",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => requireAccount(() => setShowComposer(true)):Post your build#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 272,
+      "title": "Post your build",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.8ed6a99a85149142",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => requireAccount(() => setShowTokens(true)):available#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 353,
+      "title": "available",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.92f90bcf2f9291de",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/src/components/Screens.tsx#Button:activate::START A DIAGNOSIS#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/src/components/Screens.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 46,
+      "title": "START A DIAGNOSIS",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.93eb7971074dc94e",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => requireAccount(() => setShowTokens(true)):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 239,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.9617022bb1a20803",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setNotice(\"Checkout is awaiting the production payment provider connection.\"):#2",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 415,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.990e236ad557b501",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => navigate(id):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 233,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.997a1a9dbd82cc62",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setNotice(\"Opening the Ram service and diagnostic history.\"):Open vehicle →#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 400,
+      "title": "Open vehicle →",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.9b30b2c77e0d9a17",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => navigate(\"garage\"):View garage#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 259,
+      "title": "View garage",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.9d8963ebb156ffdd",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#form:onSubmit:publishPost:#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 413,
+      "title": "form onSubmit",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.9fa28050e2262db2",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setNotice(\"Protection terms opened for review. Final processor and payout timing require Stripe Connect configuration.\"):How it works →#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 391,
+      "title": "How it works →",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.a0ba1b4b4bd71ebd",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => requireAccount(() => setNotice(\"Profile editor ready for your details, tools, specialties, and location privacy settings.\")):Edit profile#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 399,
+      "title": "Edit profile",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.a5a79afafd4fe6a3",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => requireAccount(() => setNotice(\"Discussion opened. Replies will be persisted when the production database is connected.\")):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 312,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.b41c863947ec1318",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:activate::Save listing draft#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 417,
+      "title": "Save listing draft",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.b5fe4fcab29a2db3",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => requireAccount(() => setNotice(`${item.title} added to your marketplace watchlist.`)):View listing#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 393,
+      "title": "View listing",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.b8205f793c91a54c",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setNotice(\"\"):Dismiss#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 419,
+      "title": "Dismiss",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.bd522bdd5b4218f0",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setMarketFilter(filter):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 392,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.c1f12abb6debeb59",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => navigate(id):#2",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 408,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.ca4d5a9728f2c01c",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:activate::#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 341,
+      "title": "button activate",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.cb520a293567a797",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => toggleLike(post.id):`Like ${post.title}`#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 311,
+      "title": "`Like ${post.title}`",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.d0fa9fdb6be5ac5d",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:activate::Publish build entry#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 413,
+      "title": "Publish build entry",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.d2400eaf79fcff87",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => navigate(\"diagnose\"):Start a diagnosis#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 326,
+      "title": "Start a diagnosis",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.d95c391efa11a02b",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => navigate(\"diagnose\"):Try Torque Assist#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 273,
+      "title": "Try Torque Assist",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.dd8838526a416b83",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#form:onSubmit:publishListing:#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 417,
+      "title": "form onSubmit",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.de72e6ebd731caae",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#a:navigate:operatorOsLoginUrl:Continue with OperatorOS#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 411,
+      "title": "Continue with OperatorOS",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.df9d3847c9bda5e5",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setShowJoin(true):Sign in#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 249,
+      "title": "Sign in",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.efa884154eaba9fc",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setNotice(\"Opening the complete Civic build timeline.\"):Open build →#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 400,
+      "title": "Open build →",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.f0d5d30c4f21bd88",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setShowTokens(false):Close#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 415,
+      "title": "Close",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.f1b6a83b2e8b9578",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setNotice(`Opening ${post.author}'s complete build journal.`):Open build journal →#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 382,
+      "title": "Open build journal →",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.f39f716a4830eb7d",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => requireAccount(() => setShowComposer(true)):Start a build journal#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 380,
+      "title": "Start a build journal",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.f4487d19e02d569b",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => setNotice(\"Checkout is awaiting the production payment provider connection.\"):#3",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 415,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.component_action.f529e25fbf19954c",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app.tsx#button:onClick:() => requireAccount(() => setNotice(\"Vehicle setup opened. VIN decoding will remain optional for privacy.\")):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 400,
+      "title": "button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.08cba5362d3c0d08",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_sessions.tokenHash",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 63,
+      "title": "torqueshed_sessions.tokenHash",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.1b8c0252f82a6514",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_users.tenantName",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 42,
+      "title": "torqueshed_users.tenantName",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.287acd1a3ba7a8fd",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_sessions.userAgent",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 74,
+      "title": "torqueshed_sessions.userAgent",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.39264dbeb76c1ba4",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_users.tenantSlug",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 41,
+      "title": "torqueshed_users.tenantSlug",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.4080abb8e4bfa0ca",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_users.platformRole",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 39,
+      "title": "torqueshed_users.platformRole",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.59612613bf3ae791",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_users.updatedAt",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 47,
+      "title": "torqueshed_users.updatedAt",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.5c14cc3f991b63f0",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_users.id",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 35,
+      "title": "torqueshed_users.id",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.5f2d3978e111c5f2",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_users.createdAt",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 44,
+      "title": "torqueshed_users.createdAt",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.668279bd6af8bddf",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_sessions.lastSeenAt",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 71,
+      "title": "torqueshed_sessions.lastSeenAt",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.789f1b4a82195273",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_sessions.createdAt",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 67,
+      "title": "torqueshed_sessions.createdAt",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.7c063d7aeeb5183f",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_sessions.expiresAt",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 70,
+      "title": "torqueshed_sessions.expiresAt",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.a212c3e9b8b01a9b",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_users.email",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 37,
+      "title": "torqueshed_users.email",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.b0ed9f65a4dd400e",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_users.operatorOsUserId",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 36,
+      "title": "torqueshed_users.operatorOsUserId",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.c0b5c5cbeec56258",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_users.tenantRole",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 43,
+      "title": "torqueshed_users.tenantRole",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.ed63c89bf8c8ffac",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_users.tenantId",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 40,
+      "title": "torqueshed_users.tenantId",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.f87452a77ce640b7",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_sessions.userId",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 64,
+      "title": "torqueshed_sessions.userId",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_column.fb0cf7bd48d55f42",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_users.displayName",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 38,
+      "title": "torqueshed_users.displayName",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_table.a20dc7e2edb9a7ea",
+      "moduleSlug": "torqueshed",
+      "type": "database_table",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_users",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 32,
+      "title": "torqueshed_users",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.database_table.b302843becaaa936",
+      "moduleSlug": "torqueshed",
+      "type": "database_table",
+      "canonicalSourceIdentity": "lib/db/src/schema/index.ts#torqueshed_sessions",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 60,
+      "title": "torqueshed_sessions",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.0fc6b18062142d93",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app.ts#env:ANDROID_APP_SHA256_CERT_FINGERPRINT",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 93,
+      "title": "ANDROID_APP_SHA256_CERT_FINGERPRINT",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.32135b720bbfbd5a",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#env:NODE_ENV",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 113,
+      "title": "NODE_ENV",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.33e8d80df56089fc",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#env:OPERATOROS_AUTH_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 96,
+      "title": "OPERATOROS_AUTH_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.34c5c173912ad436",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/torqueshed/vite.config.ts#env:NODE_ENV",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/vite.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 35,
+      "title": "NODE_ENV",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.39440ea4eb856fe3",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app.ts#env:IOS_APP_TEAM_ID",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 72,
+      "title": "IOS_APP_TEAM_ID",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.3959c98073389c8e",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#env:TORQUESHED_PUBLIC_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 102,
+      "title": "TORQUESHED_PUBLIC_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.3ffaa24b670057fb",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/torqueshed/vite.config.ts#env:BASE_PATH",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/vite.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 21,
+      "title": "BASE_PATH",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.413e4a2eef03407b",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "lib/db/src/index.ts#env:DATABASE_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 7,
+      "title": "DATABASE_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.4b0a8caf3e9f66a7",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/index.ts#env:PORT",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 4,
+      "title": "PORT",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.783d277c0aa22245",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/lib/logger.ts#env:LOG_LEVEL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/lib/logger.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 6,
+      "title": "LOG_LEVEL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.b4252294aebf1b58",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/src/lib/theme.ts#env:EXPO_PUBLIC_TORQUESHED_API_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/src/lib/theme.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 13,
+      "title": "EXPO_PUBLIC_TORQUESHED_API_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.bbbb5bb4342dfb9a",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#env:OPERATOROS_API_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 84,
+      "title": "OPERATOROS_API_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.bd6c38f1e77c66c3",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app.ts#env:CORS_ALLOWED_ORIGINS",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 34,
+      "title": "CORS_ALLOWED_ORIGINS",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.c24d17839c03589c",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#env:OPERATOROS_APP_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 90,
+      "title": "OPERATOROS_APP_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.c73a30cbd2dc1821",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/lib/logger.ts#env:NODE_ENV",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/lib/logger.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 3,
+      "title": "NODE_ENV",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.d2469b96bebbc05b",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/torqueshed/vite.config.ts#env:PORT",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/vite.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 7,
+      "title": "PORT",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.d7927455e69ae38a",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/src/lib/theme.ts#env:EXPO_PUBLIC_OPERATOROS_AUTH_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/src/lib/theme.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 14,
+      "title": "EXPO_PUBLIC_OPERATOROS_AUTH_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.df8d65df1f10fe44",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app.ts#env:NODE_ENV",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 13,
+      "title": "NODE_ENV",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.e820f0bdf809c876",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "lib/db/drizzle.config.ts#env:DATABASE_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/drizzle.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 4,
+      "title": "DATABASE_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.f287426059ffc421",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/src/lib/theme.ts#env:EXPO_PUBLIC_OPERATOROS_APP_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/src/lib/theme.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 15,
+      "title": "EXPO_PUBLIC_OPERATOROS_APP_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.integration.fbbb8ead9d3adf5e",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/torqueshed/vite.config.ts#env:REPL_ID",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/vite.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 36,
+      "title": "REPL_ID",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.mobile_product.687d0ed6e8a2c237",
+      "moduleSlug": "torqueshed",
+      "type": "mobile_product",
+      "canonicalSourceIdentity": "expo-ios-android-product",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/app.json",
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/src/app/(tabs)/_layout.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "Expo iOS and Android TorqueShed product",
+      "state": "BLOCKED",
+      "blockerCode": "NATIVE_MOBILE_PARITY_REQUIRED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Web-only evidence does not prove the imported Expo iOS/Android workflows, navigation, SSO or assets."
+    },
+    {
+      "capabilityId": "torqueshed.mobile_pwa_surface.6cd0bee223cf085a",
+      "moduleSlug": "torqueshed",
+      "type": "mobile_pwa_surface",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/eas.json",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/eas.json"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed-mobile/eas.json",
+      "state": "BLOCKED",
+      "blockerCode": "MOBILE_OR_PWA_PARITY_UNPROVEN",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.mobile_pwa_surface.9b41818af821ae58",
+      "moduleSlug": "torqueshed",
+      "type": "mobile_pwa_surface",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/app.json",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/app.json"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed-mobile/app.json",
+      "state": "BLOCKED",
+      "blockerCode": "MOBILE_OR_PWA_PARITY_UNPROVEN",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.mobile_pwa_surface.cd1482436f5a5d97",
+      "moduleSlug": "torqueshed",
+      "type": "mobile_pwa_surface",
+      "canonicalSourceIdentity": "artifacts/torqueshed-mobile/expo-env.d.ts",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed-mobile/expo-env.d.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/torqueshed-mobile/expo-env.d.ts",
+      "state": "BLOCKED",
+      "blockerCode": "MOBILE_OR_PWA_PARITY_UNPROVEN",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.public_flow.3309a72ff05480c3",
+      "moduleSlug": "torqueshed",
+      "type": "public_flow",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#GET /auth/me",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 407,
+      "title": "GET /auth/me",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.public_flow.49cd3dbb6a09c5e8",
+      "moduleSlug": "torqueshed",
+      "type": "public_flow",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#POST /auth/operatoros",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 439,
+      "title": "POST /auth/operatoros",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.public_flow.9d4ffdeaf5423e1f",
+      "moduleSlug": "torqueshed",
+      "type": "public_flow",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth.ts#POST /auth/logout",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 418,
+      "title": "POST /auth/logout",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "torqueshed.ui_page.4e878c3c34aff724",
+      "moduleSlug": "torqueshed",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/pages/not-found.tsx",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/pages/not-found.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "not-found.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    }
+  ]
+}

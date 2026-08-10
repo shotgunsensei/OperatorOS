@@ -162,7 +162,7 @@ test('soft-deleted attachments purge private blobs only after retention expires'
   assert.equal(state.rows[0]?.attachment_id, null);
 });
 
-test('attachment, scan job, outbox, usage, and activity survive independent queue cycles', async () => {
+test('P22-ADAPTER-ATTACHMENT-001 / P22-ADAPTER-USAGE-001: attachment, scan job, outbox, usage, and activity survive independent queue cycles', async () => {
   const content = Buffer.from('phase three attachment proof', 'utf8');
   const created = await db.transaction(async tx => {
     const attachment = await createAttachment({

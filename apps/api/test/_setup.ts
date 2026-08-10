@@ -91,6 +91,8 @@ export async function ensureSchemaReady() {
   await ensureBrandForgeOsTables();
   const { ensureSharedServiceTables } = await import('../src/lib/shared-services-db-init.js');
   await ensureSharedServiceTables();
+  const { ensureSharedPlatformTables } = await import('../src/lib/shared-platform-db-init.js');
+  await ensureSharedPlatformTables();
   const { ensureOutCallTables, ensureOutCallProductTables } = await import('../src/lib/outcall-db-init.js');
   await ensureOutCallTables();
   await ensureOutCallProductTables();
@@ -187,6 +189,20 @@ export async function cleanupUser(userId: string) {
       // Shared-service tables deliberately use restrictive foreign keys so
       // tests exercise the same deletion ordering required by production
       // retention workflows. Remove tenant-scoped leaves before the tenant.
+      try { await db.execute(sql`DELETE FROM shared_download_grants WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_delivery_attempts WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_webhook_deliveries WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_webhook_endpoints WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_api_tokens WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_service_identities WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_feature_flags WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_search_documents WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_legacy_references WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_notification_suppressions WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_provider_configs WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_secret_references WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_schedules WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_exports WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM shared_notifications WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM shared_outbox_messages WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM shared_jobs WHERE tenant_id = ${t.id}`); } catch {}

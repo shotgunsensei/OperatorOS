@@ -1,0 +1,3188 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/phase22-shared-equivalent-contract.mjs",
+  "sourceOfTruth": "docs/parity/modules/*.json ACTIVE_SHARED_EQUIVALENT records",
+  "mappingCount": 181,
+  "mappingDigestSha256": "a2cbd2b380705f71b4d34c0e643c265abe1fb5e990ad3181df3d5122f920e59e",
+  "adapters": {
+    "identity-session-v1": {
+      "testId": "P22-ADAPTER-SSO-001",
+      "testPath": "apps/api/test/auth-boundary-contract.test.ts",
+      "assertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority."
+    },
+    "tenant-access-v1": {
+      "testId": "P22-RBAC-001",
+      "testPath": "apps/api/test/shared-platform-routes.test.ts",
+      "assertion": "The original action remains available only at the same or narrower effective tenant and module access level."
+    },
+    "directory-reference-v1": {
+      "testId": "P22-ADAPTER-DIRECTORY-001",
+      "testPath": "apps/api/test/business-directory.test.ts",
+      "assertion": "The original organization, site, contact, or requester outcome persists through the shared tenant-scoped Directory."
+    },
+    "provider-outbox-v1": {
+      "testId": "P22-PROVIDER-001",
+      "testPath": "apps/api/test/shared-platform.test.ts",
+      "assertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly."
+    },
+    "attachment-v1": {
+      "testId": "P22-ADAPTER-ATTACHMENT-001",
+      "testPath": "apps/api/test/shared-services.test.ts",
+      "assertion": "The original attachment outcome retains tenant scope, integrity, scan, quarantine, retention, and authorized retrieval behavior."
+    },
+    "job-export-v1": {
+      "testId": "P22-JOB-001",
+      "testPath": "apps/api/test/shared-platform.test.ts",
+      "assertion": "The original long-running outcome is durable, idempotent, leased, retryable, restart-safe, and recoverable from dead letter."
+    },
+    "usage-credit-v1": {
+      "testId": "P22-ADAPTER-USAGE-001",
+      "testPath": "apps/api/test/shared-services.test.ts",
+      "assertion": "The original metered outcome records durable tenant and module provenance without creating child billing authority."
+    },
+    "search-deeplink-v1": {
+      "testId": "P22-ADAPTER-SEARCH-001",
+      "testPath": "apps/api/test/shared-platform.test.ts",
+      "assertion": "The original object remains discoverable at a valid relative deep link without leaking a foreign tenant result."
+    }
+  },
+  "mappings": [
+    {
+      "capabilityId": "pulsedesk.api_endpoint.058c8d5f4c35930b",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /webhooks/operatoros/entitlements",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.16f2545edbca31e1",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/public/sso-config",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.1980fae7795c0efd",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "GET /api/admin/orgs",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/platform-rbac.test.ts",
+        "apps/api/test/platform-route-contract.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.220308928b29a6e0",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "GET /api/notifications",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/pulsedesk-state5-workflow.test.ts",
+        "apps/api/test/shared-service-routes.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.267aedb73a76ae12",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/billing/portal",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts",
+        "apps/api/test/marketplace-rbac.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.2e9f5de2de8cf0e7",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "GET /api/admin/orgs/:orgId/members",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/platform-rbac.test.ts",
+        "apps/api/test/platform-route-contract.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.3b1618236542adc1",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/vendors",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.3bd3e1483076da21",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "PATCH /api/admin/orgs/:id",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/platform-rbac.test.ts",
+        "apps/api/test/platform-route-contract.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.423b45512fdfd34b",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "GET /api/health",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/module-runtime-authority.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.47f030bd25618136",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "GET /api/admin/master-admins",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/platform-rbac.test.ts",
+        "apps/api/test/platform-route-contract.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.51fc36176bcae4ee",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/billing/plans",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts",
+        "apps/api/test/marketplace-rbac.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.76f6a5ffe1bc493e",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/billing/status",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts",
+        "apps/api/test/marketplace-rbac.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.825c9e50ae2a1d2d",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/billing/checkout",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts",
+        "apps/api/test/marketplace-rbac.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.8298d0a20c40156a",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "GET /api/admin/audit",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/platform-rbac.test.ts",
+        "apps/api/test/platform-route-contract.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.85f4eff57f3004d8",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /sso",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.92ff787e76913a6c",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/vendors",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.93e1177efcad916d",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/vendors/:id",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.9b1361d34db95790",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "GET /api/admin/users",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/platform-rbac.test.ts",
+        "apps/api/test/platform-route-contract.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.9f833f0dc8624c49",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "GET /api/notifications/unread-count",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/pulsedesk-state5-workflow.test.ts",
+        "apps/api/test/shared-service-routes.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.a23521f8d1d9e46b",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "POST /api/admin/orgs/:orgId/invites",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/platform-rbac.test.ts",
+        "apps/api/test/platform-route-contract.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.b80326a8aad69742",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "POST /api/notifications/:id/read",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/pulsedesk-state5-workflow.test.ts",
+        "apps/api/test/shared-service-routes.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.c4219155b5b7eb39",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "POST /api/notifications/read-all",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/pulsedesk-state5-workflow.test.ts",
+        "apps/api/test/shared-service-routes.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.db1511014ed059f4",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "PATCH /api/vendors/:id",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.e2f07d82ee3edbd7",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "POST /api/admin/orgs/:id/switch",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/platform-rbac.test.ts",
+        "apps/api/test/platform-route-contract.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.e676b742d144a37f",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "PATCH /api/admin/orgs/:orgId/members/:userId/role",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/platform-rbac.test.ts",
+        "apps/api/test/platform-route-contract.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.e7741a9f45c26c3b",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "directory-reference-v1",
+      "originalUserOutcome": "DELETE /api/vendors/:id",
+      "compatibilityAssertion": "The original organization, site, contact, or requester outcome persists through the shared tenant-scoped Directory.",
+      "adapterTestIds": [
+        "P22-ADAPTER-DIRECTORY-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/business-directory.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.f22629bb69332e87",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/billing/publishable-key",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts",
+        "apps/api/test/marketplace-rbac.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.f85e4113555f10a0",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "GET /api/admin/entitlements",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/platform-rbac.test.ts",
+        "apps/api/test/platform-route-contract.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.api_endpoint.f8ffb1a18b545b35",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "PATCH /api/admin/users/:id/superadmin",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/platform-rbac.test.ts",
+        "apps/api/test/platform-route-contract.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.background_process.23babce2cea65774",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "operatoros-entitlement-sync",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.background_process.71b13fa69be4b89e",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "billing-sync",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.database_table.2274b637e18640fe",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "vendors",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.database_table.38723e021984179f",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "contacts",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.database_table.38cf40b2c6c74c99",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "activity_events",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/platform-route-contract.test.ts",
+        "apps/api/test/pulsedesk-service-desk-domain.test.ts",
+        "apps/api/test/pulsedesk-service-desk-static.test.ts",
+        "apps/api/test/pulsedesk-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.database_table.46b0e5139cebd0d1",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "clients",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.database_table.4f121cf561d9a43a",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "attachment-v1",
+      "originalUserOutcome": "attachments",
+      "compatibilityAssertion": "The original attachment outcome retains tenant scope, integrity, scan, quarantine, retention, and authorized retrieval behavior.",
+      "adapterTestIds": [
+        "P22-ADAPTER-ATTACHMENT-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-services.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/pulsedesk-state5-workflow.test.ts",
+        "apps/api/test/shared-service-routes.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.database_table.613569812c0738f7",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "knowledge_categories",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/pulsedesk-service-desk-domain.test.ts",
+        "apps/api/test/pulsedesk-service-desk-static.test.ts",
+        "apps/api/test/pulsedesk-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.database_table.8807fc98ef3b341d",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "notifications",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/pulsedesk-state5-workflow.test.ts",
+        "apps/api/test/shared-service-routes.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.database_table.9db5f8499bea0223",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "sites",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.27fc3c1f24fbde09",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_SSO_ENV",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.337b28eecbe5a444",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "PULSEDESK_URL",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/core-module-deep-link-routing.test.ts",
+        "apps/api/test/pulsedesk-service-desk-static.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.3452a3df36359b57",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "PUBLIC_BASE_URL",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/core-module-deep-link-routing.test.ts",
+        "apps/api/test/pulsedesk-service-desk-static.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.3934e4467429e74d",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "PORT",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/database-release-contract.test.ts",
+        "apps/api/test/module-runtime-authority.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.49ec7f949f5da53c",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "DATABASE_URL",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/database-release-contract.test.ts",
+        "apps/api/test/module-runtime-authority.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.5b1f7e886b0536fc",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_SERVICE_TOKEN",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.6a87f3c770051276",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_SSO_CONSUME_URL",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.70955320ddaee9fa",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "REPLIT_DOMAINS",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/core-module-deep-link-routing.test.ts",
+        "apps/api/test/pulsedesk-service-desk-static.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.75906fd62faf09e4",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_ENTITLEMENTS_INTROSPECT_URL",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.83a4c195f8de0f3d",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_API_URL",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.8c6418b63745969a",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "APP_BASE_URL",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/core-module-deep-link-routing.test.ts",
+        "apps/api/test/pulsedesk-service-desk-static.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.b3d9d9e405c838ab",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_SSO_AUDIENCE",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.c37937c3b4576499",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "PULSEDESK_PUBLIC_URL",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/core-module-deep-link-routing.test.ts",
+        "apps/api/test/pulsedesk-service-desk-static.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.c4c861781cd5ee45",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_INTROSPECTION_URL",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.integration.dd3a5be19fbb0bf6",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_ENTITLEMENT_SYNC_URL",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.public_flow.222ec9b3812a7cfd",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/public/sso-config",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.public_flow.80e6cf8e89fda7d0",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/billing/portal",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts",
+        "apps/api/test/marketplace-rbac.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.ui_route.11b098708f54d74e",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "usage-credit-v1",
+      "originalUserOutcome": "/admin",
+      "compatibilityAssertion": "The original metered outcome records durable tenant and module provenance without creating child billing authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-USAGE-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-services.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.ui_route.127048190ef9ab1d",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/clients",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.ui_route.399007c5b6b751ac",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/vendors",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "pulsedesk.ui_route.c93c8d010994c5d2",
+      "moduleSlug": "pulsedesk",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/clients/:id",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.04631bf1619f2a78",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/sites/import",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.05d60eb435fe9c74",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "PATCH /api/admin/tenants/:tenantId/subscription",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.0721ef4a33af20af",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "PATCH /api/client-access/:id",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.25db408df283ee8d",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/billing/customer-portal",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts",
+        "apps/api/test/marketplace-rbac.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.29f13c8961ea5ba5",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/clients",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.2ccbc064e1bbe44b",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/members",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.3099b764cb149f33",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/modules",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.36b6f9a0b98838bf",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/stripe/webhook",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts",
+        "apps/api/test/marketplace-rbac.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.374787668d11e89b",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "DELETE /api/admin/tenants/:tenantId",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.3d4a701a8d0407ca",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/admin/tenants",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.40ce8e1cbef1dff0",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/sites/bulk-delete",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.4158bdda870d95f7",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/admin/tenants/:tenantId/unpause",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.42c3ab650baafafd",
+      "moduleSlug": "techdeck",
+      "adapterId": "directory-reference-v1",
+      "originalUserOutcome": "DELETE /api/sites/:id",
+      "compatibilityAssertion": "The original organization, site, contact, or requester outcome persists through the shared tenant-scoped Directory.",
+      "adapterTestIds": [
+        "P22-ADAPTER-DIRECTORY-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/business-directory.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.4cf64b7d9753317c",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/billing/subscription",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts",
+        "apps/api/test/marketplace-rbac.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.5678a44a584e8e96",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/admin/tenants/:tenantId/subscription",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.5991771025d84918",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "GET /health",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/module-runtime-authority.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.6016b8a04fc940fb",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/clients/:id",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.62b77d848d380ea7",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/sites",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.69f3c22b54f8ac2e",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/tenant/pause-status",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.6c59d2ef89040eb9",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/operatoros/entitlements/sync",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.6f858a310a065851",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/admin/me",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.72a4ed1cf23fea67",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/tenant",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.7606525961f5f3a5",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/billing/plans",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts",
+        "apps/api/test/marketplace-rbac.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.80e0739dc795c18b",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/tenants",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.81480472553d0557",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/admin/plans",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.84ea14ad7a21e799",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/clients/import",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.8571a59ad7937258",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/clients/bulk-delete",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.89fa825f8905bad3",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "PATCH /api/members/:id/role",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.92234c9b7da7ac11",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/members/invite",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.93ab3db270716a27",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/sites",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.9d9057cdb8b59e8f",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/client-access",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.9e4993ead5cd2ea3",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/clients/template.csv",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.aefc497394d6800c",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/clients",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.b0544ae83c4e8212",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/client-access",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.b67f25a55276a04d",
+      "moduleSlug": "techdeck",
+      "adapterId": "directory-reference-v1",
+      "originalUserOutcome": "DELETE /api/clients/:id",
+      "compatibilityAssertion": "The original organization, site, contact, or requester outcome persists through the shared tenant-scoped Directory.",
+      "adapterTestIds": [
+        "P22-ADAPTER-DIRECTORY-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/business-directory.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.bac37a8cce9507b6",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "DELETE /api/client-access/:id",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.bfb7158db106a975",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/billing/checkout-session",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts",
+        "apps/api/test/marketplace-rbac.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.d40e277659fb89e3",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "GET /api/audit-logs",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/techdeck-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.d9f15501f178d35f",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/admin/tenants/:tenantId/pause",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.e16428f16e90ab65",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/sites/template.csv",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.e96c563e76859aeb",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "GET /api/audit-actions",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/techdeck-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.f3d8aac5e8f6d918",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/admin/users",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.f984d05627570cef",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "POST /api/admin/users/:userId/system-admin",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.api_endpoint.f9cd8e7302f6a6c8",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "GET /api/me/entitlements",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.background_process.13808a34c30b4b8e",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "process-health-sampler",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/module-runtime-authority.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.background_process.999781d313357ea0",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "billing-grace-cleanup",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.background_process.fc1c1fa750aec279",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "typed-event-audit-subscribers",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/techdeck-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.database_table.07709ee67e2d7e96",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "sites",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.database_table.213cfa6fa3dd3eac",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "client_user_assignments",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.database_table.50fd79894d11364e",
+      "moduleSlug": "techdeck",
+      "adapterId": "attachment-v1",
+      "originalUserOutcome": "operational_attachments",
+      "compatibilityAssertion": "The original attachment outcome retains tenant scope, integrity, scan, quarantine, retention, and authorized retrieval behavior.",
+      "adapterTestIds": [
+        "P22-ADAPTER-ATTACHMENT-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-services.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/techdeck-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.database_table.5f4bd696ce6ea5d1",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "contact_records",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.database_table.8333f9d285803b02",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "clients",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.database_table.91b2e359aa37caf8",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "audit_logs",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/techdeck-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.20ee384ba6a73cb2",
+      "moduleSlug": "techdeck",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "SMTP_PASS",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/techdeck-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.21b46719cf472ac0",
+      "moduleSlug": "techdeck",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "SMTP_SECURE",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/techdeck-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.28b9b10eb8e48f55",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "PORT",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/database-release-contract.test.ts",
+        "apps/api/test/module-runtime-authority.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.2f23ccc8a6789efc",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_SSO_ENV",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.339625d3eb2c415a",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "CHILD_APP_MODULE_KEY",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.40b857ce5335a9a0",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_BILLING_URL",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.4fe6949512f47921",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "REPLIT_CONNECTORS_HOSTNAME",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/replit-unified-runtime.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.56da6a63fab6cc73",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "REPLIT_DEPLOYMENT",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/replit-unified-runtime.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.57fd68da003c4e6d",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_SERVICE_TOKEN",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.612c434e5df520ec",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_SSO_AUDIENCE",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.61c8decf2907d3c7",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_SSO_ALLOW_LEGACY_ISSUER",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.65d71e8c5d1404a8",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "ENABLE_LEGACY_BILLING_SEED",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts",
+        "apps/api/test/marketplace-rbac.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.6db51202823e2f36",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_API_URL",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.96a5b4b69696560c",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "ENABLE_LEGACY_BILLING_GRACE_CLEANUP",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/billing-resync.test.ts",
+        "apps/api/test/marketplace-rbac.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.a90385b77fb8a1ab",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_ADMIN_URL",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.ae7cd56b4a4d4b28",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "REPL_IDENTITY",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/replit-unified-runtime.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.b05dbfa6179618d2",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "NODE_ENV",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/database-release-contract.test.ts",
+        "apps/api/test/module-runtime-authority.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.b6d0c17ae131cc4e",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_ISSUER",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.b7297e77c4cbb84f",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "WEB_REPL_RENEWAL",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/replit-unified-runtime.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.b7c3d3b7ba552eee",
+      "moduleSlug": "techdeck",
+      "adapterId": "attachment-v1",
+      "originalUserOutcome": "MAX_UPLOAD_MB",
+      "compatibilityAssertion": "The original attachment outcome retains tenant scope, integrity, scan, quarantine, retention, and authorized retrieval behavior.",
+      "adapterTestIds": [
+        "P22-ADAPTER-ATTACHMENT-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-services.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/techdeck-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.bc0fbadfe58fb068",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "OPERATOROS_BASE_URL",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.c07c15eb6efe568a",
+      "moduleSlug": "techdeck",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "MAIL_FROM",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/techdeck-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.ce215505dfc7f3d0",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "REPL_ID",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/replit-unified-runtime.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.d12852c1605e458f",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "REPLIT_DOMAINS",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/replit-unified-runtime.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.df36f17888da850c",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "LOG_LEVEL",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/module-runtime-authority.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.df7dae8377a021c5",
+      "moduleSlug": "techdeck",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "SMTP_PORT",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/techdeck-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.f42d8bbdc0e39610",
+      "moduleSlug": "techdeck",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "SMTP_USER",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/techdeck-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.integration.fb6eddd1ed7c6bdb",
+      "moduleSlug": "techdeck",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "SMTP_HOST",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/techdeck-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.public_flow.5daa99d121a31e09",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/terms",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.public_flow.de6c2395ffc48d1a",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/privacy",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.04c6f45f76da5c5b",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/access-denied",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.211e61860b451e1b",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "/m/calendar",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/core-module-deep-link-routing.test.ts",
+        "apps/api/test/techdeck-state5-static.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.2483d7bdf1e1e9de",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/system-admin",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.273542e349a846db",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/pricing",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.33681a0d92a220a1",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/terms",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.3617a8cb28db4045",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "/m",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/core-module-deep-link-routing.test.ts",
+        "apps/api/test/techdeck-state5-static.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.423b396454d9a260",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/audit",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.46028ca0bc66d9c6",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/privacy",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.4b625a32990c4873",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/refund",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.5e9193c2dce9eb68",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/sites",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.94bdb47cd86e0477",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/client-access",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.a3d6dd695490d4cf",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/team",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.ab328b11a44fecf0",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/clients/:id",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.ab4cc8e3a7422777",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "/m/tickets",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/core-module-deep-link-routing.test.ts",
+        "apps/api/test/techdeck-state5-static.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.abf910cb89f8a532",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "/m/time",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/core-module-deep-link-routing.test.ts",
+        "apps/api/test/techdeck-state5-static.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.c023b4e4236d8a9d",
+      "moduleSlug": "techdeck",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "/m/tickets/:id",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/core-module-deep-link-routing.test.ts",
+        "apps/api/test/techdeck-state5-static.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.c8a3533d4fa09b4f",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/clients",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "techdeck.ui_route.e4274e328fc268b3",
+      "moduleSlug": "techdeck",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "/billing",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/auth-security.test.ts",
+        "apps/api/test/shared-sso-routes.test.ts",
+        "apps/web/e2e/sso-v1.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.api_endpoint.2195657a46430686",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "GET /api/review-requests/job/:jobId",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.api_endpoint.9aa44641f9de8ab8",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "POST /api/review-requests",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.api_endpoint.a664cff208fb244c",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "GET /api/review-requests",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.api_endpoint.ae46c6fd7dcfa7a4",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "GET /api/review-requests/stats",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.database_table.0544513c867b57bf",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "tags",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.database_table.11d8aa411b5f5cf9",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "entity_comments",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.database_table.25012e7ce3e82b62",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "contacts",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.database_table.3be70cafc7b8821b",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "notifications",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.database_table.47940651330bc2f1",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "companies",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.database_table.516f4aac64749a7b",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "attachment-v1",
+      "originalUserOutcome": "entity_attachments",
+      "compatibilityAssertion": "The original attachment outcome retains tenant scope, integrity, scan, quarantine, retention, and authorized retrieval behavior.",
+      "adapterTestIds": [
+        "P22-ADAPTER-ATTACHMENT-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-services.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.database_table.97325681d4f9d0f4",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "entity_tags",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.database_table.9c7dc9e554aea9fd",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "review_requests",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.database_table.a87c0e65eb1d4285",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "activity_events",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.database_table.dc3275887d9857c0",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "tenant-access-v1",
+      "originalUserOutcome": "entity_notes",
+      "compatibilityAssertion": "The original action remains available only at the same or narrower effective tenant and module access level.",
+      "adapterTestIds": [
+        "P22-RBAC-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform-routes.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.integration.1ebe9eeb198c8486",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "SENDGRID_API_KEY",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-lead-messaging-static.test.ts",
+        "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.integration.3e499978879be2ca",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "SENDGRID_FROM_EMAIL",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-lead-messaging-static.test.ts",
+        "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.integration.c9d41f1fd2c28946",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "TWILIO_ACCOUNT_SID",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-lead-messaging-static.test.ts",
+        "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.integration.cb3ba97b3d9abc17",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "provider-outbox-v1",
+      "originalUserOutcome": "TWILIO_PHONE_NUMBER",
+      "compatibilityAssertion": "The original provider-backed outcome is queued durably and reports test, retry, delivery, disabled, or dead-letter state honestly.",
+      "adapterTestIds": [
+        "P22-PROVIDER-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/shared-platform.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-lead-messaging-static.test.ts",
+        "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.integration.e6ac99db732dfd0c",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "identity-session-v1",
+      "originalUserOutcome": "TWILIO_AUTH_TOKEN",
+      "compatibilityAssertion": "The module reuses exact-host, host-only OperatorOS session and SSO behavior without a module-local credential authority.",
+      "adapterTestIds": [
+        "P22-ADAPTER-SSO-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/auth-boundary-contract.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/shared-service-routes.test.ts",
+        "apps/api/test/tradeflowkit-lead-messaging-static.test.ts",
+        "apps/api/test/tradeflowkit-lead-messaging.test.ts",
+        "apps/api/test/tradeflowkit-state5-workflow.test.ts"
+      ]
+    },
+    {
+      "capabilityId": "tradeflowkit.ui_route.74b963a1762ec70e",
+      "moduleSlug": "tradeflowkit",
+      "adapterId": "directory-reference-v1",
+      "originalUserOutcome": "/contacts",
+      "compatibilityAssertion": "The original organization, site, contact, or requester outcome persists through the shared tenant-scoped Directory.",
+      "adapterTestIds": [
+        "P22-ADAPTER-DIRECTORY-001"
+      ],
+      "adapterTestPaths": [
+        "apps/api/test/business-directory.test.ts"
+      ],
+      "existingEvidence": [
+        "apps/api/test/business-directory.test.ts",
+        "apps/web/e2e/business-directory.spec.ts"
+      ]
+    }
+  ]
+}

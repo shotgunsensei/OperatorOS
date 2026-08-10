@@ -5,10 +5,14 @@ import {
   Activity,
   AlertTriangle,
   Archive,
+  CalendarClock,
   CheckCircle2,
   GitBranch,
   Loader2,
+  PauseCircle,
+  PlayCircle,
   Plus,
+  Repeat2,
   Search,
   Star,
   Workflow,
@@ -16,7 +20,9 @@ import {
 import {
   moduleShellApi,
   type TradeFlowKitActivity,
+  type TradeFlowKitCustomer,
   type TradeFlowKitJob,
+  type TradeFlowKitRecurringSchedule,
   type TradeFlowKitTask,
   type TradeFlowKitWorkflow,
 } from '@/lib/auth';
@@ -37,6 +43,8 @@ export default function TradeFlowKitWorkManagement({
   const [workflows, setWorkflows] = useState<TradeFlowKitWorkflow[]>([]);
   const [tasks, setTasks] = useState<TradeFlowKitTask[]>([]);
   const [jobs, setJobs] = useState<TradeFlowKitJob[]>([]);
+  const [customers, setCustomers] = useState<TradeFlowKitCustomer[]>([]);
+  const [recurringSchedules, setRecurringSchedules] = useState<TradeFlowKitRecurringSchedule[]>([]);
   const [activity, setActivity] = useState<TradeFlowKitActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
@@ -49,12 +57,20 @@ export default function TradeFlowKitWorkManagement({
   const [workflowStages, setWorkflowStages] = useState('New, Scheduled, In progress, Complete');
   const [workflowDefault, setWorkflowDefault] = useState(false);
   const [newStageNames, setNewStageNames] = useState<Record<string, string>>({});
+  const [recurringName, setRecurringName] = useState('');
+  const [recurringCustomerId, setRecurringCustomerId] = useState('');
+  const [recurringTitle, setRecurringTitle] = useState('');
+  const [recurringDescription, setRecurringDescription] = useState('');
+  const [recurringPriority, setRecurringPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
+  const [recurringIntervalDays, setRecurringIntervalDays] = useState(7);
+  const [recurringDurationMinutes, setRecurringDurationMinutes] = useState(60);
+  const [recurringNextRunAt, setRecurringNextRunAt] = useState(() => localDateTimeInput(new Date(Date.now() + 86_400_000)));
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [workflowRows, taskRows, activityRows, operations] = await Promise.all([
+      const [workflowRows, taskRows, activityRows, operations, revenue, recurring] = await Promise.all([
         moduleShellApi.tradeflowkit.workflows(),
         moduleShellApi.tradeflowkit.tasks({
           scope: 'team',
@@ -64,11 +80,16 @@ export default function TradeFlowKitWorkManagement({
         }),
         moduleShellApi.tradeflowkit.activity({ limit: 50 }),
         moduleShellApi.tradeflowkit.operations({ limit: 100 }),
+        moduleShellApi.tradeflowkit.revenue(),
+        moduleShellApi.tradeflowkit.recurringJobs(),
       ]);
       setWorkflows(workflowRows);
       setTasks(taskRows.items);
       setActivity(activityRows.items);
       setJobs(operations.jobs);
+      setCustomers(revenue.customers);
+      setRecurringCustomerId(current => current || revenue.customers[0]?.id || '');
+      setRecurringSchedules(recurring.schedules);
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -122,6 +143,29 @@ export default function TradeFlowKitWorkManagement({
     });
   };
 
+  const createRecurringSchedule = (event: FormEvent) => {
+    event.preventDefault();
+    if (!recurringName.trim() || !recurringCustomerId || !recurringTitle.trim() || !recurringNextRunAt) {
+      setError('Enter a schedule name, customer, job title, and first run time.');
+      return;
+    }
+    void run(async () => {
+      await moduleShellApi.tradeflowkit.createRecurringJob({
+        name: recurringName.trim(),
+        customerId: recurringCustomerId,
+        title: recurringTitle.trim(),
+        description: recurringDescription.trim() || undefined,
+        priority: recurringPriority,
+        intervalDays: recurringIntervalDays,
+        durationMinutes: recurringDurationMinutes,
+        nextRunAt: new Date(recurringNextRunAt).toISOString(),
+      });
+      setRecurringName('');
+      setRecurringTitle('');
+      setRecurringDescription('');
+    });
+  };
+
   const jobWorkflows = useMemo(
     () => workflows.filter(workflow => workflow.entityType === 'job'),
     [workflows],
@@ -158,6 +202,7 @@ export default function TradeFlowKitWorkManagement({
           <div className="tfk-work-metrics">
             <Metric label="Active workflows" value={workflows.length} />
             <Metric label="Open team tasks" value={tasks.filter(task => !['completed', 'canceled'].includes(task.status)).length} />
+            <Metric label="Recurring schedules" value={recurringSchedules.filter(schedule => schedule.enabled).length} />
             <Metric label="Recent events" value={activity.length} />
           </div>
 
@@ -257,12 +302,54 @@ export default function TradeFlowKitWorkManagement({
             )}
           </section>
 
+          <section className="tfk-work-section" aria-labelledby="tfk-recurring-heading">
+            <div className="tfk-work-section-heading">
+              <div><Repeat2 size={18} /><div><h3 id="tfk-recurring-heading">Recurring jobs</h3><p>Schedule repeat work through the shared worker so each due run creates one persisted, audited job.</p></div></div>
+            </div>
+
+            {canManage && (
+              <form className="tfk-work-form tfk-recurring-form" onSubmit={createRecurringSchedule} data-testid="tradeflowkit-recurring-job-form">
+                <label>Schedule name<input value={recurringName} onChange={event => setRecurringName(event.target.value)} maxLength={120} required /></label>
+                <label>Customer<select value={recurringCustomerId} onChange={event => setRecurringCustomerId(event.target.value)} required><option value="">Select a customer</option>{customers.map(customer => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
+                <label className="wide">Job title<input value={recurringTitle} onChange={event => setRecurringTitle(event.target.value)} maxLength={200} required /></label>
+                <label className="wide">Description<input value={recurringDescription} onChange={event => setRecurringDescription(event.target.value)} maxLength={4000} /></label>
+                <label>Priority<select value={recurringPriority} onChange={event => setRecurringPriority(event.target.value as typeof recurringPriority)}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
+                <label>Repeat every<input type="number" min={1} max={30} value={recurringIntervalDays} onChange={event => setRecurringIntervalDays(Number(event.target.value))} aria-describedby="tfk-recurring-days-help" /><small id="tfk-recurring-days-help">Days, from 1 to 30</small></label>
+                <label>Estimated duration<input type="number" min={15} max={1440} step={15} value={recurringDurationMinutes} onChange={event => setRecurringDurationMinutes(Number(event.target.value))} /><small>Minutes</small></label>
+                <label>First run<input type="datetime-local" value={recurringNextRunAt} onChange={event => setRecurringNextRunAt(event.target.value)} required /></label>
+                <button type="submit" disabled={pending || customers.length === 0}><CalendarClock size={15} />Save recurring job</button>
+              </form>
+            )}
+
+            {customers.length === 0 && canManage && <div className="tfk-work-state"><AlertTriangle size={17} />Create a customer before scheduling recurring work.</div>}
+            {recurringSchedules.length === 0 ? (
+              <div className="tfk-work-state"><Repeat2 size={18} /><span>No recurring work is scheduled.</span></div>
+            ) : (
+              <div className="tfk-recurring-list">
+                {recurringSchedules.map(schedule => (
+                  <article key={schedule.id} data-testid={`tradeflowkit-recurring-${schedule.id}`}>
+                    <div className="tfk-recurring-summary">
+                      <span className={schedule.enabled ? 'enabled' : 'paused'}>{schedule.enabled ? 'Active' : 'Paused'}</span>
+                      <div><strong>{schedule.name}</strong><small>{schedule.payload.title ?? 'Recurring job'} · every {Math.max(1, Math.round(schedule.intervalSeconds / 86_400))} day(s)</small></div>
+                    </div>
+                    <dl>
+                      <div><dt>Next run</dt><dd>{new Date(schedule.nextRunAt).toLocaleString()}</dd></div>
+                      <div><dt>Last enqueued</dt><dd>{schedule.lastEnqueuedAt ? new Date(schedule.lastEnqueuedAt).toLocaleString() : 'Not yet'}</dd></div>
+                      <div><dt>Worker state</dt><dd>{schedule.lastErrorCode ? `Retry required: ${schedule.lastErrorCode}` : 'Ready'}</dd></div>
+                    </dl>
+                    {canManage && <button type="button" disabled={pending} onClick={() => void run(() => moduleShellApi.tradeflowkit.updateRecurringJob(schedule.id, schedule.version, !schedule.enabled))}>{schedule.enabled ? <PauseCircle size={15} /> : <PlayCircle size={15} />}{schedule.enabled ? 'Pause' : 'Resume'}</button>}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
           <section className="tfk-work-section" aria-labelledby="tfk-team-task-heading">
             <div className="tfk-work-section-heading">
               <div><CheckCircle2 size={18} /><div><h3 id="tfk-team-task-heading">Team tasks</h3><p>Search, assign, and manage job tasks across the current workspace.</p></div></div>
               <div className="tfk-task-filters">
                 <label><Search size={14} /><input value={taskSearch} onChange={event => setTaskSearch(event.target.value)} placeholder="Search tasks" /></label>
-                <select value={taskStatus} onChange={event => setTaskStatus(event.target.value)}><option value="">All statuses</option>{taskStatuses.map(status => <option key={status} value={status}>{status.replace('_', ' ')}</option>)}</select>
+                <select aria-label="Filter team tasks by status" value={taskStatus} onChange={event => setTaskStatus(event.target.value)}><option value="">All statuses</option>{taskStatuses.map(status => <option key={status} value={status}>{status.replace('_', ' ')}</option>)}</select>
               </div>
             </div>
             {tasks.length === 0 ? <div className="tfk-work-state">No job tasks match this view. Create a task from the operations board.</div> : (
@@ -314,7 +401,11 @@ function Metric({ label, value }: { label: string; value: number }) {
 }
 
 function stageColor(position: number): string {
-  return ['#2563eb', '#0f766e', '#b7791f', '#059669', '#6d28d9', '#dc2626'][position % 6];
+  return ['#2563eb', '#0f766e', '#b7791f', 'var(--tfk-primary)', '#6d28d9', '#dc2626'][position % 6];
+}
+
+function localDateTimeInput(value: Date): string {
+  return new Date(value.getTime() - value.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
 
 const css = `
@@ -324,28 +415,42 @@ const css = `
   .tfk-work-heading { align-items: flex-start; }
   .tfk-work-heading h2, .tfk-work-section h3 { margin: 0; }
   .tfk-work-heading p, .tfk-work-section-heading p, .tfk-workflow-card p { margin: 5px 0 0; color: #587067; font-size: 13px; line-height: 1.45; }
-  .tfk-work-eyebrow { display: flex; align-items: center; gap: 7px; color: #059669; font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 7px; }
+  .tfk-work-eyebrow { display: flex; align-items: center; gap: 7px; color: var(--tfk-primary); font-size: 12px; font-weight: 800; text-transform: uppercase; margin-bottom: 7px; }
   .tfk-work button, .tfk-work input, .tfk-work select { font: inherit; }
-  .tfk-work button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid rgba(5,150,105,.28); border-radius: 7px; padding: 8px 10px; background: #fff; color: #10231d; font-size: 12px; font-weight: 800; cursor: pointer; }
+  .tfk-work button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid color-mix(in srgb, var(--tfk-primary) 28%, transparent); border-radius: 7px; padding: 8px 10px; background: #fff; color: #10231d; font-size: 12px; font-weight: 800; cursor: pointer; }
   .tfk-work button:disabled { opacity: .52; cursor: not-allowed; }
   .tfk-work button.danger { color: #b91c1c; border-color: rgba(220,38,38,.25); }
   .tfk-work button.icon { padding: 8px; }
-  .tfk-work input, .tfk-work select { min-width: 0; border: 1px solid rgba(22,101,52,.2); border-radius: 7px; padding: 8px 9px; background: #fff; color: #10231d; }
+  .tfk-work input, .tfk-work select { min-width: 0; border: 1px solid color-mix(in srgb, var(--tfk-primary) 20%, transparent); border-radius: 7px; padding: 8px 9px; background: #fff; color: #10231d; }
   .tfk-work-alert, .tfk-work-state { display: flex; align-items: center; gap: 9px; border: 1px solid rgba(220,38,38,.28); border-radius: 8px; padding: 12px; background: rgba(220,38,38,.06); color: #991b1b; font-size: 13px; }
-  .tfk-work-state { border-color: rgba(5,150,105,.2); background: #eef8f2; color: #587067; }
-  .tfk-work-metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
-  .tfk-work-metrics > div { border: 1px solid rgba(22,101,52,.16); border-radius: 8px; padding: 12px; background: #f8fcfa; }
+  .tfk-work-state { border-color: color-mix(in srgb, var(--tfk-primary) 20%, transparent); background: var(--tfk-primary-soft); color: #587067; }
+  .tfk-work-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+  .tfk-work-metrics > div { border: 1px solid color-mix(in srgb, var(--tfk-primary) 16%, transparent); border-radius: 8px; padding: 12px; background: var(--tfk-card); }
   .tfk-work-metrics span { color: #587067; font-size: 12px; display: block; }
   .tfk-work-metrics strong { display: block; margin-top: 4px; font-size: 22px; }
-  .tfk-work-section { display: grid; gap: 12px; border-top: 1px solid rgba(22,101,52,.14); padding-top: 16px; }
+  .tfk-work-section { display: grid; gap: 12px; border-top: 1px solid color-mix(in srgb, var(--tfk-primary) 14%, transparent); padding-top: 16px; }
   .tfk-work-section-heading > div:first-child { display: flex; gap: 9px; align-items: flex-start; }
-  .tfk-work-form { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; border: 1px solid rgba(5,150,105,.22); border-radius: 8px; padding: 12px; background: #f3faf6; }
+  .tfk-work-form { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; border: 1px solid color-mix(in srgb, var(--tfk-primary) 22%, transparent); border-radius: 8px; padding: 12px; background: var(--tfk-primary-soft); }
   .tfk-work-form label { display: grid; gap: 5px; color: #587067; font-size: 12px; font-weight: 700; }
   .tfk-work-form .wide { grid-column: 1/-1; }
   .tfk-work-form .check { display: flex; align-items: center; flex-direction: row; }
   .tfk-work-form .check input { min-width: auto; }
+  .tfk-work-form small { color: var(--tfk-muted-foreground); font-weight: 500; }
+  .tfk-recurring-form button { align-self: end; min-height: 36px; }
+  .tfk-recurring-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  .tfk-recurring-list article { display: grid; gap: 12px; border: 1px solid var(--tfk-border); border-radius: 8px; padding: 13px; background: var(--tfk-card); min-width: 0; }
+  .tfk-recurring-summary { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
+  .tfk-recurring-summary > span { border-radius: 999px; padding: 4px 7px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+  .tfk-recurring-summary > span.enabled { color: var(--tfk-success); background: var(--tfk-success-soft); }
+  .tfk-recurring-summary > span.paused { color: var(--tfk-muted-foreground); background: var(--tfk-muted); }
+  .tfk-recurring-summary div { min-width: 0; }
+  .tfk-recurring-summary small { display: block; margin-top: 3px; color: var(--tfk-muted-foreground); }
+  .tfk-recurring-list dl { display: grid; gap: 6px; margin: 0; font-size: 11px; }
+  .tfk-recurring-list dl > div { display: flex; justify-content: space-between; gap: 12px; }
+  .tfk-recurring-list dt { color: var(--tfk-muted-foreground); }
+  .tfk-recurring-list dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
   .tfk-workflow-list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
-  .tfk-workflow-card { border: 1px solid rgba(22,101,52,.16); border-radius: 8px; padding: 13px; min-width: 0; }
+  .tfk-workflow-card { border: 1px solid color-mix(in srgb, var(--tfk-primary) 16%, transparent); border-radius: 8px; padding: 13px; min-width: 0; }
   .tfk-workflow-title > div, .tfk-job-workflow-list > div > div, .tfk-team-tasks article > div { min-width: 0; }
   .tfk-workflow-title span, .tfk-job-workflow-list span, .tfk-team-tasks span { display: block; color: #587067; font-size: 11px; margin-top: 3px; }
   .tfk-work-default { display: inline-flex !important; align-items: center; gap: 4px; color: #b7791f !important; background: rgba(183,121,31,.1); border-radius: 999px; padding: 5px 8px; margin: 0 !important; font-weight: 800; }
@@ -356,18 +461,18 @@ const css = `
   .tfk-workflow-actions { justify-content: flex-start; flex-wrap: wrap; }
   .tfk-workflow-actions input { flex: 1 1 120px; }
   .tfk-job-workflow-list, .tfk-team-tasks, .tfk-activity-list { display: grid; gap: 8px; }
-  .tfk-job-workflow-list > div, .tfk-team-tasks article { border: 1px solid rgba(22,101,52,.14); border-radius: 8px; padding: 10px 11px; }
+  .tfk-job-workflow-list > div, .tfk-team-tasks article { border: 1px solid color-mix(in srgb, var(--tfk-primary) 14%, transparent); border-radius: 8px; padding: 10px 11px; }
   .tfk-job-workflow-list select { width: min(360px,45%); }
   .tfk-task-filters { display: flex; gap: 8px; }
-  .tfk-task-filters label { display: flex; align-items: center; gap: 5px; border: 1px solid rgba(22,101,52,.2); border-radius: 7px; padding-left: 8px; background: #fff; }
+  .tfk-task-filters label { display: flex; align-items: center; gap: 5px; border: 1px solid color-mix(in srgb, var(--tfk-primary) 20%, transparent); border-radius: 7px; padding-left: 8px; background: #fff; }
   .tfk-task-filters label input { border: 0; }
   .tfk-team-tasks article { display: grid; grid-template-columns: minmax(0,1fr) 150px auto; }
-  .tfk-activity-list > div { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; padding: 8px 0; border-bottom: 1px solid rgba(22,101,52,.1); }
+  .tfk-activity-list > div { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--tfk-primary) 10%, transparent); }
   .tfk-activity-list small { display: block; color: #789189; margin-top: 2px; }
   .spin { animation: tfk-work-spin 1s linear infinite; }
   @keyframes tfk-work-spin { to { transform: rotate(360deg); } }
   @media (max-width: 820px) {
-    .tfk-workflow-list { grid-template-columns: 1fr; }
+    .tfk-workflow-list, .tfk-recurring-list { grid-template-columns: 1fr; }
     .tfk-work-section-heading { align-items: flex-start; flex-direction: column; }
     .tfk-task-filters { width: 100%; flex-direction: column; }
     .tfk-team-tasks article { grid-template-columns: minmax(0,1fr) auto; }
@@ -379,5 +484,7 @@ const css = `
     .tfk-work-metrics, .tfk-work-form { grid-template-columns: 1fr; }
     .tfk-work-form .wide { grid-column: auto; }
     .tfk-job-workflow-list select { width: 100%; }
+    .tfk-recurring-list dl > div { display: grid; gap: 2px; }
+    .tfk-recurring-list dd { text-align: left; }
   }
 `;

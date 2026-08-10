@@ -34,6 +34,7 @@ const pageLabels: Record<string, { section: string; label: string }> = {
   'tenant-modules': { section: 'Organization', label: 'Tool access' },
   'tenant-billing': { section: 'Organization', label: 'Billing and add-ons' },
   'tenant-settings': { section: 'Organization', label: 'Organization settings' },
+  'tenant-shared-services': { section: 'Organization', label: 'Shared services' },
   billing: { section: 'Account', label: 'Workspace plan' },
   settings: { section: 'Account', label: 'Profile and security' },
   platform: { section: 'Platform', label: 'Platform administration' },

@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { faultlineContentHash } from './faultlinelab-domain.js';
 import {
   FAULTLINELAB_SOURCE_COMMIT,
@@ -6,26 +5,12 @@ import {
   faultlineStarterManifest,
 } from './faultlinelab-starter-content.js';
 
-const PLANNED_CATALOG_ONLY_ENTRIES = 52;
-
-function stable(value: unknown): string {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
-  if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
-  return `{${Object.entries(value as Record<string, unknown>)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, nested]) => `${JSON.stringify(key)}:${stable(nested)}`)
-    .join(',')}}`;
-}
-
-function hash(value: unknown): string {
-  return createHash('sha256').update(stable(value)).digest('hex');
-}
-
 export interface FaultlineLabImportPlan {
-  planVersion: 1;
+  planVersion: 2;
   mode: 'dry-run';
   sourceCommit: string;
   sourceManifestHash: string;
+  discoveredSourceCount: number;
   playableSourceCount: number;
   plannedCatalogOnlyCount: number;
   plannedTargetCounts: Record<string, number>;
@@ -42,6 +27,7 @@ export interface FaultlineLabImportPlan {
     authorityRecordsImported: 0;
     billingRecordsImported: 0;
     plannedCatalogEntriesImported: 0;
+    publishedPlayableVersions: number;
     standaloneDataApplyRequired: false;
   };
   warnings: string[];
@@ -75,12 +61,13 @@ export function planFaultlineLabImport(): FaultlineLabImportPlan {
   }
 
   return {
-    planVersion: 1,
+    planVersion: 2,
     mode: 'dry-run',
     sourceCommit: FAULTLINELAB_SOURCE_COMMIT,
-    sourceManifestHash: hash(manifest),
+    sourceManifestHash: manifest.sourceManifestHash,
+    discoveredSourceCount: manifest.discoveredCount,
     playableSourceCount: FAULTLINELAB_STARTER_CHALLENGES.length,
-    plannedCatalogOnlyCount: PLANNED_CATALOG_ONLY_ENTRIES,
+    plannedCatalogOnlyCount: 0,
     plannedTargetCounts: {
       faultlinelab_challenges: FAULTLINELAB_STARTER_CHALLENGES.length,
       faultlinelab_challenge_versions: FAULTLINELAB_STARTER_CHALLENGES.length,
@@ -99,10 +86,11 @@ export function planFaultlineLabImport(): FaultlineLabImportPlan {
       authorityRecordsImported: 0,
       billingRecordsImported: 0,
       plannedCatalogEntriesImported: 0,
+      publishedPlayableVersions: FAULTLINELAB_STARTER_CHALLENGES.length,
       standaloneDataApplyRequired: false,
     },
     warnings: [
-      'Only the four validated runnable source cases are initialized; planned catalog cards remain non-playable evidence.',
+      'Every valid case reached through the pinned source allCases export is compiled as a published playable immutable version.',
       'Standalone identity, sessions, roles, subscriptions, billing, profile JSON, and child migrations are excluded.',
       'Initialization is idempotent and tenant-scoped; this dry run never writes to a database.',
     ],

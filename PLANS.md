@@ -42,6 +42,8 @@ slice is not parity.
 | 16A | Re-baseline TradeFlowKit against the restored full product and close recorded parity gaps | Phase 15 release evidence plus restored-source provenance | Complete source/local at state 4. The executable ledger classifies all 277 capabilities with 145 active, 58 shared replacements, 43 security retirements, 31 product-boundary retirements, zero unclassified, and zero gaps. The final increment adds privacy/consent-bound public lead capture, signed source adapters, and provider-gated Stripe Connect business payments with verified replay-safe settlement under ADR-0032. The full API aggregate passes 908/0/6 across 914 tests, typecheck/build pass, and release v32 applies cleanly/idempotently. No real standalone export, production apply, deployment, reviewed Connect onboarding/payment/refund, browser provider acceptance, rollback rehearsal, traffic cutover, or state-5 promotion is authorized. |
 | 17 | Production truth and revenue release gate | Current cumulative `main` | Production-truth controls are merged and present on public commit `c29cbca`: complete release/DB-v29 identity and disabled OutCall assertions pass within the public 48/48 gate. Later main `92ca0db` is not deployed, and production-safe authenticated 3/3, provider, data, backup/rollback, and State 5 gates remain open. |
 | 18 | OutCall live-capable source activation and customer experience closure | Phase 17 authority and Phase 12B product boundary | OutCall implementation merged to `main` at `d96c698`; release-candidate closure is on `codex/phase18-release-candidate-closure`. Explicit Twilio Verify/voice/SMS/DTMF, signed/replay-safe callbacks, durable rate limits, profile-bound triggers, privacy export/deletion, release v33, active registry/SSO coverage, and the ecosystem customer-copy sweep are source/local state 4. Focused 44/44, PostgreSQL 5/5, aggregate 914/0/6 across 920 tests, clean/idempotent v33, typecheck/build, strict compiled supervisor health, local exact-host matrix 12/12, and first-screen 2/2 pass. Deployment/real-provider/production backup-apply/rollback gates remain open. |
+| 20 | Product truth reset and source recovery | Current `main`, imported source trees, Phase 17 and TechDeck restoration evidence | Baseline generated on `codex/phase-20-product-truth-reset`: 13 fingerprints, 6,646 stable capabilities, 276 native, 181 shared-equivalent, 0 owner-waived, 6,189 blocked, and 0 unclassified. The strict pointer check found 113 facets in the three old source ledgers whose claimed implementation paths are absent from the pinned imports. Phase 20 is not complete while any required item remains blocked. OutCall source recovery, exact source-to-target/evidence mapping, former-retirement review, FaultlineLab's 52 missing runnable cases, TradeFlowKit visual fidelity, and TorqueShed native mobile parity are explicit entry blockers for later restoration phases. |
+| 21 | Executable parity compiler and fail-closed release gate | Phase 20 source manifest and module ledgers | Infrastructure implemented on `codex/phase-21-executable-parity-gate`: deterministic source/target discovery, compiled evidence/test IDs, per-module JSON/Markdown/HTML reports, negative fixtures, route/control and three-viewport visual contracts, root quality/release orchestration, and clean-checkout disposable-PostgreSQL CI. The gate is intentionally red: 6,289 strict parity failures, 74 static route/control failures, and 40 visual-contract failures. Typecheck, lint, 31/31 unit contracts, production build, v33 read-only plan, and core preflight pass; no full release pass or module completion is claimed. |
 
 ## Phase execution rules
 
@@ -60,28 +62,27 @@ slice is not parity.
 
 ## Immediate next gate
 
-Close the Phase 18 deployment/provider gate without widening product scope:
+Use the Phase 21 compiler output to triage the Phase 20 blocked inventory before
+resuming deployment promotion or broad product work:
 
-1. Review and merge the Phase 18 closure candidate, then rebuild from that
-   exact merged commit.
-2. Confirm the provider-managed database backup, review the v33 plan, and
-   apply/verify release v33 through the supported runtime path.
-3. Add the documented OutCall protection and Twilio secret names in Replit;
-   do not copy values into the repository or logs.
-4. Deploy through the checked-in Replit autoscale workflow and pin
-   `OPERATOROS_EXPECTED_RELEASE_COMMIT` to the merged commit.
-5. Require public health/readiness and production verifier success, then run
-   authenticated exact-host SSO, denial, local/global logout, and all-module
-   browser acceptance.
-6. Run one controlled verified-self Verify, SMS trigger, voice/DTMF, callback
-   replay/tamper, cancellation, export, and deletion acceptance; record
-   provider IDs only in the protected evidence location.
-7. Record deployment/build IDs, rollback evidence, and the remaining state-5
-   blockers in the authoritative reports.
+1. Resolve source authority for OutCall and the newer/divergent TorqueShed
+   candidates without replacing the pinned snapshots blindly.
+2. Review the highest-value `SOURCE_CAPABILITY_UNMAPPED` records and add exact
+   OperatorOS targets plus automated compatibility evidence.
+3. Review all `BLOCKED_REVIEW` records individually. Implement a native/shared
+   equivalent or obtain an exact owner waiver; do not waive categories.
+4. Restore the 52 missing runnable FaultlineLab cases, TradeFlowKit's
+   orange/navy visual contract, and TorqueShed's Expo product in scoped later
+   phases with their required security, tenant, visual, and browser evidence.
+5. Clear the 61 exact route-ID and 39 exact schema-ID gaps without replacing
+   them with coarse file mappings.
+6. Review and approve all three viewport baselines against pinned source only
+   after the source-faithful screen is restored; never approve generated drift.
+7. Keep the Phase 20 reproducibility check green and run the strict
+   `corepack pnpm verify:parity` gate whenever an imported tree, target mapping,
+   route, schema, test, or waiver changes. It is expected to remain red until
+   every required Phase 20 blocker is resolved.
 
-The operator-facing sequence and checkboxes are maintained in
-`docs/PHASE18_HUMAN_COMPLETION_GUIDE.md` and its validated PDF under
-`output/pdf/`.
-
-Do not claim deployment, provider acceptance, promotion, or module state 5
-until those human-gated actions pass.
+The Phase 18 deployment/provider checklist remains historical operational
+evidence, but it cannot establish product parity while the Phase 20 ledger is
+blocked.

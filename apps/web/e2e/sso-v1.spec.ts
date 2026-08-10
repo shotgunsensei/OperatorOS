@@ -1269,7 +1269,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.getByTestId('faultlinelab-module-shell')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.getByTestId('faultlinelab-challenge-card').first()).toBeVisible();
 
-    await modulePage.getByTestId('faultlinelab-challenge-card').first().getByRole('button', { name: 'Standard' }).click();
+    await modulePage.getByTestId('faultlinelab-challenge-card').first().getByRole('button', { name: 'Start' }).click();
     await expect(modulePage.getByTestId('faultlinelab-session')).toBeVisible();
     await expect(modulePage).toHaveURL(/^https:\/\/faultlinelab\.operatoros\.net\/sessions\/[a-f0-9-]+$/);
     const sessionUrl = modulePage.url();

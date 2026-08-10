@@ -1,0 +1,1104 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/phase20-product-truth.mjs",
+  "moduleSlug": "ninja-pool-hall",
+  "moduleName": "Ninja Pool Hall",
+  "sourceRoot": "apps/modules/ninja-pool-hall/source",
+  "provenance": {
+    "selectedKind": "imported_snapshot",
+    "remote": "https://github.com/shotgunsensei/Shotgun-ninja-pool-hall.git",
+    "commit": "62439c4018ec551ce2891800351200c8ab2cb9e7",
+    "ref": "main",
+    "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
+  },
+  "sourceFingerprint": {
+    "algorithm": "sha256(path NUL uint64be(size) content)",
+    "treeSha256": "ef94c15839731bfa2881d7e95a703c1cfef950b18790109373c80a31efec0fa8",
+    "fileCount": 146,
+    "totalBytes": 1828963
+  },
+  "stateCounts": {
+    "ACTIVE_NATIVE": 0,
+    "ACTIVE_SHARED_EQUIVALENT": 0,
+    "OWNER_WAIVED": 0,
+    "BLOCKED": 56
+  },
+  "typeCounts": {
+    "api_endpoint": 1,
+    "asset": 8,
+    "background_process": 2,
+    "component_action": 19,
+    "integration": 9,
+    "mobile_pwa_surface": 2,
+    "source_test": 2,
+    "ui_page": 7,
+    "ui_route": 6
+  },
+  "capabilityDigestSha256": "2fcfffa04c97e795dfce0d13accc3cb3fdd79d36a844db2b7f4dbb5d43c7e2d4",
+  "capabilities": [
+    {
+      "capabilityId": "ninja-pool-hall.api_endpoint.247d8a284573ad12",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/health.ts#GET /healthz",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/api-server/src/routes/health.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 6,
+      "title": "GET /healthz",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.asset.233328f90595731b",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/pool/public/screenshot-wide-game.png",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/public/screenshot-wide-game.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/pool/public/screenshot-wide-game.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninja-pool-hall.asset.44dba01c741214ee",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/pool/public/icon-512-maskable.png",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/public/icon-512-maskable.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/pool/public/icon-512-maskable.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninja-pool-hall.asset.5262f2f9ff7b3104",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/pool/public/icon-512.png",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/public/icon-512.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/pool/public/icon-512.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninja-pool-hall.asset.76971b12e544b93f",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/pool/public/opengraph.jpg",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/public/opengraph.jpg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/pool/public/opengraph.jpg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninja-pool-hall.asset.7c28aa33031a7cda",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/pool/public/favicon.svg",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/public/favicon.svg"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/pool/public/favicon.svg",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninja-pool-hall.asset.95b9b52bb9b2512a",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/pool/public/screenshot-narrow-game.png",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/public/screenshot-narrow-game.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/pool/public/screenshot-narrow-game.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninja-pool-hall.asset.acb4ba888e9f03a1",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/pool/public/screenshot-narrow-menu.png",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/public/screenshot-narrow-menu.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/pool/public/screenshot-narrow-menu.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninja-pool-hall.asset.c04f51e4fa680f07",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "asset",
+      "canonicalSourceIdentity": "artifacts/pool/public/icon-192.png",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/public/icon-192.png"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/pool/public/icon-192.png",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline."
+    },
+    {
+      "capabilityId": "ninja-pool-hall.background_process.180233f09c7e6951",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "background_process",
+      "canonicalSourceIdentity": "artifacts/api-server/src/lib/poolRoom.ts#setInterval:() => { if (!alive) { try { ws.terminate(); } catch { /* ignore */ } clearInterval(interval); return; } alive = false; try { ws.ping(); } catch { /* ignore */ } }",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/api-server/src/lib/poolRoom.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 294,
+      "title": "setInterval () => { if (!alive) { try { ws.terminate(); } catch { /* ignore */ } clearInterv",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.background_process.3ec2ab14a54fadb6",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "background_process",
+      "canonicalSourceIdentity": "artifacts/api-server/src/lib/poolRoom.ts#setInterval:cleanupRooms",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/api-server/src/lib/poolRoom.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 56,
+      "title": "setInterval cleanupRooms",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.00f01d7afb015976",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/components/InstallPrompt.tsx#Button:onClick:() => onOpenChange(false):Got it#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/components/InstallPrompt.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 103,
+      "title": "Got it",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.15ee8074a46dd037",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/Settings.tsx#Button:onClick:() => navigate(\"/\"):Back to menu#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/Settings.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 20,
+      "title": "Back to menu",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.28c54ce3ae2415a1",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/components/PoolGame.tsx#Button:onClick:newGame:New game#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/components/PoolGame.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1329,
+      "title": "New game",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.311172d65ca216c4",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/components/HUD.tsx#Button:onClick:onExit:Back to menu#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/components/HUD.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 118,
+      "title": "Back to menu",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.459c1ff2e0480573",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/JoinGame.tsx#Button:onClick:joinRoom:Join room#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/JoinGame.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 170,
+      "title": "Join room",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.4ada2edbb2386a5e",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/components/InstallPrompt.tsx#Button:onClick:() => dismissInstallPrompt():Dismiss install prompt#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/components/InstallPrompt.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 173,
+      "title": "Dismiss install prompt",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.4b2eaed5f84ffa9c",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/MainMenu.tsx#Link:navigate:item.to:#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/MainMenu.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 135,
+      "title": "item.to",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.5ae7a5e4a3c72cb1",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/Practice.tsx#Button:onClick:() => navigate(\"/\"):Back#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/Practice.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 41,
+      "title": "Back",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.5bd44d3c7eff0172",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/components/InstallPrompt.tsx#Button:onClick:() => runInstallAction(mode, () => setShowInstructions(true)):Install#2",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/components/InstallPrompt.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 221,
+      "title": "Install",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.7224c162e452237e",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/JoinGame.tsx#Button:onClick:() => navigate(\"/\"):Back to menu#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/JoinGame.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 121,
+      "title": "Back to menu",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.86d409550b4b679b",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/HostGame.tsx#Button:onClick:() => { void navigator.clipboard.writeText(joinUrl).catch(() => { /* ignore */ }); }:Copy link#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/HostGame.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 203,
+      "title": "Copy link",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.939c02cd49069d5e",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/Practice.tsx#Button:onClick:() => setChosen(\"bot\"):Vs CPU#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/Practice.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 33,
+      "title": "Vs CPU",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.9de92aa3b01b0855",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/Practice.tsx#Button:onClick:() => setChosen(\"freeshoot\"):Free shoot#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/Practice.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 26,
+      "title": "Free shoot",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.a79a2d0d8bc0687e",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/HostGame.tsx#Button:onClick:() => navigate(\"/\"):Back to menu#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/HostGame.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 148,
+      "title": "Back to menu",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.bb1cae2af1262ad6",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/components/PoolGame.tsx#Button:onClick:onRerack:Re-rack &amp; re-break#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/components/PoolGame.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1638,
+      "title": "Re-rack &amp; re-break",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.c3adbaf7a7c1e24c",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/components/InstallPrompt.tsx#Button:onClick:() => runInstallAction(mode, () => setShowInstructions(true)):Install#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/components/InstallPrompt.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 164,
+      "title": "Install",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.d4bd84dff402d7b5",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/components/PoolGame.tsx#Button:onClick:onAccept:Play the table#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/components/PoolGame.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1635,
+      "title": "Play the table",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.e807796860aeabc3",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/components/PoolGame.tsx#Button:onClick:triggerShot:#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/components/PoolGame.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1305,
+      "title": "Button onClick",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.component_action.fcc0377d44ce15e8",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/Settings.tsx#Button:onClick:() => setSettings({ ...DEFAULT_SETTINGS }):Restore defaults#1",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/Settings.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 135,
+      "title": "Restore defaults",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.integration.12c33045e4358b0e",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/pool/vite.config.ts#env:NODE_ENV",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/vite.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 35,
+      "title": "NODE_ENV",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.integration.311f596995db128c",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/pool/vite.config.ts#env:BASE_PATH",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/vite.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 21,
+      "title": "BASE_PATH",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.integration.80e87209399a7125",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/pool/vite.config.ts#env:REPL_ID",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/vite.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 36,
+      "title": "REPL_ID",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.integration.819266ee1ab141a7",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/lib/logger.ts#env:LOG_LEVEL",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/api-server/src/lib/logger.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 6,
+      "title": "LOG_LEVEL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.integration.a3b35305e7005732",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/pool/vite.config.ts#env:PORT",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/vite.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 7,
+      "title": "PORT",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.integration.a70eb4962ca8b4ef",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/index.ts#env:PORT",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/api-server/src/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 7,
+      "title": "PORT",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.integration.c3d1daf29128afd4",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "integration",
+      "canonicalSourceIdentity": "lib/db/src/index.ts#env:DATABASE_URL",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/lib/db/src/index.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 7,
+      "title": "DATABASE_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.integration.cdfe1fefd17183ff",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/lib/logger.ts#env:NODE_ENV",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/api-server/src/lib/logger.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 3,
+      "title": "NODE_ENV",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.integration.d0a532eafc961528",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "integration",
+      "canonicalSourceIdentity": "lib/db/drizzle.config.ts#env:DATABASE_URL",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/lib/db/drizzle.config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 4,
+      "title": "DATABASE_URL",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.mobile_pwa_surface.2f899c79ba702a25",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "mobile_pwa_surface",
+      "canonicalSourceIdentity": "artifacts/pool/public/sw.js",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/public/sw.js"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/pool/public/sw.js",
+      "state": "BLOCKED",
+      "blockerCode": "MOBILE_OR_PWA_PARITY_UNPROVEN",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.mobile_pwa_surface.993e38bc98295314",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "mobile_pwa_surface",
+      "canonicalSourceIdentity": "artifacts/pool/public/manifest.webmanifest",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/public/manifest.webmanifest"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/pool/public/manifest.webmanifest",
+      "state": "BLOCKED",
+      "blockerCode": "MOBILE_OR_PWA_PARITY_UNPROVEN",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.source_test.78356f00f13e0cbf",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "source_test",
+      "canonicalSourceIdentity": "artifacts/pool/src/lib/rules.test.ts",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/lib/rules.test.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/pool/src/lib/rules.test.ts",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source test expectation is inventoried but not yet mapped to an OperatorOS compatibility test."
+    },
+    {
+      "capabilityId": "ninja-pool-hall.source_test.7cada70fd2483d0b",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "source_test",
+      "canonicalSourceIdentity": "artifacts/pool/src/lib/physics.test.ts",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/lib/physics.test.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "artifacts/pool/src/lib/physics.test.ts",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Source test expectation is inventoried but not yet mapped to an OperatorOS compatibility test."
+    },
+    {
+      "capabilityId": "ninja-pool-hall.ui_page.19aa22f7ccd0744a",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/JoinGame.tsx",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/JoinGame.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "JoinGame.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.ui_page.3a64ceb4df8ebb8c",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/Practice.tsx",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/Practice.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "Practice.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.ui_page.3d0614f6d2c76bb7",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/MainMenu.tsx",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/MainMenu.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "MainMenu.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.ui_page.4ba491f67ae26288",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/LocalTwoPlayer.tsx",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/LocalTwoPlayer.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "LocalTwoPlayer.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.ui_page.a020b507c9e46235",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/HostGame.tsx",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/HostGame.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "HostGame.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.ui_page.bac9680925042ae7",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/not-found.tsx",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/not-found.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "not-found.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.ui_page.bbb239b2a07e4e42",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "ui_page",
+      "canonicalSourceIdentity": "artifacts/pool/src/pages/Settings.tsx",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/Settings.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 1,
+      "title": "Settings.tsx",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.ui_route.106dc7eaeece5fae",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/pool/src/App.tsx#/",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 16,
+      "title": "/",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.ui_route.130225b9994b8a65",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/pool/src/App.tsx#/practice",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 17,
+      "title": "/practice",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.ui_route.38fbe4265413dd77",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/pool/src/App.tsx#/settings",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 21,
+      "title": "/settings",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.ui_route.9e5e1bad0d8fa6ef",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/pool/src/App.tsx#/host",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 19,
+      "title": "/host",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.ui_route.d279f763fe6f3f77",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/pool/src/App.tsx#/join",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 20,
+      "title": "/join",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    },
+    {
+      "capabilityId": "ninja-pool-hall.ui_route.fda04d18d0021191",
+      "moduleSlug": "ninja-pool-hall",
+      "type": "ui_route",
+      "canonicalSourceIdentity": "artifacts/pool/src/App.tsx#/local",
+      "sourcePointers": [
+        "apps/modules/ninja-pool-hall/source/artifacts/pool/src/App.tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 18,
+      "title": "/local",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_CAPABILITY_UNMAPPED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": null
+    }
+  ]
+}

@@ -22,6 +22,7 @@ import TenantUsersPage from '@/components/pages/TenantUsersPage';
 import TenantModulesPage from '@/components/pages/TenantModulesPage';
 import TenantSettingsPage from '@/components/pages/TenantSettingsPage';
 import TenantBillingPage from '@/components/pages/TenantBillingPage';
+import SharedServicesAdminPage from '@/components/pages/SharedServicesAdminPage';
 import OperatorLoader from '@/components/brand/OperatorLoader';
 import { isSuperAdmin, isTenantAdmin } from '@/lib/rbac';
 
@@ -35,6 +36,7 @@ const LINKABLE_CONSOLE_PAGES = new Set([
   'tenant-modules',
   'tenant-billing',
   'tenant-settings',
+  'tenant-shared-services',
 ]);
 
 function initialConsolePage(): string {
@@ -152,6 +154,10 @@ function AppContent() {
         return userIsTenantAdmin
           ? <TenantSettingsPage />
           : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only organization owners or admins can edit organization settings." />;
+      case 'tenant-shared-services':
+        return userIsTenantAdmin
+          ? <SharedServicesAdminPage onNavigate={handleNavigate} />
+          : <UnauthorizedPage onGoBack={() => handleNavigate('my-apps')} message="Only organization owners or admins can manage shared services." />;
       case 'platform':
         return userIsSuperAdmin
           ? <PlatformPage />

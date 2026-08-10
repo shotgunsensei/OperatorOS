@@ -2,22 +2,29 @@
 
 import React, { createContext, useContext } from 'react';
 
-const ModuleDeepLinkTargetContext = createContext<string | undefined>(undefined);
+export interface ModuleDeepLinkTargetValue {
+  sectionId?: string;
+  routePath?: string;
+}
+
+const ModuleDeepLinkTargetContext = createContext<ModuleDeepLinkTargetValue>({});
 
 export function ModuleDeepLinkTargetProvider({
   initialSectionId,
+  initialRoutePath,
   children,
 }: {
   initialSectionId?: string;
+  initialRoutePath?: string;
   children: React.ReactNode;
 }) {
   return (
-    <ModuleDeepLinkTargetContext.Provider value={initialSectionId}>
+    <ModuleDeepLinkTargetContext.Provider value={{ sectionId: initialSectionId, routePath: initialRoutePath }}>
       {children}
     </ModuleDeepLinkTargetContext.Provider>
   );
 }
 
-export function useModuleDeepLinkTarget(): string | undefined {
+export function useModuleDeepLinkTarget(): ModuleDeepLinkTargetValue {
   return useContext(ModuleDeepLinkTargetContext);
 }

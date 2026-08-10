@@ -1,5 +1,6 @@
 import ModuleHost from '../ModuleHost';
 import ModuleState from '../ModuleState';
+import { redirect } from 'next/navigation';
 import { getModuleBySlug } from '../../../../../../../packages/modules/registry.js';
 import {
   formatModuleDeepPath,
@@ -29,10 +30,12 @@ export default function ModuleDeepLinkPage({ params }: ModuleDeepLinkPageProps) 
 
   const target = resolveCoreModuleDeepLink(params.slug, params.path);
   if (target) {
+    if (target.redirectPath) redirect(target.redirectPath);
     return (
       <ModuleHost
         slug={params.slug}
         initialSectionId={target.sectionId}
+        initialRoutePath={formatModuleDeepPath(params.path)}
       />
     );
   }
