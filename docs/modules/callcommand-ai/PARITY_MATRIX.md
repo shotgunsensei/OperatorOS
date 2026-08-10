@@ -1,5 +1,12 @@
 # CallCommand AI parity matrix
 
+## Phase 20 truth notice (2026-08-08)
+
+The matrix below is historical implementation evidence. Current release truth
+is `docs/parity/modules/callcommand-ai.json`: 589 capabilities, 0 native, 0
+shared-equivalent, 0 owner-waived, and 589 blocked pending exact target/test
+mapping. See `docs/phase-20/PRODUCT-TRUTH-REPORT.md`.
+
 Status: Phase 11E source/local implementation contract. The imported source is
 read-only evidence, not an executable child application.
 

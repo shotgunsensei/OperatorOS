@@ -46,6 +46,7 @@ import { registerEcosystemRoutes } from './routes/ecosystem-routes.js';
 import { registerDiagnosticsRoutes } from './routes/diagnostics-routes.js';
 import { registerDirectoryRoutes } from './routes/directory-routes.js';
 import { registerSharedServiceRoutes } from './routes/shared-service-routes.js';
+import { registerSharedPlatformRoutes } from './routes/shared-platform-routes.js';
 import { registerSnapProofOsRoutes } from './routes/snapproofos-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
 import {
@@ -65,6 +66,7 @@ import { OPERATOROS_MODULE_REGISTRY } from '../../../packages/modules/registry.j
 import { isBrowserRequestOriginAllowed } from './lib/request-origin.js';
 import { resolveSsoCodeSecret } from '../../../packages/sso/index.js';
 import { runtimeTrustsProxy } from './lib/proxy-trust.js';
+import { getSharedSecretVaultReadiness } from './lib/shared-secret-vault.js';
 
 /**
  * CORS origin policy. Production permits only registered OperatorOS platform
@@ -258,6 +260,7 @@ await registerEcosystemRoutes(app);
 await registerDiagnosticsRoutes(app);
 await registerDirectoryRoutes(app);
 await registerSharedServiceRoutes(app);
+await registerSharedPlatformRoutes(app);
 await registerSnapProofOsRoutes(app);
 
 if (process.env.OPERATOROS_DATABASE_RELEASE_APPLIED === '1') {
@@ -434,14 +437,25 @@ app.get('/api/health', async (_req, reply) => reply.send(healthSnapshot()));
 app.get('/readyz', async (_req, reply) => {
   const ssoCodeEncryptionConfigured = !!resolveSsoCodeSecret();
   let database: 'healthy' | 'unavailable' = 'healthy';
+  let liveProviderCount = 0;
+  let blockedLiveProviderCount = 0;
   try {
     await db.execute(sql`select 1 as operatoros_readiness`);
+    const providerReadiness = await db.execute(sql`
+      SELECT COUNT(*) FILTER (WHERE mode = 'live')::int AS live_count,
+        COUNT(*) FILTER (WHERE mode = 'live' AND health_state <> 'ready')::int AS blocked_count
+      FROM shared_provider_configs
+    `);
+    liveProviderCount = Number(providerReadiness.rows[0]?.live_count || 0);
+    blockedLiveProviderCount = Number(providerReadiness.rows[0]?.blocked_count || 0);
   } catch {
     database = 'unavailable';
     // Do not serialize driver errors here: connection strings and credentials
     // can be embedded in nested database error metadata.
     app.log.error({ check: 'database' }, 'readiness_database_failed');
   }
+
+  const sharedSecretVault = getSharedSecretVaultReadiness();
 
   const checks = {
     database,
@@ -451,6 +465,10 @@ app.get('/readyz', async (_req, reply) => {
       ? 'configured'
       : 'missing',
     sharedServiceWorker: getSharedServiceWorkerStatus().started ? 'configured' : 'missing',
+    sharedSecretEncryption: sharedSecretVault.mode,
+    sharedProviderControlPlane: liveProviderCount === 0 ? 'not_configured'
+      : blockedLiveProviderCount > 0 ? 'blocked'
+        : 'ready',
     releaseIdentity: releaseIdentity.status === 'identified' ? 'configured' : 'missing',
   };
   const externalDependencies = {
@@ -461,7 +479,12 @@ app.get('/readyz', async (_req, reply) => {
   };
   const ready = database === 'healthy'
     && getSharedServiceWorkerStatus().started
-    && (!isProductionEnv() || (ssoCodeEncryptionConfigured && releaseIdentity.status === 'identified'));
+    && (!isProductionEnv() || (
+      ssoCodeEncryptionConfigured
+      && releaseIdentity.status === 'identified'
+      && blockedLiveProviderCount === 0
+      && (liveProviderCount === 0 || sharedSecretVault.configured)
+    ));
   return reply.code(ready ? 200 : 503).send({
     ready,
     checks,

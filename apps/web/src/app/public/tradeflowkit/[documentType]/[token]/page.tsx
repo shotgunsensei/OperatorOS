@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 
 type PublicRecord = Record<string, any>;
 const money = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
@@ -54,8 +55,8 @@ export default function TradeFlowKitPublicDocument({ params }: { params: { docum
     : params.documentType === 'customers' ? 'Customer Portal'
     : params.documentType === 'leads' ? (record?.name || 'Request Service')
     : params.token === 'success' ? 'Payment received' : 'Payment canceled';
-  return <main style={styles.main} data-testid="tradeflowkit-public-document"><section style={styles.card}>
-    <header style={styles.header}><div><span style={styles.brand}>OperatorOS · TradeFlowKit</span><h1 style={styles.title}>{title}</h1></div><span style={styles.secure}>Secure</span></header>
+  return <main style={{ ...styles.main, ...publicTheme }} data-testid="tradeflowkit-public-document"><section style={styles.card}>
+    <header style={styles.header}><div style={styles.identity}><Image src="/brand/tradeflowkit-logo.png" alt="TradeFlowKit" width={52} height={52} priority /><div><span style={styles.brand}>TradeFlow · secured by OperatorOS</span><h1 style={styles.title}>{title}</h1></div></div><span style={styles.secure}>Secure link</span></header>
     {loading ? <div style={styles.state} aria-busy="true">Loading…</div> : error ? <div style={{ ...styles.state, color: '#991b1b' }} role="alert">{error}</div> : paymentReturn ? <PaymentReturn successful={params.token === 'success'} /> : record && params.documentType === 'leads' ? <LeadCapture form={record} token={params.token} /> : record && params.documentType === 'customers' ? <Portal record={record} /> : record ? <Document record={record} type={params.documentType} pending={pending} respond={respond} /> : null}
     <footer style={styles.footer}>{params.documentType === 'leads' ? 'Your request is submitted directly to this business. OperatorOS applies rate limits and does not expose tenant credentials.' : paymentReturn ? 'Payment status is confirmed by the provider webhook; this return page does not change invoice state.' : 'This link contains an opaque access token. Do not forward it. OperatorOS never places a login credential or bearer token in this URL.'}</footer>
   </section></main>;
@@ -103,10 +104,10 @@ function LeadCapture({ form, token }: { form: PublicRecord; token: string }) {
     </div>
     <label style={styles.label}>How can we help?<textarea maxLength={4000} rows={5} value={fields.description} onChange={event => update('description', event.target.value)} style={{ ...styles.input, resize: 'vertical' }} /></label>
     <label style={styles.checkbox}><input type="checkbox" checked={fields.consentToSms} onChange={event => update('consentToSms', event.target.checked)} /> I agree to receive service-related SMS messages. Reply STOP to opt out.</label>
-    <label style={styles.checkbox}><input required type="checkbox" checked={fields.privacyConsent} onChange={event => update('privacyConsent', event.target.checked)} /> <span>{form.consentText} <a href={form.privacyNoticeUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#047857', fontWeight: 700 }}>Privacy notice</a></span></label>
+    <label style={styles.checkbox}><input required type="checkbox" checked={fields.privacyConsent} onChange={event => update('privacyConsent', event.target.checked)} /> <span>{form.consentText} <a href={form.privacyNoticeUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--tfk-primary-hover)', fontWeight: 700 }}>Privacy notice</a></span></label>
     <label aria-hidden="true" style={{ position: 'absolute', left: '-10000px' }}>Website<input tabIndex={-1} autoComplete="off" value={fields.website} onChange={event => update('website', event.target.value)} /></label>
     {error && <div style={{ ...styles.state, padding: 12, color: '#991b1b' }} role="alert">{error}</div>}
-    <button disabled={submitting || !fields.privacyConsent} style={{ ...styles.button, background: submitting ? '#789189' : '#047857', justifySelf: 'end' }}>{submitting ? 'Submitting…' : 'Submit request'}</button>
+    <button disabled={submitting || !fields.privacyConsent} style={{ ...styles.button, background: submitting ? '#789189' : 'var(--tfk-primary)', justifySelf: 'end' }}>{submitting ? 'Submitting…' : 'Submit request'}</button>
   </form>;
 }
 
@@ -115,7 +116,7 @@ function Document({ record, type, pending, respond }: { record: PublicRecord; ty
     <div style={styles.lines}>{(record.lineItems || []).map((item: PublicRecord, index: number) => <div key={index} style={styles.line}><span>{item.description}</span><span>{item.quantity} × {money(item.unitPriceCents)}</span><strong>{money(item.quantity * item.unitPriceCents)}</strong></div>)}</div>
     <div style={styles.totals}><span>Subtotal <strong>{money(record.subtotalCents)}</strong></span><span>Tax <strong>{money(record.taxCents)}</strong></span>{record.discountCents > 0 && <span>Discount <strong>−{money(record.discountCents)}</strong></span>}<span style={{ fontSize: 18 }}>Total <strong>{money(record.totalCents)}</strong></span></div>
     {record.notes && <div style={styles.note}><strong>Notes</strong><p>{record.notes}</p></div>}
-    {type === 'quotes' && record.status === 'sent' && <div style={styles.actions}><button disabled={pending} onClick={() => respond('accepted')} style={{ ...styles.button, background: '#047857' }}>Accept quote</button><button disabled={pending} onClick={() => respond('declined')} style={{ ...styles.button, background: '#b91c1c' }}>Decline</button></div>}
+    {type === 'quotes' && record.status === 'sent' && <div style={styles.actions}><button disabled={pending} onClick={() => respond('accepted')} style={{ ...styles.button, background: 'var(--tfk-primary-hover)' }}>Accept quote</button><button disabled={pending} onClick={() => respond('declined')} style={{ ...styles.button, background: '#b91c1c' }}>Decline</button></div>}
     {type === 'quotes' && ['accepted','declined','expired'].includes(record.status) && <div style={styles.state}>Response recorded: <strong>{record.status}</strong></div>}
   </div>;
 }
@@ -126,10 +127,19 @@ function Portal({ record }: { record: PublicRecord }) {
 
 function PortalList({ label, rows, render }: { label: string; rows: PublicRecord[]; render: (row: PublicRecord) => string }) { return <section><h3>{label}</h3>{rows.length === 0 ? <div style={styles.state}>No {label.toLowerCase()} yet.</div> : <div style={styles.lines}>{rows.map(row => <div key={row.id} style={styles.line}><span>{render(row)}</span></div>)}</div>}</section>; }
 
+const publicTheme = {
+  '--tfk-primary': 'hsl(25 95% 44%)',
+  '--tfk-primary-hover': 'hsl(25 95% 38%)',
+  '--tfk-primary-soft': 'hsl(25 95% 95%)',
+  '--tfk-card': 'hsl(0 0% 98%)',
+  '--tfk-navy': 'hsl(220 45% 14%)',
+  '--tfk-muted': 'hsl(215 16% 40%)',
+} as React.CSSProperties;
+
 const styles: Record<string, React.CSSProperties> = {
-  main: { minHeight:'100vh', background:'linear-gradient(135deg,#ecfdf5,#f8fafc)', padding:24, color:'#10231d', fontFamily:'system-ui,sans-serif' },
-  card: { maxWidth:820, margin:'0 auto', background:'white', border:'1px solid rgba(5,150,105,.22)', borderRadius:14, boxShadow:'0 24px 70px rgba(17,76,57,.12)', overflow:'hidden' },
-  header: { display:'flex', justifyContent:'space-between', gap:16, padding:24, borderBottom:'1px solid rgba(22,101,52,.13)', background:'#f6fbf8' }, brand:{ color:'#047857', fontSize:11, fontWeight:900, letterSpacing:1, textTransform:'uppercase' }, title:{ margin:'5px 0 0', fontSize:26 }, secure:{ height:'fit-content', borderRadius:999, padding:'6px 10px', background:'#dcfce7', color:'#166534', fontSize:12, fontWeight:800 },
-  content:{ padding:24, display:'grid', gap:20 }, state:{ padding:24, textAlign:'center', color:'#587067' }, summary:{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(120px,1fr))', gap:8 }, lines:{ display:'grid', gap:7 }, line:{ display:'flex', flexWrap:'wrap', justifyContent:'space-between', gap:10, border:'1px solid rgba(22,101,52,.12)', borderRadius:7, padding:11 }, totals:{ display:'grid', gap:6, justifyContent:'end', textAlign:'right' }, note:{ background:'#f8fafc', borderRadius:8, padding:14 }, actions:{ display:'flex', gap:10, justifyContent:'flex-end' }, button:{ border:0, borderRadius:7, padding:'11px 16px', color:'white', fontWeight:800, cursor:'pointer' }, footer:{ padding:'14px 24px', borderTop:'1px solid rgba(22,101,52,.1)', color:'#789189', fontSize:11, lineHeight:1.5 },
-  formGrid:{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:14 }, label:{ display:'grid', gap:6, fontSize:13, fontWeight:800 }, input:{ width:'100%', boxSizing:'border-box', border:'1px solid rgba(22,101,52,.25)', borderRadius:7, padding:'10px 11px', background:'#fbfefc', color:'#10231d', font:'inherit' }, checkbox:{ display:'flex', alignItems:'flex-start', gap:9, color:'#385249', fontSize:13, lineHeight:1.5 },
+  main: { minHeight:'100vh', background:'linear-gradient(135deg,var(--tfk-primary-soft),hsl(214 25% 96%))', padding:24, color:'var(--tfk-navy)', fontFamily:'"Open Sans",ui-sans-serif,system-ui,sans-serif' },
+  card: { maxWidth:820, margin:'0 auto', background:'white', border:'1px solid color-mix(in srgb, var(--tfk-primary) 22%, transparent)', borderRadius:10, boxShadow:'0 24px 70px hsl(220 45% 14% / .12)', overflow:'hidden' },
+  header: { display:'flex', justifyContent:'space-between', gap:16, padding:24, borderBottom:'1px solid color-mix(in srgb, var(--tfk-primary) 13%, transparent)', background:'var(--tfk-card)' }, identity:{ display:'flex', alignItems:'center', gap:12 }, brand:{ color:'var(--tfk-primary-hover)', fontSize:11, fontWeight:900, letterSpacing:1, textTransform:'uppercase' }, title:{ margin:'5px 0 0', fontSize:26, color:'var(--tfk-navy)' }, secure:{ height:'fit-content', borderRadius:999, padding:'6px 10px', background:'#dcfce7', color:'#166534', fontSize:12, fontWeight:800 },
+  content:{ padding:24, display:'grid', gap:20 }, state:{ padding:24, textAlign:'center', color:'var(--tfk-muted)' }, summary:{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(120px,1fr))', gap:8 }, lines:{ display:'grid', gap:7 }, line:{ display:'flex', flexWrap:'wrap', justifyContent:'space-between', gap:10, border:'1px solid color-mix(in srgb, var(--tfk-primary) 12%, transparent)', borderRadius:7, padding:11 }, totals:{ display:'grid', gap:6, justifyContent:'end', textAlign:'right' }, note:{ background:'var(--tfk-card)', borderRadius:8, padding:14 }, actions:{ display:'flex', gap:10, justifyContent:'flex-end' }, button:{ border:0, borderRadius:7, minHeight:44, padding:'11px 16px', color:'white', fontWeight:800, cursor:'pointer' }, footer:{ padding:'14px 24px', borderTop:'1px solid color-mix(in srgb, var(--tfk-primary) 10%, transparent)', color:'var(--tfk-muted)', fontSize:11, lineHeight:1.5 },
+  formGrid:{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:14 }, label:{ display:'grid', gap:6, fontSize:13, fontWeight:800 }, input:{ width:'100%', boxSizing:'border-box', minHeight:42, border:'1px solid color-mix(in srgb, var(--tfk-primary) 25%, transparent)', borderRadius:7, padding:'10px 11px', background:'var(--tfk-card)', color:'var(--tfk-navy)', font:'inherit' }, checkbox:{ display:'flex', alignItems:'flex-start', gap:9, color:'var(--tfk-muted)', fontSize:13, lineHeight:1.5 },
 };

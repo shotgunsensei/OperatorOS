@@ -140,8 +140,9 @@ boundaries.
 FaultlineLab is a Phase 10A state-3 source/local completion candidate. It owns
 tenant-scoped versioned challenges, attempts, assignments, progress and
 append-only evidence while OperatorOS retains identity, tenant, entitlement
-and billing authority. Only four validated runnable source cases initialize;
-52 planned cards remain non-playable. Scores and evidence release are
+and billing authority. Every valid definition reachable from the pinned source
+`allCases` export initializes by compiler/source hash as a published immutable
+version; no authored pack case remains planned-only. Scores and evidence release are
 server-derived, proof files use shared private attachments, and no certificate
 claim exists. ADR-0019 defines this boundary.
 

@@ -248,6 +248,26 @@ export const tenantApi = {
     apiFetch(`/tenants/${tenantId}/switch`, { method: 'POST' }),
 };
 
+export const sharedPlatformApi = {
+  overview: (tenantId: string) => apiFetch(`/tenants/${tenantId}/shared-platform/overview`),
+  operations: (tenantId: string) => apiFetch(`/tenants/${tenantId}/shared-platform/operations`),
+  saveProvider: (tenantId: string, providerKey: string, data: Record<string, unknown>) =>
+    apiFetch(`/tenants/${tenantId}/shared-platform/providers/${encodeURIComponent(providerKey)}`, { method: 'PUT', body: JSON.stringify(data) }),
+  webhookEndpoints: (tenantId: string) => apiFetch(`/tenants/${tenantId}/shared-platform/webhook-endpoints`),
+  createWebhookEndpoint: (tenantId: string, data: Record<string, unknown>) =>
+    apiFetch(`/tenants/${tenantId}/shared-platform/webhook-endpoints`, { method: 'POST', body: JSON.stringify(data) }),
+  retryDeadLetter: (tenantId: string, kind: 'job' | 'webhook' | 'outbox', id: string) =>
+    apiFetch(`/tenants/${tenantId}/shared-platform/dead-letters/${kind}/${id}/retry`, { method: 'POST' }),
+  createServiceIdentity: (tenantId: string, data: Record<string, unknown>) =>
+    apiFetch(`/tenants/${tenantId}/shared-platform/service-identities`, { method: 'POST', body: JSON.stringify(data) }),
+  revokeApiToken: (tenantId: string, tokenId: string) =>
+    apiFetch(`/tenants/${tenantId}/shared-platform/api-tokens/${tokenId}`, { method: 'DELETE' }),
+  requestExport: (tenantId: string, data: Record<string, unknown>, idempotencyKey: string) =>
+    apiFetch(`/tenants/${tenantId}/shared-platform/exports`, { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify(data) }),
+  createDownloadGrant: (tenantId: string, attachmentId: string, moduleSlug: string) =>
+    apiFetch(`/tenants/${tenantId}/shared-platform/attachments/${attachmentId}/download-grant`, { method: 'POST', body: JSON.stringify({ moduleSlug }) }),
+};
+
 export type TechDeckTicketPriority = 'critical' | 'high' | 'medium' | 'low';
 export type TechDeckTicketStatus = 'open' | 'in_progress' | 'waiting_on_client' | 'resolved' | 'closed';
 
@@ -802,6 +822,33 @@ export interface FaultlineChallengeSummary {
   bestScore?: number | null;
   bestPercentage?: number | null;
   bestTier?: string | null;
+  publishedAt?: string | null;
+  updatedAt?: string | null;
+  sourceId?: string | null;
+  estimatedMinutes?: number;
+  shortSummary?: string;
+  mobileSummary?: string;
+  sourceProductId?: string;
+  requiredEntitlements?: string[];
+  requiredToolSlugs?: string[];
+  previewSymptoms?: string[];
+  previewSystems?: string[];
+  tags?: string[];
+  isStarter?: boolean;
+  isFeatured?: boolean;
+  isDailyEligible?: boolean;
+  isSandboxEligible?: boolean;
+  sortOrder?: number;
+}
+
+export interface FaultlineCatalogResponse {
+  challenges: FaultlineChallengeSummary[];
+  total: number;
+  facets: {
+    total: number;
+    categories: Record<string, number>;
+    difficulties: Record<string, number>;
+  };
 }
 
 export interface FaultlineChallengeContent {
@@ -932,6 +979,27 @@ export interface TradeFlowKitTaskList {
 export interface TradeFlowKitActivity {
   id: string; action: string; entityType: string; entityId: string | null;
   metadata: Record<string, unknown> | null; userId: string; createdAt: string;
+}
+export interface TradeFlowKitRecurringSchedule {
+  id: string;
+  name: string;
+  payload: {
+    customerId?: string;
+    siteId?: string | null;
+    assignedToUserId?: string | null;
+    title?: string;
+    description?: string | null;
+    priority?: string;
+    durationMinutes?: number;
+  };
+  intervalSeconds: number;
+  nextRunAt: string;
+  enabled: boolean;
+  lastEnqueuedAt: string | null;
+  lastErrorCode: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TorqueShedVehicle {
@@ -1452,8 +1520,19 @@ export const moduleShellApi = {
   faultlinelab: {
     policy: (): Promise<Record<string, any>> =>
       apiFetch('/modules/faultlinelab/policy') as Promise<Record<string, any>>,
-    listChallenges: (includeDrafts = false): Promise<{ challenges: FaultlineChallengeSummary[]; total: number }> =>
-      apiFetch(`/modules/faultlinelab/challenges${includeDrafts ? '?includeDrafts=true' : ''}`) as Promise<any>,
+    listChallenges: (
+      includeDrafts = false,
+      filters: { search?: string; category?: string; difficulty?: string; sort?: string } = {},
+    ): Promise<FaultlineCatalogResponse> => {
+      const query = new URLSearchParams();
+      if (includeDrafts) query.set('includeDrafts', 'true');
+      if (filters.search) query.set('search', filters.search);
+      if (filters.category) query.set('category', filters.category);
+      if (filters.difficulty) query.set('difficulty', filters.difficulty);
+      if (filters.sort) query.set('sort', filters.sort);
+      const suffix = query.size ? `?${query}` : '';
+      return apiFetch(`/modules/faultlinelab/challenges${suffix}`) as Promise<FaultlineCatalogResponse>;
+    },
     getChallenge: (id: string): Promise<{ challenge: FaultlineChallengeSummary; content: FaultlineChallengeContent; contentHash: string }> =>
       apiFetch(`/modules/faultlinelab/challenges/${encodeURIComponent(id)}`) as Promise<any>,
     getAuthoringChallenge: (id: string): Promise<{ challenge: FaultlineChallengeSummary; content: Record<string, any>; versions: Array<Record<string, any>> }> =>
@@ -1468,6 +1547,12 @@ export const moduleShellApi = {
       apiFetch(`/modules/faultlinelab/authoring/challenges/${encodeURIComponent(id)}/retire`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) as Promise<any>,
     exportChallenge: (id: string): Promise<Record<string, any>> =>
       apiFetch(`/modules/faultlinelab/authoring/challenges/${encodeURIComponent(id)}/export`) as Promise<any>,
+    validateChallenge: (content: Record<string, unknown>): Promise<{ valid: boolean; validation: Record<string, any>; contentHash: string }> =>
+      apiFetch('/modules/faultlinelab/authoring/validate', { method: 'POST', body: JSON.stringify({ content }) }) as Promise<any>,
+    listChallengeAttachments: (id: string): Promise<{ attachments: Array<Record<string, any>> }> =>
+      apiFetch(`/modules/faultlinelab/authoring/challenges/${encodeURIComponent(id)}/attachments`) as Promise<any>,
+    uploadChallengeAttachment: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/faultlinelab/authoring/challenges/${encodeURIComponent(id)}/attachments`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
     daily: (): Promise<Record<string, any>> => apiFetch('/modules/faultlinelab/daily') as Promise<any>,
     listSessions: (): Promise<{ sessions: FaultlineSessionBundle['session'][]; total: number }> =>
       apiFetch('/modules/faultlinelab/sessions') as Promise<any>,
@@ -1818,6 +1903,8 @@ export const moduleShellApi = {
   tradeflowkit: {
     revenue: (): Promise<TradeFlowKitRevenueResponse> =>
       apiFetch('/modules/tradeflowkit/revenue') as Promise<TradeFlowKitRevenueResponse>,
+    publicLink: (documentType: 'quotes' | 'invoices' | 'customers', id: string): Promise<{ token: string; path: string }> =>
+      apiFetch(`/modules/tradeflowkit/${documentType}/${encodeURIComponent(id)}/public-link`, { method: 'POST' }) as Promise<{ token: string; path: string }>,
     search: (query: string): Promise<TradeFlowKitSearchResponse> =>
       apiFetch(`/modules/tradeflowkit/search?q=${encodeURIComponent(query)}`) as Promise<TradeFlowKitSearchResponse>,
     trash: (): Promise<TradeFlowKitTrashResponse> =>
@@ -1965,6 +2052,31 @@ export const moduleShellApi = {
       const suffix = query.size ? `?${query.toString()}` : '';
       return apiFetch(`/modules/tradeflowkit/operations${suffix}`) as Promise<TradeFlowKitOperationsResponse>;
     },
+    recurringJobs: (): Promise<{ schedules: TradeFlowKitRecurringSchedule[] }> =>
+      apiFetch('/modules/tradeflowkit/recurring-jobs') as Promise<{ schedules: TradeFlowKitRecurringSchedule[] }>,
+    createRecurringJob: (input: {
+      name: string;
+      customerId: string;
+      siteId?: string;
+      assignedToUserId?: string;
+      title: string;
+      description?: string;
+      priority: 'low' | 'normal' | 'high' | 'urgent';
+      intervalDays: number;
+      durationMinutes: number;
+      nextRunAt: string;
+    }): Promise<{ schedule: TradeFlowKitRecurringSchedule }> =>
+      apiFetch('/modules/tradeflowkit/recurring-jobs', { method: 'POST', body: JSON.stringify(input) }) as Promise<{ schedule: TradeFlowKitRecurringSchedule }>,
+    updateRecurringJob: (
+      id: string,
+      expectedVersion: number,
+      enabled: boolean,
+      nextRunAt?: string,
+    ): Promise<{ schedule: TradeFlowKitRecurringSchedule }> =>
+      apiFetch(`/modules/tradeflowkit/recurring-jobs/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ expectedVersion, enabled, ...(nextRunAt ? { nextRunAt } : {}) }),
+      }) as Promise<{ schedule: TradeFlowKitRecurringSchedule }>,
     savedViews: (resource?: TradeFlowKitSavedView['resource']): Promise<{ savedViews: TradeFlowKitSavedView[] }> =>
       apiFetch(`/modules/tradeflowkit/saved-views${resource ? `?resource=${encodeURIComponent(resource)}` : ''}`) as Promise<{ savedViews: TradeFlowKitSavedView[] }>,
     createSavedView: (input: {

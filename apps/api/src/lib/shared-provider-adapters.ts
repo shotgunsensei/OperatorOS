@@ -1,6 +1,7 @@
 import { getAiProvider, getProviderInfo, type AiCompletionRequest, type AiCompletionResponse } from './ai-provider.js';
 import { resolveTelephonyConfig, restAuthHeader } from './telephony.js';
 import { isOperatorOSTestEnvironment } from './shared-service-safety.js';
+import { sanitizeSharedMetadata } from './shared-service-safety.js';
 
 export type ProviderKind = 'email' | 'sms' | 'payments' | 'ai';
 export type ProviderState = 'configured' | 'disabled' | 'test';
@@ -28,6 +29,8 @@ export interface OutboundMessageInput {
 
 export interface OutboundMessageResult {
   providerMessageId: string;
+  /** False for deterministic adapters: the payload was captured, not externally delivered. */
+  externalDelivery: boolean;
 }
 
 export interface OutboundProviderAdapter {
@@ -70,7 +73,7 @@ class TestOutboundAdapter implements OutboundProviderAdapter {
     this.status = { kind, name: 'deterministic-test', state: 'test' };
   }
   async send(input: OutboundMessageInput): Promise<OutboundMessageResult> {
-    return { providerMessageId: `test:${this.status.kind}:${input.idempotencyKey}` };
+    return { providerMessageId: `test:${this.status.kind}:${input.idempotencyKey}`, externalDelivery: false };
   }
 }
 
@@ -102,7 +105,7 @@ class ResendEmailAdapter implements OutboundProviderAdapter {
         code: 'EMAIL_PROVIDER_RESPONSE_INVALID',
       });
     }
-    return { providerMessageId: result.id };
+    return { providerMessageId: result.id, externalDelivery: true };
   }
 }
 
@@ -134,7 +137,7 @@ class TwilioSmsAdapter implements OutboundProviderAdapter {
         code: 'SMS_PROVIDER_RESPONSE_INVALID',
       });
     }
-    return { providerMessageId: result.sid };
+    return { providerMessageId: result.sid, externalDelivery: true };
   }
 }
 
@@ -194,4 +197,26 @@ export async function getSharedProviderStatuses(): Promise<ProviderStatus[]> {
     getOutboundProviderAdapter('sms'),
   ]);
   return [email.status, sms.status, getPaymentProviderAdapter().status, getSharedAiProviderAdapter().status];
+}
+
+/**
+ * Deterministic connector used by tests for connector classes that must not
+ * contact a live network (OAuth, storage handoff, webhook, email, SMS, AI).
+ */
+export function runDeterministicConnectorForTests(input: {
+  kind: 'email' | 'sms' | 'ai' | 'storage' | 'webhook' | 'oauth';
+  payload: Record<string, unknown>;
+  idempotencyKey: string;
+}) {
+  if (!isOperatorOSTestEnvironment()) {
+    throw Object.assign(new Error('Deterministic connectors are test-only'), { code: 'DETERMINISTIC_CONNECTOR_FORBIDDEN' });
+  }
+  return {
+    accepted: true,
+    externalDelivery: false as const,
+    adapter: 'deterministic-test' as const,
+    payload: sanitizeSharedMetadata(input.payload),
+    receiptId: `test:${input.kind}:${input.idempotencyKey}`,
+    state: 'recorded_not_delivered' as const,
+  };
 }

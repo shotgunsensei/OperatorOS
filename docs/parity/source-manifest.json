@@ -1,0 +1,593 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/phase20-product-truth.mjs",
+  "stateModel": [
+    "ACTIVE_NATIVE",
+    "ACTIVE_SHARED_EQUIVALENT",
+    "OWNER_WAIVED",
+    "BLOCKED"
+  ],
+  "blockedReviewRule": "retired_security, retired_product_boundary, planned and undocumented exclusions map to BLOCKED unless an exact owner waiver exists; BLOCKED_REVIEW is used unless a stricter evidence/provenance blocker applies",
+  "missingSourcePointerRule": "a legacy-ledger implementation path absent from the pinned imported source tree is preserved in missingSourcePointers and forced to BLOCKED plus blockerCode=SOURCE_IMPLEMENTATION_POINTER_MISSING",
+  "ownerWaivers": {
+    "path": "docs/parity/OWNER_WAIVERS.yml",
+    "count": 0,
+    "implicitWaivers": 0
+  },
+  "totals": {
+    "modules": 13,
+    "capabilities": 6646,
+    "stateCounts": {
+      "ACTIVE_NATIVE": 336,
+      "ACTIVE_SHARED_EQUIVALENT": 181,
+      "OWNER_WAIVED": 0,
+      "BLOCKED": 6129
+    },
+    "typeCounts": {
+      "api_endpoint": 990,
+      "asset": 141,
+      "background_process": 24,
+      "component_action": 2076,
+      "database_column": 2116,
+      "database_table": 238,
+      "export_flow": 49,
+      "import_flow": 26,
+      "integration": 367,
+      "mobile_product": 1,
+      "mobile_pwa_surface": 40,
+      "playable_case": 56,
+      "public_flow": 117,
+      "source_recovery": 1,
+      "source_test": 73,
+      "ui_page": 116,
+      "ui_route": 214,
+      "visual_contract": 1
+    },
+    "unclassified": 0
+  },
+  "modules": [
+    {
+      "moduleSlug": "brandforgeos",
+      "moduleName": "BrandForgeOS",
+      "ledger": "docs/parity/modules/brandforgeos.json",
+      "sourceRoot": "apps/modules/brandforgeos/source",
+      "provenance": {
+        "selectedKind": "imported_snapshot",
+        "remote": "https://github.com/shotgunsensei/BrandForge-OS.git",
+        "commit": "5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e",
+        "ref": "main",
+        "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
+      },
+      "sourceFingerprint": {
+        "algorithm": "sha256(path NUL uint64be(size) content)",
+        "treeSha256": "20858dfed1553e65c2ee14bc7a76579212450ecf82fdbadadfc7cd1070047cff",
+        "fileCount": 273,
+        "totalBytes": 1265564
+      },
+      "capabilityDigestSha256": "54e8fd82c4f7bc25000d7c2040e1f7879385f14ee45ac9626344507eca59a888",
+      "stateCounts": {
+        "ACTIVE_NATIVE": 0,
+        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "OWNER_WAIVED": 0,
+        "BLOCKED": 793
+      },
+      "typeCounts": {
+        "api_endpoint": 86,
+        "asset": 2,
+        "component_action": 214,
+        "database_column": 380,
+        "database_table": 33,
+        "export_flow": 5,
+        "integration": 24,
+        "mobile_pwa_surface": 1,
+        "public_flow": 5,
+        "ui_page": 21,
+        "ui_route": 22
+      }
+    },
+    {
+      "moduleSlug": "callcommand-ai",
+      "moduleName": "CallCommand AI",
+      "ledger": "docs/parity/modules/callcommand-ai.json",
+      "sourceRoot": "apps/modules/callcommand-ai/source",
+      "provenance": {
+        "selectedKind": "imported_snapshot",
+        "remote": "https://github.com/shotgunsensei/Call-Command-AI.git",
+        "commit": "d49434e1d641d62cc141591c7208539a7afbf11e",
+        "ref": "main",
+        "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
+      },
+      "sourceFingerprint": {
+        "algorithm": "sha256(path NUL uint64be(size) content)",
+        "treeSha256": "9d6b63239bf3e1e021ee38cbb0e1900bc5756b240e9b306ff203d26edae9f548",
+        "fileCount": 370,
+        "totalBytes": 4448558
+      },
+      "capabilityDigestSha256": "1e8ac22312f990b15a3021d856ef49377969f3cac5f55a43326afffa8a11ab4a",
+      "stateCounts": {
+        "ACTIVE_NATIVE": 0,
+        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "OWNER_WAIVED": 0,
+        "BLOCKED": 589
+      },
+      "typeCounts": {
+        "api_endpoint": 86,
+        "asset": 5,
+        "component_action": 134,
+        "database_column": 264,
+        "database_table": 20,
+        "import_flow": 16,
+        "integration": 39,
+        "ui_page": 22,
+        "ui_route": 3
+      }
+    },
+    {
+      "moduleSlug": "faultlinelab",
+      "moduleName": "FaultlineLab",
+      "ledger": "docs/parity/modules/faultlinelab.json",
+      "sourceRoot": "apps/modules/faultlinelab/source",
+      "provenance": {
+        "selectedKind": "imported_snapshot",
+        "remote": "https://github.com/shotgunsensei/Faultline-Lab.git",
+        "commit": "46877aae35565149ccf4f4988dd94627fc6bb92b",
+        "ref": "main",
+        "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08",
+        "truthNote": "The source allCases export is compiler-discovered; every valid authored definition initializes as a published immutable OperatorOS challenge version."
+      },
+      "sourceFingerprint": {
+        "algorithm": "sha256(path NUL uint64be(size) content)",
+        "treeSha256": "e003f51e460376ad96f42c14303d4928f3948af6faa62170811279d7cc0d86af",
+        "fileCount": 452,
+        "totalBytes": 7927304
+      },
+      "capabilityDigestSha256": "02cd43443a5f4e2018d9fff83117a323f504bceedfaae9fa81dee86fdb0cae25",
+      "stateCounts": {
+        "ACTIVE_NATIVE": 56,
+        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "OWNER_WAIVED": 0,
+        "BLOCKED": 501
+      },
+      "typeCounts": {
+        "api_endpoint": 42,
+        "asset": 61,
+        "background_process": 7,
+        "component_action": 200,
+        "database_column": 79,
+        "database_table": 9,
+        "export_flow": 3,
+        "import_flow": 1,
+        "integration": 72,
+        "mobile_pwa_surface": 2,
+        "playable_case": 56,
+        "source_test": 24,
+        "ui_page": 1
+      }
+    },
+    {
+      "moduleSlug": "ninja-launch-kit",
+      "moduleName": "Ninja Launch Kit",
+      "ledger": "docs/parity/modules/ninja-launch-kit.json",
+      "sourceRoot": "apps/modules/ninja-launch-kit/source",
+      "provenance": {
+        "selectedKind": "imported_snapshot",
+        "remote": "https://github.com/shotgunsensei/Ninja-Launch-Kit.git",
+        "commit": "30bd1abc05846926e97bc7b26c5b7d6625e8f161",
+        "ref": "main",
+        "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
+      },
+      "sourceFingerprint": {
+        "algorithm": "sha256(path NUL uint64be(size) content)",
+        "treeSha256": "59daef03f6dbaa1998793808294d2992c9d8a7c1bcf836057d4ab3dd3293a5ce",
+        "fileCount": 257,
+        "totalBytes": 1184335
+      },
+      "capabilityDigestSha256": "2f892de52aec2466b08f182ac7779669bb11b62c0796cf05889fc9147b850e28",
+      "stateCounts": {
+        "ACTIVE_NATIVE": 0,
+        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "OWNER_WAIVED": 0,
+        "BLOCKED": 336
+      },
+      "typeCounts": {
+        "api_endpoint": 44,
+        "asset": 2,
+        "component_action": 107,
+        "database_column": 60,
+        "database_table": 9,
+        "export_flow": 22,
+        "integration": 39,
+        "mobile_pwa_surface": 11,
+        "public_flow": 7,
+        "ui_page": 18,
+        "ui_route": 17
+      }
+    },
+    {
+      "moduleSlug": "ninja-pool-hall",
+      "moduleName": "Ninja Pool Hall",
+      "ledger": "docs/parity/modules/ninja-pool-hall.json",
+      "sourceRoot": "apps/modules/ninja-pool-hall/source",
+      "provenance": {
+        "selectedKind": "imported_snapshot",
+        "remote": "https://github.com/shotgunsensei/Shotgun-ninja-pool-hall.git",
+        "commit": "62439c4018ec551ce2891800351200c8ab2cb9e7",
+        "ref": "main",
+        "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
+      },
+      "sourceFingerprint": {
+        "algorithm": "sha256(path NUL uint64be(size) content)",
+        "treeSha256": "ef94c15839731bfa2881d7e95a703c1cfef950b18790109373c80a31efec0fa8",
+        "fileCount": 146,
+        "totalBytes": 1828963
+      },
+      "capabilityDigestSha256": "2fcfffa04c97e795dfce0d13accc3cb3fdd79d36a844db2b7f4dbb5d43c7e2d4",
+      "stateCounts": {
+        "ACTIVE_NATIVE": 0,
+        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "OWNER_WAIVED": 0,
+        "BLOCKED": 56
+      },
+      "typeCounts": {
+        "api_endpoint": 1,
+        "asset": 8,
+        "background_process": 2,
+        "component_action": 19,
+        "integration": 9,
+        "mobile_pwa_surface": 2,
+        "source_test": 2,
+        "ui_page": 7,
+        "ui_route": 6
+      }
+    },
+    {
+      "moduleSlug": "ninjamation",
+      "moduleName": "Ninjamation",
+      "ledger": "docs/parity/modules/ninjamation.json",
+      "sourceRoot": "apps/modules/ninjamation/source",
+      "provenance": {
+        "selectedKind": "composite_imported_snapshot",
+        "remote": "https://github.com/shotgunsensei/AutomationPacks.git",
+        "commit": "cca75338d04ed35b89f28d614eb51559735aa32f",
+        "ref": "master",
+        "additionalSource": {
+          "commit": "ca0e55fd086f6751a43964927166bfa69db012b6",
+          "ref": "main",
+          "purpose": "script catalog"
+        },
+        "remoteVerification": "master and main matched selected application/catalog commits on 2026-08-08",
+        "recoveryCandidates": [
+          {
+            "commit": "1b8818afbc261f70e60584979e3e4efe550630c8",
+            "ref": "codex/create-gui-for-script-selection-and-execution",
+            "disposition": "retained_for_evidence",
+            "note": "Older 35-entry catalog-only tree with no common ancestor to the application commit; not a fuller application baseline."
+          }
+        ]
+      },
+      "sourceFingerprint": {
+        "algorithm": "sha256(path NUL uint64be(size) content)",
+        "treeSha256": "4c50291fa06582d0b8a5ecdd86f294bec94bd9282ac4774a2ac6ae00dabb6e3b",
+        "fileCount": 185,
+        "totalBytes": 2867510
+      },
+      "capabilityDigestSha256": "af4ee46d00411516b4548f5d05260910671ec56efff4c7818eea5f5f822c4fe8",
+      "stateCounts": {
+        "ACTIVE_NATIVE": 0,
+        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "OWNER_WAIVED": 0,
+        "BLOCKED": 189
+      },
+      "typeCounts": {
+        "api_endpoint": 29,
+        "asset": 7,
+        "background_process": 1,
+        "component_action": 67,
+        "database_column": 26,
+        "database_table": 3,
+        "export_flow": 2,
+        "integration": 32,
+        "public_flow": 3,
+        "ui_page": 10,
+        "ui_route": 9
+      }
+    },
+    {
+      "moduleSlug": "outcall",
+      "moduleName": "OutCall",
+      "ledger": "docs/parity/modules/outcall.json",
+      "sourceRoot": "apps/modules/outcall/source",
+      "provenance": {
+        "selectedKind": "missing_source",
+        "remote": null,
+        "commit": null,
+        "ref": null,
+        "remoteVerification": "No OutCall repository in the owner public repository list; direct shotgunsensei/OutCall probe returned repository not found on 2026-08-08.",
+        "recoverySearch": [
+          "apps/modules/outcall/source contains only README.md",
+          "No matching source in C:/Dev sibling repositories",
+          "No matching entry in C:/Dev/OperatorOS.zip or C:/Dev/TorqueShed.zip"
+        ]
+      },
+      "sourceFingerprint": {
+        "algorithm": "sha256(path NUL uint64be(size) content)",
+        "treeSha256": "c8dd9b90c2b2624a9b8b2ee17cbcd6cfd1f1de2cd8b6a82654ec341115a453ef",
+        "fileCount": 1,
+        "totalBytes": 639
+      },
+      "capabilityDigestSha256": "542f567184365a4f05417386cb9bb418f1647b8763f001fc79f20e5ab5614e17",
+      "stateCounts": {
+        "ACTIVE_NATIVE": 0,
+        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "OWNER_WAIVED": 0,
+        "BLOCKED": 1
+      },
+      "typeCounts": {
+        "source_recovery": 1
+      }
+    },
+    {
+      "moduleSlug": "pulsedesk",
+      "moduleName": "PulseDesk",
+      "ledger": "docs/parity/modules/pulsedesk.json",
+      "sourceRoot": "apps/modules/pulsedesk/source",
+      "provenance": {
+        "selectedKind": "imported_snapshot",
+        "remote": "https://github.com/shotgunsensei/PulseDesk.git",
+        "commit": "937849471e489ed23db2a263d04160a388402740",
+        "ref": "main",
+        "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
+      },
+      "sourceFingerprint": {
+        "algorithm": "sha256(path NUL uint64be(size) content)",
+        "treeSha256": "37577ad5b07de3a9ffc65adc3a279ecd37e3498434bbaa3209b469da0c06b833",
+        "fileCount": 211,
+        "totalBytes": 7663743
+      },
+      "capabilityDigestSha256": "aeb280dfc1f14e36a3af615dfca9ccfceffb9828fa4c7b936726507d199119f4",
+      "stateCounts": {
+        "ACTIVE_NATIVE": 65,
+        "ACTIVE_SHARED_EQUIVALENT": 60,
+        "OWNER_WAIVED": 0,
+        "BLOCKED": 764
+      },
+      "typeCounts": {
+        "api_endpoint": 183,
+        "asset": 8,
+        "background_process": 8,
+        "component_action": 238,
+        "database_column": 308,
+        "database_table": 50,
+        "integration": 45,
+        "mobile_pwa_surface": 2,
+        "public_flow": 24,
+        "ui_route": 23
+      }
+    },
+    {
+      "moduleSlug": "snapproofos",
+      "moduleName": "SnapProofOS",
+      "ledger": "docs/parity/modules/snapproofos.json",
+      "sourceRoot": "apps/modules/snapproofos/source",
+      "provenance": {
+        "selectedKind": "imported_snapshot",
+        "remote": "https://github.com/shotgunsensei/snapproof.git",
+        "commit": "26bded38c13b5b6361d407462c68052b0c30613d",
+        "ref": "main",
+        "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
+      },
+      "sourceFingerprint": {
+        "algorithm": "sha256(path NUL uint64be(size) content)",
+        "treeSha256": "8b40d45e0b827310a8e2c5581d8694f179efe98519b554756884383e992353ea",
+        "fileCount": 260,
+        "totalBytes": 3411533
+      },
+      "capabilityDigestSha256": "449fd43a43c4d667e9d9ed347aa682acd72159339b1c362b0cec8ac5ccf43ad5",
+      "stateCounts": {
+        "ACTIVE_NATIVE": 0,
+        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "OWNER_WAIVED": 0,
+        "BLOCKED": 341
+      },
+      "typeCounts": {
+        "api_endpoint": 63,
+        "asset": 4,
+        "component_action": 46,
+        "database_column": 140,
+        "database_table": 16,
+        "export_flow": 11,
+        "import_flow": 2,
+        "integration": 12,
+        "mobile_pwa_surface": 8,
+        "public_flow": 6,
+        "ui_page": 17,
+        "ui_route": 16
+      }
+    },
+    {
+      "moduleSlug": "studyforge-ai",
+      "moduleName": "StudyForge AI",
+      "ledger": "docs/parity/modules/studyforge-ai.json",
+      "sourceRoot": "apps/modules/studyforge-ai/source",
+      "provenance": {
+        "selectedKind": "imported_snapshot",
+        "remote": "https://github.com/shotgunsensei/Study-Forge.git",
+        "commit": "a607a9f34442b1d0f6bfffbf0293609529494825",
+        "ref": "main",
+        "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
+      },
+      "sourceFingerprint": {
+        "algorithm": "sha256(path NUL uint64be(size) content)",
+        "treeSha256": "eb37ae3fb92f606d9a137657baa4d0fcb4988c6918eb7afd87b60814040156b3",
+        "fileCount": 225,
+        "totalBytes": 936004
+      },
+      "capabilityDigestSha256": "9a4b25f81edfa4c8049d2271025372d9d9613e33300715cc473d0621080ab81d",
+      "stateCounts": {
+        "ACTIVE_NATIVE": 0,
+        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "OWNER_WAIVED": 0,
+        "BLOCKED": 317
+      },
+      "typeCounts": {
+        "api_endpoint": 33,
+        "asset": 2,
+        "background_process": 1,
+        "component_action": 119,
+        "database_column": 83,
+        "database_table": 11,
+        "integration": 20,
+        "public_flow": 11,
+        "ui_page": 19,
+        "ui_route": 18
+      }
+    },
+    {
+      "moduleSlug": "techdeck",
+      "moduleName": "TechDeck",
+      "ledger": "docs/parity/modules/techdeck.json",
+      "sourceRoot": "apps/modules/techdeck/source",
+      "provenance": {
+        "selectedKind": "imported_snapshot",
+        "remote": "https://github.com/shotgunsensei/Tech-Deck.git",
+        "commit": "8125f8d89d8d39d60a50c8061a26133a0c917792",
+        "ref": "main",
+        "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
+      },
+      "sourceFingerprint": {
+        "algorithm": "sha256(path NUL uint64be(size) content)",
+        "treeSha256": "96346d2116e03349953771d7606dadf4b367338d2c87edd5950e6f8cb5071795",
+        "fileCount": 302,
+        "totalBytes": 13929944
+      },
+      "capabilityDigestSha256": "94b9341fa2b0478a3e65d970b9b80dc2875dfcb729dc725e8140232a99a9e411",
+      "stateCounts": {
+        "ACTIVE_NATIVE": 73,
+        "ACTIVE_SHARED_EQUIVALENT": 101,
+        "OWNER_WAIVED": 0,
+        "BLOCKED": 1163
+      },
+      "typeCounts": {
+        "api_endpoint": 221,
+        "asset": 8,
+        "background_process": 5,
+        "component_action": 448,
+        "database_column": 438,
+        "database_table": 45,
+        "import_flow": 4,
+        "integration": 46,
+        "mobile_pwa_surface": 8,
+        "public_flow": 35,
+        "source_test": 14,
+        "ui_route": 65
+      }
+    },
+    {
+      "moduleSlug": "torqueshed",
+      "moduleName": "TorqueShed",
+      "ledger": "docs/parity/modules/torqueshed.json",
+      "sourceRoot": "apps/modules/torqueshed/source",
+      "provenance": {
+        "selectedKind": "imported_snapshot",
+        "remote": "https://github.com/shotgunsensei/TorqueShed-Codex.git",
+        "commit": "c33ade5cef525d62d371a63946b814c58a72a4a7",
+        "ref": "historical snapshot",
+        "remoteVerification": "Selected snapshot remains resolvable but remote main advanced.",
+        "recoveryCandidates": [
+          {
+            "commit": "508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75",
+            "ref": "main",
+            "disposition": "BLOCKED_REVIEW",
+            "note": "Three commits and 34 files beyond the imported snapshot; adds product API/schema, web work, billing and tests."
+          },
+          {
+            "commit": "68da4548f6650cfb11eb19ee133643a110ccf084",
+            "path": "C:/Dev/TorqueShed-Codex",
+            "disposition": "retained_for_evidence",
+            "note": "Dirty local checkout with extensive uncommitted product, security and mobile work; not deterministic provenance."
+          },
+          {
+            "commit": "a81ffcfc81cc87008e2fb531a99d55cbcfcfa9cc",
+            "path": "C:/Dev/TorqueShed",
+            "disposition": "BLOCKED_REVIEW",
+            "note": "Separate clean web-product repository requiring an owner source-authority decision."
+          }
+        ]
+      },
+      "sourceFingerprint": {
+        "algorithm": "sha256(path NUL uint64be(size) content)",
+        "treeSha256": "babeb43df2beb6200c4afc68383ca51fdfbabdfb0d6c250dbb54959ba289e366",
+        "fileCount": 149,
+        "totalBytes": 7946844
+      },
+      "capabilityDigestSha256": "4caf9a85f4d26d9237d57b4a61a6499a5b7e37cf42eacf7e027f3c0b216683d8",
+      "stateCounts": {
+        "ACTIVE_NATIVE": 0,
+        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "OWNER_WAIVED": 0,
+        "BLOCKED": 125
+      },
+      "typeCounts": {
+        "api_endpoint": 8,
+        "asset": 17,
+        "component_action": 52,
+        "database_column": 17,
+        "database_table": 2,
+        "integration": 21,
+        "mobile_product": 1,
+        "mobile_pwa_surface": 3,
+        "public_flow": 3,
+        "ui_page": 1
+      }
+    },
+    {
+      "moduleSlug": "tradeflowkit",
+      "moduleName": "TradeFlowKit",
+      "ledger": "docs/parity/modules/tradeflowkit.json",
+      "sourceRoot": "apps/modules/tradeflowkit/source",
+      "provenance": {
+        "selectedKind": "imported_restored_snapshot",
+        "remote": "https://github.com/shotgunsensei/TradeFlowKit.git",
+        "commit": "37aa67f1da804fc3ac56f36e50e01362077d7a26",
+        "ref": "codex/restore-production-app (captured, no longer present on remote)",
+        "remoteVerification": "Remote exposes only main at 6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55; restored commit was not remotely resolvable on 2026-08-08. The imported tree fingerprint is the repeatable baseline.",
+        "recoveryCandidates": [
+          {
+            "commit": "6d0c13df5e324f6aba9cdf2cf14a550d0cf0ca55",
+            "ref": "main",
+            "disposition": "retained_for_evidence",
+            "note": "Original public baseline; older than the imported restored snapshot."
+          }
+        ]
+      },
+      "sourceFingerprint": {
+        "algorithm": "sha256(path NUL uint64be(size) content)",
+        "treeSha256": "81c63c362772b35a4c5f531591d5ed56f438fa0aa8161d41c399565ca9c97509",
+        "fileCount": 321,
+        "totalBytes": 7881072
+      },
+      "capabilityDigestSha256": "62550d030cf7c8a1ca35195bcb5011b7d21abbd1b25323c10fdcedb1c904bb8d",
+      "stateCounts": {
+        "ACTIVE_NATIVE": 142,
+        "ACTIVE_SHARED_EQUIVALENT": 20,
+        "OWNER_WAIVED": 0,
+        "BLOCKED": 954
+      },
+      "typeCounts": {
+        "api_endpoint": 194,
+        "asset": 17,
+        "component_action": 432,
+        "database_column": 321,
+        "database_table": 40,
+        "export_flow": 6,
+        "import_flow": 3,
+        "integration": 8,
+        "mobile_pwa_surface": 3,
+        "public_flow": 23,
+        "source_test": 33,
+        "ui_route": 35,
+        "visual_contract": 1
+      }
+    }
+  ]
+}

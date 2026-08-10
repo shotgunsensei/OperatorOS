@@ -5,11 +5,13 @@
     "required": [
       "DATABASE_URL",
       "SESSION_SECRET",
-      "SSO_CODE_ENCRYPTION_SECRET"
+      "SSO_CODE_ENCRYPTION_SECRET",
+      "SHARED_SECRET_ENCRYPTION_KEY"
     ],
     "minimumLengths": {
       "SESSION_SECRET": 24,
-      "SSO_CODE_ENCRYPTION_SECRET": 32
+      "SSO_CODE_ENCRYPTION_SECRET": 32,
+      "SHARED_SECRET_ENCRYPTION_KEY": 43
     },
     "exact": {
       "APP_ENV": "production",

@@ -94,6 +94,7 @@ import { registerOutCallRoutes } from './outcall-routes.js';
 import { registerTradeFlowKitLeadOperationsRoutes } from './tradeflowkit-lead-operations-routes.js';
 import { registerTradeFlowKitPublicIntakeRoutes } from './tradeflowkit-public-intake-routes.js';
 import { registerTradeFlowKitPaymentRoutes } from './tradeflowkit-payment-routes.js';
+import { registerTradeFlowKitRecurringRoutes } from './tradeflowkit-recurring-routes.js';
 import { scheduleTradeFlowKitLeadFollowups } from '../lib/tradeflowkit-lead-operations.js';
 
 // Per-module guard chains. `requireTenantMember` confirms the caller belongs
@@ -575,6 +576,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerTradeFlowKitLeadOperationsRoutes(app);
   await registerTradeFlowKitPublicIntakeRoutes(app);
   await registerTradeFlowKitPaymentRoutes(app);
+  await registerTradeFlowKitRecurringRoutes(app);
   await registerTechDeckRoutes(app);
   await registerTorqueShedRoutes(app);
   await registerTorqueAssistRoutes(app);

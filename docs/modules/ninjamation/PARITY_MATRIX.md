@@ -1,5 +1,12 @@
 # Ninjamation parity matrix
 
+## Phase 20 truth notice (2026-08-08)
+
+The matrix below is historical implementation evidence. Current release truth
+is `docs/parity/modules/ninjamation.json`: 189 capabilities, 0 native, 0
+shared-equivalent, 0 owner-waived, and 189 blocked pending exact target/test
+mapping. See `docs/phase-20/PRODUCT-TRUTH-REPORT.md`.
+
 Status: Phase 12A source/local state 4 candidate. Imported source remains
 read-only evidence, not an executable child application. Deployment and
 cutover gates remain open.

@@ -101,7 +101,9 @@ test('FaultlineLab persists a server-scored investigation with strict tenant and
   const catalogResponse = await inject('GET', '/v1/modules/faultlinelab/challenges', ownerA);
   assert.equal(catalogResponse.statusCode, 200, catalogResponse.body);
   const catalog = catalogResponse.json().challenges;
-  assert.equal(catalog.length, 4);
+  assert.equal(catalog.length, FAULTLINELAB_STARTER_CHALLENGES.length);
+  assert.equal(catalogResponse.json().facets.total, FAULTLINELAB_STARTER_CHALLENGES.length);
+  assert.ok(catalog.every((item: any) => item.sourceId), 'every compiled source case must expose its provenance id');
   const source = FAULTLINELAB_STARTER_CHALLENGES[0]!;
   const challenge = catalog.find((item: any) => item.slug === source.slug);
   assert.ok(challenge);

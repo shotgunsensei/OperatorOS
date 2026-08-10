@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
@@ -15,6 +15,42 @@ import {
 
 type Executor = Pick<typeof db, 'execute'>;
 type Channel = 'email' | 'sms' | 'in_app';
+
+function destinationFingerprint(destination: string): string {
+  return createHash('sha256').update(destination.trim().toLowerCase()).digest('hex');
+}
+
+export async function suppressNotificationDestination(input: {
+  tenantId: string;
+  channel: 'email' | 'sms';
+  destination: string;
+  reasonCode: string;
+  source: string;
+  actorUserId?: string | null;
+}, executor: Executor = db) {
+  const result = await executor.execute(sql`
+    INSERT INTO shared_notification_suppressions (
+      tenant_id, channel, destination_fingerprint, reason_code, source, created_by_user_id
+    ) VALUES (${input.tenantId}, ${input.channel}, ${destinationFingerprint(input.destination)},
+      ${input.reasonCode.slice(0, 120)}, ${input.source.slice(0, 120)}, ${input.actorUserId ?? null})
+    ON CONFLICT DO NOTHING RETURNING id, channel, reason_code, source, created_at
+  `);
+  return result.rows[0] ?? null;
+}
+
+export async function isNotificationDestinationSuppressed(input: {
+  tenantId: string;
+  channel: 'email' | 'sms';
+  destination: string;
+}, executor: Executor = db): Promise<boolean> {
+  const result = await executor.execute(sql`
+    SELECT 1 FROM shared_notification_suppressions
+    WHERE tenant_id = ${input.tenantId} AND channel = ${input.channel}
+      AND destination_fingerprint = ${destinationFingerprint(input.destination)} AND lifted_at IS NULL
+    LIMIT 1
+  `);
+  return Boolean(result.rows[0]);
+}
 
 export interface NotificationTemplateInput {
   tenantId: string;
@@ -163,17 +199,21 @@ export async function enqueueOutboxMessage(input: OutboxMessageInput, executor: 
     throw Object.assign(new Error('Outbound message requires a destination'), { code: 'OUTBOX_DESTINATION_REQUIRED' });
   }
   const context = sanitizeSharedMetadata(input.context);
+  const suppressed = input.channel !== 'in_app' && input.destination
+    ? await isNotificationDestinationSuppressed({ tenantId: input.tenantId, channel: input.channel, destination: input.destination }, executor)
+    : false;
   const result = await executor.execute(sql`
     INSERT INTO shared_outbox_messages (
       tenant_id, module_id, requested_by_user_id, recipient_user_id, channel,
       destination, template_key, subject, body, context_json, idempotency_key,
-      correlation_id, available_at, max_attempts
+      correlation_id, available_at, max_attempts, status, last_error_code
     ) VALUES (
       ${input.tenantId}, ${input.moduleId}, ${input.requestedByUserId ?? null},
       ${input.recipientUserId ?? null}, ${input.channel}, ${input.destination ?? null},
       ${input.templateKey ?? null}, ${input.subject ?? null}, ${input.body.slice(0, 20_000)},
       ${context}, ${input.idempotencyKey}, ${input.correlationId ?? null},
-      ${input.availableAt ?? new Date()}, ${Math.max(1, Math.min(20, input.maxAttempts ?? 5))}
+      ${input.availableAt ?? new Date()}, ${Math.max(1, Math.min(20, input.maxAttempts ?? 5))},
+      ${suppressed ? 'cancelled' : 'pending'}, ${suppressed ? 'DESTINATION_SUPPRESSED' : null}
     )
     ON CONFLICT (tenant_id, module_id, idempotency_key) DO NOTHING
     RETURNING *
@@ -260,6 +300,12 @@ async function markOutboxFailure(
   const disabled = error instanceof ProviderDisabledError;
   const terminal = disabled || attempt >= maxAttempts;
   const next = new Date(Date.now() + boundedRetryDelayMs(attempt));
+  await recordNotificationAttempt(row, {
+    adapterName: error instanceof ProviderDisabledError ? 'disabled' : String(row.provider_name || 'outbound-provider'),
+    externalDelivery: false,
+    resultState: disabled ? 'disabled' : terminal ? 'dead_letter' : 'retry',
+    errorCode: safeFailureCode(error),
+  }, executor);
   await executor.execute(sql`
     UPDATE shared_outbox_messages
     SET status = ${disabled ? 'disabled' : (terminal ? 'dead_letter' : 'retry')},
@@ -267,6 +313,23 @@ async function markOutboxFailure(
       lease_expires_at = NULL, last_error_code = ${safeFailureCode(error)}, updated_at = NOW()
     WHERE id = ${String(row.id)} AND tenant_id = ${String(row.tenant_id)}
       AND status = 'processing' AND lease_owner = ${String(row.lease_owner)}
+  `);
+}
+
+async function recordNotificationAttempt(row: Record<string, unknown>, input: {
+  adapterName: string;
+  externalDelivery: boolean;
+  resultState: string;
+  errorCode?: string | null;
+}, executor: Executor) {
+  await executor.execute(sql`
+    INSERT INTO shared_delivery_attempts (
+      tenant_id, module_id, delivery_kind, delivery_id, attempt_number,
+      adapter_name, external_delivery, result_state, safe_error_code, completed_at
+    ) VALUES (${String(row.tenant_id)}, ${String(row.module_id)}, 'notification', ${String(row.id)},
+      ${Number(row.attempt_count) + 1}, ${input.adapterName}, ${input.externalDelivery},
+      ${input.resultState}, ${input.errorCode ?? null}, NOW())
+    ON CONFLICT (tenant_id, delivery_kind, delivery_id, attempt_number) DO NOTHING
   `);
 }
 
@@ -297,6 +360,9 @@ export async function processOutboxMessage(row: Record<string, unknown>, executo
         WHERE id = ${String(row.id)} AND tenant_id = ${String(row.tenant_id)}
           AND status = 'processing' AND lease_owner = ${String(row.lease_owner)}
       `);
+      await recordNotificationAttempt(row, {
+        adapterName: 'operatoros-in-app', externalDelivery: false, resultState: 'delivered_internal',
+      }, executor);
       return;
     }
 
@@ -308,11 +374,16 @@ export async function processOutboxMessage(row: Record<string, unknown>, executo
       body: String(row.body),
       idempotencyKey: String(row.idempotency_key),
     });
+    await recordNotificationAttempt(row, {
+      adapterName: adapter.status.name,
+      externalDelivery: delivery.externalDelivery,
+      resultState: delivery.externalDelivery ? 'delivered' : 'recorded_not_delivered',
+    }, executor);
     await executor.execute(sql`
       UPDATE shared_outbox_messages
-      SET status = 'delivered', attempt_count = attempt_count + 1,
+      SET status = ${delivery.externalDelivery ? 'delivered' : 'recorded'}, attempt_count = attempt_count + 1,
         provider_name = ${adapter.status.name}, provider_message_id = ${delivery.providerMessageId},
-        delivered_at = NOW(), lease_owner = NULL, lease_expires_at = NULL,
+        delivered_at = ${delivery.externalDelivery ? new Date() : null}, lease_owner = NULL, lease_expires_at = NULL,
         last_error_code = NULL, updated_at = NOW()
       WHERE id = ${String(row.id)} AND tenant_id = ${String(row.tenant_id)}
         AND status = 'processing' AND lease_owner = ${String(row.lease_owner)}

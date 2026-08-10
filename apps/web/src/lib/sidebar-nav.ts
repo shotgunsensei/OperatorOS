@@ -1,6 +1,6 @@
 import {
   LayoutGrid, Store, Sparkles, Receipt, Settings as SettingsIcon,
-  Building2, Users as UsersIcon, Boxes, ShieldCheck, Mail,
+  Building2, Users as UsersIcon, Boxes, ShieldCheck, Mail, ServerCog,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -44,6 +44,7 @@ export function buildNavSections(opts: SidebarRoleFlags): NavSection[] {
         { id: 'tenant-modules', label: 'Tool access', Icon: Boxes },
         { id: 'tenant-billing', label: 'Billing and add-ons', Icon: Receipt },
         { id: 'tenant-settings', label: 'Organization settings', Icon: SettingsIcon },
+        { id: 'tenant-shared-services', label: 'Shared services', Icon: ServerCog },
       ],
     });
   }

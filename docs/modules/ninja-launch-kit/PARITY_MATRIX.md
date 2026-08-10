@@ -1,5 +1,12 @@
 # Ninja Launch Kit parity matrix
 
+## Phase 20 truth notice (2026-08-08)
+
+The matrix below is historical implementation evidence. Current release truth
+is `docs/parity/modules/ninja-launch-kit.json`: 336 capabilities, 0 native, 0
+shared-equivalent, 0 owner-waived, and 336 blocked pending exact target/test
+mapping. See `docs/phase-20/PRODUCT-TRUTH-REPORT.md`.
+
 Status: Phase 11D implementation contract. The imported source is read-only
 migration evidence, not an executable child application.
 

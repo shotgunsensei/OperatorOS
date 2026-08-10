@@ -1,22 +1,25 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import type { CSSProperties } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Activity,
-  ArchiveRestore,
   AlertTriangle,
+  ArchiveRestore,
   BarChart3,
+  Bell,
   BriefcaseBusiness,
   ClipboardList,
-  CreditCard,
-  ExternalLink,
   FileText,
-  GitBranch,
+  LayoutDashboard,
   Receipt,
+  Search,
   Settings,
   ShieldCheck,
-  Truck,
+  Moon,
+  Sun,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -26,284 +29,164 @@ import { getActiveTenantId } from '@/lib/auth';
 import { hasPlatformAdminAuthority } from '../../../../../packages/auth/index.js';
 import { createTradeFlowKitAdapterContext } from '../../../../../apps/modules/tradeflowkit/adapter.js';
 import TradeFlowKitLeadCenter from './TradeFlowKitLeadCenter';
-import TradeFlowKitRevenueFlow from './TradeFlowKitRevenueFlow';
-import TradeFlowKitOperations from './TradeFlowKitOperations';
+import TradeFlowKitRevenueFlow, { type TradeFlowKitRevenueView } from './TradeFlowKitRevenueFlow';
+import TradeFlowKitOperations, { type TradeFlowKitOperationsView } from './TradeFlowKitOperations';
 import TradeFlowKitWorkManagement from './TradeFlowKitWorkManagement';
 import TradeFlowKitGlobalSearch from './TradeFlowKitGlobalSearch';
 import TradeFlowKitTrash from './TradeFlowKitTrash';
 import BusinessDirectory from './BusinessDirectory';
-import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
+import styles from './TradeFlowKitShell.module.css';
 
 interface TradeFlowKitShellProps {
   baseUrl?: string;
+  routePath?: string;
 }
 
-const colors = {
-  bg: '#07110e',
-  ink: '#eaf7f0',
-  muted: '#9ab6aa',
-  dim: '#6f8b80',
-  panel: '#0f1b17',
-  panelSoft: '#14241e',
-  border: 'rgba(134, 239, 172, 0.16)',
-  borderStrong: 'rgba(52, 211, 153, 0.38)',
-  green: '#34d399',
-  blue: '#38bdf8',
-  gold: '#fbbf24',
-  red: '#fb7185',
-  violet: '#c4b5fd',
+type TradeFlowKitScreen =
+  | 'dashboard'
+  | 'leads'
+  | 'customers'
+  | 'jobs'
+  | 'quotes'
+  | 'invoices'
+  | 'payments'
+  | 'analytics'
+  | 'directory'
+  | 'trash'
+  | 'settings';
+
+interface RouteState {
+  screen: TradeFlowKitScreen;
+  recordId?: string;
+  intent?: 'new';
+}
+
+interface NavItem {
+  screen: TradeFlowKitScreen;
+  href: string;
+  label: string;
+  Icon: LucideIcon;
+}
+
+const primaryNav: NavItem[] = [
+  { screen: 'dashboard', href: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+  { screen: 'leads', href: '/leads', label: 'Leads', Icon: ClipboardList },
+  { screen: 'customers', href: '/customers', label: 'Customers', Icon: Users },
+  { screen: 'jobs', href: '/jobs', label: 'Jobs', Icon: BriefcaseBusiness },
+  { screen: 'quotes', href: '/quotes', label: 'Quotes', Icon: FileText },
+  { screen: 'invoices', href: '/invoices', label: 'Invoices', Icon: Receipt },
+  { screen: 'analytics', href: '/analytics', label: 'Analytics', Icon: BarChart3 },
+];
+
+const systemNav: NavItem[] = [
+  { screen: 'settings', href: '/settings', label: 'Settings', Icon: Settings },
+  { screen: 'trash', href: '/trash', label: 'Trash', Icon: ArchiveRestore },
+];
+
+const pageCopy: Record<TradeFlowKitScreen, { eyebrow: string; title: string; description: string }> = {
+  dashboard: {
+    eyebrow: 'Service management overview',
+    title: 'Dashboard',
+    description: 'See the real lead, job, task, invoice, and collection state for this organization.',
+  },
+  leads: {
+    eyebrow: 'Sales pipeline',
+    title: 'Leads',
+    description: 'Capture, qualify, follow up, and convert service opportunities into customers and numbered jobs.',
+  },
+  customers: {
+    eyebrow: 'Customer records',
+    title: 'Customers',
+    description: 'Manage persisted customer profiles and follow their linked work and revenue history.',
+  },
+  jobs: {
+    eyebrow: 'Field operations',
+    title: 'Jobs',
+    description: 'Schedule and update real jobs, coordinate tasks, and keep the workflow stage current.',
+  },
+  quotes: {
+    eyebrow: 'Revenue documents',
+    title: 'Quotes',
+    description: 'Create, edit, send, and track customer quotes backed by the TradeFlowKit revenue ledger.',
+  },
+  invoices: {
+    eyebrow: 'Billing operations',
+    title: 'Invoices',
+    description: 'Issue invoices, record authoritative payment history, and share secure customer documents.',
+  },
+  payments: {
+    eyebrow: 'Business payments',
+    title: 'Payments',
+    description: 'Review invoice balances and record customer payments without mixing them with OperatorOS billing.',
+  },
+  analytics: {
+    eyebrow: 'Operational reporting',
+    title: 'Analytics',
+    description: 'Use persisted lead, job, task, invoice, and collection totals to understand current performance.',
+  },
+  directory: {
+    eyebrow: 'Connected workspace',
+    title: 'Business Directory',
+    description: 'Reuse tenant-scoped organizations, contacts, and sites across TradeFlowKit workflows.',
+  },
+  trash: {
+    eyebrow: 'Retention workspace',
+    title: 'Trash',
+    description: 'Review and restore retained business records without bypassing record dependencies.',
+  },
+  settings: {
+    eyebrow: 'Workspace configuration',
+    title: 'Settings',
+    description: 'Configure operating defaults, lead intake, and provider readiness under OperatorOS authority.',
+  },
 };
 
-const workflowShortcuts = [
-  {
-    id: 'leads',
-    label: 'Leads',
-    summary: 'Add a lead, record follow-up, and turn qualified work into a customer and job.',
-    Icon: ClipboardList,
-    tone: colors.green,
-  },
-  {
-    id: 'customers',
-    label: 'Customers',
-    summary: 'Customer history, contact context, job history, invoice history, and service notes.',
-    Icon: Users,
-    tone: colors.blue,
-  },
-  {
-    id: 'jobs',
-    label: 'Jobs',
-    summary: 'Schedule field work, assign it, track tasks, and mark the job complete.',
-    Icon: BriefcaseBusiness,
-    tone: colors.green,
-  },
-  {
-    id: 'quotes',
-    label: 'Quotes',
-    summary: 'Send a quote for customer approval, track its expiration, and turn an accepted quote into an invoice.',
-    Icon: FileText,
-    tone: colors.gold,
-  },
-  {
-    id: 'invoices',
-    label: 'Invoices',
-    summary: 'Create invoices, record partial or full payments, and share customer documents.',
-    Icon: Receipt,
-    tone: colors.blue,
-  },
-  {
-    id: 'payments',
-    label: 'Payments',
-    summary: 'Record payments safely. Online payment processing appears only after an administrator finishes setup.',
-    Icon: CreditCard,
-    tone: colors.gold,
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics',
-    summary: 'Quote acceptance, collection timing, source mix, conversion rate, and operational performance.',
-    Icon: BarChart3,
-    tone: colors.green,
-  },
-];
+function resolveRoute(routePath?: string): RouteState {
+  const clean = (routePath || '/dashboard').split('?')[0].replace(/^\/modules\/tradeflowkit/, '') || '/dashboard';
+  const segments = clean.split('/').filter(Boolean);
+  const resource = segments[0] || 'dashboard';
+  const recordId = segments.length > 1 && segments[1] !== 'new' ? segments[1] : undefined;
+  const intent = segments[1] === 'new' ? 'new' : undefined;
+  if (resource === 'leads') return { screen: 'leads', recordId };
+  if (resource === 'customers') return { screen: 'customers', recordId };
+  if (resource === 'jobs' || resource === 'tasks') return { screen: 'jobs', recordId };
+  if (resource === 'quotes') return { screen: 'quotes', recordId, intent };
+  if (resource === 'invoices') return { screen: 'invoices', recordId, intent };
+  if (resource === 'payments') return { screen: 'payments', recordId };
+  if (resource === 'analytics') return { screen: 'analytics' };
+  if (['directory', 'contacts', 'sites'].includes(resource)) return { screen: 'directory', recordId };
+  if (resource === 'trash') return { screen: 'trash' };
+  if (resource === 'settings') return { screen: 'settings' };
+  return { screen: 'dashboard' };
+}
 
-const readinessRows = [
-  ['Sign-in', 'Protected', colors.green],
-  ['Business records', 'Organization-only', colors.blue],
-  ['Team access', 'Based on role', colors.green],
-  ['Online payments', 'Requires setup', colors.gold],
-];
-
-const shellCss = `
-  .tfk-shell {
-    min-height: 100vh;
-    color-scheme: dark;
-    color: ${colors.ink};
-    background:
-      radial-gradient(circle at 10% -4%, rgba(52, 211, 153, 0.18), transparent 31%),
-      radial-gradient(circle at 92% 4%, rgba(56, 189, 248, 0.11), transparent 28%),
-      linear-gradient(180deg, #091612 0%, ${colors.bg} 58%, #050b09 100%),
-      ${colors.bg};
-    padding: 24px;
-  }
-  .tfk-wrap {
-    max-width: 1240px;
-    margin: 0 auto;
-    display: grid;
-    gap: 16px;
-  }
-  .tfk-header {
-    border: 1px solid ${colors.borderStrong};
-    background: linear-gradient(135deg, rgba(15, 27, 23, 0.97), rgba(8, 18, 14, 0.98));
-    border-radius: 8px;
-    padding: 22px;
-    display: grid;
-    gap: 18px;
-    box-shadow: 0 22px 58px rgba(0, 0, 0, 0.30);
-  }
-  .tfk-header-top,
-  .tfk-actions,
-  .tfk-chip-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 14px;
-    flex-wrap: wrap;
-  }
-  .tfk-body {
-    display: grid;
-  grid-template-columns: minmax(180px, 236px) minmax(0, 1fr);
-    gap: 16px;
-    align-items: start;
-  }
-  .tfk-rail,
-  .tfk-panel {
-    border: 1px solid ${colors.border};
-    background: rgba(15, 27, 23, 0.94);
-    border-radius: 8px;
-  }
-  .tfk-rail {
-    position: sticky;
-    top: 18px;
-    padding: 12px;
-    display: grid;
-    gap: 8px;
-  }
-  .tfk-main {
-    display: grid;
-    gap: 16px;
-    min-width: 0;
-  }
-  .tfk-shell .directory-tradeflowkit {
-    --d-bg: #0b1512;
-    --d-panel: #14241e;
-    --d-text: #eaf7f0;
-    --d-muted: #9ab6aa;
-    --d-border: rgba(134, 239, 172, 0.18);
-    --d-accent: #34d399;
-    --d-danger: #fb7185;
-  }
-  .tfk-shell :is(input, select, textarea) {
-    color-scheme: dark;
-  }
-  .tfk-shell :is(input, select, textarea)::placeholder {
-    color: #6f8b80;
-  }
-  .tfk-shell :is(.tfk-lead-center, .tfk-ops, .tfk-work, .tfk-trash, .directory-root) {
-    color: ${colors.ink};
-  }
-  .tfk-shell :is(.tfk-lead-center, .tfk-ops, .tfk-work, .tfk-trash, .directory-root)
-    :is(h2, h3, h4, strong, summary) {
-    color: ${colors.ink};
-  }
-  .tfk-shell :is(input, select, textarea) {
-    background: #0b1512 !important;
-    color: ${colors.ink} !important;
-    border-color: ${colors.border} !important;
-  }
-  .tfk-shell :is(
-    .tfk-lead-form,
-    .tfk-work-form,
-    .tfk-work-state,
-    .tfk-work-metrics > div,
-    .tfk-saved-views,
-    .tfk-accounting-exports,
-    .tfk-bulk-bar,
-    .tfk-task-board,
-    .tfk-trash-state,
-    .tfk-trash-groups > section,
-    .tfk-global-search form,
-    .tfk-global-search-empty
-  ) {
-    background: ${colors.panelSoft} !important;
-    border-color: ${colors.border} !important;
-  }
-  .tfk-shell :is(
-    .tfk-lead-metrics > div,
-    .tfk-lead-row,
-    .tfk-workflow-card,
-    .tfk-job-workflow-list > div,
-    .tfk-team-tasks article,
-    .tfk-ops-metrics > div,
-    .tfk-ops-layout aside button,
-    .tfk-task,
-    .tfk-record-editor,
-    .tfk-global-search-results section,
-    .tfk-trash,
-    .tfk-trash article
-  ) {
-    background: ${colors.panel} !important;
-    border-color: ${colors.border} !important;
-  }
-  .tfk-shell :is(.tfk-lead-row.selected, .tfk-ops-layout aside button.active, .tfk-task.selected, .tfk-record-editor.selected) {
-    background: rgba(52, 211, 153, 0.10) !important;
-    border-color: ${colors.green} !important;
-  }
-  .tfk-shell :is(.tfk-work button, .tfk-trash button, .tfk-lead-delete button, .tfk-ops-actions a, .tfk-accounting-exports a) {
-    background: ${colors.panelSoft};
-    color: ${colors.ink};
-    border-color: ${colors.border};
-  }
-  .tfk-shell :is(.tfk-lead-heading p, .tfk-work p, .tfk-ops-head p, .tfk-task-title p, .tfk-trash small, .tfk-trash .empty, .tfk-trash .bounded) {
-    color: ${colors.muted};
-  }
-  .tfk-shell :is(.tfk-lead-notice, .tfk-lead-read-only) {
-    background: rgba(52, 211, 153, 0.10);
-    color: #a7f3d0;
-  }
-  .tfk-card-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-  }
-  .tfk-workflow-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-  }
-  @media (max-width: 920px) {
-    .tfk-body {
-      grid-template-columns: 1fr;
-    }
-    .tfk-rail {
-      position: static;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .tfk-card-grid,
-    .tfk-workflow-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-  @media (max-width: 620px) {
-    .tfk-shell {
-      padding: 14px;
-    }
-    .tfk-header {
-      padding: 16px;
-    }
-    .tfk-rail,
-    .tfk-card-grid,
-    .tfk-workflow-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-`;
-
-export default function TradeFlowKitShell(_props: TradeFlowKitShellProps) {
+export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps) {
   const { user, loading: authLoading } = useAuth();
   const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
+  const pathname = usePathname();
+  const [routePrefix, setRoutePrefix] = useState('');
+  const [theme, setTheme] = useState<'system' | 'light' | 'dark'>('system');
+  const [systemDark, setSystemDark] = useState(false);
   const fallbackTenantId = user?.currentTenantId ?? getActiveTenantId();
   const tenantId = activeTenant?.id ?? fallbackTenantId;
   const platformAdmin = hasPlatformAdminAuthority(user);
   const adapterRole = platformAdmin ? 'admin' : activeRole ?? 'member';
+  const route = resolveRoute(routePath || pathname);
+
+  useEffect(() => {
+    setRoutePrefix(window.location.pathname.startsWith('/modules/tradeflowkit') ? '/modules/tradeflowkit' : '');
+    const stored = window.localStorage.getItem('tradeflowkit-theme-v1');
+    if (stored === 'light' || stored === 'dark') setTheme(stored);
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const updateSystemTheme = () => setSystemDark(media.matches);
+    updateSystemTheme();
+    media.addEventListener('change', updateSystemTheme);
+    return () => media.removeEventListener('change', updateSystemTheme);
+  }, []);
 
   const adapter = useMemo(() => createTradeFlowKitAdapterContext({
     currentUser: user
-      ? {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          platformRole: user.platformRole,
-        }
+      ? { id: user.id, email: user.email, name: user.name, platformRole: user.platformRole }
       : null,
     tenantId,
     role: adapterRole,
@@ -311,8 +194,9 @@ export default function TradeFlowKitShell(_props: TradeFlowKitShellProps) {
     platformAdmin,
   }), [adapterRole, platformAdmin, tenantId, user]);
 
-  const isLoading = authLoading || tenantLoading;
   const hasTenantContext = !!adapter.tenantId || platformAdmin;
+  const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
+  const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
   const roleLabel = platformAdmin
     ? 'Platform administrator'
     : activeRole === 'owner'
@@ -322,471 +206,159 @@ export default function TradeFlowKitShell(_props: TradeFlowKitShellProps) {
         : activeRole === 'viewer'
           ? 'Read-only access'
           : 'Team member';
-  const tenantLabel = activeTenant?.name ?? adapter.tenantId ?? 'No organization selected';
-  const canManageModule = platformAdmin || activeRole === 'owner' || activeRole === 'admin';
+  const hrefFor = (href: string) => `${routePrefix}${href}`;
+  const darkThemeActive = theme === 'dark' || (theme === 'system' && systemDark);
+  const toggleTheme = () => {
+    const next = darkThemeActive ? 'light' : 'dark';
+    setTheme(next);
+    window.localStorage.setItem('tradeflowkit-theme-v1', next);
+  };
 
-  if (isLoading) {
+  if (authLoading || tenantLoading) {
     return (
-      <main className="tfk-shell" data-testid="tradeflowkit-module-shell">
-        <style>{shellCss}</style>
-        <section className="tfk-wrap">
-          <div style={loadingPanelStyle} data-testid="tradeflowkit-loading-state" aria-busy="true">
-            <Activity size={18} color={colors.green} />
-            <div>
-              <div style={{ fontWeight: 800 }}>Loading TradeFlowKit</div>
-              <div style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
-                Preparing your leads, customers, jobs, invoices, and team access.
-              </div>
-            </div>
-          </div>
-        </section>
+      <main className={styles.shell} data-testid="tradeflowkit-module-shell">
+        <div className={styles.content}>
+          <section className={styles.stateCard} data-testid="tradeflowkit-loading-state" aria-busy="true">
+            <Activity size={19} color="var(--tfk-primary)" />
+            <div><strong>Loading TradeFlowKit</strong><span>Preparing your organization-scoped service workspace.</span></div>
+          </section>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="tfk-shell" data-testid="tradeflowkit-module-shell">
-      <style>{shellCss}</style>
-      <section className="tfk-wrap">
-        <header
-          id="tradeflowkit-overview"
-          className="tfk-header"
-          data-testid="tradeflowkit-module-header"
-          tabIndex={-1}
-        >
-          <div className="tfk-header-top">
-            <div style={{ minWidth: 0 }}>
-              <div style={eyebrowStyle}>Field service and revenue</div>
-              <h1 style={titleStyle}>TradeFlowKit</h1>
-              <p style={ledeStyle}>
-                Move leads into customers, jobs, quotes, invoices, payments, and clear revenue visibility from one workspace.
-              </p>
-            </div>
-            <div className="tfk-actions">
-              <HeaderLink href="#tradeflowkit-lead-center" testId="tradeflowkit-start-with-lead" Icon={ClipboardList}>
-                Start with a lead
-              </HeaderLink>
-              {canManageModule && (
-                <HeaderLink href="#tradeflowkit-settings" testId="tradeflowkit-module-settings-link" Icon={Settings}>
-                  Manage TradeFlowKit
-                </HeaderLink>
-              )}
-              {platformAdmin && (
-                <HeaderLink href={`${DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl}app/platform/modules/tradeflowkit`} testId="tradeflowkit-platform-manage-link" Icon={ShieldCheck}>
-                  Platform settings
-                </HeaderLink>
-              )}
-              <HeaderLink href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} testId="tradeflowkit-return-command-center" Icon={ExternalLink}>
-                Return to My Apps
-              </HeaderLink>
-            </div>
+    <main className={styles.shell} data-theme={theme} data-testid="tradeflowkit-module-shell" data-tradeflowkit-screen={route.screen}>
+      <div className={styles.workspace}>
+        <aside className={styles.sidebar} data-testid="tradeflowkit-module-sidebar">
+          <Link className={styles.brand} href={hrefFor('/dashboard')} aria-label="TradeFlowKit dashboard">
+            <Image src="/brand/tradeflowkit-logo.png" alt="TradeFlowKit" width={46} height={46} priority />
+            <span className={styles.brandText}><strong>TradeFlow</strong><span>Service management</span></span>
+          </Link>
+
+          <div className={styles.tenantCard} data-testid="tradeflowkit-tenant-badge">
+            <span>Organization</span><strong title={tenantLabel}>{tenantLabel}</strong>
           </div>
 
-          <div className="tfk-chip-row">
-            <ContextChip label="Organization" value={tenantLabel} tone={hasTenantContext ? colors.blue : colors.red} testId="tradeflowkit-tenant-badge" />
-            <ContextChip label="Role" value={roleLabel} tone={platformAdmin ? colors.violet : colors.green} testId="tradeflowkit-role-badge" />
-            <ContextChip label="Sign-in" value="Protected by OperatorOS" tone={colors.green} testId="tradeflowkit-session-badge" />
-            {platformAdmin && <ContextChip label="Module address" value={adapter.hostnames.production} tone={colors.gold} testId="tradeflowkit-host-badge" />}
-          </div>
-
-          {hasTenantContext && adapter.tenantId && (
-            <TradeFlowKitGlobalSearch key={`search-${adapter.tenantId}`} tenantKey={adapter.tenantId} />
-          )}
-        </header>
-
-        {!hasTenantContext && (
-          <StatePanel
-            testId="tradeflowkit-empty-state"
-            tone={colors.red}
-            Icon={AlertTriangle}
-            title="Choose an organization"
-            body="Return to My Apps and choose the organization whose leads, jobs, quotes, invoices, and payments you want to manage."
-          />
-        )}
-
-        <div className="tfk-body">
-          <nav className="tfk-rail" aria-label="TradeFlowKit sections" data-testid="tradeflowkit-module-sidebar">
-            {workflowShortcuts.map(({ id, label, Icon, tone }) => (
-              <a
-                key={id}
-                href={id === 'leads' ? '#tradeflowkit-lead-center' : id === 'tasks' ? '#tradeflowkit-work-management' : `#tradeflowkit-${id}`}
-                style={railLinkStyle}
-                data-testid={`tradeflowkit-sidebar-${id}`}
-              >
-                <Icon size={15} color={tone} />
-                <span>{label}</span>
-              </a>
-            ))}
-            <a href="#tradeflowkit-work-management" style={railLinkStyle} data-testid="tradeflowkit-sidebar-workflows">
-              <GitBranch size={15} color={colors.violet} />
-              <span>Workflow Studio</span>
-            </a>
-            <a href="#tradeflowkit-trash" style={railLinkStyle} data-testid="tradeflowkit-sidebar-trash">
-              <ArchiveRestore size={15} color={colors.blue} />
-              <span>Archived Records</span>
-            </a>
-            <a href="#tradeflowkit-settings" style={railLinkStyle} data-testid="tradeflowkit-sidebar-settings">
-              <Settings size={15} color={colors.gold} />
-              <span>Settings</span>
-            </a>
+          <nav className={styles.navGroup} aria-label="TradeFlowKit primary navigation">
+            <span className={styles.navLabel}>Main</span>
+            {primaryNav.map(item => <DesktopNavLink key={item.screen} item={item} active={route.screen === item.screen} href={hrefFor(item.href)} />)}
           </nav>
 
-          <section className="tfk-main">
-            <section className="tfk-card-grid" aria-label="TradeFlowKit readiness">
-              {readinessRows.map(([label, value, tone]) => (
-                <MetricTile key={label} label={label} value={value} tone={tone} />
-              ))}
-            </section>
+          <nav className={styles.navGroup} aria-label="TradeFlowKit system navigation">
+            <span className={styles.navLabel}>System</span>
+            {systemNav.map(item => <DesktopNavLink key={item.screen} item={item} active={route.screen === item.screen} href={hrefFor(item.href)} />)}
+          </nav>
 
-            <section
-              id="tradeflowkit-lead-center"
-              data-testid="tradeflowkit-lead-center-panel"
-              tabIndex={-1}
-            >
-              {hasTenantContext && adapter.tenantId && (
-                <TradeFlowKitLeadCenter key={adapter.tenantId} tenantKey={adapter.tenantId} canManage={canManageModule} />
-              )}
-            </section>
+          <div className={styles.sidebarFoot}>
+            <div className={styles.tenantCard} data-testid="tradeflowkit-role-badge"><span>Access</span><strong>{roleLabel}</strong></div>
+          </div>
+        </aside>
 
-            {hasTenantContext && adapter.tenantId && (
-              <TradeFlowKitOperations key={`operations-${adapter.tenantId}`} tenantKey={adapter.tenantId} canManage={canManageModule} />
-            )}
+        <div className={styles.content}>
+          <div className={styles.topbar}>
+            <div className={styles.crumbs}>TradeFlowKit / <strong>{pageCopy[route.screen].title}</strong></div>
+            <div className={styles.topActions}>
+              <Link className={styles.iconButton} href={`${hrefFor('/dashboard')}#tradeflowkit-global-search-input`} aria-label="Open TradeFlowKit search"><Search size={17} /></Link>
+              <Link className={styles.iconButton} href={hrefFor('/settings')} aria-label="TradeFlowKit settings"><Settings size={17} /></Link>
+              <button className={styles.iconButton} type="button" onClick={toggleTheme} aria-label={`Use ${darkThemeActive ? 'light' : 'dark'} TradeFlowKit theme`} title={`Use ${darkThemeActive ? 'light' : 'dark'} TradeFlowKit theme`}>{darkThemeActive ? <Sun size={17} /> : <Moon size={17} />}</button>
+              <span className={styles.iconButton} aria-label="OperatorOS session protected" title="OperatorOS session protected"><ShieldCheck size={17} /></span>
+              <span className={styles.iconButton} aria-label="Notifications are delivered by OperatorOS" title="Notifications are delivered by OperatorOS"><Bell size={17} /></span>
+            </div>
+          </div>
 
-            {hasTenantContext && adapter.tenantId && (
-              <TradeFlowKitWorkManagement key={`work-${adapter.tenantId}`} tenantKey={adapter.tenantId} canManage={canManageModule} />
-            )}
+          <section className={styles.page}>
+            <header id="tradeflowkit-overview" className={styles.pageHeader} data-testid="tradeflowkit-module-header" tabIndex={-1}>
+              <div>
+                <div className={styles.eyebrow}>{pageCopy[route.screen].eyebrow}</div>
+                <h1>{route.recordId ? `${pageCopy[route.screen].title} detail` : pageCopy[route.screen].title}</h1>
+                <p>{pageCopy[route.screen].description}</p>
+              </div>
+              {route.screen === 'dashboard' && <Link className={styles.primaryLink} href={hrefFor('/leads')} data-testid="tradeflowkit-start-with-lead"><ClipboardList size={15} /> Add a lead</Link>}
+              {route.screen === 'quotes' && canManageModule && <Link className={styles.primaryLink} href={hrefFor('/quotes/new')}><FileText size={15} /> New quote</Link>}
+              {route.screen === 'invoices' && canManageModule && <Link className={styles.primaryLink} href={hrefFor('/invoices/new')}><Receipt size={15} /> New invoice</Link>}
+            </header>
 
-            {hasTenantContext && adapter.tenantId && (
-              <TradeFlowKitRevenueFlow key={`revenue-${adapter.tenantId}`} tenantKey={adapter.tenantId} canManage={canManageModule} />
-            )}
-
-            {hasTenantContext && adapter.tenantId && (
-              <section id="tradeflowkit-directory" tabIndex={-1}>
-                <BusinessDirectory moduleSlug="tradeflowkit" tenantKey={adapter.tenantId} canArchive={canManageModule} />
+            {!hasTenantContext ? (
+              <section className={styles.stateCard} data-testid="tradeflowkit-empty-state" role="alert">
+                <AlertTriangle size={19} color="var(--tfk-danger)" />
+                <div><strong>Choose an organization</strong><span>TradeFlowKit only loads records for the organization validated by OperatorOS.</span></div>
               </section>
-            )}
-
-            {hasTenantContext && adapter.tenantId && (
-              <TradeFlowKitTrash key={`trash-${adapter.tenantId}`} tenantKey={adapter.tenantId} canManage={canManageModule} />
-            )}
-
-            <section className="tfk-panel" style={{ padding: 18 }} data-testid="tradeflowkit-workflows-panel">
-              <SectionHeading
-                Icon={Truck}
-                title="What you can do"
-                subtitle="Move from a new lead to completed work and payment without losing the customer history."
+            ) : adapter.tenantId ? (
+              <TradeFlowKitScreen
+                screen={route.screen}
+                recordId={route.recordId}
+                intent={route.intent}
+                tenantKey={adapter.tenantId}
+                canManage={canManageModule}
+                hrefFor={hrefFor}
               />
-              <div className="tfk-workflow-grid" style={{ marginTop: 14 }}>
-                {workflowShortcuts.map(({ id, label, summary, Icon, tone }) => (
-                  <WorkflowPanel key={id} id={id} label={label} summary={summary} Icon={Icon} tone={tone} />
-                ))}
-              </div>
-            </section>
-
-            <section
-              id="tradeflowkit-settings"
-              className="tfk-panel"
-              style={{ padding: 18 }}
-              data-testid="tradeflowkit-settings-panel"
-              tabIndex={-1}
-            >
-              <SectionHeading
-                Icon={ShieldCheck}
-                title="Access and settings"
-                subtitle={canManageModule ? 'You can manage this tool because you are an organization administrator.' : 'Your administrator controls team and billing access.'}
-              />
-              <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
-                <AdminRow
-                  label="Account and access"
-                  value="OperatorOS manages sign-in, subscription access, and workspace membership."
-                  tone={colors.green}
-                />
-                <AdminRow
-                  label="Business operations"
-                  value="TradeFlowKit keeps field-service work, customer activity, and revenue flow together."
-                  tone={colors.blue}
-                />
-                <AdminRow
-                  label="Current access"
-                  value={canManageModule ? 'You can manage team access and settings.' : 'You can use the field-service workflows assigned to you.'}
-                  tone={canManageModule ? colors.gold : colors.muted}
-                />
-              </div>
-            </section>
-
-            <StatePanel
-              testId="tradeflowkit-error-state"
-              tone={colors.gold}
-              Icon={AlertTriangle}
-              title="Need help?"
-              body="Try the action again. If you still cannot open work or record a payment, contact your organization administrator. Your existing records will not be changed by a failed attempt."
-            />
+            ) : null}
           </section>
         </div>
-      </section>
+      </div>
+
+      <nav className={styles.mobileNav} aria-label="TradeFlowKit mobile navigation" data-testid="tradeflowkit-mobile-nav">
+        {[primaryNav[0], primaryNav[1], primaryNav[3], systemNav[0]].map(item => {
+          const active = route.screen === item.screen;
+          return <Link key={item.screen} href={hrefFor(item.href)} className={active ? styles.navLinkActive : undefined} aria-current={active ? 'page' : undefined}><item.Icon size={19} /><span>{item.label === 'Settings' ? 'More' : item.label}</span></Link>;
+        })}
+      </nav>
     </main>
   );
 }
 
-function HeaderLink({
-  href,
-  testId,
-  Icon,
-  children,
-}: {
-  href: string;
-  testId: string;
-  Icon: LucideIcon;
-  children: React.ReactNode;
-}) {
+function DesktopNavLink({ item, active, href }: { item: NavItem; active: boolean; href: string }) {
   return (
-    <a href={href} data-testid={testId} style={headerLinkStyle}>
-      <Icon size={14} />
-      {children}
-    </a>
-  );
-}
-
-function ContextChip({
-  label,
-  value,
-  tone,
-  testId,
-}: {
-  label: string;
-  value: string;
-  tone: string;
-  testId: string;
-}) {
-  return (
-    <div style={{ ...chipStyle, borderColor: `${tone}66` }} data-testid={testId}>
-      <span style={{ color: colors.dim }}>{label}</span>
-      <strong style={{ color: tone, overflowWrap: 'anywhere' }}>{value}</strong>
-    </div>
-  );
-}
-
-function MetricTile({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return (
-    <div style={metricTileStyle} data-testid={`tradeflowkit-metric-${label.toLowerCase().replace(/\s+/g, '-')}`}>
-      <div style={{ width: 8, height: 8, borderRadius: 999, background: tone }} />
-      <div style={{ color: colors.muted, fontSize: 12, marginTop: 12 }}>{label}</div>
-      <div style={{ marginTop: 4, fontSize: 17, fontWeight: 800 }}>{value}</div>
-    </div>
-  );
-}
-
-function SectionHeading({
-  Icon,
-  title,
-  subtitle,
-}: {
-  Icon: LucideIcon;
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-      <span style={sectionIconStyle}>
-        <Icon size={17} color={colors.green} />
-      </span>
-      <div>
-        <h2 style={{ margin: 0, fontSize: 16 }}>{title}</h2>
-        <p style={{ margin: '4px 0 0', color: colors.muted, fontSize: 13, lineHeight: 1.45 }}>{subtitle}</p>
-      </div>
-    </div>
-  );
-}
-
-function WorkflowPanel({
-  id,
-  label,
-  summary,
-  Icon,
-  tone,
-}: {
-  id: string;
-  label: string;
-  summary: string;
-  Icon: LucideIcon;
-  tone: string;
-}) {
-  return (
-    <article id={`tradeflowkit-${id}`} style={workflowPanelStyle} data-testid={`tradeflowkit-workflow-${id}`}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ ...smallIconStyle, borderColor: `${tone}66` }}>
-          <Icon size={16} color={tone} />
-        </span>
-        <h3 style={{ margin: 0, fontSize: 15 }}>{label}</h3>
-      </div>
-      <p style={{ color: colors.muted, fontSize: 13, lineHeight: 1.45, margin: '10px 0 0' }}>{summary}</p>
-      <div style={{ marginTop: 12, color: colors.green, fontSize: 12, fontWeight: 800 }}>
-        {id === 'payments' ? 'Manual payments available · online processing requires setup' : 'Ready to use'}
-      </div>
-    </article>
-  );
-}
-
-function AdminRow({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return (
-    <div style={adminRowStyle}>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ color: colors.ink, fontSize: 13, fontWeight: 800 }}>{label}</div>
-        <div style={{ color: colors.muted, fontSize: 12, marginTop: 3, lineHeight: 1.45 }}>{value}</div>
-      </div>
-      <span style={{ width: 8, height: 8, borderRadius: 999, background: tone, flex: '0 0 auto' }} />
-    </div>
-  );
-}
-
-function StatePanel({
-  testId,
-  tone,
-  Icon,
-  title,
-  body,
-}: {
-  testId: string;
-  tone: string;
-  Icon: LucideIcon;
-  title: string;
-  body: string;
-}) {
-  return (
-    <section
-      className="tfk-panel"
-      data-testid={testId}
-      style={{ padding: 16, borderColor: `${tone}66`, background: `${colors.panel}` }}
+    <Link
+      className={`${styles.navLink} ${active ? styles.navLinkActive : ''}`}
+      href={href}
+      aria-current={active ? 'page' : undefined}
+      data-testid={`tradeflowkit-sidebar-${item.screen}`}
     >
-      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <Icon size={18} color={tone} />
-        <div>
-          <div style={{ fontWeight: 800 }}>{title}</div>
-          <div style={{ color: colors.muted, fontSize: 13, lineHeight: 1.45, marginTop: 4 }}>{body}</div>
-        </div>
-      </div>
-    </section>
+      <item.Icon size={17} /><span>{item.label}</span>
+    </Link>
   );
 }
 
-const eyebrowStyle: CSSProperties = {
-  color: colors.green,
-  fontSize: 12,
-  fontWeight: 800,
-  letterSpacing: 0,
-  textTransform: 'uppercase',
-};
+function TradeFlowKitScreen({
+  screen,
+  recordId,
+  intent,
+  tenantKey,
+  canManage,
+  hrefFor,
+}: RouteState & { tenantKey: string; canManage: boolean; hrefFor: (href: string) => string }) {
+  if (screen === 'dashboard') {
+    return <>
+      <TradeFlowKitGlobalSearch tenantKey={tenantKey} />
+      <TradeFlowKitOperations tenantKey={tenantKey} canManage={canManage} view="dashboard" routePrefix={hrefFor('')} />
+      <div className={styles.dashboardGrid} aria-label="TradeFlowKit active workflows">
+        <QuickLink href={hrefFor('/leads')} Icon={ClipboardList} title="Lead pipeline" body="Capture and qualify real service opportunities." />
+        <QuickLink href={hrefFor('/customers')} Icon={Users} title="Customer records" body="Open persisted customer and service history." />
+        <QuickLink href={hrefFor('/jobs')} Icon={BriefcaseBusiness} title="Jobs and tasks" body="Coordinate scheduled work and task completion." />
+        <QuickLink href={hrefFor('/quotes')} Icon={FileText} title="Quotes" body="Prepare customer quotes and track responses." />
+        <QuickLink href={hrefFor('/invoices')} Icon={Receipt} title="Invoices" body="Issue invoices and record payment history." />
+        <QuickLink href={hrefFor('/analytics')} Icon={BarChart3} title="Analytics" body="Review metrics calculated from persisted records." />
+      </div>
+    </>;
+  }
+  if (screen === 'leads') return <section id="tradeflowkit-lead-center" data-testid="tradeflowkit-lead-center-panel" tabIndex={-1}><TradeFlowKitLeadCenter tenantKey={tenantKey} canManage={canManage} view="leads" routePrefix={hrefFor('')} /></section>;
+  if (screen === 'customers' || screen === 'quotes' || screen === 'invoices' || screen === 'payments') {
+    const view: TradeFlowKitRevenueView = screen;
+    return <TradeFlowKitRevenueFlow tenantKey={tenantKey} canManage={canManage} view={view} recordId={recordId} intent={intent} routePrefix={hrefFor('')} />;
+  }
+  if (screen === 'jobs') return <><TradeFlowKitOperations tenantKey={tenantKey} canManage={canManage} view="jobs" recordId={recordId} routePrefix={hrefFor('')} /><TradeFlowKitWorkManagement tenantKey={tenantKey} canManage={canManage} /></>;
+  if (screen === 'analytics') return <TradeFlowKitOperations tenantKey={tenantKey} canManage={canManage} view="analytics" routePrefix={hrefFor('')} />;
+  if (screen === 'directory') return <section id="tradeflowkit-directory" tabIndex={-1}><BusinessDirectory moduleSlug="tradeflowkit" tenantKey={tenantKey} canArchive={canManage} /></section>;
+  if (screen === 'trash') return <TradeFlowKitTrash tenantKey={tenantKey} canManage={canManage} />;
+  if (screen === 'settings') {
+    const operationsView: TradeFlowKitOperationsView = 'settings';
+    return <section id="tradeflowkit-settings" data-testid="tradeflowkit-settings-panel" tabIndex={-1}><TradeFlowKitOperations tenantKey={tenantKey} canManage={canManage} view={operationsView} routePrefix={hrefFor('')} /><TradeFlowKitLeadCenter tenantKey={tenantKey} canManage={canManage} view="settings" routePrefix={hrefFor('')} /></section>;
+  }
+  return null;
+}
 
-const titleStyle: CSSProperties = {
-  margin: '7px 0 0',
-  fontSize: 34,
-  lineHeight: 1.05,
-};
-
-const ledeStyle: CSSProperties = {
-  margin: '9px 0 0',
-  color: colors.muted,
-  maxWidth: 780,
-  lineHeight: 1.5,
-};
-
-const headerLinkStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 8,
-  border: `1px solid ${colors.border}`,
-  borderRadius: 8,
-  padding: '9px 12px',
-  color: colors.ink,
-  background: 'rgba(20, 36, 30, 0.92)',
-  textDecoration: 'none',
-  fontSize: 13,
-  fontWeight: 800,
-};
-
-const chipStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 8,
-  border: `1px solid ${colors.border}`,
-  borderRadius: 8,
-  padding: '7px 10px',
-  background: colors.panelSoft,
-  fontSize: 12,
-  minWidth: 0,
-};
-
-const railLinkStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 9,
-  padding: '10px 11px',
-  borderRadius: 8,
-  color: colors.ink,
-  background: colors.panelSoft,
-  border: `1px solid ${colors.border}`,
-  textDecoration: 'none',
-  fontSize: 13,
-  fontWeight: 800,
-};
-
-const metricTileStyle: CSSProperties = {
-  border: `1px solid ${colors.border}`,
-  borderRadius: 8,
-  background: 'rgba(15, 27, 23, 0.96)',
-  padding: 14,
-  minHeight: 96,
-};
-
-const sectionIconStyle: CSSProperties = {
-  width: 34,
-  height: 34,
-  borderRadius: 8,
-  border: `1px solid ${colors.border}`,
-  background: 'rgba(5, 150, 105, 0.10)',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  flex: '0 0 auto',
-};
-
-const smallIconStyle: CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: 8,
-  border: `1px solid ${colors.border}`,
-  background: colors.panelSoft,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  flex: '0 0 auto',
-};
-
-const workflowPanelStyle: CSSProperties = {
-  border: `1px solid ${colors.border}`,
-  borderRadius: 8,
-  padding: 14,
-  background: 'rgba(15, 27, 23, 0.86)',
-  minWidth: 0,
-};
-
-const adminRowStyle: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 12,
-  alignItems: 'center',
-  border: `1px solid ${colors.border}`,
-  borderRadius: 8,
-  background: colors.panelSoft,
-  padding: 12,
-};
-
-const loadingPanelStyle: CSSProperties = {
-  border: `1px solid ${colors.borderStrong}`,
-  background: 'rgba(15, 27, 23, 0.96)',
-  borderRadius: 8,
-  padding: 18,
-  display: 'flex',
-  alignItems: 'flex-start',
-  gap: 12,
-};
+function QuickLink({ href, Icon, title, body }: { href: string; Icon: LucideIcon; title: string; body: string }) {
+  return <Link className={styles.quickLink} href={href}><span className={styles.quickIcon}><Icon size={18} /></span><strong>{title}</strong><span>{body}</span></Link>;
+}

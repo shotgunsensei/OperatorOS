@@ -1,6 +1,66 @@
 # OperatorOS module consolidation status
 
-Baseline refreshed: 2026-08-02
+Baseline refreshed: 2026-08-08
+
+## Current Phase 22 shared-service foundation
+
+Phase 22 adds an additive v34 shared control plane for encrypted provider
+references/readiness, notification suppression and attempt evidence, HMAC
+webhooks with SSRF protection, schedules, asynchronous exports/signed
+retrieval, service identities/API tokens, feature flags, tenant-safe search,
+and legacy-reference adapters. A real tenant-admin Shared Services console is
+role-gated, tenant-scoped, durable, and audited. Deterministic email, SMS, AI,
+storage, webhook, and OAuth adapters report `recorded_not_delivered` and never
+claim external success.
+
+The executable adapter contract is generated from all 181 current
+`ACTIVE_SHARED_EQUIVALENT` records and requires each mapping to name its source
+outcome, compatibility assertion, adapter, and exact behavior test. This
+foundation does not change module totals or completion states: all 6,189
+required blockers and the Phase 21 route/schema/visual/control failures remain
+release-blocking. See `docs/phase-22/SHARED-SERVICE-CONTRACT-REPORT.md`.
+
+## Current Phase 21 executable release truth
+
+The Phase 20 inventory is now compiled against the active repository on every
+release run. An active capability must resolve to live hashed implementation
+paths and runnable test IDs; routes and database capabilities must also resolve
+to discoverable route and schema IDs. Shared equivalents retain the source
+outcome and explicit compatibility assertion. Source drift, missing evidence,
+required blockers, incomplete waivers, duplicate IDs, stale counts, route or
+schema gaps, visual drift, and dead controls all fail the release gate.
+
+Current result: **release blocked** with 6,289 strict parity failures, 74 static
+route/control failures, and 40 visual-contract failures. Per-module reports are
+generated in JSON, Markdown, and HTML. Historical consolidation prose below is
+still useful provenance, but cannot override the executable result. See
+`docs/phase-21/EXECUTABLE-RELEASE-GATE-REPORT.md`.
+
+## Current Phase 20 release truth
+
+The current executable baseline is `docs/parity/source-manifest.json` and the
+13 ledgers under `docs/parity/modules/`. It records 6,646 source-derived
+capabilities: 276 `ACTIVE_NATIVE`, 181 `ACTIVE_SHARED_EQUIVALENT`, 0
+`OWNER_WAIVED`, 6,189 `BLOCKED`, and 0 unclassified. Therefore Phase 20 and
+module parity are **blocked**, regardless of the historical consolidation-state
+language below.
+
+The canonical inventory remains useful implementation history, but descriptions
+such as "zero approved parity gaps", "excluded", or "retired" are not current
+completion states. The new model requires tested behavioral equivalence or an
+exact, owner-approved capability waiver. In particular, 469 former security or
+product-boundary facets remain blocked (462 `BLOCKED_REVIEW` plus 7 with
+missing claimed source implementation paths), and 113 facets across the three
+old ledgers point to source files absent from the pinned imports; FaultlineLab is 4 mapped
+runnable cases versus 52 blocked source-runnable cases; TradeFlowKit retains an
+open visual-contract mismatch and Phase 17's historical 57-gap evidence;
+TorqueShed has unproven native mobile parity; and OutCall has no recovered full
+source application.
+
+See `docs/phase-20/PRODUCT-TRUTH-REPORT.md` for exact counts and the
+current-to-branch/source reconciliation. The material below is preserved as
+historical architecture and verification evidence, not a Phase 20 parity
+clearance.
 
 This file is the honest source-of-truth for **source ownership and functional
 migration**. A module being registered, entitled, or reachable on an
@@ -36,7 +96,7 @@ OperatorOS is a modular monorepo and shared Replit runtime:
 | TorqueShed | `torqueshed` | `torqueshed.operatoros.net` | free | Dirty read-only `C:\Dev\TorqueShed-Codex`: local `68da4548f665`, committed reference `508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75`; immutable snapshot remains `c33ade5...` | Source/local state 4: Phase 7 automotive foundation; Phase 8 server-context safety-ranked Assist and OperatorOS-owned append-only token accounting; Phase 9 persistent Marketplace listings/search/saved/contact/messages/expiry/reports and Community profiles/preferences/follows/blocks/posts/tags/comments/reactions/scanned media/reports/append-only moderation with native UI/deep links. No protection/payment/shipping/reputation claims. Fresh focused, PostgreSQL, release v29, build/runtime/health, and dedicated exact-host browser gates pass locally; deployed provider/data/rollback/cutover gates still block state 5 |
 | TechDeck | `techdeck` | `techdeck.operatoros.net` | core | Clean `C:\Dev\Tech-Deck` at `8125f8d89d8d39d60a50c8061a26133a0c917792`; executable source ledger inventories all 382 discovered capabilities with zero unclassified/gaps | Source/local state 4 candidate: Directory-linked clients/sites and tickets/comments/time; typed configuration inventory; network/IPAM topology; lifecycle; versioned documentation/runbooks/backlinks; shared private attachments; evidence metadata; deterministic reports; persisted dashboards; mobile/KB compatibility; and exact configuration/ticket/client/document/evidence/report deep links. The ledger records 91 active, 109 shared replacements, 48 security retirements, and 134 product-boundary retirements. ADR-0012/0013/0014 exclude discovery/device mutation, secret values, remote execution, unsafe intake, recurrence, and business invoicing; deployed workflow/provider/cutover evidence still block state 5 |
 | PulseDesk | `pulsedesk` | `pulsedesk.operatoros.net` | core | Clean `C:\Dev\PulseDesk` at `937849471e489ed23db2a263d04160a388402740`; executable source ledger inventories all 309 discovered capabilities with zero unclassified/gaps | Source/local state 4 candidate: PHI-minimized shared-Directory clients/facilities/requesters; departments; operational assets; numbered tickets; queues/teams/assignments; internal notes/requester replies; shared private attachments; time/SLA; vendor, supply and facility coordination; knowledge/tags/saved views/preferences; dashboards, configuration, bulk actions, legacy-compatible deep links, equipment-issue prefill, and exact Directory client detail. The ledger records 91 active, 74 shared replacements, 53 security retirements, and 91 product-boundary retirements. ADR-0015 excludes EHR/clinical records and resolves the TechDeck boundary; deployed workflow and authorized privacy-reviewed cutover evidence still block state 5 |
-| FaultlineLab | `faultlinelab` | `faultlinelab.operatoros.net` | free | `C:\Dev\Faultline-Lab` at pinned snapshot `46877aae35565149ccf4f4988dd94627fc6bb92b` | Phase 10A source/local state-4 candidate: four hash-pinned runnable cases; immutable versioned authoring/publish; safe challenge projections; standard/daily/preview/assignment/Chaos attempts; append-only evidence; server scoring; assignments/progress/badges; private proof; analytics/exports; dedicated UI/canonical session deep links; dry-run reconciliation excludes 52 planned cards and all child authority. Compiled runtime/health and production-host SSO/workflow pass locally; deployed acceptance and authorized data cutover still block state 5 |
+| FaultlineLab | `faultlinelab` | `faultlinelab.operatoros.net` | free | `C:\Dev\Faultline-Lab` at pinned snapshot `46877aae35565149ccf4f4988dd94627fc6bb92b` | Phase 25 source/local candidate: deterministic `allCases` compiler imports every valid authored standalone/pack definition as a published immutable version; dynamic catalog/search/filter/sort/daily; restart-safe standard/daily/preview/assignment/Chaos attempts; append-only evidence and server scoring; assignments/progress/badges; private scanned proof/author assets; analytics/exports; versioned validate/preview/publish/retire/import/export; dedicated responsive UI/deep links. Zero-exclusion full-catalog action/score/reload passes locally; deployed acceptance and authorized user/session data cutover still block state 5 |
 | Ninja Pool Hall | `ninja-pool-hall` | `ninja-pool-hall.operatoros.net` | free | Clean `C:\Dev\Shotgun-ninja-pool-hall` and snapshot at `62439c4018ec551ce2891800351200c8ab2cb9e7` | Phase 10B source/local state-4 candidate: Free Shoot, CPU 8-ball and local hot-seat; exact physics/types/rules/bot/audio promotion; persistent profiles/preferences; structured server-rules match events/results/aggregates; recovery and canonical deep links. Continuous physics remains browser-local and evidence is explicitly client-reported. ADR-0020 excludes unsafe online relay, ranking/reward/proof claims and child authority. Local compiled runtime/health and production-host SSO/gameplay pass; deployed acceptance still blocks state 5 |
 | BrandForgeOS | `brandforgeos` | `brandforgeos.operatoros.net` | add-on | Clean `C:\Dev\BrandForge-OS` and snapshot at `5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e` | Phase 11A source/local state-4 candidate: versioned brand kits/personas; campaign, copy and calendar lifecycle; persisted metrics and exports; OperatorOS-owned AI/idempotency/usage/activity; viewer denial, tenant isolation and canonical deep links. ADR-0021 excludes child identity/billing/credits/admin, random analytics, fake integrations and template purchasing. Clean 23-step release, compiled health/readiness and production-host SSO/workflow pass locally; deployed acceptance and authorized data cutover still block state 5 |
 | SnapProofOS | `snapproofos` | `snapproofos.operatoros.net` | add-on | Clean `C:\Dev\snapproof` and snapshot at `26bded38c13b5b6361d407462c68052b0c30613d` | Phase 11B source/local state-4 candidate: tenant-scoped evidence cases; private note/file capture with signature/MIME validation, shared scan and SHA-256 recheck; member submit/admin review; findings; append-only comments and hash-linked custody; immutable reports; real JSON/CSV exports; retention/legal hold/archive; persisted dashboard and canonical deep links. ADR-0022 excludes child identity/billing, public share/file URLs, fake exports and arbitrary integrations. Clean 24-step release, aggregate 787/787, compiled health/readiness and production-host matrix 6/6 pass locally; deployed acceptance and authorized data reconciliation/cutover still block state 5 |

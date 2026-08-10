@@ -1,5 +1,13 @@
 # TorqueShed Phase 9 parity matrix
 
+## Phase 20 truth notice (2026-08-08)
+
+The matrix below is historical implementation evidence. Current release truth
+is `docs/parity/modules/torqueshed.json`: 125 capabilities, 0 native, 0
+shared-equivalent, 0 owner-waived, and 125 blocked. The imported Expo iOS/
+Android product has its own native-mobile blocker; web evidence is
+insufficient. See `docs/phase-20/PRODUCT-TRUTH-REPORT.md`.
+
 Assessment date: 2026-07-18
 
 ## Provenance

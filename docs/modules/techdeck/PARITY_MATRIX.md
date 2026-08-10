@@ -1,5 +1,14 @@
 # TechDeck zero-gap parity matrix
 
+## Phase 20 truth notice (2026-08-08)
+
+The "zero-gap" matrix below is historical implementation evidence, not current
+release truth. `docs/parity/modules/techdeck.json` records 1,337 capabilities:
+73 native, 101 shared-equivalent, 0 owner-waived, and 1,163 blocked. The strict
+source check found 28 facets whose claimed implementation paths are absent from
+the pinned import; former retirements remain blocked. See
+`docs/phase-20/PRODUCT-TRUTH-REPORT.md`.
+
 Assessment date: 2026-07-29
 
 Recovered source: clean `C:\Dev\Tech-Deck` `main` at

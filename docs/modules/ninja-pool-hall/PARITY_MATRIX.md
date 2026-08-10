@@ -1,5 +1,12 @@
 # Ninja Pool Hall Phase 10B parity matrix
 
+## Phase 20 truth notice (2026-08-08)
+
+The matrix below is historical implementation evidence. Current release truth
+is `docs/parity/modules/ninja-pool-hall.json`: 56 capabilities, 0 native, 0
+shared-equivalent, 0 owner-waived, and 56 blocked pending exact target/test
+mapping. See `docs/phase-20/PRODUCT-TRUTH-REPORT.md`.
+
 Assessment date: 2026-07-22
 
 Candidate status: source/local state 4 verification complete. This document

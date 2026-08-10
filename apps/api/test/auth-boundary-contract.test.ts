@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
-test('production public auth accepts only the exact platform identity hosts', async () => {
+test('P22-ADAPTER-SSO-001: production public auth accepts only the exact platform identity hosts', async () => {
   const {
     isPlatformPublicAuthHostAllowed,
     resolvePlatformPublicAuthHost,

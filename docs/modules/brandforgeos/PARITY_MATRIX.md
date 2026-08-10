@@ -1,5 +1,12 @@
 # BrandForgeOS Phase 11A parity matrix
 
+## Phase 20 truth notice (2026-08-08)
+
+The matrix below is historical implementation evidence. Current release truth
+is `docs/parity/modules/brandforgeos.json`: 793 capabilities, 0 native, 0
+shared-equivalent, 0 owner-waived, and 793 blocked pending exact target/test
+mapping. See `docs/phase-20/PRODUCT-TRUTH-REPORT.md`.
+
 Assessment date: 2026-07-26
 
 Candidate status: source/local consolidation state 4 complete. This document

@@ -1,5 +1,17 @@
 # TradeFlowKit parity matrix
 
+## Phase 24 cumulative truth notice (2026-08-09)
+
+The matrix below is historical implementation evidence. Current release truth
+is `docs/parity/modules/tradeflowkit.json`: 1,116 capabilities, 142 native, 20
+shared-equivalent, 0 owner-waived, and 954 blocked. The strict source check
+found 36 facets whose claimed implementation paths are absent from the pinned
+import. Former retirements do not count as complete, the Phase 17 branch
+preserves the earlier 57-gap ledger, Phase 23 closes the source orange/navy
+visual-contract record, and Phase 24 closes seven recurring-job records. See
+`docs/phase-20/PRODUCT-TRUTH-REPORT.md` and
+`docs/phase-24/TRADEFLOWKIT-ZERO-GAP-REPORT.md`.
+
 - Assessment date: 2026-08-02
 - Canonical runtime: `C:\Dev\OperatorOS`
 - Standalone reference: `C:\Dev\TradeFlowKit`
@@ -67,7 +79,7 @@ Status values: **complete**, **partial / Phase 16 gap**, **excluded by ADR**,
 | AI scoring/qualification | none | none | deterministic-scope decision | excluded by ADR |
 | Customers CRUD/import/bulk, `/customers/:id` | revenue flow record editor/deep link plus shared Business Directory; `POST/PATCH/DELETE /customers/:id`; bounded browser-parsed CSV import via `POST /customers/import`; archived-record restore workspace | versioned customer writes atomically reconcile the linked Directory organization/primary contact; dependency-guarded customer archive leaves shared Directory identity active; import retains shared idempotency, tenant advisory lock, normalized duplicate suppression, and deterministic source fingerprint | core CRUD PostgreSQL + exact-host E2E; customer-import PostgreSQL/static tests + directory E2E; retention PostgreSQL/browser workflow | complete for single-record create/read/update/archive/restore and bounded import; destructive bulk deletion and permanent purge excluded by ADR-0011 |
 | Jobs CRUD, schedule, assignment, events | operations board with full editor/deep link; `POST /jobs`, `GET/PATCH/DELETE /jobs/:id`; bounded browser-parsed CSV import via `POST /jobs/import`; admin-only `POST /jobs/bulk-status`; archived-record restore workspace | numbered/versioned `tradeflowkit_jobs`, tenant/customer reconciliation, deterministic source fingerprints, shared idempotency, bounded all-or-nothing status batch, dependency-guarded soft archive/restore, activity | record-import, core CRUD, safe-bulk, and retention API/exact-host workflows | complete |
-| Recurring jobs and bulk destructive actions | bounded status update is retained; destructive bulk delete remains absent | tenant-scoped optimistic batch service; no bulk-delete authority | ADR-0011/0029 scheduling/retention decision | recurrence and destructive bulk delete excluded by ADR; safe status batch complete |
+| Recurring jobs and bulk destructive actions | recurring schedule form/list/pause/resume plus bounded job status update; destructive bulk delete remains absent | typed shared scheduler and TradeFlowKit handler create one tenant-scoped scheduled job per immutable schedule/run identity; optimistic schedule version, activity/audit, idempotent worker replay | `P24-RECURRING-001`, ADR-0029 retention boundary | recurring jobs complete locally; destructive bulk delete remains blocked/absent |
 | Workflow templates, stages, and job transitions | Workflow Studio; workflow CRUD/stage APIs; `POST /jobs/:id/workflow-transition` | `tradeflowkit_workflows`, `tradeflowkit_workflow_stages`, job stage FK, activity | Phase 16 work-management integration test | complete for ADR-0028 governed scope |
 | Team task workspace | team list/search/detail plus full edit/status/archive UI and exact task deep-link selection; job-scoped create/dependencies/comments | `tradeflowkit_tasks`, `tradeflowkit_task_dependencies`, comments, activity | core CRUD exact-host/API restart workflow | complete for the job-scoped ADR-0010/0028/0031 model; standalone task creation is excluded |
 | Job work steps (Phase 4 requirement) | task board; `POST /jobs/:id/tasks`, `PATCH/DELETE /tasks/:id`, dependency API | `tradeflowkit_tasks`, `tradeflowkit_task_dependencies` | dependencies, full record edit, archive ordering, stale version, restart | complete |
@@ -82,7 +94,7 @@ Status values: **complete**, **partial / Phase 16 gap**, **excluded by ADR**,
 | Stripe Connect/provider checkout | test-only provider session/complete API | explicit disabled/test adapter and provider references | test adapter workflow | production adapter excluded pending reviewed centralized contract |
 | Customer portal `/portal/:token` | anonymous responsive portal page/API | hashed customer portal token; bounded jobs/quotes/invoices | workflow API proof; browser deployment pending | complete locally |
 | Lead email/SMS, quote/invoice email, reminders | dedicated `POST /leads/:id/send-email` and `/send-sms` plus generic `POST /:entityType/:entityId/message`; responsive Lead Center queue actions | server-owned lead destination, explicit SMS consent and enforced opt-out wording, shared outbox/provider worker, exact replay/body-drift protection, safe activity | focused lead-messaging PostgreSQL/static tests; production-mode exact-host workflow | complete locally for operator-triggered communication; live provider delivery remains gated |
-| Autonomous reminder/recurrence loops | none | none | ADR-0011 durable scheduling decision | excluded by ADR |
+| Autonomous reminders beyond recurring jobs | no dedicated reminder-loop UI | shared scheduler/outbox foundations exist but no source-compatible autonomous reminder adapter is mapped | strict Phase 24 ledger | blocked; recurring jobs do not imply reminder parity |
 | Settings, numbering, tax/rate/business defaults | responsive settings form; `GET/PATCH /settings` | settings + atomic document sequences | expanded state-5 workflow + release apply | complete |
 | Analytics `/analytics/*` | live operations metrics | persisted aggregate queries | state-5 workflow financial assertion | complete |
 | Search/filter | lead and operations filters plus responsive global search with canonical result navigation | bounded five-per-type search across leads, customers, jobs, tasks, Directory organizations/contacts, quotes, and invoices; escaped patterns and trusted tenant predicates | 21/21 isolated PostgreSQL regression, 16/16 non-database checks, exact-host core/search E2E | complete locally; deployed revision pending |
@@ -120,6 +132,7 @@ tests do not execute that quarantined server. Active coverage is provided by:
 - `tradeflowkit-safe-bulk-operations.test.ts`
 - `tradeflowkit-accounting-exports-static.test.ts`
 - `tradeflowkit-accounting-exports.test.ts`
+- `tradeflowkit-recurring-jobs.test.ts`
 - `tradeflowkit-revenue-ui-static.test.ts`
 - `tradeflowkit-shared-runtime-leads.test.ts`
 - `tradeflowkit-import-plan.test.ts`
@@ -131,6 +144,14 @@ tests do not execute that quarantined server. Active coverage is provided by:
 - `tradeflowkit-customer-import.spec.ts`
 - `tradeflowkit-core-crud.spec.ts`
 - `sso-v1.spec.ts` and `operatoros-final-acceptance.spec.ts`
+
+Fresh recurring-work evidence on 2026-08-09 includes API and web TypeScript
+with zero errors plus 1/1 isolated PostgreSQL integration pass with zero
+skip/todo. It proves viewer denial, second-tenant non-enumeration, durable due
+schedule enqueue, worker-created start/end times, immutable series/run source
+identity, idempotent replay, pause, stale-version rejection, and foreign-tenant
+mutation rejection. Seven exact source capability IDs are now native; 954
+TradeFlowKit records remain blocked, so this is not a zero-gap claim.
 
 Fresh core CRUD evidence on 2026-07-28 includes a 2/2 focused PostgreSQL
 workflow, workspace typecheck, production build, readiness-gated compiled

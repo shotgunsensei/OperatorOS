@@ -11,11 +11,11 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 33);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 34);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 33);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 33);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 34);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 34);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
   assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'outcall_product_operations');
   assert.ok(
@@ -79,6 +79,11 @@ test('database release plan is explicit, ordered, additive, and reusable by star
     'shared services must follow tenant, directory, and active module tables',
   );
   assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'shared_platform_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'shared_service_tables'),
+    'Phase 22 control-plane tables must extend the existing shared service foundation additively',
+  );
+  assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'ninja_pool_hall_tables')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'faultlinelab_tables'),
     'Ninja Pool Hall tables must follow the previously accepted module foundations',
@@ -128,6 +133,11 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.directory_organizations'\)/);
   assert.match(releaseSource, /to_regclass\('public\.shared_outbox_messages'\)/);
   assert.match(releaseSource, /to_regclass\('public\.shared_usage_events'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.shared_provider_configs'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.shared_webhook_deliveries'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.shared_exports'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.shared_api_tokens'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.shared_search_documents'\)/);
   assert.match(releaseSource, /to_regclass\('public\.outcall_call_requests'\)/);
   assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_tasks'\)/);
   assert.match(releaseSource, /to_regclass\('public\.tradeflowkit_workflows'\)/);

@@ -1,5 +1,14 @@
 # PulseDesk parity matrix
 
+## Phase 20 truth notice (2026-08-08)
+
+The matrix below is historical implementation evidence. Current release truth
+is `docs/parity/modules/pulsedesk.json`: 889 capabilities, 65 native, 60
+shared-equivalent, 0 owner-waived, and 764 blocked. The strict source check
+found 49 facets whose claimed implementation paths are absent from the pinned
+import; former retirements remain blocked. See
+`docs/phase-20/PRODUCT-TRUTH-REPORT.md`.
+
 Assessment date: 2026-07-29
 
 The clean provenance source is `C:\Dev\PulseDesk` at

@@ -52,7 +52,7 @@ export async function ensureFaultlineStarterContent(
     const challengeId = faultlineStableUuid(
       `faultlinelab:${tenantId}:starter:${starter.sourceId}`,
     );
-    const versionId = faultlineStableUuid(`${challengeId}:version:1`);
+    const versionId = faultlineStableUuid(`${challengeId}:content:${starter.contentHash}`);
     const migrationId = faultlineStableUuid(
       `faultlinelab:${tenantId}:migration:${starter.sourceId}`,
     );
@@ -68,21 +68,53 @@ export async function ensureFaultlineStarterContent(
       )
       ON CONFLICT DO NOTHING
     `);
-    await executor.execute(sql`
+    const existingVersion = await executor.execute(sql`
+      SELECT version_number
+      FROM faultlinelab_challenge_versions
+      WHERE tenant_id=${tenantId} AND challenge_id=${challengeId} AND content_sha256=${starter.contentHash}
+      LIMIT 1
+    `);
+    let versionNumber = Number(existingVersion.rows[0]?.version_number ?? 0);
+    if (!versionNumber) {
+      const nextVersion = await executor.execute(sql`
+        SELECT COALESCE(MAX(version_number), 0)::int + 1 AS version_number
+        FROM faultlinelab_challenge_versions
+        WHERE tenant_id=${tenantId} AND challenge_id=${challengeId}
+      `);
+      versionNumber = Number(nextVersion.rows[0]?.version_number ?? 1);
+      await executor.execute(sql`
       INSERT INTO faultlinelab_challenge_versions (
         id, tenant_id, challenge_id, version_number, content, content_sha256,
         validation, change_note, created_by_user_id
       )
-      SELECT ${versionId}, ${tenantId}, ${challengeId}, 1,
+      SELECT ${versionId}, ${tenantId}, ${challengeId}, ${versionNumber},
         ${JSON.stringify(starter.content)}::jsonb, ${starter.contentHash},
         ${JSON.stringify({ valid: true, errors: [], warnings: [] })}::jsonb,
-        'Pinned starter content imported from the approved source snapshot',
+        'Compiled from the pinned source allCases export',
         ${actorUserId}
       WHERE EXISTS (
         SELECT 1 FROM faultlinelab_challenges
         WHERE tenant_id=${tenantId} AND id=${challengeId}
       )
       ON CONFLICT DO NOTHING
+    `);
+      const resolved = await executor.execute(sql`
+        SELECT version_number
+        FROM faultlinelab_challenge_versions
+        WHERE tenant_id=${tenantId} AND challenge_id=${challengeId} AND content_sha256=${starter.contentHash}
+        LIMIT 1
+      `);
+      versionNumber = Number(resolved.rows[0]?.version_number ?? versionNumber);
+    }
+    await executor.execute(sql`
+      UPDATE faultlinelab_challenges
+      SET slug=${starter.slug}, title=${starter.title}, category=${starter.category}, difficulty=${starter.difficulty},
+        status='published', current_version_number=${versionNumber}, published_version_number=${versionNumber},
+        updated_by_user_id=${actorUserId}, updated_at=NOW(), published_at=COALESCE(published_at, NOW()),
+        retired_at=NULL, archived_at=NULL,
+        version=CASE WHEN current_version_number=${versionNumber} AND slug=${starter.slug} AND title=${starter.title}
+          THEN version ELSE version + 1 END
+      WHERE tenant_id=${tenantId} AND id=${challengeId}
     `);
     await executor.execute(sql`
       INSERT INTO faultlinelab_migration_refs (
@@ -91,12 +123,14 @@ export async function ensureFaultlineStarterContent(
       )
       SELECT ${migrationId}, ${tenantId}, ${FAULTLINELAB_SOURCE_COMMIT},
         'starter_challenge', ${starter.sourceId}, 'challenge', ${challengeId},
-        ${starter.contentHash}
+        ${starter.sourceHash}
       WHERE EXISTS (
         SELECT 1 FROM faultlinelab_challenges
         WHERE tenant_id=${tenantId} AND id=${challengeId}
       )
-      ON CONFLICT DO NOTHING
+      ON CONFLICT (tenant_id, source_type, source_id) DO UPDATE SET
+        source_commit=EXCLUDED.source_commit, target_id=EXCLUDED.target_id,
+        source_fingerprint=EXCLUDED.source_fingerprint, imported_at=NOW()
     `);
   }
 }

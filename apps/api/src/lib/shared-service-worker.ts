@@ -5,6 +5,8 @@ import { processSharedJobBatch } from './shared-background-jobs.js';
 import { processOutboxBatch } from './shared-notification-outbox.js';
 import { processWebhookBatch } from './shared-webhooks.js';
 import { purgeExpiredAttachmentBlobs } from './shared-attachments.js';
+import { processOutboundWebhookBatch } from './shared-outbound-webhooks.js';
+import { enqueueDueSchedules } from './shared-schedules-exports.js';
 
 const workerId = `operatoros-${process.pid}-${randomUUID().slice(0, 8)}`;
 let interval: ReturnType<typeof setInterval> | null = null;
@@ -33,9 +35,11 @@ export async function getSharedServiceQueueHealth() {
       (SELECT COUNT(*)::int FROM shared_outbox_messages WHERE status = 'dead_letter') AS outbox_dead_letter,
       (SELECT COUNT(*)::int FROM shared_jobs WHERE status = 'dead_letter') AS jobs_dead_letter,
       (SELECT COUNT(*)::int FROM shared_webhook_receipts WHERE status = 'dead_letter') AS webhooks_dead_letter,
+      (SELECT COUNT(*)::int FROM shared_webhook_deliveries WHERE status = 'dead_letter') AS outbound_webhooks_dead_letter,
       (SELECT COUNT(*)::int FROM shared_outbox_messages WHERE status IN ('pending','retry','processing')) AS outbox_open,
       (SELECT COUNT(*)::int FROM shared_jobs WHERE status IN ('pending','retry','processing')) AS jobs_open,
       (SELECT COUNT(*)::int FROM shared_webhook_receipts WHERE status IN ('pending','retry','processing')) AS webhooks_open
+      ,(SELECT COUNT(*)::int FROM shared_webhook_deliveries WHERE status IN ('pending','retry','processing')) AS outbound_webhooks_open
   `);
   return result.rows[0] ?? {};
 }
@@ -44,25 +48,29 @@ export async function runSharedServiceCycle(): Promise<{
   outbox: number;
   jobs: number;
   webhooks: number;
+  outboundWebhooks: number;
+  schedules: number;
   purgedAttachments: number;
 }> {
-  if (running || stopping) return { outbox: 0, jobs: 0, webhooks: 0, purgedAttachments: 0 };
+  if (running || stopping) return { outbox: 0, jobs: 0, webhooks: 0, outboundWebhooks: 0, schedules: 0, purgedAttachments: 0 };
   running = true;
   lastStartedAt = new Date();
   try {
-    const [outbox, jobs, webhooks, purgedAttachments] = await Promise.all([
+    const [outbox, jobs, webhooks, outboundWebhooks, schedules, purgedAttachments] = await Promise.all([
       processOutboxBatch({ workerId: `${workerId}:outbox`, limit: 20 }),
       processSharedJobBatch({ workerId: `${workerId}:jobs`, limit: 20 }),
       processWebhookBatch({ workerId: `${workerId}:webhooks`, limit: 20 }),
+      processOutboundWebhookBatch({ workerId: `${workerId}:outbound-webhooks`, limit: 20 }),
+      enqueueDueSchedules({ limit: 20 }),
       purgeExpiredAttachmentBlobs(20),
     ]);
     lastCompletedAt = new Date();
     lastErrorCode = null;
-    return { outbox, jobs, webhooks, purgedAttachments };
+    return { outbox, jobs, webhooks, outboundWebhooks, schedules, purgedAttachments };
   } catch {
     lastCompletedAt = new Date();
     lastErrorCode = 'SHARED_SERVICE_CYCLE_FAILED';
-    return { outbox: 0, jobs: 0, webhooks: 0, purgedAttachments: 0 };
+    return { outbox: 0, jobs: 0, webhooks: 0, outboundWebhooks: 0, schedules: 0, purgedAttachments: 0 };
   } finally {
     running = false;
   }

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/phase20-product-truth.mjs",
+  "moduleSlug": "outcall",
+  "moduleName": "OutCall",
+  "sourceRoot": "apps/modules/outcall/source",
+  "provenance": {
+    "selectedKind": "missing_source",
+    "remote": null,
+    "commit": null,
+    "ref": null,
+    "remoteVerification": "No OutCall repository in the owner public repository list; direct shotgunsensei/OutCall probe returned repository not found on 2026-08-08.",
+    "recoverySearch": [
+      "apps/modules/outcall/source contains only README.md",
+      "No matching source in C:/Dev sibling repositories",
+      "No matching entry in C:/Dev/OperatorOS.zip or C:/Dev/TorqueShed.zip"
+    ]
+  },
+  "sourceFingerprint": {
+    "algorithm": "sha256(path NUL uint64be(size) content)",
+    "treeSha256": "c8dd9b90c2b2624a9b8b2ee17cbcd6cfd1f1de2cd8b6a82654ec341115a453ef",
+    "fileCount": 1,
+    "totalBytes": 639
+  },
+  "stateCounts": {
+    "ACTIVE_NATIVE": 0,
+    "ACTIVE_SHARED_EQUIVALENT": 0,
+    "OWNER_WAIVED": 0,
+    "BLOCKED": 1
+  },
+  "typeCounts": {
+    "source_recovery": 1
+  },
+  "capabilityDigestSha256": "542f567184365a4f05417386cb9bb418f1647b8763f001fc79f20e5ab5614e17",
+  "capabilities": [
+    {
+      "capabilityId": "outcall.source_recovery.f27ae45eb8ea6be6",
+      "moduleSlug": "outcall",
+      "type": "source_recovery",
+      "canonicalSourceIdentity": "canonical-launchable-source-application",
+      "sourcePointers": [
+        "apps/modules/outcall/source/README.md"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": null,
+      "title": "Recover the canonical OutCall source application",
+      "state": "BLOCKED",
+      "blockerCode": "SOURCE_RECOVERY_REQUIRED",
+      "currentTargets": [],
+      "automatedEvidence": [],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "The current source boundary is one README and no owner repository or local/archive implementation was found."
+    }
+  ]
+}

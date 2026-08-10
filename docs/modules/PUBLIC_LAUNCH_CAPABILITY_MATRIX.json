@@ -669,6 +669,8 @@
         "/modules",
         "/modules/:slug",
         "/modules/:slug/:path*",
+        "/msg_privacy",
+        "/msg_terms",
         "/platform/:slug*",
         "/portfolio",
         "/pricing",
@@ -9543,21 +9545,21 @@
       "type": "provider",
       "key": "OUTCALL_LIVE_PROVIDER",
       "source": "apps/api/src/lib/outcall-provider.ts",
-      "line": 87,
+      "line": 86,
       "ownerCapabilityId": "module-outcall"
     },
     {
       "type": "provider",
       "key": "OUTCALL_PUBLIC_URL",
       "source": "apps/api/src/lib/outcall-provider.ts",
-      "line": 51,
+      "line": 50,
       "ownerCapabilityId": "module-outcall"
     },
     {
       "type": "provider",
       "key": "OUTCALL_TEST_ADAPTER",
       "source": "apps/api/src/lib/outcall-provider.ts",
-      "line": 41,
+      "line": 40,
       "ownerCapabilityId": "module-outcall"
     },
     {
@@ -9893,7 +9895,7 @@
       "type": "provider",
       "key": "TWILIO_ACCOUNT_SID",
       "source": "apps/api/src/lib/outcall-provider.ts",
-      "line": 45,
+      "line": 44,
       "ownerCapabilityId": "module-outcall"
     },
     {
@@ -9907,28 +9909,28 @@
       "type": "provider",
       "key": "TWILIO_ALLOWED_COUNTRIES",
       "source": "apps/api/src/lib/outcall-provider.ts",
-      "line": 53,
+      "line": 52,
       "ownerCapabilityId": "module-outcall"
     },
     {
       "type": "provider",
       "key": "TWILIO_API_KEY_SECRET",
       "source": "apps/api/src/lib/outcall-provider.ts",
-      "line": 48,
+      "line": 47,
       "ownerCapabilityId": "module-outcall"
     },
     {
       "type": "provider",
       "key": "TWILIO_API_KEY_SID",
       "source": "apps/api/src/lib/outcall-provider.ts",
-      "line": 47,
+      "line": 46,
       "ownerCapabilityId": "module-outcall"
     },
     {
       "type": "provider",
       "key": "TWILIO_AUTH_TOKEN",
       "source": "apps/api/src/lib/outcall-provider.ts",
-      "line": 46,
+      "line": 45,
       "ownerCapabilityId": "module-outcall"
     },
     {
@@ -9949,7 +9951,7 @@
       "type": "provider",
       "key": "TWILIO_PHONE_NUMBER",
       "source": "apps/api/src/lib/outcall-provider.ts",
-      "line": 50,
+      "line": 49,
       "ownerCapabilityId": "module-outcall"
     },
     {
@@ -9970,7 +9972,7 @@
       "type": "provider",
       "key": "TWILIO_VERIFY_SERVICE_SID",
       "source": "apps/api/src/lib/outcall-provider.ts",
-      "line": 49,
+      "line": 48,
       "ownerCapabilityId": "module-outcall"
     },
     {
@@ -10103,6 +10105,20 @@
       "type": "uiRoute",
       "key": "/modules/:slug/:path*",
       "source": "apps/web/src/app/modules/[slug]/[...path]/page.tsx",
+      "line": 1,
+      "ownerCapabilityId": "platform-workspace-runtime"
+    },
+    {
+      "type": "uiRoute",
+      "key": "/msg_privacy",
+      "source": "apps/web/src/app/msg_privacy/page.tsx",
+      "line": 1,
+      "ownerCapabilityId": "platform-workspace-runtime"
+    },
+    {
+      "type": "uiRoute",
+      "key": "/msg_terms",
+      "source": "apps/web/src/app/msg_terms/page.tsx",
       "line": 1,
       "ownerCapabilityId": "platform-workspace-runtime"
     },
@@ -14172,6 +14188,14 @@
       "rationale": "Permission, validation, busy-state, or provider fail-closed guard."
     },
     {
+      "source": "apps/web/src/components/marketing/LegalMessagingPage.tsx",
+      "line": 189,
+      "term": "unsupported",
+      "classification": "fail-closed-guard",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Explicit validation, integrity, or unavailable-state guard."
+    },
+    {
       "source": "apps/web/src/components/marketing/MarketingPlaceholder.tsx",
       "line": 8,
       "term": "Placeholder",
@@ -14853,7 +14877,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/NinjamationShell.tsx",
-      "line": 441,
+      "line": 431,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -14861,7 +14885,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/NinjamationShell.tsx",
-      "line": 470,
+      "line": 460,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -14869,7 +14893,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/NinjamationShell.tsx",
-      "line": 478,
+      "line": 468,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -14877,7 +14901,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/NinjamationShell.tsx",
-      "line": 489,
+      "line": 479,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -14885,7 +14909,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/NinjamationShell.tsx",
-      "line": 498,
+      "line": 488,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -14893,7 +14917,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/NinjamationShell.tsx",
-      "line": 557,
+      "line": 547,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -14901,7 +14925,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/NinjamationShell.tsx",
-      "line": 569,
+      "line": 559,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -14909,7 +14933,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/NinjamationShell.tsx",
-      "line": 578,
+      "line": 568,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -14917,7 +14941,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/NinjamationShell.tsx",
-      "line": 590,
+      "line": 580,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -14925,7 +14949,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/NinjamationShell.tsx",
-      "line": 601,
+      "line": 591,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -14933,7 +14957,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/NinjamationShell.tsx",
-      "line": 626,
+      "line": 616,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -14941,7 +14965,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/NinjamationShell.tsx",
-      "line": 646,
+      "line": 636,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -14949,7 +14973,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/NinjamationShell.tsx",
-      "line": 653,
+      "line": 643,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -15557,7 +15581,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/ShellChrome.tsx",
-      "line": 50,
+      "line": 49,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -15565,7 +15589,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/SnapProofWorkspace.tsx",
-      "line": 296,
+      "line": 297,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -15573,7 +15597,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/SnapProofWorkspace.tsx",
-      "line": 356,
+      "line": 357,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -15581,15 +15605,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/SnapProofWorkspace.tsx",
-      "line": 356,
-      "term": "disabled",
-      "classification": "fail-closed-or-busy-guard",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Permission, validation, busy-state, or provider fail-closed guard."
-    },
-    {
-      "source": "apps/web/src/components/module-shells/SnapProofWorkspace.tsx",
-      "line": 408,
+      "line": 357,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -15613,7 +15629,15 @@
     },
     {
       "source": "apps/web/src/components/module-shells/SnapProofWorkspace.tsx",
-      "line": 422,
+      "line": 411,
+      "term": "disabled",
+      "classification": "fail-closed-or-busy-guard",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Permission, validation, busy-state, or provider fail-closed guard."
+    },
+    {
+      "source": "apps/web/src/components/module-shells/SnapProofWorkspace.tsx",
+      "line": 423,
       "term": "disabled",
       "classification": "reviewed-runtime-language",
       "status": "APPROVED_PRODUCT_BOUNDARY",
@@ -15621,7 +15645,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/SnapProofWorkspace.tsx",
-      "line": 441,
+      "line": 442,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -17549,7 +17573,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
-      "line": 19,
+      "line": 20,
       "term": "Placeholder",
       "classification": "reviewed-runtime-language",
       "status": "APPROVED_PRODUCT_BOUNDARY",
@@ -17557,7 +17581,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
-      "line": 21,
+      "line": 22,
       "term": "Placeholder",
       "classification": "reviewed-runtime-language",
       "status": "APPROVED_PRODUCT_BOUNDARY",
@@ -17565,15 +17589,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
-      "line": 23,
-      "term": "Placeholder",
-      "classification": "reviewed-runtime-language",
-      "status": "APPROVED_PRODUCT_BOUNDARY",
-      "rationale": "Reviewed occurrence does not advertise unfinished primary functionality."
-    },
-    {
-      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
-      "line": 30,
+      "line": 24,
       "term": "Placeholder",
       "classification": "reviewed-runtime-language",
       "status": "APPROVED_PRODUCT_BOUNDARY",
@@ -17597,7 +17613,7 @@
     },
     {
       "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
-      "line": 37,
+      "line": 33,
       "term": "Placeholder",
       "classification": "reviewed-runtime-language",
       "status": "APPROVED_PRODUCT_BOUNDARY",
@@ -17621,55 +17637,71 @@
     },
     {
       "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
+      "line": 40,
+      "term": "Placeholder",
+      "classification": "reviewed-runtime-language",
+      "status": "APPROVED_PRODUCT_BOUNDARY",
+      "rationale": "Reviewed occurrence does not advertise unfinished primary functionality."
+    },
+    {
+      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
+      "line": 157,
+      "term": "placeholder",
+      "classification": "input-guidance",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Form hint text; the control has a real handler or mutation."
+    },
+    {
+      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
+      "line": 157,
+      "term": "Placeholder",
+      "classification": "input-guidance",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Form hint text; the control has a real handler or mutation."
+    },
+    {
+      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
+      "line": 158,
+      "term": "placeholder",
+      "classification": "input-guidance",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Form hint text; the control has a real handler or mutation."
+    },
+    {
+      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
+      "line": 158,
+      "term": "Placeholder",
+      "classification": "input-guidance",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Form hint text; the control has a real handler or mutation."
+    },
+    {
+      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
+      "line": 159,
+      "term": "placeholder",
+      "classification": "input-guidance",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Form hint text; the control has a real handler or mutation."
+    },
+    {
+      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
+      "line": 159,
+      "term": "Placeholder",
+      "classification": "input-guidance",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Form hint text; the control has a real handler or mutation."
+    },
+    {
+      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
       "line": 160,
-      "term": "placeholder",
-      "classification": "input-guidance",
+      "term": "disabled",
+      "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Form hint text; the control has a real handler or mutation."
+      "rationale": "Permission, validation, busy-state, or provider fail-closed guard."
     },
     {
       "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
-      "line": 160,
-      "term": "Placeholder",
-      "classification": "input-guidance",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Form hint text; the control has a real handler or mutation."
-    },
-    {
-      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
-      "line": 161,
-      "term": "placeholder",
-      "classification": "input-guidance",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Form hint text; the control has a real handler or mutation."
-    },
-    {
-      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
-      "line": 161,
-      "term": "Placeholder",
-      "classification": "input-guidance",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Form hint text; the control has a real handler or mutation."
-    },
-    {
-      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
-      "line": 162,
-      "term": "placeholder",
-      "classification": "input-guidance",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Form hint text; the control has a real handler or mutation."
-    },
-    {
-      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
-      "line": 162,
-      "term": "Placeholder",
-      "classification": "input-guidance",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Form hint text; the control has a real handler or mutation."
-    },
-    {
-      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
-      "line": 163,
+      "line": 171,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -17684,16 +17716,8 @@
       "rationale": "Permission, validation, busy-state, or provider fail-closed guard."
     },
     {
-      "source": "apps/web/src/components/module-shells/WorkflowModuleShell.tsx",
-      "line": 177,
-      "term": "disabled",
-      "classification": "fail-closed-or-busy-guard",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Permission, validation, busy-state, or provider fail-closed guard."
-    },
-    {
       "source": "apps/web/src/components/pages/AiToolsPage.tsx",
-      "line": 397,
+      "line": 394,
       "term": "placeholder",
       "classification": "reviewed-runtime-language",
       "status": "APPROVED_PRODUCT_BOUNDARY",
@@ -17701,7 +17725,7 @@
     },
     {
       "source": "apps/web/src/components/pages/AiToolsPage.tsx",
-      "line": 455,
+      "line": 452,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -17709,7 +17733,7 @@
     },
     {
       "source": "apps/web/src/components/pages/AiToolsPage.tsx",
-      "line": 455,
+      "line": 452,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -17717,7 +17741,7 @@
     },
     {
       "source": "apps/web/src/components/pages/AiToolsPage.tsx",
-      "line": 474,
+      "line": 471,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -17725,7 +17749,7 @@
     },
     {
       "source": "apps/web/src/components/pages/AiToolsPage.tsx",
-      "line": 628,
+      "line": 625,
       "term": "placeholder",
       "classification": "reviewed-runtime-language",
       "status": "APPROVED_PRODUCT_BOUNDARY",
@@ -17733,7 +17757,7 @@
     },
     {
       "source": "apps/web/src/components/pages/AiToolsPage.tsx",
-      "line": 667,
+      "line": 664,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -17741,7 +17765,15 @@
     },
     {
       "source": "apps/web/src/components/pages/AiToolsPage.tsx",
-      "line": 682,
+      "line": 679,
+      "term": "placeholder",
+      "classification": "input-guidance",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Form hint text; the control has a real handler or mutation."
+    },
+    {
+      "source": "apps/web/src/components/pages/AiToolsPage.tsx",
+      "line": 686,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -17750,14 +17782,6 @@
     {
       "source": "apps/web/src/components/pages/AiToolsPage.tsx",
       "line": 689,
-      "term": "placeholder",
-      "classification": "input-guidance",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Form hint text; the control has a real handler or mutation."
-    },
-    {
-      "source": "apps/web/src/components/pages/AiToolsPage.tsx",
-      "line": 692,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -17765,7 +17789,7 @@
     },
     {
       "source": "apps/web/src/components/pages/AiToolsPage.tsx",
-      "line": 878,
+      "line": 875,
       "term": "Mock",
       "classification": "bounded-test-or-example-mode",
       "status": "APPROVED_PRODUCT_BOUNDARY",
@@ -17773,7 +17797,7 @@
     },
     {
       "source": "apps/web/src/components/pages/AiToolsPage.tsx",
-      "line": 878,
+      "line": 875,
       "term": "Demo",
       "classification": "bounded-test-or-example-mode",
       "status": "APPROVED_PRODUCT_BOUNDARY",
@@ -17885,7 +17909,7 @@
     },
     {
       "source": "apps/web/src/components/pages/DashboardPage.tsx",
-      "line": 106,
+      "line": 110,
       "term": "todo",
       "classification": "workflow-status-vocabulary",
       "status": "ACTIVE_AND_PROVEN",
@@ -17893,7 +17917,7 @@
     },
     {
       "source": "apps/web/src/components/pages/ForgotPasswordPage.tsx",
-      "line": 68,
+      "line": 69,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -17901,7 +17925,7 @@
     },
     {
       "source": "apps/web/src/components/pages/ForgotPasswordPage.tsx",
-      "line": 70,
+      "line": 71,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -18125,7 +18149,7 @@
     },
     {
       "source": "apps/web/src/components/pages/NotesPage.tsx",
-      "line": 87,
+      "line": 88,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -18133,7 +18157,7 @@
     },
     {
       "source": "apps/web/src/components/pages/NotesPage.tsx",
-      "line": 89,
+      "line": 90,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -18589,7 +18613,7 @@
     },
     {
       "source": "apps/web/src/components/pages/ProjectsPage.tsx",
-      "line": 180,
+      "line": 181,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -18597,7 +18621,7 @@
     },
     {
       "source": "apps/web/src/components/pages/ProjectsPage.tsx",
-      "line": 186,
+      "line": 187,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -18605,7 +18629,7 @@
     },
     {
       "source": "apps/web/src/components/pages/ProjectsPage.tsx",
-      "line": 204,
+      "line": 205,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -18613,46 +18637,6 @@
     },
     {
       "source": "apps/web/src/components/pages/RegisterPage.tsx",
-      "line": 104,
-      "term": "placeholder",
-      "classification": "input-guidance",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Form hint text; the control has a real handler or mutation."
-    },
-    {
-      "source": "apps/web/src/components/pages/RegisterPage.tsx",
-      "line": 110,
-      "term": "placeholder",
-      "classification": "input-guidance",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Form hint text; the control has a real handler or mutation."
-    },
-    {
-      "source": "apps/web/src/components/pages/RegisterPage.tsx",
-      "line": 116,
-      "term": "placeholder",
-      "classification": "input-guidance",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Form hint text; the control has a real handler or mutation."
-    },
-    {
-      "source": "apps/web/src/components/pages/RegisterPage.tsx",
-      "line": 118,
-      "term": "disabled",
-      "classification": "fail-closed-or-busy-guard",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Permission, validation, busy-state, or provider fail-closed guard."
-    },
-    {
-      "source": "apps/web/src/components/pages/ResetPasswordPage.tsx",
-      "line": 89,
-      "term": "placeholder",
-      "classification": "input-guidance",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Form hint text; the control has a real handler or mutation."
-    },
-    {
-      "source": "apps/web/src/components/pages/ResetPasswordPage.tsx",
       "line": 105,
       "term": "placeholder",
       "classification": "input-guidance",
@@ -18660,8 +18644,32 @@
       "rationale": "Form hint text; the control has a real handler or mutation."
     },
     {
+      "source": "apps/web/src/components/pages/RegisterPage.tsx",
+      "line": 111,
+      "term": "placeholder",
+      "classification": "input-guidance",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Form hint text; the control has a real handler or mutation."
+    },
+    {
+      "source": "apps/web/src/components/pages/RegisterPage.tsx",
+      "line": 117,
+      "term": "placeholder",
+      "classification": "input-guidance",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Form hint text; the control has a real handler or mutation."
+    },
+    {
+      "source": "apps/web/src/components/pages/RegisterPage.tsx",
+      "line": 119,
+      "term": "disabled",
+      "classification": "fail-closed-or-busy-guard",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Permission, validation, busy-state, or provider fail-closed guard."
+    },
+    {
       "source": "apps/web/src/components/pages/ResetPasswordPage.tsx",
-      "line": 121,
+      "line": 90,
       "term": "placeholder",
       "classification": "input-guidance",
       "status": "ACTIVE_AND_PROVEN",
@@ -18669,7 +18677,23 @@
     },
     {
       "source": "apps/web/src/components/pages/ResetPasswordPage.tsx",
-      "line": 128,
+      "line": 106,
+      "term": "placeholder",
+      "classification": "input-guidance",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Form hint text; the control has a real handler or mutation."
+    },
+    {
+      "source": "apps/web/src/components/pages/ResetPasswordPage.tsx",
+      "line": 122,
+      "term": "placeholder",
+      "classification": "input-guidance",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Form hint text; the control has a real handler or mutation."
+    },
+    {
+      "source": "apps/web/src/components/pages/ResetPasswordPage.tsx",
+      "line": 129,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -18773,7 +18797,7 @@
     },
     {
       "source": "apps/web/src/components/pages/TenantBillingPage.tsx",
-      "line": 172,
+      "line": 173,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -18781,7 +18805,7 @@
     },
     {
       "source": "apps/web/src/components/pages/TenantBillingPage.tsx",
-      "line": 203,
+      "line": 204,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -18789,7 +18813,7 @@
     },
     {
       "source": "apps/web/src/components/pages/TenantBillingPage.tsx",
-      "line": 211,
+      "line": 212,
       "term": "disabled",
       "classification": "reviewed-runtime-language",
       "status": "APPROVED_PRODUCT_BOUNDARY",
@@ -18797,7 +18821,7 @@
     },
     {
       "source": "apps/web/src/components/pages/TenantBillingPage.tsx",
-      "line": 249,
+      "line": 250,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",
@@ -18893,14 +18917,6 @@
     },
     {
       "source": "apps/web/src/components/pages/WorkspacesPage.tsx",
-      "line": 123,
-      "term": "placeholder",
-      "classification": "input-guidance",
-      "status": "ACTIVE_AND_PROVEN",
-      "rationale": "Form hint text; the control has a real handler or mutation."
-    },
-    {
-      "source": "apps/web/src/components/pages/WorkspacesPage.tsx",
       "line": 125,
       "term": "placeholder",
       "classification": "input-guidance",
@@ -18909,7 +18925,15 @@
     },
     {
       "source": "apps/web/src/components/pages/WorkspacesPage.tsx",
-      "line": 129,
+      "line": 127,
+      "term": "placeholder",
+      "classification": "input-guidance",
+      "status": "ACTIVE_AND_PROVEN",
+      "rationale": "Form hint text; the control has a real handler or mutation."
+    },
+    {
+      "source": "apps/web/src/components/pages/WorkspacesPage.tsx",
+      "line": 131,
       "term": "disabled",
       "classification": "fail-closed-or-busy-guard",
       "status": "ACTIVE_AND_PROVEN",

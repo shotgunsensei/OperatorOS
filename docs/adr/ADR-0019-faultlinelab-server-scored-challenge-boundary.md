@@ -6,12 +6,13 @@ Date: 2026-07-22
 
 ## Context
 
-The pinned FaultlineLab source contains four runnable troubleshooting cases,
-browser-local scoring and profile state, and 52 catalog cards that do not have
-complete runnable content. Its standalone identity, sessions, roles, billing,
-and child database are not valid OperatorOS authorities. Treating the planned
-cards, client score, or browser state as production data would present
-unfinished or tamperable behavior as functional.
+The pinned FaultlineLab source contains a complete `allCases` export composed
+from standalone definitions and six authored packs, alongside browser-local
+scoring and profile state. Earlier OperatorOS work artificially restricted the
+runtime to four cases even though the pack definitions are runnable. Its
+standalone identity, sessions, roles, billing, and child database are not valid
+OperatorOS authorities. Client score or browser state cannot be treated as
+production authority.
 
 ## Decision
 
@@ -19,10 +20,12 @@ FaultlineLab runs inside the canonical OperatorOS Next/Fastify deployment and
 uses only the validated OperatorOS session, tenant, membership, module access,
 and entitlement context.
 
-- The four complete cases pinned to source commit
-  `46877aae35565149ccf4f4988dd94627fc6bb92b` initialize idempotently as
-  tenant-scoped, published, immutable challenge versions. The 52 planned cards
-  remain non-playable provenance and are not imported.
+- Every valid definition reachable from `allCases` at source commit
+  `46877aae35565149ccf4f4988dd94627fc6bb92b` is compiler-discovered and
+  initializes idempotently by source hash as a tenant-scoped, published,
+  immutable challenge version. Counts are generated, not maintained in this
+  ADR. Invalid authored records are repaired through an explicit repair ledger
+  or fail compilation; none is silently excluded.
 - Personal and tenant challenges use validated immutable content versions.
   Tenant publication, retirement, assignments, and aggregate analytics require
   tenant owner/admin authority. Participant writes require write-capable module
@@ -48,8 +51,8 @@ and entitlement context.
 FaultlineLab has a real persistent product workflow without creating a second
 authority system. Existing attempts do not drift when authors publish a new
 version, tenant resources cannot be enumerated across boundaries, and scoring
-can be audited from immutable inputs. Planned source content stays visibly
-unavailable until it has complete validated challenge data.
+can be audited from immutable inputs. Authored pack cases are playable under
+the same immutable contract as standalone cases.
 
 State 4 requires the approved source/local workflow, clean database release,
 tenant/RBAC negatives, persistence, deep-link, build, and browser evidence.
@@ -60,13 +63,14 @@ acceptance on the exact deployed revision.
 ## Migration and rollback
 
 The ordered OperatorOS release manifest owns additive FaultlineLab tables.
-The dry-run planner verifies the pinned manifest and content hashes but has no
-apply mode. Rollback follows `docs/DATABASE_BACKUP_RESTORE.md`: restore a
+The compiler and dry-run planner verify the pinned manifest and content hashes;
+tenant initialization reuses a matching immutable hash or appends a new version.
+Rollback follows `docs/DATABASE_BACKUP_RESTORE.md`: restore a
 verified pre-release backup into a new database and switch traffic. Append-only
 evidence triggers are not disabled for cleanup or rollback.
 
 ## Superseded records
 
 This ADR supersedes any standalone-source assumption that browser-local
-identity, scoring, profiles, planned catalog cards, billing, or child database
+identity, scoring, profiles, billing, or child database
 migrations are OperatorOS production authority.

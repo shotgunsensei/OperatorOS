@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "policy": "A baseline is release evidence only when its PNG exists and visual-baseline-approvals.json binds its SHA-256 to an identified reviewer, timestamp, and reason.",
+  "modules": [
+    {
+      "moduleSlug": "brandforgeos",
+      "moduleName": "BrandForgeOS",
+      "criticalRoute": "/app/apps/brandforgeos",
+      "sourceReferences": ["apps/modules/brandforgeos/source/artifacts/brandforge/src/App.tsx"],
+      "brandTokens": [{"name":"primary","value":"#7c3aed"},{"name":"accent","value":"#ec4899"},{"name":"surface","value":"#0f172a"}],
+      "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/brandforgeos-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/brandforgeos-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/brandforgeos-mobile.png"}]
+    },
+    {
+      "moduleSlug": "callcommand-ai",
+      "moduleName": "CallCommand AI",
+      "criticalRoute": "/app/apps/callcommand-ai",
+      "sourceReferences": ["apps/modules/callcommand-ai/source/artifacts/callcommand/src/App.tsx"],
+      "brandTokens": [{"name":"primary","value":"#2563eb"},{"name":"accent","value":"#06b6d4"},{"name":"surface","value":"#0f172a"}],
+      "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/callcommand-ai-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/callcommand-ai-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/callcommand-ai-mobile.png"}]
+    },
+    {
+      "moduleSlug": "faultlinelab",
+      "moduleName": "FaultlineLab",
+      "criticalRoute": "/app/apps/faultlinelab",
+      "sourceReferences": ["apps/modules/faultlinelab/source/artifacts/faultline-lab/src/index.css"],
+      "brandTokens": [{"name":"primary","value":"#f97316"},{"name":"accent","value":"#22c55e"},{"name":"surface","value":"#020617"}],
+      "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/faultlinelab-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/faultlinelab-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/faultlinelab-mobile.png"}]
+    },
+    {
+      "moduleSlug": "ninja-launch-kit",
+      "moduleName": "Ninja Launch Kit",
+      "criticalRoute": "/app/apps/ninja-launch-kit",
+      "sourceReferences": ["apps/modules/ninja-launch-kit/source/artifacts/ninjalaunchkit/src/App.tsx"],
+      "brandTokens": [{"name":"primary","value":"#8b5cf6"},{"name":"accent","value":"#f59e0b"},{"name":"surface","value":"#111827"}],
+      "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/ninja-launch-kit-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/ninja-launch-kit-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/ninja-launch-kit-mobile.png"}]
+    },
+    {
+      "moduleSlug": "ninja-pool-hall",
+      "moduleName": "Ninja Pool Hall",
+      "criticalRoute": "/app/apps/ninja-pool-hall",
+      "sourceReferences": ["apps/modules/ninja-pool-hall/source/artifacts/pool/src/pages/MainMenu.tsx"],
+      "brandTokens": [{"name":"primary","value":"#16a34a"},{"name":"accent","value":"#d4af37"},{"name":"surface","value":"#0b1f14"}],
+      "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/ninja-pool-hall-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/ninja-pool-hall-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/ninja-pool-hall-mobile.png"}]
+    },
+    {
+      "moduleSlug": "ninjamation",
+      "moduleName": "Ninjamation",
+      "criticalRoute": "/app/apps/ninjamation",
+      "sourceReferences": ["apps/modules/ninjamation/source/artifacts/automation-station/src/index.css"],
+      "brandTokens": [{"name":"primary","value":"#7c3aed"},{"name":"accent","value":"#06b6d4"},{"name":"surface","value":"#111827"}],
+      "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/ninjamation-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/ninjamation-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/ninjamation-mobile.png"}]
+    },
+    {
+      "moduleSlug": "outcall",
+      "moduleName": "OutCall",
+      "criticalRoute": "/app/apps/outcall",
+      "sourceReferences": ["apps/modules/outcall/source/README.md"],
+      "brandTokens": [],
+      "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/outcall-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/outcall-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/outcall-mobile.png"}]
+    },
+    {
+      "moduleSlug": "pulsedesk",
+      "moduleName": "PulseDesk",
+      "criticalRoute": "/app/apps/pulsedesk",
+      "sourceReferences": ["apps/modules/pulsedesk/source/client/src/index.css"],
+      "brandTokens": [{"name":"primary","value":"#0ea5e9"},{"name":"accent","value":"#14b8a6"},{"name":"surface","value":"#0f172a"}],
+      "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/pulsedesk-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/pulsedesk-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/pulsedesk-mobile.png"}]
+    },
+    {
+      "moduleSlug": "snapproofos",
+      "moduleName": "SnapProofOS",
+      "criticalRoute": "/app/apps/snapproofos",
+      "sourceReferences": ["apps/modules/snapproofos/source/artifacts/snapproof/src/App.tsx"],
+      "brandTokens": [{"name":"primary","value":"#2563eb"},{"name":"accent","value":"#f59e0b"},{"name":"surface","value":"#111827"}],
+      "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/snapproofos-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/snapproofos-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/snapproofos-mobile.png"}]
+    },
+    {
+      "moduleSlug": "studyforge-ai",
+      "moduleName": "StudyForge AI",
+      "criticalRoute": "/app/apps/studyforge-ai",
+      "sourceReferences": ["apps/modules/studyforge-ai/source/artifacts/studyforge/src/App.tsx"],
+      "brandTokens": [{"name":"primary","value":"#8b5cf6"},{"name":"accent","value":"#ec4899"},{"name":"surface","value":"#0f172a"}],
+      "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/studyforge-ai-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/studyforge-ai-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/studyforge-ai-mobile.png"}]
+    },
+    {
+      "moduleSlug": "techdeck",
+      "moduleName": "TechDeck",
+      "criticalRoute": "/app/apps/techdeck",
+      "sourceReferences": ["apps/modules/techdeck/source/client/src/index.css"],
+      "brandTokens": [{"name":"primary","value":"#2563eb"},{"name":"accent","value":"#64748b"},{"name":"surface","value":"#0f172a"}],
+      "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/techdeck-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/techdeck-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/techdeck-mobile.png"}]
+    },
+    {
+      "moduleSlug": "torqueshed",
+      "moduleName": "TorqueShed",
+      "criticalRoute": "/app/apps/torqueshed",
+      "sourceReferences": ["apps/modules/torqueshed/source/artifacts/torqueshed/src/App.tsx","apps/modules/torqueshed/source/artifacts/torqueshed-mobile/app.json"],
+      "brandTokens": [{"name":"primary","value":"#ef4444"},{"name":"accent","value":"#f59e0b"},{"name":"surface","value":"#111827"}],
+      "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/torqueshed-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/torqueshed-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/torqueshed-mobile.png"}]
+    },
+    {
+      "moduleSlug": "tradeflowkit",
+      "moduleName": "TradeFlowKit",
+      "criticalRoute": "/app/apps/tradeflowkit",
+      "sourceReferences": ["apps/modules/tradeflowkit/source/client/src/index.css","apps/modules/tradeflowkit/source/client/src/pages/auth-page.tsx"],
+      "brandTokens": [{"name":"primary-orange","value":"#f97316"},{"name":"navy","value":"#0f172a"},{"name":"surface","value":"#f8fafc"}],
+      "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/tradeflowkit-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/tradeflowkit-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/tradeflowkit-mobile.png"}]
+    }
+  ]
+}
