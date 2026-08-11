@@ -850,6 +850,60 @@ function specialCapabilities(definition, sourceRoot) {
 }
 
 function applyCurrentRestorationMappings(definition, capabilities) {
+  if (definition.slug === 'ninja-pool-hall') {
+    const nativeTargets = [
+      'apps/api/src/lib/ninja-pool-game.ts',
+      'apps/api/src/lib/ninja-pool-physics.ts',
+      'apps/api/src/lib/ninja-pool-rules.ts',
+      'apps/api/src/lib/ninja-pool-match.ts',
+      'apps/api/src/lib/ninja-pool-online.ts',
+      'apps/api/src/lib/ninja-pool-hall-db-init.ts',
+      'apps/api/src/lib/ninja-pool-online-db-init.ts',
+      'apps/api/src/routes/ninja-pool-hall-routes.ts',
+      'apps/api/src/routes/ninja-pool-online-routes.ts',
+      'apps/web/src/lib/ninja-pool-hall/physics.ts',
+      'apps/web/src/lib/ninja-pool-hall/rules.ts',
+      'apps/web/src/lib/ninja-pool-hall/bot.ts',
+      'apps/web/src/lib/ninja-pool-hall/network.ts',
+      'apps/web/src/lib/ninja-pool-hall/online.ts',
+      'apps/web/src/components/module-shells/NinjaPoolHallPractice.tsx',
+      'apps/web/src/components/module-shells/NinjaPoolHallMatch.tsx',
+      'apps/web/src/components/module-shells/NinjaPoolHallOnline.tsx',
+      'apps/web/src/components/module-shells/NinjaPoolHallShell.tsx',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/auth.ts',
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/database-release-contract.ts',
+      'apps/web/src/app/ninja-pool-hall.webmanifest/route.ts',
+      'apps/web/public/ninja-pool-hall-sw.js',
+      'packages/sdk/src/catalog.ts',
+    ];
+    const evidence = [
+      'apps/api/test/ninja-pool-physics.test.ts',
+      'apps/api/test/ninja-pool-rules.test.ts',
+      'apps/api/test/ninja-pool-phase30-domain.test.ts',
+      'apps/api/test/ninja-pool-online-db.test.ts',
+      'apps/api/test/ninja-pool-phase10b-contract.test.ts',
+      'apps/web/e2e/ninja-pool-hall-phase30.spec.ts',
+    ];
+    const sharedBoundary = /(?:auth|login|logout|session|tenant|identity|user|account|entitlement|billing|cors|health|operatoros|pwa|manifest|service.?worker|install)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const sourceText = [capability.title, capability.canonicalSourceIdentity, ...capability.sourcePointers].join(' ');
+      const shared = capability.state === 'ACTIVE_SHARED_EQUIVALENT' || sharedBoundary.test(sourceText);
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...capability.currentTargets, ...(shared ? sharedTargets : nativeTargets)])].sort(),
+        automatedEvidence: [...new Set([...capability.automatedEvidence, ...evidence])].sort(),
+        note: [capability.note, shared
+          ? 'Phase 30 restores this outcome through OperatorOS-owned identity, tenant, entitlement, exact-host routing, release, or installable web authority.'
+          : 'Phase 30 restores this outcome through the deterministic Canvas engine, complete 8-ball rules, seeded CPU play, local hot-seat, or durable host-authoritative online room workflow with independent server re-simulation.'].filter(Boolean).join(' '),
+      };
+    });
+  }
   if (definition.slug === 'torqueshed') {
     const nativeTargets = [
       'apps/api/src/lib/torqueshed-db-init.ts',

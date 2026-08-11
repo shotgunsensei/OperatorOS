@@ -5,7 +5,7 @@ import {
   POCKETS,
   POCKET_CAPTURE_RADIUS,
   BALL_RADIUS,
-} from './ninja-pool-game.js';
+} from './ninja-pool-physics.js';
 import type {
   Ball,
   GameState,

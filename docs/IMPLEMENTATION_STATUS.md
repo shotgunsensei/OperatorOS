@@ -1,5 +1,33 @@
 # OperatorOS implementation status
 
+## Phase 30 Ninja Pool Hall full game and multiplayer restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-11)
+
+Phase 30 re-opens ADR-0020's online retirement without reactivating the unsafe
+standalone relay. The pinned source commit
+`62439c4018ec551ce2891800351200c8ab2cb9e7` compiles to 56 facets: 50
+`ACTIVE_NATIVE`, 6 `ACTIVE_SHARED_EQUIVALENT`, zero `OWNER_WAIVED`, and zero
+`BLOCKED`. Practice free-shoot, seeded CPU play, local hot-seat, and protected
+online rooms are real mobile-first Canvas gameplay modes.
+
+Cumulative additive release v39 adds durable tenant-scoped rooms, append-only
+room events, and persistent rate windows. Online seats come only from the
+OperatorOS session and tenant membership. Guests submit shot intents; the host
+runs the visible simulation; Fastify independently re-simulates the exact shot
+and accepts only matching deterministic hashes. Versions, sequences,
+idempotency, pending intents, state requests, snapshots, five-minute reconnect,
+one-hour expiry, impossible-shot validation, and bounded rates recover safely
+from disconnects and reject stale or forged actions.
+
+Focused TypeScript, golden physics, full rules, seeded 45-shot CPU-rack, and
+disposable-PostgreSQL two-WebSocket tests pass. The latter proves cross-tenant
+denial, host and guest shots, stale rejection, leave/rejoin, reconnect, host
+disconnect persistence, and reconnect-window abandonment. Responsive deep
+links, touch/English controls, procedural audio/settings, device performance
+quality, exact-host-aware manifest scope, and a no-authenticated-cache offline
+shell are active. Production backup/apply, deployed exact-host two-device play,
+rollback, and promotion remain owner gates. See
+`docs/phase-30/NINJA-POOL-HALL-GAME-REPORT.md` and ADR-0034.
+
 ## Phase 28 TorqueShed complete web/API restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-11)
 
 Phase 28 replaces the reduced TorqueShed vehicle shell with the pinned complete

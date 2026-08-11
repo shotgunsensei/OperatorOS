@@ -13,13 +13,15 @@ expected non-secret values, but it is not evidence that the published snapshot
 received them. Replit editor secrets and development environment values must not
 be assumed to carry into the deployment.
 
-- [ ] The app is published as a single deployment (Next on the public port and
-      Fastify on the private `5001` port). The shared API owns the authenticated
-      runner routes; do not expose the legacy standalone runner-gateway port.
-- [ ] Deployment logs show `Fastify ready; starting Next`; the supervised
-      launcher must receive `ready: true` from private `/readyz` before opening
-      the public Next process. If either child exits, the deployment must exit
-      and let Replit restart the complete unit.
+- [ ] The app is published as a single deployment (public HTTP/WebSocket
+      gateway on the Replit port, Fastify on private `5001`, and Next on private
+      `5002`). The shared API owns authenticated socket and runner routes; do
+      not expose the legacy standalone runner-gateway port.
+- [ ] Deployment logs show `Fastify ready; starting Next` followed by `Next
+      ready; public HTTP/WebSocket gateway listening`. The launcher must receive
+      `ready: true` from private `/readyz` before opening the public boundary.
+      If either child exits, the deployment must exit and let Replit restart the
+      complete unit.
 - [ ] The build log uses the checked-in pnpm `10.34.5` pin through
       `npm exec`, then invokes Next directly from `apps/web`. It must not enter
       Replit's Corepack cache. This avoids the Node 20.20

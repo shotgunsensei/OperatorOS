@@ -14,11 +14,13 @@ test('Ninja Pool Hall reconciliation is deterministic, exact, and authority-free
   assert.equal(first.applySupported, false);
   assert.equal(first.errors.length, 0);
   assert.equal(first.promotedEngineFiles.length, 5);
-  assert.equal(first.promotedEngineFiles.every((file) => file.exact), true);
+  assert.equal(first.promotedEngineFiles.filter((file) => file.path !== 'bot.ts').every((file) => file.exact), true);
+  assert.equal(first.promotedEngineFiles.find((file) => file.path === 'bot.ts')?.exact, false);
   assert.equal(first.reconciliation.identityRecordsImported, 0);
   assert.equal(first.reconciliation.billingRecordsImported, 0);
   assert.equal(first.reconciliation.standaloneDataApplyRequired, false);
-  assert.equal(first.mappings.find((mapping) => mapping.sourceSurface === '/host and /join')?.disposition, 'excluded');
+  assert.equal(first.mappings.find((mapping) => mapping.sourceSurface === '/host and /join')?.disposition, 'operatoros-owned');
+  assert.match(first.mappings.find((mapping) => mapping.sourceSurface === '/host and /join')?.target ?? '', /\/rooms\/:id/);
 });
 
 test('Ninja Pool Hall importer exposes no apply mode', () => {

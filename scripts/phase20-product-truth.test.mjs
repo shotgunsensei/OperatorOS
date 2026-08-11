@@ -119,4 +119,11 @@ test('retirement labels stay blocked unless a later literal-restoration contract
   assert.equal(torqueshed.stateCounts.OWNER_WAIVED, 0);
   assert.equal(torqueshed.capabilities.find((capability) => capability.type === 'mobile_product')?.state, 'ACTIVE_SHARED_EQUIVALENT');
   assert.ok(torqueshed.capabilities.every((capability) => capability.automatedEvidence.includes('apps/api/test/torqueshed-web-api-product.test.ts')));
+  const ninjaPool = json('docs/parity/modules/ninja-pool-hall.json');
+  assert.equal(ninjaPool.capabilities.length, 56);
+  assert.equal(ninjaPool.stateCounts.ACTIVE_NATIVE, 50);
+  assert.equal(ninjaPool.stateCounts.ACTIVE_SHARED_EQUIVALENT, 6);
+  assert.equal(ninjaPool.stateCounts.BLOCKED, 0);
+  assert.equal(ninjaPool.stateCounts.OWNER_WAIVED, 0);
+  assert.ok(ninjaPool.capabilities.every((capability) => capability.automatedEvidence.includes('apps/api/test/ninja-pool-phase30-domain.test.ts')));
 });

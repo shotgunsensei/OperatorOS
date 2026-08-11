@@ -89,7 +89,7 @@ export const FREE_WITH_ANY_ACCOUNT: readonly ModuleCatalogItem[] = [
   {
     key: 'ninja-pool-hall',
     name: 'Ninja Pool Hall',
-    description: 'A companion engagement experience for your organization.',
+    description: 'Deterministic Canvas 8-ball with practice, CPU, local and protected online play.',
   },
 ] as const;
 

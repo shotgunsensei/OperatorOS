@@ -7,6 +7,7 @@ import {
   makeInitialGameState,
   rerackAndBreak,
 } from '../src/lib/ninja-pool-rules.ts';
+import { POCKETS } from '../src/lib/ninja-pool-physics.ts';
 
 function clone(state: GameState): GameState {
   return structuredClone(state);
@@ -120,4 +121,45 @@ test('three consecutive fouls lose only when the saved rule variant is enabled',
   });
   assert.equal(disabled.state.gameOver, null);
   assert.deepEqual(disabled.state.consecutiveFouls, [3, 0]);
+});
+
+test('break and post-break scratches grant the correct bounded ball-in-hand state', () => {
+  const breakBefore = makeInitialGameState(makeLogicalBalls(), ['A', 'B']);
+  const breakAfter = clone(breakBefore);
+  mark(breakAfter, [0]);
+  const breakScratch = applyShotResult(breakBefore, breakAfter, events({
+    pocketed: [0], firstContact: 1, cushionAfterContact: true, objectBallsToRail: 4,
+  }));
+  assert.equal(breakScratch.state.currentPlayer, 1);
+  assert.equal(breakScratch.state.ballInHand, true);
+  assert.equal(breakScratch.state.ballInHandBehindHeadString, true);
+  assert.match(breakScratch.foul?.reason ?? '', /scratch on the break/i);
+
+  const regularBefore = makeInitialGameState(makeLogicalBalls(), ['A', 'B']);
+  regularBefore.shotCount = 1;
+  const regularAfter = clone(regularBefore);
+  mark(regularAfter, [0]);
+  const regularScratch = applyShotResult(regularBefore, regularAfter, events({
+    pocketed: [0], firstContact: 1, cushionAfterContact: true,
+  }));
+  assert.equal(regularScratch.state.currentPlayer, 1);
+  assert.equal(regularScratch.state.ballInHand, true);
+  assert.equal(regularScratch.state.ballInHandBehindHeadString, false);
+});
+
+test('called-pocket 8-ball fixtures distinguish a legal win from a wrong-pocket loss', () => {
+  const before = makeInitialGameState(makeLogicalBalls([1, 2, 3, 4, 5, 6, 7]), ['A', 'B']);
+  before.shotCount = 6;
+  before.groupsAssigned = true;
+  before.players[0].group = 'solids';
+  before.players[1].group = 'stripes';
+  const after = clone(before);
+  const eight = after.balls.find((ball) => ball.id === 8)!;
+  eight.inPocket = true;
+  eight.pos = { ...POCKETS[2]! };
+  const shotEvents = events({ pocketed: [8], firstContact: 8, cushionAfterContact: true });
+  const legal = applyShotResult(before, after, shotEvents, { callShotOn8: true, threeFoulRule: false }, { calledPocket: 2 });
+  assert.deepEqual(legal.state.gameOver, { winner: 0, reason: 'Legal 8-ball pocket' });
+  const wrong = applyShotResult(before, after, shotEvents, { callShotOn8: true, threeFoulRule: false }, { calledPocket: 5 });
+  assert.deepEqual(wrong.state.gameOver, { winner: 1, reason: '8 ball pocketed in the wrong pocket' });
 });
