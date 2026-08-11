@@ -95,6 +95,8 @@ export async function ensureSchemaReady() {
   await ensureSharedPlatformTables();
   const { ensureTorqueShedWebApiTables } = await import('../src/lib/torqueshed-web-api-db-init.js');
   await ensureTorqueShedWebApiTables();
+  const { ensureTorqueShedNativeTables } = await import('../src/lib/torqueshed-native-db-init.js');
+  await ensureTorqueShedNativeTables();
   const { ensureTechDeckLiteralTables } = await import('../src/lib/techdeck-literal-db-init.js');
   await ensureTechDeckLiteralTables();
   const { ensureOutCallTables, ensureOutCallProductTables } = await import('../src/lib/outcall-db-init.js');

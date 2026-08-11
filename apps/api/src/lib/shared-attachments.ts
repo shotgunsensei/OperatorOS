@@ -135,6 +135,7 @@ export async function createAttachment(input: {
   createdByUserId: string;
   retentionUntil?: Date | null;
   correlationId?: string | null;
+  idempotencyKey?: string | null;
 }, executor: Executor = db) {
   if (input.content.length === 0 || input.content.length > getMaxAttachmentBytes()) {
     throw Object.assign(new Error('Attachment size is outside the configured limit'), { code: 'ATTACHMENT_SIZE_INVALID' });
@@ -143,18 +144,28 @@ export async function createAttachment(input: {
   const detectedMimeType = detectAttachmentMimeType(input.content, input.declaredMimeType);
   assertDeclaredMimeMatches(input.declaredMimeType, detectedMimeType);
   const sha256 = createHash('sha256').update(input.content).digest('hex');
+  if (input.idempotencyKey) {
+    const existing = await executor.execute(sql`
+      SELECT * FROM shared_attachments
+      WHERE tenant_id=${input.tenantId} AND module_id=${input.moduleId}
+        AND object_type=${input.objectType} AND object_id=${input.objectId}
+        AND client_mutation_id=${input.idempotencyKey}
+      LIMIT 1
+    `);
+    if (existing.rows[0]) return existing.rows[0] as Record<string, unknown>;
+  }
   const storage = getAttachmentStorageAdapter();
   const storageKey = `${input.tenantId}/${input.moduleId}/${new Date().toISOString().slice(0, 7)}/${randomBytes(24).toString('hex')}`;
   const result = await executor.execute(sql`
     INSERT INTO shared_attachments (
       tenant_id, module_id, object_type, object_id, original_name, storage_adapter,
       storage_key, size_bytes, declared_mime_type, detected_mime_type, sha256,
-      retention_until, created_by_user_id
+      retention_until, created_by_user_id, client_mutation_id
     ) VALUES (
       ${input.tenantId}, ${input.moduleId}, ${input.objectType}, ${input.objectId},
       ${originalName}, ${storage.name}, ${storageKey}, ${input.content.length},
       ${input.declaredMimeType ?? null}, ${detectedMimeType}, ${sha256},
-      ${input.retentionUntil ?? null}, ${input.createdByUserId}
+      ${input.retentionUntil ?? null}, ${input.createdByUserId}, ${input.idempotencyKey ?? null}
     )
     RETURNING *
   `);

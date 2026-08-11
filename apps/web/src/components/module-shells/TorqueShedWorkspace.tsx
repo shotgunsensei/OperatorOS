@@ -36,6 +36,7 @@ import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modu
 import { ShellLiveBadge } from './ShellChrome';
 import { TorqueShedCommunityPanel, TorqueShedMarketplacePanel } from './TorqueShedSocialPanels';
 import { TorqueShedJournalPanel, TorqueShedLiveBayPanel, TorqueShedUtilityPanel } from './TorqueShedRestorationPanels';
+import TorqueShedNativeAuthorizePanel from './TorqueShedNativeAuthorizePanel';
 
 type Tab = 'dashboard' | 'garage' | 'service' | 'builds' | 'journal' | 'diagnostics' | 'live' | 'templates' | 'marketplace' | 'community' | 'tools';
 
@@ -110,6 +111,7 @@ export default function TorqueShedWorkspace() {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [nativeAuthorization, setNativeAuthorization] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -193,6 +195,10 @@ export default function TorqueShedWorkspace() {
   }, []);
   useEffect(() => {
     const path = window.location.pathname;
+    if (/\/native-auth\/?$/.test(path)) {
+      setNativeAuthorization(true);
+      return;
+    }
     const diagnostic = path.match(/\/diagnostics\/([a-z0-9-]+)\/?$/i);
     const vehicle = path.match(/\/vehicles\/([a-z0-9-]+)\/?$/i);
     if (diagnostic?.[1]) void openDiagnostic(diagnostic[1]);
@@ -311,6 +317,8 @@ export default function TorqueShedWorkspace() {
       form,
     );
   }
+
+  if (nativeAuthorization) return <TorqueShedNativeAuthorizePanel />;
 
   return (
     <main

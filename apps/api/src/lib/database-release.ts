@@ -24,6 +24,7 @@ import { ensurePulseDeskTables } from './pulsedesk-db-init.js';
 import { ensurePulseDeskLiteralTables } from './pulsedesk-literal-db-init.js';
 import { ensureTorqueShedTables } from './torqueshed-db-init.js';
 import { ensureTorqueShedWebApiTables } from './torqueshed-web-api-db-init.js';
+import { ensureTorqueShedNativeTables } from './torqueshed-native-db-init.js';
 import { ensureFaultlineLabTables } from './faultlinelab-db-init.js';
 import { ensureNinjaPoolHallTables } from './ninja-pool-hall-db-init.js';
 import { ensureBrandForgeOsTables } from './brandforgeos-db-init.js';
@@ -86,6 +87,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   outcall_product_operations: ensureOutCallProductTables,
   operatoros_messaging_compliance_tables: ensureOperatorOsMessagingComplianceTables,
   torqueshed_web_api_tables: ensureTorqueShedWebApiTables,
+  torqueshed_native_tables: ensureTorqueShedNativeTables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -141,6 +143,8 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.torqueshed_live_bay_messages') IS NOT NULL AS torqueshed_live_bay_messages,
       to_regclass('public.torqueshed_share_links') IS NOT NULL AS torqueshed_share_links,
       to_regclass('public.torqueshed_user_settings') IS NOT NULL AS torqueshed_user_settings,
+      to_regclass('public.torqueshed_native_authorization_codes') IS NOT NULL AS torqueshed_native_authorization_codes,
+      to_regclass('public.torqueshed_native_sessions') IS NOT NULL AS torqueshed_native_sessions,
       to_regclass('public.faultlinelab_challenges') IS NOT NULL AS faultlinelab_challenges,
       to_regclass('public.faultlinelab_challenge_versions') IS NOT NULL AS faultlinelab_challenge_versions,
       to_regclass('public.faultlinelab_sessions') IS NOT NULL AS faultlinelab_sessions,

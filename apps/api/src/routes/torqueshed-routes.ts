@@ -1490,6 +1490,7 @@ async function attachmentRoute(
       content,
       createdByUserId: user(request),
       correlationId: request.id,
+      idempotencyKey: idempotencyKey(request),
     });
     await audit(db, request, 'attachment_created', 'attachment', String(attachment.id), {
       objectType: target.storage,

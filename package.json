@@ -15,9 +15,11 @@
     "phase26:report:write": "node scripts/phase26-techdeck-report.mjs --write",
     "phase27:report:write": "node scripts/phase27-pulsedesk-report.mjs --write",
     "phase28:report:write": "node scripts/phase28-torqueshed-report.mjs --write",
+    "phase29:report:write": "node scripts/phase29-torqueshed-native-report.mjs --write",
     "verify:techdeck:phase26": "node scripts/phase20-product-truth.mjs && node scripts/phase26-techdeck-report.mjs",
     "verify:pulsedesk:phase27": "node scripts/phase20-product-truth.mjs && node scripts/phase27-pulsedesk-report.mjs",
     "verify:torqueshed:phase28": "node scripts/phase20-product-truth.mjs && node scripts/phase28-torqueshed-report.mjs",
+    "verify:torqueshed:phase29": "pnpm --filter @operatoros/torqueshed-native test && pnpm --filter @operatoros/torqueshed-native typecheck && pnpm --filter @operatoros/torqueshed-native validate:config && pnpm --filter @operatoros/torqueshed-native export:mobile && pnpm --filter @operatoros/api exec tsx --test --test-concurrency=1 test/torqueshed-native-auth.test.ts test/torqueshed-native-static.test.ts && node scripts/phase29-torqueshed-native-report.mjs",
     "verify:faultlinelab:catalog": "node scripts/faultlinelab/compile-source-cases.mjs && node --test scripts/faultlinelab/compile-source-cases.test.mjs && node scripts/faultlinelab/report-full-catalog.mjs",
     "tradeflowkit:visual:normalize": "node scripts/phase23/normalize-tradeflowkit-colors.mjs --write",
     "verify:pulsedesk:source": "node scripts/pulsedesk-source-ledger.mjs",
@@ -33,7 +35,7 @@
     "parity:discover-target": "node scripts/parity/discover-target.mjs",
     "parity:build": "node scripts/parity/build-ledger.mjs",
     "parity:report": "node scripts/parity/report-parity.mjs",
-    "lint": "eslint scripts apps/api/src apps/api/test apps/runner-gateway/src apps/web/src apps/web/e2e packages --max-warnings=0",
+    "lint": "eslint scripts apps/api/src apps/api/test apps/runner-gateway/src apps/web/src apps/web/e2e apps/torqueshed-native/src apps/torqueshed-native/scripts packages --max-warnings=0",
     "test": "pnpm test:unit && pnpm test:api && pnpm test:integration",
     "test:unit": "node scripts/parity/run-unit-tests.mjs",
     "test:api": "node scripts/parity/run-api-tests.mjs",
@@ -70,7 +72,7 @@
     "build": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web build",
     "build:production": "pnpm verify:faultlinelab:catalog && node scripts/generate-release-metadata.mjs && pnpm typecheck && pnpm build",
     "start": "pnpm -r --parallel --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web start",
-    "typecheck": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web typecheck"
+    "typecheck": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web --filter ./apps/torqueshed-native typecheck"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",

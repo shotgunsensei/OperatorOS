@@ -8,6 +8,7 @@ import { eq, and } from 'drizzle-orm';
 import { getUserPlanConfig, checkResourceLimit, checkFeatureAccess, type PlanFeatures, type PlanLimits } from './plans.js';
 import { requireSessionSecret } from './session-secret.js';
 import { SESSION_COOKIE_NAME } from '../../../../packages/auth/index.js';
+import { resolveTorqueShedNativeAccessToken } from './torqueshed-native-auth.js';
 
 const JWT_SECRET = requireSessionSecret();
 const JWT_EXPIRY = '7d';
@@ -128,7 +129,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
     return reply.code(401).send({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
   }
 
-  const payload = verifyToken(token);
+  const payload = verifyToken(token) ?? await resolveTorqueShedNativeAccessToken(token);
   if (!payload) {
     return reply.code(401).send({ error: 'Invalid or expired token', code: 'TOKEN_INVALID' });
   }
