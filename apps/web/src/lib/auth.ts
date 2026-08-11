@@ -670,6 +670,8 @@ export interface BrandForgeBrand {
   bodyFont: string | null;
   voiceTone: string | null;
   guidelines: string | null;
+  logoAttachmentId: string | null;
+  assetSummary: string[];
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -721,6 +723,8 @@ export interface BrandForgeCopyAsset {
   tone: string | null;
   status: 'draft' | 'review' | 'approved' | 'published' | 'archived';
   generationId: string | null;
+  favorite: boolean;
+  scores: Record<string, number | string>;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -1513,6 +1517,94 @@ export const moduleShellApi = {
       apiFetch('/modules/brandforgeos/generations') as Promise<any>,
     generate: (input: Record<string, unknown>): Promise<{ generation: BrandForgeGeneration }> =>
       apiFetch('/modules/brandforgeos/generations', { method: 'POST', body: JSON.stringify(input) }) as Promise<{ generation: BrandForgeGeneration }>,
+    productContract: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/product-contract') as Promise<any>,
+    productOverview: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/product-overview') as Promise<any>,
+    listOffers: (): Promise<{ offers: Array<Record<string, any>> }> => apiFetch('/modules/brandforgeos/offers') as Promise<any>,
+    createOffer: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/brandforgeos/offers', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    campaignProduction: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/brandforgeos/campaigns/${encodeURIComponent(id)}/production`) as Promise<any>,
+    createCampaignTask: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/campaigns/${encodeURIComponent(id)}/tasks`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    updateCampaignTask: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/campaign-tasks/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    createCampaignComment: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/campaigns/${encodeURIComponent(id)}/comments`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    createLandingPage: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/campaigns/${encodeURIComponent(id)}/landing-pages`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    listWorkflows: (): Promise<{ workflows: Array<Record<string, any>> }> => apiFetch('/modules/brandforgeos/workflows') as Promise<any>,
+    createWorkflow: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/brandforgeos/workflows', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    completeWorkflow: (id: string, generationId: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/workflows/${encodeURIComponent(id)}/complete`, {
+        method: 'POST',
+        body: JSON.stringify({ generationId }),
+      }) as Promise<any>,
+    listTemplates: (): Promise<{ templates: Array<Record<string, any>> }> => apiFetch('/modules/brandforgeos/templates') as Promise<any>,
+    createTemplate: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/brandforgeos/templates', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    useTemplate: (id: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/templates/${encodeURIComponent(id)}/use`, {
+        method: 'POST',
+        body: '{}',
+      }) as Promise<any>,
+    listIntegrations: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/integrations') as Promise<any>,
+    connectIntegration: (provider: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/integrations/${encodeURIComponent(provider)}/connect`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    disconnectIntegration: (provider: string): Promise<void> =>
+      apiFetch(`/modules/brandforgeos/integrations/${encodeURIComponent(provider)}`, {
+        method: 'DELETE',
+      }) as Promise<void>,
+    syncIntegration: (provider: string, idempotencyKey: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/integrations/${encodeURIComponent(provider)}/sync`, {
+        method: 'POST',
+        body: JSON.stringify({ idempotencyKey }),
+      }) as Promise<any>,
+    listRecommendations: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/recommendations') as Promise<any>,
+    listLeads: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/leads') as Promise<any>,
+    listReports: (): Promise<{ reports: Array<Record<string, any>> }> => apiFetch('/modules/brandforgeos/reports') as Promise<any>,
+    createReport: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/brandforgeos/reports', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    generateReport: (id: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/reports/${encodeURIComponent(id)}/generate`, {
+        method: 'POST',
+        body: '{}',
+      }) as Promise<any>,
+    listExports: (): Promise<{ exports: Array<Record<string, any>> }> => apiFetch('/modules/brandforgeos/exports') as Promise<any>,
+    createExport: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/brandforgeos/exports', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    activity: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/activity') as Promise<any>,
+    notifications: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/notifications') as Promise<any>,
+    planUsage: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/plan-usage') as Promise<any>,
   },
   snapproofos: {
     dashboard: (): Promise<{ counts: Record<string, number> }> =>

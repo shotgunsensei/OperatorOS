@@ -45,6 +45,7 @@ try {
       'e2e/twilio-compliance.spec.ts',
       'e2e/torqueshed-phase28.spec.ts',
       'e2e/ninja-pool-hall-phase30.spec.ts',
+      'e2e/brandforgeos-phase31.spec.ts',
     ];
     const focusedPattern = process.env.PARITY_BROWSER_GREP?.trim();
     if (focusedPattern) browserArgs.push('--grep', focusedPattern);

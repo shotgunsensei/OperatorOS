@@ -850,6 +850,63 @@ function specialCapabilities(definition, sourceRoot) {
 }
 
 function applyCurrentRestorationMappings(definition, capabilities) {
+  if (definition.slug === 'brandforgeos') {
+    const nativeTargets = [
+      'apps/api/src/lib/brandforgeos-db-init.ts',
+      'apps/api/src/lib/brandforgeos-phase31-db-init.ts',
+      'apps/api/src/lib/brandforgeos.ts',
+      'apps/api/src/routes/brandforgeos-routes.ts',
+      'apps/api/src/routes/brandforgeos-phase31-routes.ts',
+      'apps/web/src/components/module-shells/BrandForgeWorkspace.tsx',
+      'apps/web/src/components/module-shells/BrandForgeCompletePanels.tsx',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/ai-provider.ts',
+      'apps/api/src/lib/shared-platform-control-plane.ts',
+      'apps/api/src/lib/shared-provider-adapters.ts',
+      'apps/api/src/lib/shared-background-jobs.ts',
+      'apps/api/src/lib/shared-notification-outbox.ts',
+      'apps/api/src/lib/shared-usage-activity.ts',
+      'apps/api/src/lib/shared-services-db-init.ts',
+      'apps/api/src/lib/shared-platform-db-init.ts',
+      'apps/api/src/lib/database-release-contract.ts',
+    ];
+    const nativeSchemas = ['apps/api/src/lib/brandforgeos-db-init.ts','apps/api/src/lib/brandforgeos-phase31-db-init.ts'];
+    const sharedSchemas = ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-services-db-init.ts','apps/api/src/lib/shared-platform-db-init.ts'];
+    const uiTargets = ['apps/web/src/app/modules/[slug]/page.tsx','apps/web/src/app/modules/[slug]/[...path]/page.tsx'];
+    const evidence = [
+      'apps/api/test/brandforgeos-db.test.ts',
+      'apps/api/test/brandforgeos-phase31-domain.test.ts',
+      'apps/api/test/brandforgeos-phase31-static.test.ts',
+      'apps/web/e2e/brandforgeos-phase31.spec.ts',
+    ];
+    const sharedBoundary = /(?:routes\/auth|\/login|\/register|\/logout|\/session|routes\/tenants|membership|role.?mapping|billing|subscription|plan.?limits|plan.?add.?ons|entitlement|stripe|operatoros|provider|openai|routes\/ai|\/ai\/|integration|oauth|connector|secret|credit|usage|notification|activity|export|job|worker|routes\/admin|feature.?flag|privacy|terms|legal|pricing|health)/iu;
+    const sharedSchemaBoundary = /^(?:add_on_purchases|audit_logs|billing_profiles|credit_packs|export_jobs|feature_flags|integrations|invoices|memberships|notifications|sessions|subscriptions|sync_jobs|tenants|usage_records|users)(?:\.|$)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const alreadyActive = capability.state === 'ACTIVE_NATIVE' || capability.state === 'ACTIVE_SHARED_EQUIVALENT';
+      const sourceText = [capability.title,capability.canonicalSourceIdentity,...capability.sourcePointers].join(' ');
+      const shared = alreadyActive
+        ? capability.state === 'ACTIVE_SHARED_EQUIVALENT'
+        : capability.type === 'integration' || capability.type === 'background_process' || capability.type === 'public_flow' || capability.type === 'mobile_pwa_surface' || ((capability.type === 'database_table' || capability.type === 'database_column') && sharedSchemaBoundary.test(capability.title)) || sharedBoundary.test(sourceText);
+      const typedTargets = capability.type === 'ui_page' || capability.type === 'ui_route'
+        ? uiTargets
+        : capability.type === 'database_table'
+          ? (shared ? sharedSchemas : nativeSchemas)
+          : [];
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...capability.currentTargets,...(shared?sharedTargets:nativeTargets),...typedTargets])].sort(),
+        automatedEvidence: [...new Set([...capability.automatedEvidence,...evidence])].sort(),
+        note: [capability.note,!alreadyActive ? (shared
+          ? 'Phase 31 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI/provider, audited usage, notification, job, platform-admin, legal, or billing authority.'
+          : 'Phase 31 restores this outcome through the tenant-scoped BrandForgeOS API, additive v40 persistence, premium workspace, source-compatible deep links, deterministic scoring, and persisted marketing workflows.') : null].filter(Boolean).join(' '),
+      };
+    });
+  }
   if (definition.slug === 'ninja-pool-hall') {
     const nativeTargets = [
       'apps/api/src/lib/ninja-pool-game.ts',

@@ -28,6 +28,7 @@ import { ensureFaultlineLabTables } from './faultlinelab-db-init.js';
 import { ensureNinjaPoolHallTables } from './ninja-pool-hall-db-init.js';
 import { ensureNinjaPoolOnlineTables } from './ninja-pool-online-db-init.js';
 import { ensureBrandForgeOsTables } from './brandforgeos-db-init.js';
+import { ensureBrandForgeOsPhase31Tables } from './brandforgeos-phase31-db-init.js';
 import { ensureSnapProofOsTables } from './snapproofos-db-init.js';
 import { ensureStudyForgeTables } from './studyforge-db-init.js';
 import { ensureNinjaLaunchKitTables } from './ninja-launch-kit-db-init.js';
@@ -88,6 +89,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   operatoros_messaging_compliance_tables: ensureOperatorOsMessagingComplianceTables,
   torqueshed_web_api_tables: ensureTorqueShedWebApiTables,
   ninja_pool_online_tables: ensureNinjaPoolOnlineTables,
+  brandforgeos_complete_product_tables: ensureBrandForgeOsPhase31Tables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -158,6 +160,19 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.brandforge_campaigns') IS NOT NULL AS brandforge_campaigns,
       to_regclass('public.brandforge_copy_assets') IS NOT NULL AS brandforge_copy_assets,
       to_regclass('public.brandforge_generations') IS NOT NULL AS brandforge_generations,
+      to_regclass('public.brandforge_offers') IS NOT NULL AS brandforge_offers,
+      to_regclass('public.brandforge_campaign_tasks') IS NOT NULL AS brandforge_campaign_tasks,
+      to_regclass('public.brandforge_campaign_comments') IS NOT NULL AS brandforge_campaign_comments,
+      to_regclass('public.brandforge_landing_pages') IS NOT NULL AS brandforge_landing_pages,
+      to_regclass('public.brandforge_ai_workflows') IS NOT NULL AS brandforge_ai_workflows,
+      to_regclass('public.brandforge_templates') IS NOT NULL AS brandforge_templates,
+      to_regclass('public.brandforge_integrations') IS NOT NULL AS brandforge_integrations,
+      to_regclass('public.brandforge_sync_runs') IS NOT NULL AS brandforge_sync_runs,
+      to_regclass('public.brandforge_recommendations') IS NOT NULL AS brandforge_recommendations,
+      to_regclass('public.brandforge_lead_submissions') IS NOT NULL AS brandforge_lead_submissions,
+      to_regclass('public.brandforge_reports') IS NOT NULL AS brandforge_reports,
+      to_regclass('public.brandforge_export_jobs') IS NOT NULL AS brandforge_export_jobs,
+      to_regclass('public.brandforge_credit_counters') IS NOT NULL AS brandforge_credit_counters,
       to_regclass('public.snapproof_cases') IS NOT NULL AS snapproof_cases,
       to_regclass('public.snapproof_evidence_items') IS NOT NULL AS snapproof_evidence_items,
       to_regclass('public.snapproof_custody_events') IS NOT NULL AS snapproof_custody_events,

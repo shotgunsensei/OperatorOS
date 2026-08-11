@@ -1,5 +1,37 @@
 # OperatorOS implementation status
 
+## Phase 31 BrandForgeOS complete marketing SaaS restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-11)
+
+Phase 31 pins BrandForgeOS source commit
+`5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e` and re-opens the Phase 11A
+product-boundary retirements. The executable ledger now classifies all 793
+source facets as 463 `ACTIVE_NATIVE` and 330 `ACTIVE_SHARED_EQUIVALENT`, with
+zero `OWNER_WAIVED` and zero `BLOCKED`.
+
+Cumulative additive release v40 restores offers; campaign tasks, comments and
+landing content; six guided workflows; the global/custom template marketplace;
+twelve shared-provider integration projections with durable sync history;
+recommendations and leads; six deterministic report types; asynchronous
+integrity-hashed exports; and atomic OperatorOS generation credits. Copy Studio
+accepts ten source channel modes and eight tones, persists inspectable quality
+scores, and records validated provider output and usage without logging the
+sensitive prompt body. Reports use persisted metrics only—no random or sample
+performance data.
+
+OperatorOS remains the sole identity, tenant, role, plan, billing, entitlement,
+provider-secret, platform-admin, background-job, notification, usage and audit
+authority. Cross-tenant brand, campaign, landing, workflow, report, and assignee
+references fail closed. Local API/web typechecks, 5/5 source/domain/static
+contracts, and the full 6/6 PostgreSQL workflow pass against a disposable
+loopback PostgreSQL 16 database, including deterministic connector sync,
+white-label report/export integrity, concurrent credit exhaustion, replay,
+viewer denial, restart persistence, and tenant isolation.
+
+Production v40 apply, live provider/OAuth setup, exact-host deployed browser
+acceptance, authorized source-data reconciliation, backup/restore, rollback and
+cutover remain owner-controlled gates. Phase 31 does not claim state 5 or a
+production deployment.
+
 ## Phase 30 Ninja Pool Hall full game and multiplayer restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-11)
 
 Phase 30 re-opens ADR-0020's online retirement without reactivating the unsafe

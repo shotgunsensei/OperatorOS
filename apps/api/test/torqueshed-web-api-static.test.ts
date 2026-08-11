@@ -6,12 +6,12 @@ import { fileURLToPath } from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 const read=(path:string)=>readFileSync(resolve(root,path),'utf8');
 
-test('Phase 28 uses the pinned complete TorqueShed source and retains its additive step in cumulative v39',()=>{
+test('Phase 28 uses the pinned complete TorqueShed source and retains its additive step before later cumulative releases',()=>{
   const source=JSON.parse(read('apps/modules/torqueshed/source/SOURCE_SNAPSHOT.json'));
   assert.equal(source.sourceCommit,'508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75');
   assert.equal(source.highConfidenceSecretFindings,0);
   const contract=read('apps/api/src/lib/database-release-contract.ts');
-  assert.match(contract,/releaseVersion:\s*39/);assert.match(contract,/torqueshed_web_api_tables/);
+assert.match(contract,/releaseVersion:\s*40/);assert.match(contract,/torqueshed_web_api_tables/);
   const ddl=read('apps/api/src/lib/torqueshed-web-api-db-init.ts');
   for(const table of ['torqueshed_build_journal_entries','torqueshed_build_parts','torqueshed_live_bays','torqueshed_live_bay_members','torqueshed_live_bay_messages','torqueshed_share_links','torqueshed_user_settings'])assert.match(ddl,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   assert.doesNotMatch(ddl,/DROP\s+TABLE|TRUNCATE|DELETE\s+FROM/i);

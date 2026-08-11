@@ -145,11 +145,25 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/dashboard': { sectionId: 'brandforgeos-dashboard', label: 'Dashboard' },
     '/brands': { sectionId: 'brandforgeos-brands', label: 'Brand Kits' },
     '/personas': { sectionId: 'brandforgeos-personas', label: 'Audience Personas' },
+    '/offers': { sectionId: 'brandforgeos-offers', label: 'Offers' },
     '/campaigns': { sectionId: 'brandforgeos-campaigns', label: 'Campaigns' },
     '/copy-studio': { sectionId: 'brandforgeos-copy', label: 'Copy Studio' },
     '/calendar': { sectionId: 'brandforgeos-calendar', label: 'Content Calendar' },
     '/analytics': { sectionId: 'brandforgeos-analytics', label: 'Analytics' },
     '/ai-workflows': { sectionId: 'brandforgeos-ai', label: 'AI Workflows' },
+    '/strategy': { sectionId: 'brandforgeos-strategy', label: 'Guided Strategy' },
+    '/templates': { sectionId: 'brandforgeos-templates', label: 'Template Marketplace' },
+    '/integrations': { sectionId: 'brandforgeos-integrations', label: 'Integrations' },
+    '/reports': { sectionId: 'brandforgeos-reports', label: 'Reports and Exports' },
+    '/activity': { sectionId: 'brandforgeos-activity', label: 'Activity and Notifications' },
+    '/admin': { sectionId: 'brandforgeos-admin', label: 'Plan and Security' },
+    '/onboarding': { sectionId: 'brandforgeos-settings', label: 'Onboarding' },
+    '/pricing': { sectionId: 'brandforgeos-admin', label: 'OperatorOS Plan' },
+    '/legal': { sectionId: 'brandforgeos-admin', label: 'Legal and Security' },
+    '/privacy': { sectionId: 'brandforgeos-admin', label: 'Privacy' },
+    '/terms': { sectionId: 'brandforgeos-admin', label: 'Terms' },
+    '/home': { sectionId: 'brandforgeos-dashboard', label: 'Home' },
+    '/login': { sectionId: 'brandforgeos-dashboard', label: 'OperatorOS Login' },
     '/settings': { sectionId: 'brandforgeos-settings', label: 'Settings' },
   },
   snapproofos: {
@@ -311,6 +325,10 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'copy-assets') return { sectionId: 'brandforgeos-copy', label: 'Copy Asset' };
     if (resource === 'calendar-items') return { sectionId: 'brandforgeos-calendar', label: 'Calendar Item' };
     if (resource === 'generations') return { sectionId: 'brandforgeos-ai', label: 'Generation Result' };
+    if (resource === 'offers') return { sectionId: 'brandforgeos-offers', label: 'Offer' };
+    if (resource === 'templates') return { sectionId: 'brandforgeos-templates', label: 'Template' };
+    if (resource === 'reports' || resource === 'exports') return { sectionId: 'brandforgeos-reports', label: resource === 'reports' ? 'Report' : 'Export' };
+    if (resource === 'workflows') return { sectionId: 'brandforgeos-strategy', label: 'Guided Workflow' };
   }
   if (slug === 'snapproofos' && pathSegments.length === 2) {
     const [resource] = pathSegments;

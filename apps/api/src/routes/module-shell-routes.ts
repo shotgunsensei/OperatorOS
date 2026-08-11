@@ -90,6 +90,7 @@ import { registerTorqueShedSocialRoutes } from './torqueshed-social-routes.js';
 import { registerTorqueShedWebApiRoutes } from './torqueshed-web-api-routes.js';
 import { registerFaultlineLabRoutes } from './faultlinelab-routes.js';
 import { registerBrandForgeOsRoutes } from './brandforgeos-routes.js';
+import { registerBrandForgeOsPhase31Routes } from './brandforgeos-phase31-routes.js';
 import { registerStudyForgeRoutes } from './studyforge-routes.js';
 import { registerNinjaLaunchKitRoutes } from './ninja-launch-kit-routes.js';
 import { registerCallCommandRoutes } from './callcommand-routes.js';
@@ -591,6 +592,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerTorqueShedWebApiRoutes(app);
   await registerFaultlineLabRoutes(app);
   await registerBrandForgeOsRoutes(app);
+  await registerBrandForgeOsPhase31Routes(app);
   await registerStudyForgeRoutes(app);
   await registerNinjaLaunchKitRoutes(app);
   await registerNinjamationRoutes(app);

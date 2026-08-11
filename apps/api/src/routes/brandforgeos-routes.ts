@@ -36,6 +36,7 @@ import {
   requireTenantModuleAccess,
   requireTenantModuleWriteAccess,
 } from '../lib/tenant-auth.js';
+import { BRANDFORGE_COPY_MODES, BRANDFORGE_TONES, scoreCopyContent } from '../lib/brandforgeos-phase31.js';
 
 const readGuards = [requireTenantModuleAccess('brandforgeos')];
 const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
@@ -203,7 +204,7 @@ function parseProviderOutput(type: 'copy' | 'strategy' | 'campaign_ideas', raw: 
       if (!item || typeof item !== 'object' || !safeText((item as any).title, 200) || !safeText((item as any).content, 20_000)) throw invalid();
       return { title: String((item as any).title).trim(), content: String((item as any).content).trim() };
     });
-    return { variants };
+    return { variants: variants.map(variant => ({ ...variant, scores: scoreCopyContent(variant.content) })) };
   }
   if (type === 'strategy') {
     if (!safeText(output.title, 200) || !safeText(output.content, 20_000) || !Array.isArray(output.suggestions) || output.suggestions.length > 10) throw invalid();
@@ -231,6 +232,35 @@ function parseProviderOutput(type: 'copy' | 'strategy' | 'campaign_ideas', raw: 
 function csvCell(value: unknown) {
   const raw = value === null || value === undefined ? '' : String(value);
   return `"${raw.replaceAll('"', '""')}"`;
+}
+
+async function reserveGenerationCredit(tenantId: string) {
+  const projection = await db.execute(sql`
+    SELECT tm.metadata->'features'->>'brandforgeMonthlyCredits' AS monthly_credits
+    FROM tenant_modules tm JOIN modules module ON module.id=tm.module_id
+    WHERE tm.tenant_id=${tenantId} AND module.slug='brandforgeos' LIMIT 1
+  `);
+  const raw = (projection.rows[0] as any)?.monthly_credits;
+  if (raw === null || raw === undefined || raw === '') return { reserved: false, exhausted: false, limit: null };
+  const limit = Number(raw);
+  if (!Number.isSafeInteger(limit) || limit <= 0) return { reserved: false, exhausted: true, limit: Math.max(0, Number.isFinite(limit) ? limit : 0) };
+  const result = await db.execute(sql`
+    INSERT INTO brandforge_credit_counters (tenant_id,period_start,limit_snapshot,used_credits)
+    VALUES (${tenantId},date_trunc('month',CURRENT_DATE)::date,${limit},1)
+    ON CONFLICT (tenant_id,period_start) DO UPDATE SET
+      used_credits=brandforge_credit_counters.used_credits+1,
+      limit_snapshot=EXCLUDED.limit_snapshot,updated_at=NOW()
+    WHERE brandforge_credit_counters.used_credits < EXCLUDED.limit_snapshot
+    RETURNING used_credits,limit_snapshot
+  `);
+  return { reserved: Boolean(result.rows[0]), exhausted: !result.rows[0], limit };
+}
+
+async function releaseGenerationCredit(tenantId: string) {
+  await db.execute(sql`
+    UPDATE brandforge_credit_counters SET used_credits=GREATEST(0,used_credits-1),updated_at=NOW()
+    WHERE tenant_id=${tenantId} AND period_start=date_trunc('month',CURRENT_DATE)::date
+  `);
 }
 
 export async function registerBrandForgeOsRoutes(app: FastifyInstance) {
@@ -514,6 +544,7 @@ export async function registerBrandForgeOsRoutes(app: FastifyInstance) {
       title: input.title!,
       content: input.content!,
       copyType: input.copyType!,
+      scores: scoreCopyContent(input.content!),
       tenantId: ctx.tenantId,
       createdByUserId: user.id,
     }).returning();
@@ -537,7 +568,7 @@ export async function registerBrandForgeOsRoutes(app: FastifyInstance) {
     const invalid = await validateReferences(reply, ctx.tenantId, input);
     if (invalid) return invalid;
     const { expectedVersion, ...changes } = input;
-    const [row] = await db.update(brandforgeCopyAssets).set({ ...changes, version: sql`${brandforgeCopyAssets.version}+1`, updatedAt: new Date() }).where(and(
+    const [row] = await db.update(brandforgeCopyAssets).set({ ...changes, ...(changes.content ? { scores: scoreCopyContent(changes.content) } : {}), version: sql`${brandforgeCopyAssets.version}+1`, updatedAt: new Date() }).where(and(
       eq(brandforgeCopyAssets.tenantId, ctx.tenantId), eq(brandforgeCopyAssets.id, current.id),
       eq(brandforgeCopyAssets.version, expectedVersion!), isNull(brandforgeCopyAssets.deletedAt),
     )).returning();
@@ -658,6 +689,20 @@ export async function registerBrandForgeOsRoutes(app: FastifyInstance) {
         code: 'BRANDFORGE_GENERATION_RATE_LIMITED',
       });
     }
+    if (input.copyType && !BRANDFORGE_COPY_MODES.includes(input.copyType as any)) {
+      await failIdempotentOperation({ tenantId: ctx.tenantId, id: idempotency.id, leaseExpiresAt: idempotency.leaseExpiresAt });
+      return reply.code(400).send({ error: 'copyType is unsupported', code: 'BRANDFORGE_COPY_TYPE_INVALID' });
+    }
+    const acceptedTones = new Set([...BRANDFORGE_TONES.map(value => value.toLowerCase()), 'direct']);
+    if (input.tone && !acceptedTones.has(input.tone.toLowerCase())) {
+      await failIdempotentOperation({ tenantId: ctx.tenantId, id: idempotency.id, leaseExpiresAt: idempotency.leaseExpiresAt });
+      return reply.code(400).send({ error: 'tone is unsupported', code: 'BRANDFORGE_TONE_INVALID' });
+    }
+    const credit = await reserveGenerationCredit(ctx.tenantId);
+    if (credit.exhausted) {
+      await failIdempotentOperation({ tenantId: ctx.tenantId, id: idempotency.id, leaseExpiresAt: idempotency.leaseExpiresAt });
+      return reply.code(402).send({ error: 'BrandForgeOS generation credits are exhausted', code: 'BRANDFORGE_CREDITS_EXHAUSTED', limit: credit.limit });
+    }
     try {
       const provider = getAiProvider();
       const response = await provider.complete({
@@ -667,7 +712,11 @@ export async function registerBrandForgeOsRoutes(app: FastifyInstance) {
           prompt: input.prompt,
           tone: input.tone,
           channel: input.channel,
-          audience: input.audience,
+           audience: input.audience,
+          copyType: input.copyType,
+          objective: input.objective,
+          length: input.length,
+          ctaStyle: input.ctaStyle,
           brandContext: input.brandId ? brandView((await scopedBrand(ctx.tenantId, input.brandId))!) : null,
           campaignContext: input.campaignId ? campaignView((await scopedCampaign(ctx.tenantId, input.campaignId))!) : null,
         }),
@@ -705,6 +754,17 @@ export async function registerBrandForgeOsRoutes(app: FastifyInstance) {
           externalReference: generation!.id,
           metadata: { generationType: input.type, provider: response.provider, model: response.model },
         }, tx);
+        await recordUsageEvent({
+          tenantId: ctx.tenantId,
+          moduleId: moduleRow.id,
+          userId: user.id,
+          operation: 'brandforge.generation.credit',
+          units: 1,
+          unitKind: 'credits',
+          idempotencyKey: input.idempotencyKey,
+          externalReference: generation!.id,
+          metadata: { generationType: input.type },
+        }, tx);
         await appendActivityEvent({
           tenantId: ctx.tenantId,
           moduleId: moduleRow.id,
@@ -727,6 +787,7 @@ export async function registerBrandForgeOsRoutes(app: FastifyInstance) {
       });
       return reply.code(201).send(result);
     } catch (error) {
+      if (credit.reserved) await releaseGenerationCredit(ctx.tenantId);
       await failIdempotentOperation({ tenantId: ctx.tenantId, id: idempotency.id, leaseExpiresAt: idempotency.leaseExpiresAt });
       if (error instanceof AiProviderDisabledError) {
         return reply.code(503).send({ error: 'AI generation is disabled until the OperatorOS provider is configured', code: error.code });

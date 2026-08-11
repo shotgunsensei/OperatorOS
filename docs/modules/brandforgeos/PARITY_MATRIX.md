@@ -1,11 +1,13 @@
-# BrandForgeOS Phase 11A parity matrix
+# BrandForgeOS Phase 31 parity matrix
 
-## Phase 20 truth notice (2026-08-08)
+## Phase 31 current truth (2026-08-11)
 
-The matrix below is historical implementation evidence. Current release truth
-is `docs/parity/modules/brandforgeos.json`: 793 capabilities, 0 native, 0
-shared-equivalent, 0 owner-waived, and 793 blocked pending exact target/test
-mapping. See `docs/phase-20/PRODUCT-TRUTH-REPORT.md`.
+Current release truth is `docs/parity/modules/brandforgeos.json`: 793 exact
+facets, 463 native, 330 shared-equivalent, 0 owner-waived, and 0 blocked.
+`docs/phase-31/BRANDFORGEOS-COMPLETE-PRODUCT-REPORT.md` contains the complete
+generated ledger and evidence. The Phase 11A disposition table below remains
+historical evidence; Phase 31 re-opens its template, integration, report-job,
+credit, workflow and admin-projection retirements under ADR-0035.
 
 Assessment date: 2026-07-26
 
