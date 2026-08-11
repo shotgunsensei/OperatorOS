@@ -35,6 +35,7 @@ import {
   saasWorkspaces, saasProjects, saasTasks, notes, workspaceMemberships,
   activityFeed, ninjaPoolMatchEvents, ninjaPoolMatchSessions,
   ninjaPoolPlayerProfiles, ninjaPoolPracticeSessions,
+  ninjaPoolOnlineEvents, ninjaPoolOnlineRooms, ninjaPoolOnlineRateLimits,
   tradeflowkitInvoices, tradeflowkitQuotes, tradeflowkitJobs, tradeflowkitCustomers,
   brandforgeCalendarItems, brandforgeCopyAssets, brandforgeCampaignMetrics,
   brandforgeGenerations, brandforgeCampaigns, brandforgePersonas,
@@ -619,6 +620,9 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           await tx.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.tenantId, id));
           await tx.delete(ninjaPoolPlayerProfiles).where(eq(ninjaPoolPlayerProfiles.tenantId, id));
           await tx.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.tenantId, id));
+          await tx.delete(ninjaPoolOnlineEvents).where(eq(ninjaPoolOnlineEvents.tenantId, id));
+          await tx.delete(ninjaPoolOnlineRooms).where(eq(ninjaPoolOnlineRooms.tenantId, id));
+          await tx.delete(ninjaPoolOnlineRateLimits).where(eq(ninjaPoolOnlineRateLimits.tenantId, id));
           await tx.delete(brandforgeCalendarItems).where(eq(brandforgeCalendarItems.tenantId, id));
           await tx.delete(brandforgeCopyAssets).where(eq(brandforgeCopyAssets.tenantId, id));
           await tx.delete(brandforgeCampaignMetrics).where(eq(brandforgeCampaignMetrics.tenantId, id));
@@ -2213,6 +2217,9 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           await tx.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.userId, id));
           await tx.delete(ninjaPoolPlayerProfiles).where(eq(ninjaPoolPlayerProfiles.userId, id));
           await tx.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.userId, id));
+          await tx.delete(ninjaPoolOnlineEvents).where(eq(ninjaPoolOnlineEvents.actorUserId, id));
+          await tx.delete(ninjaPoolOnlineRooms).where(or(eq(ninjaPoolOnlineRooms.hostUserId, id), eq(ninjaPoolOnlineRooms.guestUserId, id)));
+          await tx.delete(ninjaPoolOnlineRateLimits).where(eq(ninjaPoolOnlineRateLimits.userId, id));
           await tx.execute(sql`UPDATE shared_usage_events SET user_id = NULL WHERE user_id = ${id}`);
           await tx.execute(sql`UPDATE shared_activity_events SET actor_user_id = NULL WHERE actor_user_id = ${id}`);
           await tx.delete(activityFeed).where(eq(activityFeed.userId, id));

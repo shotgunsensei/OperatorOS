@@ -1,6 +1,6 @@
 'use client';
 
-import type { GameState, ShotEvents } from './ninja-pool-hall/types';
+import type { GameState, Shot, ShotEvents } from './ninja-pool-hall/types';
 
 const API_BASE = '/api';
 
@@ -632,6 +632,31 @@ export interface NinjaPoolMatchActionResponse {
     evidence: string;
   };
   idempotent: boolean;
+}
+
+export type NinjaPoolOnlineStatus = 'waiting' | 'active' | 'completed' | 'abandoned' | 'expired';
+export type NinjaPoolOnlineRole = 'host' | 'guest';
+
+export interface NinjaPoolOnlineRoom {
+  id: string;
+  code: string;
+  status: NinjaPoolOnlineStatus;
+  role: NinjaPoolOnlineRole;
+  players: [
+    { seat: 0; name: string; role: 'host'; connected: boolean },
+    { seat: 1; name: string; role: 'guest'; joined: boolean; connected: boolean },
+  ];
+  rulesSettings: NinjaPoolPreferences;
+  authoritativeState: GameState;
+  stateHash: string;
+  pendingShot: { expectedVersion: number; clientShotId: string; shooterSeat: 0 | 1; shot: Shot } | null;
+  sequenceNumber: number;
+  version: number;
+  expiresAt: string;
+  lastActivityAt: string;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface BrandForgeBrand {
@@ -1420,6 +1445,20 @@ export const moduleShellApi = {
         method: 'POST',
         body: JSON.stringify({ expectedVersion }),
       }) as Promise<NinjaPoolMatch>,
+    listOnlineRooms: (): Promise<{ rooms: NinjaPoolOnlineRoom[] }> =>
+      apiFetch('/modules/ninja-pool-hall/rooms') as Promise<{ rooms: NinjaPoolOnlineRoom[] }>,
+    getOnlineRoom: (id: string): Promise<{ room: NinjaPoolOnlineRoom; events: Array<Record<string, unknown>> }> =>
+      apiFetch(`/modules/ninja-pool-hall/rooms/${encodeURIComponent(id)}`) as Promise<{ room: NinjaPoolOnlineRoom; events: Array<Record<string, unknown>> }>,
+    hostOnlineRoom: (input: { clientRoomId: string }): Promise<NinjaPoolOnlineRoom> =>
+      apiFetch('/modules/ninja-pool-hall/rooms', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<NinjaPoolOnlineRoom>,
+    joinOnlineRoom: (input: { code: string }): Promise<NinjaPoolOnlineRoom> =>
+      apiFetch('/modules/ninja-pool-hall/rooms/join', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<NinjaPoolOnlineRoom>,
   },
   brandforgeos: {
     dashboard: (): Promise<Record<string, any>> =>

@@ -22,6 +22,7 @@ test('unified Replit launcher validates production authority and port separation
     INTERNAL_API_URL: 'http://localhost:5001',
     OPERATOROS_DATABASE_RELEASE_MODE: 'apply',
     TRUST_PROXY: 'true',
+    SHARED_SECRET_ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
   };
   assert.doesNotThrow(() => launcher.validateDeploymentEnvironment(valid));
   assert.throws(() => launcher.validateDeploymentEnvironment({ ...valid, DATABASE_URL: '' }), /DATABASE_URL/);
@@ -34,8 +35,10 @@ test('unified Replit launcher validates production authority and port separation
   assert.deepEqual(launcher.resolveRuntimeConfig({ PORT: '5000', API_PORT: '5001' }), {
     apiPort: 5001,
     publicPort: 5000,
+    nextPort: 5002,
     startupTimeoutMs: 120000,
     apiReadyUrl: 'http://127.0.0.1:5001/readyz',
+    nextReadyUrl: 'http://127.0.0.1:5002/healthz',
     internalApiUrl: 'http://localhost:5001',
   });
   assert.deepEqual(launcher.resolveRuntimeEntrypoints('C:\\workspace'), {
@@ -62,6 +65,8 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.match(source, /evaluateProductionEnvironment/);
   assert.match(source, /Fastify exited/);
   assert.match(source, /Next exited/);
+  assert.match(source, /server\.on\('upgrade'/);
+  assert.match(source, /request\.url\.slice\(3\)/);
   assert.match(source, /SIGTERM/);
   assert.match(source, /shell: false/);
   assert.match(source, /database-release\.js/);
@@ -74,7 +79,7 @@ test('Replit deployment uses the supervised readiness-gated runtime', () => {
   assert.equal(packageJson.packageManager, 'pnpm@10.34.5');
   assert.equal(
     packageJson.scripts['build:production'],
-    'node scripts/generate-release-metadata.mjs && pnpm typecheck && pnpm build',
+    'pnpm verify:faultlinelab:catalog && node scripts/generate-release-metadata.mjs && pnpm typecheck && pnpm build',
   );
   assert.equal(packageJson.dependencies.pnpm, undefined);
   assert.equal(packageJson.pnpm, undefined);

@@ -136,6 +136,9 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/practice': { sectionId: 'ninja-pool-hall-shell', label: 'Free Shoot' },
     '/cpu': { sectionId: 'ninja-pool-hall-shell', label: 'CPU Match' },
     '/local': { sectionId: 'ninja-pool-hall-shell', label: 'Local Match' },
+    '/online': { sectionId: 'ninja-pool-hall-shell', label: 'Online Rooms' },
+    '/host': { sectionId: 'ninja-pool-hall-shell', label: 'Host Online Room' },
+    '/join': { sectionId: 'ninja-pool-hall-shell', label: 'Join Online Room' },
     '/profile': { sectionId: 'ninja-pool-hall-shell', label: 'Player Profile' },
   },
   brandforgeos: {
@@ -298,6 +301,7 @@ export function resolveCoreModuleDeepLink(
   if (slug === 'ninja-pool-hall' && pathSegments.length === 2) {
     const [resource] = pathSegments;
     if (resource === 'matches') return { sectionId: 'ninja-pool-hall-shell', label: 'Saved Match' };
+    if (resource === 'rooms') return { sectionId: 'ninja-pool-hall-shell', label: 'Online Room' };
   }
   if (slug === 'brandforgeos' && pathSegments.length === 2) {
     const [resource] = pathSegments;

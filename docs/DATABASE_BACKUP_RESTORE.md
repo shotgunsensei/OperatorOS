@@ -314,6 +314,26 @@ snapshot and logical backup, checksum and restore verification, approved
 source-data reconciliation, authenticated/deployed acceptance, and an explicit
 cutover/rollback decision.
 
+## Phase 30 v39 additive release rehearsal
+
+On 2026-08-11 the 39-step production release plan, apply, and immediate
+idempotent reapply passed against a new disposable loopback PostgreSQL 16
+database. The final `ninja_pool_online_tables` step adds only the durable
+tenant-scoped room, append-only event, and rate-limit tables used by
+authenticated Ninja Pool Hall online matches. Direct catalog verification
+confirmed `ninja_pool_online_rooms`, `ninja_pool_online_events`, and
+`ninja_pool_online_rate_limits` after the reapply.
+
+The focused multiplayer database journey used synthetic OperatorOS tenants,
+users, entitlements, and match state only. It verified host/guest authority,
+independent server shot simulation, sequence and idempotency controls,
+cross-tenant denial, reconnect/rejoin, disconnect persistence, room expiry,
+and durable abuse limits. No production database, customer data, or deployed
+room was read or changed, so this rehearsal did not create a production backup
+artifact. Production apply still requires a fresh provider snapshot and
+logical backup, checksum and restore verification, authenticated exact-host
+two-device acceptance, and an explicit cutover/rollback decision.
+
 ## Production recovery
 
 1. Freeze writes and preserve the failed database as read-only when safe.

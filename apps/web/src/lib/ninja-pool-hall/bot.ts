@@ -25,7 +25,16 @@ interface Candidate {
   score: number;
 }
 
-export function chooseBotShot(state: GameState): Shot {
+/** Stable PRNG used by CPU matches and golden rack fixtures. */
+export function createSeededRandom(seed: number): () => number {
+  let value = seed >>> 0;
+  return () => {
+    value = (Math.imul(value, 1664525) + 1013904223) >>> 0;
+    return value / 0x1_0000_0000;
+  };
+}
+
+export function chooseBotShot(state: GameState, random: () => number = Math.random): Shot {
   // The new physics layer accepts an optional `tipOffset` for spin. The bot
   // always plays center-strike (stun) shots — leaving tipOffset off keeps
   // the simulation in its backwards-compatible "no spin" mode.
@@ -108,13 +117,13 @@ export function chooseBotShot(state: GameState): Shot {
     // No clean shot found — bank a soft random shot at the densest cluster.
     const target = targets[0]!;
     const angle = Math.atan2(target.pos.y - cue.pos.y, target.pos.x - cue.pos.x);
-    const jitter = (Math.random() - 0.5) * 0.1;
+    const jitter = (random() - 0.5) * 0.1;
     return { angle: angle + jitter, power: 0.55 };
   }
 
   candidates.sort((a, b) => b.score - a.score);
   const best = candidates[0]!.shot;
   // Add small human-like jitter so the bot isn't perfect.
-  const jitter = (Math.random() - 0.5) * 0.06;
+  const jitter = (random() - 0.5) * 0.06;
   return { angle: best.angle + jitter, power: best.power };
 }

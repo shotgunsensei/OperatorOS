@@ -30,12 +30,14 @@ One Replit autoscale workload owns the public runtime:
    failure.
 4. The compiled Fastify API starts privately on port 5001 and must report
    `/readyz` before public startup continues.
-5. The compiled Next server starts on public port 5000. Its server-only
-   `INTERNAL_API_URL=http://localhost:5001` rewrites same-origin API traffic to
-   Fastify.
-6. Replit TLS and host attachment route the canonical hosts to the one Next
-   surface. Next middleware and rewrites preserve the exact host as the routing
-   and session boundary.
+5. The compiled Next server starts privately on port 5002. A supervised public
+   gateway owns port 5000, routes HTTP to Next, and routes `/ws/*` upgrades
+   directly to Fastify after removing the internal `/ws` prefix. The server-
+   only `INTERNAL_API_URL=http://localhost:5001` remains the HTTP API rewrite
+   authority.
+6. Replit TLS and host attachment route the canonical hosts to the public
+   gateway. It preserves exact host/session headers; Next middleware owns HTTP
+   routing while Fastify authenticates and authorizes upgraded sockets.
 
 The runner gateway is not part of the public autoscale process. Imported
 `apps/modules/*/source` trees are read-only migration evidence and are never

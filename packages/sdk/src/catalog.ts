@@ -151,7 +151,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'ninja-pool-hall',
     name: 'Ninja Pool Hall',
-    description: 'Companion engagement experience',
+    description: 'Deterministic Canvas 8-ball with practice, CPU, local and protected online play',
     category: 'support',
     commercialType: 'free',
     canonicalBaseUrl: 'https://ninja-pool-hall.operatoros.net',

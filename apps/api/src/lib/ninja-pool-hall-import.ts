@@ -57,7 +57,7 @@ export function planNinjaPoolHallImport(): NinjaPoolHallImportPlan {
     const target = readFileSync(resolve(promotedRoot, file));
     const sourceHash = hash(source);
     const targetHash = hash(target);
-    if (sourceHash !== targetHash) errors.push(`Promoted engine file differs from source: ${file}`);
+    if (sourceHash !== targetHash && file !== 'bot.ts') errors.push(`Promoted engine file differs from source: ${file}`);
     return { path: file, sourceHash, targetHash, exact: sourceHash === targetHash };
   });
 
@@ -73,7 +73,7 @@ export function planNinjaPoolHallImport(): NinjaPoolHallImportPlan {
       { sourceSurface: '/practice CPU', disposition: 'promoted', target: '/cpu', reason: 'Source bot and 8-ball rules with OperatorOS match persistence.' },
       { sourceSurface: '/local', disposition: 'promoted', target: '/local', reason: 'Same-device two-player with server-applied logical results.' },
       { sourceSurface: 'localStorage settings', disposition: 'operatoros-owned', target: '/profile', reason: 'Tenant/user profile preferences replace browser-only settings.' },
-      { sourceSurface: '/host and /join', disposition: 'excluded', target: 'disabled', reason: 'Unauthenticated in-memory relay and browser host authority do not satisfy OperatorOS identity, tenant, recovery, or anti-cheat requirements.' },
+      { sourceSurface: '/host and /join', disposition: 'operatoros-owned', target: '/host, /join, /rooms/:id', reason: 'Phase 30 restores the source outcome through tenant-bound WebSockets, durable room snapshots, host-visible simulation, and independent server re-simulation.' },
       { sourceSurface: 'localStorage clientId', disposition: 'excluded', target: 'none', reason: 'OperatorOS session identity replaces browser-generated player authority.' },
       { sourceSurface: 'standalone Express/CORS server', disposition: 'excluded', target: 'shared Fastify runtime', reason: 'Child auth, routing, health, and CORS authority cannot be activated.' },
     ],
@@ -91,6 +91,7 @@ export function planNinjaPoolHallImport(): NinjaPoolHallImportPlan {
       'The source contains no database-backed profile, preference, achievement, progression, leaderboard, or historical result rows to import.',
       'Browser localStorage values are device-local and are not imported as trusted identity or shared data.',
       'This dry run is deterministic and read-only; profile and match tables initialize through the ordered OperatorOS database release.',
+      'Phase 30 intentionally extends the source bot with an injectable seeded random function so CPU rack fixtures and replay behavior are deterministic.',
     ],
     ready: errors.length === 0,
     applySupported: false,

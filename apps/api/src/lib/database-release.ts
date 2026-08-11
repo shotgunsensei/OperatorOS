@@ -26,6 +26,7 @@ import { ensureTorqueShedTables } from './torqueshed-db-init.js';
 import { ensureTorqueShedWebApiTables } from './torqueshed-web-api-db-init.js';
 import { ensureFaultlineLabTables } from './faultlinelab-db-init.js';
 import { ensureNinjaPoolHallTables } from './ninja-pool-hall-db-init.js';
+import { ensureNinjaPoolOnlineTables } from './ninja-pool-online-db-init.js';
 import { ensureBrandForgeOsTables } from './brandforgeos-db-init.js';
 import { ensureSnapProofOsTables } from './snapproofos-db-init.js';
 import { ensureStudyForgeTables } from './studyforge-db-init.js';
@@ -86,6 +87,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   outcall_product_operations: ensureOutCallProductTables,
   operatoros_messaging_compliance_tables: ensureOperatorOsMessagingComplianceTables,
   torqueshed_web_api_tables: ensureTorqueShedWebApiTables,
+  ninja_pool_online_tables: ensureNinjaPoolOnlineTables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -149,6 +151,9 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.ninja_pool_player_profiles') IS NOT NULL AS ninja_pool_player_profiles,
       to_regclass('public.ninja_pool_match_sessions') IS NOT NULL AS ninja_pool_match_sessions,
       to_regclass('public.ninja_pool_match_events') IS NOT NULL AS ninja_pool_match_events,
+      to_regclass('public.ninja_pool_online_rooms') IS NOT NULL AS ninja_pool_online_rooms,
+      to_regclass('public.ninja_pool_online_events') IS NOT NULL AS ninja_pool_online_events,
+      to_regclass('public.ninja_pool_online_rate_limits') IS NOT NULL AS ninja_pool_online_rate_limits,
       to_regclass('public.brandforge_brands') IS NOT NULL AS brandforge_brands,
       to_regclass('public.brandforge_campaigns') IS NOT NULL AS brandforge_campaigns,
       to_regclass('public.brandforge_copy_assets') IS NOT NULL AS brandforge_copy_assets,

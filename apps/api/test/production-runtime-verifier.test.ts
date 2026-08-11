@@ -83,9 +83,9 @@ test('release identity validator requires the intended commit, database release,
     lockfileSha256: 'c'.repeat(64),
     databaseRelease: {
       contractVersion: 1,
-      releaseVersion: 38,
-      stepCount: 38,
-      lastStep: 'torqueshed_web_api_tables',
+      releaseVersion: 39,
+      stepCount: 39,
+      lastStep: 'ninja_pool_online_tables',
     },
   };
   assert.deepEqual(verifier.validateReleaseIdentity(valid, commit), []);

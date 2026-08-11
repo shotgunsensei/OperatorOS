@@ -62,6 +62,8 @@ test('module session API allowlist excludes other modules, tenant switching, and
   assert.equal(isModuleSessionPathAllowed('tradeflowkit', '/v1/auth/me'), true);
   assert.equal(isModuleSessionPathAllowed('tradeflowkit', '/v1/me/tenants'), true);
   assert.equal(isModuleSessionPathAllowed('tradeflowkit', '/v1/modules/tradeflowkit/leads'), true);
+  assert.equal(isModuleSessionPathAllowed('tradeflowkit', '/v1/tenants/tenant-a/modules/tradeflowkit/rooms/room-a/socket'), true);
+  assert.equal(isModuleSessionPathAllowed('tradeflowkit', '/v1/tenants/tenant-a/modules/techdeck/rooms/room-a/socket'), false);
   assert.equal(isModuleSessionPathAllowed('tradeflowkit', '/v1/modules/techdeck'), false);
   assert.equal(isModuleSessionPathAllowed('tradeflowkit', '/v1/tenants/tenant-b/switch'), false);
   assert.equal(isModuleSessionPathAllowed('tradeflowkit', '/v1/platform/tenants'), false);

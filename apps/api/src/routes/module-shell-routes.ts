@@ -80,6 +80,7 @@ import { registerPulseDeskRoutes } from './pulsedesk-routes.js';
 import { registerPulseDeskServiceDeskRoutes } from './pulsedesk-service-desk-routes.js';
 import { registerPulseDeskLiteralRoutes } from './pulsedesk-literal-routes.js';
 import { registerNinjaPoolHallRoutes } from './ninja-pool-hall-routes.js';
+import { registerNinjaPoolOnlineRoutes } from './ninja-pool-online-routes.js';
 import { allocateTradeFlowKitNumber, registerTradeFlowKitRoutes } from './tradeflowkit-routes.js';
 import { registerTechDeckRoutes } from './techdeck-routes.js';
 import { registerTechDeckLiteralRoutes } from './techdeck-literal-routes.js';
@@ -576,6 +577,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerPulseDeskServiceDeskRoutes(app);
   await registerPulseDeskLiteralRoutes(app);
   await registerNinjaPoolHallRoutes(app);
+  await registerNinjaPoolOnlineRoutes(app);
   await registerTradeFlowKitRoutes(app);
   await registerTradeFlowKitLeadOperationsRoutes(app);
   await registerTradeFlowKitPublicIntakeRoutes(app);

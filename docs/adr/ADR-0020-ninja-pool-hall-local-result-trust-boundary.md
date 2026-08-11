@@ -2,6 +2,8 @@
 
 Status: Accepted
 
+Online exclusion superseded by ADR-0034; local-mode trust boundaries remain accepted.
+
 Date: 2026-07-22
 
 ## Context
@@ -49,10 +51,9 @@ and entitlement context.
 - Reload recovery never invents ball coordinates. A recovered active logical
   record must be explicitly ended before a fresh physical table begins.
 - The unauthenticated WebSocket host/join room and browser `clientId` are
-  excluded. Online multiplayer remains visibly disabled until a separate ADR
-  defines authenticated participants, tenant/public scope, durable room state,
-  reconnect ownership, server authority, abuse controls, and operational
-  capacity.
+  excluded. ADR-0034 now restores the user outcome through authenticated
+  participants, tenant scope, durable room state, reconnect ownership,
+  independent server re-simulation, and abuse controls.
 - The source contains no durable profiles, settings, achievements, or results
   to apply. Reconciliation is a deterministic read-only plan with no apply
   mode and imports zero identity or billing records.
@@ -63,7 +64,8 @@ The approved source game is playable without activating a second trust system.
 CPU and hot-seat results persist after reload, server rules cannot be replaced
 by UI-only winner claims, preferences follow the OperatorOS user and tenant,
 and all records remain explicitly honest about their client-reported physical
-inputs. Online room cards are not presented as functional.
+inputs. ADR-0034 separately defines the stronger server-resimulated online
+evidence boundary.
 
 This decision deliberately does not create achievements or leaderboards that
 do not exist in the source. A future verified competition product would need a

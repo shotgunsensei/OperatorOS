@@ -23,6 +23,14 @@ export interface Ball {
   inPocket: boolean;
 }
 
+export interface Shot {
+  cuePlacement?: Vec2;
+  angle: number;
+  power: number;
+  tipOffset?: Vec2;
+  calledPocket?: number;
+}
+
 export interface ShotEvents {
   pocketed: BallId[];
   firstContact: BallId | null;
