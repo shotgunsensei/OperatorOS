@@ -256,7 +256,7 @@ async function issueSession(
       updatedAt: new Date(),
     })
     .onConflictDoUpdate({
-      target: torqueshedUsers.operatorOsUserId,
+      target: [torqueshedUsers.operatorOsUserId, torqueshedUsers.tenantId],
       set: {
         email: context.email,
         displayName: context.displayName,
@@ -315,7 +315,7 @@ function readSessionToken(request: Request): string | null {
   return readString(request.cookies?.[SESSION_COOKIE_NAME]);
 }
 
-async function currentUser(request: Request): Promise<TorqueShedUser | null> {
+export async function currentUser(request: Request): Promise<TorqueShedUser | null> {
   const token = readSessionToken(request);
   if (!token) return null;
 
@@ -345,8 +345,12 @@ async function currentUser(request: Request): Promise<TorqueShedUser | null> {
   return row.user;
 }
 
+export function operatorOsReturnUrl(): string {
+  return `${operatorOsAppUrl()}/app`;
+}
+
 function loginUrl(): string {
-  const next = `${operatorOsAppUrl()}/app`;
+  const next = operatorOsReturnUrl();
   return `${operatorOsAuthUrl()}/login?next=${encodeURIComponent(next)}`;
 }
 
@@ -429,7 +433,7 @@ authRouter.post("/auth/logout", async (request, response, next) => {
       sameSite: "lax",
       path: "/",
     });
-    return response.status(204).send();
+    return response.status(200).json({ returnTo: operatorOsReturnUrl() });
   } catch (error) {
     return next(error);
   }

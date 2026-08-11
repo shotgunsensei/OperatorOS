@@ -1,6 +1,40 @@
-# TorqueShed Phase 9 parity matrix
+# TorqueShed parity matrix
 
-## Phase 20 truth notice (2026-08-08)
+## Phase 28 current truth (2026-08-11)
+
+The Phase 9 and Phase 20 sections below are retained as historical evidence
+only. Phase 28 pins the clean source `main`/`origin/main` commit
+`508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75` and replaces the former
+125-blocker snapshot with the executable
+`docs/parity/modules/torqueshed.json` ledger:
+
+| Classification | Count |
+| --- | ---: |
+| `ACTIVE_NATIVE` | 473 |
+| `ACTIVE_SHARED_EQUIVALENT` | 387 |
+| `OWNER_WAIVED` | 0 |
+| `BLOCKED` | 0 |
+| Total | 860 |
+
+The native target restores durable garage/history, community and privacy,
+build journals/parts/costs, complete diagnostic evidence/reports, reconnecting
+live bays, marketplace inquiry/moderation boundaries, notifications/search/
+activity/settings, revocable shares, exports, deep links, and a responsive PWA
+surface. Shared-equivalent records preserve the source outcome through
+OperatorOS identity/tenant/entitlement, AI/usage, attachments/media scanning,
+exports, secrets, notifications, and audit. Public projections are explicitly
+allowlisted and never expose private tenant records or VINs. Marketplace
+contribution reputation is not a transaction rating, payment, escrow,
+shipping, protection, or guarantee claim.
+
+Release v38, focused persistence/authorization tests, root quality gates, and
+compiled exact-host SSO plus desktop/tablet/mobile browser acceptance pass
+locally. Production providers, backup/apply, source-data reconciliation,
+deployed verification, rollback, and cutover remain state-5 gates. The full
+ledger and evidence are in
+`docs/phase-28/TORQUESHED-WEB-API-PARITY-REPORT.md`.
+
+## Historical Phase 20 truth notice (2026-08-08)
 
 The matrix below is historical implementation evidence. Current release truth
 is `docs/parity/modules/torqueshed.json`: 125 capabilities, 0 native, 0

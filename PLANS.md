@@ -46,6 +46,7 @@ slice is not parity.
 | 21 | Executable parity compiler and fail-closed release gate | Phase 20 source manifest and module ledgers | Infrastructure implemented on `codex/phase-21-executable-parity-gate`: deterministic source/target discovery, compiled evidence/test IDs, per-module JSON/Markdown/HTML reports, negative fixtures, route/control and three-viewport visual contracts, root quality/release orchestration, and clean-checkout disposable-PostgreSQL CI. The gate is intentionally red: 6,289 strict parity failures, 74 static route/control failures, and 40 visual-contract failures. Typecheck, lint, 31/31 unit contracts, production build, v33 read-only plan, and core preflight pass; no full release pass or module completion is claimed. |
 | 26 | TechDeck literal product restoration | Phase 22 shared services and pinned TechDeck source | Source/local implementation on `codex/phase-26-techdeck-literal-restoration`: corrected pinned-source inventory 354 primary records and 1,309 exhaustive facets; all 182 historical retirements reopened as 84 native and 98 shared-equivalent primary outcomes; zero TechDeck blockers, waivers, or strict compiler issues. Release v35, restored UI/API/public/headless surfaces, deterministic compliance ZIPs, isolated PostgreSQL, typecheck/lint/build, and local exact-host desktop/public/mobile/accessibility acceptance pass. The root strict gate remains red only on non-TechDeck inventory. Production backup/apply, live-provider delivery, deployed exact-host verification, data cutover, rollback, and deployment remain gates. |
 | 27 | PulseDesk complete healthcare operations restoration | Phase 22 shared services and pinned PulseDesk source | Source/local implementation on `codex/phase-27-pulsedesk-complete-operations`: corrected primary inventory 261 and 840 exhaustive facets; all 138 source-backed historical retirements reopened; zero PulseDesk blockers, waivers, or strict compiler issues. Release v36, four connector adapters, authenticated/replay-safe/quarantined inbound intake, exact public/deep-link and reconnect-safe PWA surfaces, and focused local verification are implemented. The root strict gate remains red only on other modules. Production backup/apply, live-provider/OAuth delivery, deployed exact-host verification, privacy-reviewed cutover, rollback, and deployment remain gates. |
+| 28 | TorqueShed complete web/API product restoration | Phase 22 shared services and pinned TorqueShed source | Source/local implementation on `codex/phase-28-torqueshed-web-api-restoration`: clean source authority `508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75`, 860 exhaustive facets, 473 native, 387 shared-equivalent, zero blocked/waived/strict issues. Release v38, full garage/journal/diagnostic/Assist/live-bay/community/marketplace/tools/PWA surfaces, durable realtime recovery, public/private projections, shared media/export/AI authority, and compiled exact-host desktop/tablet/mobile acceptance pass locally. Production backup/apply, live AI/media providers, approved data reconciliation/cutover, deployed verification, rollback, and deployment remain gates. |
 
 ## Phase execution rules
 
@@ -64,20 +65,21 @@ slice is not parity.
 
 ## Immediate next gate
 
-Use the Phase 21 compiler output to triage the remaining non-TechDeck/non-PulseDesk Phase 20 blocked inventory before
+Use the Phase 21 compiler output to triage the remaining non-TechDeck/non-PulseDesk/non-TorqueShed Phase 20 blocked inventory before
 resuming deployment promotion or broad product work:
 
-1. Resolve source authority for OutCall and the newer/divergent TorqueShed
-   candidates without replacing the pinned snapshots blindly.
+1. Resolve source authority for OutCall without replacing pinned snapshots
+   blindly; TorqueShed web/API source authority is closed by Phase 28.
 2. Review the highest-value `SOURCE_CAPABILITY_UNMAPPED` records and add exact
    OperatorOS targets plus automated compatibility evidence.
 3. Review all remaining `BLOCKED_REVIEW` records individually. TechDeck's 182
    historical retirements are closed for TechDeck by Phase 26 and PulseDesk by Phase 27; implement a native/shared
-   equivalent or obtain an exact owner waiver for other modules; do not waive
+   equivalent or obtain an exact owner waiver for other modules; Phase 28
+   closes TorqueShed web/API records without waivers; do not waive
    categories.
-4. Restore the 52 missing runnable FaultlineLab cases, TradeFlowKit's
-   orange/navy visual contract, and TorqueShed's Expo product in scoped later
-   phases with their required security, tenant, visual, and browser evidence.
+4. Restore the 52 missing runnable FaultlineLab cases and TradeFlowKit's
+   orange/navy visual contract in scoped later phases with their required
+   security, tenant, visual, and browser evidence.
 5. Clear the 61 exact route-ID and 39 exact schema-ID gaps without replacing
    them with coarse file mappings.
 6. Review and approve all three viewport baselines against pinned source only

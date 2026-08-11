@@ -16,7 +16,7 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../.
 const snapshots = [
   {
     slug: 'torqueshed',
-    commit: 'c33ade5cef525d62d371a63946b814c58a72a4a7',
+    commit: '508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75',
     remote: 'https://github.com/shotgunsensei/TorqueShed-Codex.git',
   },
   {

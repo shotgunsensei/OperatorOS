@@ -176,27 +176,15 @@ const sourceDefinitions = [
     provenance: {
       selectedKind: 'imported_snapshot',
       remote: 'https://github.com/shotgunsensei/TorqueShed-Codex.git',
-      commit: 'c33ade5cef525d62d371a63946b814c58a72a4a7',
-      ref: 'historical snapshot',
-      remoteVerification: 'Selected snapshot remains resolvable but remote main advanced.',
+      commit: '508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75',
+      ref: 'main',
+      remoteVerification: 'Clean local main and origin/main matched the selected commit on 2026-08-10.',
       recoveryCandidates: [
         {
-          commit: '508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75',
-          ref: 'main',
-          disposition: 'BLOCKED_REVIEW',
-          note: 'Three commits and 34 files beyond the imported snapshot; adds product API/schema, web work, billing and tests.',
-        },
-        {
-          commit: '68da4548f6650cfb11eb19ee133643a110ccf084',
-          path: 'C:/Dev/TorqueShed-Codex',
+          commit: 'c33ade5cef525d62d371a63946b814c58a72a4a7',
+          ref: 'historical snapshot',
           disposition: 'retained_for_evidence',
-          note: 'Dirty local checkout with extensive uncommitted product, security and mobile work; not deterministic provenance.',
-        },
-        {
-          commit: 'a81ffcfc81cc87008e2fb531a99d55cbcfcfa9cc',
-          path: 'C:/Dev/TorqueShed',
-          disposition: 'BLOCKED_REVIEW',
-          note: 'Separate clean web-product repository requiring an owner source-authority decision.',
+          note: 'Older imported baseline retained in history; it predates the committed product schema, API, web restoration, billing adapter and E2E workflow selected by Phase 28.',
         },
       ],
     },
@@ -862,6 +850,64 @@ function specialCapabilities(definition, sourceRoot) {
 }
 
 function applyCurrentRestorationMappings(definition, capabilities) {
+  if (definition.slug === 'torqueshed') {
+    const nativeTargets = [
+      'apps/api/src/lib/torqueshed-db-init.ts',
+      'apps/api/src/lib/torqueshed-web-api-db-init.ts',
+      'apps/api/src/routes/torqueshed-routes.ts',
+      'apps/api/src/routes/torque-assist-routes.ts',
+      'apps/api/src/routes/torqueshed-social-routes.ts',
+      'apps/api/src/routes/torqueshed-web-api-routes.ts',
+      'apps/web/src/components/module-shells/TorqueShedWorkspace.tsx',
+      'apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx',
+      'apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/shared-provider-adapters.ts',
+      'apps/api/src/lib/shared-attachments.ts',
+      'apps/api/src/lib/shared-schedules-exports.ts',
+      'apps/api/src/lib/shared-usage-activity.ts',
+      'apps/api/src/lib/torqueshed-product-export.ts',
+      'apps/web/public/torqueshed-sw.js',
+      'apps/web/src/app/torqueshed.webmanifest/route.ts',
+    ];
+    const nativeSchemas = ['apps/api/src/lib/torqueshed-db-init.ts','apps/api/src/lib/torqueshed-web-api-db-init.ts'];
+    const sharedSchemas = ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-services-db-init.ts','apps/api/src/lib/shared-platform-db-init.ts'];
+    const uiTargets = ['apps/web/src/app/modules/[slug]/page.tsx','apps/web/src/app/modules/[slug]/[...path]/page.tsx'];
+    const evidence = [
+      'apps/api/test/torqueshed-foundation-workflow.test.ts',
+      'apps/api/test/torque-assist-workflow.test.ts',
+      'apps/api/test/torqueshed-social-workflow.test.ts',
+      'apps/api/test/torqueshed-web-api-product.test.ts',
+      'apps/api/test/torqueshed-web-api-static.test.ts',
+      'apps/web/e2e/torqueshed-phase28.spec.ts',
+    ];
+    const sharedBoundary = /(?:auth|login|register|logout|session|tenant|org|membership|role|identity|user|account|billing|subscription|entitlement|stripe|operatoros|provider|ai|openai|torque.?assist|token|usage|attachment|media|upload|image|storage|scan|notification|export|pwa|mobile|expo|background|worker|health|well-known)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const alreadyActive = capability.state === 'ACTIVE_NATIVE' || capability.state === 'ACTIVE_SHARED_EQUIVALENT';
+      const sourceText = [capability.title,capability.canonicalSourceIdentity,...capability.sourcePointers].join(' ');
+      const shared = alreadyActive
+        ? capability.state === 'ACTIVE_SHARED_EQUIVALENT'
+        : capability.type === 'integration' || capability.type === 'background_process' || capability.type === 'mobile_product' || capability.type === 'mobile_pwa_surface' || sharedBoundary.test(sourceText);
+      const typedTargets = capability.type === 'ui_page' || capability.type === 'ui_route'
+        ? uiTargets
+        : capability.type === 'database_table'
+          ? (shared ? sharedSchemas : nativeSchemas)
+          : [];
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...capability.currentTargets,...(shared?sharedTargets:nativeTargets),...typedTargets])].sort(),
+        automatedEvidence: [...new Set([...capability.automatedEvidence,...evidence])].sort(),
+        note: [capability.note,!alreadyActive ? (shared
+          ? 'Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority.'
+          : 'Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow.') : null].filter(Boolean).join(' '),
+      };
+    });
+  }
   if (definition.slug === 'pulsedesk') {
     const nativeTargets = [
       'apps/api/src/lib/pulsedesk-db-init.ts',

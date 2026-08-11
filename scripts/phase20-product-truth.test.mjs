@@ -114,5 +114,9 @@ test('retirement labels stay blocked unless a later literal-restoration contract
   assert.equal(visual?.state, 'ACTIVE_NATIVE');
   assert.ok(visual?.automatedEvidence.includes('apps/web/e2e/tradeflowkit-phase23-visual.spec.ts'));
   const torqueshed = json('docs/parity/modules/torqueshed.json');
-  assert.equal(torqueshed.capabilities.find((capability) => capability.type === 'mobile_product')?.state, 'BLOCKED');
+  assert.equal(torqueshed.capabilities.length, 860);
+  assert.equal(torqueshed.stateCounts.BLOCKED, 0);
+  assert.equal(torqueshed.stateCounts.OWNER_WAIVED, 0);
+  assert.equal(torqueshed.capabilities.find((capability) => capability.type === 'mobile_product')?.state, 'ACTIVE_SHARED_EQUIVALENT');
+  assert.ok(torqueshed.capabilities.every((capability) => capability.automatedEvidence.includes('apps/api/test/torqueshed-web-api-product.test.ts')));
 });

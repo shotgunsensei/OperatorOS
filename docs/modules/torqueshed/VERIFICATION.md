@@ -1,5 +1,21 @@
 # TorqueShed verification
 
+## Phase 28 complete web/API restoration — 2026-08-11
+
+| Gate | Result |
+| --- | --- |
+| Executable parity | PASS; 860 facets, 473 native, 387 shared-equivalent, zero blocked/waived/strict issues |
+| Focused contracts | PASS; Phase 28 static plus PostgreSQL product journey, including tenant/owner/public boundaries, live-bay authorization/reconnect/rate/idempotency, reports, shares, settings, search/activity/notifications, and shared exports |
+| Database release | PASS; clean v38 apply and immediate idempotent reapply, with `torqueshed_web_api_tables` last and all required tables verified |
+| Typecheck and lint | PASS for the final workspace tree |
+| Production build | PASS with the required server/public API URL contract configured |
+| Compiled exact-host browser | PASS 1/1 through the production supervisor and local TLS host proxy; real auth-host registration and SSO into `torqueshed.operatoros.net` |
+| Responsive/accessibility/PWA | PASS for garage, journal, diagnostics, live bay, marketplace, and tools at 1440x1000, 900x1000, and 390x844; no horizontal overflow or unnamed visible form controls; manifest and GET-only service worker verified |
+
+This is source/local state-4 evidence. No live AI/media provider call,
+production database apply, standalone source-data cutover, public deployment,
+production rollback, or deployed exact-host acceptance was performed.
+
 ## State 4 acceptance follow-up — 2026-07-31
 
 The prior Phase 9 blocked-gate record below is retained as historical evidence.

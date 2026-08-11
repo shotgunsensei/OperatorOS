@@ -1,6 +1,6 @@
 export const DATABASE_RELEASE_CONTRACT = Object.freeze({
   contractVersion: 1,
-  releaseVersion: 37,
+  releaseVersion: 38,
   mode: 'idempotent-apply',
   destructive: false,
   rollback: 'restore-to-new-database-and-switch-traffic',
@@ -44,4 +44,5 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'techdeck_literal_tables', kind: 'ddl' },
   { id: 'pulsedesk_literal_tables', kind: 'ddl' },
   { id: 'operatoros_messaging_compliance_tables', kind: 'ddl' },
+  { id: 'torqueshed_web_api_tables', kind: 'ddl' },
 ] as const);

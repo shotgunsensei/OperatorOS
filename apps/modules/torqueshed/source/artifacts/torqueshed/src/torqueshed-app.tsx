@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ArrowRight, Bookmark, Bot, Check, CircleGauge, Heart, Home, LogOut, MessageCircle, MoreHorizontal, PackageSearch, Plus, ShieldCheck, Store, Wrench, X } from "lucide-react";
 
 export type TorqueShedUser = {
@@ -9,6 +9,76 @@ export type TorqueShedUser = {
   tenant: { id: string; slug: string | null; name: string; role: string | null };
 } | null;
 type View = "community" | "diagnose" | "builds" | "market" | "garage";
+
+type ApiVehicle = {
+  id: string;
+  year: number;
+  make: string;
+  model: string;
+  trim: string | null;
+  engine: string | null;
+  transmission: string | null;
+  drivetrain: string | null;
+  mileage: number | null;
+  nickname: string | null;
+  updatedAt: string;
+};
+
+type VehicleRecord = { id: string; kind: string; title: string; description: string; mileage: number | null; costCents: number | null; laborMinutes: number | null; performedAt: string };
+type VehicleReminder = { id: string; title: string; dueAt: string | null; dueMileage: number | null; status: string };
+type VehicleDiagnostic = { id: string; title: string; customerConcern: string; status: string; updatedAt: string };
+type VehicleDetail = {
+  vehicle: ApiVehicle & { vin: string | null };
+  profile: { summary: string; currentModifications: string[] } | null;
+  records: VehicleRecord[];
+  reminders: VehicleReminder[];
+  diagnostics: VehicleDiagnostic[];
+  builds: Array<{ id: string; title: string; status: string }>;
+  attachments: Array<{ id: string; kind: string; originalName: string; contentType: string; createdAt: string }>;
+};
+
+type ApiPost = {
+  post: { id: string; kind: string; title: string; body: string; createdAt: string };
+  authorName: string;
+  commentCount: number;
+  reactionCount: number;
+};
+
+type ApiListing = {
+  id: string;
+  title: string;
+  description: string;
+  listingType: string;
+  category: string;
+  condition: string;
+  price: string | null;
+  locationLabel: string | null;
+  status: string;
+};
+
+type AssistPlan = {
+  summary: string;
+  facts: string[];
+  assumptions: string[];
+  hypotheses: Array<{ rank: number; cause: string; confidence: number; supportingEvidence: string[] }>;
+  followUpQuestions: string[];
+  diagnosticPlan: Array<{ order: number; test: string; purpose: string; expectedResults: string[]; safety: string }>;
+  safetyNotes: string[];
+};
+
+type TokenPackage = { id: string; name: string; tokenAmount: number; priceCents: number; checkoutConfigured: boolean };
+type LedgerEntry = { id: string; delta: number; entryType: string; description: string; createdAt: string };
+
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`/api${path}`, {
+    credentials: "include",
+    ...init,
+    headers: { accept: "application/json", ...(init?.body ? { "content-type": "application/json" } : {}), ...init?.headers },
+  });
+  const payload = await response.json().catch(() => ({})) as T & { error?: string };
+  if (!response.ok) throw new Error(payload.error || `Request failed (${response.status})`);
+  return payload;
+}
 
 const operatorOsLoginUrl = `https://auth.operatoros.net/login?next=${encodeURIComponent("https://app.operatoros.net/app")}`;
 
@@ -93,7 +163,7 @@ function initials(value: string) {
 }
 
 export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSignOut: () => Promise<void> }) {
-  const [view, setView] = useState<View>("community");
+  const [view, setView] = useState<View>(user ? "garage" : "community");
   const [feedFilter, setFeedFilter] = useState("FOR YOU");
   const [marketFilter, setMarketFilter] = useState("ALL");
   const [liked, setLiked] = useState<number[]>([1]);
@@ -101,12 +171,26 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
   const [showComposer, setShowComposer] = useState(false);
   const [showTokens, setShowTokens] = useState(false);
   const [showListing, setShowListing] = useState(false);
+  const [showVehicle, setShowVehicle] = useState(false);
+  const [showRecord, setShowRecord] = useState(false);
+  const [showVehicleDetail, setShowVehicleDetail] = useState(false);
   const [notice, setNotice] = useState("");
   const [code, setCode] = useState("P0302");
   const [symptoms, setSymptoms] = useState("Rough idle, flashing CEL under load, fuel smell at startup");
   const [diagnosing, setDiagnosing] = useState(false);
   const [result, setResult] = useState(false);
   const [tokens, setTokens] = useState(0);
+  const [vehicles, setVehicles] = useState<ApiVehicle[]>([]);
+  const [persistedPosts, setPersistedPosts] = useState<ApiPost[]>([]);
+  const [persistedListings, setPersistedListings] = useState<ApiListing[]>([]);
+  const [tokenPackages, setTokenPackages] = useState<TokenPackage[]>([]);
+  const [tokenLedger, setTokenLedger] = useState<LedgerEntry[]>([]);
+  const [vehicleDetail, setVehicleDetail] = useState<VehicleDetail | null>(null);
+  const [loadingVehicleDetail, setLoadingVehicleDetail] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState("");
+  const [marketSearch, setMarketSearch] = useState("");
+  const [assistPlan, setAssistPlan] = useState<AssistPlan | null>(null);
+  const [loadingProduct, setLoadingProduct] = useState(Boolean(user));
   const [chat, setChat] = useState([
     { name: "WrenchWitch", text: "Anybody have the torque spec for K24 cam caps?" },
     { name: "BoostedMaya", text: "Start at 9 lb-ft, final pass 16 lb-ft. Work from the center out." },
@@ -114,10 +198,72 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
   const [chatText, setChatText] = useState("");
 
   const displayName = user?.displayName.split("@")[0] ?? "Guest Builder";
+  const feedPosts = useMemo(() => persistedPosts.map((row, index) => ({
+    id: index + 100,
+    apiId: row.post.id,
+    type: row.post.kind.replaceAll("_", " ").toUpperCase(),
+    author: row.authorName,
+    handle: "OperatorOS verified",
+    avatar: initials(row.authorName),
+    time: new Date(row.post.createdAt).toLocaleDateString(),
+    title: row.post.title,
+    excerpt: row.post.body,
+    vehicle: "TorqueShed community",
+    meta: "Documented build entry",
+    likes: row.reactionCount,
+    replies: row.commentCount,
+    color: index % 2 ? "steel" : "copper",
+    image: index % 2 ? "/marketplace/ls-engine-mounts-source.jpg" : "/marketplace/efi-controller-source.jpg",
+    imageAlt: "Automotive work documented in TorqueShed",
+  })), [persistedPosts]);
+  const activePosts = user ? feedPosts : buildPosts;
+  const dynamicListings = useMemo(() => persistedListings.map((item, index) => ({
+    id: index + 100,
+    apiId: item.id,
+    title: item.title,
+    price: item.price ? `$${Number(item.price).toLocaleString()}` : item.listingType === "trade" ? "Trade" : "Wanted",
+    type: item.listingType.toUpperCase(),
+    seller: "OperatorOS verified seller",
+    rating: "New",
+    protected: false,
+    image: ["/marketplace/ls-engine-mounts-source.jpg", "/marketplace/efi-controller-source.jpg", "/marketplace/gauge-pod-source.jpg"][index % 3]!,
+    imageAlt: item.description,
+    credit: item.locationLabel || "Location shared by seller",
+  })), [persistedListings]);
+  const activeListings = user ? dynamicListings : listings.map((item) => ({ ...item, protected: false }));
   const visibleListings = useMemo(
-    () => listings.filter((item) => marketFilter === "ALL" || item.type.includes(marketFilter)),
-    [marketFilter],
+    () => activeListings.filter((item) =>
+      (marketFilter === "ALL" || item.type.includes(marketFilter)) &&
+      (!marketSearch.trim() || item.title.toLowerCase().includes(marketSearch.trim().toLowerCase())),
+    ),
+    [activeListings, marketFilter, marketSearch],
   );
+
+  async function loadProduct() {
+    if (!user) return;
+    try {
+      const [dashboard, postsPayload, listingsPayload, packagesPayload] = await Promise.all([
+        api<{ vehicles: ApiVehicle[]; tokens: { available: number } }>("/dashboard"),
+        api<{ posts: ApiPost[] }>("/posts"),
+        api<{ listings: ApiListing[] }>("/listings"),
+        api<{ packages: TokenPackage[] }>("/billing/packages"),
+      ]);
+      setVehicles(dashboard.vehicles);
+      setSelectedVehicleId((current) => current || dashboard.vehicles[0]?.id || "");
+      setTokens(dashboard.tokens.available);
+      setPersistedPosts(postsPayload.posts);
+      setPersistedListings(listingsPayload.listings);
+      setTokenPackages(packagesPayload.packages);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "TorqueShed data could not be loaded.");
+    } finally {
+      setLoadingProduct(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadProduct();
+  }, [user?.id]);
 
   function requireAccount(action: () => void) {
     if (!user) {
@@ -132,29 +278,126 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function toggleLike(id: number) {
-    requireAccount(() =>
-      setLiked((current) =>
-        current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-      ),
-    );
+  function toggleLike(id: number, apiId?: string) {
+    requireAccount(() => void (async () => {
+      const alreadyLiked = liked.includes(id);
+      setLiked((current) => alreadyLiked ? current.filter((item) => item !== id) : [...current, id]);
+      if (!apiId || alreadyLiked) return;
+      try {
+        await api(`/posts/${apiId}/reactions/like`, { method: "PUT" });
+      } catch (error) {
+        setLiked((current) => current.filter((item) => item !== id));
+        setNotice(error instanceof Error ? error.message : "The reaction could not be saved.");
+      }
+    })());
+  }
+
+  async function openVehicle(vehicleId: string) {
+    setSelectedVehicleId(vehicleId);
+    setShowVehicleDetail(true);
+    setLoadingVehicleDetail(true);
+    try {
+      setVehicleDetail(await api<VehicleDetail>(`/vehicles/${vehicleId}`));
+    } catch (error) {
+      setShowVehicleDetail(false);
+      setNotice(error instanceof Error ? error.message : "Vehicle history could not be loaded.");
+    } finally {
+      setLoadingVehicleDetail(false);
+    }
+  }
+
+  function openTokens() {
+    requireAccount(() => void (async () => {
+      setShowTokens(true);
+      try {
+        const payload = await api<{ available: number; ledger: LedgerEntry[] }>("/token-balance");
+        setTokens(payload.available);
+        setTokenLedger(payload.ledger);
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : "Token history could not be loaded.");
+      }
+    })());
+  }
+
+  async function favoriteListing(listingId: string | undefined, title: string) {
+    if (!listingId) {
+      setNotice("Sign in to save live marketplace listings.");
+      return;
+    }
+    try {
+      await api(`/listings/${listingId}/favorite`, { method: "PUT" });
+      setNotice(`${title} saved to your marketplace favorites.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "The listing could not be saved.");
+    }
+  }
+
+  async function updateVehicle(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!vehicleDetail) return;
+    const data = new FormData(event.currentTarget);
+    try {
+      await api(`/vehicles/${vehicleDetail.vehicle.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          nickname: data.get("nickname"),
+          engine: data.get("engine"),
+          transmission: data.get("transmission"),
+          drivetrain: data.get("drivetrain"),
+          mileage: data.get("mileage") || null,
+        }),
+      });
+      await Promise.all([openVehicle(vehicleDetail.vehicle.id), loadProduct()]);
+      setNotice("Vehicle profile updated.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "The vehicle could not be updated.");
+    }
   }
 
   function analyze() {
-    requireAccount(() => {
+    requireAccount(() => void (async () => {
       if (!code.trim()) return;
+      if (!selectedVehicleId) {
+        setShowVehicle(true);
+        setNotice("Add a vehicle before starting a diagnostic session.");
+        return;
+      }
       if (tokens < 2) {
-        setShowTokens(true);
+        openTokens();
         return;
       }
       setDiagnosing(true);
       setResult(false);
-      window.setTimeout(() => {
-        setDiagnosing(false);
+      setAssistPlan(null);
+      try {
+        const created = await api<{ session: { id: string } }>("/diagnostics", {
+          method: "POST",
+          body: JSON.stringify({
+            vehicleId: selectedVehicleId,
+            title: `${code.trim().toUpperCase()} diagnostic`,
+            customerConcern: symptoms,
+            symptoms,
+            conditions: {},
+          }),
+        });
+        await api(`/diagnostics/${created.session.id}/codes`, {
+          method: "POST",
+          body: JSON.stringify({ code: code.trim().toUpperCase(), status: "active" }),
+        });
+        const analyzed = await api<{ analysis: { result: AssistPlan }; tokens: { available: number } }>(`/diagnostics/${created.session.id}/assist`, {
+          method: "POST",
+          headers: { "idempotency-key": crypto.randomUUID() },
+          body: JSON.stringify({}),
+        });
+        setAssistPlan(analyzed.analysis.result);
+        setTokens(analyzed.tokens.available);
         setResult(true);
-        setTokens((value) => value - 2);
-      }, 1200);
-    });
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : "Torque Assist could not complete the analysis.");
+      } finally {
+        setDiagnosing(false);
+      }
+    })());
   }
 
   async function publishPost(event: FormEvent<HTMLFormElement>) {
@@ -162,22 +405,21 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
     const form = event.currentTarget;
     const data = new FormData(form);
     try {
-      const response = await fetch("/api/posts", {
+      await api("/posts", {
         method: "POST",
-        headers: { "content-type": "application/json" },
         body: JSON.stringify({
           kind: data.get("kind"),
           title: data.get("title"),
-          vehicle: data.get("vehicle"),
+          vehicleId: data.get("vehicleId") || null,
           body: data.get("body"),
         }),
       });
-      if (!response.ok) throw new Error("publish failed");
       form.reset();
       setShowComposer(false);
       setNotice("Build entry published to the community feed.");
-    } catch {
-      setNotice("Publishing is unavailable in this preview. Your form is still open so the draft is not lost.");
+      await loadProduct();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "The build entry could not be published.");
     }
   }
 
@@ -186,24 +428,83 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
     const form = event.currentTarget;
     const data = new FormData(form);
     try {
-      const response = await fetch("/api/listings", {
+      const price = String(data.get("price") || "").replace(/[$,]/g, "");
+      await api("/listings", {
         method: "POST",
-        headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          type: data.get("type"),
-          price: data.get("price"),
+          listingType: data.get("type"),
+          category: data.get("category"),
+          price: price ? Number(price) : null,
           title: data.get("title"),
           condition: data.get("condition"),
           description: data.get("description"),
-          protectionEligible: data.get("protectionEligible") === "on",
+          locationLabel: data.get("locationLabel"),
+          status: "published",
         }),
       });
-      if (!response.ok) throw new Error("listing failed");
       form.reset();
       setShowListing(false);
-      setNotice("Listing draft saved. Payouts remain disabled until seller verification and Stripe Connect are configured.");
-    } catch {
-      setNotice("Listing storage is unavailable in this preview. Your form is still open so the draft is not lost.");
+      setNotice("Listing published. Buyers can contact you through TorqueShed; payment protection is not offered.");
+      await loadProduct();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "The listing could not be saved.");
+    }
+  }
+
+  async function addVehicle(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    try {
+      const payload = await api<{ vehicle: ApiVehicle }>("/vehicles", {
+        method: "POST",
+        body: JSON.stringify(Object.fromEntries(data.entries())),
+      });
+      setSelectedVehicleId(payload.vehicle.id);
+      form.reset();
+      setShowVehicle(false);
+      setNotice(`${payload.vehicle.year} ${payload.vehicle.make} ${payload.vehicle.model} added to your garage.`);
+      await loadProduct();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "The vehicle could not be added.");
+    }
+  }
+
+  async function addMaintenance(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedVehicleId) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    try {
+      await api(`/vehicles/${selectedVehicleId}/records`, {
+        method: "POST",
+        body: JSON.stringify({
+          kind: data.get("kind"),
+          title: data.get("title"),
+          description: data.get("description"),
+          mileage: data.get("mileage") || null,
+          costCents: data.get("cost") ? Math.round(Number(data.get("cost")) * 100) : null,
+          performedAt: data.get("performedAt") || new Date().toISOString(),
+        }),
+      });
+      form.reset();
+      setShowRecord(false);
+      setNotice("Vehicle history updated.");
+      await Promise.all([loadProduct(), showVehicleDetail ? openVehicle(selectedVehicleId) : Promise.resolve()]);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "The history entry could not be saved.");
+    }
+  }
+
+  async function startCheckout(packageId: string) {
+    try {
+      const payload = await api<{ checkoutUrl: string }>("/billing/checkout", {
+        method: "POST",
+        body: JSON.stringify({ packageId }),
+      });
+      window.location.assign(payload.checkoutUrl);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Checkout could not be started.");
     }
   }
 
@@ -214,6 +515,7 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
       if (!message) return;
       setChat((items) => [...items, { name: displayName, text: message }]);
       setChatText("");
+      setNotice("Bay Q&A preview messages remain in this browser session; use post comments for persisted discussion.");
     });
   }
 
@@ -236,7 +538,7 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
           ))}
         </nav>
         <div className="top-actions">
-          <button className="token-chip" onClick={() => requireAccount(() => setShowTokens(true))}>
+          <button className="token-chip" onClick={openTokens}>
             <span className="token-mark">T</span>
             <span><b>{tokens}</b> tokens</span>
           </button>
@@ -273,7 +575,7 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
                   <button className="secondary" onClick={() => navigate("diagnose")}>Try Torque Assist</button>
                 </div>
                 <div className="trust-row"><span>FREE COMMUNITY</span><i /> <span>NO PAYWALLED HOW-TOS</span><i /> <span>OPERATOROS VERIFIED ACCESS</span></div>
-                <div className="garage-pulse" aria-label="TorqueShed community activity"><span><b>12.4k</b> active builders</span><span><b>38k</b> documented fixes</span><span><b>4.9/5</b> seller reputation</span></div>
+                <div className="garage-pulse" aria-label="TorqueShed activity"><span><b>{user ? vehicles.length : "FREE"}</b> {user ? "garage vehicles" : "community access"}</span><span><b>{user ? persistedPosts.length : "AI"}</b> {user ? "tenant posts" : "evidence-led plans"}</span><span><b>{user ? persistedListings.length : "DIRECT"}</b> {user ? "active listings" : "market exchanges"}</span></div>
               </div>
             </section>
 
@@ -289,7 +591,7 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
                   ))}
                 </div>
                 <div className="post-list">
-                  {buildPosts.map((post) => (
+                  {activePosts.map((post) => (
                     <article className="post-card" key={post.id}>
                       <div className={`post-visual ${post.color}`}>
                         <img src={post.image} alt={post.imageAlt} />
@@ -308,13 +610,14 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
                         <p>{post.excerpt}</p>
                         <div className="vehicle-tag"><b>{post.vehicle}</b><span>{post.meta}</span></div>
                         <div className="post-stats">
-                          <button aria-pressed={liked.includes(post.id)} aria-label={`Like ${post.title}`} className={liked.includes(post.id) ? "stat-button liked" : "stat-button"} onClick={() => toggleLike(post.id)}><Heart size={14} fill={liked.includes(post.id) ? "currentColor" : "none"} /> {post.likes + (liked.includes(post.id) ? 1 : 0)}</button>
-                          <button className="stat-button" onClick={() => requireAccount(() => setNotice("Discussion opened. Replies will be persisted when the production database is connected."))}><MessageCircle size={14} /> {post.replies}</button>
+                          <button aria-pressed={liked.includes(post.id)} aria-label={`Like ${post.title}`} className={liked.includes(post.id) ? "stat-button liked" : "stat-button"} onClick={() => toggleLike(post.id, "apiId" in post && typeof post.apiId === "string" ? post.apiId : undefined)}><Heart size={14} fill={liked.includes(post.id) ? "currentColor" : "none"} /> {post.likes + (liked.includes(post.id) ? 1 : 0)}</button>
+                          <button className="stat-button" onClick={() => requireAccount(() => setNotice("Comments are available through the persisted community API; the focused thread view is the next UI surface."))}><MessageCircle size={14} /> {post.replies}</button>
                           <button className="stat-button save" onClick={() => requireAccount(() => setNotice("Saved to your garage reference shelf."))}><Bookmark size={14} /> Save</button>
                         </div>
                       </div>
                     </article>
                   ))}
+                  {activePosts.length === 0 && <div className="product-loading">No community entries yet. Publish the first documented build, repair, or diagnostic result for this organization.</div>}
                 </div>
               </div>
 
@@ -327,7 +630,7 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
                 </section>
 
                 <section className="rail-card live-card">
-                  <div className="rail-title"><div><span className="live-dot" /> LIVE BAY CHAT</div><small>{42 + chat.length} online</small></div>
+                  <div className="rail-title"><div><span className="live-dot" /> BAY Q&amp;A PREVIEW</div><small>LOCAL SESSION</small></div>
                   <div className="chat-list">
                     {chat.slice(-4).map((item, index) => (
                       <div className="chat-message" key={`${item.name}-${index}`}><span className="avatar tiny">{initials(item.name)}</span><p><b>{item.name}</b>{item.text}</p></div>
@@ -350,8 +653,8 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
             <div className="page-intro"><p className="kicker">TORQUE ASSIST / AI DIAGNOSTICS</p><h1>Evidence first. <em>Parts second.</em></h1><p>Turn scan data and symptoms into a prioritized test plan. Every result shows its reasoning, confidence, and next measurements.</p></div>
             <div className="diagnose-grid">
               <div className="diagnostic-form panel">
-                <div className="panel-head"><span>01</span><div><h2>Tell us what the vehicle is doing</h2><p>One diagnosis uses 2 tokens.</p></div><button className="token-chip" onClick={() => requireAccount(() => setShowTokens(true))}><span className="token-mark">T</span>{tokens} available</button></div>
-                <label>Vehicle<select defaultValue="civic"><option value="civic">1994 Honda Civic CX · K24A2</option><option value="ram">2006 Ram 2500 · 5.9 Cummins</option><option value="new">+ Add another vehicle</option></select></label>
+                <div className="panel-head"><span>01</span><div><h2>Tell us what the vehicle is doing</h2><p>One diagnosis uses 2 tokens.</p></div><button className="token-chip" onClick={openTokens}><span className="token-mark">T</span>{tokens} available</button></div>
+                <label>Vehicle<select value={selectedVehicleId} onChange={(event) => setSelectedVehicleId(event.target.value)}>{vehicles.length === 0 && <option value="">Add a vehicle first</option>}{vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.year} {vehicle.make} {vehicle.model}{vehicle.engine ? ` · ${vehicle.engine}` : ""}</option>)}</select></label>
                 <div className="field-pair"><label>OBD-II / manufacturer code<input value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} maxLength={12} /></label><label>Mileage<input defaultValue="142,860" inputMode="numeric" /></label></div>
                 <label>Symptoms, conditions, and recent work<textarea value={symptoms} onChange={(event) => setSymptoms(event.target.value)} rows={5} /></label>
                 <div className="upload-zone"><b>+ Add freeze-frame or live data</b><span>CSV, screenshot, or paste supported in production</span></div>
@@ -364,10 +667,12 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
                   <div className="scan-state"><span className="scan-ring">TA</span><h3>Comparing likely failure paths</h3><p>Reading code context · checking symptom conflicts · ordering confirmation tests</p></div>
                 ) : (
                   <div className="result-content">
-                    <div className="result-head"><span className="confidence">82% confidence</span><small>Analysis TS-24072</small><h2>Misfire detected on cylinder 2</h2><p>The fuel smell and load-dependent flashing CEL make ignition breakdown more likely than a mechanical fault, but the fastest path starts with a swap test.</p></div>
-                    <div className="cause-list"><h3>LIKELY CAUSES</h3><div><span>01</span><p><b>Ignition coil breakdown</b><small>High probability · matches load condition</small></p><strong>48%</strong></div><div><span>02</span><p><b>Fouled or over-gapped plug</b><small>Medium probability · inspect before buying</small></p><strong>27%</strong></div><div><span>03</span><p><b>Injector leakage / flow issue</b><small>Possible · fuel smell supports follow-up</small></p><strong>15%</strong></div></div>
-                    <div className="test-plan"><h3>CONFIRMATION PLAN</h3><ol><li><b>Swap coil 2 with coil 3.</b><span>Clear codes and reproduce the same loaded condition. If the misfire moves, replace the coil.</span></li><li><b>Inspect and measure plug gap.</b><span>Look for fuel fouling, cracked porcelain, and gap outside 0.028–0.032 in for this setup.</span></li><li><b>Run injector balance check.</b><span>Only if the misfire stays on cylinder 2 after ignition checks.</span></li></ol></div>
-                    <button className="outline-button full" onClick={() => setNotice("Diagnostic saved to your 1994 Civic build timeline.")}>Save to build history</button>
+                    <div className="result-head"><span className="confidence">Evidence-led plan</span><small>Charged only after successful analysis</small><h2>Torque Assist diagnostic plan</h2><p>{assistPlan?.summary}</p></div>
+                    <div className="evidence-columns"><div><h3>KNOWN FACTS</h3>{assistPlan?.facts.map((fact) => <p key={fact}>✓ {fact}</p>)}</div><div><h3>ASSUMPTIONS</h3>{assistPlan?.assumptions.map((assumption) => <p key={assumption}>? {assumption}</p>)}</div></div>
+                    <div className="cause-list"><h3>RANKED HYPOTHESES</h3>{assistPlan?.hypotheses.map((hypothesis) => <div key={`${hypothesis.rank}-${hypothesis.cause}`}><span>{String(hypothesis.rank).padStart(2, "0")}</span><p><b>{hypothesis.cause}</b><small>{hypothesis.supportingEvidence.join(" · ")}</small></p><strong>{Math.round(hypothesis.confidence * 100)}%</strong></div>)}</div>
+                    <div className="test-plan"><h3>CONFIRMATION PLAN</h3><ol>{assistPlan?.diagnosticPlan.map((step) => <li key={`${step.order}-${step.test}`}><b>{step.test}</b><span>{step.purpose} {step.safety}</span></li>)}</ol></div>
+                    {assistPlan?.followUpQuestions.length ? <div className="follow-up"><h3>FOLLOW-UP QUESTIONS</h3>{assistPlan.followUpQuestions.map((question) => <p key={question}>{question}</p>)}</div> : null}
+                    <button className="outline-button full" onClick={() => setNotice("Diagnostic and usage event are saved in your vehicle history.")}>Saved to diagnostic history</button>
                   </div>
                 )}
               </div>
@@ -379,25 +684,26 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
           <section className="inner-page section-wrap">
             <div className="page-intro split"><div><p className="kicker">BUILD LIBRARY</p><h1>Real work. <em>Fully documented.</em></h1><p>Follow projects from first teardown to final shakedown, with parts, costs, mistakes, and proof attached.</p></div><button className="primary" onClick={() => requireAccount(() => setShowComposer(true))}>Start a build journal</button></div>
             <div className="build-library">
-              {buildPosts.map((post) => <article className={`build-tile ${post.color}`} key={post.id}><div className="build-number">0{post.id}</div><span>{post.type}</span><h2>{post.title}</h2><p>{post.excerpt}</p><div><b>{post.vehicle}</b><small>{post.meta}</small></div><button onClick={() => setNotice(`Opening ${post.author}'s complete build journal.`)}>Open build journal →</button></article>)}
-              <article className="build-tile blueprint"><div className="build-number">04</div><span>FEATURED COLLECTION</span><h2>First-time engine swap field guide</h2><p>Twenty-three member builds organized by chassis, powertrain, budget, and fabrication level.</p><div><b>Community collection</b><small>23 builds · 411 documented steps</small></div><button onClick={() => requireAccount(() => setNotice("Collection added to your reference shelf."))}>Browse collection →</button></article>
+              {activePosts.map((post) => <article className={`build-tile ${post.color}`} key={post.id}><div className="build-number">{String(post.id).padStart(2, "0")}</div><span>{post.type}</span><h2>{post.title}</h2><p>{post.excerpt}</p><div><b>{post.vehicle}</b><small>{post.meta}</small></div><button onClick={() => setNotice(`Opening ${post.author}'s documented build entry.`)}>Open build entry →</button></article>)}
+              {!user && <article className="build-tile blueprint"><div className="build-number">04</div><span>FEATURED COLLECTION</span><h2>First-time engine swap field guide</h2><p>Explore how build journals can be organized by chassis, powertrain, budget, and fabrication level.</p><div><b>Guest preview</b><small>Sign in to view persisted organization builds</small></div><button onClick={() => setShowJoin(true)}>Sign in to browse →</button></article>}
+              {user && activePosts.length === 0 && <div className="product-loading">No build journals have been published in this organization yet.</div>}
             </div>
           </section>
         )}
 
         {view === "market" && (
           <section className="inner-page section-wrap market-page">
-            <div className="page-intro split"><div><p className="kicker">DIY MARKETPLACE</p><h1>Made in garages. <em>Backed by reputation.</em></h1><p>Buy, sell, or trade builder-made parts and used gear. Choose direct exchange or optional TorqueShed Protection at checkout.</p></div><button className="primary" onClick={() => requireAccount(() => setShowListing(true))}>List an item</button></div>
-            <div className="protection-banner"><span className="shield">TS</span><div><b>Optional TorqueShed Protection</b><p>Protected checkout, shipment tracking, and a documented dispute window for a small 3% platform fee. Direct trades remain free.</p></div><button onClick={() => setNotice("Protection terms opened for review. Final processor and payout timing require Stripe Connect configuration.")}>How it works →</button></div>
-            <div className="market-toolbar"><div>{["ALL", "SELL", "BUY", "TRADE"].map((filter) => <button key={filter} onClick={() => setMarketFilter(filter)} className={marketFilter === filter ? "filter active" : "filter"}>{filter}</button>)}</div><label>Sort<select><option>Recently listed</option><option>Price: low to high</option><option>Seller rating</option></select></label></div>
-            <div className="listing-grid">{visibleListings.map((item) => <article className="listing-card" key={item.id}><div className="listing-visual"><img src={item.image} alt={item.imageAlt} /><div className="listing-scrim" /><span>{item.type}</span><small>PHOTO: {item.credit}</small></div><div className="listing-body"><div className="price-row"><span>{item.price}</span>{item.protected && <small><ShieldCheck size={11} /> TS PROTECTED</small>}</div><h2>{item.title}</h2><div className="seller-row"><span className="avatar tiny">{initials(item.seller)}</span><p><b>{item.seller}</b><small>★ {item.rating} · 36 sales</small></p></div><button onClick={() => requireAccount(() => setNotice(`${item.title} added to your marketplace watchlist.`))}>View listing <ArrowRight size={14} /></button></div></article>)}</div>
+            <div className="page-intro split"><div><p className="kicker">DIY MARKETPLACE</p><h1>Made in garages. <em>Documented clearly.</em></h1><p>Buy, sell, or trade builder-made parts and used gear through direct community contact. Review the listing and seller before arranging any transaction.</p></div><button className="primary" onClick={() => requireAccount(() => setShowListing(true))}>List an item</button></div>
+            <div className="protection-banner"><span className="shield">TS</span><div><b>Community marketplace</b><p>Search parts, tools, and vehicles, save favorites, and contact sellers. TorqueShed does not currently provide escrow, shipping, tax handling, or payment protection.</p></div><button onClick={() => setNotice("Review every listing and seller before arranging a transaction.")}>Safety guidance →</button></div>
+            <div className="market-toolbar"><div>{["ALL", "SELL", "BUY", "TRADE"].map((filter) => <button key={filter} onClick={() => setMarketFilter(filter)} className={marketFilter === filter ? "filter active" : "filter"}>{filter}</button>)}</div><label>Search<input value={marketSearch} onChange={(event) => setMarketSearch(event.target.value)} placeholder="Parts, tools, vehicles" /></label></div>
+            <div className="listing-grid">{visibleListings.map((item) => <article className="listing-card" key={item.id}><div className="listing-visual"><img src={item.image} alt={item.imageAlt} /><div className="listing-scrim" /><span>{item.type}</span><small>{item.credit}</small></div><div className="listing-body"><div className="price-row"><span>{item.price}</span></div><h2>{item.title}</h2><div className="seller-row"><span className="avatar tiny">{initials(item.seller)}</span><p><b>{item.seller}</b><small>{item.rating} seller profile</small></p></div><button onClick={() => requireAccount(() => void favoriteListing("apiId" in item && typeof item.apiId === "string" ? item.apiId : undefined, item.title))}>Save listing <Bookmark size={14} /></button></div></article>)}{visibleListings.length === 0 && <div className="product-loading marketplace-empty">No active listings match this view. Publish a part, tool, or vehicle listing to start the marketplace.</div>}</div>
           </section>
         )}
 
         {view === "garage" && (
           <section className="inner-page section-wrap garage-page">
-            <div className="garage-hero panel"><div className="avatar huge">{initials(displayName)}</div><div><p className="kicker">MY TORQUESHED GARAGE</p><h1>{displayName}</h1><p>{user?.email ?? "Sign in to build your permanent garage profile."}</p>{user && <div className="operator-badge"><ShieldCheck size={14} /> Verified by OperatorOS <span>{user.tenant.name}</span></div>}<div className="garage-stats"><span><b>2</b> vehicles</span><span><b>18</b> build entries</span><span><b>847</b> reputation</span></div></div><div className="garage-actions"><button className="outline-button" onClick={() => requireAccount(() => setNotice("Profile editor ready for your details, tools, specialties, and location privacy settings."))}>Edit profile</button>{user && <button className="quiet-button" onClick={() => void onSignOut()}><LogOut size={14} /> Sign out</button>}</div></div>
-            <div className="garage-grid"><article className="vehicle-card copper"><div><span>PRIMARY BUILD</span><b>HC</b></div><h2>1994 Honda Civic CX</h2><p>K24A2 · Precision 5858 · 8 PSI</p><div className="progress"><span style={{ width: "72%" }} /></div><small>72% build completion · updated today</small><button onClick={() => setNotice("Opening the complete Civic build timeline.")}>Open build →</button></article><article className="vehicle-card steel"><div><span>DAILY / TOW</span><b>RAM</b></div><h2>2006 Ram 2500 SLT</h2><p>5.9 Cummins · G56 · 312K miles</p><div className="progress"><span style={{ width: "91%" }} /></div><small>19 service records · next due in 840 mi</small><button onClick={() => setNotice("Opening the Ram service and diagnostic history.")}>Open vehicle →</button></article><button className="add-vehicle" onClick={() => requireAccount(() => setNotice("Vehicle setup opened. VIN decoding will remain optional for privacy."))}><span>+</span><b>Add a vehicle or build</b><small>Track service, parts, diagnostics, and progress</small></button></div>
+            <div className="garage-hero panel"><div className="avatar huge">{initials(displayName)}</div><div><p className="kicker">MY TORQUESHED GARAGE</p><h1>{displayName}</h1><p>{user?.email ?? "Sign in to build your permanent garage profile."}</p>{user && <div className="operator-badge"><ShieldCheck size={14} /> Verified by OperatorOS <span>{user.tenant.name}</span></div>}<div className="garage-stats"><span><b>{vehicles.length}</b> vehicles</span><span><b>{tokens}</b> available tokens</span><span><b>{persistedPosts.length}</b> community entries</span></div></div><div className="garage-actions"><button className="outline-button" onClick={() => setShowRecord(true)} disabled={!selectedVehicleId}>Add history</button>{user && <button className="quiet-button" onClick={() => void onSignOut()}><LogOut size={14} /> Sign out</button>}</div></div>
+            {loadingProduct ? <div className="product-loading">Loading your garage history…</div> : <div className="garage-grid">{vehicles.map((vehicle, index) => <article className={`vehicle-card ${index % 2 ? "steel" : "copper"}`} key={vehicle.id}><div><span>{vehicle.nickname || "GARAGE VEHICLE"}</span><b>{vehicle.make.slice(0, 3).toUpperCase()}</b></div><h2>{vehicle.year} {vehicle.make} {vehicle.model}</h2><p>{[vehicle.trim, vehicle.engine, vehicle.transmission, vehicle.drivetrain].filter(Boolean).join(" · ") || "Add specifications"}</p><small>{vehicle.mileage == null ? "Mileage not recorded" : `${vehicle.mileage.toLocaleString()} miles`} · updated {new Date(vehicle.updatedAt).toLocaleDateString()}</small><button onClick={() => void openVehicle(vehicle.id)}>Open vehicle dashboard →</button></article>)}<button className="add-vehicle" onClick={() => requireAccount(() => setShowVehicle(true))}><span>+</span><b>Add a vehicle or build</b><small>Track service, parts, diagnostics, and progress</small></button></div>}
           </section>
         )}
       </main>
@@ -410,11 +716,17 @@ export function TorqueShedApp({ user, onSignOut }: { user: TorqueShedUser; onSig
 
       {showJoin && <div className="modal-backdrop" onMouseDown={() => setShowJoin(false)}><section className="modal join-modal" role="dialog" aria-modal="true" aria-labelledby="join-title" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setShowJoin(false)} aria-label="Close"><X size={18} /></button><img src="/torqueshed-logo.png" alt="TorqueShed" /><p className="kicker">OPERATOROS SECURE ACCESS</p><h2 id="join-title">Bring your garage identity with you.</h2><p>Sign in through OperatorOS to launch TorqueShed with your verified account and organization. Your build history remains private to TorqueShed.</p><a className="primary full link-button" href={operatorOsLoginUrl}>Continue with OperatorOS <ArrowRight size={16} /></a><div className="join-points"><span><Check size={14} /> Free community access</span><span><ShieldCheck size={14} /> One-time secure handoff</span><span><PackageSearch size={14} /> Private garage history</span></div><small>OperatorOS authenticates your account; TorqueShed creates and controls its own session.</small></section></div>}
 
-      {showComposer && <div className="modal-backdrop" onMouseDown={() => setShowComposer(false)}><form className="modal form-modal" onSubmit={publishPost} onMouseDown={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={() => setShowComposer(false)} aria-label="Close">×</button><p className="kicker">NEW BUILD ENTRY</p><h2>Share what happened in the garage.</h2><label>Entry type<select name="kind"><option>Build update</option><option>How-to article</option><option>Question</option><option>Tool review</option></select></label><label>Title<input name="title" required maxLength={120} placeholder="What did you build, learn, or fix?" /></label><label>Vehicle<select name="vehicle"><option>1994 Honda Civic CX</option><option>2006 Ram 2500</option><option>General / no vehicle</option></select></label><label>Details<textarea name="body" required maxLength={12000} rows={6} placeholder="Parts, measurements, process, mistakes, and results..." /></label><button className="primary full" type="submit">Publish build entry <span>→</span></button></form></div>}
+      {showComposer && <div className="modal-backdrop" onMouseDown={() => setShowComposer(false)}><form className="modal form-modal" onSubmit={publishPost} onMouseDown={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={() => setShowComposer(false)} aria-label="Close">×</button><p className="kicker">NEW BUILD ENTRY</p><h2>Share what happened in the garage.</h2><label>Entry type<select name="kind"><option value="build_update">Build update</option><option value="how_to">How-to article</option><option value="question">Question</option><option value="tool_review">Tool review</option></select></label><label>Title<input name="title" required maxLength={120} placeholder="What did you build, learn, or fix?" /></label><label>Vehicle<select name="vehicleId"><option value="">General / no vehicle</option>{vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.year} {vehicle.make} {vehicle.model}</option>)}</select></label><label>Details<textarea name="body" required maxLength={12000} rows={6} placeholder="Parts, measurements, process, mistakes, and results..." /></label><button className="primary full" type="submit">Publish build entry <span>→</span></button></form></div>}
 
-      {showTokens && <div className="modal-backdrop" onMouseDown={() => setShowTokens(false)}><section className="modal token-modal" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setShowTokens(false)} aria-label="Close">×</button><p className="kicker">TORQUE ASSIST TOKENS</p><h2>Pay for diagnostics, not membership.</h2><p>The community stays free. Tokens cover the cost of evidence-based AI analysis. Unused tokens never expire.</p><div className="token-packs"><button onClick={() => setNotice("Checkout is awaiting the production payment provider connection.")}><span>10 tokens</span><b>$5</b><small>5 diagnostic plans</small></button><button className="recommended" onClick={() => setNotice("Checkout is awaiting the production payment provider connection.")}><em>BEST VALUE</em><span>30 tokens</span><b>$12</b><small>15 diagnostic plans</small></button><button onClick={() => setNotice("Checkout is awaiting the production payment provider connection.")}><span>75 tokens</span><b>$25</b><small>37 diagnostic plans</small></button></div><small>Final pricing and checkout remain inactive until Stripe products and webhook verification are configured.</small></section></div>}
+      {showTokens && <div className="modal-backdrop" onMouseDown={() => setShowTokens(false)}><section className="modal token-modal" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setShowTokens(false)} aria-label="Close">×</button><p className="kicker">TORQUE ASSIST TOKENS</p><h2>{tokens} tokens available.</h2><p>The community stays free. The ledger records every purchase, successful AI analysis, refund, and reversal.</p><div className="token-packs">{tokenPackages.map((pack, index) => <button key={pack.id} className={index === 1 ? "recommended" : undefined} disabled={!pack.checkoutConfigured} onClick={() => void startCheckout(pack.id)}>{index === 1 && <em>BEST VALUE</em>}<span>{pack.tokenAmount} tokens</span><b>${(pack.priceCents / 100).toFixed(0)}</b><small>{pack.checkoutConfigured ? `${Math.floor(pack.tokenAmount / 2)} diagnostic plans` : "Stripe price not configured"}</small></button>)}</div><div className="ledger-panel"><div><b>USAGE HISTORY</b><small>Ledger-derived balance</small></div>{tokenLedger.length ? tokenLedger.slice(0, 12).map((entry) => <div className="ledger-row" key={entry.id}><span><b>{entry.description}</b><small>{entry.entryType.replaceAll("_", " ")} · {new Date(entry.createdAt).toLocaleString()}</small></span><strong className={entry.delta < 0 ? "debit" : "credit"}>{entry.delta > 0 ? "+" : ""}{entry.delta}</strong></div>) : <p>No token activity has been recorded yet.</p>}</div><small>Tokens are credited only by the signed Stripe webhook after payment succeeds.</small></section></div>}
 
-      {showListing && <div className="modal-backdrop" onMouseDown={() => setShowListing(false)}><form className="modal form-modal" onSubmit={publishListing} onMouseDown={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={() => setShowListing(false)} aria-label="Close">×</button><p className="kicker">NEW MARKETPLACE LISTING</p><h2>List it clearly. Trade it safely.</h2><div className="field-pair"><label>Listing type<select name="type"><option>Sell</option><option>Trade</option><option>Buy / wanted</option></select></label><label>Price<input name="price" inputMode="decimal" placeholder="$0.00" /></label></div><label>Item title<input name="title" required maxLength={120} placeholder="Part, tool, or DIY product" /></label><label>Condition<select name="condition"><option>New / builder-made</option><option>Used — excellent</option><option>Used — working</option><option>For parts / repair</option></select></label><label>Description<textarea name="description" required maxLength={5000} rows={5} placeholder="Fitment, condition, measurements, what is included..." /></label><label className="check-row"><input name="protectionEligible" type="checkbox" defaultChecked /> Offer TorqueShed Protection (3% seller fee)</label><button className="primary full" type="submit">Save listing draft <span>→</span></button></form></div>}
+      {showVehicleDetail && <div className="modal-backdrop" onMouseDown={() => setShowVehicleDetail(false)}><section className="modal vehicle-detail-modal" onMouseDown={(event) => event.stopPropagation()}><button className="modal-close" onClick={() => setShowVehicleDetail(false)} aria-label="Close">×</button>{loadingVehicleDetail || !vehicleDetail ? <div className="product-loading">Loading vehicle dashboard…</div> : <><p className="kicker">VEHICLE DASHBOARD</p><h2>{vehicleDetail.vehicle.year} {vehicleDetail.vehicle.make} {vehicleDetail.vehicle.model}</h2><div className="vehicle-facts"><span><b>{vehicleDetail.vehicle.mileage?.toLocaleString() ?? "—"}</b> miles</span><span><b>{vehicleDetail.records.length}</b> history entries</span><span><b>{vehicleDetail.diagnostics.length}</b> diagnostics</span><span><b>{vehicleDetail.reminders.filter((item) => item.status === "open").length}</b> reminders</span></div><form className="vehicle-edit" onSubmit={updateVehicle}><div className="field-pair"><label>Garage nickname<input name="nickname" defaultValue={vehicleDetail.vehicle.nickname ?? ""} maxLength={80} /></label><label>Mileage<input name="mileage" defaultValue={vehicleDetail.vehicle.mileage ?? ""} inputMode="numeric" /></label></div><div className="field-pair"><label>Engine<input name="engine" defaultValue={vehicleDetail.vehicle.engine ?? ""} maxLength={120} /></label><label>Transmission<input name="transmission" defaultValue={vehicleDetail.vehicle.transmission ?? ""} maxLength={120} /></label></div><label>Drivetrain<input name="drivetrain" defaultValue={vehicleDetail.vehicle.drivetrain ?? ""} maxLength={80} /></label><button className="outline-button" type="submit">Update vehicle profile</button></form><div className="vehicle-timeline-grid"><section><div className="detail-heading"><b>HISTORY & COSTS</b><button onClick={() => setShowRecord(true)}>+ Add entry</button></div>{vehicleDetail.records.length ? vehicleDetail.records.map((record) => <article className="timeline-row" key={record.id}><span>{record.kind.replaceAll("_", " ")}</span><div><b>{record.title}</b><p>{record.description || "No additional notes"}</p><small>{new Date(record.performedAt).toLocaleDateString()}{record.mileage != null ? ` · ${record.mileage.toLocaleString()} mi` : ""}{record.costCents != null ? ` · $${(record.costCents / 100).toFixed(2)}` : ""}</small></div></article>) : <p className="detail-empty">No maintenance, repair, modification, inspection, or mileage entries yet.</p>}</section><section><div className="detail-heading"><b>DIAGNOSTICS & SERVICE</b></div>{vehicleDetail.diagnostics.map((item) => <article className="timeline-row" key={item.id}><span>{item.status}</span><div><b>{item.title}</b><p>{item.customerConcern}</p><small>{new Date(item.updatedAt).toLocaleDateString()}</small></div></article>)}{vehicleDetail.reminders.map((item) => <article className="timeline-row reminder" key={item.id}><span>{item.status}</span><div><b>{item.title}</b><small>{item.dueMileage ? `Due at ${item.dueMileage.toLocaleString()} mi` : item.dueAt ? `Due ${new Date(item.dueAt).toLocaleDateString()}` : "No due threshold"}</small></div></article>)}{vehicleDetail.diagnostics.length === 0 && vehicleDetail.reminders.length === 0 && <p className="detail-empty">No diagnostics or service reminders yet.</p>}</section></div><div className="vehicle-supporting"><span>VIN <b>{vehicleDetail.vehicle.vin || "Not recorded"}</b></span><span>Builds <b>{vehicleDetail.builds.length}</b></span><span>Photos & documents <b>{vehicleDetail.attachments.length}</b></span></div></>}</section></div>}
+
+      {showListing && <div className="modal-backdrop" onMouseDown={() => setShowListing(false)}><form className="modal form-modal" onSubmit={publishListing} onMouseDown={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={() => setShowListing(false)} aria-label="Close">×</button><p className="kicker">NEW MARKETPLACE LISTING</p><h2>List it clearly. Trade it safely.</h2><div className="field-pair"><label>Listing type<select name="type"><option value="sell">Sell</option><option value="trade">Trade</option><option value="wanted">Buy / wanted</option></select></label><label>Category<select name="category"><option value="parts">Parts</option><option value="tools">Tools</option><option value="vehicles">Vehicles</option></select></label></div><label>Item title<input name="title" required maxLength={120} placeholder="Part, tool, or vehicle" /></label><div className="field-pair"><label>Condition<select name="condition"><option>New / builder-made</option><option>Used — excellent</option><option>Used — working</option><option>For parts / repair</option></select></label><label>Price<input name="price" inputMode="decimal" placeholder="$0.00" /></label></div><label>Location<input name="locationLabel" maxLength={120} placeholder="City / region only — no street address" /></label><label>Description<textarea name="description" required maxLength={5000} rows={5} placeholder="Fitment, condition, measurements, what is included..." /></label><p className="form-disclaimer">TorqueShed does not provide escrow, shipping, tax handling, or payment protection.</p><button className="primary full" type="submit">Publish listing <span>→</span></button></form></div>}
+
+      {showVehicle && <div className="modal-backdrop" onMouseDown={() => setShowVehicle(false)}><form className="modal form-modal" onSubmit={addVehicle} onMouseDown={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={() => setShowVehicle(false)} aria-label="Close">×</button><p className="kicker">ADD VEHICLE</p><h2>Start a permanent vehicle record.</h2><div className="field-pair"><label>Year<input name="year" type="number" min="1886" max={new Date().getFullYear() + 2} required /></label><label>Make<input name="make" required maxLength={80} /></label></div><div className="field-pair"><label>Model<input name="model" required maxLength={80} /></label><label>Trim<input name="trim" maxLength={80} /></label></div><label>VIN (optional)<input name="vin" maxLength={17} autoCapitalize="characters" /></label><div className="field-pair"><label>Engine<input name="engine" maxLength={120} /></label><label>Transmission<input name="transmission" maxLength={120} /></label></div><div className="field-pair"><label>Drivetrain<input name="drivetrain" maxLength={80} /></label><label>Mileage<input name="mileage" inputMode="numeric" /></label></div><label>Garage nickname<input name="nickname" maxLength={80} /></label><button className="primary full" type="submit">Add to garage <span>→</span></button></form></div>}
+
+      {showRecord && <div className="modal-backdrop" onMouseDown={() => setShowRecord(false)}><form className="modal form-modal" onSubmit={addMaintenance} onMouseDown={(event) => event.stopPropagation()}><button type="button" className="modal-close" onClick={() => setShowRecord(false)} aria-label="Close">×</button><p className="kicker">VEHICLE HISTORY</p><h2>Add maintenance, repair, or modification.</h2><label>Vehicle<select value={selectedVehicleId} onChange={(event) => setSelectedVehicleId(event.target.value)}>{vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.year} {vehicle.make} {vehicle.model}</option>)}</select></label><div className="field-pair"><label>Record type<select name="kind"><option value="maintenance">Maintenance</option><option value="repair">Repair</option><option value="modification">Modification</option><option value="inspection">Inspection</option><option value="mileage">Mileage</option></select></label><label>Date<input name="performedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} /></label></div><label>Title<input name="title" required maxLength={160} placeholder="Oil change, brake repair, turbo install…" /></label><label>Details<textarea name="description" maxLength={10000} rows={4} /></label><div className="field-pair"><label>Mileage<input name="mileage" inputMode="numeric" /></label><label>Cost (USD)<input name="cost" inputMode="decimal" /></label></div><button className="primary full" type="submit">Save history entry <span>→</span></button></form></div>}
 
       {notice && <div className="toast" role="status"><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Dismiss">×</button></div>}
     </div>

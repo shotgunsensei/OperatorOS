@@ -295,6 +295,25 @@ snapshot and logical backup, checksum and restore verification, privacy-
 reviewed reconciliation, real-provider acceptance, authenticated/public
 browser acceptance, and an explicit cutover/rollback decision.
 
+## Phase 28 v38 additive release rehearsal
+
+On 2026-08-11 the 38-step production release applied to a new disposable
+PostgreSQL database, verified every step, and passed an immediate idempotent
+reapply before the compiled exact-host browser gate. The final
+`torqueshed_web_api_tables` step adds only journal entries/parts, live-bay
+state/membership/messages/rate windows, hashed share links, and user settings.
+
+The focused product database tests used synthetic identities and records and
+proved tenant/owner isolation, public projection limits, message ordering,
+reconnect cursors, durable rate controls, idempotent client message IDs,
+diagnostic reports, revocable shares, settings, and shared exports. No
+production database, customer record, live provider, or standalone TorqueShed
+export was read or changed, so this additive rehearsal did not create a
+production backup artifact. Production apply still requires a fresh provider
+snapshot and logical backup, checksum and restore verification, approved
+source-data reconciliation, authenticated/deployed acceptance, and an explicit
+cutover/rollback decision.
+
 ## Production recovery
 
 1. Freeze writes and preserve the failed database as read-only when safe.

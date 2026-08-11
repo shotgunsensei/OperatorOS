@@ -1658,6 +1658,31 @@ export const moduleShellApi = {
     uploadSocialMedia: (objectType: 'marketplace_listing' | 'community_post', id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/social/media/${objectType}/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
     listModerationReports: (status = 'open'): Promise<{ reports: Array<Record<string, any>> }> => apiFetch(`/modules/torqueshed/moderation/reports?status=${encodeURIComponent(status)}`) as Promise<any>,
     moderateSocialReport: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/moderation/reports/${encodeURIComponent(id)}/action`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    getBuildWorkspace: (id: string): Promise<{ build: Record<string, any>; stages: Array<Record<string, any>>; tasks: Array<Record<string, any>>; journal: Array<Record<string, any>>; parts: Array<Record<string, any>> }> =>
+      apiFetch(`/modules/torqueshed/builds/${encodeURIComponent(id)}/workspace`) as Promise<any>,
+    addBuildJournalEntry: (id: string, input: Record<string, unknown>): Promise<{ entry: Record<string, any> }> =>
+      apiFetch(`/modules/torqueshed/builds/${encodeURIComponent(id)}/journal`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    addBuildPart: (id: string, input: Record<string, unknown>): Promise<{ part: Record<string, any> }> =>
+      apiFetch(`/modules/torqueshed/builds/${encodeURIComponent(id)}/parts`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    updateBuildPart: (id: string, input: Record<string, unknown>): Promise<{ part: Record<string, any> }> =>
+      apiFetch(`/modules/torqueshed/build-parts/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<any>,
+    listLiveBays: (): Promise<{ bays: Array<Record<string, any>> }> => apiFetch('/modules/torqueshed/live-bays') as Promise<any>,
+    createLiveBay: (input: Record<string, unknown>): Promise<{ bay: Record<string, any> }> => apiFetch('/modules/torqueshed/live-bays', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    getLiveBay: (id: string, after = 0): Promise<{ bay: Record<string, any>; messages: Array<Record<string, any>>; cursor: number }> => apiFetch(`/modules/torqueshed/live-bays/${encodeURIComponent(id)}?after=${after}`) as Promise<any>,
+    addLiveBayMember: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/live-bays/${encodeURIComponent(id)}/members`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    sendLiveBayMessage: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/live-bays/${encodeURIComponent(id)}/messages`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    closeLiveBay: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/live-bays/${encodeURIComponent(id)}/close`, { method: 'POST', body: JSON.stringify({}) }) as Promise<any>,
+    getDiagnosticReport: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/diagnostics/${encodeURIComponent(id)}/report`) as Promise<any>,
+    getMarketplaceSeller: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/marketplace/sellers/${encodeURIComponent(id)}`) as Promise<any>,
+    searchProduct: (query: string): Promise<{ query: string; results: Array<Record<string, any>> }> => apiFetch(`/modules/torqueshed/search?q=${encodeURIComponent(query)}`) as Promise<any>,
+    listActivity: (): Promise<{ events: Array<Record<string, any>>; nextCursor: string | null }> => apiFetch('/modules/torqueshed/activity') as Promise<any>,
+    listNotifications: (): Promise<{ notifications: Array<Record<string, any>> }> => apiFetch('/modules/torqueshed/notifications') as Promise<any>,
+    getSettings: (): Promise<{ settings: Record<string, any> }> => apiFetch('/modules/torqueshed/settings') as Promise<any>,
+    saveSettings: (input: Record<string, unknown>): Promise<{ settings: Record<string, any> }> => apiFetch('/modules/torqueshed/settings', { method: 'PUT', body: JSON.stringify(input) }) as Promise<any>,
+    requestExport: (format: 'json' | 'csv', idempotencyKey: string): Promise<Record<string, any>> => apiFetch('/modules/torqueshed/exports', { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify({ format }) }) as Promise<any>,
+    listExports: (): Promise<{ exports: Array<Record<string, any>> }> => apiFetch('/modules/torqueshed/exports') as Promise<any>,
+    createShareLink: (input: Record<string, unknown>): Promise<{ shareLink: Record<string, any> }> => apiFetch('/modules/torqueshed/share-links', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    revokeShareLink: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/torqueshed/share-links/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<any>,
     getTorqueAssistStatus: (): Promise<TorqueAssistStatus> =>
       apiFetch('/modules/torqueshed/torque-assist/status') as Promise<TorqueAssistStatus>,
     getTorqueAssistContext: (diagnosticSessionId: string): Promise<Record<string, any>> =>

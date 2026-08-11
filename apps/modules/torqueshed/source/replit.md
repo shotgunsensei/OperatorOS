@@ -39,7 +39,7 @@ A visually rich digital garage for community build journals, evidence-led diagno
 
 ## Product
 
-- Community build feed, build journals, live bay chat, Torque Assist diagnostic plans, DIY marketplace, and personal garage.
+- Community build feed, build journals, persisted post discussions, Torque Assist diagnostic plans, DIY marketplace, and personal garage.
 
 ## User preferences
 

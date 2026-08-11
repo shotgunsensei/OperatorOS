@@ -28,8 +28,12 @@ function App() {
   }, []);
 
   async function signOut() {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => undefined);
+    const response = await fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => null);
     setUser(null);
+    if (response?.ok) {
+      const payload = (await response.json().catch(() => null)) as { returnTo?: string } | null;
+      if (payload?.returnTo) window.location.assign(payload.returnTo);
+    }
   }
 
   if (!authReady) {

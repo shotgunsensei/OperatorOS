@@ -23,6 +23,7 @@ import { ensureTechDeckLiteralTables } from './techdeck-literal-db-init.js';
 import { ensurePulseDeskTables } from './pulsedesk-db-init.js';
 import { ensurePulseDeskLiteralTables } from './pulsedesk-literal-db-init.js';
 import { ensureTorqueShedTables } from './torqueshed-db-init.js';
+import { ensureTorqueShedWebApiTables } from './torqueshed-web-api-db-init.js';
 import { ensureFaultlineLabTables } from './faultlinelab-db-init.js';
 import { ensureNinjaPoolHallTables } from './ninja-pool-hall-db-init.js';
 import { ensureBrandForgeOsTables } from './brandforgeos-db-init.js';
@@ -84,6 +85,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   tradeflowkit_public_operations: ensureTradeFlowKitPublicOperationsTables,
   outcall_product_operations: ensureOutCallProductTables,
   operatoros_messaging_compliance_tables: ensureOperatorOsMessagingComplianceTables,
+  torqueshed_web_api_tables: ensureTorqueShedWebApiTables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -133,6 +135,12 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.torqueshed_community_comments') IS NOT NULL AS torqueshed_community_comments,
       to_regclass('public.torqueshed_social_reports') IS NOT NULL AS torqueshed_social_reports,
       to_regclass('public.torqueshed_social_moderation_actions') IS NOT NULL AS torqueshed_social_moderation_actions,
+      to_regclass('public.torqueshed_build_journal_entries') IS NOT NULL AS torqueshed_build_journal_entries,
+      to_regclass('public.torqueshed_build_parts') IS NOT NULL AS torqueshed_build_parts,
+      to_regclass('public.torqueshed_live_bays') IS NOT NULL AS torqueshed_live_bays,
+      to_regclass('public.torqueshed_live_bay_messages') IS NOT NULL AS torqueshed_live_bay_messages,
+      to_regclass('public.torqueshed_share_links') IS NOT NULL AS torqueshed_share_links,
+      to_regclass('public.torqueshed_user_settings') IS NOT NULL AS torqueshed_user_settings,
       to_regclass('public.faultlinelab_challenges') IS NOT NULL AS faultlinelab_challenges,
       to_regclass('public.faultlinelab_challenge_versions') IS NOT NULL AS faultlinelab_challenge_versions,
       to_regclass('public.faultlinelab_sessions') IS NOT NULL AS faultlinelab_sessions,

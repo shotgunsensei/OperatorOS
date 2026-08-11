@@ -107,12 +107,20 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/repairs': { sectionId: 'torqueshed-service', label: 'Repairs' },
     '/reminders': { sectionId: 'torqueshed-service', label: 'Service Reminders' },
     '/builds': { sectionId: 'torqueshed-builds', label: 'Builds' },
+    '/journal': { sectionId: 'torqueshed-journal', label: 'Build Journal' },
+    '/build-journal': { sectionId: 'torqueshed-journal', label: 'Build Journal' },
     '/diagnostics': { sectionId: 'torqueshed-diagnostics', label: 'Diagnostics' },
+    '/live-bay': { sectionId: 'torqueshed-live-bay', label: 'Live Bay' },
+    '/live-bays': { sectionId: 'torqueshed-live-bay', label: 'Live Bays' },
     '/diagnostic-templates': { sectionId: 'torqueshed-templates', label: 'Diagnostic Templates' },
     '/vendors': { sectionId: 'torqueshed-templates', label: 'Vendors' },
     '/marketplace': { sectionId: 'torqueshed-marketplace', label: 'Marketplace' },
     '/community': { sectionId: 'torqueshed-community', label: 'Community' },
-    '/settings': { sectionId: 'torqueshed-templates', label: 'Settings' },
+    '/search': { sectionId: 'torqueshed-tools', label: 'Product Search' },
+    '/activity': { sectionId: 'torqueshed-tools', label: 'Activity' },
+    '/notifications': { sectionId: 'torqueshed-tools', label: 'Notifications' },
+    '/exports': { sectionId: 'torqueshed-tools', label: 'Exports' },
+    '/settings': { sectionId: 'torqueshed-tools', label: 'Settings' },
   },
   faultlinelab: {
     '/dashboard': { sectionId: 'faultlinelab-dashboard', label: 'Dashboard' },
@@ -280,6 +288,7 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'diagnostics') return { sectionId: 'torqueshed-diagnostics', label: 'Diagnostic Session' };
     if (resource === 'marketplace') return { sectionId: 'torqueshed-marketplace', label: 'Marketplace Listing' };
     if (resource === 'community') return { sectionId: 'torqueshed-community', label: 'Community Post' };
+    if (resource === 'live-bays') return { sectionId: 'torqueshed-live-bay', label: 'Live Bay Record' };
   }
   if (slug === 'faultlinelab' && pathSegments.length === 2) {
     const [resource] = pathSegments;

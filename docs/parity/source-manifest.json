@@ -16,29 +16,29 @@
   },
   "totals": {
     "modules": 13,
-    "capabilities": 6569,
+    "capabilities": 7304,
     "stateCounts": {
-      "ACTIVE_NATIVE": 1286,
-      "ACTIVE_SHARED_EQUIVALENT": 1081,
+      "ACTIVE_NATIVE": 1759,
+      "ACTIVE_SHARED_EQUIVALENT": 1475,
       "OWNER_WAIVED": 0,
-      "BLOCKED": 4202
+      "BLOCKED": 4070
     },
     "typeCounts": {
-      "api_endpoint": 923,
+      "api_endpoint": 964,
       "asset": 141,
       "background_process": 23,
-      "component_action": 2076,
-      "database_column": 2116,
-      "database_table": 238,
+      "component_action": 2083,
+      "database_column": 2723,
+      "database_table": 300,
       "export_flow": 49,
       "import_flow": 26,
-      "integration": 359,
+      "integration": 376,
       "mobile_product": 1,
       "mobile_pwa_surface": 40,
       "playable_case": 56,
       "public_flow": 116,
       "source_recovery": 1,
-      "source_test": 73,
+      "source_test": 74,
       "ui_page": 116,
       "ui_route": 214,
       "visual_contract": 1
@@ -490,53 +490,42 @@
       "provenance": {
         "selectedKind": "imported_snapshot",
         "remote": "https://github.com/shotgunsensei/TorqueShed-Codex.git",
-        "commit": "c33ade5cef525d62d371a63946b814c58a72a4a7",
-        "ref": "historical snapshot",
-        "remoteVerification": "Selected snapshot remains resolvable but remote main advanced.",
+        "commit": "508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75",
+        "ref": "main",
+        "remoteVerification": "Clean local main and origin/main matched the selected commit on 2026-08-10.",
         "recoveryCandidates": [
           {
-            "commit": "508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75",
-            "ref": "main",
-            "disposition": "BLOCKED_REVIEW",
-            "note": "Three commits and 34 files beyond the imported snapshot; adds product API/schema, web work, billing and tests."
-          },
-          {
-            "commit": "68da4548f6650cfb11eb19ee133643a110ccf084",
-            "path": "C:/Dev/TorqueShed-Codex",
+            "commit": "c33ade5cef525d62d371a63946b814c58a72a4a7",
+            "ref": "historical snapshot",
             "disposition": "retained_for_evidence",
-            "note": "Dirty local checkout with extensive uncommitted product, security and mobile work; not deterministic provenance."
-          },
-          {
-            "commit": "a81ffcfc81cc87008e2fb531a99d55cbcfcfa9cc",
-            "path": "C:/Dev/TorqueShed",
-            "disposition": "BLOCKED_REVIEW",
-            "note": "Separate clean web-product repository requiring an owner source-authority decision."
+            "note": "Older imported baseline retained in history; it predates the committed product schema, API, web restoration, billing adapter and E2E workflow selected by Phase 28."
           }
         ]
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "babeb43df2beb6200c4afc68383ca51fdfbabdfb0d6c250dbb54959ba289e366",
-        "fileCount": 149,
-        "totalBytes": 7946844
+        "treeSha256": "0a4d86273ea388be1bdfc8ba8ce4246afeb79730cb14d2523b39599abaefd209",
+        "fileCount": 166,
+        "totalBytes": 8315725
       },
-      "capabilityDigestSha256": "4caf9a85f4d26d9237d57b4a61a6499a5b7e37cf42eacf7e027f3c0b216683d8",
+      "capabilityDigestSha256": "f40bc406ced86fa8516f4e3d5b45d8b8f77933e4562a286bda2bf3234f111cb7",
       "stateCounts": {
-        "ACTIVE_NATIVE": 0,
-        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "ACTIVE_NATIVE": 473,
+        "ACTIVE_SHARED_EQUIVALENT": 387,
         "OWNER_WAIVED": 0,
-        "BLOCKED": 125
+        "BLOCKED": 0
       },
       "typeCounts": {
-        "api_endpoint": 8,
+        "api_endpoint": 49,
         "asset": 17,
-        "component_action": 52,
-        "database_column": 17,
-        "database_table": 2,
-        "integration": 21,
+        "component_action": 59,
+        "database_column": 624,
+        "database_table": 64,
+        "integration": 38,
         "mobile_product": 1,
         "mobile_pwa_surface": 3,
         "public_flow": 3,
+        "source_test": 1,
         "ui_page": 1
       }
     },
@@ -566,12 +555,12 @@
         "fileCount": 322,
         "totalBytes": 7883812
       },
-      "capabilityDigestSha256": "62550d030cf7c8a1ca35195bcb5011b7d21abbd1b25323c10fdcedb1c904bb8d",
+      "capabilityDigestSha256": "5b7412df7c02246d17b8a501bd0c42c4815295887407ffe2ecbcdfd735fdced3",
       "stateCounts": {
         "ACTIVE_NATIVE": 142,
-        "ACTIVE_SHARED_EQUIVALENT": 20,
+        "ACTIVE_SHARED_EQUIVALENT": 27,
         "OWNER_WAIVED": 0,
-        "BLOCKED": 954
+        "BLOCKED": 947
       },
       "typeCounts": {
         "api_endpoint": 194,

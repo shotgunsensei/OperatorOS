@@ -87,7 +87,7 @@ test('TorqueShed native workspace and durable deep routes are registered', () =>
 test('TorqueShed immutable source provenance remains separate from active runtime', () => {
   const snapshot = JSON.parse(read('apps/modules/torqueshed/source/SOURCE_SNAPSHOT.json'));
   assert.equal(snapshot.moduleSlug, 'torqueshed');
-  assert.equal(snapshot.sourceCommit, 'c33ade5cef525d62d371a63946b814c58a72a4a7');
+  assert.equal(snapshot.sourceCommit, '508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75');
   assert.equal(snapshot.highConfidenceSecretFindings, 0);
   const routeRegistration = read('apps/api/src/routes/module-shell-routes.ts');
   assert.match(routeRegistration, /registerTorqueShedRoutes/);

@@ -6,6 +6,8 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { operatorOsSsoReceiver } from "./routes/auth";
+import { stripeWebhookHandler } from "./routes/billing";
+import { installErrorHandler } from "./lib/http";
 
 const app: Express = express();
 
@@ -62,6 +64,11 @@ app.use((_, response, next) => {
   });
   next();
 });
+app.post(
+  "/api/billing/stripe/webhook",
+  express.raw({ type: "application/json", limit: "1mb" }),
+  stripeWebhookHandler,
+);
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cookieParser());
@@ -127,5 +134,7 @@ app.get("/{*path}", (request, response, next) => {
     if (error) next(error);
   });
 });
+
+app.use(installErrorHandler());
 
 export default app;

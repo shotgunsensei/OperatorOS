@@ -13,6 +13,19 @@ export default defineConfig({
     ? [['line'], ['html', { open: 'never' }], ['./e2e/fail-on-skipped-reporter.ts']]
     : [['line'], ['./e2e/fail-on-skipped-reporter.ts']],
   outputDir: 'test-results/playwright',
+  webServer: process.env.E2E_AUTO_START_WEB === '1' ? {
+    command: 'corepack pnpm exec next start -p 5000',
+    url: 'http://127.0.0.1:5000',
+    reuseExistingServer: false,
+    timeout: 120_000,
+    env: {
+      ...process.env,
+      NODE_ENV: 'production',
+      APP_ENV: 'test',
+      PORT: '5000',
+      INTERNAL_API_URL: process.env.INTERNAL_API_URL ?? 'http://127.0.0.1:5001',
+    },
+  } : undefined,
   use: {
     ...devices['Desktop Chrome'],
     ignoreHTTPSErrors: true,

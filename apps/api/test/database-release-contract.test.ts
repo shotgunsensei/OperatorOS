@@ -11,13 +11,13 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 37);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 38);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 37);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 37);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 38);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 38);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'operatoros_messaging_compliance_tables');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'torqueshed_web_api_tables');
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'tradeflowkit_saved_views')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'free_account_app_backfill'),
@@ -52,6 +52,11 @@ test('database release plan is explicit, ordered, additive, and reusable by star
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'operatoros_messaging_compliance_tables')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'pulsedesk_literal_tables'),
     'platform messaging consent evidence must be an additive release step after v36',
+  );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'torqueshed_web_api_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'operatoros_messaging_compliance_tables'),
+    'TorqueShed Phase 28 web/API tables must be an additive release step after v37',
   );
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'directory_tables')
@@ -185,6 +190,9 @@ test('database release plan is explicit, ordered, additive, and reusable by star
   assert.match(releaseSource, /to_regclass\('public\.torqueshed_community_comments'\)/);
   assert.match(releaseSource, /to_regclass\('public\.torqueshed_social_reports'\)/);
   assert.match(releaseSource, /to_regclass\('public\.torqueshed_social_moderation_actions'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.torqueshed_build_journal_entries'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.torqueshed_live_bay_messages'\)/);
+  assert.match(releaseSource, /to_regclass\('public\.torqueshed_share_links'\)/);
   assert.match(releaseSource, /to_regclass\('public\.faultlinelab_challenges'\)/);
   assert.match(releaseSource, /to_regclass\('public\.faultlinelab_challenge_versions'\)/);
   assert.match(releaseSource, /to_regclass\('public\.faultlinelab_sessions'\)/);

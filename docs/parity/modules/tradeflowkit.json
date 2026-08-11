@@ -27,9 +27,9 @@
   },
   "stateCounts": {
     "ACTIVE_NATIVE": 142,
-    "ACTIVE_SHARED_EQUIVALENT": 20,
+    "ACTIVE_SHARED_EQUIVALENT": 27,
     "OWNER_WAIVED": 0,
-    "BLOCKED": 954
+    "BLOCKED": 947
   },
   "typeCounts": {
     "api_endpoint": 194,
@@ -46,7 +46,7 @@
     "ui_route": 35,
     "visual_contract": 1
   },
-  "capabilityDigestSha256": "62550d030cf7c8a1ca35195bcb5011b7d21abbd1b25323c10fdcedb1c904bb8d",
+  "capabilityDigestSha256": "5b7412df7c02246d17b8a501bd0c42c4815295887407ffe2ecbcdfd735fdced3",
   "capabilities": [
     {
       "capabilityId": "tradeflowkit.api_endpoint.00d2c745a9fc0d49",
@@ -20863,9 +20863,12 @@
       "missingSourcePointers": [],
       "sourceLine": null,
       "title": "/privacy",
-      "state": "BLOCKED",
-      "blockerCode": "MISSING_CURRENT_TARGET_OR_AUTOMATED_EVIDENCE",
-      "currentTargets": [],
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/web/src/app/privacy/page.tsx",
+        "apps/web/src/app/terms/page.tsx"
+      ],
       "automatedEvidence": [
         "apps/web/e2e/operatoros-final-acceptance.spec.ts"
       ],
@@ -21009,9 +21012,12 @@
       "missingSourcePointers": [],
       "sourceLine": null,
       "title": "/terms",
-      "state": "BLOCKED",
-      "blockerCode": "MISSING_CURRENT_TARGET_OR_AUTOMATED_EVIDENCE",
-      "currentTargets": [],
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/web/src/app/privacy/page.tsx",
+        "apps/web/src/app/terms/page.tsx"
+      ],
       "automatedEvidence": [
         "apps/web/e2e/operatoros-final-acceptance.spec.ts"
       ],
@@ -22049,9 +22055,12 @@
       "missingSourcePointers": [],
       "sourceLine": null,
       "title": "/sms-consent",
-      "state": "BLOCKED",
-      "blockerCode": "MISSING_CURRENT_TARGET_OR_AUTOMATED_EVIDENCE",
-      "currentTargets": [],
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/web/src/app/privacy/page.tsx",
+        "apps/web/src/app/terms/page.tsx"
+      ],
       "automatedEvidence": [
         "apps/web/e2e/operatoros-final-acceptance.spec.ts"
       ],
@@ -22070,9 +22079,12 @@
       "missingSourcePointers": [],
       "sourceLine": null,
       "title": "/terms",
-      "state": "BLOCKED",
-      "blockerCode": "MISSING_CURRENT_TARGET_OR_AUTOMATED_EVIDENCE",
-      "currentTargets": [],
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/web/src/app/privacy/page.tsx",
+        "apps/web/src/app/terms/page.tsx"
+      ],
       "automatedEvidence": [
         "apps/web/e2e/operatoros-final-acceptance.spec.ts"
       ],
@@ -22356,9 +22368,12 @@
       "missingSourcePointers": [],
       "sourceLine": null,
       "title": "/privacy",
-      "state": "BLOCKED",
-      "blockerCode": "MISSING_CURRENT_TARGET_OR_AUTOMATED_EVIDENCE",
-      "currentTargets": [],
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/web/src/app/privacy/page.tsx",
+        "apps/web/src/app/terms/page.tsx"
+      ],
       "automatedEvidence": [
         "apps/web/e2e/operatoros-final-acceptance.spec.ts"
       ],
@@ -22602,9 +22617,12 @@
       "missingSourcePointers": [],
       "sourceLine": null,
       "title": "/guide",
-      "state": "BLOCKED",
-      "blockerCode": "MISSING_CURRENT_TARGET_OR_AUTOMATED_EVIDENCE",
-      "currentTargets": [],
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/web/src/app/privacy/page.tsx",
+        "apps/web/src/app/terms/page.tsx"
+      ],
       "automatedEvidence": [
         "apps/web/e2e/operatoros-final-acceptance.spec.ts"
       ],
@@ -22623,9 +22641,12 @@
       "missingSourcePointers": [],
       "sourceLine": null,
       "title": "/delete-account",
-      "state": "BLOCKED",
-      "blockerCode": "MISSING_CURRENT_TARGET_OR_AUTOMATED_EVIDENCE",
-      "currentTargets": [],
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/web/src/app/privacy/page.tsx",
+        "apps/web/src/app/terms/page.tsx"
+      ],
       "automatedEvidence": [
         "apps/web/e2e/operatoros-final-acceptance.spec.ts"
       ],

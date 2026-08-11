@@ -1,5 +1,37 @@
 # OperatorOS implementation status
 
+## Phase 28 TorqueShed complete web/API restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-11)
+
+Phase 28 replaces the reduced TorqueShed vehicle shell with the pinned complete
+web/API product. Source authority is the clean `C:\Dev\TorqueShed-Codex`
+`main`/`origin/main` commit
+`508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75`. The bounded import contains 165
+source files from 280 tracked files, excludes 115 infrastructure/auth/runtime
+files, and has zero high-confidence secret findings. The executable ledger now
+contains 860 facets: 473 `ACTIVE_NATIVE`, 387
+`ACTIVE_SHARED_EQUIVALENT`, zero `OWNER_WAIVED`, and zero `BLOCKED`.
+
+Additive release v38 preserves OperatorOS identity, tenant, entitlement,
+billing, shared AI, media, export, secret, and audit authority while adding the
+missing journal entries/parts, durable live-bay membership/messages/rate
+windows, revocable hashed share links, and user settings. The product exposes
+garage/history, community, journals, diagnostics/reports, deterministic Torque
+Assist fallback and usage accounting, reconnecting live collaboration,
+marketplace inquiry/moderation boundaries, search/activity/notifications,
+settings, exports/shares, source-compatible deep links, and a GET-only
+reconnect-safe PWA shell. Private garage/diagnostic data remains tenant/owner
+scoped; only allowlisted public projections can cross that boundary.
+
+Focused API/database/static tests, root typecheck/lint/build, clean and
+idempotent 38-step release, and compiled production-host SSO acceptance pass
+locally. The browser gate covers `torqueshed.operatoros.net` garage, journal,
+diagnostics, live bay, marketplace, and tools across desktop/tablet/mobile,
+including accessibility labels, overflow, manifest, and service worker.
+Production backup/apply, live AI/media provider acceptance, approved source
+data reconciliation/cutover, deployed exact-host verification, rollback, and
+deployment remain open; Phase 28 does not claim state 5 or production rollout.
+See `docs/phase-28/TORQUESHED-WEB-API-PARITY-REPORT.md`.
+
 ## Phase 27 PulseDesk complete healthcare operations restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-10)
 
 Phase 27 preserves the valid merged PulseDesk operations work and re-opens

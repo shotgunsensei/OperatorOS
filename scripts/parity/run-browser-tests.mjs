@@ -41,6 +41,7 @@ try {
       'e2e/sso-v1.spec.ts',
       'e2e/parity-route-control.spec.ts',
       'e2e/twilio-compliance.spec.ts',
+      'e2e/torqueshed-phase28.spec.ts',
     ];
     const focusedPattern = process.env.PARITY_BROWSER_GREP?.trim();
     if (focusedPattern) browserArgs.push('--grep', focusedPattern);

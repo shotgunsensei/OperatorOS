@@ -1,0 +1,2 @@
+DROP INDEX "torqueshed_users_operatoros_user_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "torqueshed_users_operatoros_tenant_unique" ON "torqueshed_users" USING btree ("operatoros_user_id","tenant_id");

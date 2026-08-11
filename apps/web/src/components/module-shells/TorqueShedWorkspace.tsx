@@ -35,8 +35,9 @@ import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-token
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
 import { ShellLiveBadge } from './ShellChrome';
 import { TorqueShedCommunityPanel, TorqueShedMarketplacePanel } from './TorqueShedSocialPanels';
+import { TorqueShedJournalPanel, TorqueShedLiveBayPanel, TorqueShedUtilityPanel } from './TorqueShedRestorationPanels';
 
-type Tab = 'dashboard' | 'garage' | 'service' | 'builds' | 'diagnostics' | 'templates' | 'marketplace' | 'community';
+type Tab = 'dashboard' | 'garage' | 'service' | 'builds' | 'journal' | 'diagnostics' | 'live' | 'templates' | 'marketplace' | 'community' | 'tools';
 
 function errorText(error: unknown): string {
   void error;
@@ -177,6 +178,20 @@ export default function TorqueShedWorkspace() {
     void load();
   }, [load]);
   useEffect(() => {
+    let manifest = document.querySelector<HTMLLinkElement>('link[data-torqueshed-manifest]');
+    if (!manifest) {
+      manifest = document.createElement('link');
+      manifest.rel = 'manifest';
+      manifest.href = '/torqueshed.webmanifest';
+      manifest.dataset.torqueshedManifest = 'true';
+      document.head.appendChild(manifest);
+    }
+    if ('serviceWorker' in navigator) {
+      void navigator.serviceWorker.register('/torqueshed-sw.js', { scope: '/modules/torqueshed/' });
+    }
+    return () => manifest?.remove();
+  }, []);
+  useEffect(() => {
     const path = window.location.pathname;
     const diagnostic = path.match(/\/diagnostics\/([a-z0-9-]+)\/?$/i);
     const vehicle = path.match(/\/vehicles\/([a-z0-9-]+)\/?$/i);
@@ -186,8 +201,11 @@ export default function TorqueShedWorkspace() {
     else if (/\/(?:garage|vehicles)(?:\/|$)/.test(path)) setTab('garage');
     else if (/\/(?:maintenance|repairs|reminders)(?:\/|$)/.test(path)) setTab('service');
     else if (/\/builds(?:\/|$)/.test(path)) setTab('builds');
+    else if (/\/(?:journal|build-journal)(?:\/|$)/.test(path)) setTab('journal');
+    else if (/\/(?:live-bay|live-bays)(?:\/|$)/.test(path)) setTab('live');
     else if (/\/marketplace(?:\/|$)/.test(path)) setTab('marketplace');
     else if (/\/community(?:\/|$)/.test(path)) setTab('community');
+    else if (/\/(?:search|activity|notifications|exports|settings)(?:\/|$)/.test(path)) setTab('tools');
     else if (/\/diagnostic-templates(?:\/|$)/.test(path)) setTab('templates');
   }, [openDiagnostic, openVehicle]);
 
@@ -297,9 +315,39 @@ export default function TorqueShedWorkspace() {
   return (
     <main
       data-testid="torqueshed-module-shell"
-      style={{ maxWidth: 1240, margin: '0 auto', padding: space.xxl }}
+      style={{ maxWidth: 1320, margin: '0 auto', padding: space.xxl, colorScheme: 'dark', position: 'relative' }}
     >
-      <style>{`@media (max-width: 760px) { [data-testid="torqueshed-builds"], [data-testid="torqueshed-diagnostics"] { grid-template-columns: minmax(0, 1fr) !important; } [data-testid="torqueshed-module-shell"] { padding: 16px !important; } } @media (max-width: 560px) { [data-testid="torqueshed-garage"] form > div, [data-testid="torqueshed-service"] form > div { grid-template-columns: minmax(0, 1fr) !important; } }`}</style>
+      <style>{`
+        [data-testid="torqueshed-module-shell"]:before { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; background:radial-gradient(circle at 80% 5%,rgba(245,158,11,.10),transparent 28rem),repeating-linear-gradient(110deg,transparent 0 74px,rgba(255,255,255,.012) 75px 76px); }
+        [data-testid="torqueshed-module-shell"] h2,[data-testid="torqueshed-module-shell"] h3,[data-testid="torqueshed-module-shell"] h4 { letter-spacing:-.02em; color:#f8fafc; }
+        .ts28-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+        .ts28-live { display:grid; grid-template-columns:minmax(280px,.65fr) minmax(0,1.35fr); gap:18px; min-height:680px; }
+        .ts28-hero { display:flex; align-items:center; justify-content:space-between; gap:24px; overflow:hidden; position:relative; border-color:#8a5b16 !important; background:linear-gradient(118deg,#2a1d0b,#151719 55%,#111315) !important; }
+        .ts28-hero:after { content:""; width:260px; height:260px; position:absolute; right:-120px; border:34px solid rgba(245,158,11,.08); border-radius:50%; }
+        .ts28-hero h2 { margin:4px 0; font-size:clamp(24px,4vw,42px); text-transform:uppercase; font-style:italic; }
+        .ts28-hero p,.ts28-muted { color:#a8a29e; line-height:1.55; margin:4px 0; }
+        .ts28-kicker { color:#fbbf24; text-transform:uppercase; letter-spacing:.16em; font-size:11px; font-weight:900; }
+        .ts28-form { display:grid; gap:12px; margin-top:16px; }
+        .ts28-form h3,.ts28-live-title,.ts28-chat>header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0; }
+        .ts28-form h3 { justify-content:flex-start; }
+        .ts28-two,.ts28-three { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+        .ts28-three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+        .ts28-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 0; }
+        .ts28-stats b { background:#0b0d0f; border:1px solid #332b21; border-radius:10px; padding:10px; color:#fbbf24; }
+        .ts28-stats small { display:block; color:#78716c; font-weight:600; margin-top:3px; }
+        .ts28-list,.ts28-bays { display:grid; gap:8px; margin-top:14px; }
+        .ts28-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px; background:#0b0d0f; border:1px solid #29241d; border-radius:10px; }
+        .ts28-row>div { display:grid; gap:4px; min-width:0; } .ts28-row small { color:#8e8880; overflow:hidden; text-overflow:ellipsis; } .ts28-row span { color:#fbbf24; font-size:12px; text-transform:uppercase; }
+        .ts28-timeline { display:grid; gap:0; }.ts28-event { display:grid; grid-template-columns:26px 1fr; gap:10px; }.ts28-event i { width:10px;height:10px;border-radius:50%;background:#f59e0b;margin:7px auto;box-shadow:0 0 0 5px rgba(245,158,11,.12);position:relative;}.ts28-event i:after{content:"";width:1px;background:#554020;position:absolute;top:15px;bottom:-120px;left:5px}.ts28-event h4,.ts28-event p{margin:3px 0}.ts28-event span{color:#fbbf24;text-transform:uppercase;font-size:10px;font-weight:900;letter-spacing:.1em}.ts28-event small{color:#78716c}.ts28-event>div{padding-bottom:20px}
+        .ts28-alert { grid-column:1/-1; padding:12px; border:1px solid #7f1d1d; color:#fecaca; background:#450a0a55; border-radius:10px; }
+        .ts28-bays button { text-align:left;display:grid;gap:3px;padding:11px;border-radius:10px;border:1px solid #30291f;background:#0c0e10;color:#e7e5e4;cursor:pointer }.ts28-bays button.active{border-color:#f59e0b;background:#f59e0b10}.ts28-bays span{color:#78716c;font-size:11px}
+        .ts28-chat { display:grid;grid-template-rows:auto 1fr auto auto;gap:12px;min-height:620px }.ts28-chat header small{color:#78716c}.ts28-messages{overflow:auto;display:flex;flex-direction:column;gap:10px;padding:12px;background:#08090a;border-radius:12px;border:1px solid #29241d;max-height:500px}.ts28-message{max-width:82%;padding:10px 12px;border:1px solid #3b3226;border-radius:4px 14px 14px 14px;background:#17191c}.ts28-message>div{display:flex;justify-content:space-between;gap:20px}.ts28-message b{color:#fbbf24}.ts28-message time{font-size:10px;color:#78716c}.ts28-message p{margin:5px 0;white-space:pre-wrap}.ts28-send{display:grid;grid-template-columns:1fr auto;gap:8px}.ts28-safe{display:flex;gap:7px;align-items:center;color:#78716c;font-size:11px;margin:0}.ts28-pulse{animation:ts28-pulse 1.5s infinite}@keyframes ts28-pulse{50%{filter:drop-shadow(0 0 7px #22c55e)}}
+        .ts28-report{display:grid;gap:5px;margin-top:12px;padding:12px;background:#0b0d0f;border-radius:10px;border:1px solid #30291f}.ts28-report p{margin:0;color:#a8a29e}.ts28-report small{color:#fbbf24}.ts28-report output{overflow-wrap:anywhere;color:#86efac;margin-top:8px}.ts28-check{display:flex;align-items:center;gap:8px;color:#d6d3d1}.ts28-actions{display:flex;gap:8px;flex-wrap:wrap}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+        @media (prefers-reduced-motion:reduce){.ts28-pulse{animation:none}}
+        @media (max-width: 900px) { .ts28-grid,.ts28-live { grid-template-columns:minmax(0,1fr); }.ts28-live{min-height:0}.ts28-chat{min-height:560px} }
+        @media (max-width: 760px) { [data-testid="torqueshed-builds"], [data-testid="torqueshed-diagnostics"] { grid-template-columns: minmax(0, 1fr) !important; } [data-testid="torqueshed-module-shell"] { padding: 16px !important; } .ts28-three{grid-template-columns:minmax(0,1fr)} }
+        @media (max-width: 560px) { [data-testid="torqueshed-garage"] form > div, [data-testid="torqueshed-service"] form > div,.ts28-two { grid-template-columns: minmax(0, 1fr) !important; }.ts28-send{grid-template-columns:1fr}.ts28-send button{width:100%}.ts28-message{max-width:96%}.ts28-stats{grid-template-columns:1fr}.ts28-hero svg{display:none} }
+      `}</style>
       <header
         style={{
           display: 'flex',
@@ -402,6 +450,9 @@ export default function TorqueShedWorkspace() {
                 ['templates', 'Templates and vendors', ClipboardCheck],
                 ['marketplace', 'Parts marketplace', Store],
                 ['community', 'Community', Users],
+                ['journal', 'Build journal', ClipboardCheck],
+                ['live', 'Live bay', Activity],
+                ['tools', 'Search, reports and settings', Search],
               ] as const
             ).map(([id, name, Icon]) => (
               <button key={id} onClick={() => setTab(id)} aria-pressed={tab === id} style={{ ...button, width: '100%', justifyContent: 'flex-start', background: tab === id ? '#f59e0b' : 'transparent', color: tab === id ? '#18130a' : semantic.textMuted }}>
@@ -477,6 +528,9 @@ export default function TorqueShedWorkspace() {
 
       {tab === 'marketplace' && <TorqueShedMarketplacePanel />}
       {tab === 'community' && <TorqueShedCommunityPanel />}
+      {tab === 'journal' && <TorqueShedJournalPanel builds={builds} />}
+      {tab === 'live' && <TorqueShedLiveBayPanel vehicles={vehicles} builds={builds} diagnostics={diagnostics} />}
+      {tab === 'tools' && <TorqueShedUtilityPanel diagnostics={diagnostics} />}
 
       {tab === 'dashboard' && (
         <section data-testid="torqueshed-dashboard" style={{ display: 'grid', gap: space.lg }}>

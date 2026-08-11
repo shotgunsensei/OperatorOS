@@ -86,6 +86,7 @@ import { registerTechDeckLiteralRoutes } from './techdeck-literal-routes.js';
 import { registerTorqueShedRoutes } from './torqueshed-routes.js';
 import { registerTorqueAssistRoutes } from './torque-assist-routes.js';
 import { registerTorqueShedSocialRoutes } from './torqueshed-social-routes.js';
+import { registerTorqueShedWebApiRoutes } from './torqueshed-web-api-routes.js';
 import { registerFaultlineLabRoutes } from './faultlinelab-routes.js';
 import { registerBrandForgeOsRoutes } from './brandforgeos-routes.js';
 import { registerStudyForgeRoutes } from './studyforge-routes.js';
@@ -585,6 +586,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerTorqueShedRoutes(app);
   await registerTorqueAssistRoutes(app);
   await registerTorqueShedSocialRoutes(app);
+  await registerTorqueShedWebApiRoutes(app);
   await registerFaultlineLabRoutes(app);
   await registerBrandForgeOsRoutes(app);
   await registerStudyForgeRoutes(app);
