@@ -20,10 +20,14 @@ performance data.
 
 OperatorOS remains the sole identity, tenant, role, plan, billing, entitlement,
 provider-secret, platform-admin, background-job, notification, usage and audit
-authority. Cross-tenant brand, campaign, landing, workflow, report, and assignee
-references fail closed. Local API/web typechecks, 5/5 source/domain/static
-contracts, and the full 6/6 PostgreSQL workflow pass against a disposable
-loopback PostgreSQL 16 database, including deterministic connector sync,
+authority. Integration connect/sync operations enforce each catalog entry's
+required OperatorOS feature. Cross-tenant brand, campaign, landing, workflow,
+report, and assignee references fail closed; brand-scoped reports exclude other
+brands, report CSVs serialize the persisted snapshot, and export replay reuses
+the original business row as well as the shared job. Local API/web typechecks,
+7/7 focused domain/static contracts, and a combined 15/15 review regression
+suite pass against a disposable loopback PostgreSQL 16 database. The complete
+6/6 PostgreSQL workflow remains green, including deterministic connector sync,
 white-label report/export integrity, concurrent credit exhaustion, replay,
 viewer denial, restart persistence, and tenant isolation.
 

@@ -50,3 +50,14 @@ test('Phase 31 exposes source-compatible product routes and persisted product ac
   ]) assert.match(ui, new RegExp(`data-testid=["']${testId}["']`));
   assert.doesNotMatch(`${routes}\n${ui}`, /Math\.random|fake metric|random report/iu);
 });
+
+test('Phase 31 enforces integration features, export-row idempotency, and brand-scoped reports', () => {
+  const routes = readFileSync(resolve(root, 'apps/api/src/routes/brandforgeos-phase31-routes.ts'), 'utf8');
+  const ddl = readFileSync(resolve(root, 'apps/api/src/lib/brandforgeos-phase31-db-init.ts'), 'utf8');
+  assert.match(routes, /BRANDFORGE_INTEGRATION_ENTITLEMENT_REQUIRED/);
+  assert.match(routes, /features\[requiredFeature\] === true/);
+  assert.match(routes, /ON CONFLICT \(tenant_id,idempotency_key\)/);
+  assert.match(routes, /serializeBrandForgeReportCsv/);
+  assert.match(routes, /campaign\.brand_id=\$\{report\.brand_id\}/);
+  assert.match(ddl, /uq_brandforge_exports_tenant_idempotency/);
+});

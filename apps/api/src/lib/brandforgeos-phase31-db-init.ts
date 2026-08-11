@@ -311,6 +311,7 @@ export async function ensureBrandForgeOsPhase31Tables(): Promise<void> {
       requested_by_user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
       report_id VARCHAR(36),
       shared_job_id VARCHAR(36),
+      idempotency_key VARCHAR(160),
       export_type VARCHAR(60) NOT NULL,
       format VARCHAR(16) NOT NULL,
       status VARCHAR(24) NOT NULL DEFAULT 'queued',
@@ -327,6 +328,11 @@ export async function ensureBrandForgeOsPhase31Tables(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_brandforge_exports_tenant_created
       ON brandforge_export_jobs(tenant_id,created_at DESC);
+    ALTER TABLE brandforge_export_jobs
+      ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(160);
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_brandforge_exports_tenant_idempotency
+      ON brandforge_export_jobs(tenant_id,idempotency_key)
+      WHERE idempotency_key IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS brandforge_credit_counters (
       tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),

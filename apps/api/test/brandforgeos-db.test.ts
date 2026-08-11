@@ -92,6 +92,7 @@ before(async () => {
       status: 'enabled',
       source: 'admin',
       allowAllMembers: true,
+      metadata: { features: { 'integrations.starter': true } },
     },
     {
       tenantId: ownerB.currentTenantId,
@@ -412,6 +413,16 @@ test('Phase 31 restores campaign production, marketplace, connector, report, and
   assert.ok(templates.json().templates.length >= 6);
   assert.ok(templates.json().templates.some((item: any) => item.is_premium && !item.usable));
 
+  const deniedIntegration = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/brandforgeos/integrations/salesforce/connect',
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: { mode: 'test', publicConfig: {}, callbackReady: false },
+  });
+  assert.equal(deniedIntegration.statusCode, 403, deniedIntegration.body);
+  assert.equal(deniedIntegration.json().code, 'BRANDFORGE_INTEGRATION_ENTITLEMENT_REQUIRED');
+  assert.equal(deniedIntegration.json().requiredFeature, 'integrations.agency');
+
   const integration = await app.inject({
     method: 'POST',
     url: '/v1/modules/brandforgeos/integrations/meta_ads/connect',
@@ -427,6 +438,57 @@ test('Phase 31 restores campaign production, marketplace, connector, report, and
     payload: { idempotencyKey: 'phase31-meta-sync-0001' },
   });
   assert.equal(sync.statusCode, 202, sync.body);
+
+  const otherBrand = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/brandforgeos/brands',
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: { name: 'Unrelated brand' },
+  });
+  assert.equal(otherBrand.statusCode, 201, otherBrand.body);
+  const otherCampaign = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/brandforgeos/campaigns',
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: { name: 'Unrelated campaign', brandId: otherBrand.json().id, status: 'active' },
+  });
+  assert.equal(otherCampaign.statusCode, 201, otherCampaign.body);
+  const otherMetric = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/brandforgeos/campaigns/${otherCampaign.json().id}/metrics`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: {
+      metricDate: '2026-08-16T00:00:00.000Z', channel: 'Search', impressions: 50,
+      clicks: 10, conversions: 2, spendCents: 500, revenueCents: 1_500,
+    },
+  });
+  assert.equal(otherMetric.statusCode, 201, otherMetric.body);
+  const otherOffer = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/brandforgeos/offers',
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: { brandId: otherBrand.json().id, name: 'Unrelated brand offer' },
+  });
+  assert.equal(otherOffer.statusCode, 201, otherOffer.body);
+
+  const brandReport = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/brandforgeos/reports',
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: { name: 'Selected brand health', reportType: 'brand_health', brandId },
+  });
+  assert.equal(brandReport.statusCode, 201, brandReport.body);
+  const generatedBrandReport = await app.inject({
+    method: 'POST',
+    url: `/v1/modules/brandforgeos/reports/${brandReport.json().id}/generate`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+  });
+  assert.equal(generatedBrandReport.statusCode, 200, generatedBrandReport.body);
+  assert.equal(Number(generatedBrandReport.json().snapshot.metrics.impressions), 100);
+  assert.equal(Number(generatedBrandReport.json().snapshot.counts.campaigns), 1);
+  assert.equal(Number(generatedBrandReport.json().snapshot.counts.copy_assets), 1);
+  assert.ok(generatedBrandReport.json().snapshot.recentActivity.some((item: any) => /Operator launch offer/.test(item.summary)));
+  assert.ok(generatedBrandReport.json().snapshot.recentActivity.every((item: any) => !/Unrelated brand offer/.test(item.summary)));
 
   const report = await app.inject({
     method: 'POST',
@@ -465,6 +527,24 @@ test('Phase 31 restores campaign production, marketplace, connector, report, and
     },
   });
   assert.equal(queued.statusCode, 202, queued.body);
+  const replayed = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/brandforgeos/exports',
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: {
+      reportId: report.json().id,
+      exportType: 'report',
+      format: 'html',
+      idempotencyKey: 'phase31-report-export-0001',
+    },
+  });
+  assert.equal(replayed.statusCode, 202, replayed.body);
+  assert.equal(replayed.json().duplicate, true);
+  assert.equal(replayed.json().export.id, queued.json().export.id);
+  const exportRows = await db.execute(
+    sql`SELECT count(*)::int count FROM brandforge_export_jobs WHERE tenant_id=${ownerA.currentTenantId} AND idempotency_key='phase31-report-export-0001'`,
+  );
+  assert.equal(Number(exportRows.rows[0]?.count), 1);
   const { processSharedJob } = await import('../src/lib/shared-background-jobs.js');
   for (const jobId of [sync.json().job.id, queued.json().job.id]) {
     await db.execute(sql`UPDATE shared_jobs SET status='processing',lease_owner='phase31-test',lease_expires_at=NOW()+INTERVAL '1 minute' WHERE id=${jobId}`);
@@ -485,6 +565,31 @@ test('Phase 31 restores campaign production, marketplace, connector, report, and
   assert.equal(download.statusCode, 200, download.body);
   assert.match(download.headers['content-type'] ?? '', /text\/html/);
   assert.match(download.body, /White-label launch report/);
+
+  const csvQueued = await app.inject({
+    method: 'POST',
+    url: '/v1/modules/brandforgeos/exports',
+    headers: headers(ownerA, ownerA.currentTenantId),
+    payload: {
+      reportId: report.json().id,
+      exportType: 'report',
+      format: 'csv',
+      idempotencyKey: 'phase31-report-export-csv-0001',
+    },
+  });
+  assert.equal(csvQueued.statusCode, 202, csvQueued.body);
+  await db.execute(sql`UPDATE shared_jobs SET status='processing',lease_owner='phase31-test',lease_expires_at=NOW()+INTERVAL '1 minute' WHERE id=${csvQueued.json().job.id}`);
+  const csvJob = await db.execute(sql`SELECT * FROM shared_jobs WHERE id=${csvQueued.json().job.id}`);
+  await processSharedJob(csvJob.rows[0] as Record<string, unknown>);
+  const csvDownload = await app.inject({
+    method: 'GET',
+    url: `/v1/modules/brandforgeos/exports/${csvQueued.json().export.id}/download`,
+    headers: headers(ownerA, ownerA.currentTenantId),
+  });
+  assert.equal(csvDownload.statusCode, 200, csvDownload.body);
+  assert.match(csvDownload.headers['content-type'] ?? '', /text\/csv/);
+  assert.match(csvDownload.body, /"report","name","White-label launch report"/);
+  assert.match(csvDownload.body, /"metrics","impressions","100"/);
 
   const foreignReport = await app.inject({
     method: 'GET',

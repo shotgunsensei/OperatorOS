@@ -20,6 +20,7 @@ import {
 import { isOperatorOSTestEnvironment } from '../lib/shared-service-safety.js';
 import { runDeterministicConnectorForTests } from '../lib/shared-provider-adapters.js';
 import { writeAudit } from '../lib/audit.js';
+import { resolveEntitlements } from '../lib/entitlement-resolver.js';
 import {
   BRANDFORGE_COPY_MODES,
   BRANDFORGE_INTEGRATION_CATALOG,
@@ -35,6 +36,7 @@ import {
   parsePhase31,
   reportInput,
   stableJsonHash,
+  serializeBrandForgeReportCsv,
   taskInput,
   templateInput,
   workflowInput,
@@ -147,6 +149,26 @@ function integrationCatalog(provider: string) {
   return BRANDFORGE_INTEGRATION_CATALOG.find((item) => item.provider === provider);
 }
 
+async function brandForgeFeatures(request: FastifyRequest) {
+  const snapshot = await resolveEntitlements(actor(request), tenant(request));
+  return snapshot?.modules.find((item) => item.slug === MODULE_SLUG && item.enabled)?.features ?? {};
+}
+
+async function requireIntegrationEntitlement(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  requiredFeature: string,
+) {
+  const features = await brandForgeFeatures(request);
+  if (features[requiredFeature] === true) return true;
+  reply.code(403).send({
+    error: 'OperatorOS integration entitlement is required',
+    code: 'BRANDFORGE_INTEGRATION_ENTITLEMENT_REQUIRED',
+    requiredFeature,
+  });
+  return false;
+}
+
 async function entitlementProjection(tenantId: string) {
   const result = await db.execute(sql`
     SELECT tm.status,tm.source,COALESCE(tm.metadata,'{}'::jsonb) AS module_metadata,
@@ -189,30 +211,60 @@ async function entitlementProjection(tenantId: string) {
 }
 
 async function reportSnapshot(tenantId: string, report: Row) {
-  const campaignFilter = report.campaign_id ? sql`AND campaign_id=${report.campaign_id}` : sql``;
-  const dateFrom = report.date_from ? sql`AND metric_date>=${report.date_from}` : sql``;
-  const dateTo = report.date_to ? sql`AND metric_date<=${report.date_to}` : sql``;
+  const metricScope = report.campaign_id
+    ? sql`AND metric.campaign_id=${report.campaign_id}`
+    : report.brand_id
+      ? sql`AND EXISTS (SELECT 1 FROM brandforge_campaigns campaign WHERE campaign.tenant_id=metric.tenant_id AND campaign.id=metric.campaign_id AND campaign.brand_id=${report.brand_id} AND campaign.deleted_at IS NULL)`
+      : sql``;
+  const campaignScope = report.campaign_id
+    ? sql`AND campaign.id=${report.campaign_id}`
+    : report.brand_id
+      ? sql`AND campaign.brand_id=${report.brand_id}`
+      : sql``;
+  const assetScope = report.campaign_id
+    ? sql`AND asset.campaign_id=${report.campaign_id}`
+    : report.brand_id
+      ? sql`AND (asset.brand_id=${report.brand_id} OR EXISTS (SELECT 1 FROM brandforge_campaigns campaign WHERE campaign.tenant_id=asset.tenant_id AND campaign.id=asset.campaign_id AND campaign.brand_id=${report.brand_id} AND campaign.deleted_at IS NULL))`
+      : sql``;
+  const calendarScope = report.campaign_id
+    ? sql`AND item.campaign_id=${report.campaign_id}`
+    : report.brand_id
+      ? sql`AND (item.brand_id=${report.brand_id} OR EXISTS (SELECT 1 FROM brandforge_campaigns campaign WHERE campaign.tenant_id=item.tenant_id AND campaign.id=item.campaign_id AND campaign.brand_id=${report.brand_id} AND campaign.deleted_at IS NULL))`
+      : sql``;
+  const campaignChildScope = report.campaign_id
+    ? sql`AND child.campaign_id=${report.campaign_id}`
+    : report.brand_id
+      ? sql`AND EXISTS (SELECT 1 FROM brandforge_campaigns campaign WHERE campaign.tenant_id=child.tenant_id AND campaign.id=child.campaign_id AND campaign.brand_id=${report.brand_id} AND campaign.deleted_at IS NULL)`
+      : sql``;
+  const activityScope = report.campaign_id
+    ? sql`AND (event.object_id=${report.campaign_id} OR event.object_id IN (SELECT generation.id FROM brandforge_generations generation WHERE generation.tenant_id=${tenantId} AND generation.campaign_id=${report.campaign_id}) OR event.object_id IN (SELECT scoped_report.id FROM brandforge_reports scoped_report WHERE scoped_report.tenant_id=${tenantId} AND scoped_report.campaign_id=${report.campaign_id}))`
+    : report.brand_id
+      ? sql`AND (event.object_id=${report.brand_id} OR event.object_id IN (SELECT campaign.id FROM brandforge_campaigns campaign WHERE campaign.tenant_id=${tenantId} AND campaign.brand_id=${report.brand_id} AND campaign.deleted_at IS NULL) OR event.object_id IN (SELECT generation.id FROM brandforge_generations generation WHERE generation.tenant_id=${tenantId} AND (generation.brand_id=${report.brand_id} OR generation.campaign_id IN (SELECT campaign.id FROM brandforge_campaigns campaign WHERE campaign.tenant_id=${tenantId} AND campaign.brand_id=${report.brand_id} AND campaign.deleted_at IS NULL))) OR event.object_id IN (SELECT offer.id FROM brandforge_offers offer WHERE offer.tenant_id=${tenantId} AND offer.brand_id=${report.brand_id} AND offer.deleted_at IS NULL) OR event.object_id IN (SELECT scoped_report.id FROM brandforge_reports scoped_report WHERE scoped_report.tenant_id=${tenantId} AND scoped_report.brand_id=${report.brand_id}))`
+      : sql``;
+  const dateFrom = report.date_from ? sql`AND metric.metric_date>=${report.date_from}` : sql``;
+  const dateTo = report.date_to ? sql`AND metric.metric_date<=${report.date_to}` : sql``;
   const [metrics, counts, channels, tasks, activityRows] = await Promise.all([
     db.execute(
-      sql`SELECT COALESCE(sum(impressions),0)::bigint AS impressions,COALESCE(sum(clicks),0)::bigint AS clicks,COALESCE(sum(conversions),0)::bigint AS conversions,COALESCE(sum(spend_cents),0)::bigint AS spend_cents,COALESCE(sum(revenue_cents),0)::bigint AS revenue_cents FROM brandforge_campaign_metrics WHERE tenant_id=${tenantId} ${campaignFilter} ${dateFrom} ${dateTo}`,
+      sql`SELECT COALESCE(sum(metric.impressions),0)::bigint AS impressions,COALESCE(sum(metric.clicks),0)::bigint AS clicks,COALESCE(sum(metric.conversions),0)::bigint AS conversions,COALESCE(sum(metric.spend_cents),0)::bigint AS spend_cents,COALESCE(sum(metric.revenue_cents),0)::bigint AS revenue_cents FROM brandforge_campaign_metrics metric WHERE metric.tenant_id=${tenantId} ${metricScope} ${dateFrom} ${dateTo}`,
     ),
     db.execute(
-      sql`SELECT (SELECT count(*)::int FROM brandforge_campaigns WHERE tenant_id=${tenantId} AND deleted_at IS NULL) campaigns,(SELECT count(*)::int FROM brandforge_copy_assets WHERE tenant_id=${tenantId} AND deleted_at IS NULL) copy_assets,(SELECT count(*)::int FROM brandforge_calendar_items WHERE tenant_id=${tenantId} AND deleted_at IS NULL) calendar_items,(SELECT count(*)::int FROM brandforge_lead_submissions WHERE tenant_id=${tenantId}) leads`,
+      sql`SELECT (SELECT count(*)::int FROM brandforge_campaigns campaign WHERE campaign.tenant_id=${tenantId} AND campaign.deleted_at IS NULL ${campaignScope}) campaigns,(SELECT count(*)::int FROM brandforge_copy_assets asset WHERE asset.tenant_id=${tenantId} AND asset.deleted_at IS NULL ${assetScope}) copy_assets,(SELECT count(*)::int FROM brandforge_calendar_items item WHERE item.tenant_id=${tenantId} AND item.deleted_at IS NULL ${calendarScope}) calendar_items,(SELECT count(*)::int FROM brandforge_lead_submissions child WHERE child.tenant_id=${tenantId} ${campaignChildScope}) leads`,
     ),
     db.execute(
-      sql`SELECT channel,COALESCE(sum(impressions),0)::bigint impressions,COALESCE(sum(clicks),0)::bigint clicks,COALESCE(sum(conversions),0)::bigint conversions FROM brandforge_campaign_metrics WHERE tenant_id=${tenantId} ${campaignFilter} ${dateFrom} ${dateTo} GROUP BY channel ORDER BY impressions DESC NULLS LAST`,
+      sql`SELECT metric.channel,COALESCE(sum(metric.impressions),0)::bigint impressions,COALESCE(sum(metric.clicks),0)::bigint clicks,COALESCE(sum(metric.conversions),0)::bigint conversions FROM brandforge_campaign_metrics metric WHERE metric.tenant_id=${tenantId} ${metricScope} ${dateFrom} ${dateTo} GROUP BY metric.channel ORDER BY impressions DESC NULLS LAST`,
     ),
     db.execute(
-      sql`SELECT status,count(*)::int count FROM brandforge_campaign_tasks WHERE tenant_id=${tenantId} ${report.campaign_id ? sql`AND campaign_id=${report.campaign_id}` : sql``} GROUP BY status ORDER BY status`,
+      sql`SELECT child.status,count(*)::int count FROM brandforge_campaign_tasks child WHERE child.tenant_id=${tenantId} ${campaignChildScope} GROUP BY child.status ORDER BY child.status`,
     ),
     db.execute(
-      sql`SELECT event_type,summary,created_at FROM shared_activity_events WHERE tenant_id=${tenantId} AND module_id=${await moduleId()} ORDER BY created_at DESC LIMIT 50`,
+      sql`SELECT event.event_type,event.summary,event.created_at FROM shared_activity_events event WHERE event.tenant_id=${tenantId} AND event.module_id=${await moduleId()} ${activityScope} ORDER BY event.created_at DESC LIMIT 50`,
     ),
   ]);
   return {
     schema: 'operatoros.brandforge.report.v1',
     reportType: report.report_type,
     period: { from: report.date_from ?? null, to: report.date_to ?? null },
+    scope: { brandId: report.brand_id ?? null, campaignId: report.campaign_id ?? null },
     metrics: metrics.rows[0] ?? {},
     counts: counts.rows[0] ?? {},
     channels: channels.rows,
@@ -274,7 +326,9 @@ registerSharedJobHandler(EXPORT_HANDLER, async (context) => {
       ? {
           contentType: 'text/csv',
           fileName: `brandforge-${exportId}.csv`,
-          content: `entity,count\r\nbrands,${Array.isArray(payload.brands) ? payload.brands.length : 0}\r\ncampaigns,${Array.isArray(payload.campaigns) ? payload.campaigns.length : 0}\r\ncopy_assets,${Array.isArray(payload.copyAssets) ? payload.copyAssets.length : 0}\r\n`,
+          content: payload.report
+            ? serializeBrandForgeReportCsv(payload.report as Row)
+            : `entity,count\r\nbrands,${Array.isArray(payload.brands) ? payload.brands.length : 0}\r\ncampaigns,${Array.isArray(payload.campaigns) ? payload.campaigns.length : 0}\r\ncopy_assets,${Array.isArray(payload.copyAssets) ? payload.copyAssets.length : 0}\r\n`,
         }
       : job.format === 'html'
         ? {
@@ -627,16 +681,18 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
   });
 
   app.get(`${base}/integrations`, { preHandler: readGuards }, async (request) => {
-    const [links, configs] = await Promise.all([
+    const [links, configs, features] = await Promise.all([
       db.execute(
         sql`SELECT * FROM brandforge_integrations WHERE tenant_id=${tenant(request)} ORDER BY provider_key`,
       ),
       listProviderConfigurations(tenant(request)),
+      brandForgeFeatures(request),
     ]);
     const byProvider = new Map((links.rows as Row[]).map((row) => [row.provider_key, row]));
     return {
       integrations: BRANDFORGE_INTEGRATION_CATALOG.map((item) => ({
         ...item,
+        entitled: features[item.requiredFeature] === true,
         connection: byProvider.get(item.provider) ?? null,
       })),
       providerConfigurations: configs.filter((row: any) =>
@@ -660,6 +716,7 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
       } catch (error) {
         return failure(reply, error);
       }
+      if (!(await requireIntegrationEntitlement(request, reply, catalog.requiredFeature))) return;
       const config = await saveProviderConfiguration({
         tenantId: tenant(request),
         moduleId: await moduleId(),
@@ -706,6 +763,13 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
     `${base}/integrations/:provider/sync`,
     { preHandler: adminGuards },
     async (request, reply) => {
+      const catalog = integrationCatalog(param(request, 'provider'));
+      if (!catalog)
+        return reply.code(404).send({
+          error: 'Integration provider is unsupported',
+          code: 'BRANDFORGE_PROVIDER_UNSUPPORTED',
+        });
+      if (!(await requireIntegrationEntitlement(request, reply, catalog.requiredFeature))) return;
       const linkResult = await db.execute(
         sql`SELECT * FROM brandforge_integrations WHERE tenant_id=${tenant(request)} AND provider_key=${param(request, 'provider')} AND status IN ('ready','degraded') LIMIT 1`,
       );
@@ -822,6 +886,16 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
       return reply
         .code(404)
         .send({ error: 'Campaign not found', code: 'BRANDFORGE_CAMPAIGN_NOT_FOUND' });
+    if (input.brandId && input.campaignId) {
+      const scoped = await db.execute(
+        sql`SELECT id FROM brandforge_campaigns WHERE tenant_id=${tenant(request)} AND id=${input.campaignId} AND brand_id=${input.brandId} AND deleted_at IS NULL LIMIT 1`,
+      );
+      if (!scoped.rows[0])
+        return reply.code(422).send({
+          error: 'Campaign does not belong to the selected brand',
+          code: 'BRANDFORGE_REPORT_SCOPE_INVALID',
+        });
+    }
     const result = await db.execute(
       sql`INSERT INTO brandforge_reports (tenant_id,created_by_user_id,brand_id,campaign_id,name,report_type,date_from,date_to,sections,branding,is_white_label) VALUES (${tenant(request)},${actor(request)},${input.brandId ?? null},${input.campaignId ?? null},${input.name},${input.reportType},${input.dateFrom ?? null},${input.dateTo ?? null},${JSON.stringify(input.sections)}::jsonb,${input.branding},${input.isWhiteLabel}) RETURNING *`,
     );
@@ -880,9 +954,27 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
         .code(404)
         .send({ error: 'Report not found', code: 'BRANDFORGE_REPORT_NOT_FOUND' });
     const created = await db.execute(
-      sql`INSERT INTO brandforge_export_jobs (tenant_id,requested_by_user_id,report_id,export_type,format) VALUES (${tenant(request)},${actor(request)},${input.reportId ?? null},${input.exportType},${input.format}) RETURNING *`,
+      sql`INSERT INTO brandforge_export_jobs (tenant_id,requested_by_user_id,report_id,idempotency_key,export_type,format) VALUES (${tenant(request)},${actor(request)},${input.reportId ?? null},${input.idempotencyKey},${input.exportType},${input.format}) ON CONFLICT (tenant_id,idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING RETURNING *`,
     );
-    const job = created.rows[0] as Row;
+    const selected = created.rows[0]
+      ? created
+      : await db.execute(
+          sql`SELECT * FROM brandforge_export_jobs WHERE tenant_id=${tenant(request)} AND idempotency_key=${input.idempotencyKey} LIMIT 1`,
+        );
+    const job = selected.rows[0] as Row | undefined;
+    if (!job)
+      throw Object.assign(new Error('Export idempotency record is unavailable'), {
+        code: 'BRANDFORGE_EXPORT_IDEMPOTENCY_UNAVAILABLE',
+      });
+    if (
+      String(job.report_id ?? '') !== String(input.reportId ?? '') ||
+      job.export_type !== input.exportType ||
+      job.format !== input.format
+    )
+      return reply.code(409).send({
+        error: 'Idempotency key was already used for another export request',
+        code: 'BRANDFORGE_EXPORT_IDEMPOTENCY_CONFLICT',
+      });
     const queued = await enqueueSharedJob({
       tenantId: tenant(request),
       moduleId: await moduleId(),
@@ -891,10 +983,14 @@ export async function registerBrandForgeOsPhase31Routes(app: FastifyInstance) {
       payload: { exportId: job.id },
       idempotencyKey: input.idempotencyKey,
     });
-    await db.execute(
-      sql`UPDATE brandforge_export_jobs SET shared_job_id=${(queued.job as Row).id} WHERE id=${job.id}`,
+    const linked = await db.execute(
+      sql`UPDATE brandforge_export_jobs SET shared_job_id=${(queued.job as Row).id} WHERE tenant_id=${tenant(request)} AND id=${job.id} RETURNING *`,
     );
-    return reply.code(202).send({ export: job, job: queued.job, duplicate: queued.duplicate });
+    return reply.code(202).send({
+      export: linked.rows[0] ?? job,
+      job: queued.job,
+      duplicate: created.rows.length === 0 || queued.duplicate,
+    });
   });
   app.get(`${base}/exports/:id/download`, { preHandler: readGuards }, async (request, reply) => {
     const result = await db.execute(

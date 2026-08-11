@@ -121,3 +121,42 @@ export function scoreCopyContent(content: string) {
 export function stableJsonHash(value: unknown) {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
+
+function csvCell(value: unknown) {
+  const serialized = value == null
+    ? ''
+    : typeof value === 'object'
+      ? JSON.stringify(value)
+      : String(value);
+  const formulaSafe = /^[=+\-@\t\r]/u.test(serialized) ? `'${serialized}` : serialized;
+  return `"${formulaSafe.replaceAll('"', '""')}"`;
+}
+
+/** Deterministic report CSV containing the persisted snapshot rather than workspace counters. */
+export function serializeBrandForgeReportCsv(report: Record<string, unknown>) {
+  const snapshot = report.snapshot && typeof report.snapshot === 'object'
+    ? report.snapshot as Record<string, unknown>
+    : {};
+  const rows: unknown[][] = [['section', 'key', 'value']];
+  const add = (section: string, key: string, value: unknown) => rows.push([section, key, value]);
+
+  for (const key of ['id', 'name', 'report_type', 'status', 'generated_at', 'snapshot_sha256']) {
+    add('report', key, report[key] ?? null);
+  }
+  add('report', 'sections', report.sections ?? []);
+  add('report', 'branding', report.branding ?? {});
+  for (const section of ['period', 'scope', 'metrics', 'counts']) {
+    const value = snapshot[section];
+    if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+    for (const [key, nested] of Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b))) {
+      add(section, key, nested);
+    }
+  }
+  for (const section of ['channels', 'taskStatus', 'recentActivity']) {
+    const values = Array.isArray(snapshot[section]) ? snapshot[section] as unknown[] : [];
+    values.forEach((value, index) => add(section, String(index + 1), value));
+  }
+  add('evidence', 'source', snapshot.evidence ?? null);
+  add('evidence', 'sampleData', snapshot.sampleData ?? null);
+  return `${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}\r\n`;
+}
