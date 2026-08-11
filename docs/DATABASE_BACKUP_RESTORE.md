@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 35 ordered step identifiers without secrets
+`db:plan` is read-only and prints 40 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -333,6 +333,27 @@ room was read or changed, so this rehearsal did not create a production backup
 artifact. Production apply still requires a fresh provider snapshot and
 logical backup, checksum and restore verification, authenticated exact-host
 two-device acceptance, and an explicit cutover/rollback decision.
+
+## Phase 31 v40 additive release rehearsal
+
+On 2026-08-11 the 40-step production release applied to a disposable
+loopback-only PostgreSQL 16 database and the complete BrandForgeOS database
+journey passed with synthetic tenants and marketing records. The final
+`brandforgeos_complete_product_tables` step adds offers, campaign production,
+landing content, guided workflows, templates, provider projections and sync
+history, recommendations, leads, reports, export jobs, and atomic credit
+counters. It also adds copy favorites/scores and brand asset-reference fields;
+it contains no destructive DDL.
+
+The focused journey verified shared deterministic provider synchronization,
+white-label persisted-fact reports, SHA-256 export integrity, background-job
+completion, concurrent credit exhaustion and replay, viewer denial, restart
+persistence, and cross-tenant non-enumeration. No production database, live
+provider, customer data, or standalone BrandForgeOS export was read or changed,
+so this rehearsal did not create a production backup artifact. Production apply
+still requires a fresh logical backup, checksum and restore verification,
+approved source-data reconciliation, authenticated exact-host/provider
+acceptance, and an explicit cutover/rollback decision.
 
 ## Production recovery
 

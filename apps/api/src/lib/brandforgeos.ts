@@ -104,7 +104,7 @@ function ensurePatch(changes: ObjectValue) {
 
 export function parseBrandInput(input: unknown, mode: 'create' | 'patch') {
   const body = record(input);
-  knownFields(body, ['name', 'description', 'primaryColor', 'secondaryColor', 'accentColor', 'headingFont', 'bodyFont', 'voiceTone', 'guidelines', 'expectedVersion']);
+  knownFields(body, ['name', 'description', 'primaryColor', 'secondaryColor', 'accentColor', 'headingFont', 'bodyFont', 'voiceTone', 'guidelines', 'logoAttachmentId', 'assetSummary', 'expectedVersion']);
   const color = (value: unknown, field: string) => {
     const result = optionalText(value, field, 7);
     if (result && !HEX_COLOR.test(result)) throw new BrandForgeValidationError(`${field} must be a six-digit hex color`, field);
@@ -120,6 +120,8 @@ export function parseBrandInput(input: unknown, mode: 'create' | 'patch') {
     bodyFont: optionalText(body.bodyFont, 'bodyFont', 80),
     voiceTone: optionalText(body.voiceTone, 'voiceTone', 2_000),
     guidelines: optionalText(body.guidelines, 'guidelines', 12_000),
+    logoAttachmentId: uuid(body.logoAttachmentId, 'logoAttachmentId'),
+    assetSummary: body.assetSummary === undefined ? undefined : strings(body.assetSummary, 'assetSummary', 30, 300),
   };
   if (mode === 'patch') ensurePatch(changes);
   return { ...changes, ...(mode === 'patch' ? { expectedVersion: patchVersion(body) } : {}) };
@@ -181,7 +183,7 @@ export function parseCampaignInput(input: unknown, mode: 'create' | 'patch') {
 
 export function parseCopyAssetInput(input: unknown, mode: 'create' | 'patch') {
   const body = record(input);
-  knownFields(body, ['brandId', 'campaignId', 'title', 'content', 'copyType', 'channel', 'tone', 'status', 'generationId', 'expectedVersion']);
+  knownFields(body, ['brandId', 'campaignId', 'title', 'content', 'copyType', 'channel', 'tone', 'status', 'generationId', 'favorite', 'expectedVersion']);
   const changes = {
     brandId: uuid(body.brandId, 'brandId'),
     campaignId: uuid(body.campaignId, 'campaignId'),
@@ -192,6 +194,10 @@ export function parseCopyAssetInput(input: unknown, mode: 'create' | 'patch') {
     tone: optionalText(body.tone, 'tone', 120),
     status: status(body.status, 'status', COPY_STATUSES) ?? (mode === 'create' ? 'draft' as const : undefined),
     generationId: uuid(body.generationId, 'generationId'),
+    favorite: body.favorite === undefined ? undefined : (() => {
+      if (typeof body.favorite !== 'boolean') throw new BrandForgeValidationError('favorite must be boolean', 'favorite');
+      return body.favorite;
+    })(),
   };
   if (mode === 'patch') ensurePatch(changes);
   return { ...changes, ...(mode === 'patch' ? { expectedVersion: patchVersion(body) } : {}) };
@@ -273,9 +279,13 @@ export function parseGenerationInput(input: unknown): {
   tone: string | null | undefined;
   channel: string | null | undefined;
   audience: string | null | undefined;
+  copyType: string | null | undefined;
+  objective: string | null | undefined;
+  length: string | null | undefined;
+  ctaStyle: string | null | undefined;
 } {
   const body = record(input);
-  knownFields(body, ['type', 'idempotencyKey', 'brandId', 'campaignId', 'prompt', 'tone', 'channel', 'audience']);
+  knownFields(body, ['type', 'idempotencyKey', 'brandId', 'campaignId', 'prompt', 'tone', 'channel', 'audience', 'copyType', 'objective', 'length', 'ctaStyle']);
   const type = body.type;
   if (type !== 'copy' && type !== 'strategy' && type !== 'campaign_ideas') {
     throw new BrandForgeValidationError('type must be copy, strategy, or campaign_ideas', 'type');
@@ -292,6 +302,10 @@ export function parseGenerationInput(input: unknown): {
     tone: optionalText(body.tone, 'tone', 120),
     channel: optionalText(body.channel, 'channel', 60),
     audience: optionalText(body.audience, 'audience', 2_000),
+    copyType: optionalText(body.copyType, 'copyType', 60),
+    objective: optionalText(body.objective, 'objective', 120),
+    length: optionalText(body.length, 'length', 40),
+    ctaStyle: optionalText(body.ctaStyle, 'ctaStyle', 120),
   };
 }
 

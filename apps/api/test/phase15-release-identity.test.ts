@@ -70,9 +70,9 @@ test('runtime identity binds the build to deployment time and database release v
       deployedAt: '2026-07-29T20:05:00.000Z',
       databaseRelease: {
         contractVersion: 1,
-        releaseVersion: 39,
-        stepCount: 39,
-        lastStep: 'ninja_pool_online_tables',
+        releaseVersion: 40,
+        stepCount: 40,
+        lastStep: 'brandforgeos_complete_product_tables',
       },
     },
   );
