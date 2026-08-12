@@ -304,7 +304,7 @@ test.describe('OperatorOS final ecosystem acceptance', () => {
       };
       const paymentProbe = await browserFetch(
         modulePage,
-        '/api/billing/torque-assist/webhook',
+        '/api/billing/webhook',
         'POST',
         paymentEvent,
         { 'stripe-signature': 'operatoros-test-signature' },

@@ -1168,7 +1168,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const eventId = `evt_torqueshed_browser_${suffix}`;
     const payment = await browserJson<Record<string, unknown>>(
       page,
-      '/api/billing/torque-assist/webhook',
+      '/api/billing/webhook',
       'POST',
       {
         id: eventId,
@@ -1198,9 +1198,11 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(payment.status, JSON.stringify(payment.body)).toBe(200);
 
     const diagnosticUrl = `https://torqueshed.operatoros.net/diagnostics/${diagnostic.id}`;
-    await page.goto(diagnosticUrl);
+    const purchaseStatusUrl = `${diagnosticUrl}?tokenPurchase=success&purchase=${purchase.id}`;
+    await page.goto(purchaseStatusUrl);
     await expect(page.getByTestId('torqueshed-diagnostic-timeline')).toContainText(diagnosticTitle, { timeout: 30_000 });
     const refreshedAssist = page.getByTestId('torqueshed-torque-assist');
+    await expect(refreshedAssist.getByTestId('torque-purchase-status')).toContainText('Credits added', { timeout: 30_000 });
     await expect(refreshedAssist).toContainText('25,000 units', { timeout: 30_000 });
     const assistResponse = page.waitForResponse(response =>
       response.request().method() === 'POST'
@@ -1350,6 +1352,144 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(reopened).toHaveURL(/^https:\/\/operatoros\.net\/signed-out\?signed_out=local$/);
     expect((await sessionCookies(context)).some(cookie => cookie.domain === 'torqueshed.operatoros.net')).toBe(false);
     await reopened.close();
+  });
+
+  test('TorqueShed canonical payment return shows exactly-once authoritative credits', async ({ page, request }) => {
+    test.setTimeout(120_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+    const suffix = Date.now().toString(36);
+
+    await page.goto('https://torqueshed.operatoros.net/diagnostics');
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/torqueshed\.operatoros\.net\/diagnostics(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+
+    const vehicleReply = await browserJson<{ id: string }>(
+      page,
+      '/api/modules/torqueshed/vehicles',
+      'POST',
+      {
+        nickname: `Payment proof vehicle ${suffix}`,
+        year: 2018,
+        make: 'Ford',
+        model: 'F-150',
+        engine: '3.5L EcoBoost',
+        visibility: 'private',
+      },
+    );
+    expect(vehicleReply.status, JSON.stringify(vehicleReply.body)).toBe(201);
+    const diagnosticReply = await browserJson<{ id: string }>(
+      page,
+      '/api/modules/torqueshed/diagnostics',
+      'POST',
+      {
+        vehicleId: vehicleReply.body.id,
+        title: `Canonical payment proof ${suffix}`,
+        customerConcern: 'Payment acceptance path only; no repair conclusion.',
+        symptoms: 'Deterministic exact-host fixture.',
+        visibility: 'private',
+      },
+    );
+    expect(diagnosticReply.status, JSON.stringify(diagnosticReply.body)).toBe(201);
+    const checkoutReply = await browserJson<{
+      purchase: {
+        id: string; tenantId: string; userId: string; moduleId: string; packageKey: string;
+        units: number; amountMinor: number; currency: string; providerCheckoutId: string;
+      };
+    }>(
+      page,
+      '/api/modules/torqueshed/token-purchases/checkout',
+      'POST',
+      { diagnosticSessionId: diagnosticReply.body.id, packageKey: 'roadside-25000' },
+      { 'Idempotency-Key': `exact-host-payment-${suffix}` },
+    );
+    expect(checkoutReply.status, JSON.stringify(checkoutReply.body)).toBe(201);
+    const purchase = checkoutReply.body.purchase;
+    const event = {
+      id: `evt_exact_host_payment_${suffix}`,
+      type: 'checkout.session.completed',
+      livemode: false,
+      data: {
+        object: {
+          id: purchase.providerCheckoutId,
+          payment_intent: `pi_exact_host_payment_${suffix}`,
+          payment_status: 'paid',
+          status: 'complete',
+          amount_total: purchase.amountMinor,
+          currency: purchase.currency.toLowerCase(),
+          metadata: {
+            operatoros_kind: 'torque_assist_credit',
+            purchase_id: purchase.id,
+            tenant_id: purchase.tenantId,
+            user_id: purchase.userId,
+            module_id: purchase.moduleId,
+            package_key: purchase.packageKey,
+            units: String(purchase.units),
+          },
+        },
+      },
+    };
+    const credited = await browserJson<Record<string, unknown>>(
+      page,
+      '/api/billing/webhook',
+      'POST',
+      event,
+      { 'stripe-signature': 'operatoros-test-signature' },
+    );
+    expect(credited.status, JSON.stringify(credited.body)).toBe(200);
+    const replay = await browserJson<{ duplicate?: boolean }>(
+      page,
+      '/api/billing/webhook',
+      'POST',
+      event,
+      { 'stripe-signature': 'operatoros-test-signature' },
+    );
+    expect(replay.status, JSON.stringify(replay.body)).toBe(200);
+    expect(replay.body.duplicate).toBe(true);
+
+    const purchaseStatusUrl = `https://torqueshed.operatoros.net/diagnostics/${diagnosticReply.body.id}?tokenPurchase=success&purchase=${purchase.id}`;
+    await page.goto(purchaseStatusUrl);
+    const assist = page.getByTestId('torqueshed-torque-assist');
+    await expect(assist.getByTestId('torque-purchase-status')).toContainText('Credits added', { timeout: 30_000 });
+    await expect(assist).toContainText('25,000 units');
+    const ledger = await browserJson<{
+      balance: number;
+      entries: Array<{ entryKind: string; purchaseIntentId?: string }>;
+    }>(page, '/api/modules/torqueshed/token-ledger');
+    expect(ledger.status, JSON.stringify(ledger.body)).toBe(200);
+    expect(ledger.body.balance).toBe(25_000);
+    expect(ledger.body.entries.filter(entry =>
+      entry.entryKind === 'credit' && entry.purchaseIntentId === purchase.id,
+    )).toHaveLength(1);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
+    await expect(page.getByTestId('torqueshed-torque-assist').getByTestId('torque-purchase-status'))
+      .toContainText('Credits added', { timeout: 30_000 });
+    const overflow = await page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLElement>('body *'))
+        .map(element => {
+          const bounds = element.getBoundingClientRect();
+          return {
+            tag: element.tagName.toLowerCase(),
+            testId: element.dataset.testid ?? null,
+            className: typeof element.className === 'string' ? element.className : '',
+            left: Math.round(bounds.left),
+            right: Math.round(bounds.right),
+            width: Math.round(bounds.width),
+            text: (element.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 80),
+          };
+        })
+        .filter(element => element.left < -1 || element.right > window.innerWidth + 1)
+        .slice(0, 20),
+    );
+    expect(overflow, JSON.stringify(overflow, null, 2)).toEqual([]);
   });
 
   test('tenant entitlement denial fails closed for TechDeck and OutCall without issuing a handoff', async ({ page, request }) => {
