@@ -47,6 +47,7 @@ async function cleanTenant(tenantId: string) {
   await db.execute(sql`DELETE FROM studyforge_exam_countdowns WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM studyforge_short_answers WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM studyforge_daily_activity WHERE tenant_id=${tenantId}`);
+  await db.execute(sql`DELETE FROM studyforge_generation_reservations WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM studyforge_usage_counters WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM studyforge_card_progress WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM studyforge_quiz_attempts WHERE tenant_id=${tenantId}`);
@@ -77,6 +78,22 @@ function setPayload(title: string, key: string) {
     generationMode: 'deterministic',
     idempotencyKey: key,
   };
+}
+
+async function withUnavailableAiProvider<T>(action: () => Promise<T>): Promise<T> {
+  const previousNodeEnv = process.env.NODE_ENV;
+  const previousAppEnv = process.env.APP_ENV;
+  const previousApiKey = process.env.OPENAI_API_KEY;
+  process.env.NODE_ENV = 'production';
+  process.env.APP_ENV = 'production';
+  delete process.env.OPENAI_API_KEY;
+  try {
+    return await action();
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousNodeEnv;
+    if (previousAppEnv === undefined) delete process.env.APP_ENV; else process.env.APP_ENV = previousAppEnv;
+    if (previousApiKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previousApiKey;
+  }
 }
 
 before(async () => {
@@ -210,9 +227,11 @@ test('user/tenant isolation, plan projection, countdown, and export gates are en
 });
 
 test('free and concurrent generation limits fail closed without partial orphan rows', async () => {
+  const freeSets: Record<string, any>[] = [];
   for (let index = 1; index <= 3; index += 1) {
     const response = await app.inject({ method: 'POST', url: '/v1/modules/studyforge-ai/study-sets', headers: headers(ownerB, ownerB.currentTenantId), payload: setPayload(`Free set ${index}`, `phase33-free-set-000${index}`) });
     assert.equal(response.statusCode, 201, response.body);
+    freeSets.push(response.json().set);
   }
   const blocked = await app.inject({ method: 'POST', url: '/v1/modules/studyforge-ai/study-sets', headers: headers(ownerB, ownerB.currentTenantId), payload: setPayload('Free set 4', 'phase33-free-set-0004') });
   assert.equal(blocked.statusCode, 402, blocked.body);
@@ -228,6 +247,44 @@ test('free and concurrent generation limits fail closed without partial orphan r
   assert.deepEqual(concurrent.map((response) => response.statusCode).sort(), [201, 402]);
   const usage = await db.execute(sql`SELECT generation_count FROM studyforge_usage_counters WHERE tenant_id=${ownerA.currentTenantId} AND user_id=${ownerA.id}`);
   assert.equal(Number(usage.rows[0].generation_count), 2);
+
+  await db.update(tenantModules).set({ metadata: { features: { studyforgePlan: 'free', studyforgeMonthlyGenerations: 100 } }, updatedAt: new Date() }).where(eq(tenantModules.tenantId, ownerB.currentTenantId));
+  const archived = await app.inject({ method: 'PATCH', url: `/v1/modules/studyforge-ai/study-sets/${freeSets[0].id}`, headers: headers(ownerB, ownerB.currentTenantId), payload: { status: 'archived', expectedVersion: freeSets[0].version } });
+  assert.equal(archived.statusCode, 200, archived.body);
+  const replacement = await app.inject({ method: 'POST', url: '/v1/modules/studyforge-ai/study-sets', headers: headers(ownerB, ownerB.currentTenantId), payload: setPayload('Free replacement', 'phase33-free-replacement-0001') });
+  assert.equal(replacement.statusCode, 201, replacement.body);
+  const restoreBlocked = await app.inject({ method: 'PATCH', url: `/v1/modules/studyforge-ai/study-sets/${freeSets[0].id}`, headers: headers(ownerB, ownerB.currentTenantId), payload: { status: 'active', expectedVersion: archived.json().version } });
+  assert.equal(restoreBlocked.statusCode, 402, restoreBlocked.body);
+  assert.equal(restoreBlocked.json().code, 'STUDYFORGE_SET_LIMIT_REACHED');
+  const removeArchived = await app.inject({ method: 'DELETE', url: `/v1/modules/studyforge-ai/study-sets/${freeSets[0].id}`, headers: headers(ownerB, ownerB.currentTenantId) });
+  assert.equal(removeArchived.statusCode, 204, removeArchived.body);
+
+  await db.update(tenantModules).set({ metadata: { features: { studyforgePlan: 'pro', studyforgeMonthlyGenerations: 10 } }, updatedAt: new Date() }).where(eq(tenantModules.tenantId, ownerA.currentTenantId));
+  const beforeProviderFailure = await db.execute(sql`SELECT generation_count FROM studyforge_usage_counters WHERE tenant_id=${ownerA.currentTenantId} AND user_id=${ownerA.id}`);
+  const unavailable = await withUnavailableAiProvider(() => app.inject({ method: 'POST', url: '/v1/modules/studyforge-ai/study-sets', headers: headers(ownerA, ownerA.currentTenantId), payload: { ...setPayload('Provider unavailable', 'phase33-provider-failure-0001'), generationMode: 'ai' } }));
+  assert.equal(unavailable.statusCode, 503, unavailable.body);
+  const afterProviderFailure = await db.execute(sql`SELECT generation_count FROM studyforge_usage_counters WHERE tenant_id=${ownerA.currentTenantId} AND user_id=${ownerA.id}`);
+  assert.equal(Number(afterProviderFailure.rows[0].generation_count), Number(beforeProviderFailure.rows[0].generation_count));
+  const leakedReservation = await db.execute(sql`SELECT count(*)::int AS count FROM studyforge_generation_reservations WHERE tenant_id=${ownerA.currentTenantId} AND user_id=${ownerA.id}`);
+  assert.equal(Number(leakedReservation.rows[0].count), 0);
+
+  await db.update(tenantModules).set({ metadata: { features: { studyforgePlan: 'pro', studyforgeMonthlyGenerations: 0 } }, updatedAt: new Date() }).where(eq(tenantModules.tenantId, ownerA.currentTenantId));
+  await db.execute(sql`DELETE FROM studyforge_usage_counters WHERE tenant_id=${ownerA.currentTenantId} AND user_id=${ownerA.id}`);
+  const zeroLimit = await withUnavailableAiProvider(() => app.inject({ method: 'POST', url: '/v1/modules/studyforge-ai/study-sets', headers: headers(ownerA, ownerA.currentTenantId), payload: { ...setPayload('Zero limit', 'phase33-zero-limit-0001'), generationMode: 'ai' } }));
+  assert.equal(zeroLimit.statusCode, 402, zeroLimit.body);
+  assert.equal(zeroLimit.json().code, 'STUDYFORGE_GENERATION_LIMIT_REACHED');
+  const zeroRows = await db.execute(sql`SELECT (SELECT count(*) FROM studyforge_usage_counters WHERE tenant_id=${ownerA.currentTenantId} AND user_id=${ownerA.id})::int AS counters,(SELECT count(*) FROM studyforge_generation_reservations WHERE tenant_id=${ownerA.currentTenantId} AND user_id=${ownerA.id})::int AS reservations`);
+  assert.deepEqual({ counters: Number(zeroRows.rows[0].counters), reservations: Number(zeroRows.rows[0].reservations) }, { counters: 0, reservations: 0 });
+  await db.update(tenantModules).set({ metadata: { features: { studyforgePlan: 'pro', studyforgeMonthlyGenerations: 100 } }, updatedAt: new Date() }).where(eq(tenantModules.tenantId, ownerA.currentTenantId));
+});
+
+test('v42 seeds current-period generation counters from shared OperatorOS usage', async () => {
+  await db.execute(sql`DELETE FROM studyforge_usage_counters WHERE tenant_id=${ownerA.currentTenantId} AND user_id=${ownerA.id}`);
+  await db.execute(sql`INSERT INTO shared_usage_events(tenant_id,module_id,user_id,operation,units,unit_kind,idempotency_key,occurred_at) VALUES (${ownerA.currentTenantId},${moduleRow.id},${ownerA.id},'studyforge.ai_generation',2,'generation','phase33-backfill-fixture-0001',NOW())`);
+  const expected = await db.execute(sql`SELECT COALESCE(sum(units),0)::int AS count FROM shared_usage_events WHERE tenant_id=${ownerA.currentTenantId} AND module_id=${moduleRow.id} AND user_id=${ownerA.id} AND operation IN ('studyforge.ai_generation','studyforge.complete_generation') AND occurred_at>=date_trunc('month',CURRENT_DATE)`);
+  await ensureStudyForgePhase33Tables();
+  const counter = await db.execute(sql`SELECT generation_count FROM studyforge_usage_counters WHERE tenant_id=${ownerA.currentTenantId} AND user_id=${ownerA.id} AND period_start=date_trunc('month',CURRENT_DATE)::date`);
+  assert.equal(Number(counter.rows[0].generation_count), Number(expected.rows[0].count));
 });
 
 test('archive/restore and soft-delete cascade remove active generated outcomes without affecting another user', async () => {

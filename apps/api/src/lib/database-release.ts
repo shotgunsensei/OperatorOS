@@ -191,6 +191,7 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.studyforge_study_sets') IS NOT NULL AS studyforge_study_sets,
       to_regclass('public.studyforge_short_answers') IS NOT NULL AS studyforge_short_answers,
       to_regclass('public.studyforge_daily_activity') IS NOT NULL AS studyforge_daily_activity,
+      to_regclass('public.studyforge_generation_reservations') IS NOT NULL AS studyforge_generation_reservations,
       to_regclass('public.launchkit_launches') IS NOT NULL AS launchkit_launches,
       to_regclass('public.launchkit_tasks') IS NOT NULL AS launchkit_tasks,
       to_regclass('public.launchkit_artifacts') IS NOT NULL AS launchkit_artifacts,

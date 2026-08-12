@@ -61,6 +61,16 @@ export async function consumeStudyForgeUsage(args: {
   executor?: Executor;
 }): Promise<{ generationCount: number; quizAttemptCount: number }> {
   const executor = args.executor ?? db;
+  if (args.limit === 0) {
+    throw Object.assign(new Error(
+      args.kind === 'generation'
+        ? 'StudyForge generation limit reached for this OperatorOS entitlement period'
+        : 'StudyForge quiz attempt limit reached for this OperatorOS entitlement period',
+    ), {
+      statusCode: 402,
+      code: args.kind === 'generation' ? 'STUDYFORGE_GENERATION_LIMIT_REACHED' : 'STUDYFORGE_QUIZ_LIMIT_REACHED',
+    });
+  }
   const column = args.kind === 'generation' ? sql.raw('generation_count') : sql.raw('quiz_attempt_count');
   const currentColumn = args.kind === 'generation'
     ? sql.raw('studyforge_usage_counters.generation_count')
@@ -87,4 +97,20 @@ export async function consumeStudyForgeUsage(args: {
   }
   const row = result.rows[0] as any;
   return { generationCount: Number(row.generation_count), quizAttemptCount: Number(row.quiz_attempt_count) };
+}
+
+export async function releaseStudyForgeUsage(args: {
+  tenantId: string;
+  userId: string;
+  kind: StudyForgeUsageKind;
+  executor?: Executor;
+}): Promise<void> {
+  const executor = args.executor ?? db;
+  const column = args.kind === 'generation' ? sql.raw('generation_count') : sql.raw('quiz_attempt_count');
+  await executor.execute(sql`
+    UPDATE studyforge_usage_counters
+    SET ${column}=GREATEST(${column}-1,0),updated_at=NOW()
+    WHERE tenant_id=${args.tenantId} AND user_id=${args.userId}
+      AND period_start=date_trunc('month',CURRENT_DATE)::date
+  `);
 }

@@ -15,6 +15,7 @@ import {
   cleanupModule, cleanupUser, createTestModule, createTestUser, ensureSchemaReady,
 } from './_setup.js';
 import { ensureStudyForgeTables } from '../src/lib/studyforge-db-init.js';
+import { ensureStudyForgePhase33Tables } from '../src/lib/studyforge-phase33-db-init.js';
 
 let app: ReturnType<typeof Fastify>;
 let ownerA: Awaited<ReturnType<typeof createTestUser>>;
@@ -51,6 +52,7 @@ async function makeApp() {
 }
 
 async function cleanTenant(tenantId: string) {
+  await db.execute(sql`DELETE FROM studyforge_generation_reservations WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM studyforge_usage_counters WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM studyforge_card_progress WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM studyforge_quiz_attempts WHERE tenant_id=${tenantId}`);
@@ -75,6 +77,7 @@ async function cleanTenant(tenantId: string) {
 before(async () => {
   await ensureSchemaReady();
   await ensureStudyForgeTables();
+  await ensureStudyForgePhase33Tables();
   ({ signToken } = await import('../src/lib/auth.js'));
   ownerA = await createTestUser();
   ownerB = await createTestUser();

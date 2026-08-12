@@ -30,7 +30,7 @@ import {
 } from '../lib/shared-usage-activity.js';
 import { createAttachment, getAttachmentContent, getMaxAttachmentBytes } from '../lib/shared-attachments.js';
 import { planStudyForgeImport } from '../lib/studyforge-import.js';
-import { consumeStudyForgeUsage, resolveStudyForgeAccess } from '../lib/studyforge-access.js';
+import { consumeStudyForgeUsage, releaseStudyForgeUsage, resolveStudyForgeAccess } from '../lib/studyforge-access.js';
 
 const readGuards = [requireTenantModuleAccess('studyforge-ai')];
 const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
@@ -510,6 +510,7 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
 
   app.post('/v1/modules/studyforge-ai/generations', { preHandler: writeGuards }, async (request, reply) => {
     let operation: Awaited<ReturnType<typeof beginIdempotentOperation>> | null = null;
+    let reservedUsage: { tenantId: string; userId: string } | null = null;
     try {
       const input = parseGeneration(request.body);
       const { tenantId, userId } = context(request);
@@ -541,6 +542,14 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
       if (operation.state === 'in_progress') return reply.code(409).send({ error: 'Generation is already processing', code: 'IDEMPOTENCY_IN_PROGRESS' });
       const acquiredOperation = operation;
 
+      await consumeStudyForgeUsage({
+        tenantId,
+        userId,
+        kind: 'generation',
+        limit: access.limits.generationsPerMonth,
+      });
+      reservedUsage = { tenantId, userId };
+
       const provider = getAiProvider();
       const result = await provider.complete({
         systemPrompt: [
@@ -562,13 +571,6 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
       });
       const material = parseGeneratedMaterial(input.type, result.text, sourceBody);
       const response = await db.transaction(async (tx) => {
-        await consumeStudyForgeUsage({
-          tenantId,
-          userId,
-          kind: 'generation',
-          limit: access.limits.generationsPerMonth,
-          executor: tx,
-        });
         const generated = await tx.execute(sql`INSERT INTO studyforge_generations
           (tenant_id,user_id,source_id,generation_type,idempotency_key,input_sha256,output_json,
            source_references,provider,model,provider_version,token_count,duration_ms)
@@ -635,9 +637,13 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
         }, tx);
         return payload;
       });
+      reservedUsage = null;
       await activity(request, 'generation.completed', 'studyforge_generation', String(response.generation.id), 'Draft study material generated from an authorized source.', { type: input.type });
       return reply.code(201).send(response);
     } catch (error) {
+      if (reservedUsage) {
+        await releaseStudyForgeUsage({ ...reservedUsage, kind: 'generation' }).catch(() => undefined);
+      }
       if (operation?.state === 'acquired') {
         await failIdempotentOperation({
           tenantId: context(request).tenantId,

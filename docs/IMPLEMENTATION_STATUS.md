@@ -18,12 +18,12 @@ counters, and business idempotency prevent partial sets, duplicate debits, and
 concurrent limit overruns. OperatorOS remains the sole auth, tenant, role,
 entitlement, billing, provider, credit, usage, and platform-admin authority.
 
-Workspace typecheck, root lint, 8/8 domain/static contracts, 6/6 disposable
-PostgreSQL journeys, the combined 28/28 StudyForge regression suite, shared
+Workspace typecheck, 8/8 domain/static contracts, 7/7 disposable PostgreSQL
+journeys, the combined 29/29 StudyForge regression suite, shared
 integration 28/28, clean/idempotent v42, production build, exact-ledger gate,
-and compiled exact-host Playwright 2/2 pass locally. The broad API aggregate is
-not green (979 pass, 29 existing unrelated failures, 6 skips across 1,014), so
-it is not claimed as a pass.
+and compiled exact-host Playwright 2/2 pass locally. The broad API aggregate
+remains non-green because of existing unrelated failures, so it is not claimed
+as a pass.
 
 Production backup/apply, live AI-provider acceptance, deployed exact-host
 acceptance, authorized source-data reconciliation, restore/rollback, and

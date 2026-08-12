@@ -206,5 +206,38 @@ export async function ensureStudyForgePhase33Tables(): Promise<void> {
       PRIMARY KEY (tenant_id,user_id,period_start),
       CONSTRAINT studyforge_usage_counter_values_check CHECK (generation_count >= 0 AND quiz_attempt_count >= 0)
     );
+
+    CREATE TABLE IF NOT EXISTS studyforge_generation_reservations (
+      tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id),
+      user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      idempotency_key VARCHAR(160) NOT NULL,
+      period_start DATE NOT NULL,
+      reserves_active_set BOOLEAN NOT NULL DEFAULT TRUE,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (tenant_id,user_id,idempotency_key)
+    );
+    CREATE INDEX IF NOT EXISTS idx_studyforge_generation_reservations_capacity
+      ON studyforge_generation_reservations(tenant_id,user_id,expires_at)
+      WHERE reserves_active_set=TRUE;
+
+    INSERT INTO studyforge_usage_counters(
+      tenant_id,user_id,period_start,generation_count,quiz_attempt_count
+    )
+    SELECT usage.tenant_id,usage.user_id,date_trunc('month',usage.occurred_at)::date,
+      SUM(usage.units)::integer,0
+    FROM shared_usage_events usage
+    JOIN modules module ON module.id=usage.module_id AND module.slug='studyforge-ai'
+    WHERE usage.user_id IS NOT NULL
+      AND usage.operation IN ('studyforge.ai_generation','studyforge.complete_generation')
+      AND usage.occurred_at>=date_trunc('month',CURRENT_DATE)
+      AND usage.occurred_at<date_trunc('month',CURRENT_DATE)+INTERVAL '1 month'
+    GROUP BY usage.tenant_id,usage.user_id,date_trunc('month',usage.occurred_at)::date
+    ON CONFLICT (tenant_id,user_id,period_start) DO UPDATE SET
+      generation_count=GREATEST(
+        studyforge_usage_counters.generation_count,
+        EXCLUDED.generation_count
+      ),
+      updated_at=NOW();
   `);
 }

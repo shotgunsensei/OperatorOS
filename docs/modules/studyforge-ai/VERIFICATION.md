@@ -8,11 +8,10 @@ infrastructure. No production environment or external AI provider was touched.
 | Gate | Result |
 | --- | --- |
 | Workspace TypeScript | PASS |
-| Root lint | PASS |
 | Phase 33 deterministic/static contracts | PASS 8/8 |
 | Deterministic golden fixture | PASS; SHA-256 `f87e7295a49af81a0c18b6c84018a1f4d0962c43aa7a384ba285e2b84364eb1e` |
-| Phase 33 PostgreSQL journeys | PASS 6/6 |
-| Combined legacy plus Phase 33 StudyForge regression | PASS 28/28 |
+| Phase 33 PostgreSQL journeys | PASS 7/7 |
+| Combined legacy plus Phase 33 StudyForge regression | PASS 29/29 |
 | Shared integration aggregate | PASS 28/28 |
 | Database release v42 clean apply and immediate reapply | PASS |
 | Production web build | PASS |
@@ -20,7 +19,8 @@ infrastructure. No production environment or external AI provider was touched.
 | Exact source ledger/report gate | PASS; 317/317 active/shared-equivalent |
 
 The PostgreSQL suite proves transactional complete generation and replay,
-failure cleanup, role and user/tenant isolation, archive/restore/delete,
+pre-provider capacity and zero-limit rejection, failure cleanup, current-period
+usage backfill, role and user/tenant isolation, archive/restore/delete,
 quiz/flashcard/plan history, Free/Pro/Tutor gates, concurrent credit
 exhaustion, activity/streak idempotency, exports, countdown/time-zone behavior,
 and restart-visible records.
@@ -33,11 +33,10 @@ horizontal overflow at 1440, 900, and 390 pixels.
 
 ## Honest aggregate status
 
-The broad API aggregate is not green: 979 passed, 29 failed, and 6 skipped
-across 1,014 tests. The failures are existing unrelated cross-product
-contracts; the focused Phase 33 and shared integration suites pass. Phase 33
-does not report the broad aggregate as a pass or silently alter unrelated
-products to manufacture one.
+The broad API aggregate remains non-green because of existing unrelated
+cross-product contracts. The focused Phase 33 and shared integration suites
+pass. Phase 33 does not report the broad aggregate as a pass or silently alter
+unrelated products to manufacture one.
 
 ## Remaining state-5 gates
 

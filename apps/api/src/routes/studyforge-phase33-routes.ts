@@ -111,6 +111,9 @@ function idempotency(value: unknown): string {
 
 function failure(reply: FastifyReply, error: unknown) {
   const value = error as any;
+  if (value?.code === 'AI_PROVIDER_DISABLED') {
+    return reply.code(503).send({ error: 'AI generation is unavailable until the shared provider is configured', code: value.code });
+  }
   if (value?.statusCode && value.statusCode >= 400 && value.statusCode < 500) {
     return reply.code(value.statusCode).send({ error: value.message, code: value.code ?? 'STUDYFORGE_REQUEST_FAILED' });
   }
@@ -176,6 +179,95 @@ async function loadCompleteSet(tenantId: string, userId: string, id: string): Pr
   };
 }
 
+async function reserveCompleteGenerationCapacity(args: {
+  tenantId: string;
+  userId: string;
+  idempotencyKey: string;
+  access: Awaited<ReturnType<typeof resolveStudyForgeAccess>>;
+}): Promise<Row | null> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${args.tenantId}:${args.userId}:active-sets`},0))`);
+    await tx.execute(sql`
+      WITH expired AS (
+        DELETE FROM studyforge_generation_reservations
+        WHERE tenant_id=${args.tenantId} AND user_id=${args.userId} AND expires_at<NOW()
+        RETURNING period_start
+      ), released AS (
+        SELECT period_start,count(*)::int AS count FROM expired GROUP BY period_start
+      )
+      UPDATE studyforge_usage_counters counter
+      SET generation_count=GREATEST(counter.generation_count-released.count,0),updated_at=NOW()
+      FROM released
+      WHERE counter.tenant_id=${args.tenantId} AND counter.user_id=${args.userId}
+        AND counter.period_start=released.period_start
+    `);
+    const existing = await tx.execute(sql`
+      SELECT 1 FROM studyforge_generation_reservations
+      WHERE tenant_id=${args.tenantId} AND user_id=${args.userId}
+        AND idempotency_key=${args.idempotencyKey} AND expires_at>=NOW()
+    `);
+    if (existing.rows[0]) {
+      throw new InputError('Study set generation is already processing', 'STUDYFORGE_GENERATION_IN_PROGRESS', 409);
+    }
+    const replay = await tx.execute(sql`
+      SELECT * FROM studyforge_study_sets
+      WHERE tenant_id=${args.tenantId} AND user_id=${args.userId}
+        AND idempotency_key=${args.idempotencyKey}
+      LIMIT 1
+    `);
+    if (replay.rows[0]) return replay.rows[0] as Row;
+    if (args.access.limits.activeSets !== null) {
+      const capacity = await tx.execute(sql`
+        SELECT
+          (SELECT count(*) FROM studyforge_study_sets
+            WHERE tenant_id=${args.tenantId} AND user_id=${args.userId}
+              AND deleted_at IS NULL AND status='active')::int
+          +
+          (SELECT count(*) FROM studyforge_generation_reservations
+            WHERE tenant_id=${args.tenantId} AND user_id=${args.userId}
+              AND reserves_active_set=TRUE AND expires_at>=NOW())::int AS count
+      `);
+      if (Number((capacity.rows[0] as Row).count) >= args.access.limits.activeSets) {
+        throw new InputError('Active study set limit reached for this OperatorOS entitlement', 'STUDYFORGE_SET_LIMIT_REACHED', 402);
+      }
+    }
+    await consumeStudyForgeUsage({
+      tenantId: args.tenantId,
+      userId: args.userId,
+      kind: 'generation',
+      limit: args.access.limits.generationsPerMonth,
+      executor: tx,
+    });
+    await tx.execute(sql`
+      INSERT INTO studyforge_generation_reservations(
+        tenant_id,user_id,idempotency_key,period_start,reserves_active_set,expires_at
+      ) VALUES (
+        ${args.tenantId},${args.userId},${args.idempotencyKey},
+        date_trunc('month',CURRENT_DATE)::date,TRUE,NOW()+INTERVAL '30 minutes'
+      )
+    `);
+    return null;
+  });
+}
+
+async function releaseCompleteGenerationCapacity(tenantId: string, userId: string, idempotencyKey: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${tenantId}:${userId}:active-sets`},0))`);
+    await tx.execute(sql`
+      WITH released AS (
+        DELETE FROM studyforge_generation_reservations
+        WHERE tenant_id=${tenantId} AND user_id=${userId} AND idempotency_key=${idempotencyKey}
+        RETURNING period_start
+      )
+      UPDATE studyforge_usage_counters counter
+      SET generation_count=GREATEST(counter.generation_count-1,0),updated_at=NOW()
+      FROM released
+      WHERE counter.tenant_id=${tenantId} AND counter.user_id=${userId}
+        AND counter.period_start=released.period_start
+    `);
+  });
+}
+
 async function persistCompleteSet(args: {
   request: FastifyRequest;
   input: ReturnType<typeof createInput>;
@@ -189,13 +281,31 @@ async function persistCompleteSet(args: {
   return db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${tenantId}:${userId}:${args.input.idempotencyKey}`},0))`);
     const replay = await tx.execute(sql`SELECT * FROM studyforge_study_sets WHERE tenant_id=${tenantId} AND user_id=${userId} AND idempotency_key=${args.input.idempotencyKey} LIMIT 1`);
-    if (replay.rows[0]) return { row: replay.rows[0] as Row, replayed: true };
+    if (replay.rows[0]) {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${tenantId}:${userId}:active-sets`},0))`);
+      await tx.execute(sql`
+        WITH released AS (
+          DELETE FROM studyforge_generation_reservations
+          WHERE tenant_id=${tenantId} AND user_id=${userId} AND idempotency_key=${args.input.idempotencyKey}
+          RETURNING period_start
+        )
+        UPDATE studyforge_usage_counters counter
+        SET generation_count=GREATEST(counter.generation_count-1,0),updated_at=NOW()
+        FROM released
+        WHERE counter.tenant_id=${tenantId} AND counter.user_id=${userId}
+          AND counter.period_start=released.period_start
+      `);
+      return { row: replay.rows[0] as Row, replayed: true };
+    }
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${tenantId}:${userId}:active-sets`},0))`);
-    if (args.access.limits.activeSets !== null) {
-      const count = await tx.execute(sql`SELECT count(*)::int AS count FROM studyforge_study_sets WHERE tenant_id=${tenantId} AND user_id=${userId} AND deleted_at IS NULL AND status='active'`);
-      if (Number((count.rows[0] as Row).count) >= args.access.limits.activeSets) {
-        throw new InputError('Active study set limit reached for this OperatorOS entitlement', 'STUDYFORGE_SET_LIMIT_REACHED', 402);
-      }
+    const reservation = await tx.execute(sql`
+      SELECT 1 FROM studyforge_generation_reservations
+      WHERE tenant_id=${tenantId} AND user_id=${userId}
+        AND idempotency_key=${args.input.idempotencyKey} AND expires_at>=NOW()
+      FOR UPDATE
+    `);
+    if (!reservation.rows[0]) {
+      throw new InputError('Study set generation capacity reservation expired', 'STUDYFORGE_GENERATION_RESERVATION_EXPIRED', 409);
     }
     if (args.input.folderId) {
       const folder = await tx.execute(sql`SELECT 1 FROM studyforge_folders WHERE tenant_id=${tenantId} AND user_id=${userId} AND id=${args.input.folderId} AND deleted_at IS NULL`);
@@ -214,7 +324,6 @@ async function persistCompleteSet(args: {
         subjectId = String((created.rows[0] as Row).id);
       }
     }
-    await consumeStudyForgeUsage({ tenantId, userId, kind: 'generation', limit: args.access.limits.generationsPerMonth, executor: tx });
     const source = await tx.execute(sql`
       INSERT INTO studyforge_sources(tenant_id,created_by_user_id,subject_id,title,source_type,body,content_sha256)
       VALUES (${tenantId},${userId},${subjectId},${`${args.input.title} notes`},'note',${args.input.notes},${sha256(args.input.notes)}) RETURNING *
@@ -250,6 +359,7 @@ async function persistCompleteSet(args: {
     }
     await recordUsageEvent({ tenantId, moduleId: modId, userId, operation: 'studyforge.complete_generation', units: 1, unitKind: 'generation', idempotencyKey: args.input.idempotencyKey, externalReference: String(set.id), metadata: { effectiveMode: args.provenance.effectiveMode, provider: args.provenance.provider, tokenCount: args.provenance.tokenCount } }, tx);
     await appendActivityEvent({ tenantId, moduleId: modId, actorUserId: userId, objectType: 'studyforge_study_set', objectId: String(set.id), eventType: 'studyforge.set.created', summary: `Created complete study set ${args.input.title}`, metadata: { generationMode: args.provenance.effectiveMode, qualityScore: args.material.qualityScore }, correlationId: args.request.id }, tx);
+    await tx.execute(sql`DELETE FROM studyforge_generation_reservations WHERE tenant_id=${tenantId} AND user_id=${userId} AND idempotency_key=${args.input.idempotencyKey}`);
     return { row: set, replayed: false };
   });
 }
@@ -260,14 +370,29 @@ async function createSet(request: FastifyRequest, input: ReturnType<typeof creat
   const replay = await db.execute(sql`SELECT * FROM studyforge_study_sets WHERE tenant_id=${tenantId} AND user_id=${userId} AND idempotency_key=${input.idempotencyKey} LIMIT 1`);
   if (replay.rows[0]) return { row: replay.rows[0] as Row, replayed: true };
   const access = await resolveStudyForgeAccess(userId, tenantId);
+  if (input.folderId) {
+    const folder = await db.execute(sql`SELECT 1 FROM studyforge_folders WHERE tenant_id=${tenantId} AND user_id=${userId} AND id=${input.folderId} AND deleted_at IS NULL`);
+    if (!folder.rows[0]) throw new InputError('Folder not found', 'STUDYFORGE_FOLDER_NOT_FOUND', 404);
+  }
+  if (input.subjectId) {
+    const subject = await db.execute(sql`SELECT 1 FROM studyforge_subjects WHERE tenant_id=${tenantId} AND id=${input.subjectId} AND deleted_at IS NULL`);
+    if (!subject.rows[0]) throw new InputError('Subject not found', 'STUDYFORGE_SUBJECT_NOT_FOUND', 404);
+  }
+  const capacityReplay = await reserveCompleteGenerationCapacity({ tenantId, userId, idempotencyKey: input.idempotencyKey, access });
+  if (capacityReplay) return { row: capacityReplay, replayed: true };
   const maxFlashcards = access.limits.flashcardsPerSet;
   const anchorDate = new Date().toISOString().slice(0, 10);
-  const generated = await resolveStudyForgeCompleteGeneration({
-    input: { notes: input.notes, title: input.title, subject: input.course ?? input.title, difficulty: input.difficulty, examDate: input.examDate, maxFlashcards, anchorDate },
-    mode: input.generationMode,
-    provider: getAiProvider(),
-  });
-  return persistCompleteSet({ request, input, material: generated.material, provenance: generated.provenance, access });
+  try {
+    const generated = await resolveStudyForgeCompleteGeneration({
+      input: { notes: input.notes, title: input.title, subject: input.course ?? input.title, difficulty: input.difficulty, examDate: input.examDate, maxFlashcards, anchorDate },
+      mode: input.generationMode,
+      provider: getAiProvider(),
+    });
+    return await persistCompleteSet({ request, input, material: generated.material, provenance: generated.provenance, access });
+  } catch (error) {
+    await releaseCompleteGenerationCapacity(tenantId, userId, input.idempotencyKey).catch(() => undefined);
+    throw error;
+  }
 }
 
 function calculateStreak(rows: unknown[], today: string) {
@@ -434,7 +559,38 @@ export async function registerStudyForgePhase33Routes(app: FastifyInstance): Pro
       if (status && !['active', 'archived'].includes(status)) throw new InputError('status is invalid');
       const difficulty = input.difficulty === undefined ? undefined : String(input.difficulty);
       if (difficulty && !['easy', 'medium', 'hard'].includes(difficulty)) throw new InputError('difficulty is invalid');
-      const result = await db.execute(sql`UPDATE studyforge_study_sets SET title=COALESCE(${text(input.title, 'title', 1, 200, true)},title),course=CASE WHEN ${input.course === undefined} THEN course ELSE ${text(input.course, 'course', 1, 160, true)} END,folder_id=CASE WHEN ${input.folderId === undefined} THEN folder_id ELSE ${folderId ?? null} END,difficulty=COALESCE(${difficulty ?? null},difficulty),exam_date=CASE WHEN ${input.examDate === undefined} THEN exam_date ELSE ${date(input.examDate, 'examDate', true)} END,status=COALESCE(${status ?? null},status),archived_at=CASE WHEN ${status ?? null}='archived' THEN NOW() WHEN ${status ?? null}='active' THEN NULL ELSE archived_at END,version=version+1,updated_at=NOW() WHERE tenant_id=${tenant(request)} AND user_id=${actor(request)} AND id=${identifier(request)} AND deleted_at IS NULL AND version=${integer(input.expectedVersion, 'expectedVersion', 1, 2_147_483_647)} RETURNING *`);
+      const tenantId = tenant(request), userId = actor(request);
+      const expectedVersion = integer(input.expectedVersion, 'expectedVersion', 1, 2_147_483_647);
+      const access = status === 'active' ? await resolveStudyForgeAccess(userId, tenantId) : null;
+      const result = await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${tenantId}:${userId}:active-sets`},0))`);
+        const current = await tx.execute(sql`
+          SELECT status,version FROM studyforge_study_sets
+          WHERE tenant_id=${tenantId} AND user_id=${userId} AND id=${identifier(request)}
+            AND deleted_at IS NULL
+          FOR UPDATE
+        `);
+        const currentRow = current.rows[0] as Row | undefined;
+        if (!currentRow || Number(currentRow.version) !== expectedVersion) {
+          throw new InputError('Study set changed or was not found', 'STUDYFORGE_SET_CONFLICT', 409);
+        }
+        if (status === 'active' && currentRow.status === 'archived' && access && access.limits.activeSets !== null) {
+          const capacity = await tx.execute(sql`
+            SELECT
+              (SELECT count(*) FROM studyforge_study_sets
+                WHERE tenant_id=${tenantId} AND user_id=${userId}
+                  AND deleted_at IS NULL AND status='active')::int
+              +
+              (SELECT count(*) FROM studyforge_generation_reservations
+                WHERE tenant_id=${tenantId} AND user_id=${userId}
+                  AND reserves_active_set=TRUE AND expires_at>=NOW())::int AS count
+          `);
+          if (Number((capacity.rows[0] as Row).count) >= access.limits.activeSets) {
+            throw new InputError('Active study set limit reached for this OperatorOS entitlement', 'STUDYFORGE_SET_LIMIT_REACHED', 402);
+          }
+        }
+        return tx.execute(sql`UPDATE studyforge_study_sets SET title=COALESCE(${text(input.title, 'title', 1, 200, true)},title),course=CASE WHEN ${input.course === undefined} THEN course ELSE ${text(input.course, 'course', 1, 160, true)} END,folder_id=CASE WHEN ${input.folderId === undefined} THEN folder_id ELSE ${folderId ?? null} END,difficulty=COALESCE(${difficulty ?? null},difficulty),exam_date=CASE WHEN ${input.examDate === undefined} THEN exam_date ELSE ${date(input.examDate, 'examDate', true)} END,status=COALESCE(${status ?? null},status),archived_at=CASE WHEN ${status ?? null}='archived' THEN NOW() WHEN ${status ?? null}='active' THEN NULL ELSE archived_at END,version=version+1,updated_at=NOW() WHERE tenant_id=${tenantId} AND user_id=${userId} AND id=${identifier(request)} AND deleted_at IS NULL AND version=${expectedVersion} RETURNING *`);
+      });
       if (!result.rows[0]) throw new InputError('Study set changed or was not found', 'STUDYFORGE_SET_CONFLICT', 409);
       return camel(result.rows[0]);
     } catch (error) { return failure(reply, error); }

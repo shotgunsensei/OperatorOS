@@ -21,6 +21,7 @@ test('Phase 33 is pinned to the 317-capability source baseline and additive rele
     'studyforge_short_answers', 'studyforge_exam_countdowns',
     'studyforge_learning_sessions', 'studyforge_daily_activity',
     'studyforge_session_card_reviews', 'studyforge_usage_counters',
+    'studyforge_generation_reservations',
   ]) assert.match(ddl, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   assert.doesNotMatch(ddl, /DROP\s+TABLE|TRUNCATE/iu);
 });

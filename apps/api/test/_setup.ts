@@ -197,6 +197,7 @@ export async function cleanupUser(userId: string) {
       try { await db.execute(sql`DELETE FROM studyforge_exam_countdowns WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM studyforge_short_answers WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM studyforge_daily_activity WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_generation_reservations WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM studyforge_usage_counters WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM studyforge_card_progress WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM studyforge_quiz_attempts WHERE tenant_id = ${t.id}`); } catch {}
