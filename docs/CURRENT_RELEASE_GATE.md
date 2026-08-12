@@ -1,5 +1,20 @@
 # OperatorOS current release gate
 
+## Current Phase 32 source/local overlay - RELEASE BLOCKED (2026-08-12)
+
+SnapProofOS Phase 32 is source/local implemented at additive database release
+v41. Its exact ledger is 341/341 active or shared-equivalent with no waiver or
+blocker. Root lint/typecheck, focused 10/10 contracts, disposable PostgreSQL
+4/4 workflow, release apply/reapply, and exact-ledger 6/6 pass.
+
+This is not a promotable production identity. The existing global `next/font`
+configuration received HTTP 404 for Google-hosted WOFF2 files during the final
+web production build, so compiled browser acceptance remains open. Production
+backup/apply, scanner readiness, source-data reconciliation, exact-host
+desktop/tablet/mobile acceptance, rollback, commit/merge, and deployment are
+owner gates. The historical Phase 20 release record below is retained as prior
+evidence and does not override this current overlay.
+
 ## Current source/local gate - Phase 20 PASS (2026-08-03)
 
 `SOURCE/LOCAL PUBLIC-LAUNCH FUNCTIONAL CLOSURE: PASS`. Release v33 remains the

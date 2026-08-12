@@ -165,7 +165,13 @@ export async function registerSnapProofOsRoutes(app: FastifyInstance): Promise<v
         (SELECT COUNT(*)::int FROM snapproof_evidence_items WHERE tenant_id=${tenantId} AND deleted_at IS NULL) AS evidence,
         (SELECT COUNT(*)::int FROM snapproof_evidence_items WHERE tenant_id=${tenantId} AND status='in_review' AND deleted_at IS NULL) AS evidence_in_review,
         (SELECT COUNT(*)::int FROM snapproof_findings WHERE tenant_id=${tenantId} AND status='open' AND deleted_at IS NULL) AS open_findings,
-        (SELECT COUNT(*)::int FROM snapproof_reports WHERE tenant_id=${tenantId} AND status='approved') AS approved_reports
+        (SELECT COUNT(*)::int FROM snapproof_reports WHERE tenant_id=${tenantId} AND status='approved') AS approved_reports,
+        (SELECT COUNT(*)::int FROM snapproof_customers WHERE tenant_id=${tenantId} AND archived_at IS NULL) AS customers,
+        (SELECT COUNT(*)::int FROM snapproof_cases WHERE tenant_id=${tenantId} AND job_status='in_progress' AND deleted_at IS NULL) AS active_jobs,
+        (SELECT COUNT(*)::int FROM snapproof_cases WHERE tenant_id=${tenantId} AND job_status<>'archived' AND due_at<NOW() AND deleted_at IS NULL) AS overdue_jobs,
+        (SELECT COALESCE(SUM(quantity*unit_price_cents),0)::bigint FROM snapproof_parts WHERE tenant_id=${tenantId} AND deleted_at IS NULL) AS parts_revenue_cents,
+        (SELECT COALESCE(SUM(hours*rate_cents),0)::bigint FROM snapproof_labor WHERE tenant_id=${tenantId} AND deleted_at IS NULL) AS labor_revenue_cents,
+        (SELECT COUNT(*)::int FROM shared_activity_events WHERE tenant_id=${tenantId} AND module_id=(SELECT id FROM modules WHERE slug='snapproofos' LIMIT 1) AND created_at>=NOW()-INTERVAL '7 days') AS recent_activity
     `);
     return { counts: safeRow(result.rows[0] as Record<string, unknown>) };
   });

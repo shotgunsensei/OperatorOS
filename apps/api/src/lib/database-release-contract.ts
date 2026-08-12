@@ -1,6 +1,6 @@
 export const DATABASE_RELEASE_CONTRACT = Object.freeze({
   contractVersion: 1,
-  releaseVersion: 40,
+  releaseVersion: 41,
   mode: 'idempotent-apply',
   destructive: false,
   rollback: 'restore-to-new-database-and-switch-traffic',
@@ -47,4 +47,5 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'torqueshed_web_api_tables', kind: 'ddl' },
   { id: 'ninja_pool_online_tables', kind: 'ddl' },
   { id: 'brandforgeos_complete_product_tables', kind: 'ddl' },
+  { id: 'snapproofos_complete_product_tables', kind: 'ddl' },
 ] as const);

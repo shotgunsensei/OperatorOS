@@ -1,5 +1,42 @@
 # OperatorOS implementation status
 
+## Phase 32 SnapProofOS complete field proof restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-12)
+
+Phase 32 pins SnapProofOS source commit
+`26bded38c13b5b6361d407462c68052b0c30613d` and re-opens the Phase 11B
+product-boundary retirements under ADR-0036. The executable ledger classifies
+all 341 source facets as 240 `ACTIVE_NATIVE` and 101
+`ACTIVE_SHARED_EQUIVALENT`, with zero `OWNER_WAIVED` and zero `BLOCKED`.
+
+Cumulative additive release v41 restores all sixteen source table domains:
+customers; searchable, assigned, archived field jobs; findings and
+audience-scoped/voice notes; parts and labor totals; scanned mobile files;
+templates; report branding and logos; immutable report review; persisted,
+validated PDF/DOCX exports; revocable hashed public shares; and OperatorOS team,
+billing, entitlement, usage, and activity projections. Offline captures queue in
+IndexedDB and replay exactly once through tenant-scoped client mutation IDs.
+
+Private storage validates signatures and declared MIME, strips JPEG APP1 EXIF,
+enforces scan/quarantine state, verifies SHA-256 on retrieval, and preserves
+retention-aware deletion. Approved report snapshots exclude internal notes and
+retain historical totals/branding. Public view and download enforce the same
+expiry, revocation, no-index/no-store, non-enumeration, and durable rate limit.
+
+Root lint and workspace typecheck pass. Focused source/domain/release contracts
+pass 10/10; the disposable-PostgreSQL customer-to-share workflow passes 4/4,
+including logo/audio bytes, spoof rejection, PDF/DOCX integrity, role/tenant
+denial, revocation, and restart persistence. Clean release v41 apply and
+idempotent reapply pass; the exact ledger gate passes 6/6. The local Next
+production build is currently blocked outside Phase 32 code because Google
+Fonts returns stale `next/font` WOFF2 URLs as HTTP 404; therefore compiled
+browser acceptance is not claimed.
+
+Production v41 backup/apply, scanner readiness, source-data reconciliation,
+compiled/deployed exact-host desktop/tablet/mobile acceptance, rollback, and
+cutover remain owner-controlled gates. Phase 32 does not claim state 5 or a
+production deployment. See
+`docs/phase-32/SNAPPROOFOS-COMPLETE-PRODUCT-REPORT.md`.
+
 ## Phase 31 BrandForgeOS complete marketing SaaS restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-11)
 
 Phase 31 pins BrandForgeOS source commit

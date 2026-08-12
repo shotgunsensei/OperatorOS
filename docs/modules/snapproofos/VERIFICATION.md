@@ -1,4 +1,26 @@
-# SnapProofOS Phase 11B verification
+# SnapProofOS Phase 32 verification
+
+Assessment date: 2026-08-12
+Environment: source/local worktree plus disposable PostgreSQL 16 on
+`127.0.0.1:55432`; no production data, deployment, or provider traffic.
+
+| Gate | Result |
+| --- | --- |
+| Exact source ledger | PASS: 341 facets; 240 native, 101 shared-equivalent, zero blocked/waived; all 16 domains |
+| Root lint and workspace typecheck | PASS |
+| Focused domain/static/release contracts | PASS 10/10 |
+| PostgreSQL workflow/security | PASS 4/4: full customer-to-share journey, logo/audio bytes, spoof rejection, viewer/tenant denial, replay and restart |
+| Ordered release v41 | PASS: clean apply plus immediate idempotent reapply |
+| Exact-ledger regression | PASS 6/6 |
+| Production web build | BLOCKED: existing `next/font` Google WOFF2 URLs returned HTTP 404 after API/runner compilation |
+| Compiled browser acceptance | NOT RUN because the production web artifact was not available |
+| Deployed target | NOT RUN; deployment not authorized |
+
+Production backup/apply, scanner readiness, source-data reconciliation,
+compiled/deployed exact-host mobile/desktop acceptance, rollback, and cutover
+remain owner gates. Historical Phase 11B evidence follows.
+
+## Historical Phase 11B verification
 
 Assessment date: 2026-07-26
 Environment: compiled local artifacts plus isolated disposable PostgreSQL 16

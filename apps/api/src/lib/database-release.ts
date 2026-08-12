@@ -30,6 +30,7 @@ import { ensureNinjaPoolOnlineTables } from './ninja-pool-online-db-init.js';
 import { ensureBrandForgeOsTables } from './brandforgeos-db-init.js';
 import { ensureBrandForgeOsPhase31Tables } from './brandforgeos-phase31-db-init.js';
 import { ensureSnapProofOsTables } from './snapproofos-db-init.js';
+import { ensureSnapProofOsPhase32Tables } from './snapproofos-phase32-db-init.js';
 import { ensureStudyForgeTables } from './studyforge-db-init.js';
 import { ensureNinjaLaunchKitTables } from './ninja-launch-kit-db-init.js';
 import { ensureCallCommandTables } from './callcommand-db-init.js';
@@ -90,6 +91,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   torqueshed_web_api_tables: ensureTorqueShedWebApiTables,
   ninja_pool_online_tables: ensureNinjaPoolOnlineTables,
   brandforgeos_complete_product_tables: ensureBrandForgeOsPhase31Tables,
+  snapproofos_complete_product_tables: ensureSnapProofOsPhase32Tables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {

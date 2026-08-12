@@ -1678,6 +1678,61 @@ export const moduleShellApi = {
       apiFetch(`/modules/snapproofos/reports/${encodeURIComponent(id)}/decision`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
     downloadReport: (id: string, format: 'json' | 'csv'): Promise<Blob> =>
       apiDownload(`/modules/snapproofos/reports/${encodeURIComponent(id)}/export?format=${format}`),
+    organization: (): Promise<Record<string, any>> => apiFetch('/modules/snapproofos/organization') as Promise<any>,
+    billing: (): Promise<Record<string, any>> => apiFetch('/modules/snapproofos/billing') as Promise<any>,
+    team: (): Promise<Record<string, any>> => apiFetch('/modules/snapproofos/team') as Promise<any>,
+    activity: (): Promise<Record<string, any>> => apiFetch('/modules/snapproofos/activity?limit=50') as Promise<any>,
+    customers: (search = ''): Promise<{ customers: Array<Record<string, any>> }> =>
+      apiFetch(`/modules/snapproofos/customers${search ? `?search=${encodeURIComponent(search)}` : ''}`) as Promise<any>,
+    createCustomer: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/snapproofos/customers', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    archiveCustomer: (id: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/customers/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<any>,
+    customer: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/snapproofos/customers/${encodeURIComponent(id)}`) as Promise<any>,
+    jobs: (query = ''): Promise<{ jobs: Array<Record<string, any>> }> =>
+      apiFetch(`/modules/snapproofos/jobs${query ? `?${query}` : ''}`) as Promise<any>,
+    job: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}`) as Promise<any>,
+    createJob: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/snapproofos/jobs', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    updateJob: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<any>,
+    createJobFinding: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}/findings`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    createJobNote: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}/notes`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    downloadVoiceNote: (id: string): Promise<Blob> =>
+      apiDownload(`/modules/snapproofos/notes/${encodeURIComponent(id)}/audio`),
+    createPart: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}/parts`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    createLabor: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}/labor`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    uploadJobFile: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}/files`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    updateJobFile: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/files/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<any>,
+    deleteJobFile: (id: string): Promise<void> =>
+      apiFetch(`/modules/snapproofos/files/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<any>,
+    downloadJobFile: (id: string): Promise<Blob> =>
+      apiDownload(`/modules/snapproofos/files/${encodeURIComponent(id)}/download`),
+    templates: (): Promise<{ templates: Array<Record<string, any>> }> => apiFetch('/modules/snapproofos/templates') as Promise<any>,
+    applyTemplate: (id: string, templateId: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}/apply-template`, { method: 'POST', body: JSON.stringify({ templateId }) }) as Promise<any>,
+    branding: (): Promise<Record<string, any>> => apiFetch('/modules/snapproofos/branding') as Promise<any>,
+    updateBranding: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/snapproofos/branding', { method: 'PATCH', body: JSON.stringify(input) }) as Promise<any>,
+    uploadBrandingLogo: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/snapproofos/branding/logo', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    downloadBrandingLogo: (): Promise<Blob> => apiDownload('/modules/snapproofos/branding/logo'),
+    generateReport: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/snapproofos/reports/generate', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    createReportExport: (id: string, format: 'pdf' | 'docx'): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/reports/${encodeURIComponent(id)}/exports`, { method: 'POST', body: JSON.stringify({ format }) }) as Promise<any>,
+    listExports: (): Promise<{ exports: Array<Record<string, any>> }> => apiFetch('/modules/snapproofos/exports') as Promise<any>,
+    downloadExport: (id: string): Promise<Blob> => apiDownload(`/modules/snapproofos/exports/${encodeURIComponent(id)}/download`),
+    shareLinks: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/snapproofos/reports/${encodeURIComponent(id)}/share-links`) as Promise<any>,
+    createShareLink: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/reports/${encodeURIComponent(id)}/share-links`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    revokeShareLink: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/snapproofos/share-links/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<any>,
   },
   faultlinelab: {
     policy: (): Promise<Record<string, any>> =>

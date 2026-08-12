@@ -24,6 +24,18 @@
   --ops-motion-standard: 220ms;
 }
 
+.snapproof-job-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.5fr);
+  gap: 14px;
+}
+
+@media (max-width: 720px) {
+  .snapproof-job-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 * {
   box-sizing: border-box;
 }

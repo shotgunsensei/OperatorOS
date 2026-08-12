@@ -2,7 +2,9 @@
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Activity,
   Archive,
+  BriefcaseBusiness,
   CheckCircle2,
   ClipboardCheck,
   Download,
@@ -12,11 +14,15 @@ import {
   Fingerprint,
   FolderLock,
   LayoutDashboard,
+  LayoutTemplate,
   MessageSquareText,
+  PackageOpen,
   Plus,
   Settings,
   ShieldCheck,
   Upload,
+  UserRound,
+  Users,
 } from 'lucide-react';
 import {
   moduleShellApi,
@@ -27,19 +33,29 @@ import {
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import { EmptyState, LoadingState } from '@/components/ExperiencePrimitives';
 import { ShellLiveBadge } from './ShellChrome';
+import SnapProofFieldWorkspace, { type SnapProofFieldTab } from './SnapProofFieldWorkspace';
 
-type Tab = 'dashboard' | 'cases' | 'evidence' | 'review' | 'findings' | 'reports' | 'custody' | 'retention' | 'settings';
+type Tab = 'dashboard' | 'customers' | 'jobs' | 'capture' | 'work' | 'costs' | 'templates' | 'team' | 'activity' | 'cases' | 'evidence' | 'review' | 'findings' | 'reports' | 'custody' | 'retention' | 'branding' | 'settings';
 const tabs: Array<{ id: Tab; label: string; Icon: typeof LayoutDashboard }> = [
   { id: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
-  { id: 'cases', label: 'Cases', Icon: FolderLock },
-  { id: 'evidence', label: 'Evidence', Icon: FileCheck2 },
-  { id: 'review', label: 'Review', Icon: ClipboardCheck },
-  { id: 'findings', label: 'Findings', Icon: MessageSquareText },
+  { id: 'customers', label: 'Customers', Icon: UserRound },
+  { id: 'jobs', label: 'Jobs', Icon: BriefcaseBusiness },
+  { id: 'capture', label: 'Capture', Icon: Upload },
+  { id: 'work', label: 'Findings & notes', Icon: MessageSquareText },
+  { id: 'costs', label: 'Parts & labor', Icon: PackageOpen },
+  { id: 'templates', label: 'Templates', Icon: LayoutTemplate },
   { id: 'reports', label: 'Reports', Icon: FileText },
+  { id: 'review', label: 'Review', Icon: ClipboardCheck },
+  { id: 'team', label: 'Team', Icon: Users },
+  { id: 'activity', label: 'Activity', Icon: Activity },
+  { id: 'cases', label: 'Proof cases', Icon: FolderLock },
+  { id: 'evidence', label: 'Integrity', Icon: FileCheck2 },
   { id: 'custody', label: 'Custody', Icon: Fingerprint },
   { id: 'retention', label: 'Retention', Icon: Archive },
-  { id: 'settings', label: 'Settings', Icon: Settings },
+  { id: 'branding', label: 'Branding', Icon: Settings },
+  { id: 'settings', label: 'Privacy', Icon: Settings },
 ];
+const fieldTabs = new Set<Tab>(['customers', 'jobs', 'capture', 'work', 'costs', 'templates', 'team', 'activity', 'branding']);
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -75,6 +91,9 @@ const dangerButton: React.CSSProperties = {
 function errorText(error: any) {
   return error?.error || error?.message || "We couldn't process that in SnapProof. Please try again.";
 }
+
+const money = (cents: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -163,7 +182,15 @@ export default function SnapProofWorkspace() {
   useEffect(() => {
     const sync = () => {
       const segments = window.location.pathname.split('/').filter(Boolean);
-      const candidate = [...segments].reverse().find(segment => tabs.some(item => item.id === segment)) as Tab | undefined;
+      const routeAlias: Record<string, Tab> = {
+        findings: 'work',
+        files: 'capture',
+        profile: 'branding',
+        billing: 'branding',
+        exports: 'reports',
+      };
+      const matched = [...segments].reverse().find(segment => tabs.some(item => item.id === segment) || routeAlias[segment]);
+      const candidate = matched ? (routeAlias[matched] || matched) as Tab : undefined;
       if (candidate) setTab(candidate);
       const casesIndex = segments.lastIndexOf('cases');
       if (casesIndex >= 0 && segments[casesIndex + 1]) {
@@ -208,27 +235,30 @@ export default function SnapProofWorkspace() {
     <main
       id="snapproofos-workspace"
       data-testid="snapproofos-workspace"
-      data-evidence="persisted-private-evidence-only"
+      data-evidence="persisted-field-proof-and-private-evidence"
+      data-private-evidence-contract="persisted-private-evidence-only"
+      data-phase="32"
       tabIndex={-1}
       style={{
         minHeight: '100vh',
-        background: semantic.bg,
+        background: 'radial-gradient(circle at 85% 0%,#3a1115 0,transparent 34%),#111317',
         color: semantic.text,
+        colorScheme: 'dark',
         padding: `0 ${space.xxl}px ${space.xxl}px`,
       }}
     >
       <header style={{ display: 'flex', justifyContent: 'space-between', gap: space.lg, alignItems: 'flex-end', flexWrap: 'wrap', padding: `${space.xl}px 0` }}>
         <div>
-          <div style={{ color: semantic.accentSuccess, fontSize: fontSize.xs, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase' }}>Evidence integrity and proof of work</div>
+          <div style={{ color: '#f87171', fontSize: fontSize.xs, fontWeight: 800, letterSpacing: 1.4, textTransform: 'uppercase' }}>Field proof · reports · customer trust</div>
           <h1 style={{ margin: '6px 0', fontSize: 30 }}>SnapProofOS</h1>
-          <p style={{ margin: 0, color: '#94a3b8', maxWidth: 820 }}>Capture private evidence, verify integrity, preserve chain of custody, and issue defensible reports with organization and role-based access.</p>
+          <p style={{ margin: 0, color: '#a6a9b0', maxWidth: 820 }}>Run customer field jobs from mobile capture through findings, costs, approval, branded PDF/DOCX delivery, and revocable proof sharing.</p>
         </div>
         <ShellLiveBadge />
       </header>
 
       <nav aria-label="SnapProofOS workspace" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: space.lg }}>
         {tabs.map(({ id, label, Icon }) => (
-          <button key={id} onClick={() => navigate(id)} aria-current={tab === id ? 'page' : undefined} style={{ ...subtleButton, display: 'inline-flex', gap: 7, alignItems: 'center', whiteSpace: 'nowrap', borderColor: tab === id ? '#14b8a6' : '#334155', color: tab === id ? '#5eead4' : '#94a3b8' }}>
+          <button key={id} onClick={() => navigate(id)} aria-current={tab === id ? 'page' : undefined} style={{ ...subtleButton, display: 'inline-flex', gap: 7, alignItems: 'center', whiteSpace: 'nowrap', borderColor: tab === id ? '#dc2626' : '#393d45', color: tab === id ? '#fecaca' : '#a6a9b0', background: tab === id ? '#3a1115' : '#202329' }}>
             <Icon size={15} /> {label}
           </button>
         ))}
@@ -238,6 +268,7 @@ export default function SnapProofWorkspace() {
       {loading ? <div style={{ ...cardStyle, background: '#0f172a', color: '#94a3b8' }}>Loading your evidence workspace…</div> : (
         <>
           {tab === 'dashboard' && <Dashboard counts={dashboard.counts || {}} cases={cases} onOpen={selectCase} navigate={navigate} />}
+          {fieldTabs.has(tab) && <SnapProofFieldWorkspace tab={tab as SnapProofFieldTab} selectedJobId={selectedCaseId} onSelectJob={chooseCase} />}
           {tab === 'cases' && <CasesPanel cases={cases} detail={detail} selectedCaseId={selectedCaseId} saving={saving} onSelect={selectCase} mutate={mutate} />}
           {tab === 'evidence' && <EvidencePanel cases={cases} evidence={evidence} selectedCaseId={selectedCaseId} saving={saving} onSelectCase={chooseCase} mutate={mutate} />}
           {tab === 'review' && <ReviewPanel caseDetail={detail} evidence={evidence} reports={reports} saving={saving} mutate={mutate} />}
@@ -257,14 +288,22 @@ function Panel({ id, title, description, children }: { id: string; title: string
 }
 
 function Dashboard({ counts, cases, onOpen, navigate }: { counts: Record<string, number>; cases: SnapProofCase[]; onOpen: (id: string) => void; navigate: (tab: Tab) => void }) {
-  return <Panel id="snapproofos-dashboard" title="Evidence command dashboard" description="See active cases, captured evidence, review status, findings, and recent custody events.">
+  return <Panel id="snapproofos-dashboard" title="Field operations command dashboard" description="See customers, active and overdue jobs, captured proof, approval state, financial totals, and recent activity.">
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: space.md }}>
       {[
         ['Cases', counts.cases ?? 0],
+        ['Customers', counts.customers ?? 0],
+        ['Active jobs', counts.activeJobs ?? 0],
+        ['Overdue jobs', counts.overdueJobs ?? 0],
         ['Evidence', counts.evidence ?? 0],
         ['Awaiting review', counts.evidenceInReview ?? 0],
         ['Open findings', counts.openFindings ?? 0],
         ['Approved reports', counts.approvedReports ?? 0],
+        [
+          'Documented value',
+          money(Number(counts.partsRevenueCents ?? 0) + Number(counts.laborRevenueCents ?? 0)),
+        ],
+        ['Activity (7 days)', counts.recentActivity ?? 0],
       ].map(([label, value]) => <div key={String(label)} style={{ ...cardStyle, background: '#0f172a', borderColor: '#1e3a4f' }}><div style={{ color: '#94a3b8', fontSize: 12 }}>{label}</div><div style={{ fontSize: 28, fontWeight: 800, marginTop: 5 }}>{String(value)}</div></div>)}
     </div>
     <div style={{ ...cardStyle, background: '#0f172a', marginTop: space.lg }}>
