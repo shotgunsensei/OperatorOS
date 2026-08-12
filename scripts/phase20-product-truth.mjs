@@ -850,6 +850,69 @@ function specialCapabilities(definition, sourceRoot) {
 }
 
 function applyCurrentRestorationMappings(definition, capabilities) {
+  if (definition.slug === 'studyforge-ai') {
+    const nativeTargets = [
+      'apps/api/src/lib/studyforge-db-init.ts',
+      'apps/api/src/lib/studyforge-phase33-db-init.ts',
+      'apps/api/src/lib/studyforge.ts',
+      'apps/api/src/lib/studyforge-phase33.ts',
+      'apps/api/src/lib/studyforge-access.ts',
+      'apps/api/src/routes/studyforge-routes.ts',
+      'apps/api/src/routes/studyforge-phase33-routes.ts',
+      'apps/web/src/components/module-shells/StudyForgeShell.tsx',
+      'apps/web/src/components/module-shells/StudyForgeCompleteWorkspace.tsx',
+      'apps/web/src/lib/auth.ts',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/entitlement-resolver.ts',
+      'apps/api/src/lib/ai-provider.ts',
+      'apps/api/src/lib/shared-usage-activity.ts',
+      'apps/api/src/lib/shared-services-db-init.ts',
+      'apps/api/src/lib/saas-db-init.ts',
+      'apps/api/src/routes/auth-routes.ts',
+      'apps/api/src/routes/billing-routes.ts',
+      'apps/api/src/routes/tenant-admin-routes.ts',
+      'apps/api/src/lib/database-release-contract.ts',
+    ];
+    const nativeSchemas = ['apps/api/src/lib/studyforge-db-init.ts','apps/api/src/lib/studyforge-phase33-db-init.ts'];
+    const sharedSchemas = ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-services-db-init.ts'];
+    const uiTargets = ['apps/web/src/app/modules/[slug]/page.tsx','apps/web/src/app/modules/[slug]/[...path]/page.tsx','apps/web/src/components/module-shells/StudyForgeCompleteWorkspace.tsx'];
+    const evidence = [
+      'apps/api/test/studyforge-domain.test.ts',
+      'apps/api/test/studyforge-db.test.ts',
+      'apps/api/test/studyforge-phase33-domain.test.ts',
+      'apps/api/test/studyforge-phase33-static.test.ts',
+      'apps/api/test/studyforge-phase33-db.test.ts',
+      'apps/web/e2e/studyforge-phase33.spec.ts',
+    ];
+    const sharedBoundary = /(?:routes\/auth|\/auth\/|\/login|\/signup|\/logout|\/profile|account.?delete|billing|subscription|checkout|portal|webhook|stripe|plan.?limit|entitlement|session.?secret|database.?url|openai|provider|routes\/admin|platform.?admin|health|contact|landing|pricing|terms|privacy|legal|operatoros|node.?env|base.?path|repl.?id|\bport\b)/iu;
+    const sharedSchemaBoundary = /^(?:users|sessions|stripe_events)(?:\.|$)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const sourceText = [capability.title,capability.canonicalSourceIdentity,...capability.sourcePointers].join(' ');
+      const shared = capability.type === 'integration'
+        || capability.type === 'background_process'
+        || capability.type === 'public_flow'
+        || ((capability.type === 'database_table' || capability.type === 'database_column') && sharedSchemaBoundary.test(capability.title))
+        || sharedBoundary.test(sourceText);
+      const typedTargets = capability.type === 'ui_page' || capability.type === 'ui_route'
+        ? uiTargets
+        : capability.type === 'database_table'
+          ? (shared ? sharedSchemas : nativeSchemas)
+          : [];
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...(capability.currentTargets || []),...(shared ? sharedTargets : nativeTargets),...typedTargets])].sort(),
+        automatedEvidence: [...new Set([...(capability.automatedEvidence || []),...evidence])].sort(),
+        note: [capability.note, shared
+          ? 'Phase 33 preserves this outcome through OperatorOS identity, tenant, role, entitlement, billing, shared AI provider, metered usage, runtime, legal, or platform-admin authority.'
+          : 'Phase 33 restores this source outcome through additive v42 StudyForge persistence, transactional complete-set generation, deterministic and validated AI paths, source-compatible deep links, real learning sessions, quiz history, streaks, countdowns, exports, and the responsive learning workspace.'].filter(Boolean).join(' '),
+      };
+    });
+  }
   if (definition.slug === 'snapproofos') {
     const nativeTargets = [
       'apps/api/src/lib/snapproofos-db-init.ts',

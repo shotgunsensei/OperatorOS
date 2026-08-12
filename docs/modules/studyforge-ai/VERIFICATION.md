@@ -1,77 +1,51 @@
-# StudyForge AI Phase 11C verification
+# StudyForge AI Phase 33 verification
 
-Assessment date: 2026-07-27
+Evidence date: 2026-08-12. All database and browser work used disposable local
+infrastructure. No production environment or external AI provider was touched.
 
-Branch: `codex/phase-11c-studyforge-ai-completion`
-
-Source provenance: `C:\Dev\Study-Forge` at
-`a607a9f34442b1d0f6bfffbf0293609529494825`
-
-Environment: compiled production artifacts, local exact-host HTTPS proxy, and
-disposable PostgreSQL 16 database `operatoros_phase11c_release`
-
-## Result
-
-Phase 11C satisfies the OperatorOS source/local State 4 gate. It does not
-satisfy State 5 and is not production-ready because this revision has not been
-deployed and no production data reconciliation or cutover was authorized.
-
-## Evidence
+## Passing local evidence
 
 | Gate | Result |
 | --- | --- |
-| Focused StudyForge domain/database/import/contract tests | 14 passed, 0 failed, 0 skipped |
-| Complete clean API aggregate | 801 passed, 0 failed, 0 skipped in 291,100 ms |
-| Workspace typecheck | API, runner gateway and web passed |
-| Production build | API, runner gateway and 20-page Next build passed |
-| Database release plan | 25 ordered operations including `studyforge_tables` |
-| Clean release apply | 25 operations verified in 9,746 ms |
-| Idempotent release reapply | Passed in 1,461 ms |
-| Core production preflight | Passed; 13 canonical URL registrations accepted |
-| Compiled runtime | Fastify and Next started through the readiness-gated production shape |
-| Direct and web-proxied health | `/healthz` healthy |
-| Direct and web-proxied readiness | `/readyz` ready; database, auth, SSO encryption, registry and worker configured |
-| Focused StudyForge browser workflow | 1/1 passed in 15.8 seconds |
-| Focused SnapProofOS regression | 1/1 passed in 14.3 seconds |
-| Complete production-host browser matrix | 7/7 passed in 1.5 minutes |
+| Workspace TypeScript | PASS |
+| Root lint | PASS |
+| Phase 33 deterministic/static contracts | PASS 8/8 |
+| Deterministic golden fixture | PASS; SHA-256 `f87e7295a49af81a0c18b6c84018a1f4d0962c43aa7a384ba285e2b84364eb1e` |
+| Phase 33 PostgreSQL journeys | PASS 6/6 |
+| Combined legacy plus Phase 33 StudyForge regression | PASS 28/28 |
+| Shared integration aggregate | PASS 28/28 |
+| Database release v42 clean apply and immediate reapply | PASS |
+| Production web build | PASS |
+| Compiled local exact-host Playwright | PASS 2/2 |
+| Exact source ledger/report gate | PASS; 317/317 active/shared-equivalent |
 
-The browser matrix proves one OperatorOS credential, silent exact-host module
-launch, clean URLs, host-only sessions, direct deep links, refresh, My Apps
-return and global logout/revocation. The StudyForge scenario creates a subject,
-private note source and scanned document source; generates, edits, reviews and
-publishes a deck, quiz and study plan; records a card review, server-graded quiz
-attempt and completed plan session; verifies exactly three AI usage events;
-downloads a real export; exercises mobile navigation; globally logs out;
-reauthenticates directly to a deep route; refreshes; and confirms persisted
-records.
+The PostgreSQL suite proves transactional complete generation and replay,
+failure cleanup, role and user/tenant isolation, archive/restore/delete,
+quiz/flashcard/plan history, Free/Pro/Tutor gates, concurrent credit
+exhaustion, activity/streak idempotency, exports, countdown/time-zone behavior,
+and restart-visible records.
 
-## Failures found and closed
+The compiled exact-host suite runs the production API and web artifacts behind
+the canonical host proxy. It proves OperatorOS SSO, notes to every generated
+artifact, flashcard and quiz completion, review/plan/export, persisted results,
+source-compatible record routes, labels/accessibility, no placeholders, and no
+horizontal overflow at 1440, 900, and 390 pixels.
 
-1. The first clean aggregate exposed optional StudyForge-table assumptions in
-   isolated platform hard-delete tests and missing explicit StudyForge schema
-   initialization in its database suite. Table discovery and setup were made
-   explicit; affected suites passed 15/15 and the final aggregate passed
-   801/801.
-2. The first production-host matrix exposed an ambiguous StudyForge subject
-   selector and a stale SnapProofOS selected-case closure. StudyForge selectors
-   were scoped to their sections; SnapProofOS selection now uses one
-   synchronized state/ref path and parses `/cases/:id` on direct navigation.
-3. The StudyForge acceptance initially counted quiz questions before the
-   asynchronous publish refresh completed and queried PostgreSQL before plan
-   completion finished. The test now waits for both published fieldsets and
-   the persisted completion UI. Focused and full matrices passed afterward.
-4. Repeated disposable registrations eventually reached the intentional
-   in-memory rate limit. Only the disposable API process was restarted; no
-   production limit or security control was weakened.
+## Honest aggregate status
 
-## Remaining State 5 gates
+The broad API aggregate is not green: 979 passed, 29 failed, and 6 skipped
+across 1,014 tests. The failures are existing unrelated cross-product
+contracts; the focused Phase 33 and shared integration suites pass. Phase 33
+does not report the broad aggregate as a pass or silently alter unrelated
+products to manufacture one.
 
-- Deploy the exact reviewed cumulative revision through the canonical
-  `.replit` supervisor path.
-- Pass the public read-only deployment verifier and deployed authenticated
-  StudyForge SSO, return, deep-link, persistence, authorization, isolation,
-  logout, health and readiness scenarios.
-- Approve and record any source-data mapping, backup, dry run, reconciliation,
-  apply and cutover. No apply is implied by the no-apply planner.
-- Configure and verify any live AI provider separately. Local acceptance used
-  the deterministic test adapter; no external provider traffic occurred.
+## Remaining state-5 gates
+
+- Freeze the exact reviewed commit/build and create a production database
+  backup before applying cumulative release v42.
+- Configure and accept the real shared AI provider when AI-required mode is
+  enabled; local tests used deterministic and controlled provider adapters.
+- Run deployed exact-host SSO, Free/Pro/Tutor limits, complete generation,
+  learning, export, accessibility/mobile, restart, backup/restore, and rollback
+  acceptance.
+- Authorize and reconcile any standalone source-data import separately.

@@ -11,13 +11,18 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 41);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 42);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 41);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 41);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 42);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 42);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'snapproofos_complete_product_tables');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'studyforge_complete_product_tables');
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'studyforge_complete_product_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'snapproofos_complete_product_tables'),
+    'StudyForge complete learning persistence must be an additive release step after v41',
+  );
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'tradeflowkit_saved_views')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'free_account_app_backfill'),

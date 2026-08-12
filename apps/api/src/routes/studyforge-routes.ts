@@ -30,10 +30,10 @@ import {
 } from '../lib/shared-usage-activity.js';
 import { createAttachment, getAttachmentContent, getMaxAttachmentBytes } from '../lib/shared-attachments.js';
 import { planStudyForgeImport } from '../lib/studyforge-import.js';
+import { consumeStudyForgeUsage, resolveStudyForgeAccess } from '../lib/studyforge-access.js';
 
 const readGuards = [requireTenantModuleAccess('studyforge-ai')];
 const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
-const GENERATION_LIMIT_PER_USER_MONTH = 50;
 
 type Row = Record<string, any>;
 type Executor = Pick<typeof db, 'execute'>;
@@ -200,6 +200,7 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
     const completedSessions = data.sessions.filter((row) => row.completedAt).length;
     const dueCards = data.progress.filter((row) => new Date(row.dueAt) <= new Date()).length;
     const latestScores = data.attempts.slice(0, 10).map((row) => Number(row.scorePercent));
+    const access = await resolveStudyForgeAccess(userId, tenantId);
     return reply.send({
       ...data,
       dashboard: {
@@ -214,7 +215,7 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
           ? Math.round(latestScores.reduce((sum, value) => sum + value, 0) / latestScores.length)
           : 0,
       },
-      ai: { ...getProviderInfo(), monthlyLimit: GENERATION_LIMIT_PER_USER_MONTH },
+      ai: { ...getProviderInfo(), monthlyLimit: access.limits.generationsPerMonth },
     });
   });
 
@@ -517,18 +518,7 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
       if (input.subjectId && !await scoped('subject', tenantId, input.subjectId)) return notFound(reply, 'subject');
       const modId = await moduleId();
       if (!modId) return notFound(reply, 'module');
-      const usage = await db.execute(sql`SELECT COALESCE(SUM(units),0)::int AS units
-        FROM shared_usage_events WHERE tenant_id=${tenantId} AND module_id=${modId} AND user_id=${userId}
-        AND operation='studyforge.ai_generation' AND occurred_at >= date_trunc('month',NOW())`);
-      const used = Number(usage.rows[0]?.units ?? 0);
-      if (used >= GENERATION_LIMIT_PER_USER_MONTH) {
-        return reply.code(429).send({
-          error: 'Monthly StudyForge AI generation limit reached',
-          code: 'STUDYFORGE_GENERATION_LIMIT',
-          limit: GENERATION_LIMIT_PER_USER_MONTH,
-          used,
-        });
-      }
+      const access = await resolveStudyForgeAccess(userId, tenantId);
       const sourceBody = await sourceText(tenantId, source, modId);
       const safeRequest = {
         sourceId: input.sourceId,
@@ -572,6 +562,13 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
       });
       const material = parseGeneratedMaterial(input.type, result.text, sourceBody);
       const response = await db.transaction(async (tx) => {
+        await consumeStudyForgeUsage({
+          tenantId,
+          userId,
+          kind: 'generation',
+          limit: access.limits.generationsPerMonth,
+          executor: tx,
+        });
         const generated = await tx.execute(sql`INSERT INTO studyforge_generations
           (tenant_id,user_id,source_id,generation_type,idempotency_key,input_sha256,output_json,
            source_references,provider,model,provider_version,token_count,duration_ms)
@@ -650,6 +647,7 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
       }
       if (validation(reply, error)) return;
       if (error instanceof AiProviderDisabledError) return reply.code(503).send({ error: 'AI generation is disabled until the shared provider is configured', code: error.code });
+      if ((error as any)?.statusCode === 402) return reply.code(402).send({ error: (error as Error).message, code: (error as any).code });
       const code = String((error as any)?.code ?? '');
       if (code.startsWith('SOURCE_') || code.startsWith('ATTACHMENT_')) {
         return reply.code(code.includes('PENDING') ? 423 : 422).send({ error: (error as Error).message, code });
@@ -681,13 +679,24 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
       }));
       const correct = graded.filter((answer) => answer.correct).length;
       const score = Math.round(correct * 100 / graded.length);
-      const inserted = await db.execute(sql`INSERT INTO studyforge_quiz_attempts
-        (tenant_id,quiz_id,user_id,answers,correct_count,total_count,score_percent)
-        VALUES (${tenantId},${quizId},${userId},${JSON.stringify(graded)}::jsonb,${correct},${graded.length},${score}) RETURNING *`);
+      const access = await resolveStudyForgeAccess(userId, tenantId);
+      const inserted = await db.transaction(async (tx) => {
+        await consumeStudyForgeUsage({
+          tenantId,
+          userId,
+          kind: 'quiz_attempt',
+          limit: access.limits.quizAttemptsPerMonth,
+          executor: tx,
+        });
+        return tx.execute(sql`INSERT INTO studyforge_quiz_attempts
+          (tenant_id,quiz_id,user_id,answers,correct_count,total_count,score_percent,review_json)
+          VALUES (${tenantId},${quizId},${userId},${JSON.stringify(graded)}::jsonb,${correct},${graded.length},${score},${JSON.stringify(graded)}::jsonb) RETURNING *`);
+      });
       await activity(request, 'quiz.completed', 'studyforge_quiz', quizId, 'Published quiz attempt completed.', { attemptId: inserted.rows[0].id, scorePercent: score });
       return reply.code(201).send({ attempt: camel(inserted.rows[0] as Row) });
     } catch (error) {
       if (validation(reply, error)) return;
+      if ((error as any)?.statusCode === 402) return reply.code(402).send({ error: (error as Error).message, code: (error as any).code });
       throw error;
     }
   });
@@ -696,6 +705,7 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
     try {
       const input = parseReview(request.body);
       const { tenantId, userId } = context(request);
+      const access = await resolveStudyForgeAccess(userId, tenantId);
       const cardId = String((request.params as any).id);
       const card = await db.execute(sql`SELECT c.id FROM studyforge_cards c JOIN studyforge_decks d
         ON d.tenant_id=c.tenant_id AND d.id=c.deck_id
@@ -709,8 +719,9 @@ export async function registerStudyForgeRoutes(app: FastifyInstance): Promise<vo
       const repetitions = rating === 'again' ? 0 : Number(previous?.repetitions ?? 0) + 1;
       const lapses = Number(previous?.lapses ?? 0) + (rating === 'again' ? 1 : 0);
       const base = Math.max(1, Number(previous?.interval_days ?? 0));
-      const interval = rating === 'again' ? 0 : rating === 'hard' ? Math.max(1, Math.round(base * 1.2))
-        : rating === 'good' ? Math.max(1, Math.round(base * 2.5)) : Math.max(2, Math.round(base * 4));
+      const interval = !access.limits.spacedRepetition ? 0
+        : rating === 'again' ? 0 : rating === 'hard' ? Math.max(1, Math.round(base * 1.2))
+          : rating === 'good' ? Math.max(1, Math.round(base * 2.5)) : Math.max(2, Math.round(base * 4));
       const ease = Math.max(1300, Math.min(3000, Number(previous?.ease_milli ?? 2500) + ({ again: -200, hard: -100, good: 0, easy: 150 }[rating])));
       const dueAt = new Date(Date.now() + interval * 86_400_000);
       const result = await db.execute(sql`INSERT INTO studyforge_card_progress

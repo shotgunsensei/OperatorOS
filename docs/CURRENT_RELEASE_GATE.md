@@ -1,5 +1,20 @@
 # OperatorOS current release gate
 
+## Current Phase 33 source/local overlay - RELEASE BLOCKED (2026-08-12)
+
+StudyForge Phase 33 is source/local implemented at cumulative additive database
+release v42. Its exact ledger is 317/317 active or shared-equivalent with zero
+waiver or blocker. Typecheck, lint, focused 8/8 plus PostgreSQL 6/6, combined
+StudyForge 28/28, integration 28/28, clean/reapplied v42, production build, and
+compiled local exact-host 2/2 pass.
+
+This is not a production promotion. The broad API aggregate remains non-green
+with 979 passed, 29 existing unrelated cross-product failures, and 6 skipped
+across 1,014 tests. Production backup/apply, live shared-AI configuration,
+deployed exact-host/mobile acceptance, data reconciliation, restore/rollback,
+commit/merge, and deployment are owner gates. The historical release records
+below remain provenance and do not override this current overlay.
+
 ## Current Phase 32 source/local overlay - RELEASE BLOCKED (2026-08-12)
 
 SnapProofOS Phase 32 is source/local implemented at additive database release

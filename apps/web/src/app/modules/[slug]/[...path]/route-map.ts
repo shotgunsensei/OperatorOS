@@ -191,7 +191,15 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/settings': { sectionId: 'snapproofos-settings', label: 'Settings' },
   },
   'studyforge-ai': {
-    '/dashboard': { sectionId: 'studyforge-dashboard', label: 'Dashboard' },
+    '/app': { sectionId: 'studyforge-dashboard', label: 'Learning Home' },
+    '/dashboard': { sectionId: 'studyforge-dashboard', label: 'Learning Home' },
+    '/sets': { sectionId: 'studyforge-sets', label: 'Study Sets' },
+    '/sets/new': { sectionId: 'studyforge-new-set', label: 'New Study Set' },
+    '/folders': { sectionId: 'studyforge-sets', label: 'Folders' },
+    '/exams': { sectionId: 'studyforge-exams', label: 'Exam Countdowns' },
+    '/account': { sectionId: 'studyforge-account', label: 'Plan and Usage' },
+    '/admin': { sectionId: 'studyforge-account', label: 'StudyForge Administration' },
+    '/pricing': { sectionId: 'studyforge-account', label: 'OperatorOS Plan' },
     '/subjects': { sectionId: 'studyforge-subjects', label: 'Subjects and Courses' },
     '/courses': { sectionId: 'studyforge-subjects', label: 'Subjects and Courses' },
     '/sources': { sectionId: 'studyforge-sources', label: 'Authorized Sources' },
@@ -350,8 +358,9 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'jobs') return { sectionId: 'snapproofos-jobs', label: 'Job' };
     if (resource === 'customers') return { sectionId: 'snapproofos-customers', label: 'Customer' };
   }
-  if (slug === 'studyforge-ai' && pathSegments.length === 2) {
+  if (slug === 'studyforge-ai' && pathSegments.length >= 2) {
     const [resource] = pathSegments;
+    if (resource === 'sets') return { sectionId: 'studyforge-set-workspace', label: 'Study Set' };
     if (resource === 'subjects' || resource === 'courses') return { sectionId: 'studyforge-subjects', label: 'Subject' };
     if (resource === 'sources') return { sectionId: 'studyforge-sources', label: 'Source' };
     if (resource === 'decks' || resource === 'cards') return { sectionId: 'studyforge-decks', label: 'Flashcard Deck' };

@@ -9,7 +9,7 @@ import Fastify from 'fastify';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import {
-  modules, tenantModules, tenantUserModuleAccess, tenantUsers,
+  modules, tenantEntitlements, tenantModules, tenantUserModuleAccess, tenantUsers,
 } from '../src/schema.js';
 import {
   cleanupModule, cleanupUser, createTestModule, createTestUser, ensureSchemaReady,
@@ -51,6 +51,7 @@ async function makeApp() {
 }
 
 async function cleanTenant(tenantId: string) {
+  await db.execute(sql`DELETE FROM studyforge_usage_counters WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM studyforge_card_progress WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM studyforge_quiz_attempts WHERE tenant_id=${tenantId}`);
   await db.execute(sql`DELETE FROM studyforge_cards WHERE tenant_id=${tenantId}`);
@@ -85,6 +86,14 @@ before(async () => {
     { tenantId: ownerA.currentTenantId, moduleId: moduleRow.id, status: 'enabled', source: 'admin', allowAllMembers: true },
     { tenantId: ownerB.currentTenantId, moduleId: moduleRow.id, status: 'enabled', source: 'admin', allowAllMembers: true },
   ]);
+  await db.insert(tenantEntitlements).values({
+    tenantId: ownerA.currentTenantId,
+    entitlementKey: 'studyforge-ai.pro',
+    entitlementType: 'companion_module',
+    source: 'admin',
+    active: true,
+    metadata: { reason: 'Phase 11C spaced-repetition compatibility fixture' },
+  });
   await db.insert(tenantUsers).values({ tenantId: ownerA.currentTenantId, userId: viewer.id, role: 'member' });
   await db.insert(tenantUserModuleAccess).values({
     tenantId: ownerA.currentTenantId,
@@ -99,6 +108,7 @@ after(async () => {
   if (app) await app.close();
   if (ownerA && moduleRow) await cleanTenant(ownerA.currentTenantId);
   if (ownerB && moduleRow) await cleanTenant(ownerB.currentTenantId);
+  if (ownerA) await db.delete(tenantEntitlements).where(eq(tenantEntitlements.tenantId, ownerA.currentTenantId));
   if (moduleRow) {
     await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.moduleId, moduleRow.id));
     await db.delete(tenantModules).where(eq(tenantModules.moduleId, moduleRow.id));
