@@ -7,7 +7,7 @@
 - Confirmed owner-supplied amount: USD $5.00, with Stripe reporting a successful payment and upcoming payout.
 - Observed product state: Torque Assist balance remained zero and the diagnostic action did not explain the settlement/provider failure.
 - Deployed release, verified from `https://operatoros.net/api/health` and `https://api.operatoros.net/readyz` on 2026-08-11: commit `1942a9f69f2e90e28ea8da31cadf257441175e9c`, build `bf05e2fa4d4b697fe755cc5a`, database release v39, last step `ninja_pool_online_tables`.
-- Hotfix source: branch `codex/hotfix-torqueshed-paid-credit`, based exactly on deployed commit `1942a9f69f2e90e28ea8da31cadf257441175e9c`. Record the final reviewed commit from Git immediately before deployment.
+- Hotfix source: branch `codex/hotfix-torqueshed-paid-credit`, implementation commit `b03ab43`, based exactly on deployed commit `1942a9f69f2e90e28ea8da31cadf257441175e9c`. Confirm the final branch-tip full hash with `git rev-parse HEAD` immediately before deployment.
 
 No second charge was created. No refund, raw ledger insert, production database mutation, or live reconciliation was performed by this work.
 
