@@ -168,10 +168,22 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
   },
   snapproofos: {
     '/dashboard': { sectionId: 'snapproofos-dashboard', label: 'Dashboard' },
+    '/customers': { sectionId: 'snapproofos-customers', label: 'Customers' },
+    '/jobs': { sectionId: 'snapproofos-jobs', label: 'Jobs' },
+    '/capture': { sectionId: 'snapproofos-capture', label: 'Mobile Capture' },
+    '/files': { sectionId: 'snapproofos-capture', label: 'Files and Photos' },
+    '/work': { sectionId: 'snapproofos-work', label: 'Findings and Notes' },
+    '/costs': { sectionId: 'snapproofos-costs', label: 'Parts and Labor' },
+    '/templates': { sectionId: 'snapproofos-templates', label: 'Job Templates' },
+    '/team': { sectionId: 'snapproofos-team', label: 'Team' },
+    '/activity': { sectionId: 'snapproofos-activity', label: 'Activity' },
+    '/branding': { sectionId: 'snapproofos-branding', label: 'Organization Branding' },
+    '/profile': { sectionId: 'snapproofos-branding', label: 'Profile and Organization' },
+    '/billing': { sectionId: 'snapproofos-branding', label: 'Plan and Billing' },
     '/cases': { sectionId: 'snapproofos-cases', label: 'Evidence Cases' },
     '/evidence': { sectionId: 'snapproofos-evidence', label: 'Evidence' },
     '/review': { sectionId: 'snapproofos-review', label: 'Review Queue' },
-    '/findings': { sectionId: 'snapproofos-findings', label: 'Findings' },
+    '/findings': { sectionId: 'snapproofos-work', label: 'Findings' },
     '/reports': { sectionId: 'snapproofos-reports', label: 'Reports' },
     '/exports': { sectionId: 'snapproofos-reports', label: 'Defensible Exports' },
     '/custody': { sectionId: 'snapproofos-custody', label: 'Chain of Custody' },
@@ -335,6 +347,8 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'cases') return { sectionId: 'snapproofos-cases', label: 'Evidence Case' };
     if (resource === 'evidence') return { sectionId: 'snapproofos-evidence', label: 'Evidence Item' };
     if (resource === 'reports') return { sectionId: 'snapproofos-reports', label: 'Report' };
+    if (resource === 'jobs') return { sectionId: 'snapproofos-jobs', label: 'Job' };
+    if (resource === 'customers') return { sectionId: 'snapproofos-customers', label: 'Customer' };
   }
   if (slug === 'studyforge-ai' && pathSegments.length === 2) {
     const [resource] = pathSegments;

@@ -1,4 +1,18 @@
-# SnapProofOS Phase 11B migration and cutover plan
+# SnapProofOS Phase 32 migration and cutover plan
+
+## Current v41 plan
+
+Release v41 is additive. It creates tenant-scoped customers, templates,
+branding, parts, labor, shares, and public rate windows; extends proof cases as
+field jobs; and extends findings, notes, evidence, reports, and exports. It does
+not import child identity, memberships, billing, raw public file URLs, or
+provider secrets.
+
+The existing pinned dry-run remains no-apply. Production migration requires an
+owner-approved source export, tenant/user/customer mappings, attachment bytes,
+scan disposition, count/hash reconciliation, backup reference, release v41
+apply, and rollback evidence. No production export or apply occurred in Phase
+32. Historical Phase 11B planning follows.
 
 Status: dry-run planning only; no production apply or cutover is authorized.
 

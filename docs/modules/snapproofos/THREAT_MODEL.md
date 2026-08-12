@@ -1,4 +1,20 @@
-# SnapProofOS Phase 11B threat model
+# SnapProofOS Phase 32 threat model
+
+## Phase 32 additions
+
+- Public shares: 256-bit random token, SHA-256 at rest, one approved report,
+  expiry/revocation, durable IP-minute rate limit on view and download,
+  non-enumerating misses, no-index/no-store, and customer-only snapshots.
+- Mobile/file capture: signature and declared-MIME agreement, shared size cap,
+  scan/quarantine gate, tenant/object-scoped retrieval, SHA-256 recheck, JPEG
+  APP1 EXIF removal, retention-aware deletion, and replay-safe mutation IDs.
+- Report history: approved content/branding/totals are immutable; PDF/DOCX bytes,
+  length, provenance, and SHA-256 are persisted and checked before download.
+- Authority: assignees must be tenant members; private routes enforce module
+  entitlement plus viewer/write/admin boundaries; no child auth or billing is
+  restored.
+
+The Phase 11B model below remains applicable to private proof/custody controls.
 
 | Threat | Control |
 | --- | --- |

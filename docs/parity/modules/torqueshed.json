@@ -21,30 +21,30 @@
   },
   "sourceFingerprint": {
     "algorithm": "sha256(path NUL uint64be(size) content)",
-    "treeSha256": "0a4d86273ea388be1bdfc8ba8ce4246afeb79730cb14d2523b39599abaefd209",
-    "fileCount": 166,
-    "totalBytes": 8315725
+    "treeSha256": "6a7951180ceb46f39fff4ce3fe8011e5e8875a606ac7a35e316bc49a575e5f73",
+    "fileCount": 182,
+    "totalBytes": 8839054
   },
   "stateCounts": {
-    "ACTIVE_NATIVE": 473,
-    "ACTIVE_SHARED_EQUIVALENT": 387,
+    "ACTIVE_NATIVE": 502,
+    "ACTIVE_SHARED_EQUIVALENT": 450,
     "OWNER_WAIVED": 0,
     "BLOCKED": 0
   },
   "typeCounts": {
-    "api_endpoint": 49,
+    "api_endpoint": 56,
     "asset": 17,
-    "component_action": 59,
-    "database_column": 624,
-    "database_table": 64,
-    "integration": 38,
+    "component_action": 106,
+    "database_column": 641,
+    "database_table": 66,
+    "integration": 54,
     "mobile_product": 1,
     "mobile_pwa_surface": 3,
-    "public_flow": 3,
+    "public_flow": 6,
     "source_test": 1,
     "ui_page": 1
   },
-  "capabilityDigestSha256": "f40bc406ced86fa8516f4e3d5b45d8b8f77933e4562a286bda2bf3234f111cb7",
+  "capabilityDigestSha256": "588bb1a90cadc3a92fa417c9abbed4a1216e69d42affb617745ff94ac8842f48",
   "capabilities": [
     {
       "capabilityId": "torqueshed.api_endpoint.09f14ee05d1e8e04",
@@ -372,6 +372,41 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.api_endpoint.34cedf6ace3de185",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app (1).ts#GET /.well-known/assetlinks.json",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 92,
+      "title": "GET /.well-known/assetlinks.json",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.api_endpoint.3944b1b32701bbd0",
       "moduleSlug": "torqueshed",
       "type": "api_endpoint",
@@ -405,6 +440,43 @@
       "ownerWaiverId": null,
       "priorDisposition": null,
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.api_endpoint.40406be94c8bbcac",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app (1).ts#GET /{*path}",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 124,
+      "title": "GET /{*path}",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
       "capabilityId": "torqueshed.api_endpoint.40ae4faf8aa125db",
@@ -660,6 +732,41 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.api_endpoint.6153d875d208da7f",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth (1).ts#POST /auth/logout",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 418,
+      "title": "POST /auth/logout",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.api_endpoint.69aac9a439de6cb4",
       "moduleSlug": "torqueshed",
       "type": "api_endpoint",
@@ -742,6 +849,43 @@
       "missingSourcePointers": [],
       "sourceLine": 307,
       "title": "POST /vehicles/:vehicleId/reminders",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.api_endpoint.784525694a959f24",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app (1).ts#GET /sso",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 69,
+      "title": "GET /sso",
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
@@ -880,6 +1024,41 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.api_endpoint.959567b1f5b07dd0",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app (1).ts#GET /.well-known/apple-app-site-association",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 71,
+      "title": "GET /.well-known/apple-app-site-association",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.api_endpoint.961e6951718b625d",
       "moduleSlug": "torqueshed",
       "type": "api_endpoint",
@@ -890,6 +1069,41 @@
       "missingSourcePointers": [],
       "sourceLine": 569,
       "title": "PUT /profiles/:userId/follow",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.api_endpoint.964294005b3af62c",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth (1).ts#POST /auth/operatoros",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 439,
+      "title": "POST /auth/operatoros",
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
@@ -1787,6 +2001,41 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.api_endpoint.fbda31bd554bb694",
+      "moduleSlug": "torqueshed",
+      "type": "api_endpoint",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth (1).ts#GET /auth/me",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 407,
+      "title": "GET /auth/me",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.api_endpoint.fef03f56f93f97a5",
       "moduleSlug": "torqueshed",
       "type": "api_endpoint",
@@ -2437,6 +2686,78 @@
       "note": "Source asset has no verified visual-equivalence mapping in the Phase 20 baseline. Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.component_action.018bf46c9a11ddde",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => navigate(id):#2",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 408,
+      "title": "button onClick",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.01b75d90ccaea792",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setShowTokens(false):Close#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 415,
+      "title": "Close",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.component_action.12c25b017b8dc38d",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -2447,6 +2768,43 @@
       "missingSourcePointers": [],
       "sourceLine": 525,
       "title": "TorqueShed home",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.1405a9e958dfd06b",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => navigate(\"garage\"):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 244,
+      "title": "button onClick",
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
@@ -2585,6 +2943,41 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.component_action.1c4392a81324911c",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setNotice(\"Checkout is awaiting the production payment provider connection.\"):#3",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 415,
+      "title": "button onClick",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.component_action.1d15dbbc5e9ed740",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -2595,6 +2988,43 @@
       "missingSourcePointers": [],
       "sourceLine": 697,
       "title": "Safety guidance →",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.26049fe2d0a61b68",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => void onSignOut():Sign out#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 399,
+      "title": "Sign out",
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
@@ -2667,6 +3097,113 @@
       "missingSourcePointers": [],
       "sourceLine": 719,
       "title": "Close",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.2e69be62b2c0e756",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setNotice(`Opening ${post.author}'s complete build journal.`):Open build journal →#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 382,
+      "title": "Open build journal →",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.2f5be01b083a314f",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => requireAccount(() => setNotice(\"Vehicle setup opened. VIN decoding will remain optional for privacy.\")):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 400,
+      "title": "button onClick",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.31d49b85810a46c2",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:activate::`More options for ${post.title}`#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 305,
+      "title": "`More options for ${post.title}`",
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
@@ -2768,6 +3305,78 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.component_action.3525d416d145439b",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => toggleLike(post.id):`Like ${post.title}`#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 311,
+      "title": "`Like ${post.title}`",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.38f32a121617ddb6",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => navigate(\"diagnose\"):Try Torque Assist#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 273,
+      "title": "Try Torque Assist",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.component_action.3ace90187f119fc4",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -2815,6 +3424,43 @@
       "missingSourcePointers": [],
       "sourceLine": 727,
       "title": "Close",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.3fb85879a118b28a",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => navigate(id):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 233,
+      "title": "button onClick",
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
@@ -2984,6 +3630,78 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.component_action.44d37100500a78cd",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:activate::Publish build entry#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 413,
+      "title": "Publish build entry",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.4c61b49e89a2df13",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => requireAccount(() => setShowTokens(true)):available#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 353,
+      "title": "available",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.component_action.4e0221c84374e3c1",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -3056,6 +3774,41 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.component_action.558fdb9a0b82d66d",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => requireAccount(() => setNotice(\"Profile editor ready for your details, tools, specialties, and location privacy settings.\")):Edit profile#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 399,
+      "title": "Edit profile",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.component_action.560f20938119fff7",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -3066,6 +3819,43 @@
       "missingSourcePointers": [],
       "sourceLine": 590,
       "title": "button onClick",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.5727e5c7b3d5d71d",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#form:onSubmit:publishListing:#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 417,
+      "title": "form onSubmit",
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
@@ -3165,6 +3955,78 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.component_action.61a842624ed80610",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setNotice(\"Checkout is awaiting the production payment provider connection.\"):#2",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 415,
+      "title": "button onClick",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.64e557d3c0e4e6ca",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setNotice(\"Diagnostic saved to your 1994 Civic build timeline.\"):Save to build history#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 370,
+      "title": "Save to build history",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
       "capabilityId": "torqueshed.component_action.6618125d1f0a6f4d",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -3237,6 +4099,43 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.component_action.6b24199dc93c3d99",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setShowComposer(false):Close#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 413,
+      "title": "Close",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
       "capabilityId": "torqueshed.component_action.6d77507086f66188",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -3307,6 +4206,150 @@
       "ownerWaiverId": null,
       "priorDisposition": null,
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.731b67a97ff73af0",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setNotice(\"Protection terms opened for review. Final processor and payout timing require Stripe Connect configuration.\"):How it works →#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 391,
+      "title": "How it works →",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.735e8557a34c8d02",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setShowJoin(false):Close#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 411,
+      "title": "Close",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.774e5c4d94aaa19d",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:activate::Save listing draft#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 417,
+      "title": "Save listing draft",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.81608805d3ec0ce6",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => requireAccount(() => setShowListing(true)):List an item#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 390,
+      "title": "List an item",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
       "capabilityId": "torqueshed.component_action.81bd939b77dd5ce6",
@@ -3455,6 +4498,41 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.component_action.87a6593a3d6860a7",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setNotice(\"Checkout is awaiting the production payment provider connection.\"):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 415,
+      "title": "button onClick",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.component_action.8914ada72a575a94",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -3564,6 +4642,111 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.component_action.8e1294b138af9ead",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => requireAccount(() => setNotice(\"Saved to your garage reference shelf.\")):Save#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 313,
+      "title": "Save",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.8ffae7d47cf973a4",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => requireAccount(() => setNotice(\"Discussion opened. Replies will be persisted when the production database is connected.\")):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 312,
+      "title": "button onClick",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.913148f5318b0b25",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => requireAccount(() => setShowComposer(true)):Start a build journal#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 380,
+      "title": "Start a build journal",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.component_action.92f90bcf2f9291de",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -3574,6 +4757,41 @@
       "missingSourcePointers": [],
       "sourceLine": 46,
       "title": "START A DIAGNOSIS",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.9634809d1aadc610",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => requireAccount(() => setShowTokens(true)):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 239,
+      "title": "button onClick",
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
@@ -3780,6 +4998,43 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.component_action.9f81821dc1615e24",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:analyze:#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 358,
+      "title": "button onClick",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
       "capabilityId": "torqueshed.component_action.a762045071b9b1b5",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -3789,6 +5044,117 @@
       ],
       "missingSourcePointers": [],
       "sourceLine": 729,
+      "title": "Close",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.ac9f507eb7e9f927",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setNotice(\"Opening the complete Civic build timeline.\"):Open build →#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 400,
+      "title": "Open build →",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.acddac8feca8706f",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:activate::#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 341,
+      "title": "button activate",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.b574a271648964a1",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setShowListing(false):Close#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 417,
       "title": "Close",
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
@@ -3854,6 +5220,80 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.component_action.b8bdb6f2b54d427c",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => navigate(\"diagnose\"):Start a diagnosis#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 326,
+      "title": "Start a diagnosis",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.b9565b10ac9d17b8",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setShowJoin(true):Sign in#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 249,
+      "title": "Sign in",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
       "capabilityId": "torqueshed.component_action.ba6bfb6158193f42",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -3864,6 +5304,41 @@
       "missingSourcePointers": [],
       "sourceLine": 656,
       "title": "available",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.bbcae926496c3454",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => requireAccount(() => setShowComposer(true)):Post your build#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 272,
+      "title": "Post your build",
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
@@ -3971,6 +5446,115 @@
       "missingSourcePointers": [],
       "sourceLine": 714,
       "title": "button onClick",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.c6a97189673c0666",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => requireAccount(() => setShowComposer(true)):New post#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 284,
+      "title": "New post",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.c7c75af6d0dad8be",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setNotice(\"\"):Dismiss#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 419,
+      "title": "Dismiss",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.c8cc438d5c7f5e6a",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => navigate(\"community\"):TorqueShed home#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 223,
+      "title": "TorqueShed home",
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
@@ -4144,6 +5728,80 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.component_action.d05316d4da5e3880",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setMarketFilter(filter):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 392,
+      "title": "button onClick",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.d0ae3bf3d18fbe80",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#form:onSubmit:publishPost:#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 413,
+      "title": "form onSubmit",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
       "capabilityId": "torqueshed.component_action.d0fa9fdb6be5ac5d",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -4154,6 +5812,43 @@
       "missingSourcePointers": [],
       "sourceLine": 719,
       "title": "Publish build entry",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.d14fc90e02c755ec",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setNotice(\"Opening the Ram service and diagnostic history.\"):Open vehicle →#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 400,
+      "title": "Open vehicle →",
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
@@ -4218,6 +5913,43 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.component_action.d5215c59117245a3",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#form:onSubmit:submitChat:#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 336,
+      "title": "form onSubmit",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
       "capabilityId": "torqueshed.component_action.d63c15320ded9b43",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -4253,6 +5985,41 @@
       "ownerWaiverId": null,
       "priorDisposition": null,
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.d6ec189b7534a078",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => requireAccount(() => setNotice(`${item.title} added to your marketplace watchlist.`)):View listing#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 393,
+      "title": "View listing",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
       "capabilityId": "torqueshed.component_action.d95c391efa11a02b",
@@ -4362,6 +6129,41 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.component_action.df8986e6cda6c2c9",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => requireAccount(() => setNotice(\"Collection added to your reference shelf.\")):Browse collection →#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 383,
+      "title": "Browse collection →",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.component_action.df9d3847c9bda5e5",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -4372,6 +6174,43 @@
       "missingSourcePointers": [],
       "sourceLine": 551,
       "title": "Sign in",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.e2262097e1fbac70",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => setFeedFilter(filter):#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 288,
+      "title": "button onClick",
       "state": "ACTIVE_NATIVE",
       "blockerCode": null,
       "currentTargets": [
@@ -4471,6 +6310,43 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.component_action.edd9b97695023b68",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:onClick:() => navigate(\"garage\"):View garage#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 259,
+      "title": "View garage",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
       "capabilityId": "torqueshed.component_action.f0253d9f8ca34b02",
       "moduleSlug": "torqueshed",
       "type": "component_action",
@@ -4551,6 +6427,78 @@
       "missingSourcePointers": [],
       "sourceLine": 685,
       "title": "Start a build journal",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.fb746e8dae1b8f33",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#button:activate::Send message#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 336,
+      "title": "Send message",
+      "state": "ACTIVE_NATIVE",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/torqueshed-db-init.ts",
+        "apps/api/src/lib/torqueshed-web-api-db-init.ts",
+        "apps/api/src/routes/torque-assist-routes.ts",
+        "apps/api/src/routes/torqueshed-routes.ts",
+        "apps/api/src/routes/torqueshed-social-routes.ts",
+        "apps/api/src/routes/torqueshed-web-api-routes.ts",
+        "apps/web/src/app/modules/[slug]/[...path]/route-map.ts",
+        "apps/web/src/components/module-shells/TorqueShedRestorationPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedSocialPanels.tsx",
+        "apps/web/src/components/module-shells/TorqueShedWorkspace.tsx"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.component_action.fd0441e166e48506",
+      "moduleSlug": "torqueshed",
+      "type": "component_action",
+      "canonicalSourceIdentity": "artifacts/torqueshed/src/torqueshed-app (1).tsx#a:navigate:operatorOsLoginUrl:Continue with OperatorOS#1",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/src/torqueshed-app (1).tsx"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 411,
+      "title": "Continue with OperatorOS",
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
@@ -6394,6 +8342,41 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.database_column.1359a7d117c46ab7",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_sessions.expiresAt",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 70,
+      "title": "torqueshed_sessions.expiresAt",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.database_column.13841a6978ede285",
       "moduleSlug": "torqueshed",
       "type": "database_column",
@@ -7690,6 +9673,41 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.database_column.22b383b6f42ac2bd",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_users.tenantName",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 42,
+      "title": "torqueshed_users.tenantName",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.database_column.22bb3a2d8599d034",
       "moduleSlug": "torqueshed",
       "type": "database_column",
@@ -8099,6 +10117,41 @@
       "missingSourcePointers": [],
       "sourceLine": null,
       "title": "token_packages.created_at",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.database_column.2853e8b1beeeb495",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_users.updatedAt",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 47,
+      "title": "torqueshed_users.updatedAt",
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
@@ -9136,6 +11189,41 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.database_column.31bf04852b50c0cf",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_users.tenantSlug",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 41,
+      "title": "torqueshed_users.tenantSlug",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.database_column.32c4927d87f8be51",
       "moduleSlug": "torqueshed",
       "type": "database_column",
@@ -9317,6 +11405,41 @@
       "ownerWaiverId": null,
       "priorDisposition": null,
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.database_column.342fcc72712bb13e",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_users.id",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 35,
+      "title": "torqueshed_users.id",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
       "capabilityId": "torqueshed.database_column.3538772487789e7d",
@@ -9969,6 +12092,41 @@
       "ownerWaiverId": null,
       "priorDisposition": null,
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.database_column.3c56da793f3e2229",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_sessions.createdAt",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 67,
+      "title": "torqueshed_sessions.createdAt",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
       "capabilityId": "torqueshed.database_column.3cb4017c382a13f7",
@@ -11234,6 +13392,41 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.database_column.4b7c6a82a6c40a4a",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_users.displayName",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 38,
+      "title": "torqueshed_users.displayName",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.database_column.4ba28f77b893243a",
       "moduleSlug": "torqueshed",
       "type": "database_column",
@@ -12065,6 +14258,41 @@
       "ownerWaiverId": null,
       "priorDisposition": null,
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.database_column.52a4a2de89aaf579",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_users.operatorOsUserId",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 36,
+      "title": "torqueshed_users.operatorOsUserId",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
       "capabilityId": "torqueshed.database_column.5337de39b7125a26",
@@ -13005,6 +15233,41 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.database_column.5af4102b8a35e82a",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_sessions.tokenHash",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 63,
+      "title": "torqueshed_sessions.tokenHash",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.database_column.5b18cc6483001efc",
       "moduleSlug": "torqueshed",
       "type": "database_column",
@@ -13015,6 +15278,41 @@
       "missingSourcePointers": [],
       "sourceLine": 396,
       "title": "token_purchases.ownerUserId",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.database_column.5b6687149204653b",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_users.email",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 37,
+      "title": "torqueshed_users.email",
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
@@ -16473,6 +18771,41 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.database_column.838e96f9a4fe8c96",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_sessions.userAgent",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 74,
+      "title": "torqueshed_sessions.userAgent",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.database_column.83d8b87cc26f7c91",
       "moduleSlug": "torqueshed",
       "type": "database_column",
@@ -17411,6 +19744,41 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.database_column.8d1b7d530b699a9e",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_sessions.lastSeenAt",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 71,
+      "title": "torqueshed_sessions.lastSeenAt",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.database_column.8d74659fb6078973",
       "moduleSlug": "torqueshed",
       "type": "database_column",
@@ -17553,6 +19921,41 @@
       "ownerWaiverId": null,
       "priorDisposition": null,
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.database_column.8f8374ffc0cc704d",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_users.platformRole",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 39,
+      "title": "torqueshed_users.platformRole",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
       "capabilityId": "torqueshed.database_column.8fa09d8665cc81ba",
@@ -19462,6 +21865,41 @@
       "ownerWaiverId": null,
       "priorDisposition": null,
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.database_column.a8976649cd5e4275",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_sessions.userId",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 64,
+      "title": "torqueshed_sessions.userId",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
       "capabilityId": "torqueshed.database_column.a9660181d81f08bc",
@@ -22387,6 +24825,41 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.database_column.ce7621c69c523d54",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_users.tenantId",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 40,
+      "title": "torqueshed_users.tenantId",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.database_column.ce92c7c5f079aeb7",
       "moduleSlug": "torqueshed",
       "type": "database_column",
@@ -22685,6 +25158,41 @@
       "missingSourcePointers": [],
       "sourceLine": 599,
       "title": "community_reports.tenantId",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.database_column.d135c184855b25aa",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_users.tenantRole",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 43,
+      "title": "torqueshed_users.tenantRole",
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
@@ -25271,6 +27779,41 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.database_column.ebb363c5bb3c8e5c",
+      "moduleSlug": "torqueshed",
+      "type": "database_column",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_users.createdAt",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 44,
+      "title": "torqueshed_users.createdAt",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.database_column.ec61f4c397403119",
       "moduleSlug": "torqueshed",
       "type": "database_column",
@@ -27330,6 +29873,44 @@
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
     },
     {
+      "capabilityId": "torqueshed.database_table.15d7529baec27e92",
+      "moduleSlug": "torqueshed",
+      "type": "database_table",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_sessions",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 60,
+      "title": "torqueshed_sessions",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/saas-db-init.ts",
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-platform-db-init.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-services-db-init.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.database_table.15d76733cd08f9d1",
       "moduleSlug": "torqueshed",
       "type": "database_table",
@@ -27515,6 +30096,44 @@
       "ownerWaiverId": null,
       "priorDisposition": null,
       "note": "Phase 28 restores this outcome through the tenant-scoped TorqueShed web/API, additive v38 persistence, premium garage shell, source-compatible deep links, durable collaboration, and database-backed acceptance workflow."
+    },
+    {
+      "capabilityId": "torqueshed.database_table.27ae58d13ac16e8e",
+      "moduleSlug": "torqueshed",
+      "type": "database_table",
+      "canonicalSourceIdentity": "lib/db/src/schema/index (1).ts#torqueshed_users",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/src/schema/index (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 32,
+      "title": "torqueshed_users",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/saas-db-init.ts",
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-platform-db-init.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-services-db-init.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
       "capabilityId": "torqueshed.database_table.2927642a56e7c905",
@@ -29562,6 +32181,41 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.integration.2985db93c8c19af4",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/lib/logger (1).ts#env:LOG_LEVEL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/lib/logger (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 6,
+      "title": "LOG_LEVEL",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.integration.31585173fc1f4b8b",
       "moduleSlug": "torqueshed",
       "type": "integration",
@@ -29606,6 +32260,41 @@
       ],
       "missingSourcePointers": [],
       "sourceLine": 113,
+      "title": "NODE_ENV",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.integration.32c8e475868de002",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/torqueshed/vite (1).config.ts#env:NODE_ENV",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/vite (1).config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 35,
       "title": "NODE_ENV",
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
@@ -29772,6 +32461,41 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.integration.3d9b902403c67444",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app (1).ts#env:CORS_ALLOWED_ORIGINS",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 34,
+      "title": "CORS_ALLOWED_ORIGINS",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.integration.3ffaa24b670057fb",
       "moduleSlug": "torqueshed",
       "type": "integration",
@@ -29781,6 +32505,41 @@
       ],
       "missingSourcePointers": [],
       "sourceLine": 15,
+      "title": "BASE_PATH",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.integration.403100a0607f856c",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/torqueshed/vite (1).config.ts#env:BASE_PATH",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/vite (1).config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 21,
       "title": "BASE_PATH",
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
@@ -29817,6 +32576,41 @@
       "missingSourcePointers": [],
       "sourceLine": 7,
       "title": "DATABASE_URL",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.integration.43f25a3e6079966f",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/torqueshed/vite (1).config.ts#env:REPL_ID",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/vite (1).config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 36,
+      "title": "REPL_ID",
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
@@ -30017,6 +32811,41 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.integration.6db6efa2ced907d8",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth (1).ts#env:OPERATOROS_APP_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 90,
+      "title": "OPERATOROS_APP_URL",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.integration.783d277c0aa22245",
       "moduleSlug": "torqueshed",
       "type": "integration",
@@ -30087,6 +32916,146 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.integration.87b20e26d05927e2",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth (1).ts#env:NODE_ENV",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 113,
+      "title": "NODE_ENV",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.integration.947e0b755546d6ca",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/torqueshed/vite (1).config.ts#env:PORT",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/torqueshed/vite (1).config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 7,
+      "title": "PORT",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.integration.9b72eac3db0090ae",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth (1).ts#env:OPERATOROS_API_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 84,
+      "title": "OPERATOROS_API_URL",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.integration.9c95c61b5ab064b1",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app (1).ts#env:IOS_APP_TEAM_ID",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 72,
+      "title": "IOS_APP_TEAM_ID",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.integration.9ed61c2a009d8233",
       "moduleSlug": "torqueshed",
       "type": "integration",
@@ -30132,6 +33101,111 @@
       "missingSourcePointers": [],
       "sourceLine": 85,
       "title": "LOG_LEVEL",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.integration.a719f004a75934e4",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth (1).ts#env:OPERATOROS_AUTH_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 96,
+      "title": "OPERATOROS_AUTH_URL",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.integration.a730f82777103d68",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app (1).ts#env:ANDROID_APP_SHA256_CERT_FINGERPRINT",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 93,
+      "title": "ANDROID_APP_SHA256_CERT_FINGERPRINT",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.integration.add2dc987f41c3d5",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "lib/db/drizzle (1).config.ts#env:DATABASE_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/lib/db/drizzle (1).config.ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 4,
+      "title": "DATABASE_URL",
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
@@ -30472,6 +33546,41 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.integration.c983b9135587fd96",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/lib/logger (1).ts#env:NODE_ENV",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/lib/logger (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 3,
+      "title": "NODE_ENV",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.integration.ccdd2c6479d22314",
       "moduleSlug": "torqueshed",
       "type": "integration",
@@ -30647,6 +33756,41 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.integration.daa0c273e9cb0f93",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/app (1).ts#env:NODE_ENV",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/app (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 13,
+      "title": "NODE_ENV",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.integration.df8d65df1f10fe44",
       "moduleSlug": "torqueshed",
       "type": "integration",
@@ -30657,6 +33801,41 @@
       "missingSourcePointers": [],
       "sourceLine": 15,
       "title": "NODE_ENV",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.integration.e7af2d42654a298f",
+      "moduleSlug": "torqueshed",
+      "type": "integration",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth (1).ts#env:TORQUESHED_PUBLIC_URL",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 102,
+      "title": "TORQUESHED_PUBLIC_URL",
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [
@@ -31033,6 +34212,76 @@
       "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
     },
     {
+      "capabilityId": "torqueshed.public_flow.92b7c572d2e321c7",
+      "moduleSlug": "torqueshed",
+      "type": "public_flow",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth (1).ts#GET /auth/me",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 407,
+      "title": "GET /auth/me",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.public_flow.96a74cf5b80b5d93",
+      "moduleSlug": "torqueshed",
+      "type": "public_flow",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth (1).ts#POST /auth/logout",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 418,
+      "title": "POST /auth/logout",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
       "capabilityId": "torqueshed.public_flow.9d4ffdeaf5423e1f",
       "moduleSlug": "torqueshed",
       "type": "public_flow",
@@ -31043,6 +34292,41 @@
       "missingSourcePointers": [],
       "sourceLine": 422,
       "title": "POST /auth/logout",
+      "state": "ACTIVE_SHARED_EQUIVALENT",
+      "blockerCode": null,
+      "currentTargets": [
+        "apps/api/src/lib/shared-attachments.ts",
+        "apps/api/src/lib/shared-provider-adapters.ts",
+        "apps/api/src/lib/shared-schedules-exports.ts",
+        "apps/api/src/lib/shared-usage-activity.ts",
+        "apps/api/src/lib/tenant-auth.ts",
+        "apps/api/src/lib/torqueshed-product-export.ts",
+        "apps/web/public/torqueshed-sw.js",
+        "apps/web/src/app/torqueshed.webmanifest/route.ts"
+      ],
+      "automatedEvidence": [
+        "apps/api/test/torque-assist-workflow.test.ts",
+        "apps/api/test/torqueshed-foundation-workflow.test.ts",
+        "apps/api/test/torqueshed-social-workflow.test.ts",
+        "apps/api/test/torqueshed-web-api-product.test.ts",
+        "apps/api/test/torqueshed-web-api-static.test.ts",
+        "apps/web/e2e/torqueshed-phase28.spec.ts"
+      ],
+      "ownerWaiverId": null,
+      "priorDisposition": null,
+      "note": "Phase 28 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI, audited usage, media scanning, notifications, exports, or responsive installable web authority."
+    },
+    {
+      "capabilityId": "torqueshed.public_flow.c51739300f89ce45",
+      "moduleSlug": "torqueshed",
+      "type": "public_flow",
+      "canonicalSourceIdentity": "artifacts/api-server/src/routes/auth (1).ts#POST /auth/operatoros",
+      "sourcePointers": [
+        "apps/modules/torqueshed/source/artifacts/api-server/src/routes/auth (1).ts"
+      ],
+      "missingSourcePointers": [],
+      "sourceLine": 439,
+      "title": "POST /auth/operatoros",
       "state": "ACTIVE_SHARED_EQUIVALENT",
       "blockerCode": null,
       "currentTargets": [

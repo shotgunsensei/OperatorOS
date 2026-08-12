@@ -2,6 +2,16 @@
 
 Baseline refreshed: 2026-08-08
 
+## Current Phase 32 SnapProofOS overlay
+
+The generated SnapProofOS ledger now has 341 source facets: 240 native and 101
+shared-equivalent, with zero blocked or waived. ADR-0036 re-opens the historical
+customer/job/cost/template/branding/export/share retirements using additive v41,
+secure shared attachments, immutable report snapshots, real PDF/DOCX bytes, and
+constrained hashed shares. OperatorOS remains the only parent authority. See
+`docs/phase-32/SNAPPROOFOS-COMPLETE-PRODUCT-REPORT.md` for the exact ledger and
+local gate evidence. Other modules' blockers remain unchanged by this overlay.
+
 ## Current Phase 22 shared-service foundation
 
 Phase 22 adds an additive v34 shared control plane for encrypted provider

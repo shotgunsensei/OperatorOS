@@ -355,6 +355,23 @@ still requires a fresh logical backup, checksum and restore verification,
 approved source-data reconciliation, authenticated exact-host/provider
 acceptance, and an explicit cutover/rollback decision.
 
+## Phase 32 v41 additive release rehearsal
+
+On 2026-08-12 the 41-step release applied and immediately reapplied to a clean
+disposable loopback PostgreSQL 16 database. The final
+`snapproofos_complete_product_tables` step adds customers, templates, branding,
+parts, labor, share links, public rate windows, complete field-job columns,
+voice/file metadata, and persisted PDF/DOCX bytes. It contains no table drop or
+truncate operation.
+
+The synthetic journey verified customer/job/work/cost/file/report/share state,
+logo and voice bytes, invalid-content rejection, scan state, export hashes,
+approved history, cross-tenant/viewer denial, revocation, replay, and restart
+persistence. No production database or source export was read or changed, so no
+production backup artifact exists. Production v41 requires a fresh logical
+backup, checksum and restore verification, scanner readiness, approved source
+reconciliation, exact-host acceptance, and an explicit rollback decision.
+
 ## Production recovery
 
 1. Freeze writes and preserve the failed database as read-only when safe.

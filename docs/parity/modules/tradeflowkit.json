@@ -21,9 +21,9 @@
   },
   "sourceFingerprint": {
     "algorithm": "sha256(path NUL uint64be(size) content)",
-    "treeSha256": "4b106379857991f39b87503d66fc0a51e138866e2309c3bee97563983d013f08",
-    "fileCount": 322,
-    "totalBytes": 7883812
+    "treeSha256": "81c63c362772b35a4c5f531591d5ed56f438fa0aa8161d41c399565ca9c97509",
+    "fileCount": 321,
+    "totalBytes": 7881072
   },
   "stateCounts": {
     "ACTIVE_NATIVE": 142,

@@ -1,4 +1,20 @@
-# SnapProofOS Phase 11B parity matrix
+# SnapProofOS Phase 32 parity matrix
+
+## Current executable truth (2026-08-12)
+
+Pinned source `26bded38c13b5b6361d407462c68052b0c30613d` compiles to
+341 exact facets: 240 `ACTIVE_NATIVE`, 101 `ACTIVE_SHARED_EQUIVALENT`, zero
+`OWNER_WAIVED`, and zero `BLOCKED`. All sixteen source table domains are active.
+The full per-facet ledger is `docs/parity/modules/snapproofos.json` and the
+generated record is `docs/phase-32/SNAPPROOFOS-COMPLETE-PRODUCT-REPORT.md`.
+
+Phase 32 restores customers, jobs/assignment/archive, findings, internal and
+customer/voice notes, parts/labor totals, scanned and retry-safe mobile files,
+templates, branding/logo, report approval, real PDF/DOCX exports, and secure
+expiring/revocable shares. ADR-0036 supersedes Phase 11B's product-boundary and
+public-share retirements while preserving OperatorOS parent authority.
+
+The Phase 11B material below is historical evidence, not current disposition.
 
 ## Phase 20 truth notice (2026-08-08)
 

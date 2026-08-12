@@ -16,27 +16,27 @@
   },
   "totals": {
     "modules": 13,
-    "capabilities": 7304,
+    "capabilities": 7396,
     "stateCounts": {
-      "ACTIVE_NATIVE": 2272,
-      "ACTIVE_SHARED_EQUIVALENT": 1811,
+      "ACTIVE_NATIVE": 2541,
+      "ACTIVE_SHARED_EQUIVALENT": 1975,
       "OWNER_WAIVED": 0,
-      "BLOCKED": 3221
+      "BLOCKED": 2880
     },
     "typeCounts": {
-      "api_endpoint": 964,
+      "api_endpoint": 971,
       "asset": 141,
       "background_process": 23,
-      "component_action": 2083,
-      "database_column": 2723,
-      "database_table": 300,
+      "component_action": 2130,
+      "database_column": 2740,
+      "database_table": 302,
       "export_flow": 49,
       "import_flow": 26,
-      "integration": 376,
+      "integration": 392,
       "mobile_product": 1,
       "mobile_pwa_surface": 40,
       "playable_case": 56,
-      "public_flow": 116,
+      "public_flow": 119,
       "source_recovery": 1,
       "source_test": 74,
       "ui_page": 116,
@@ -382,12 +382,12 @@
         "fileCount": 260,
         "totalBytes": 3411533
       },
-      "capabilityDigestSha256": "449fd43a43c4d667e9d9ed347aa682acd72159339b1c362b0cec8ac5ccf43ad5",
+      "capabilityDigestSha256": "3721b5f9f6beda8aef84cd277fa470e75115e5d726886d549bd1241641b7514c",
       "stateCounts": {
-        "ACTIVE_NATIVE": 0,
-        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "ACTIVE_NATIVE": 240,
+        "ACTIVE_SHARED_EQUIVALENT": 101,
         "OWNER_WAIVED": 0,
-        "BLOCKED": 341
+        "BLOCKED": 0
       },
       "typeCounts": {
         "api_endpoint": 63,
@@ -504,27 +504,27 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "0a4d86273ea388be1bdfc8ba8ce4246afeb79730cb14d2523b39599abaefd209",
-        "fileCount": 166,
-        "totalBytes": 8315725
+        "treeSha256": "6a7951180ceb46f39fff4ce3fe8011e5e8875a606ac7a35e316bc49a575e5f73",
+        "fileCount": 182,
+        "totalBytes": 8839054
       },
-      "capabilityDigestSha256": "f40bc406ced86fa8516f4e3d5b45d8b8f77933e4562a286bda2bf3234f111cb7",
+      "capabilityDigestSha256": "588bb1a90cadc3a92fa417c9abbed4a1216e69d42affb617745ff94ac8842f48",
       "stateCounts": {
-        "ACTIVE_NATIVE": 473,
-        "ACTIVE_SHARED_EQUIVALENT": 387,
+        "ACTIVE_NATIVE": 502,
+        "ACTIVE_SHARED_EQUIVALENT": 450,
         "OWNER_WAIVED": 0,
         "BLOCKED": 0
       },
       "typeCounts": {
-        "api_endpoint": 49,
+        "api_endpoint": 56,
         "asset": 17,
-        "component_action": 59,
-        "database_column": 624,
-        "database_table": 64,
-        "integration": 38,
+        "component_action": 106,
+        "database_column": 641,
+        "database_table": 66,
+        "integration": 54,
         "mobile_product": 1,
         "mobile_pwa_surface": 3,
-        "public_flow": 3,
+        "public_flow": 6,
         "source_test": 1,
         "ui_page": 1
       }
@@ -551,9 +551,9 @@
       },
       "sourceFingerprint": {
         "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "4b106379857991f39b87503d66fc0a51e138866e2309c3bee97563983d013f08",
-        "fileCount": 322,
-        "totalBytes": 7883812
+        "treeSha256": "81c63c362772b35a4c5f531591d5ed56f438fa0aa8161d41c399565ca9c97509",
+        "fileCount": 321,
+        "totalBytes": 7881072
       },
       "capabilityDigestSha256": "5b7412df7c02246d17b8a501bd0c42c4815295887407ffe2ecbcdfd735fdced3",
       "stateCounts": {

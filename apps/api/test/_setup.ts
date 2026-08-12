@@ -109,6 +109,8 @@ export async function ensureSchemaReady() {
   await ensureOperatorOsMessagingComplianceTables();
   const { ensureSnapProofOsTables } = await import('../src/lib/snapproofos-db-init.js');
   await ensureSnapProofOsTables();
+  const { ensureSnapProofOsPhase32Tables } = await import('../src/lib/snapproofos-phase32-db-init.js');
+  await ensureSnapProofOsPhase32Tables();
   await ensureTestPlans();
 }
 

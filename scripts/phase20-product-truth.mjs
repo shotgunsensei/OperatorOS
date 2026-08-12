@@ -850,6 +850,67 @@ function specialCapabilities(definition, sourceRoot) {
 }
 
 function applyCurrentRestorationMappings(definition, capabilities) {
+  if (definition.slug === 'snapproofos') {
+    const nativeTargets = [
+      'apps/api/src/lib/snapproofos-db-init.ts',
+      'apps/api/src/lib/snapproofos-phase32-db-init.ts',
+      'apps/api/src/lib/snapproofos.ts',
+      'apps/api/src/lib/snapproofos-exports.ts',
+      'apps/api/src/lib/snapproofos-media.ts',
+      'apps/api/src/routes/snapproofos-routes.ts',
+      'apps/api/src/routes/snapproofos-phase32-routes.ts',
+      'apps/web/src/components/module-shells/SnapProofWorkspace.tsx',
+      'apps/web/src/components/module-shells/SnapProofFieldWorkspace.tsx',
+      'apps/web/src/lib/snapproof-offline-queue.ts',
+      'apps/web/src/app/public/snapproofos/reports/[token]/page.tsx',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/saas-db-init.ts',
+      'apps/api/src/lib/shared-attachments.ts',
+      'apps/api/src/lib/shared-services-db-init.ts',
+      'apps/api/src/lib/shared-usage-activity.ts',
+      'apps/api/src/routes/auth-routes.ts',
+      'apps/api/src/routes/tenant-admin-routes.ts',
+      'apps/api/src/routes/billing-routes.ts',
+      'apps/api/src/lib/database-release-contract.ts',
+    ];
+    const nativeSchemas = ['apps/api/src/lib/snapproofos-db-init.ts','apps/api/src/lib/snapproofos-phase32-db-init.ts'];
+    const sharedSchemas = ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-services-db-init.ts'];
+    const uiTargets = ['apps/web/src/app/modules/[slug]/page.tsx','apps/web/src/app/modules/[slug]/[...path]/page.tsx'];
+    const evidence = [
+      'apps/api/test/snapproofos-domain.test.ts',
+      'apps/api/test/snapproofos-db.test.ts',
+      'apps/api/test/snapproofos-phase32-domain.test.ts',
+      'apps/api/test/snapproofos-phase32-static.test.ts',
+      'apps/web/e2e/snapproofos-phase32.spec.ts',
+    ];
+    const sharedBoundary = /(?:routes\/auth|\/auth\/|\/login|\/register|\/logout|\/profile|routes\/organizations|organization.?settings|team.?member|membership|user.?role|billing|subscription|plan|pricing|entitlement|session.?secret|database.?url|log.?level|node.?env|base.?path|repl.?id|\bport\b|activity)/iu;
+    const sharedSchemaBoundary = /^(?:users|organizations|team_members|activity)(?:\.|$)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const sourceText = [capability.title,capability.canonicalSourceIdentity,...capability.sourcePointers].join(' ');
+      const shared = capability.type === 'integration'
+        || capability.type === 'public_flow'
+        || ((capability.type === 'database_table' || capability.type === 'database_column') && sharedSchemaBoundary.test(capability.title))
+        || sharedBoundary.test(sourceText);
+      const typedTargets = capability.type === 'ui_page' || capability.type === 'ui_route'
+        ? uiTargets
+        : capability.type === 'database_table'
+          ? (shared ? sharedSchemas : nativeSchemas)
+          : [];
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...(capability.currentTargets || []),...(shared ? sharedTargets : nativeTargets),...typedTargets])].sort(),
+        automatedEvidence: [...new Set([...(capability.automatedEvidence || []),...evidence])].sort(),
+        note: [capability.note, shared
+          ? 'Phase 32 preserves this outcome through OperatorOS identity, tenant, membership, role, entitlement, billing, runtime, shared activity, or private attachment authority.'
+          : 'Phase 32 restores this outcome through additive v41 SnapProofOS persistence, source-compatible field workflows, scanned mobile capture, deterministic PDF/DOCX exports, hashed expiring report shares, and the graphite/crimson product workspace. Source raw file URLs and arbitrary branding HTML are represented by signed private retrieval and structured branded templates without erasing the user outcome.'].filter(Boolean).join(' '),
+      };
+    });
+  }
   if (definition.slug === 'brandforgeos') {
     const nativeTargets = [
       'apps/api/src/lib/brandforgeos-db-init.ts',
