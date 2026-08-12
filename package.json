@@ -48,6 +48,8 @@
     "verify:release": "node scripts/parity/run-release-gate.mjs",
     "db:plan": "tsx apps/api/src/scripts/database-release.ts --plan",
     "db:apply": "tsx apps/api/src/scripts/database-release.ts --apply",
+    "billing:reconcile:torque": "tsx apps/api/src/scripts/torque-payment-reconcile.ts",
+    "test:hotfix:torque-exact-host": "node scripts/hotfix/verify-torqueshed-payment-exact-host.mjs",
     "export:tradeflowkit:snapshot": "tsx apps/api/src/scripts/tradeflowkit-export.ts --read-only",
     "import:tradeflowkit:dry-run": "tsx apps/api/src/scripts/tradeflowkit-import.ts --dry-run",
     "import:tradeflowkit:apply": "tsx apps/api/src/scripts/tradeflowkit-import.ts --apply",

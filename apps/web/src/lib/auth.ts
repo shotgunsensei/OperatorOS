@@ -27,7 +27,11 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: 'include' });
   const data = await res.json();
-  if (!res.ok) throw { status: res.status, ...data };
+  if (!res.ok) throw {
+    status: res.status,
+    ...data,
+    requestId: data?.requestId ?? res.headers.get('x-request-id') ?? null,
+  };
   return data;
 }
 
@@ -1114,6 +1118,21 @@ export interface TorqueAssistStatus {
   limits: { userPerMinute: number; tenantPerMinute: number; maximumContextCharacters: number };
   ledgerAuthoritative: true;
 }
+export interface TorqueTokenPurchaseStatus {
+  purchaseId: string;
+  state: 'checkout_created' | 'payment_pending' | 'paid_pending_credit' | 'credited' |
+    'cancelled' | 'expired' | 'failed' | 'refunded' | 'disputed';
+  packageKey: string;
+  units: number;
+  amountMinor: number;
+  currency: string;
+  failureCode: string | null;
+  credited: boolean;
+  balance: number;
+  updatedAt: string;
+  creditedAt: string | null;
+  authority: 'operatoros_ledger';
+}
 
 export interface PulseDeskServiceTicket {
   id: string;
@@ -1748,6 +1767,8 @@ export const moduleShellApi = {
         headers: { 'Idempotency-Key': idempotencyKey },
         body: JSON.stringify(input),
       }) as Promise<any>,
+    getTorqueTokenPurchaseStatus: (purchaseId: string): Promise<TorqueTokenPurchaseStatus> =>
+      apiFetch(`/modules/torqueshed/token-purchases/${encodeURIComponent(purchaseId)}/status`) as Promise<TorqueTokenPurchaseStatus>,
     runTorqueAssist: (
       input: {
         diagnosticSessionId: string;

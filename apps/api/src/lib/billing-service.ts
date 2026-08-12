@@ -39,11 +39,18 @@ const esmRequire = createRequire(import.meta.url);
 // — the only call sites use the narrow methods through the public
 // helpers below (checkout/create, subscriptions/update, webhooks/etc).
 type StripeClient = {
-  checkout: { sessions: { create: (args: unknown) => Promise<{ id: string; url: string | null }> } };
+  checkout: { sessions: {
+    create: (args: unknown) => Promise<{ id: string; url: string | null }>;
+    list: (args: unknown) => Promise<{ data: any[] }>;
+  } };
   customers: { create: (args: unknown) => Promise<{ id: string }> };
   subscriptions: { update: (id: string, args: unknown) => Promise<unknown> };
   billingPortal: { sessions: { create: (args: unknown) => Promise<{ url: string }> } };
   webhooks: { constructEvent: (payload: string | Buffer, sig: string, secret: string) => unknown };
+  paymentIntents: { retrieve: (id: string) => Promise<any> };
+  charges: { retrieve: (id: string) => Promise<any> };
+  events: { list: (args: unknown) => Promise<{ data: any[] }> };
+  accounts: { retrieve: () => Promise<any> };
 };
 let __stripeSingleton: StripeClient | null = null;
 
@@ -552,6 +559,132 @@ export function verifyWebhookSignature(payload: string | Buffer, signature: stri
   return stripe.webhooks.constructEvent(payload, signature, STRIPE_WEBHOOK_SECRET);
 }
 
+function stripeId(value: unknown, prefix: string): string | null {
+  const id = typeof value === 'string' ? value : value && typeof value === 'object' && 'id' in value
+    ? String((value as { id: unknown }).id)
+    : '';
+  return id.startsWith(prefix) ? id : null;
+}
+
+/**
+ * Resolve signed payment metadata for event families such as refunds and
+ * disputes whose event object does not echo Checkout Session metadata. The
+ * provider reads are scoped to already signature-verified events.
+ */
+export async function resolveStripePaymentMetadata(event: {
+  type: string;
+  data: { object: Record<string, any> };
+}) {
+  const object = event.data?.object ?? {};
+  if (object.metadata?.operatoros_kind === 'torque_assist_credit') {
+    return {
+      metadata: object.metadata as Record<string, string>,
+      paymentIntentId: stripeId(object.payment_intent ?? object.id, 'pi_'),
+      chargeId: stripeId(object.charge ?? object.id, 'ch_'),
+    };
+  }
+  let chargeId = stripeId(object.charge ?? object.id, 'ch_');
+  let paymentIntentId = stripeId(object.payment_intent ?? object.id, 'pi_');
+  if (!paymentIntentId && chargeId) {
+    const charge = await getStripe().charges.retrieve(chargeId);
+    paymentIntentId = stripeId(charge.payment_intent, 'pi_');
+  }
+  if (!paymentIntentId) return { metadata: {}, paymentIntentId: null, chargeId };
+  const paymentIntent = await getStripe().paymentIntents.retrieve(paymentIntentId);
+  chargeId ||= stripeId(paymentIntent.latest_charge, 'ch_');
+  return {
+    metadata: paymentIntent.metadata && typeof paymentIntent.metadata === 'object'
+      ? paymentIntent.metadata as Record<string, string>
+      : {},
+    paymentIntentId,
+    chargeId,
+  };
+}
+
+const TORQUE_STRIPE_EVENT_TYPES = Object.freeze([
+  'checkout.session.completed',
+  'checkout.session.async_payment_succeeded',
+  'checkout.session.async_payment_failed',
+  'checkout.session.expired',
+  'payment_intent.payment_failed',
+  'charge.refunded',
+  'charge.dispute.created',
+  'charge.dispute.closed',
+]);
+
+/** Read-only, redacted provider truth used by the guarded reconciliation CLI. */
+export async function retrieveTorqueStripeReconciliationSnapshot(paymentIntentId: string) {
+  if (!/^pi_[A-Za-z0-9]+$/.test(paymentIntentId)) {
+    throw Object.assign(new Error('PaymentIntent id is invalid'), { code: 'TORQUE_RECONCILE_PAYMENT_INTENT_INVALID' });
+  }
+  if (!isStripeEnabled()) {
+    throw Object.assign(new Error('Stripe read access is unavailable'), { code: 'STRIPE_NOT_CONFIGURED' });
+  }
+  const stripe = getStripe();
+  const [account, paymentIntent, sessions] = await Promise.all([
+    stripe.accounts.retrieve(),
+    stripe.paymentIntents.retrieve(paymentIntentId),
+    stripe.checkout.sessions.list({ payment_intent: paymentIntentId, limit: 10 }),
+  ]);
+  const session = sessions.data.find((candidate: any) => candidate.payment_intent === paymentIntentId)
+    ?? sessions.data[0]
+    ?? null;
+  const latestChargeId = stripeId(paymentIntent.latest_charge, 'ch_');
+  const charge = latestChargeId ? await stripe.charges.retrieve(latestChargeId) : null;
+  const created = Number(paymentIntent.created || 0);
+  const eventPages = await Promise.all(
+    TORQUE_STRIPE_EVENT_TYPES.map((type) => stripe.events.list({
+      type,
+      created: created ? { gte: Math.max(0, created - 86_400) } : undefined,
+      limit: 100,
+    })),
+  );
+  const events = eventPages
+    .flatMap((page) => page.data)
+    .filter((event) => {
+      const object = event.data?.object ?? {};
+      return object.id === paymentIntentId
+        || object.id === session?.id
+        || object.id === latestChargeId
+        || object.payment_intent === paymentIntentId
+        || object.charge === latestChargeId;
+    })
+    .map((event) => ({
+      id: String(event.id),
+      type: String(event.type),
+      created: Number(event.created || 0),
+      livemode: event.livemode === true,
+    }))
+    .sort((a, b) => a.created - b.created || a.id.localeCompare(b.id));
+  const safeMetadata = (value: unknown) => value && typeof value === 'object'
+    ? Object.fromEntries(Object.entries(value as Record<string, unknown>)
+        .filter(([key]) => ['operatoros_kind', 'purchase_id', 'tenant_id', 'user_id', 'module_id', 'package_key', 'units'].includes(key))
+        .map(([key, metadataValue]) => [key, String(metadataValue)]))
+    : {};
+  return {
+    account: { id: String(account.id || ''), livemode: paymentIntent.livemode === true },
+    paymentIntent: {
+      id: String(paymentIntent.id), livemode: paymentIntent.livemode === true,
+      status: String(paymentIntent.status || ''), amount: Number(paymentIntent.amount || 0),
+      amountReceived: Number(paymentIntent.amount_received || 0),
+      currency: String(paymentIntent.currency || '').toLowerCase(), created,
+      latestChargeId, metadata: safeMetadata(paymentIntent.metadata),
+    },
+    checkoutSession: session ? {
+      id: String(session.id), livemode: session.livemode === true, mode: String(session.mode || ''),
+      paymentStatus: String(session.payment_status || ''), status: String(session.status || ''),
+      amountTotal: Number(session.amount_total || 0), currency: String(session.currency || '').toLowerCase(),
+      paymentIntentId: stripeId(session.payment_intent, 'pi_'), metadata: safeMetadata(session.metadata),
+    } : null,
+    charge: charge ? {
+      id: String(charge.id), amountRefunded: Number(charge.amount_refunded || 0),
+      refunded: charge.refunded === true, disputed: charge.disputed === true,
+      paymentIntentId: stripeId(charge.payment_intent, 'pi_'),
+    } : null,
+    events,
+  };
+}
+
 // Classify a Stripe event as addon vs plan. Looks at metadata in
 // multiple places because Stripe puts it on different objects depending
 // on the event family:
@@ -655,6 +788,43 @@ export async function claimStripeEvent(
     return { claimedRowId: null, isDuplicate: true };
   }
   return { claimedRowId: claim[0].id, isDuplicate: false };
+}
+
+/**
+ * Record canonical Torque routing in the existing billing event ledger. An old
+ * plan-classified claim is explicitly reclassified instead of suppressing the
+ * shared Torque receipt. No payment method or client secret is added here.
+ */
+export async function recordTorqueStripeEventDispatch(input: {
+  event: Record<string, any> & { id: string; type: string };
+  tenantId: string;
+  userId: string;
+  purchaseId: string;
+  receiptId?: string | null;
+  status: string;
+  errorCode?: string | null;
+}) {
+  const payloadHash = crypto.createHash('sha256').update(JSON.stringify(input.event)).digest('hex');
+  const safeMetadata = {
+    mode: 'stripe', kind: 'torque_assist_credit', purchaseId: input.purchaseId,
+    sharedReceiptId: input.receiptId ?? null, canonicalWebhook: '/v1/billing/webhook',
+    settlementStatus: input.status, reclassifiedAt: new Date().toISOString(),
+  };
+  await db.execute(sql`
+    INSERT INTO billing_events (
+      user_id,tenant_id,event_type,stripe_event_id,payload_hash,metadata,processed_at,error_message
+    ) VALUES (
+      ${input.userId},${input.tenantId},${`torque_${input.event.type.replaceAll('.', '_')}`},
+      ${input.event.id},${payloadHash},${safeMetadata},
+      ${input.status === 'processed' ? new Date() : null},${input.errorCode ?? null}
+    )
+    ON CONFLICT (stripe_event_id) WHERE stripe_event_id IS NOT NULL DO UPDATE SET
+      user_id=COALESCE(billing_events.user_id,EXCLUDED.user_id),
+      tenant_id=COALESCE(billing_events.tenant_id,EXCLUDED.tenant_id),
+      event_type=EXCLUDED.event_type,payload_hash=EXCLUDED.payload_hash,
+      metadata=COALESCE(billing_events.metadata,'{}'::jsonb)||EXCLUDED.metadata,
+      processed_at=EXCLUDED.processed_at,error_message=EXCLUDED.error_message
+  `);
 }
 
 export async function markStripeEventProcessed(claimedRowId: string, action: string | undefined) {

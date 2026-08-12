@@ -30,6 +30,7 @@ import {
   type TorqueAssistResponse,
   type TorqueAssistResult,
   type TorqueAssistStatus,
+  type TorqueTokenPurchaseStatus,
 } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../packages/modules/navigation.js';
@@ -40,8 +41,30 @@ import { TorqueShedJournalPanel, TorqueShedLiveBayPanel, TorqueShedUtilityPanel 
 type Tab = 'dashboard' | 'garage' | 'service' | 'builds' | 'journal' | 'diagnostics' | 'live' | 'templates' | 'marketplace' | 'community' | 'tools';
 
 function errorText(error: unknown): string {
-  void error;
-  return 'TorqueShed could not confirm that action. Your saved records are still available. Check the form, refresh if needed, and try again.';
+  const row = error && typeof error === 'object' ? error as Record<string, unknown> : {};
+  const code = typeof row.code === 'string' && /^[A-Z0-9_:-]{2,120}$/.test(row.code)
+    ? row.code
+    : 'TORQUESHED_UNKNOWN';
+  const requestId = typeof row.requestId === 'string' && /^[A-Za-z0-9_-]{4,120}$/.test(row.requestId)
+    ? row.requestId
+    : null;
+  const status = Number(row.status || 0);
+  const messages: Record<string, string> = {
+    TORQUE_ASSIST_BALANCE_EXHAUSTED: 'Torque Assist credits are insufficient. Review the balance or buy a credit pack before retrying.',
+    TORQUE_PAYMENT_PROVIDER_DISABLED: 'Credit checkout is temporarily unavailable. Nothing was charged; contact an administrator.',
+    TORQUE_ASSIST_PROVIDER_DISABLED: 'Torque Assist is unavailable until an administrator connects the AI provider.',
+    TORQUE_ASSIST_PROVIDER_CIRCUIT_OPEN: 'Torque Assist is recovering from a provider outage. Wait one minute, then retry the same request.',
+    TORQUE_ASSIST_RATE_LIMITED: 'Torque Assist is rate limited. Wait one minute, then retry the same request.',
+    TORQUE_ASSIST_SESSION_NOT_FOUND: 'This diagnostic is unavailable in the active tenant or your current role cannot access it.',
+    TORQUE_PURCHASE_NOT_FOUND: 'The payment reference is unavailable in this tenant. Refresh from the original diagnostic.',
+  };
+  const message = messages[code]
+    ?? (status === 503
+      ? 'Torque Assist could not reach its provider. No credits were charged; retry the same request shortly.'
+      : status === 401 || status === 403 || status === 404
+        ? 'TorqueShed could not access that diagnostic in the active tenant. Return to the garage and reopen it.'
+        : 'TorqueShed could not confirm that action. Your saved records remain available; retry once or contact support.');
+  return `${message} (${code}${requestId ? ` · reference ${requestId}` : ''})`;
 }
 
 function number(value: FormDataEntryValue | null): number | undefined {
@@ -177,6 +200,7 @@ export default function TorqueShedWorkspace() {
   useEffect(() => {
     void load();
   }, [load]);
+
   useEffect(() => {
     let manifest = document.querySelector<HTMLLinkElement>('link[data-torqueshed-manifest]');
     if (!manifest) {
@@ -318,6 +342,8 @@ export default function TorqueShedWorkspace() {
       style={{ maxWidth: 1320, margin: '0 auto', padding: space.xxl, colorScheme: 'dark', position: 'relative' }}
     >
       <style>{`
+        [data-testid="torqueshed-module-shell"] { box-sizing:border-box; width:100%; min-width:0; }
+        [data-testid="torqueshed-module-shell"] *,[data-testid="torqueshed-module-shell"] *:before,[data-testid="torqueshed-module-shell"] *:after { box-sizing:border-box; min-width:0; }
         [data-testid="torqueshed-module-shell"]:before { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; background:radial-gradient(circle at 80% 5%,rgba(245,158,11,.10),transparent 28rem),repeating-linear-gradient(110deg,transparent 0 74px,rgba(255,255,255,.012) 75px 76px); }
         [data-testid="torqueshed-module-shell"] h2,[data-testid="torqueshed-module-shell"] h3,[data-testid="torqueshed-module-shell"] h4 { letter-spacing:-.02em; color:#f8fafc; }
         .ts28-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
@@ -1483,6 +1509,8 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [purchaseStatus, setPurchaseStatus] = useState<TorqueTokenPurchaseStatus | null>(null);
+  const [purchaseReference, setPurchaseReference] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -1503,6 +1531,53 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  const refreshPurchaseStatus = useCallback(async (purchaseId = purchaseReference) => {
+    if (!purchaseId) return null;
+    const next = await moduleShellApi.torqueshed.getTorqueTokenPurchaseStatus(purchaseId);
+    setPurchaseStatus(next);
+    if (next.state === 'credited' && next.credited) {
+      setNotice(`Credits added. Your authoritative balance is ${next.balance.toLocaleString()} units.`);
+      await load();
+    }
+    return next;
+  }, [load, purchaseReference]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const purchaseId = url.searchParams.get('purchase') ?? '';
+    const returned = url.searchParams.get('tokenPurchase');
+    if (!/^[0-9a-f-]{36}$/i.test(purchaseId) || !returned) return;
+    setPurchaseReference(purchaseId);
+    setNotice(returned === 'cancelled'
+      ? 'Checkout was closed. This return link grants no credits; checking the authoritative payment status now.'
+      : 'Verifying payment. Credits appear only after OperatorOS records the signed settlement.');
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
+    const delays = [1_000, 2_000, 3_000, 5_000, 8_000, 13_000];
+    const poll = async () => {
+      try {
+        const next = await moduleShellApi.torqueshed.getTorqueTokenPurchaseStatus(purchaseId);
+        if (stopped) return;
+        setPurchaseStatus(next);
+        if (next.state === 'credited' && next.credited) {
+          setNotice(`Credits added. Your authoritative balance is ${next.balance.toLocaleString()} units.`);
+          await load();
+          return;
+        }
+        if (['failed', 'expired', 'refunded', 'disputed'].includes(next.state)) return;
+        if (attempt < delays.length) timer = setTimeout(poll, delays[attempt++]);
+      } catch (next) {
+        if (!stopped) setError(errorText(next));
+      }
+    };
+    void poll();
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [load]);
 
   const result = (response?.result ??
@@ -1620,6 +1695,26 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
       )}
       {error && <div style={{ color: semantic.accentDanger }}>{error}</div>}
       {notice && <div style={{ color: semantic.accentSuccess }}>{notice}</div>}
+      {purchaseStatus && (
+        <div data-testid="torque-purchase-status" style={{ ...cardStyle, padding: 10, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          <span style={{ color: semantic.text }}>
+            {purchaseStatus.state === 'credited' && purchaseStatus.credited
+              ? 'Credits added'
+              : purchaseStatus.state === 'paid_pending_credit'
+                ? 'Payment received · adding credits'
+                : purchaseStatus.state === 'checkout_created' || purchaseStatus.state === 'payment_pending'
+                  ? 'Verifying payment'
+                  : purchaseStatus.state === 'refunded'
+                    ? 'Payment refunded · credits reversed under policy'
+                    : purchaseStatus.state === 'disputed'
+                      ? 'Payment disputed · purchased credits are frozen'
+                      : `Payment ${purchaseStatus.state.replaceAll('_', ' ')}`}
+          </span>
+          <button type="button" onClick={() => void refreshPurchaseStatus()} style={{ ...button, minHeight: 36, padding: '7px 10px' }}>
+            <RefreshCw size={14} /> Refresh status
+          </button>
+        </div>
+      )}
 
       <div
         style={{
