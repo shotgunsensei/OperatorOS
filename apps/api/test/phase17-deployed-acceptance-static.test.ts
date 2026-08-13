@@ -29,13 +29,14 @@ test('deployed Phase 17 acceptance uses pre-provisioned accounts without direct 
   assert.match(spec, /trace: 'off', screenshot: 'off', video: 'off'/);
 });
 
-test('deployed Phase 17 acceptance covers enabled-host SSO, logout, denial, and OutCall', () => {
+test('deployed acceptance covers enabled-host SSO, logout, denial, and the OutCall activation lock', () => {
   assert.match(spec, /config\/operatoros-module-registry\.json/);
-  assert.match(spec, /ENABLED_MODULES\.length !== 13/);
+  assert.match(spec, /ENABLED_MODULES\.length !== 12/);
   assert.match(spec, /logout-all/);
   assert.match(spec, /techdeck\.operatoros\.net\/logout/);
   assert.match(spec, /MODULE_ACCESS_DENIED/);
-  assert.match(spec, /button-launch-outcall/);
+  assert.match(spec, /module-status-outcall/);
+  assert.match(spec, /MODULE_UNAVAILABLE/);
   assert.match(spec, /moduleId: 'techdeck' \| 'outcall'/);
   assert.match(spec, /assertNoCredentialQuery/);
   assert.match(spec, /assertNoBrowserCredentialStorage/);

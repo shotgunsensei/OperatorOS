@@ -116,11 +116,14 @@ const sourceDefinitions = [
       remote: null,
       commit: null,
       ref: null,
-      remoteVerification: 'No OutCall repository in the owner public repository list; direct shotgunsensei/OutCall probe returned repository not found on 2026-08-08.',
+      remoteVerification: 'Authenticated GitHub repository and code-name searches, including private repositories visible to shotgunsensei, returned no OutCall repository on 2026-08-13.',
       recoverySearch: [
-        'apps/modules/outcall/source contains only README.md',
-        'No matching source in C:/Dev sibling repositories',
-        'No matching entry in C:/Dev/OperatorOS.zip or C:/Dev/TorqueShed.zip',
+        'apps/modules/outcall/source contains only the 627-byte README.md Git blob a724a70d40a72d47b4fa8bf2ac1c972bdd35474e',
+        'C:/Dev/Outcall exists but is empty and has no Git repository',
+        'No matching source path in Downloads, Documents, Desktop, OneDrive, or Codex attachments; Downloads/outcall.ts is byte-identical to the reconstructed OperatorOS helper',
+        'No matching source in the 2026-03-04 Replit export or its embedded repositories',
+        'No matching reachable, unreachable, or dangling source tree in the inspected OperatorOS Git archives and current Git object database',
+        'The owner prompt attachment describes a requested build and is not executable source or runtime provenance',
       ],
     },
   },
@@ -776,7 +779,7 @@ function specialCapabilities(definition, sourceRoot) {
       title: 'Recover the canonical OutCall source application',
       state: 'BLOCKED',
       blockerCode: 'SOURCE_RECOVERY_REQUIRED',
-      note: 'The current source boundary is one README and no owner repository or local/archive implementation was found.',
+      note: 'Phase 37 repeated authenticated remote, local path, archive, Replit export, attachment, and Git-object recovery. The current source boundary remains one README; prompts and reconstructed OperatorOS code are not authoritative source.',
     }));
   }
   if (definition.slug === 'tradeflowkit') {
