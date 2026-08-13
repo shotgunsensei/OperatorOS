@@ -9,6 +9,7 @@ import {
 import { getActiveTenantId, moduleShellApi } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import { ShellLaunchButton, ShellLiveBadge } from './ShellChrome';
+import CallCommandMspWorkspace from './CallCommandMspWorkspace';
 
 type Row = Record<string, any>;
 type Workspace = {
@@ -128,7 +129,7 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
         <div style={{ width: 52, height: 52, borderRadius: 16, display: 'grid', placeItems: 'center', background: 'linear-gradient(145deg,#115e59,#10b981)', boxShadow: '0 0 32px rgba(16,185,129,.25)' }}><Headphones size={26}/></div>
         <div style={{ flex: 1, minWidth: 250 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}><h1 style={{ margin: 0, fontSize: 29 }}>CallCommand AI</h1><ShellLiveBadge /></div>
-          <p style={{ margin: '4px 0 0', color: semantic.textMuted }}>Live receptionist, switchboard, call intelligence, and auditable business automation.</p>
+          <p style={{ margin: '4px 0 0', color: semantic.textMuted }}>Secure MSP intake, verified customer association, screen-pop, ticket orchestration, and policy-gated automation.</p>
         </div>
         <ShellLaunchButton baseUrl={baseUrl} testId="link-launch-callcommand-ai" label="Open call command center" />
       </header>
@@ -141,6 +142,8 @@ export default function CallCommandShell({ baseUrl }: { baseUrl?: string }) {
 
       {error && <div role="alert" data-testid="text-callcommand-error" style={{ ...card, borderColor: 'rgba(251,113,133,.5)', color: '#fda4af', marginBottom: space.md }}><AlertTriangle size={16} style={{ verticalAlign: -3, marginRight: 8 }}/>{error}</div>}
       {notice && <div role="status" style={{ ...card, borderColor: 'rgba(52,211,153,.45)', color: '#6ee7b7', marginBottom: space.md }}><CheckCircle2 size={16} style={{ verticalAlign: -3, marginRight: 8 }}/>{notice}</div>}
+
+      <CallCommandMspWorkspace />
 
       <nav aria-label="CallCommand product sections" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: space.lg }}>
         {[['callcommand-dashboard','Dashboard'],['callcommand-configuration','Lines'],['callcommand-receptionists','Receptionists'],['callcommand-flows','Flows'],['callcommand-switchboard','Switchboard'],['callcommand-calls','Calls'],['callcommand-automation','Automation'],['callcommand-work','Work queue'],['callcommand-settings','Providers']].map(([href,label]) => <a key={href} href={`#${href}`} style={{ color: '#99f6e4', textDecoration: 'none', padding: '7px 10px', borderRadius: 8, background: 'rgba(15,118,110,.12)', fontSize: 12, fontWeight: 800 }}>{label}</a>)}

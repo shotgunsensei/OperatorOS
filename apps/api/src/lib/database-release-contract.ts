@@ -1,6 +1,6 @@
 export const DATABASE_RELEASE_CONTRACT = Object.freeze({
   contractVersion: 1,
-  releaseVersion: 45,
+  releaseVersion: 46,
   mode: 'idempotent-apply',
   destructive: false,
   rollback: 'restore-to-new-database-and-switch-traffic',
@@ -52,4 +52,5 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'ninja_launch_kit_complete_product_tables', kind: 'ddl' },
   { id: 'callcommand_complete_product_tables', kind: 'ddl' },
   { id: 'ninjamation_complete_product_tables', kind: 'ddl' },
+  { id: 'callcommand_msp_automation_fabric_tables', kind: 'ddl' },
 ] as const);

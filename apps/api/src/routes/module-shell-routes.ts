@@ -97,6 +97,7 @@ import { registerNinjaLaunchKitRoutes } from './ninja-launch-kit-routes.js';
 import { registerNinjaLaunchKitPhase34Routes } from './ninja-launch-kit-phase34-routes.js';
 import { registerCallCommandRoutes } from './callcommand-routes.js';
 import { registerCallCommandPhase35Routes } from './callcommand-phase35-routes.js';
+import { registerCallCommandMspRoutes } from './callcommand-msp-routes.js';
 import { registerNinjamationRoutes } from './ninjamation-routes.js';
 import { registerNinjamationPhase36Routes } from './ninjamation-phase36-routes.js';
 import { registerOutCallRoutes } from './outcall-routes.js';
@@ -579,6 +580,7 @@ async function createLinkedTradeFlowKitCustomer(
 export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerCallCommandRoutes(app);
   await registerCallCommandPhase35Routes(app);
+  await registerCallCommandMspRoutes(app);
   await registerPulseDeskRoutes(app);
   await registerPulseDeskServiceDeskRoutes(app);
   await registerPulseDeskLiteralRoutes(app);

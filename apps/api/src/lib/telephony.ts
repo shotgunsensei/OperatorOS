@@ -6,9 +6,10 @@
  * admin enable real test calls with a one-click OAuth handshake instead
  * of pasting four env vars by hand.
  *
- * This module is intentionally thin: it talks to Twilio over the REST API
- * via `fetch` so the project does not need to take a dependency on the
- * twilio SDK. It exposes:
+ * This module is intentionally thin: established REST operations retain the
+ * bounded `fetch` adapter, while the official Twilio SDK is used for webhook
+ * signature validation and Verify so those security-sensitive contracts are
+ * not reimplemented locally. It exposes:
  *
  *   1. `resolveTelephonyConfig()` — returns the active Twilio credentials
  *      plus the source (`connector` or `env`), or `null` when neither is
@@ -20,7 +21,7 @@
  *   4. `summarizeTranscript()` — AI-generated one-line call summary.
  */
 
-import { createHmac } from 'node:crypto';
+import twilio from 'twilio';
 import { getAiProvider } from './ai-provider.js';
 
 const PERSONA_SCRIPTS: Record<string, string> = {
@@ -443,12 +444,53 @@ export async function verifyTwilioSignature(
   if (!signature) return false;
   const cfg = await resolveTelephonyConfig();
   if (!cfg) return false;
-  const sortedKeys = Object.keys(params).sort();
-  let data = url;
-  for (const k of sortedKeys) data += k + params[k];
-  const signingKey = process.env.TWILIO_AUTH_TOKEN || cfg.authToken;
-  const expected = createHmac('sha1', signingKey).update(data, 'utf8').digest('base64');
-  return expected === signature;
+  // Twilio signs webhooks with the account's primary Auth Token, not an API
+  // key secret. Connector-only API-key credentials can place REST requests
+  // but cannot validate inbound signatures without TWILIO_AUTH_TOKEN.
+  const signingKey = process.env.TWILIO_AUTH_TOKEN || (cfg.apiKeySid ? null : cfg.authToken);
+  if (!signingKey) return false;
+  return twilio.validateRequest(signingKey, signature, url, params);
+}
+
+export interface TwilioVerificationResult {
+  ok: boolean;
+  status: 'pending' | 'approved' | 'failed' | 'provider_unavailable';
+  providerReference?: string;
+  reasonCode?: string;
+}
+
+function verifyServiceSid(): string | null {
+  const sid = process.env.TWILIO_VERIFY_SERVICE_SID?.trim();
+  return sid && /^VA[A-Za-z0-9]{20,62}$/.test(sid) ? sid : null;
+}
+
+function twilioClient(cfg: TelephonyConfig) {
+  return twilio(cfg.apiKeySid ?? cfg.accountSid, cfg.authToken, { accountSid: cfg.accountSid });
+}
+
+/** Send an SMS possession challenge to a previously registered destination. */
+export async function startTwilioVerification(destinationE164: string): Promise<TwilioVerificationResult> {
+  const [cfg, serviceSid] = await Promise.all([resolveTelephonyConfig(), Promise.resolve(verifyServiceSid())]);
+  if (!cfg || !serviceSid) return { ok: false, status: 'provider_unavailable', reasonCode: 'TWILIO_VERIFY_NOT_CONFIGURED' };
+  try {
+    const result = await twilioClient(cfg).verify.v2.services(serviceSid).verifications.create({ to: destinationE164, channel: 'sms' });
+    return { ok: result.status === 'pending', status: result.status === 'pending' ? 'pending' : 'failed', providerReference: result.sid, reasonCode: result.status === 'pending' ? undefined : 'TWILIO_VERIFY_NOT_PENDING' };
+  } catch {
+    return { ok: false, status: 'failed', reasonCode: 'TWILIO_VERIFY_DISPATCH_FAILED' };
+  }
+}
+
+/** Check a Twilio Verify challenge without retaining the submitted code. */
+export async function checkTwilioVerification(destinationE164: string, code: string): Promise<TwilioVerificationResult> {
+  const [cfg, serviceSid] = await Promise.all([resolveTelephonyConfig(), Promise.resolve(verifyServiceSid())]);
+  if (!cfg || !serviceSid) return { ok: false, status: 'provider_unavailable', reasonCode: 'TWILIO_VERIFY_NOT_CONFIGURED' };
+  if (!/^\d{4,10}$/.test(code)) return { ok: false, status: 'failed', reasonCode: 'TWILIO_VERIFY_CODE_INVALID' };
+  try {
+    const result = await twilioClient(cfg).verify.v2.services(serviceSid).verificationChecks.create({ to: destinationE164, code });
+    return { ok: result.status === 'approved', status: result.status === 'approved' ? 'approved' : 'failed', providerReference: result.sid, reasonCode: result.status === 'approved' ? undefined : 'TWILIO_VERIFY_CHALLENGE_FAILED' };
+  } catch {
+    return { ok: false, status: 'failed', reasonCode: 'TWILIO_VERIFY_CHECK_FAILED' };
+  }
 }
 
 export async function fetchTwilioTranscription(recordingSid: string): Promise<string | null> {

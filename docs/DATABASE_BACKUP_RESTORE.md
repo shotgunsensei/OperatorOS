@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 44 ordered step identifiers without secrets
+`db:plan` is read-only and prints 46 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -54,6 +54,30 @@ downloads plus the new favorites, catalog provenance, synchronization run/item
 ledger, deprecation state, ownership, and usage counters. Rollback remains
 restore-and-switch; do not run child migrations or delete deprecated catalog
 rows as a rollback substitute.
+
+Release v46 appends `callcommand_msp_automation_fabric_tables` after the v45
+Ninjamation step. Before applying it, require a verified backup that covers
+the complete CallCommand v44 domain plus MSP settings, organization/contact
+profiles, approved lines, SupportLinks, provider connections, call contexts
+and events, local cases, BMS links/outbox, rate limits, policy decisions,
+verification challenges, approvals/executions, device/directory mappings, and
+reset sessions. Emergency application rollback retains these additive tables,
+disables the MSP channel/integrations, and returns traffic to the prior
+artifact. Do not drop v46 tables or treat schema deletion as rollback.
+
+### Phase 37 disposable release rehearsal (2026-08-13)
+
+On an empty loopback PostgreSQL 16 database containing synthetic data only,
+`corepack pnpm db:plan` reported contract v1, release v46, 46 ordered steps,
+`destructive: false`, and final step
+`callcommand_msp_automation_fabric_tables`. With
+`OPERATOROS_DATABASE_RELEASE_MODE=apply`, the first apply completed and
+verified all 46 steps in 5,598 ms; an immediate reapply completed and verified
+all 46 steps in 2,565 ms. No production backup, restore, database, customer
+data, or provider traffic was touched. Production still requires a fresh
+provider snapshot and logical backup with readable TOC/checksum, an isolated
+restore rehearsal, v46 apply/reconciliation, compiled readiness, and an
+authorized traffic decision.
 
 ## Deployment order
 
