@@ -47,15 +47,20 @@ test('Phase 36 preserves the hard no-execution boundary in API and web processes
   assert.match(shell, /No execution claim or command interpolation/);
 });
 
-test('Phase 36 release v45 is additive, idempotent-shaped, and contains every new persisted domain', () => {
+test('Phase 36 release v45 is retained additively and contains every new persisted domain', () => {
   for (const table of ['ninjamation_favorites','ninjamation_sync_runs','ninjamation_sync_items','ninjamation_usage_counters']) {
     assert.match(schema, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   }
   assert.match(schema, /ADD COLUMN IF NOT EXISTS owner_user_id/);
   assert.match(schema, /DROP CONSTRAINT IF EXISTS ninjamation_script_language_check/);
   assert.doesNotMatch(schema, /DROP TABLE|TRUNCATE/i);
-  assert.match(release, /releaseVersion: 45/);
+  const releaseVersion = Number(release.match(/releaseVersion:\s*(\d+)/)?.[1]);
+  assert.ok(releaseVersion >= 45, `expected cumulative release >= 45, received ${releaseVersion}`);
   assert.match(release, /ninjamation_complete_product_tables/);
+  assert.ok(
+    release.indexOf('ninjamation_complete_product_tables') < release.indexOf('callcommand_msp_automation_fabric_tables'),
+    'Phase 36 must remain ordered before the later CallCommand MSP release',
+  );
 });
 
 test('Phase 36 premium product shell and exact-host routes cover every source page and honest plan state', () => {

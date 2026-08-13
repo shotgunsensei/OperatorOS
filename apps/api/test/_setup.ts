@@ -115,6 +115,8 @@ export async function ensureSchemaReady() {
   await ensureCallCommandTables();
   const { ensureCallCommandPhase35Tables } = await import('../src/lib/callcommand-phase35-db-init.js');
   await ensureCallCommandPhase35Tables();
+  const { ensureCallCommandMspTables } = await import('../src/lib/callcommand-msp-db-init.js');
+  await ensureCallCommandMspTables();
   await ensureTestPlans();
 }
 

@@ -251,6 +251,13 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/tasks': { sectionId: 'callcommand-work', label: 'Call Tasks' },
     '/billing': { sectionId: 'callcommand-settings', label: 'OperatorOS Plan and Usage' },
     '/settings': { sectionId: 'callcommand-settings', label: 'CallCommand Settings' },
+    '/organizations': { sectionId: 'callcommand-msp-organizations', label: 'MSP Organizations' },
+    '/contacts': { sectionId: 'callcommand-msp-contacts', label: 'MSP Support Contacts' },
+    '/integrations/health': { sectionId: 'callcommand-msp-integrations', label: 'MSP Integration Health' },
+    '/action-catalog': { sectionId: 'callcommand-msp-policy', label: 'Approved Action Catalog' },
+    '/policy': { sectionId: 'callcommand-msp-policy', label: 'Automation Policy' },
+    '/audit': { sectionId: 'callcommand-msp-audit', label: 'Call Evidence Ledger' },
+    '/onboarding': { sectionId: 'callcommand-msp-onboarding', label: 'MSP Production Onboarding' },
   },
   ninjamation: {
     '/dashboard': { sectionId: 'ninjamation-dashboard', label: 'Script Dashboard' },

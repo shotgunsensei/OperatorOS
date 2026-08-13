@@ -42,7 +42,7 @@ const SOURCE: readonly MarketingCatalogSource[] = [
   { slug: 'snapproofos',      name: 'SnapProofOS',      description: 'Photo-based proof of work',                  planMin: 'elite',   ord: 8,  defaultStatus: 'live' },
   { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                planMin: 'elite',   ord: 9,  defaultStatus: 'live' },
   { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Plan, review, and prove launch campaigns are ready', planMin: 'elite', ord: 10, defaultStatus: 'live' },
-  { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'AI phone agent + call automation',           planMin: 'elite',   ord: 11, defaultStatus: 'live' },
+  { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'Secure MSP phone intake, ticket orchestration, and policy-gated automation', planMin: 'elite', ord: 11, defaultStatus: 'live' },
   { slug: 'ninjamation',      name: 'Ninjamation',      description: 'Reviewed PC automation scripts + AI drafts', planMin: 'elite',   ord: 12, defaultStatus: 'live' },
   { slug: 'outcall',          name: 'OutCall',           description: 'Discreet exit-assistance and personal-safety calling', planMin: 'starter', ord: 13, defaultStatus: 'live' },
 ];

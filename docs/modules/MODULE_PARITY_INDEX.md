@@ -1,5 +1,26 @@
 # OperatorOS module parity index
 
+## Current Phase 37 CallCommand MSP intake overlay - PHASE 1 SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
+
+The owner-spec matrix contains 27 outcomes: 19 active-native, two
+shared-equivalent, two provider-gated, three security-phase-gated, and one BMS
+outcome with active local exactly-once/test behavior plus an open live-provider
+gate. Release v46 adds signed exact-`To` MSP intake, encrypted/HMAC-indexed
+trusted lines and SupportLinks, A0-A4 policy vocabulary, deterministic redacted
+classification, local cases, BMS outbox, screen-pop, tamper-evident call events,
+provider onboarding/kill switches, action catalog drafts, and later-phase data
+boundaries.
+
+Focused 14/14, complete CallCommand 80/80, workspace typecheck, production
+build, and disposable v46 plan/apply/reapply pass locally. The broad aggregate
+was exercised but remains non-green on existing cross-product contracts; the
+two v46-owned cumulative assertions pass after repair.
+This overlay extends rather than replaces the Phase 35 compiler-derived 589
+facet ledger. Live BMS/Twilio, production release/backup, deployed browser,
+pricing, reconciliation, rollback, and every Phase 2-5 privileged provider gate
+remain open. See `docs/modules/callcommand-ai/MSP_INTAKE_PARITY_MATRIX.md`,
+ADR-0040, and the Phase 37 report.
+
 ## Current Phase 36 Ninjamation complete-product overlay - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
 
 Phase 36 pins application commit

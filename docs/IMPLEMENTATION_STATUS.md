@@ -1,5 +1,48 @@
 # OperatorOS implementation status
 
+## Phase 37 CallCommand MSP intake and Automation Fabric - PHASE 1 SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
+
+ADR-0040 and cumulative release v46 add the owner-specified paid MSP intake
+product without weakening OperatorOS authority or the complete Phase 35
+telephony product. The recognized path verifies the official Twilio signature,
+resolves tenant only from an exact MSP destination number, associates an
+organization through an encrypted/HMAC-indexed approved line, associates an
+eligible Directory contact through a display-once encrypted ten-digit
+Luhn-checksummed SupportLink, creates one local case, and creates one BMS
+outbox/ticket link. The unrecognized A0 path can create a callback case but
+cannot queue BMS or automation.
+
+The responsive MSP workspace adds Operations, Organizations, Contacts,
+Integrations, Policy, Audit, Onboarding, and deterministic intake-lab surfaces.
+The additive Automation Fabric schema covers provider onboarding, Datto
+sites/devices and affinity, directory accounts, action catalog/policies,
+verification challenges, approvals/executions, reset sessions, and durable
+outbox/reconciliation state. BMS live delivery, Datto actions, Graph reset, and
+the AD broker remain explicitly gated; password-reset and RMM-action settings
+are server-forced off.
+
+Focused domain/static/PostgreSQL tests pass 14/14, the complete CallCommand
+regression passes 80/80, workspace typecheck passes, production artifacts
+build, and additive release v46 plans/applies/reapplies cleanly on disposable
+PostgreSQL 16. The isolated journey
+proves forged-webhook denial, tenant isolation, A1 association, encrypted
+display-once secret handling, public-config secret rejection, exactly-once BMS
+test behavior, hash-chain continuity, and zero automation for unrecognized
+callers. The corrected broad API aggregate exercised 1,106 tests: 1,071
+passed, 29 failed, and six intentional HTTP-only cases skipped before repairing
+the two v46-owned cumulative assertions; those repaired release/identity
+contracts pass 13/13 targeted. The remaining 27 failures are existing
+cross-product static/fixture/order-sensitive contracts, so the aggregate is
+not claimed as green. Exact build, release, preflight, and aggregate evidence
+is recorded in
+`docs/phase-37/CALLCOMMAND-MSP-INTAKE-AUTOMATION-FABRIC-REPORT.md`.
+
+Production v46 backup/apply/restore, deployed exact-host acceptance, real
+Twilio, tenant-specific Kaseya BMS contract/mappings/worker, provider
+monitoring, pricing/checkout acceptance, data reconciliation, rollback, merge,
+and deployment remain owner gates. Phase 2-5 RMM and identity automation require
+their separate security/provider acceptance and are not production capabilities.
+
 ## Phase 36 Ninjamation complete product restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
 
 Phase 36 pins Ninjamation application commit
