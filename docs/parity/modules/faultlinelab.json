@@ -13,10 +13,10 @@
     "truthNote": "The source allCases export is compiler-discovered; every valid authored definition initializes as a published immutable OperatorOS challenge version."
   },
   "sourceFingerprint": {
-    "algorithm": "sha256(path NUL uint64be(size) content)",
-    "treeSha256": "e003f51e460376ad96f42c14303d4928f3948af6faa62170811279d7cc0d86af",
+    "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+    "treeSha256": "ae29bce1a9450b34c7bf6e9ae9b9b2b170cdcbe2cbeb27cad269d31850ffed16",
     "fileCount": 452,
-    "totalBytes": 7927304
+    "totalBytes": 7872303
   },
   "stateCounts": {
     "ACTIVE_NATIVE": 56,

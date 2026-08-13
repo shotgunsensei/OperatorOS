@@ -12,10 +12,10 @@
     "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
   },
   "sourceFingerprint": {
-    "algorithm": "sha256(path NUL uint64be(size) content)",
-    "treeSha256": "8b40d45e0b827310a8e2c5581d8694f179efe98519b554756884383e992353ea",
+    "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+    "treeSha256": "6af29f96b956550bbf40153d08b91389681068c77e53735dfed66bc066b4732c",
     "fileCount": 260,
-    "totalBytes": 3411533
+    "totalBytes": 3383130
   },
   "stateCounts": {
     "ACTIVE_NATIVE": 240,

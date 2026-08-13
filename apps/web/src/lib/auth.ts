@@ -2475,6 +2475,35 @@ export const moduleShellApi = {
     telephonyStatus: () => apiFetch('/modules/callcommand-ai/telephony/status'),
   },
   studyforge: {
+    completeWorkspace: () => apiFetch('/modules/studyforge-ai/complete-workspace'),
+    completeSet: (id: string) => apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(id)}`),
+    savePreferences: (input: Record<string, unknown>) =>
+      apiFetch('/modules/studyforge-ai/preferences', { method: 'PUT', body: JSON.stringify(input) }),
+    createFolder: (input: { name: string; color?: string }) =>
+      apiFetch('/modules/studyforge-ai/folders', { method: 'POST', body: JSON.stringify(input) }),
+    createCompleteSet: (input: Record<string, unknown>) =>
+      apiFetch('/modules/studyforge-ai/study-sets', { method: 'POST', body: JSON.stringify(input) }),
+    updateCompleteSet: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    deleteCompleteSet: (id: string) =>
+      apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    copyCompleteSet: (id: string, action: 'duplicate' | 'regenerate', input: Record<string, unknown>) =>
+      apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(id)}/${action}`, { method: 'POST', body: JSON.stringify(input) }),
+    submitCompleteQuiz: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(id)}/quiz-attempts`, { method: 'POST', body: JSON.stringify(input) }),
+    startFlashcardSession: (id: string, idempotencyKey: string) =>
+      apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(id)}/flashcard-sessions`, { method: 'POST', body: JSON.stringify({ idempotencyKey }) }),
+    reviewSessionCard: (sessionId: string, cardId: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/studyforge-ai/flashcard-sessions/${encodeURIComponent(sessionId)}/cards/${encodeURIComponent(cardId)}`, { method: 'POST', body: JSON.stringify(input) }),
+    completeFlashcardSession: (sessionId: string, durationSeconds: number) =>
+      apiFetch(`/modules/studyforge-ai/flashcard-sessions/${encodeURIComponent(sessionId)}/complete`, { method: 'PATCH', body: JSON.stringify({ durationSeconds }) }),
+    completePlanItem: (setId: string, sessionId: string, completed: boolean) =>
+      apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(setId)}/plan-sessions/${encodeURIComponent(sessionId)}/complete`, { method: 'PATCH', body: JSON.stringify({ completed }) }),
+    createCountdown: (input: Record<string, unknown>) =>
+      apiFetch('/modules/studyforge-ai/exam-countdowns', { method: 'POST', body: JSON.stringify(input) }),
+    deleteCountdown: (id: string) =>
+      apiFetch(`/modules/studyforge-ai/exam-countdowns/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    account: () => apiFetch('/modules/studyforge-ai/account'),
     list: () => apiFetch('/modules/studyforge-ai/sessions'),
     create: (source: string) =>
       apiFetch('/modules/studyforge-ai/sessions', {

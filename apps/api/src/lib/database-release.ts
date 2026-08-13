@@ -32,6 +32,7 @@ import { ensureBrandForgeOsPhase31Tables } from './brandforgeos-phase31-db-init.
 import { ensureSnapProofOsTables } from './snapproofos-db-init.js';
 import { ensureSnapProofOsPhase32Tables } from './snapproofos-phase32-db-init.js';
 import { ensureStudyForgeTables } from './studyforge-db-init.js';
+import { ensureStudyForgePhase33Tables } from './studyforge-phase33-db-init.js';
 import { ensureNinjaLaunchKitTables } from './ninja-launch-kit-db-init.js';
 import { ensureCallCommandTables } from './callcommand-db-init.js';
 import { ensureNinjamationTables } from './ninjamation-db-init.js';
@@ -92,6 +93,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   ninja_pool_online_tables: ensureNinjaPoolOnlineTables,
   brandforgeos_complete_product_tables: ensureBrandForgeOsPhase31Tables,
   snapproofos_complete_product_tables: ensureSnapProofOsPhase32Tables,
+  studyforge_complete_product_tables: ensureStudyForgePhase33Tables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -186,6 +188,10 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.studyforge_quizzes') IS NOT NULL AS studyforge_quizzes,
       to_regclass('public.studyforge_plans') IS NOT NULL AS studyforge_plans,
       to_regclass('public.studyforge_card_progress') IS NOT NULL AS studyforge_card_progress,
+      to_regclass('public.studyforge_study_sets') IS NOT NULL AS studyforge_study_sets,
+      to_regclass('public.studyforge_short_answers') IS NOT NULL AS studyforge_short_answers,
+      to_regclass('public.studyforge_daily_activity') IS NOT NULL AS studyforge_daily_activity,
+      to_regclass('public.studyforge_generation_reservations') IS NOT NULL AS studyforge_generation_reservations,
       to_regclass('public.launchkit_launches') IS NOT NULL AS launchkit_launches,
       to_regclass('public.launchkit_tasks') IS NOT NULL AS launchkit_tasks,
       to_regclass('public.launchkit_artifacts') IS NOT NULL AS launchkit_artifacts,

@@ -372,6 +372,25 @@ production backup artifact exists. Production v41 requires a fresh logical
 backup, checksum and restore verification, scanner readiness, approved source
 reconciliation, exact-host acceptance, and an explicit rollback decision.
 
+## Phase 33 v42 additive release rehearsal
+
+On 2026-08-12 the 42-step release applied and immediately reapplied to a clean
+disposable loopback PostgreSQL 16 database. The final
+`studyforge_complete_product_tables` step adds user preferences, folders,
+complete study sets and short answers, exam countdowns, learning sessions,
+card-review mutations, daily activity, and atomic usage counters. It extends
+generation/review records additively and contains no drop or truncate.
+
+The synthetic journey verified complete transactional generation, replay and
+failure cleanup; flashcard/quiz/plan history; owner/role/tenant isolation;
+Free/Pro/Tutor limit and export/countdown gates; concurrent credit exhaustion;
+archive/restore/delete; streak/activity idempotency; and restart-visible
+records. No production database, live AI provider, or standalone source export
+was read or changed, so no production backup artifact exists. Production v42
+requires a fresh logical backup with checksum and restore verification,
+approved source reconciliation, live-provider and deployed exact-host
+acceptance, and an explicit rollback decision.
+
 ## Production recovery
 
 1. Freeze writes and preserve the failed database as read-only when safe.

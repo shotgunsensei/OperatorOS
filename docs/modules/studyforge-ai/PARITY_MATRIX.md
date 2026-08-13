@@ -1,56 +1,62 @@
-# StudyForge AI Phase 11C parity matrix
+# StudyForge AI Phase 33 parity matrix
 
-## Phase 20 truth notice (2026-08-08)
+Status: source/local complete; production release blocked.
 
-The matrix below is historical implementation evidence. Current release truth
-is `docs/parity/modules/studyforge-ai.json`: 317 capabilities, 0 native, 0
-shared-equivalent, 0 owner-waived, and 317 blocked pending exact target/test
-mapping. See `docs/phase-20/PRODUCT-TRUTH-REPORT.md`.
+## Executable truth
 
-Assessment date: 2026-07-26
+The pinned source commit
+`a607a9f34442b1d0f6bfffbf0293609529494825` contains 298 tracked files and
+224 bounded product files (924,929 bytes). The generated ledger at
+`docs/parity/modules/studyforge-ai.json` contains 317 exact source facets:
 
-Candidate status: source/local state 4 accepted on
-`codex/phase-11c-studyforge-ai-completion`. State 5 additionally requires the
-exact revision deployed and accepted on the target environment.
+| State | Count |
+| --- | ---: |
+| `ACTIVE_NATIVE` | 192 |
+| `ACTIVE_SHARED_EQUIVALENT` | 125 |
+| `OWNER_WAIVED` | 0 |
+| `BLOCKED` | 0 |
 
-## Provenance
+Facet types are 33 API endpoints, 2 assets, 1 background process, 119
+component actions, 83 database columns, 11 database tables, 20 integrations,
+11 public flows, 19 UI pages, and 18 UI routes. The executable JSON ledger and
+the generated Phase 33 report are authoritative if this summary drifts.
 
-The clean `C:\Dev\Study-Forge` checkout and quarantined snapshot resolve to
-`a607a9f34442b1d0f6bfffbf0293609529494825`. The snapshot records 298 tracked
-files, 224 retained files, 924,929 bytes and zero high-confidence secret
-findings. Its runtime, dependencies and migrations are not executed.
+## Restored native outcomes
 
-## Capability disposition
+- onboarding preferences, dashboard KPIs, current/longest streak, activity,
+  exam countdowns, and account usage;
+- user-owned folders and complete study sets with course/exam metadata;
+- transactional generation of summary, key terms, flashcards, MCQs,
+  short-answer questions, review sheet, and personalized study plan;
+- deterministic golden generation and validated shared-AI generation with
+  explicit retry/fallback/provider provenance;
+- flashcard sessions with keyboard/touch known/learning state and progress;
+- authoritative quiz attempts, scoring, review, retry, history, and trends;
+- edit, search/filter, archive/restore, delete, duplicate, regenerate, JSON,
+  and entitlement-gated CSV export;
+- source-compatible `/app`, `/sets`, `/sets/new`, `/sets/:id`, learning,
+  `/exams`, `/account`, and `/admin` routes.
 
-| Source capability | Source reality | Phase 11C disposition |
-| --- | --- | --- |
-| Login, signup, users, sessions | Child email/password and session authority | Exclude; OperatorOS SSO, host-only session and tenant membership only |
-| Stripe billing and limits | Child checkout, portal and subscription state | Exclude; OperatorOS billing/entitlement and shared usage limit |
-| Admin users/stats | Child global role and user administration | Exclude; OperatorOS platform/tenant administration only |
-| Folders, subjects, courses | User folders plus string subject/course fields | Tenant-scoped subjects with optional course code |
-| Notes and source material | Notes stored directly on a study set | Private source records; notes or authorized scanned shared attachments |
-| Study sets | Generated aggregate containing all learning material | Separate source, deck, quiz and plan records with composite tenant references |
-| Flashcards | Persistent cards with simple new/learning/mastered status | Draft/review/publish decks, editable cards, exact source excerpts and per-user spaced repetition |
-| Quizzes/attempts | Persistent questions and user attempts | Server-hidden correct answers, server-authoritative grading and persistent attempts |
-| Study plan/sessions | Generated dated sessions and completion toggle | Draft/review/publish plan with versioned persistent completion |
-| AI generation | Source server generation tied to child plan limits | Shared server adapter, fixed grounding prompt, exact-excerpt verification, idempotency and shared usage |
-| Review sheet/key terms | Generated JSON inside aggregate | Approved material is represented through editable deck/quiz content; no unreviewed output is published |
-| Dashboard/streak/score trend | Partially derived from persistent activity | Persisted attempts, completion and review due-state only |
-| Import/export | Browser data-URL JSON export; no migration reconciliation | Server JSON/CSV export and deterministic pinned dry-run migration planner |
-| Templates | Static examples | Exclude as product data; users may save real source/deck records |
-| Exam countdowns | Persistent countdown metadata | Plan target date and sessions; no duplicate counter authority |
-| Contact/marketing pages | Public product-site surfaces | Exclude from module workload |
+## Shared-equivalent outcomes
 
-## Completion boundary
+OperatorOS supplies identity, sessions, tenants, roles, module grants,
+subscription billing, Free/Pro/Tutor entitlement projection, shared AI/provider
+configuration, usage, idempotency, activity/audit, platform administration,
+public pricing/legal/contact surfaces, and shared job/runtime controls. No
+child auth, Stripe authority, demo account, or provider-secret store executes.
+OperatorOS SSO is the only browser sign-in path. Stripe child billing is excluded;
+subscription and entitlement state comes from OperatorOS.
 
-OperatorOS SSO, tenant entitlement, viewer denial, cross-tenant
-non-enumeration, persistent workflows, exact citation validation, uploaded
-content authorization, provider idempotency, limits, migration dry run,
-production build/start, health, deep links, return and logout are required for
-local state 4. State 5 additionally requires deployed-target SSO, workflows,
-health, persistence and approved data reconciliation/cutover.
+## Deliberate source reading
 
-Fresh local evidence is recorded in `VERIFICATION.md`: 14/14 focused tests,
-801/801 clean API aggregate, clean and idempotent 25-step release, production
-build and core preflight, compiled direct/proxied health and readiness, and
-the complete production-host browser matrix at 7/7.
+The source contains a Tutor plan flag but no group table, API, route, or usable
+group UI. Phase 33 therefore has no invented group workflow and no waiver.
+ADR-0037 supersedes ADR-0023 only where the earlier decision narrowed complete
+source outcomes; its central-authority and attribution protections remain.
+
+## Release boundary
+
+Additive release v42 and all local Phase 33 gates pass. Production backup,
+release apply, live provider readiness, deployed exact-host acceptance,
+source-data reconciliation, restore/rollback, and traffic cutover remain
+owner-controlled. Zero ledger blockers does not claim deployed state 5.

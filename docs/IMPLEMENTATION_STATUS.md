@@ -1,5 +1,35 @@
 # OperatorOS implementation status
 
+## Phase 33 StudyForge complete learning restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-12)
+
+Phase 33 pins StudyForge source commit
+`a607a9f34442b1d0f6bfffbf0293609529494825` and reopens the Phase 11C
+product-boundary retirements under ADR-0037. The executable ledger maps all 317
+exact facets to 192 `ACTIVE_NATIVE` and 125
+`ACTIVE_SHARED_EQUIVALENT`, with zero waived and zero blocked.
+
+Additive release v42 restores user folders; complete transactional study sets;
+summary, key terms, flashcards, MCQs, short answers, review sheet and dated
+plan; learning/quiz sessions and trends; countdown/time-zone behavior;
+streak/activity; edit/archive/restore/delete/duplicate/regenerate; and real
+JSON/entitlement-gated CSV exports. The deterministic generator and strict
+shared-AI path persist validated provenance. Advisory locks, conditional usage
+counters, and business idempotency prevent partial sets, duplicate debits, and
+concurrent limit overruns. OperatorOS remains the sole auth, tenant, role,
+entitlement, billing, provider, credit, usage, and platform-admin authority.
+
+Workspace typecheck, 8/8 domain/static contracts, 7/7 disposable PostgreSQL
+journeys, the combined 29/29 StudyForge regression suite, shared
+integration 28/28, clean/idempotent v42, production build, exact-ledger gate,
+and compiled exact-host Playwright 2/2 pass locally. The broad API aggregate
+remains non-green because of existing unrelated failures, so it is not claimed
+as a pass.
+
+Production backup/apply, live AI-provider acceptance, deployed exact-host
+acceptance, authorized source-data reconciliation, restore/rollback, and
+cutover remain owner-controlled. See
+`docs/phase-33/STUDYFORGE-COMPLETE-PRODUCT-REPORT.md`.
+
 ## Phase 32 SnapProofOS complete field proof restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-12)
 
 Phase 32 pins SnapProofOS source commit

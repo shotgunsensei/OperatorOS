@@ -189,6 +189,30 @@ export async function cleanupUser(userId: string) {
     // company tenants the test forgot to clean). Cascade child rows first.
     const owned = await db.select().from(tenants).where(eq(tenants.ownerUserId, userId));
     for (const t of owned) {
+      // StudyForge complete-product rows use restrictive tenant/owner keys.
+      // Remove both Phase 33 and legacy leaves before shared usage/idempotency
+      // records and the owning tenant.
+      try { await db.execute(sql`DELETE FROM studyforge_session_card_reviews WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_learning_sessions WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_exam_countdowns WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_short_answers WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_daily_activity WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_generation_reservations WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_usage_counters WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_card_progress WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_quiz_attempts WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_study_sets WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_cards WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_questions WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_plan_sessions WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_decks WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_quizzes WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_plans WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_generations WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_sources WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_subjects WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_folders WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_preferences WHERE tenant_id = ${t.id}`); } catch {}
       try {
         await db.transaction(async tx => {
           await tx.execute(sql`SET LOCAL operatoros.tenant_hard_delete = 'on'`);

@@ -1,3 +1,5 @@
+import { generateStudyForgeCompleteMaterial } from './studyforge-phase33.js';
+
 export interface AiCompletionRequest {
   systemPrompt: string;
   userPrompt: string;
@@ -178,6 +180,21 @@ export class MockAiProvider implements AiProvider {
     }
     const source = String(input.source ?? '').trim();
     const type = String(input.type ?? 'deck');
+    if (type === 'complete_set') {
+      return JSON.stringify(generateStudyForgeCompleteMaterial({
+        notes: String(input.notes ?? source),
+        title: String(input.title ?? 'Study set'),
+        subject: String(input.subject ?? 'General'),
+        difficulty: ['easy', 'medium', 'hard'].includes(String(input.difficulty))
+          ? String(input.difficulty) as 'easy' | 'medium' | 'hard'
+          : 'medium',
+        examDate: typeof input.examDate === 'string' ? input.examDate : null,
+        maxFlashcards: typeof input.maxFlashcards === 'number' ? input.maxFlashcards : 60,
+        anchorDate: typeof input.anchorDate === 'string'
+          ? input.anchorDate
+          : new Date().toISOString().slice(0, 10),
+      }));
+    }
     const sentences = source
       .split(/(?<=[.!?])\s+/)
       .map((sentence) => sentence.trim())

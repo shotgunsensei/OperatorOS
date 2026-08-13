@@ -187,7 +187,7 @@ function canonicalizeLegacyAppPath(
   context: ResolvedOperatorOSModuleContext,
 ): NextResponse | null {
   if (req.nextUrl.pathname !== '/app') return null;
-  if (!context.isOperatorOSHost || context.surface === 'auth' || context.surface === 'api') return null;
+  if (!context.isOperatorOSHost || (context.surface !== 'root' && context.surface !== 'app')) return null;
 
   // Local development still mounts the console at /app. Production aliases
   // never inspect or forward next/return/redirect parameters: the only target

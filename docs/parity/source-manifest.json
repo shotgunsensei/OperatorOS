@@ -18,10 +18,10 @@
     "modules": 13,
     "capabilities": 7396,
     "stateCounts": {
-      "ACTIVE_NATIVE": 2541,
-      "ACTIVE_SHARED_EQUIVALENT": 1975,
+      "ACTIVE_NATIVE": 2733,
+      "ACTIVE_SHARED_EQUIVALENT": 2100,
       "OWNER_WAIVED": 0,
-      "BLOCKED": 2880
+      "BLOCKED": 2563
     },
     "typeCounts": {
       "api_endpoint": 971,
@@ -59,10 +59,10 @@
         "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
       },
       "sourceFingerprint": {
-        "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "20858dfed1553e65c2ee14bc7a76579212450ecf82fdbadadfc7cd1070047cff",
+        "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+        "treeSha256": "2fffe4b0dad8024cfba747f387beda41d1563b473987c79cc634f5db9ca62794",
         "fileCount": 273,
-        "totalBytes": 1265564
+        "totalBytes": 1232410
       },
       "capabilityDigestSha256": "897a612dad1bed90e8a82c10c8ddb93e7a3556c82350252b67f3b177ffc74d2d",
       "stateCounts": {
@@ -98,10 +98,10 @@
         "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
       },
       "sourceFingerprint": {
-        "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "9d6b63239bf3e1e021ee38cbb0e1900bc5756b240e9b306ff203d26edae9f548",
+        "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+        "treeSha256": "6e9a40c62329b50b9a7d02e57d8e7b4314aaca7a42d215d6312e2affd87fac7b",
         "fileCount": 370,
-        "totalBytes": 4448558
+        "totalBytes": 4395736
       },
       "capabilityDigestSha256": "1e8ac22312f990b15a3021d856ef49377969f3cac5f55a43326afffa8a11ab4a",
       "stateCounts": {
@@ -136,10 +136,10 @@
         "truthNote": "The source allCases export is compiler-discovered; every valid authored definition initializes as a published immutable OperatorOS challenge version."
       },
       "sourceFingerprint": {
-        "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "e003f51e460376ad96f42c14303d4928f3948af6faa62170811279d7cc0d86af",
+        "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+        "treeSha256": "ae29bce1a9450b34c7bf6e9ae9b9b2b170cdcbe2cbeb27cad269d31850ffed16",
         "fileCount": 452,
-        "totalBytes": 7927304
+        "totalBytes": 7872303
       },
       "capabilityDigestSha256": "02cd43443a5f4e2018d9fff83117a323f504bceedfaae9fa81dee86fdb0cae25",
       "stateCounts": {
@@ -177,10 +177,10 @@
         "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
       },
       "sourceFingerprint": {
-        "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "59daef03f6dbaa1998793808294d2992c9d8a7c1bcf836057d4ab3dd3293a5ce",
+        "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+        "treeSha256": "d9d7055fc00ac85bc7cd96a55b432a96a3adfbd25499aeb559acc314a9004afc",
         "fileCount": 257,
-        "totalBytes": 1184335
+        "totalBytes": 1152808
       },
       "capabilityDigestSha256": "2f892de52aec2466b08f182ac7779669bb11b62c0796cf05889fc9147b850e28",
       "stateCounts": {
@@ -216,10 +216,10 @@
         "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
       },
       "sourceFingerprint": {
-        "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "ef94c15839731bfa2881d7e95a703c1cfef950b18790109373c80a31efec0fa8",
+        "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+        "treeSha256": "8f4ad33321977a7c65db6203f405c91dcfc7f411da7af395ef587a44f792eec0",
         "fileCount": 146,
-        "totalBytes": 1828963
+        "totalBytes": 1807534
       },
       "capabilityDigestSha256": "94f01507cf1cabb9111194a80e32ea4177a3afa26eaa76507bce50585bb4764c",
       "stateCounts": {
@@ -266,10 +266,10 @@
         ]
       },
       "sourceFingerprint": {
-        "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "4c50291fa06582d0b8a5ecdd86f294bec94bd9282ac4774a2ac6ae00dabb6e3b",
+        "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+        "treeSha256": "438e86063be2e82de10c941c788bd4b4e4c6d4b4be38bce4d1c9e875e5dd9d32",
         "fileCount": 185,
-        "totalBytes": 2867510
+        "totalBytes": 2845583
       },
       "capabilityDigestSha256": "af4ee46d00411516b4548f5d05260910671ec56efff4c7818eea5f5f822c4fe8",
       "stateCounts": {
@@ -310,10 +310,10 @@
         ]
       },
       "sourceFingerprint": {
-        "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "c8dd9b90c2b2624a9b8b2ee17cbcd6cfd1f1de2cd8b6a82654ec341115a453ef",
+        "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+        "treeSha256": "64a41f27a2a8c7f446a79654f2184828f34641bf37e3c8231ae83648b5778aee",
         "fileCount": 1,
-        "totalBytes": 639
+        "totalBytes": 627
       },
       "capabilityDigestSha256": "542f567184365a4f05417386cb9bb418f1647b8763f001fc79f20e5ab5614e17",
       "stateCounts": {
@@ -339,10 +339,10 @@
         "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
       },
       "sourceFingerprint": {
-        "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "37577ad5b07de3a9ffc65adc3a279ecd37e3498434bbaa3209b469da0c06b833",
+        "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+        "treeSha256": "184f6168083ad31b9fd41d9574c2eb000d50305665439dd58b0efa62fe1525ac",
         "fileCount": 211,
-        "totalBytes": 7663743
+        "totalBytes": 7628693
       },
       "capabilityDigestSha256": "4212df688630b4f6e292898825f7a8c3edb74f159d1c14cdfc939a620a6dd38a",
       "stateCounts": {
@@ -377,10 +377,10 @@
         "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
       },
       "sourceFingerprint": {
-        "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "8b40d45e0b827310a8e2c5581d8694f179efe98519b554756884383e992353ea",
+        "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+        "treeSha256": "6af29f96b956550bbf40153d08b91389681068c77e53735dfed66bc066b4732c",
         "fileCount": 260,
-        "totalBytes": 3411533
+        "totalBytes": 3383130
       },
       "capabilityDigestSha256": "3721b5f9f6beda8aef84cd277fa470e75115e5d726886d549bd1241641b7514c",
       "stateCounts": {
@@ -417,17 +417,17 @@
         "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
       },
       "sourceFingerprint": {
-        "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "eb37ae3fb92f606d9a137657baa4d0fcb4988c6918eb7afd87b60814040156b3",
+        "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+        "treeSha256": "751fa4f1432be0f22fa4bc6dbd8609bd393fcbd62f43685a764382c47fb244b5",
         "fileCount": 225,
-        "totalBytes": 936004
+        "totalBytes": 910030
       },
-      "capabilityDigestSha256": "9a4b25f81edfa4c8049d2271025372d9d9613e33300715cc473d0621080ab81d",
+      "capabilityDigestSha256": "1586573bc9ba39ef4691ae60fd3b45060eb2ccbff585894d4ac1c98d3bb3d489",
       "stateCounts": {
-        "ACTIVE_NATIVE": 0,
-        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "ACTIVE_NATIVE": 192,
+        "ACTIVE_SHARED_EQUIVALENT": 125,
         "OWNER_WAIVED": 0,
-        "BLOCKED": 317
+        "BLOCKED": 0
       },
       "typeCounts": {
         "api_endpoint": 33,
@@ -455,10 +455,10 @@
         "remoteVerification": "refs/heads/main matched selected commit on 2026-08-08"
       },
       "sourceFingerprint": {
-        "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "96346d2116e03349953771d7606dadf4b367338d2c87edd5950e6f8cb5071795",
+        "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+        "treeSha256": "575ee3675531dc267dbc5ed77ab74b23ede2e0561310c3095e68ed0d92c112b0",
         "fileCount": 302,
-        "totalBytes": 13929944
+        "totalBytes": 13881386
       },
       "capabilityDigestSha256": "d02105574e0c2d18a30c6be897645d6d57ace0bfd4d5a5e10db4f13184e15936",
       "stateCounts": {
@@ -503,10 +503,10 @@
         ]
       },
       "sourceFingerprint": {
-        "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "6a7951180ceb46f39fff4ce3fe8011e5e8875a606ac7a35e316bc49a575e5f73",
+        "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+        "treeSha256": "b2e1495ebbdeeb9d88e8571ca9b97d94ddbcaec6b63d64cc1b771ea752f95a9a",
         "fileCount": 182,
-        "totalBytes": 8839054
+        "totalBytes": 8795626
       },
       "capabilityDigestSha256": "588bb1a90cadc3a92fa417c9abbed4a1216e69d42affb617745ff94ac8842f48",
       "stateCounts": {
@@ -550,10 +550,10 @@
         ]
       },
       "sourceFingerprint": {
-        "algorithm": "sha256(path NUL uint64be(size) content)",
-        "treeSha256": "81c63c362772b35a4c5f531591d5ed56f438fa0aa8161d41c399565ca9c97509",
+        "algorithm": "sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)",
+        "treeSha256": "d79e76c69cf9fb3ec699291e51ac2d5fd93fcde44038ef17f410663f1a74f454",
         "fileCount": 321,
-        "totalBytes": 7881072
+        "totalBytes": 7820081
       },
       "capabilityDigestSha256": "5b7412df7c02246d17b8a501bd0c42c4815295887407ffe2ecbcdfd735fdced3",
       "stateCounts": {
