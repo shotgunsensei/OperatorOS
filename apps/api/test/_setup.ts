@@ -111,6 +111,10 @@ export async function ensureSchemaReady() {
   await ensureSnapProofOsTables();
   const { ensureSnapProofOsPhase32Tables } = await import('../src/lib/snapproofos-phase32-db-init.js');
   await ensureSnapProofOsPhase32Tables();
+  const { ensureCallCommandTables } = await import('../src/lib/callcommand-db-init.js');
+  await ensureCallCommandTables();
+  const { ensureCallCommandPhase35Tables } = await import('../src/lib/callcommand-phase35-db-init.js');
+  await ensureCallCommandPhase35Tables();
   await ensureTestPlans();
 }
 

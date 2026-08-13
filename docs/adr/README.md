@@ -41,6 +41,7 @@ new ADR explicitly supersedes it.
 | ADR-0034 | Ninja Pool Hall restores tenant-bound host/join rooms with durable state, authenticated seats, guest intents, host-visible simulation, independent server re-simulation, replay/reconnect recovery, and abuse controls. | Accepted | `docs/adr/ADR-0034-ninja-pool-hall-online-room-authority.md` |
 | ADR-0037 | StudyForge restores folders, complete transactional study sets and artifacts, practice/history, countdown/streak/usage, deterministic and shared-AI generation, while OperatorOS retains all parent authority. | Accepted | `docs/adr/ADR-0037-studyforge-complete-learning-product-boundary.md` |
 | ADR-0038 | Ninja Launch Kit restores its compiler-derived templates, complete launch assets, nine gated visual briefs, brands, history, exports, public routes, and administration while OperatorOS retains all parent authority. | Accepted | `docs/adr/ADR-0038-ninja-launch-kit-complete-generation-product-boundary.md` |
+| ADR-0039 | CallCommand restores consent-first live telephony, protected recordings, structured intelligence, versioned flows, business actions, and a provider-confirmed switchboard while OperatorOS retains all parent authority. | Accepted for source/local release candidate | `docs/adr/ADR-0039-callcommand-complete-telephony-boundary.md` |
 
 ## Required future ADRs
 

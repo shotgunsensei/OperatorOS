@@ -13,7 +13,7 @@ test('Phase 33 is pinned to the 317-capability source baseline and additive rele
   const ledger = JSON.parse(read('docs/parity/modules/studyforge-ai.json'));
   assert.equal(ledger.capabilities.length, 317);
   const contract = read('apps/api/src/lib/database-release-contract.ts');
-  assert.match(contract, /releaseVersion:\s*42/);
+  assert.match(contract, /releaseVersion:\s*44/);
   assert.match(contract, /studyforge_complete_product_tables/);
   const ddl = read('apps/api/src/lib/studyforge-phase33-db-init.ts');
   for (const table of [

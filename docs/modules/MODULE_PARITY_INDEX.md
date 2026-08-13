@@ -1,5 +1,25 @@
 # OperatorOS module parity index
 
+## Current Phase 35 CallCommand complete-product overlay - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
+
+Phase 35 pins CallCommand commit
+`d49434e1d641d62cc141591c7208539a7afbf11e`: 450 tracked files, 369 bounded
+product files, 4,436,242 bytes, and 589 compiler-derived facets. The exact
+ledger contains 446 native and 143 shared-equivalent outcomes, with zero
+blocked or waived.
+
+Release v44 restores complete consent-first telephony and automation:
+channels/hours/after-hours policy; productized receptionists; validated flow
+versions/traces; signed Twilio calls and provider-confirmed recording;
+protected ingestion/transcription/analysis; rule actions and durable work;
+switchboard/real redirect; analytics/PDF; and source deep links. OperatorOS
+retains all parent authority. Root static/build, 42/42 live-call, 5/5 database,
+66/66 focused regression, release apply/reapply, 8/8 ledger/report, and 1/1
+compiled browser gates pass. The broad API aggregate retains unrelated
+existing cross-module failures and is not green. Production providers,
+backup/apply, reconciliation, deployed acceptance, rollback, merge, and
+deployment remain owner gates. See the Phase 35 report and ADR-0039.
+
 ## Current Phase 33 StudyForge complete-product overlay - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-12)
 
 Phase 33 pins StudyForge commit

@@ -2446,6 +2446,38 @@ export const moduleShellApi = {
   },
   callcommand: {
     workspace: () => apiFetch('/modules/callcommand-ai/workspace'),
+    productWorkspace: () => apiFetch('/modules/callcommand-ai/product/workspace'),
+    productCall: (id: string) => apiFetch(`/modules/callcommand-ai/product/calls/${encodeURIComponent(id)}`),
+    productCreateChannel: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/channels', { method: 'POST', body: JSON.stringify(input) }),
+    productUpdateChannel: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/channels/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    productCreateProfile: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/profiles', { method: 'POST', body: JSON.stringify(input) }),
+    productCreateTarget: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/transfer-targets', { method: 'POST', body: JSON.stringify(input) }),
+    productCreateFlow: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/flows', { method: 'POST', body: JSON.stringify(input) }),
+    productUpdateFlow: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/flows/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
+    productPublishFlow: (id: string) =>
+      apiFetch(`/modules/callcommand-ai/product/flows/${encodeURIComponent(id)}/publish`, { method: 'POST', body: JSON.stringify({}) }),
+    productCreateRule: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/automation-rules', { method: 'POST', body: JSON.stringify(input) }),
+    productProcessCall: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/calls/${encodeURIComponent(id)}/process`, { method: 'POST', body: JSON.stringify(input) }),
+    productReport: (id: string) =>
+      apiDownload(`/modules/callcommand-ai/product/calls/${encodeURIComponent(id)}/report`, { method: 'POST' }),
+    productSimulate: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/simulate', { method: 'POST', body: JSON.stringify(input) }),
+    productUpdateSession: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/switchboard/sessions/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    productEndSession: (id: string) =>
+      apiFetch(`/modules/callcommand-ai/product/switchboard/sessions/${encodeURIComponent(id)}/end`, { method: 'POST', body: JSON.stringify({}) }),
+    productTransfer: (id: string, targetId: string) =>
+      apiFetch(`/modules/callcommand-ai/product/switchboard/sessions/${encodeURIComponent(id)}/transfer`, { method: 'POST', body: JSON.stringify({ targetId }) }),
+    productUpdateObject: (type: 'tickets' | 'leads' | 'tasks', id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/${type}/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
     get: (id: string) => apiFetch(`/modules/callcommand-ai/calls/${id}`),
     createChannel: (input: Record<string, unknown>) =>
       apiFetch('/modules/callcommand-ai/channels', { method: 'POST', body: JSON.stringify(input) }),

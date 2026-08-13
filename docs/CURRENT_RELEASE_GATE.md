@@ -1,5 +1,20 @@
 # OperatorOS current release gate
 
+## Current Phase 35 source/local overlay - RELEASE BLOCKED (2026-08-13)
+
+CallCommand Phase 35 is source/local implemented at cumulative additive
+database release v44. Its exact ledger is 589/589 active or shared-equivalent
+with zero waiver or blocker. Root lint/typecheck, production build, restored
+42/42 live-call gate, focused 66/66 regression, disposable PostgreSQL 5/5,
+clean/idempotent v44, parity/report 8/8, and compiled local browser 1/1 pass.
+
+This is not a production promotion. The cross-product API aggregate still has
+unrelated existing Ninja Pool/TradeFlowKit static-contract failures, although
+all Phase 35 tests pass. Production backup/apply, configured real-provider
+acceptance, deployed exact-host/mobile verification, source reconciliation,
+restart, restore/rollback, merge, and deployment remain owner gates. The
+historical records below remain provenance and do not override this overlay.
+
 ## Current Phase 33 source/local overlay - RELEASE BLOCKED (2026-08-12)
 
 StudyForge Phase 33 is source/local implemented at cumulative additive database

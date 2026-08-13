@@ -1,5 +1,34 @@
 # OperatorOS implementation status
 
+## Phase 35 CallCommand complete telephony restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
+
+Phase 35 pins CallCommand source commit
+`d49434e1d641d62cc141591c7208539a7afbf11e` and reopens the Phase 11E
+recording, live-receptionist, flow, automation, and switchboard retirements
+under ADR-0039. The executable ledger maps all 589 exact facets to 446
+`ACTIVE_NATIVE` and 143 `ACTIVE_SHARED_EQUIVALENT`, with zero waived and zero
+blocked.
+
+Additive release v44 restores tenant-scoped lines, receptionist profiles,
+versioned/validated flows and traces, signed consent-aware Twilio voice,
+provider-confirmed recording start and protected ingestion, transcription and
+structured intelligence, idempotent rules/actions, generated tickets/leads/
+tasks, live switchboard/transfer, analytics, PDF reports, and source-compatible
+routes. OperatorOS remains the sole identity, tenant, role, entitlement,
+billing, provider-secret, storage, usage, audit, and platform-admin authority.
+
+Root lint/typecheck and production build pass. The restored 42/42 live-call
+gate, 5/5 disposable-PostgreSQL journey, 66/66 focused compatibility/provider
+regression, clean/reapplied v44, 8/8 parity/report gate, and compiled browser
+journey pass locally. The broad API aggregate was exercised and all Phase 35
+tests passed, but unrelated existing Ninja Pool/TradeFlowKit static contracts
+keep the cross-product aggregate non-green.
+
+Production backup/apply, real Twilio/OpenAI/email/Slack/webhook acceptance,
+deployed exact-host acceptance, source-data reconciliation, restart under
+production infrastructure, restore/rollback, merge, and deployment remain
+owner gates. See `docs/phase-35/CALLCOMMAND-COMPLETE-TELEPHONY-REPORT.md`.
+
 ## Phase 33 StudyForge complete learning restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-12)
 
 Phase 33 pins StudyForge source commit

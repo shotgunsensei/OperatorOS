@@ -229,13 +229,28 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/pricing': { sectionId: 'launchkit-account', label: 'OperatorOS Plan' },
   },
   'callcommand-ai': {
-    '/dashboard': { sectionId: 'callcommand-calls', label: 'Call Dashboard' },
+    '/dashboard': { sectionId: 'callcommand-dashboard', label: 'Call Dashboard' },
+    '/app': { sectionId: 'callcommand-dashboard', label: 'CallCommand AI' },
     '/channels': { sectionId: 'callcommand-configuration', label: 'Channels' },
-    '/profiles': { sectionId: 'callcommand-configuration', label: 'Reception Profiles' },
-    '/consent': { sectionId: 'callcommand-consent', label: 'Consent Ledger' },
-    '/suppressions': { sectionId: 'callcommand-consent', label: 'Suppression Controls' },
+    '/profiles': { sectionId: 'callcommand-receptionists', label: 'Reception Profiles' },
+    '/receptionist-profiles': { sectionId: 'callcommand-receptionists', label: 'Receptionist Profiles' },
+    '/flows': { sectionId: 'callcommand-flows', label: 'Call Flows' },
+    '/automation-rules': { sectionId: 'callcommand-automation', label: 'Automation Rules' },
+    '/switchboard': { sectionId: 'callcommand-switchboard', label: 'Live Switchboard' },
+    '/setup/telephony': { sectionId: 'callcommand-settings', label: 'Telephony Setup' },
+    '/integrations': { sectionId: 'callcommand-settings', label: 'Integrations' },
+    '/transfer-targets': { sectionId: 'callcommand-switchboard', label: 'Transfer Targets' },
+    '/simulate': { sectionId: 'callcommand-calls', label: 'Call Simulator' },
+    '/simulate/live-call': { sectionId: 'callcommand-switchboard', label: 'Live Call Simulator' },
+    '/consent': { sectionId: 'callcommand-configuration', label: 'Consent Policy and Ledger' },
+    '/suppressions': { sectionId: 'callcommand-settings', label: 'Suppression Controls' },
     '/calls': { sectionId: 'callcommand-calls', label: 'Call Records' },
-    '/operations': { sectionId: 'callcommand-operations', label: 'Controlled Calling' },
+    '/operations': { sectionId: 'callcommand-calls', label: 'Controlled Calling' },
+    '/tickets': { sectionId: 'callcommand-work', label: 'Call Tickets' },
+    '/leads': { sectionId: 'callcommand-work', label: 'Call Leads' },
+    '/tasks': { sectionId: 'callcommand-work', label: 'Call Tasks' },
+    '/billing': { sectionId: 'callcommand-settings', label: 'OperatorOS Plan and Usage' },
+    '/settings': { sectionId: 'callcommand-settings', label: 'CallCommand Settings' },
   },
   ninjamation: {
     '/dashboard': { sectionId: 'ninjamation-dashboard', label: 'Script Dashboard' },
@@ -388,7 +403,9 @@ export function resolveCoreModuleDeepLink(
     const [resource] = pathSegments;
     if (resource === 'calls') return { sectionId: 'callcommand-calls', label: 'Call Record' };
     if (resource === 'channels' || resource === 'profiles') return { sectionId: 'callcommand-configuration', label: 'Call Configuration' };
-    if (resource === 'consents' || resource === 'suppressions') return { sectionId: 'callcommand-consent', label: 'Consent Record' };
+    if (resource === 'consents' || resource === 'suppressions') return { sectionId: 'callcommand-settings', label: 'Consent Record' };
+    if (resource === 'flows') return { sectionId: 'callcommand-flows', label: 'Call Flow' };
+    if (resource === 'tickets' || resource === 'leads' || resource === 'tasks') return { sectionId: 'callcommand-work', label: 'Generated Work Record' };
   }
   if (slug === 'ninjamation' && pathSegments.length === 2) {
     const [resource] = pathSegments;

@@ -18,10 +18,10 @@
     "modules": 13,
     "capabilities": 7396,
     "stateCounts": {
-      "ACTIVE_NATIVE": 2958,
-      "ACTIVE_SHARED_EQUIVALENT": 2211,
+      "ACTIVE_NATIVE": 3404,
+      "ACTIVE_SHARED_EQUIVALENT": 2354,
       "OWNER_WAIVED": 0,
-      "BLOCKED": 2227
+      "BLOCKED": 1638
     },
     "typeCounts": {
       "api_endpoint": 971,
@@ -103,12 +103,12 @@
         "fileCount": 370,
         "totalBytes": 4395736
       },
-      "capabilityDigestSha256": "1e8ac22312f990b15a3021d856ef49377969f3cac5f55a43326afffa8a11ab4a",
+      "capabilityDigestSha256": "b4b144afc720bcb06a4b56423a28287988fec664af1e65dc4de01d5ef59ef68e",
       "stateCounts": {
-        "ACTIVE_NATIVE": 0,
-        "ACTIVE_SHARED_EQUIVALENT": 0,
+        "ACTIVE_NATIVE": 446,
+        "ACTIVE_SHARED_EQUIVALENT": 143,
         "OWNER_WAIVED": 0,
-        "BLOCKED": 589
+        "BLOCKED": 0
       },
       "typeCounts": {
         "api_endpoint": 86,
