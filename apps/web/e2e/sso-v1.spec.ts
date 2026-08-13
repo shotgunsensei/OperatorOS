@@ -2501,9 +2501,9 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('button-launch-ninjamation').click();
     const modulePage = await popupPromise;
     await expect(modulePage.getByTestId('shell-ninjamation')).toBeVisible({ timeout: 30_000 });
-    await expect(modulePage.getByTestId('notice-ninjamation-no-execution')).toContainText('never executes these scripts');
+    await expect(modulePage.getByTestId('notice-ninjamation-no-execution')).toContainText('never executes script source');
 
-    await modulePage.getByTestId('button-ninjamation-new').click();
+    await modulePage.getByTestId('nav-ninjamation-admin').click();
     await modulePage.getByTestId('input-ninjamation-name').fill(scriptName);
     await modulePage.getByTestId('select-ninjamation-language').selectOption('powershell');
     await modulePage.getByTestId('select-ninjamation-risk').selectOption('low');

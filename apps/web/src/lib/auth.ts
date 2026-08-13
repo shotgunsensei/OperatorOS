@@ -2686,6 +2686,33 @@ export const moduleShellApi = {
       apiDownload(`/modules/ninjamation/scripts/${encodeURIComponent(id)}/downloads`, {
         method: 'POST',
       }),
+    productWorkspace: () => apiFetch('/modules/ninjamation/product/workspace'),
+    productScripts: (query: Record<string, string | number | boolean | null | undefined> = {}) => {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(query)) if (value !== undefined && value !== null && value !== '') params.set(key, String(value));
+      return apiFetch(`/modules/ninjamation/product/scripts${params.size ? `?${params}` : ''}`);
+    },
+    productDetail: (id: string) => apiFetch(`/modules/ninjamation/product/scripts/${encodeURIComponent(id)}`),
+    favorite: (id: string) => apiFetch(`/modules/ninjamation/product/scripts/${encodeURIComponent(id)}/favorite`, { method: 'POST', body: '{}' }),
+    unfavorite: (id: string) => apiFetch(`/modules/ninjamation/product/scripts/${encodeURIComponent(id)}/favorite`, { method: 'DELETE' }),
+    productDownload: (id: string) => apiDownload(`/modules/ninjamation/product/scripts/${encodeURIComponent(id)}/download`, { method: 'POST' }),
+    productGenerate: (input: {
+      idempotencyKey: string;
+      prompt: string;
+      name?: string;
+      description?: string;
+      language: 'powershell' | 'python' | 'batch' | 'bash';
+      category?: string;
+      riskTier?: 'low' | 'medium' | 'high';
+    }) => apiFetch('/modules/ninjamation/product/generations', { method: 'POST', body: JSON.stringify(input) }),
+    queueSync: (input: { idempotencyKey: string; commit?: string }) => apiFetch('/modules/ninjamation/product/sync-runs', { method: 'POST', body: JSON.stringify(input) }),
+    syncRuns: () => apiFetch('/modules/ninjamation/product/sync-runs'),
+    syncDetail: (id: string) => apiFetch(`/modules/ninjamation/product/sync-runs/${encodeURIComponent(id)}`),
+    retrySync: (id: string, idempotencyKey: string) => apiFetch(`/modules/ninjamation/product/sync-runs/${encodeURIComponent(id)}/retry`, { method: 'POST', body: JSON.stringify({ idempotencyKey }) }),
+    account: () => apiFetch('/modules/ninjamation/product/account'),
+    admin: () => apiFetch('/modules/ninjamation/product/admin'),
+    adminScript: (id: string, action: 'deprecate' | 'restore') => apiFetch(`/modules/ninjamation/product/admin/scripts/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ action }) }),
+    updateSyncSchedule: (input: { intervalSeconds: number; enabled: boolean }) => apiFetch('/modules/ninjamation/product/admin/sync-schedule', { method: 'PUT', body: JSON.stringify(input) }),
   },
   outcall: {
     workspace: () => apiFetch('/modules/outcall/workspace'),

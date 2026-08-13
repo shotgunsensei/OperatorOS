@@ -255,10 +255,18 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
   ninjamation: {
     '/dashboard': { sectionId: 'ninjamation-dashboard', label: 'Script Dashboard' },
     '/scripts': { sectionId: 'ninjamation-scripts', label: 'Script Library' },
+    '/library': { sectionId: 'ninjamation-library', label: 'Script Library' },
     '/editor': { sectionId: 'ninjamation-editor', label: 'Script Editor' },
     '/review': { sectionId: 'ninjamation-review', label: 'Review Queue' },
+    '/generate': { sectionId: 'ninjamation-generations', label: 'AI Draft Generator' },
     '/generations': { sectionId: 'ninjamation-generations', label: 'AI Draft Generator' },
     '/downloads': { sectionId: 'ninjamation-downloads', label: 'Download Audit' },
+    '/sync': { sectionId: 'ninjamation-sync', label: 'GitHub Synchronization' },
+    '/account': { sectionId: 'ninjamation-account', label: 'Account and Usage' },
+    '/billing': { sectionId: 'ninjamation-account', label: 'OperatorOS Billing' },
+    '/checkout/success': { sectionId: 'ninjamation-account', label: 'OperatorOS Billing Status' },
+    '/checkout/cancel': { sectionId: 'ninjamation-account', label: 'OperatorOS Billing Status' },
+    '/admin': { sectionId: 'ninjamation-admin', label: 'Ninjamation Administration' },
   },
   outcall: {
     '/dashboard': { sectionId: 'outcall-readiness', label: 'Readiness and Safety' },
@@ -412,6 +420,7 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'scripts') return { sectionId: 'ninjamation-editor', label: 'Script Record' };
     if (resource === 'generations') return { sectionId: 'ninjamation-generations', label: 'Generation Record' };
     if (resource === 'downloads') return { sectionId: 'ninjamation-downloads', label: 'Download Record' };
+    if (resource === 'sync-runs') return { sectionId: 'ninjamation-sync', label: 'Synchronization Run' };
   }
   return null;
 }

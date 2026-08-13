@@ -28,7 +28,7 @@ test('Phase 35 declares complete persisted telephony, intelligence, automation, 
   assert.match(route, /requireTenantAdmin/);
 });
 
-test('Phase 35 release v44 is additive, tenant-scoped, and immediately reapplicable', () => {
+test('Phase 35 release step remains additive and tenant-scoped in the cumulative release', () => {
   for (const table of [
     'callcommand_flows','callcommand_flow_versions','callcommand_flow_traces','callcommand_live_sessions',
     'callcommand_ingestion_tokens','callcommand_ingestion_events','callcommand_upload_intents','callcommand_automation_rules',
@@ -37,8 +37,8 @@ test('Phase 35 release v44 is additive, tenant-scoped, and immediately reapplica
   assert.doesNotMatch(schema, /DROP TABLE|TRUNCATE/i);
   assert.match(schema, /DROP CONSTRAINT IF EXISTS callcommand_target_shape_check/);
   assert.match(schema, /FOREIGN KEY \(tenant_id,call_id\)/);
-  assert.match(release, /releaseVersion: 44/);
   assert.match(release, /callcommand_complete_product_tables/);
+  assert.match(release, /callcommand_complete_product_tables[\s\S]*ninjamation_complete_product_tables/);
 });
 
 test('Phase 35 preserves loop guards, deterministic fallback, strict analysis, consent TwiML, protected tokens, and PDF integrity', () => {

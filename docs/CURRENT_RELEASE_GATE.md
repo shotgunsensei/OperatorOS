@@ -1,5 +1,20 @@
 # OperatorOS current release gate
 
+## Current Phase 36 source/local overlay - RELEASE BLOCKED (2026-08-13)
+
+Ninjamation Phase 36 is source/local implemented at cumulative additive
+database release v45. Its compiler-derived ledger is 189/189 active or
+shared-equivalent: 111 native, 78 shared-equivalent, zero waiver, and zero
+blocker. Focused domain/database tests pass 7/7, static/deep-link/release
+contracts pass, typecheck/build pass, clean/idempotent v45 passes, and the
+compiled exact-host private/public browser gate passes.
+
+This is not a production promotion. Live GitHub/OpenAI provider acceptance,
+production source reconciliation, backup/apply, deployed restart and
+exact-host/mobile acceptance, rollback rehearsal, merge, and deployment remain
+owner gates. The historical records below remain provenance and do not
+override this overlay.
+
 ## Current Phase 35 source/local overlay - RELEASE BLOCKED (2026-08-13)
 
 CallCommand Phase 35 is source/local implemented at cumulative additive

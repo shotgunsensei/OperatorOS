@@ -87,6 +87,13 @@ test('core module deep links resolve only to live native shell sections', () => 
   assert.equal(resolveCoreModuleDeepLink('techdeck', ['settings'])?.sectionId, 'techdeck-settings');
   assert.equal(resolveCoreModuleDeepLink('ninjamation', ['scripts'])?.sectionId, 'ninjamation-scripts');
   assert.equal(resolveCoreModuleDeepLink('ninjamation', ['scripts', 'script-123'])?.sectionId, 'ninjamation-editor');
+  assert.equal(resolveCoreModuleDeepLink('ninjamation', ['library'])?.sectionId, 'ninjamation-library');
+  assert.equal(resolveCoreModuleDeepLink('ninjamation', ['generate'])?.sectionId, 'ninjamation-generations');
+  assert.equal(resolveCoreModuleDeepLink('ninjamation', ['sync'])?.sectionId, 'ninjamation-sync');
+  assert.equal(resolveCoreModuleDeepLink('ninjamation', ['sync-runs', 'sync-123'])?.sectionId, 'ninjamation-sync');
+  assert.equal(resolveCoreModuleDeepLink('ninjamation', ['account'])?.sectionId, 'ninjamation-account');
+  assert.equal(resolveCoreModuleDeepLink('ninjamation', ['admin'])?.sectionId, 'ninjamation-admin');
+  assert.equal(resolveCoreModuleDeepLink('ninjamation', ['checkout', 'success'])?.sectionId, 'ninjamation-account');
   assert.equal(resolveCoreModuleDeepLink('ninjamation', ['execute']), null);
   for (const path of ['dashboard', 'readiness']) assert.equal(resolveCoreModuleDeepLink('outcall', [path])?.sectionId, 'outcall-readiness');
   assert.equal(resolveCoreModuleDeepLink('outcall', ['setup'])?.sectionId, 'outcall-setup');
@@ -115,7 +122,7 @@ test('pending, nested, malformed, and non-core module paths fail closed', () => 
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['assets', 'asset-123']), null);
   assert.equal(resolveCoreModuleDeepLink('pulsedesk', ['unknown']), null);
   assert.equal(resolveCoreModuleDeepLink('ninja-pool-hall', ['matches']), null);
-  assert.equal(resolveCoreModuleDeepLink('ninja-pool-hall', ['host']), null);
+  assert.equal(resolveCoreModuleDeepLink('ninja-pool-hall', ['host'])?.sectionId, 'ninja-pool-hall-shell');
   assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['dashboard'])?.sectionId, 'brandforgeos-dashboard');
   assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['brands', 'brand-123'])?.sectionId, 'brandforgeos-brands');
   assert.equal(resolveCoreModuleDeepLink('brandforgeos', ['campaigns', 'campaign-123'])?.sectionId, 'brandforgeos-campaigns');

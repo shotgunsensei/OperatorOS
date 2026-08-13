@@ -47,6 +47,14 @@ versions/traces, live sessions, protected ingestion, automation rules,
 tickets/leads/tasks, action/transfer logs, reports, and usage. Rollback remains
 restore-and-switch; there is no destructive down migration.
 
+Release v45 appends `ninjamation_complete_product_tables` after the v44
+CallCommand step. Before applying it, require a verified backup that covers the
+existing Ninjamation scripts, immutable versions, reviews, generations, and
+downloads plus the new favorites, catalog provenance, synchronization run/item
+ledger, deprecation state, ownership, and usage counters. Rollback remains
+restore-and-switch; do not run child migrations or delete deprecated catalog
+rows as a rollback substitute.
+
 ## Deployment order
 
 1. Identify the exact reviewed application commit and database engine version.

@@ -1,5 +1,28 @@
 # OperatorOS implementation status
 
+## Phase 36 Ninjamation complete product restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
+
+Phase 36 pins Ninjamation application commit
+`cca75338d04ed35b89f28d614eb51559735aa32f` and AutomationPacks catalog
+commit `ca0e55fd086f6751a43964927166bfa69db012b6`. The executable ledger maps
+all 189 facets to 111 `ACTIVE_NATIVE` and 78
+`ACTIVE_SHARED_EQUIVALENT`, with zero waived and zero blocked.
+
+Additive release v45 restores the persisted searchable/versioned script
+library, favorites and ownership, exact checksum downloads, format/category
+metadata, fixed-source incremental GitHub synchronization, non-destructive
+deprecation/restore, validated and metered four-format AI generation, account
+usage, plan gates, shared scheduled sync, and parent-authorized admin behavior.
+Static and optional sandbox analysis remain review evidence only; no route or
+service executes script content in the web/API process.
+
+Focused domain/database tests pass 7/7. Static/deep-link/release contracts,
+typecheck, production build, clean/idempotent v45, exact-ledger/report, and the
+compiled exact-host desktop/mobile/public browser gate pass locally.
+Production backup/apply, live GitHub/OpenAI verification, data reconciliation,
+deployed restart, rollback, merge, and deployment remain owner gates. See
+`docs/phase-36/NINJAMATION-COMPLETE-PRODUCT-REPORT.md`.
+
 ## Phase 35 CallCommand complete telephony restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
 
 Phase 35 pins CallCommand source commit

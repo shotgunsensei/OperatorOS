@@ -220,6 +220,7 @@ async function exerciseShell(page: Page, slug: Slug) {
     }
     case 'ninjamation': {
       const suffix = Date.now().toString(36);
+      await page.getByTestId('nav-ninjamation-admin').click();
       await page.getByTestId('input-ninjamation-name').fill(`Inventory ${suffix}`);
       await page.getByTestId('textarea-ninjamation-content').fill(
         'param([string]$Path)\nGet-ChildItem -LiteralPath $Path -ErrorAction Stop',

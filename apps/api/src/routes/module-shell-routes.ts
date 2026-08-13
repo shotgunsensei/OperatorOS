@@ -98,6 +98,7 @@ import { registerNinjaLaunchKitPhase34Routes } from './ninja-launch-kit-phase34-
 import { registerCallCommandRoutes } from './callcommand-routes.js';
 import { registerCallCommandPhase35Routes } from './callcommand-phase35-routes.js';
 import { registerNinjamationRoutes } from './ninjamation-routes.js';
+import { registerNinjamationPhase36Routes } from './ninjamation-phase36-routes.js';
 import { registerOutCallRoutes } from './outcall-routes.js';
 import { registerTradeFlowKitLeadOperationsRoutes } from './tradeflowkit-lead-operations-routes.js';
 import { registerTradeFlowKitPublicIntakeRoutes } from './tradeflowkit-public-intake-routes.js';
@@ -602,6 +603,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerNinjaLaunchKitRoutes(app);
   await registerNinjaLaunchKitPhase34Routes(app);
   await registerNinjamationRoutes(app);
+  await registerNinjamationPhase36Routes(app);
   await registerOutCallRoutes(app);
 
   // ===== TradeFlowKit: lead and revenue compatibility routes ==============

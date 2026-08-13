@@ -1,5 +1,24 @@
 # OperatorOS module parity index
 
+## Current Phase 36 Ninjamation complete-product overlay - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
+
+Phase 36 pins application commit
+`cca75338d04ed35b89f28d614eb51559735aa32f` and AutomationPacks commit
+`ca0e55fd086f6751a43964927166bfa69db012b6`: 184 bounded product files,
+2,855,775 bytes, and 189 compiler-derived facets. The ledger contains 111
+native and 78 shared-equivalent outcomes, with zero blocked or waived.
+
+Release v45 restores the complete library, immutable provenance/version
+history, search/filter/favorites/ownership, exact checksum downloads,
+PowerShell/Python/Batch/Bash AI drafts, plan usage, incremental fixed-source
+GitHub sync, safe deprecation/restore, health/history/admin, exact-host public
+pages, and responsive source routes. OperatorOS retains parent authority, the
+shared scheduler handles recurrence, and no web/API code executes scripts.
+Focused 7/7, static/release/deep-link, build, apply/reapply, ledger/report, and
+compiled browser gates pass locally. Live providers, production reconciliation,
+backup/apply, deployed acceptance, rollback, merge, and deployment remain owner
+gates. See the Phase 36 report.
+
 ## Current Phase 35 CallCommand complete-product overlay - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
 
 Phase 35 pins CallCommand commit

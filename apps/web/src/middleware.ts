@@ -120,6 +120,13 @@ function ninjaLaunchKitPublicDestination(pathname: string): string | null {
     : null;
 }
 
+function ninjamationPublicDestination(pathname: string): string | null {
+  const normalized = pathname === '/' ? 'home' : pathname.replace(/^\//, '').replace(/\/$/, '');
+  return ['home', 'pricing'].includes(normalized)
+    ? `/public/ninjamation/${normalized}`
+    : null;
+}
+
 function isSsoCallbackPath(pathname: string): boolean {
   return pathname === '/sso' || pathname.startsWith('/sso/');
 }
@@ -430,6 +437,15 @@ export async function middleware(req: NextRequest) {
     if (pathname === '/login' || pathname === '/signup') {
       const mode = pathname === '/signup' ? '&mode=register' : '';
       const next = encodeURIComponent('https://ninjalaunchkit.operatoros.net/dashboard');
+      return withAuthSecurityHeaders(NextResponse.redirect(new URL(buildPublicUrl(`/login?next=${next}${mode}`, 'root')), 307));
+    }
+  }
+  if (context.module?.slug === 'ninjamation') {
+    const destination = ninjamationPublicDestination(pathname);
+    if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));
+    if (pathname === '/login' || pathname === '/signup') {
+      const mode = pathname === '/signup' ? '&mode=register' : '';
+      const next = encodeURIComponent('https://ninjamation.operatoros.net/library');
       return withAuthSecurityHeaders(NextResponse.redirect(new URL(buildPublicUrl(`/login?next=${next}${mode}`, 'root')), 307));
     }
   }

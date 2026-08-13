@@ -853,6 +853,69 @@ function specialCapabilities(definition, sourceRoot) {
 }
 
 function applyCurrentRestorationMappings(definition, capabilities) {
+  if (definition.slug === 'ninjamation') {
+    const nativeTargets = [
+      'apps/api/src/lib/ninjamation-db-init.ts',
+      'apps/api/src/lib/ninjamation-phase36-db-init.ts',
+      'apps/api/src/lib/ninjamation.ts',
+      'apps/api/src/lib/ninjamation-phase36.ts',
+      'apps/api/src/lib/ninjamation-access.ts',
+      'apps/api/src/lib/ninjamation-sync.ts',
+      'apps/api/src/routes/ninjamation-routes.ts',
+      'apps/api/src/routes/ninjamation-phase36-routes.ts',
+      'apps/web/src/components/module-shells/NinjamationShell.tsx',
+      'apps/web/src/app/public/ninjamation/[page]/page.tsx',
+      'apps/web/src/lib/auth.ts',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+      'apps/web/src/middleware.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/entitlement-resolver.ts',
+      'apps/api/src/lib/ai-provider.ts',
+      'apps/api/src/lib/shared-provider-adapters.ts',
+      'apps/api/src/lib/shared-background-jobs.ts',
+      'apps/api/src/lib/shared-schedules-exports.ts',
+      'apps/api/src/lib/shared-usage-activity.ts',
+      'apps/api/src/lib/shared-services-db-init.ts',
+      'apps/api/src/lib/saas-db-init.ts',
+      'apps/api/src/routes/auth-routes.ts',
+      'apps/api/src/routes/billing-routes.ts',
+      'apps/api/src/routes/tenant-admin-routes.ts',
+      'apps/api/src/lib/database-release-contract.ts',
+    ];
+    const evidence = [
+      'apps/api/test/ninjamation-phase36-domain.test.ts',
+      'apps/api/test/ninjamation-phase36-db.test.ts',
+      'apps/api/test/ninjamation-phase36-static.test.ts',
+      'apps/api/test/ninjamation-domain.test.ts',
+      'apps/api/test/ninjamation-db.test.ts',
+      'apps/web/e2e/ninjamation-phase36.spec.ts',
+    ];
+    const sharedBoundary = /(?:routes\/auth|\/auth\/|\/login|\/sign.?in|\/sign.?up|\/logout|\/me\b|billing|subscription|checkout|plan|entitlement|stripe|user.?owner|tenant|membership|session|password|admin.?user|account.?profile|health|openai|provider|integration|secret|object.?storage|storage\/|email.?provider|operatoros|replit|database.?url|\bport\b)/iu;
+    const sharedSchemaBoundary = /^(?:users|user_roles|payments|subscriptions)(?:\.|$)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const sourceText = [capability.title, capability.canonicalSourceIdentity, ...capability.sourcePointers].join(' ');
+      const shared = capability.type === 'integration'
+        || ((capability.type === 'database_table' || capability.type === 'database_column') && sharedSchemaBoundary.test(capability.title))
+        || sharedBoundary.test(sourceText);
+      const typedTargets = capability.type === 'database_table'
+        ? (shared ? ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-services-db-init.ts'] : ['apps/api/src/lib/ninjamation-phase36-db-init.ts'])
+        : capability.type === 'ui_page' || capability.type === 'ui_route'
+          ? ['apps/web/src/app/modules/[slug]/[...path]/page.tsx','apps/web/src/components/module-shells/NinjamationShell.tsx','apps/web/src/app/public/ninjamation/[page]/page.tsx']
+          : [];
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...(capability.currentTargets || []), ...(shared ? sharedTargets : nativeTargets), ...typedTargets])].sort(),
+        automatedEvidence: [...new Set([...(capability.automatedEvidence || []), ...evidence])].sort(),
+        note: [capability.note, shared
+          ? 'Phase 36 preserves this outcome through OperatorOS identity, tenant, role, entitlement, billing, shared AI/provider, scheduler, usage, audit, or administration authority.'
+          : 'Phase 36 restores this outcome through additive v45 persistence, fixed-source commit-provenanced AutomationPacks synchronization, immutable versions, search and ownership workflows, validated AI drafts, exact checksum downloads, source-compatible routes, and an explicit no-execution boundary.'].filter(Boolean).join(' '),
+      };
+    });
+  }
   if (definition.slug === 'callcommand-ai') {
     const nativeTargets = [
       'apps/api/src/lib/callcommand-db-init.ts',

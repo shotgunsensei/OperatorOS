@@ -38,6 +38,7 @@ import { ensureNinjaLaunchKitPhase34Tables } from './ninja-launch-kit-phase34-db
 import { ensureCallCommandTables } from './callcommand-db-init.js';
 import { ensureCallCommandPhase35Tables } from './callcommand-phase35-db-init.js';
 import { ensureNinjamationTables } from './ninjamation-db-init.js';
+import { ensureNinjamationPhase36Tables } from './ninjamation-phase36-db-init.js';
 import { ensureOutCallProductTables, ensureOutCallTables } from './outcall-db-init.js';
 import { ensureOperatorOsMessagingComplianceTables } from './operatoros-messaging-compliance-db-init.js';
 import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db-init.js';
@@ -98,6 +99,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   studyforge_complete_product_tables: ensureStudyForgePhase33Tables,
   ninja_launch_kit_complete_product_tables: ensureNinjaLaunchKitPhase34Tables,
   callcommand_complete_product_tables: ensureCallCommandPhase35Tables,
+  ninjamation_complete_product_tables: ensureNinjamationPhase36Tables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -228,6 +230,10 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.ninjamation_reviews') IS NOT NULL AS ninjamation_reviews,
       to_regclass('public.ninjamation_downloads') IS NOT NULL AS ninjamation_downloads,
       to_regclass('public.ninjamation_generations') IS NOT NULL AS ninjamation_generations,
+      to_regclass('public.ninjamation_favorites') IS NOT NULL AS ninjamation_favorites,
+      to_regclass('public.ninjamation_sync_runs') IS NOT NULL AS ninjamation_sync_runs,
+      to_regclass('public.ninjamation_sync_items') IS NOT NULL AS ninjamation_sync_items,
+      to_regclass('public.ninjamation_usage_counters') IS NOT NULL AS ninjamation_usage_counters,
       to_regclass('public.outcall_settings') IS NOT NULL AS outcall_settings,
       to_regclass('public.outcall_phone_owners') IS NOT NULL AS outcall_phone_owners,
       to_regclass('public.outcall_profiles') IS NOT NULL AS outcall_profiles,
