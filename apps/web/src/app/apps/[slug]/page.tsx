@@ -13,7 +13,7 @@ import ContactLink from '@/components/ContactLink';
 import LoginPage from '@/components/pages/LoginPage';
 import OperatorLoader from '@/components/brand/OperatorLoader';
 import StudyForgeShell from '@/components/module-shells/StudyForgeShell';
-import NinjaLaunchKitShell from '@/components/module-shells/NinjaLaunchKitShell';
+import NinjaLaunchKitCompleteWorkspace from '@/components/module-shells/NinjaLaunchKitCompleteWorkspace';
 import CallCommandShell from '@/components/module-shells/CallCommandShell';
 import NinjamationShell from '@/components/module-shells/NinjamationShell';
 import OutCallShell from '@/components/module-shells/OutCallShell';
@@ -52,7 +52,7 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string; ro
   'pulsedesk':        PulseDeskShell,
   'tradeflowkit':     TradeFlowKitShell,
   'studyforge-ai':    StudyForgeShell,
-  'ninja-launch-kit': NinjaLaunchKitShell,
+  'ninja-launch-kit': NinjaLaunchKitCompleteWorkspace,
   'callcommand-ai':   CallCommandShell,
   'ninjamation':      NinjamationShell,
   'outcall':          OutCallShell,

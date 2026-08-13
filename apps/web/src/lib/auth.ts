@@ -2772,6 +2772,37 @@ export const moduleShellApi = {
         method: 'POST',
         body: JSON.stringify(input),
       }),
+    productOverview: () => apiFetch('/modules/ninja-launch-kit/product/overview'),
+    productTemplates: () => apiFetch('/modules/ninja-launch-kit/product/catalog/templates'),
+    productTemplate: (slug: string) => apiFetch(`/modules/ninja-launch-kit/product/catalog/templates/${encodeURIComponent(slug)}`),
+    previewProductKit: (input: Record<string, unknown>) =>
+      apiFetch('/modules/ninja-launch-kit/product/kits/preview', { method: 'POST', body: JSON.stringify(input) }),
+    productKit: (id: string) => apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}`),
+    productKits: (query = '') => apiFetch(`/modules/ninja-launch-kit/product/kits${query}`),
+    createProductKit: (input: Record<string, unknown>) =>
+      apiFetch('/modules/ninja-launch-kit/product/kits', { method: 'POST', body: JSON.stringify(input) }),
+    updateProductKit: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    duplicateProductKit: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}/duplicate`, { method: 'POST', body: JSON.stringify(input) }),
+    regenerateProductKit: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}/regenerate`, { method: 'POST', body: JSON.stringify(input) }),
+    productKitAction: (id: string, action: 'archive' | 'restore' | 'undo-delete') =>
+      apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}/${action}`, { method: 'POST' }),
+    deleteProductKit: (id: string) =>
+      apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    productBrands: () => apiFetch('/modules/ninja-launch-kit/product/brands'),
+    createProductBrand: (input: Record<string, unknown>) =>
+      apiFetch('/modules/ninja-launch-kit/product/brands', { method: 'POST', body: JSON.stringify(input) }),
+    updateProductBrand: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/product/brands/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    deleteProductBrand: (id: string) =>
+      apiFetch(`/modules/ninja-launch-kit/product/brands/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    productExports: () => apiFetch('/modules/ninja-launch-kit/product/exports'),
+    exportProductKit: (id: string, input: { format: 'txt' | 'markdown' | 'json'; idempotencyKey: string }) =>
+      apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}/exports`, { method: 'POST', body: JSON.stringify(input) }),
+    productAccount: () => apiFetch('/modules/ninja-launch-kit/product/account'),
+    productAdmin: () => apiFetch('/modules/ninja-launch-kit/product/admin/stats'),
   },
 };
 

@@ -853,6 +853,65 @@ function specialCapabilities(definition, sourceRoot) {
 }
 
 function applyCurrentRestorationMappings(definition, capabilities) {
+  if (definition.slug === 'ninja-launch-kit') {
+    const nativeTargets = [
+      'apps/api/src/generated/ninja-launch-kit-source-catalog.ts',
+      'apps/api/src/lib/ninja-launch-kit-db-init.ts',
+      'apps/api/src/lib/ninja-launch-kit-phase34-db-init.ts',
+      'apps/api/src/lib/ninja-launch-kit-phase34.ts',
+      'apps/api/src/lib/ninja-launch-kit-access.ts',
+      'apps/api/src/routes/ninja-launch-kit-routes.ts',
+      'apps/api/src/routes/ninja-launch-kit-phase34-routes.ts',
+      'apps/web/src/components/module-shells/NinjaLaunchKitCompleteWorkspace.tsx',
+      'apps/web/src/components/module-shells/NinjaLaunchKitShell.tsx',
+      'apps/web/src/lib/auth.ts',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+      'apps/web/src/app/public/ninja-launch-kit/[page]/page.tsx',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/entitlement-resolver.ts',
+      'apps/api/src/lib/ai-provider.ts',
+      'apps/api/src/lib/shared-usage-activity.ts',
+      'apps/api/src/lib/shared-services-db-init.ts',
+      'apps/api/src/lib/saas-db-init.ts',
+      'apps/api/src/routes/auth-routes.ts',
+      'apps/api/src/routes/billing-routes.ts',
+      'apps/api/src/routes/tenant-admin-routes.ts',
+      'apps/api/src/lib/database-release-contract.ts',
+    ];
+    const evidence = [
+      'scripts/phase34/compile-ninja-launch-kit-source.mjs',
+      'scripts/phase34/ninja-launch-kit-contract.test.mjs',
+      'apps/api/test/ninja-launch-kit-phase34-domain.test.ts',
+      'apps/api/test/ninja-launch-kit-phase34-static.test.ts',
+      'apps/web/e2e/ninja-launch-kit-phase34.spec.ts',
+    ];
+    const sharedBoundary = /(?:routes\/auth|\/auth\/|\/login|\/signup|\/logout|\/profile|account.?delete|billing|subscription|checkout|portal|webhook|stripe|plan.?limit|entitlement|session.?secret|database.?url|anthropic|openai|provider|routes\/admin|platform.?admin|health|operatoros|node.?env|base.?path|repl.?id|\bport\b)/iu;
+    const sharedSchemaBoundary = /^(?:users|sessions|stripe_events|admin_settings|featured_templates)(?:\.|$)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const sourceText = [capability.title,capability.canonicalSourceIdentity,...capability.sourcePointers].join(' ');
+      const shared = capability.type === 'integration'
+        || capability.type === 'background_process'
+        || ((capability.type === 'database_table' || capability.type === 'database_column') && sharedSchemaBoundary.test(capability.title))
+        || sharedBoundary.test(sourceText);
+      const typedTargets = capability.type === 'database_table'
+        ? (shared ? ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-services-db-init.ts'] : ['apps/api/src/lib/ninja-launch-kit-phase34-db-init.ts'])
+        : capability.type === 'ui_page' || capability.type === 'ui_route'
+          ? ['apps/web/src/app/modules/[slug]/[...path]/page.tsx','apps/web/src/components/module-shells/NinjaLaunchKitCompleteWorkspace.tsx','apps/web/src/app/public/ninja-launch-kit/[page]/page.tsx']
+          : [];
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...(capability.currentTargets || []),...(shared ? sharedTargets : nativeTargets),...typedTargets])].sort(),
+        automatedEvidence: [...new Set([...(capability.automatedEvidence || []),...evidence])].sort(),
+        note: [capability.note, shared
+          ? 'Phase 34 preserves this source outcome through OperatorOS identity, tenant, role, entitlement, billing, shared AI-provider, metered usage, legal, runtime, or platform-admin authority.'
+          : 'Phase 34 restores this source outcome through additive v43 persistence, a compiler-derived 20-template and nine-brief catalog, deterministic and schema-validated AI generation, history, soft-delete undo, plan-safe visual briefs, persisted checksum exports, source-compatible deep links, and the responsive dark-crimson product workspace.'].filter(Boolean).join(' '),
+      };
+    });
+  }
   if (definition.slug === 'studyforge-ai') {
     const nativeTargets = [
       'apps/api/src/lib/studyforge-db-init.ts',

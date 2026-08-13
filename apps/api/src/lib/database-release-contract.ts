@@ -1,6 +1,6 @@
 export const DATABASE_RELEASE_CONTRACT = Object.freeze({
   contractVersion: 1,
-  releaseVersion: 42,
+  releaseVersion: 43,
   mode: 'idempotent-apply',
   destructive: false,
   rollback: 'restore-to-new-database-and-switch-traffic',
@@ -49,4 +49,5 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'brandforgeos_complete_product_tables', kind: 'ddl' },
   { id: 'snapproofos_complete_product_tables', kind: 'ddl' },
   { id: 'studyforge_complete_product_tables', kind: 'ddl' },
+  { id: 'ninja_launch_kit_complete_product_tables', kind: 'ddl' },
 ] as const);

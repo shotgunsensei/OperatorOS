@@ -113,6 +113,13 @@ function pulseDeskPublicDestination(pathname: string): string | null {
   return intake ? `/public/pulsedesk/intake/${intake[1]}` : null;
 }
 
+function ninjaLaunchKitPublicDestination(pathname: string): string | null {
+  const normalized = pathname === '/' ? 'home' : pathname.replace(/^\//, '').replace(/\/$/, '');
+  return ['home', 'pricing', 'contact', 'terms', 'privacy'].includes(normalized)
+    ? `/public/ninja-launch-kit/${normalized}`
+    : null;
+}
+
 function isSsoCallbackPath(pathname: string): boolean {
   return pathname === '/sso' || pathname.startsWith('/sso/');
 }
@@ -416,6 +423,15 @@ export async function middleware(req: NextRequest) {
   if (context.module?.slug === 'pulsedesk') {
     const destination = pulseDeskPublicDestination(pathname);
     if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));
+  }
+  if (context.module?.slug === 'ninja-launch-kit') {
+    const destination = ninjaLaunchKitPublicDestination(pathname);
+    if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));
+    if (pathname === '/login' || pathname === '/signup') {
+      const mode = pathname === '/signup' ? '&mode=register' : '';
+      const next = encodeURIComponent('https://ninjalaunchkit.operatoros.net/dashboard');
+      return withAuthSecurityHeaders(NextResponse.redirect(new URL(buildPublicUrl(`/login?next=${next}${mode}`, 'root')), 307));
+    }
   }
 
   if (context.surface === 'auth' && pathname === '/') {

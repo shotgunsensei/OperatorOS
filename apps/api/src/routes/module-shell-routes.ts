@@ -94,6 +94,7 @@ import { registerBrandForgeOsPhase31Routes } from './brandforgeos-phase31-routes
 import { registerStudyForgeRoutes } from './studyforge-routes.js';
 import { registerStudyForgePhase33Routes } from './studyforge-phase33-routes.js';
 import { registerNinjaLaunchKitRoutes } from './ninja-launch-kit-routes.js';
+import { registerNinjaLaunchKitPhase34Routes } from './ninja-launch-kit-phase34-routes.js';
 import { registerCallCommandRoutes } from './callcommand-routes.js';
 import { registerNinjamationRoutes } from './ninjamation-routes.js';
 import { registerOutCallRoutes } from './outcall-routes.js';
@@ -597,6 +598,7 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerStudyForgeRoutes(app);
   await registerStudyForgePhase33Routes(app);
   await registerNinjaLaunchKitRoutes(app);
+  await registerNinjaLaunchKitPhase34Routes(app);
   await registerNinjamationRoutes(app);
   await registerOutCallRoutes(app);
 

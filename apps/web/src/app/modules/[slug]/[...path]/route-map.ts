@@ -213,13 +213,20 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
   },
   'ninja-launch-kit': {
     '/dashboard': { sectionId: 'launchkit-dashboard', label: 'Launch Dashboard' },
-    '/launches': { sectionId: 'launchkit-launches', label: 'Launch Workspaces' },
+    '/app': { sectionId: 'launchkit-dashboard', label: 'Launch Dashboard' },
+    '/launches': { sectionId: 'launchkit-execution', label: 'Launch Workspaces' },
     '/builder': { sectionId: 'launchkit-builder', label: 'Launch Brief' },
     '/templates': { sectionId: 'launchkit-templates', label: 'Launch Templates' },
-    '/plan': { sectionId: 'launchkit-plan', label: 'Launch Plan' },
-    '/artifacts': { sectionId: 'launchkit-artifacts', label: 'Campaign Artifacts' },
-    '/readiness': { sectionId: 'launchkit-readiness', label: 'Launch Readiness' },
+    '/kits': { sectionId: 'launchkit-kits', label: 'Generated Launch Kits' },
+    '/brands': { sectionId: 'launchkit-brands', label: 'Brand Profiles' },
+    '/visual-promos': { sectionId: 'launchkit-visual-promos', label: 'Visual Promo Briefs' },
+    '/plan': { sectionId: 'launchkit-execution', label: 'Launch Plan' },
+    '/artifacts': { sectionId: 'launchkit-execution', label: 'Campaign Artifacts' },
+    '/readiness': { sectionId: 'launchkit-execution', label: 'Launch Readiness' },
     '/exports': { sectionId: 'launchkit-exports', label: 'Exports' },
+    '/account': { sectionId: 'launchkit-account', label: 'Plan and Usage' },
+    '/admin': { sectionId: 'launchkit-admin', label: 'Ninja Launch Kit Administration' },
+    '/pricing': { sectionId: 'launchkit-account', label: 'OperatorOS Plan' },
   },
   'callcommand-ai': {
     '/dashboard': { sectionId: 'callcommand-calls', label: 'Call Dashboard' },
@@ -369,9 +376,13 @@ export function resolveCoreModuleDeepLink(
   }
   if (slug === 'ninja-launch-kit' && pathSegments.length === 2) {
     const [resource] = pathSegments;
-    if (resource === 'launches') return { sectionId: 'launchkit-launches', label: 'Launch Workspace' };
-    if (resource === 'tasks' || resource === 'milestones' || resource === 'phases') return { sectionId: 'launchkit-plan', label: 'Launch Plan Record' };
-    if (resource === 'artifacts') return { sectionId: 'launchkit-artifacts', label: 'Campaign Artifact' };
+    if (resource === 'launches') return { sectionId: 'launchkit-execution', label: 'Launch Workspace' };
+    if (resource === 'tasks' || resource === 'milestones' || resource === 'phases') return { sectionId: 'launchkit-execution', label: 'Launch Plan Record' };
+    if (resource === 'artifacts') return { sectionId: 'launchkit-execution', label: 'Campaign Artifact' };
+    if (resource === 'kits') return { sectionId: 'launchkit-visual-promos', label: 'Generated Launch Kit' };
+    if (resource === 'templates') return { sectionId: 'launchkit-templates', label: 'Launch Template' };
+    if (resource === 'brands') return { sectionId: 'launchkit-brands', label: 'Brand Profile' };
+    if (resource === 'exports') return { sectionId: 'launchkit-exports', label: 'Launch Export' };
   }
   if (slug === 'callcommand-ai' && pathSegments.length === 2) {
     const [resource] = pathSegments;

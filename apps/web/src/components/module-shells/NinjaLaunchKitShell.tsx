@@ -58,7 +58,7 @@ function errorMessage(error: unknown, fallback: string) {
   return (error as any)?.message || fallback;
 }
 
-export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
+export default function NinjaLaunchKitShell({ baseUrl, idPrefix }: { baseUrl?: string; idPrefix?: string }) {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [templates, setTemplates] = useState<Row[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -110,6 +110,10 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
   const channels = useMemo(
     () => form.channels.split(',').map((value) => value.trim()).filter(Boolean),
     [form.channels],
+  );
+  const sectionId = useCallback(
+    (id: string) => idPrefix ? `${idPrefix}-${id}` : id,
+    [idPrefix],
   );
 
   async function createLaunch(event: React.FormEvent) {
@@ -184,7 +188,7 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
         `ui-${selectedId}-${selected?.version}-${Date.now()}`,
       );
       await load(selectedId);
-      document.getElementById('launchkit-artifacts')?.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById(sectionId('launchkit-artifacts'))?.scrollIntoView({ behavior: 'smooth' });
     } catch (caught) {
       setError(errorMessage(caught, 'Could not generate launch artifacts'));
     } finally {
@@ -253,7 +257,7 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
         </div>
       )}
 
-      <section id="launchkit-dashboard" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: space.md, marginBottom: space.xl }}>
+      <section id={sectionId('launchkit-dashboard')} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: space.md, marginBottom: space.xl }}>
         {[
           ['Launches', workspace?.summary?.launches ?? 0, Rocket],
           ['Launched', workspace?.summary?.launched ?? 0, CheckCircle2],
@@ -268,7 +272,7 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
         ))}
       </section>
 
-      <section id="launchkit-builder" style={{ ...cardStyle, marginBottom: space.xl }}>
+      <section id={sectionId('launchkit-builder')} style={{ ...cardStyle, marginBottom: space.xl }}>
         <h2 style={{ color: '#fff', marginTop: 0 }}>Create a real launch workspace</h2>
         <form onSubmit={createLaunch} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: space.md }}>
           <label style={{ color: semantic.textMuted }}>Launch name
@@ -277,7 +281,7 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
           <label style={{ color: semantic.textMuted }}>Product type
             <input data-testid="input-launchkit-product-type" required maxLength={80} value={form.productType} onChange={(event) => setForm({ ...form, productType: event.target.value })} style={inputStyle} />
           </label>
-          <label id="launchkit-templates" style={{ color: semantic.textMuted }}>Template
+          <label id={sectionId('launchkit-templates')} style={{ color: semantic.textMuted }}>Template
             <select data-testid="select-launchkit-template" value={form.templateSlug} onChange={(event) => setForm({ ...form, templateSlug: event.target.value })} style={inputStyle}>
               <option value="">Blank launch</option>
               {templates.map((template) => <option key={template.slug} value={template.slug}>{template.name}</option>)}
@@ -312,7 +316,7 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
         </form>
       </section>
 
-      <section id="launchkit-launches" style={{ marginBottom: space.xl }}>
+      <section id={sectionId('launchkit-launches')} style={{ marginBottom: space.xl }}>
         <h2 style={{ color: '#fff' }}>Launch workspaces</h2>
         {loading ? (
           <div data-testid="text-launchkit-loading" style={{ ...cardStyle, color: semantic.textMuted }}>Loading your launches…</div>
@@ -343,7 +347,7 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
 
       {selected && (
         <>
-          <section id="launchkit-readiness" style={{ ...cardStyle, marginBottom: space.xl }}>
+          <section id={sectionId('launchkit-readiness')} style={{ ...cardStyle, marginBottom: space.xl }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
               <Target size={25} color="#f97316" />
               <div style={{ flex: 1 }}>
@@ -371,7 +375,7 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
             </div>
           </section>
 
-          <section id="launchkit-plan" style={{ marginBottom: space.xl }}>
+          <section id={sectionId('launchkit-plan')} style={{ marginBottom: space.xl }}>
             <h2 style={{ color: '#fff' }}>Launch plan and checklist</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: space.md }}>
               {(workspace.phases ?? []).map((phase) => (
@@ -398,7 +402,7 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
             </div>
           </section>
 
-          <section id="launchkit-artifacts" style={{ marginBottom: space.xl }}>
+          <section id={sectionId('launchkit-artifacts')} style={{ marginBottom: space.xl }}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ flex: 1 }}>
                 <h2 style={{ color: '#fff', marginBottom: 4 }}>Campaign artifacts</h2>
@@ -427,7 +431,7 @@ export default function NinjaLaunchKitShell({ baseUrl }: { baseUrl?: string }) {
             </div>
           </section>
 
-          <section id="launchkit-exports" style={{ ...cardStyle, marginBottom: space.xl }}>
+          <section id={sectionId('launchkit-exports')} style={{ ...cardStyle, marginBottom: space.xl }}>
             <h2 style={{ color: '#fff', marginTop: 0 }}>Audited exports</h2>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {(['markdown', 'json', 'csv'] as const).map((format) => (

@@ -34,6 +34,7 @@ import { ensureSnapProofOsPhase32Tables } from './snapproofos-phase32-db-init.js
 import { ensureStudyForgeTables } from './studyforge-db-init.js';
 import { ensureStudyForgePhase33Tables } from './studyforge-phase33-db-init.js';
 import { ensureNinjaLaunchKitTables } from './ninja-launch-kit-db-init.js';
+import { ensureNinjaLaunchKitPhase34Tables } from './ninja-launch-kit-phase34-db-init.js';
 import { ensureCallCommandTables } from './callcommand-db-init.js';
 import { ensureNinjamationTables } from './ninjamation-db-init.js';
 import { ensureOutCallProductTables, ensureOutCallTables } from './outcall-db-init.js';
@@ -94,6 +95,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   brandforgeos_complete_product_tables: ensureBrandForgeOsPhase31Tables,
   snapproofos_complete_product_tables: ensureSnapProofOsPhase32Tables,
   studyforge_complete_product_tables: ensureStudyForgePhase33Tables,
+  ninja_launch_kit_complete_product_tables: ensureNinjaLaunchKitPhase34Tables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -196,6 +198,11 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.launchkit_tasks') IS NOT NULL AS launchkit_tasks,
       to_regclass('public.launchkit_artifacts') IS NOT NULL AS launchkit_artifacts,
       to_regclass('public.launchkit_exports') IS NOT NULL AS launchkit_exports,
+      to_regclass('public.launchkit_brand_profiles') IS NOT NULL AS launchkit_brand_profiles,
+      to_regclass('public.launchkit_product_kits') IS NOT NULL AS launchkit_product_kits,
+      to_regclass('public.launchkit_product_revisions') IS NOT NULL AS launchkit_product_revisions,
+      to_regclass('public.launchkit_product_exports') IS NOT NULL AS launchkit_product_exports,
+      to_regclass('public.launchkit_usage_counters') IS NOT NULL AS launchkit_usage_counters,
       to_regclass('public.callcommand_channels') IS NOT NULL AS callcommand_channels,
       to_regclass('public.callcommand_consents') IS NOT NULL AS callcommand_consents,
       to_regclass('public.callcommand_calls') IS NOT NULL AS callcommand_calls,
