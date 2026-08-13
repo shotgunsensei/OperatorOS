@@ -2447,6 +2447,33 @@ export const moduleShellApi = {
   callcommand: {
     workspace: () => apiFetch('/modules/callcommand-ai/workspace'),
     productWorkspace: () => apiFetch('/modules/callcommand-ai/product/workspace'),
+    mspWorkspace: () => apiFetch('/modules/callcommand-ai/product/msp/workspace'),
+    mspUpdateSettings: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/settings', { method: 'PATCH', body: JSON.stringify(input) }),
+    mspConfigureOrganization: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/organizations', { method: 'POST', body: JSON.stringify(input) }),
+    mspConfigureTrustedLine: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/trusted-lines', { method: 'POST', body: JSON.stringify(input) }),
+    mspVerifyTrustedLine: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/msp/trusted-lines/${encodeURIComponent(id)}/verify`, { method: 'POST', body: JSON.stringify(input) }),
+    mspSetTrustedLineStatus: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/msp/trusted-lines/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify(input) }),
+    mspConfigureContact: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/contacts', { method: 'POST', body: JSON.stringify(input) }),
+    mspIssueSupportLink: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/support-links', { method: 'POST', body: JSON.stringify(input) }),
+    mspSetSupportLinkStatus: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/msp/support-links/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify(input) }),
+    mspConfigureIntegration: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/integrations', { method: 'POST', body: JSON.stringify(input) }),
+    mspIntegrationKillSwitch: (id: string, active: boolean) =>
+      apiFetch(`/modules/callcommand-ai/product/msp/integrations/${encodeURIComponent(id)}/kill-switch`, { method: 'POST', body: JSON.stringify({ active }) }),
+    mspCreateActionDraft: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/action-catalog', { method: 'POST', body: JSON.stringify(input) }),
+    mspEvaluatePolicy: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/policy/evaluate', { method: 'POST', body: JSON.stringify(input) }),
+    mspSimulateIntake: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/simulate/intake', { method: 'POST', body: JSON.stringify(input) }),
     productCall: (id: string) => apiFetch(`/modules/callcommand-ai/product/calls/${encodeURIComponent(id)}`),
     productCreateChannel: (input: Record<string, unknown>) =>
       apiFetch('/modules/callcommand-ai/product/channels', { method: 'POST', body: JSON.stringify(input) }),

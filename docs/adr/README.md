@@ -42,6 +42,7 @@ new ADR explicitly supersedes it.
 | ADR-0037 | StudyForge restores folders, complete transactional study sets and artifacts, practice/history, countdown/streak/usage, deterministic and shared-AI generation, while OperatorOS retains all parent authority. | Accepted | `docs/adr/ADR-0037-studyforge-complete-learning-product-boundary.md` |
 | ADR-0038 | Ninja Launch Kit restores its compiler-derived templates, complete launch assets, nine gated visual briefs, brands, history, exports, public routes, and administration while OperatorOS retains all parent authority. | Accepted | `docs/adr/ADR-0038-ninja-launch-kit-complete-generation-product-boundary.md` |
 | ADR-0039 | CallCommand restores consent-first live telephony, protected recordings, structured intelligence, versioned flows, business actions, and a provider-confirmed switchboard while OperatorOS retains all parent authority. | Accepted for source/local release candidate | `docs/adr/ADR-0039-callcommand-complete-telephony-boundary.md` |
+| ADR-0040 | CallCommand adds paid MSP intake using exact signed telephony, trusted-line and SupportLink association, local cases, a provider-truth BMS outbox, assurance/policy, and a phased Automation Fabric; privileged RMM and identity actions remain gated. | Accepted for source/local Phase 1; later phases gated | `docs/adr/ADR-0040-callcommand-msp-intake-and-automation-fabric.md` |
 
 ## Required future ADRs
 

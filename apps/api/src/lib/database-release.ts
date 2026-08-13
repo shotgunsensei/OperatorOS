@@ -37,6 +37,7 @@ import { ensureNinjaLaunchKitTables } from './ninja-launch-kit-db-init.js';
 import { ensureNinjaLaunchKitPhase34Tables } from './ninja-launch-kit-phase34-db-init.js';
 import { ensureCallCommandTables } from './callcommand-db-init.js';
 import { ensureCallCommandPhase35Tables } from './callcommand-phase35-db-init.js';
+import { ensureCallCommandMspTables } from './callcommand-msp-db-init.js';
 import { ensureNinjamationTables } from './ninjamation-db-init.js';
 import { ensureNinjamationPhase36Tables } from './ninjamation-phase36-db-init.js';
 import { ensureOutCallProductTables, ensureOutCallTables } from './outcall-db-init.js';
@@ -100,6 +101,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   ninja_launch_kit_complete_product_tables: ensureNinjaLaunchKitPhase34Tables,
   callcommand_complete_product_tables: ensureCallCommandPhase35Tables,
   ninjamation_complete_product_tables: ensureNinjamationPhase36Tables,
+  callcommand_msp_automation_fabric_tables: ensureCallCommandMspTables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -225,6 +227,21 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.callcommand_action_runs') IS NOT NULL AS callcommand_action_runs,
       to_regclass('public.callcommand_transfer_logs') IS NOT NULL AS callcommand_transfer_logs,
       to_regclass('public.callcommand_reports') IS NOT NULL AS callcommand_reports,
+      to_regclass('public.callcommand_msp_settings') IS NOT NULL AS callcommand_msp_settings,
+      to_regclass('public.callcommand_organization_profiles') IS NOT NULL AS callcommand_organization_profiles,
+      to_regclass('public.automation_fabric_integrations') IS NOT NULL AS automation_fabric_integrations,
+      to_regclass('public.callcommand_trusted_originating_lines') IS NOT NULL AS callcommand_trusted_originating_lines,
+      to_regclass('public.callcommand_contact_profiles') IS NOT NULL AS callcommand_contact_profiles,
+      to_regclass('public.callcommand_support_links') IS NOT NULL AS callcommand_support_links,
+      to_regclass('public.callcommand_msp_call_contexts') IS NOT NULL AS callcommand_msp_call_contexts,
+      to_regclass('public.callcommand_msp_call_events') IS NOT NULL AS callcommand_msp_call_events,
+      to_regclass('public.callcommand_local_cases') IS NOT NULL AS callcommand_local_cases,
+      to_regclass('public.automation_fabric_action_catalog') IS NOT NULL AS automation_fabric_action_catalog,
+      to_regclass('public.callcommand_action_requests') IS NOT NULL AS callcommand_action_requests,
+      to_regclass('public.callcommand_policy_decisions') IS NOT NULL AS callcommand_policy_decisions,
+      to_regclass('public.callcommand_verification_challenges') IS NOT NULL AS callcommand_verification_challenges,
+      to_regclass('public.callcommand_reset_sessions') IS NOT NULL AS callcommand_reset_sessions,
+      to_regclass('public.callcommand_integration_outbox') IS NOT NULL AS callcommand_integration_outbox,
       to_regclass('public.ninjamation_scripts') IS NOT NULL AS ninjamation_scripts,
       to_regclass('public.ninjamation_script_versions') IS NOT NULL AS ninjamation_script_versions,
       to_regclass('public.ninjamation_reviews') IS NOT NULL AS ninjamation_reviews,

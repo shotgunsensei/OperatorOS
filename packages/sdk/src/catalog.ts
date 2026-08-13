@@ -231,7 +231,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'callcommand-ai',
     name: 'CallCommand AI',
-    description: 'AI phone agent + call automation',
+    description: 'Secure MSP phone intake, ticket orchestration, and policy-gated automation',
     category: 'ai',
     commercialType: 'addon',
     canonicalBaseUrl: 'https://callcommand-ai.operatoros.net',

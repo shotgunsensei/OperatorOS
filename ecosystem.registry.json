@@ -140,7 +140,7 @@
       "slug": "callcommand-ai",
       "name": "CallCommand AI",
       "category": "ai",
-      "description": "AI phone agent + call automation",
+      "description": "Secure MSP phone intake, ticket orchestration, and policy-gated automation",
       "ecosystemUrl": "https://callcommand-ai.operatoros.net",
       "status": "active",
       "launchMode": "subdomain",

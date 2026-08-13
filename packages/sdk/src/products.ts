@@ -98,7 +98,7 @@ export const COMPANION_MODULES: readonly ModuleCatalogItem[] = [
   { key: 'brandforgeos', name: 'BrandForgeOS', description: 'Brand and campaign production workspace.' },
   { key: 'studyforge-ai', name: 'StudyForge AI', description: 'AI-assisted study and team training.' },
   { key: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Launch planning, reviewed campaign assets, readiness, and audited exports.' },
-  { key: 'callcommand-ai', name: 'CallCommand AI', description: 'AI phone operations and call automation.' },
+  { key: 'callcommand-ai', name: 'CallCommand AI', description: 'Secure MSP phone intake, ticket orchestration, and policy-gated automation.' },
   { key: 'ninjamation', name: 'Ninjamation', description: 'Reviewed PC automation script library and AI draft generator.' },
 ] as const;
 
