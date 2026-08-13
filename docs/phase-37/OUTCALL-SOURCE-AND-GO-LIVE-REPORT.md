@@ -176,6 +176,21 @@ and unrelated static contract drift. The aggregate is supplementary evidence;
 it does not invalidate the focused Phase 37 assertions, and it cannot replace
 the missing authoritative source or unrun Twilio sandbox lifecycle.
 
+### Pull-request release-gate reconciliation
+
+The first PR #68 release run also stopped at a stale generated
+`docs/parity/shared-equivalent-adapters.json`. After merging current `main`, the
+ledger was regenerated with `corepack pnpm shared-services:write` and verified
+as reproducible at 2,432 shared-equivalent mappings. The gate can now evaluate
+the underlying parity state instead of stopping on generated-file drift.
+
+That underlying state remains intentionally non-green: `corepack pnpm
+verify:parity` reports 2,458 unresolved failures—1,449 `BLOCKED_REQUIRED`, 84
+`MISSING_TARGET_ROUTE`, and 925 `MISSING_TEST_ID`. The API failures shown in
+the attached GitHub run were also present on the exact PR base and current
+`main`; Phase 37 does not alter those unrelated product contracts merely to
+make this blocked recovery PR appear releasable.
+
 ## Human input required
 
 Provide one verifiable authoritative source artifact:
