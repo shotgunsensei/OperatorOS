@@ -53,7 +53,7 @@ The imported source exposes eight route/layout files: root layout, SSO return, t
 | Gate | Result |
 | --- | --- |
 | Mobile TypeScript | PASS |
-| Mobile unit queue/reconciliation tests | PASS (2/2) |
+| Mobile unit queue/reconciliation tests | PASS (3/3) |
 | Expo SDK dependency compatibility | PASS |
 | Expo public configuration / no-placeholder validation | PASS |
 | Android and iOS production JS/Hermes bundles | PASS |
@@ -64,16 +64,27 @@ The imported source exposes eight route/layout files: root layout, SSO return, t
 | API/web/mobile TypeScript | PASS |
 | Local Android device/emulator | UNAVAILABLE: no Android SDK/device attached |
 | Local iOS simulator | UNAVAILABLE: Windows host |
+| GitHub native contracts | PASS — run `31817468802`, `contracts` job |
+| GitHub Android API-35 emulator | PASS — run `31817468802`; x86_64 APK build, non-streaming install, launch, and `torqueshed://settings` deep link |
+| GitHub iOS simulator | PASS — run `31817468802`; native build, install, launch, and `torqueshed://settings` deep link |
 
-The dedicated `.github/workflows/torqueshed-native.yml` contract provides clean-checkout Android emulator and macOS iOS simulator prebuild, native build, install, launch, and deep-link smoke jobs. Those jobs become deployed evidence only after the branch is pushed and the workflow completes; their presence is not counted here as a pass.
+The dedicated `.github/workflows/torqueshed-native.yml` contract provides clean-checkout Android emulator and macOS iOS simulator prebuild, native build, install, launch, and deep-link smoke jobs. Corrective run [`31817468802`](https://github.com/shotgunsensei/OperatorOS/actions/runs/31817468802) completed successfully on commit `95d7cae1409ae289475d59898c9a00c7e994260d` with all three jobs green.
+
+### Android CI incident and correction trace
+
+| Run / commit | Result | Evidence and disposition |
+| --- | --- | --- |
+| `31813537047` / `68d73df` | FAIL | The full four-ABI Gradle build completed successfully; the Ubuntu runner lacked usable KVM acceleration and streamed `adb install` ended with `Broken pipe (32)`. This is retained as failed device-gate evidence, not counted green. |
+| `31816492952` / `c91f7c6` | FAIL | The x86_64-only APK build completed successfully in ten minutes, but `udevadm trigger --name-match=kvm` returned exit 1 before emulator startup. This is retained as failed infrastructure-gate evidence, not counted green. |
+| `31817468802` / `95d7cae` | PASS | Direct ephemeral-runner `/dev/kvm` permission verification passed; the accelerated API-35 emulator installed the APK with `adb --no-streaming`, launched `pro.torqueshed.app`, opened the settings deep link, and reported the app activity. Contracts and iOS simulator jobs also passed. |
 
 ## Required external release gates
 
 1. Supply the real Apple team ID, Android release signing SHA-256 fingerprint, and immutable mobile build ID in protected deployment/EAS environments.
 2. Provision the Expo/EAS project, Apple distribution/App Store Connect credentials, Android upload/app-signing keys, package ownership, and store records.
-3. Run the native workflow and capture successful Android/iOS CI build IDs plus device results for auth, media permission/upload, offline/reconnect, deep links, revocation, and logout.
+3. Repeat the native workflow on the immutable release candidate and capture signed EAS/store build IDs plus physical-device results for auth, media permission/upload, offline/reconnect, deep links, revocation, and logout.
 4. Deploy the exact reviewed OperatorOS API/web commit with additive database release v47, then verify both association documents from the public exact host before submitting either store build.
 
 ## Acceptance disposition
 
-The repository-level product, security, persistence, config, dual bundle, and Android prebuild gates are satisfied. Phase 29 is not represented as shipped to Apple/Google or accepted on physical/simulator devices until the owner-controlled signing identities, public association deployment, CI device runs, and store build IDs are attached to this report.
+The repository-level product, security, persistence, config, dual bundle, Android emulator, and iOS simulator gates are satisfied. Phase 29 is not represented as shipped to Apple/Google or accepted on physical release devices until the owner-controlled signing identities, public association deployment, signed store builds, and physical-device acceptance are attached to this report.

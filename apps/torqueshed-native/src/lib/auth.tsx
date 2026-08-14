@@ -186,17 +186,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async (): Promise<string | null> => {
     const current = await readSession();
     if (!current) return null;
+    const id = await deviceId();
     try {
       const next = await postPublic<NativeSession>('/public/torqueshed/native/refresh', {
         refreshToken: current.refreshToken,
-        deviceId: await deviceId(),
+        deviceId: id,
       });
+      if (await SecureStore.getItemAsync(REFRESH_KEY) !== current.refreshToken) {
+        const superseded = { refreshToken: next.refreshToken, deviceId: id };
+        if (await sendRevocation(superseded) === 'retry') await queuePendingRevocation(superseded);
+        return null;
+      }
       await writeSession(next);
       setSession(next);
       return next.accessToken;
     } catch {
-      await clearSession();
-      setSession(null);
+      const activeRefreshToken = await SecureStore.getItemAsync(REFRESH_KEY).catch(() => null);
+      if (activeRefreshToken === current.refreshToken) {
+        await clearSession();
+        setSession(null);
+      }
       return null;
     }
   }, []);

@@ -6,7 +6,21 @@ export class ApiError extends Error {
 }
 
 let refreshAccess: (() => Promise<string | null>) | null = null;
-let refreshInFlight: Promise<string | null> | null = null;
+const refreshInFlightByAccessToken = new Map<string, Promise<string | null>>();
+
+function coalescedRefresh(
+  accessToken: string | null,
+  callback: () => Promise<string | null>,
+): Promise<string | null> {
+  const key = accessToken ?? '<anonymous>';
+  const existing = refreshInFlightByAccessToken.get(key);
+  if (existing) return existing;
+  const pending = callback().finally(() => {
+    if (refreshInFlightByAccessToken.get(key) === pending) refreshInFlightByAccessToken.delete(key);
+  });
+  refreshInFlightByAccessToken.set(key, pending);
+  return pending;
+}
 
 export function configureApiRefresh(callback: () => Promise<string | null>): () => void {
   refreshAccess = callback;
@@ -27,6 +41,7 @@ export async function apiRequest<T>(
     retryAuth?: boolean;
     accessToken?: string | null;
     refreshAccess?: () => Promise<string | null>;
+    validateRefreshResult?: (accessToken: string | null) => void;
   } = {},
 ): Promise<T> {
   const send = async (token: string | null) => fetch(`${nativeConfig.apiBaseUrl}${path}`, {
@@ -40,11 +55,11 @@ export async function apiRequest<T>(
     ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
   });
   const hasBoundAccessToken = Object.prototype.hasOwnProperty.call(options, 'accessToken');
-  let response = await send(hasBoundAccessToken ? options.accessToken ?? null : await storedAccessToken());
+  const initialAccessToken = hasBoundAccessToken ? options.accessToken ?? null : await storedAccessToken();
+  let response = await send(initialAccessToken);
   if (response.status === 401 && options.retryAuth !== false && (options.refreshAccess || refreshAccess)) {
-    const token = options.refreshAccess
-      ? await options.refreshAccess()
-      : await (refreshInFlight ??= refreshAccess!().finally(() => { refreshInFlight = null; }));
+    const token = await coalescedRefresh(initialAccessToken, options.refreshAccess ?? refreshAccess!);
+    options.validateRefreshResult?.(token);
     if (token) response = await send(token);
   }
   const payload = await parse(response);

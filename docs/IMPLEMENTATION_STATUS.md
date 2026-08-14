@@ -198,6 +198,36 @@ acceptance, authorized source-data reconciliation, backup/restore, rollback and
 cutover remain owner-controlled gates. Phase 31 does not claim state 5 or a
 production deployment.
 
+## Phase 29 TorqueShed native iOS/Android restoration - SOURCE/CI VERIFIED / STORE RELEASE BLOCKED (2026-08-14)
+
+Phase 29 restores the Expo Router mobile product at `apps/torqueshed-native`
+against the Phase 28 API and additive database release v47. OperatorOS remains
+the identity, tenant, entitlement, role, and revocation authority. Opaque
+access/rotating refresh credentials use OS secure storage; queued mutations are
+account-scoped, replay-safe, reconnect-safe, and protected from cross-account
+flush and refresh races. Root authentication gates preserve protected deep
+links, and journal, parts, media, diagnostic, live-bay, and marketplace
+mutations retain stable idempotency identities.
+
+Local native/API typechecks, focused lint, 3/3 queue tests, 2/2 static release
+contracts, Android prebuild, dual Android/iOS Hermes export, and the 3/3
+disposable-PostgreSQL native auth/tenant/revocation journey pass. GitHub run
+`31813537047` recorded an Android infrastructure failure after the four-ABI APK
+build passed: the unaccelerated Ubuntu emulator broke its streamed `adb`
+install pipe. Run `31816492952` proved the optimized x86_64 APK build in ten
+minutes but failed before device startup because a `udevadm` KVM-rule reload
+returned nonzero. Corrective run
+[`31817468802`](https://github.com/shotgunsensei/OperatorOS/actions/runs/31817468802)
+passes all three jobs: contracts, accelerated Android API-35 emulator
+build/install/launch/deep-link smoke, and macOS iOS simulator
+build/install/launch/deep-link smoke.
+
+Real Apple team/signing identity, Android release-signing fingerprint, EAS/store
+build IDs, public AASA/assetlinks deployment verification, physical-device
+acceptance, store submission, and production API/database deployment remain
+external owner gates. See
+`docs/phase-29/TORQUESHED-NATIVE-RELEASE-REPORT.md`.
+
 ## Phase 30 Ninja Pool Hall full game and multiplayer restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-11)
 
 Phase 30 re-opens ADR-0020's online retirement without reactivating the unsafe

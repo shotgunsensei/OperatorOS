@@ -76,11 +76,23 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           idempotencyKey: item.id,
           accessToken: executingAccessToken,
           refreshAccess: async () => {
-            if (latestScopeKeyRef.current !== executingScopeKey) return null;
+            if (latestScopeKeyRef.current !== executingScopeKey) {
+              throw new ApiError('Account changed while synchronizing', 0, 'NATIVE_SYNC_SCOPE_CHANGED');
+            }
             const refreshed = await auth.refresh();
-            if (latestScopeKeyRef.current !== executingScopeKey) return null;
-            if (refreshed) executingAccessToken = refreshed;
+            if (latestScopeKeyRef.current !== executingScopeKey) {
+              throw new ApiError('Account changed while synchronizing', 0, 'NATIVE_SYNC_SCOPE_CHANGED');
+            }
+            if (!refreshed) throw new ApiError('Reauthentication is required before synchronizing', 0, 'NATIVE_SYNC_REAUTH_REQUIRED');
+            executingAccessToken = refreshed;
             return refreshed;
+          },
+          validateRefreshResult: refreshed => {
+            if (latestScopeKeyRef.current !== executingScopeKey) {
+              throw new ApiError('Account changed while synchronizing', 0, 'NATIVE_SYNC_SCOPE_CHANGED');
+            }
+            if (!refreshed) throw new ApiError('Reauthentication is required before synchronizing', 0, 'NATIVE_SYNC_REAUTH_REQUIRED');
+            executingAccessToken = refreshed;
           },
         });
       }, (_item, error) => {
