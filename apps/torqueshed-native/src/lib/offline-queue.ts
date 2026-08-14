@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
-import { applyQueueOutcome, queueStorageKey, type QueueOutcome, type QueueScope, type QueuedMutation } from './queue-domain';
+import { applyQueueOutcome, parseStoredQueue, queueStorageKey, type QueueOutcome, type QueueScope, type QueuedMutation } from './queue-domain';
 import { ScopedQueueCoordinator } from './scoped-queue-coordinator';
 
 export { applyQueueOutcome, queueStorageKey } from './queue-domain';
@@ -9,11 +9,8 @@ export type { QueueOutcome, QueueScope, QueuedMutation } from './queue-domain';
 const queueCoordinator = new ScopedQueueCoordinator();
 
 export async function loadQueue(scope: QueueScope): Promise<QueuedMutation[]> {
-  try {
-    const raw = await AsyncStorage.getItem(queueStorageKey(scope));
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
+  const raw = await AsyncStorage.getItem(queueStorageKey(scope));
+  return parseStoredQueue(raw);
 }
 
 async function saveQueue(scope: QueueScope, queue: QueuedMutation[]): Promise<void> {
@@ -40,7 +37,7 @@ async function persistQueuedFile(
   return { ...file, uri: destination, durable: true };
 }
 
-async function removeConfirmedFile(file: QueuedMutation['file']): Promise<void> {
+async function removeTerminalFile(file: QueuedMutation['file']): Promise<void> {
   if (!file?.durable) return;
   await FileSystem.deleteAsync(file.uri, { idempotent: true }).catch(() => undefined);
 }
@@ -89,7 +86,7 @@ export async function flushMutationQueue(
       await saveQueue(scope, next);
       return next;
     });
-    if (outcome.kind === 'success') await removeConfirmedFile(item.file);
+    if (outcome.kind !== 'retry') await removeTerminalFile(item.file);
     if (outcome.kind === 'retry') break;
   }
   return { sent, pending: queue.length, failed };

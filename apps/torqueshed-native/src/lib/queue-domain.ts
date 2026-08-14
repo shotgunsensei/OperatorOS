@@ -17,6 +17,13 @@ export function queueStorageKey(scope: QueueScope): string {
   return `${QUEUE_KEY}:${scope.tenantId}:${scope.userId}`;
 }
 
+export function parseStoredQueue(raw: string | null): QueuedMutation[] {
+  if (!raw) return [];
+  const parsed = JSON.parse(raw);
+  if (!Array.isArray(parsed)) throw new Error('Stored offline mutation queue is invalid');
+  return parsed;
+}
+
 export function applyQueueOutcome(queue: QueuedMutation[], id: string, outcome: QueueOutcome): QueuedMutation[] {
   if (outcome.kind === 'success' || outcome.kind === 'permanent') return queue.filter(item => item.id !== id);
   return queue.map(item => item.id === id ? { ...item, attempts: item.attempts + 1 } : item);

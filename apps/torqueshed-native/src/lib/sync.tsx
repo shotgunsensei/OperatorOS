@@ -41,7 +41,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       setPending(0);
       return Promise.resolve();
     }
-    return loadQueue(scope).then(items => setPending(items.length));
+    return loadQueue(scope)
+      .then(items => setPending(items.length))
+      .catch(error => setLastError(String((error as Error).message ?? error)));
   }, [scope?.tenantId, scope?.userId]);
   useEffect(() => { void recount(); }, [recount]);
 
@@ -99,6 +101,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         if (latestScopeKeyRef.current === executingScopeKey) setLastError(error);
       });
       if (latestScopeKeyRef.current === executingScopeKey) setPending(result.pending);
+    } catch (error) {
+      if (latestScopeKeyRef.current === executingScopeKey) {
+        setLastError(String((error as Error).message ?? error));
+      }
     } finally {
       syncingRef.current = false;
       activeScopeKeyRef.current = null;

@@ -211,35 +211,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { current } = snapshot;
     if (!current) return null;
     const id = await deviceId();
+    let next: NativeSession;
     try {
-      const next = await postPublic<NativeSession>('/public/torqueshed/native/refresh', {
+      next = await postPublic<NativeSession>('/public/torqueshed/native/refresh', {
         refreshToken: current.refreshToken,
         deviceId: id,
       });
-      const installed = await sessionTransitions.serialize(async () => {
-        if (!sessionTransitions.isCurrent(snapshot.generation)) return false;
-        if (await SecureStore.getItemAsync(REFRESH_KEY) !== current.refreshToken) return false;
-        await writeSession(next);
-        setSession(next);
-        return true;
-      });
-      if (!installed) {
-        const superseded = { refreshToken: next.refreshToken, deviceId: id };
-        if (await sendRevocation(superseded) === 'retry') await queuePendingRevocation(superseded);
-        return null;
-      }
-      return next.accessToken;
     } catch (error) {
       if (!shouldClearSessionAfterRefreshFailure(error)) return null;
       await sessionTransitions.serialize(async () => {
         const activeRefreshToken = await SecureStore.getItemAsync(REFRESH_KEY).catch(() => null);
         if (!sessionTransitions.isCurrent(snapshot.generation) || activeRefreshToken !== current.refreshToken) return;
         sessionTransitions.advance();
-        await clearSession();
+        await clearSession().catch(() => undefined);
         setSession(null);
       });
       return null;
     }
+
+    const rotated = { refreshToken: next.refreshToken, deviceId: id };
+    const revokeRotatedSession = async () => {
+      if (await sendRevocation(rotated) === 'retry') await queuePendingRevocation(rotated);
+    };
+    let installed: boolean;
+    try {
+      installed = await sessionTransitions.serialize(async () => {
+        if (!sessionTransitions.isCurrent(snapshot.generation)) return false;
+        if (await SecureStore.getItemAsync(REFRESH_KEY) !== current.refreshToken) return false;
+        await writeSession(next);
+        setSession(next);
+        return true;
+      });
+    } catch {
+      await sessionTransitions.serialize(async () => {
+        const activeRefreshToken = await SecureStore.getItemAsync(REFRESH_KEY).catch(() => null);
+        const ownsFailedRotation = activeRefreshToken === current.refreshToken || activeRefreshToken === next.refreshToken;
+        if (!sessionTransitions.isCurrent(snapshot.generation) && !ownsFailedRotation) return;
+        sessionTransitions.advance();
+        await clearSession().catch(() => undefined);
+        setSession(null);
+      });
+      await revokeRotatedSession();
+      return null;
+    }
+    if (!installed) {
+      await revokeRotatedSession();
+      return null;
+    }
+    return next.accessToken;
   }, []);
 
   const login = useCallback(async () => {
