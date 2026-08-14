@@ -20,7 +20,14 @@ async function parse(response: Response): Promise<any> {
 
 export async function apiRequest<T>(
   path: string,
-  options: { method?: string; body?: unknown; idempotencyKey?: string; retryAuth?: boolean } = {},
+  options: {
+    method?: string;
+    body?: unknown;
+    idempotencyKey?: string;
+    retryAuth?: boolean;
+    accessToken?: string | null;
+    refreshAccess?: () => Promise<string | null>;
+  } = {},
 ): Promise<T> {
   const send = async (token: string | null) => fetch(`${nativeConfig.apiBaseUrl}${path}`, {
     method: options.method ?? (options.body === undefined ? 'GET' : 'POST'),
@@ -32,10 +39,12 @@ export async function apiRequest<T>(
     },
     ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
   });
-  let response = await send(await storedAccessToken());
-  if (response.status === 401 && options.retryAuth !== false && refreshAccess) {
-    refreshInFlight ??= refreshAccess().finally(() => { refreshInFlight = null; });
-    const token = await refreshInFlight;
+  const hasBoundAccessToken = Object.prototype.hasOwnProperty.call(options, 'accessToken');
+  let response = await send(hasBoundAccessToken ? options.accessToken ?? null : await storedAccessToken());
+  if (response.status === 401 && options.retryAuth !== false && (options.refreshAccess || refreshAccess)) {
+    const token = options.refreshAccess
+      ? await options.refreshAccess()
+      : await (refreshInFlight ??= refreshAccess!().finally(() => { refreshInFlight = null; }));
     if (token) response = await send(token);
   }
   const payload = await parse(response);

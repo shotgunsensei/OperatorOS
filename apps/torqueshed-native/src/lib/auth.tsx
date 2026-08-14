@@ -29,6 +29,7 @@ export type NativeSession = {
 type SessionMeta = Omit<NativeSession, 'accessToken' | 'refreshToken'>;
 type PendingRevocation = { refreshToken: string; deviceId: string };
 let revocationFlushInFlight: Promise<void> | null = null;
+let revocationOperationTail: Promise<void> = Promise.resolve();
 type AuthContextValue = {
   session: NativeSession | null;
   loading: boolean;
@@ -94,10 +95,18 @@ async function writePendingRevocations(items: PendingRevocation[]): Promise<void
   await SecureStore.setItemAsync(PENDING_REVOCATIONS_KEY, JSON.stringify(items.slice(-8)), secureOptions);
 }
 
-async function queuePendingRevocation(entry: PendingRevocation): Promise<void> {
-  const current = await readPendingRevocations();
-  if (current.some(item => item.refreshToken === entry.refreshToken)) return;
-  await writePendingRevocations([...current, entry]);
+function serializeRevocationOperation(operation: () => Promise<void>): Promise<void> {
+  const next = revocationOperationTail.then(operation, operation);
+  revocationOperationTail = next.catch(() => undefined);
+  return next;
+}
+
+function queuePendingRevocation(entry: PendingRevocation): Promise<void> {
+  return serializeRevocationOperation(async () => {
+    const current = await readPendingRevocations();
+    if (current.some(item => item.refreshToken === entry.refreshToken)) return;
+    await writePendingRevocations([...current, entry]);
+  });
 }
 
 async function sendRevocation(entry: PendingRevocation): Promise<'complete' | 'retry'> {
@@ -126,7 +135,7 @@ async function performPendingRevocationFlush(): Promise<void> {
 }
 
 function flushPendingRevocations(): Promise<void> {
-  revocationFlushInFlight ??= performPendingRevocationFlush().finally(() => {
+  revocationFlushInFlight ??= serializeRevocationOperation(performPendingRevocationFlush).finally(() => {
     revocationFlushInFlight = null;
   });
   return revocationFlushInFlight;
