@@ -1,27 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
+import { applyQueueOutcome, queueStorageKey, type QueueOutcome, type QueueScope, type QueuedMutation } from './queue-domain';
+import { ScopedQueueCoordinator } from './scoped-queue-coordinator';
 
-const QUEUE_KEY = 'torqueshed.native.mutation-queue.v1';
-export type QueueScope = { tenantId: string; userId: string };
-export type QueuedMutation = {
-  id: string;
-  method: 'POST' | 'PATCH' | 'DELETE';
-  path: string;
-  body?: Record<string, unknown>;
-  file?: { uri: string; name: string; mimeType: string; bodyField: string };
-  createdAt: string;
-  attempts: number;
-};
+export { applyQueueOutcome, queueStorageKey } from './queue-domain';
+export type { QueueOutcome, QueueScope, QueuedMutation } from './queue-domain';
 
-export type QueueOutcome = { kind: 'success' } | { kind: 'retry' } | { kind: 'permanent'; error: string };
-
-export function queueStorageKey(scope: QueueScope): string {
-  return `${QUEUE_KEY}:${scope.tenantId}:${scope.userId}`;
-}
-
-export function applyQueueOutcome(queue: QueuedMutation[], id: string, outcome: QueueOutcome): QueuedMutation[] {
-  if (outcome.kind === 'success' || outcome.kind === 'permanent') return queue.filter(item => item.id !== id);
-  return queue.map(item => item.id === id ? { ...item, attempts: item.attempts + 1 } : item);
-}
+const queueCoordinator = new ScopedQueueCoordinator();
 
 export async function loadQueue(scope: QueueScope): Promise<QueuedMutation[]> {
   try {
@@ -35,10 +20,38 @@ async function saveQueue(scope: QueueScope, queue: QueuedMutation[]): Promise<vo
   await AsyncStorage.setItem(queueStorageKey(scope), JSON.stringify(queue));
 }
 
+function safePathSegment(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
+}
+
+async function persistQueuedFile(
+  scope: QueueScope,
+  mutationId: string,
+  file: NonNullable<QueuedMutation['file']>,
+): Promise<NonNullable<QueuedMutation['file']>> {
+  if (file.durable) return file;
+  if (!FileSystem.documentDirectory) throw new Error('Durable offline file storage is unavailable');
+  const directory = `${FileSystem.documentDirectory}torqueshed-native-queue/`;
+  const extensionMatch = /\.[a-zA-Z0-9]{1,10}$/.exec(file.name);
+  const destination = `${directory}${safePathSegment(scope.tenantId)}-${safePathSegment(scope.userId)}-${safePathSegment(mutationId)}${extensionMatch?.[0] ?? ''}`;
+  await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
+  const existing = await FileSystem.getInfoAsync(destination);
+  if (!existing.exists) await FileSystem.copyAsync({ from: file.uri, to: destination });
+  return { ...file, uri: destination, durable: true };
+}
+
+async function removeConfirmedFile(file: QueuedMutation['file']): Promise<void> {
+  if (!file?.durable) return;
+  await FileSystem.deleteAsync(file.uri, { idempotent: true }).catch(() => undefined);
+}
+
 export async function enqueueMutation(scope: QueueScope, mutation: Omit<QueuedMutation, 'createdAt' | 'attempts'>): Promise<void> {
-  const queue = await loadQueue(scope);
-  if (queue.some(item => item.id === mutation.id)) return;
-  await saveQueue(scope, [...queue, { ...mutation, createdAt: new Date().toISOString(), attempts: 0 }]);
+  await queueCoordinator.serialize(queueStorageKey(scope), async () => {
+    const queue = await loadQueue(scope);
+    if (queue.some(item => item.id === mutation.id)) return;
+    const file = mutation.file ? await persistQueuedFile(scope, mutation.id, mutation.file) : undefined;
+    await saveQueue(scope, [...queue, { ...mutation, file, createdAt: new Date().toISOString(), attempts: 0 }]);
+  });
 }
 
 export async function flushMutationQueue(
@@ -46,10 +59,11 @@ export async function flushMutationQueue(
   sender: (item: QueuedMutation) => Promise<void>,
   onPermanentFailure?: (item: QueuedMutation, error: string) => void,
 ): Promise<{ sent: number; pending: number; failed: number }> {
-  let queue = await loadQueue(scope);
+  const initialQueue = await queueCoordinator.serialize(queueStorageKey(scope), () => loadQueue(scope));
+  let queue = initialQueue;
   let sent = 0;
   let failed = 0;
-  for (const item of [...queue]) {
+  for (const item of initialQueue) {
     let outcome: QueueOutcome;
     try {
       await sender(item);
@@ -69,8 +83,13 @@ export async function flushMutationQueue(
         outcome = { kind: 'retry' };
       }
     }
-    queue = applyQueueOutcome(queue, item.id, outcome);
-    await saveQueue(scope, queue);
+    queue = await queueCoordinator.serialize(queueStorageKey(scope), async () => {
+      const current = await loadQueue(scope);
+      const next = applyQueueOutcome(current, item.id, outcome);
+      await saveQueue(scope, next);
+      return next;
+    });
+    if (outcome.kind === 'success') await removeConfirmedFile(item.file);
     if (outcome.kind === 'retry') break;
   }
   return { sent, pending: queue.length, failed };

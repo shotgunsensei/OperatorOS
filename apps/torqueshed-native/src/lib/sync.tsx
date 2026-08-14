@@ -118,16 +118,44 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => { if (online) void flush(); }, [online, flush, flushRequestVersion]);
 
   const queue = useCallback(async (input: QueueInput) => {
-    if (!scope) throw new ApiError('Sign in through OperatorOS before changing garage data', 401, 'NATIVE_SESSION_REQUIRED');
+    if (!scope || !scopeKey || !auth.session) throw new ApiError('Sign in through OperatorOS before changing garage data', 401, 'NATIVE_SESSION_REQUIRED');
+    const executingScope = scope;
+    const executingScopeKey = scopeKey;
+    let executingAccessToken = auth.session.accessToken;
     const id = input.id ?? `native-${Crypto.randomUUID()}`;
+    const assertCurrentScope = () => {
+      if (latestScopeKeyRef.current !== executingScopeKey) {
+        throw new ApiError('Account changed while saving', 0, 'NATIVE_SYNC_SCOPE_CHANGED');
+      }
+    };
     if (online) {
       try {
+        assertCurrentScope();
         let requestBody = input.body;
         if (input.file) {
           const contentBase64 = await FileSystem.readAsStringAsync(input.file.uri, { encoding: FileSystem.EncodingType.Base64 });
           requestBody = { ...requestBody, [input.file.bodyField]: contentBase64, originalName: input.file.name, declaredMimeType: input.file.mimeType };
         }
-        await apiRequest(input.path, { method: input.method, body: requestBody, idempotencyKey: id });
+        assertCurrentScope();
+        await apiRequest(input.path, {
+          method: input.method,
+          body: requestBody,
+          idempotencyKey: id,
+          accessToken: executingAccessToken,
+          refreshAccess: async () => {
+            assertCurrentScope();
+            const refreshed = await auth.refresh();
+            assertCurrentScope();
+            if (!refreshed) throw new ApiError('Reauthentication is required before saving', 0, 'NATIVE_SYNC_REAUTH_REQUIRED');
+            executingAccessToken = refreshed;
+            return refreshed;
+          },
+          validateRefreshResult: refreshed => {
+            assertCurrentScope();
+            if (!refreshed) throw new ApiError('Reauthentication is required before saving', 0, 'NATIVE_SYNC_REAUTH_REQUIRED');
+            executingAccessToken = refreshed;
+          },
+        });
         return { queued: true as const, id };
       } catch (error) {
         if (error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 408 && error.status !== 429) {
@@ -135,10 +163,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-    await enqueueMutation(scope, { ...input, id });
-    await recount();
+    await enqueueMutation(executingScope, { ...input, id });
+    if (latestScopeKeyRef.current === executingScopeKey) {
+      const items = await loadQueue(executingScope);
+      if (latestScopeKeyRef.current === executingScopeKey) setPending(items.length);
+    }
     return { queued: true as const, id };
-  }, [online, recount, scope?.tenantId, scope?.userId]);
+  }, [auth.refresh, auth.session?.accessToken, online, scope?.tenantId, scope?.userId]);
 
   const value = useMemo(() => ({ online, pending, syncing, lastError, queue, flush }), [online, pending, syncing, lastError, queue, flush]);
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;

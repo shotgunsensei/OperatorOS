@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SessionTransitionCoordinator } from './session-transition';
+import { SessionTransitionCoordinator, shouldClearSessionAfterRefreshFailure } from './session-transition';
 
 test('session transitions serialize refresh installation before logout', async () => {
   const coordinator = new SessionTransitionCoordinator();
@@ -33,4 +33,14 @@ test('logout generation prevents a late refresh response from installing', async
   const installed = await coordinator.serialize(() => coordinator.isCurrent(refreshGeneration));
 
   assert.equal(installed, false);
+});
+
+test('only definitive refresh rejection clears an otherwise valid session', () => {
+  assert.equal(shouldClearSessionAfterRefreshFailure({ status: 401 }), true);
+  assert.equal(shouldClearSessionAfterRefreshFailure({ status: 403 }), true);
+  assert.equal(shouldClearSessionAfterRefreshFailure({ status: 0 }), false);
+  assert.equal(shouldClearSessionAfterRefreshFailure({ status: 408 }), false);
+  assert.equal(shouldClearSessionAfterRefreshFailure({ status: 429 }), false);
+  assert.equal(shouldClearSessionAfterRefreshFailure({ status: 503 }), false);
+  assert.equal(shouldClearSessionAfterRefreshFailure(new Error('local storage unavailable')), false);
 });

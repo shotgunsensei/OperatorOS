@@ -6,7 +6,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { nativeConfig } from './config';
-import { SessionTransitionCoordinator } from './session-transition';
+import { SessionTransitionCoordinator, shouldClearSessionAfterRefreshFailure } from './session-transition';
 
 const ACCESS_KEY = 'torqueshed.native.access';
 const REFRESH_KEY = 'torqueshed.native.refresh';
@@ -159,14 +159,31 @@ async function readSession(): Promise<NativeSession | null> {
   }
 }
 
+class NativeAuthRequestError extends Error {
+  constructor(message: string, public readonly status: number, public readonly code?: string) {
+    super(message);
+  }
+}
+
 async function postPublic<T>(path: string, payload: Record<string, unknown>): Promise<T> {
-  const response = await fetch(`${nativeConfig.apiBaseUrl}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${nativeConfig.apiBaseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new NativeAuthRequestError('OperatorOS native authentication is temporarily unavailable', 0, 'NATIVE_AUTH_NETWORK_ERROR');
+  }
   const json = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(String(json.error ?? 'OperatorOS native authentication failed'));
+  if (!response.ok) {
+    throw new NativeAuthRequestError(
+      String(json.error ?? 'OperatorOS native authentication failed'),
+      response.status,
+      typeof json.code === 'string' ? json.code : undefined,
+    );
+  }
   return json as T;
 }
 
@@ -212,7 +229,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
       return next.accessToken;
-    } catch {
+    } catch (error) {
+      if (!shouldClearSessionAfterRefreshFailure(error)) return null;
       await sessionTransitions.serialize(async () => {
         const activeRefreshToken = await SecureStore.getItemAsync(REFRESH_KEY).catch(() => null);
         if (!sessionTransitions.isCurrent(snapshot.generation) || activeRefreshToken !== current.refreshToken) return;

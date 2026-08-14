@@ -21,3 +21,8 @@ export class SessionTransitionCoordinator {
     return next;
   }
 }
+
+export function shouldClearSessionAfterRefreshFailure(error: unknown): boolean {
+  const status = Number((error as { status?: unknown } | null)?.status ?? 0);
+  return status >= 400 && status < 500 && status !== 408 && status !== 429;
+}
