@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "TorqueShed",
+    "slug": "torqueshed",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "torqueshed",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#090b0b"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "pro.torqueshed.app",
+      "associatedDomains": ["applinks:torqueshed.pro"]
+    },
+    "android": {
+      "package": "pro.torqueshed.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#090b0b"
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "https", "host": "torqueshed.pro", "pathPrefix": "/sso" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "plugins": ["expo-router", "expo-secure-store", "expo-web-browser"],
+    "experiments": { "typedRoutes": true }
+  }
+}

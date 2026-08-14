@@ -23,7 +23,8 @@ import { eq, and, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
   users, tenants, tenantUsers, tenantModules, tenantUserModuleAccess,
-  modules, planModules, subscriptions, subscriptionPlans,
+  modules, planModules, subscriptions, subscriptionPlans, billingEvents,
+  tenantEntitlements,
 } from '../schema.js';
 import { PLAN_CONFIGS } from './plans.js';
 
@@ -65,26 +66,42 @@ export async function launchFixPreSeed(): Promise<void> {
     // then drop the legacy row.
     const legacyId = legacy.id;
     const targetId = target.id;
+    const repointed: Record<string, number> = {
+      plan_modules: 0,
+      tenant_modules: 0,
+      tenant_user_module_access: 0,
+      addon_subscriptions: 0,
+      entitlement_overrides: 0,
+    };
+    const dropped: Record<string, number> = {
+      plan_modules: 0,
+      tenant_modules: 0,
+      tenant_user_module_access: 0,
+    };
     await db.transaction(async (tx) => {
-      await tx.execute(sql`
+      const pmUpd = await tx.execute(sql`
         UPDATE plan_modules SET module_id = ${targetId}
         WHERE module_id = ${legacyId}
           AND NOT EXISTS (
             SELECT 1 FROM plan_modules pm2
             WHERE pm2.plan_id = plan_modules.plan_id AND pm2.module_id = ${targetId}
           )`);
-      await tx.execute(sql`DELETE FROM plan_modules WHERE module_id = ${legacyId}`);
+      repointed.plan_modules = pmUpd.rowCount ?? 0;
+      const pmDel = await tx.execute(sql`DELETE FROM plan_modules WHERE module_id = ${legacyId}`);
+      dropped.plan_modules = pmDel.rowCount ?? 0;
 
-      await tx.execute(sql`
+      const tmUpd = await tx.execute(sql`
         UPDATE tenant_modules SET module_id = ${targetId}
         WHERE module_id = ${legacyId}
           AND NOT EXISTS (
             SELECT 1 FROM tenant_modules tm2
             WHERE tm2.tenant_id = tenant_modules.tenant_id AND tm2.module_id = ${targetId}
           )`);
-      await tx.execute(sql`DELETE FROM tenant_modules WHERE module_id = ${legacyId}`);
+      repointed.tenant_modules = tmUpd.rowCount ?? 0;
+      const tmDel = await tx.execute(sql`DELETE FROM tenant_modules WHERE module_id = ${legacyId}`);
+      dropped.tenant_modules = tmDel.rowCount ?? 0;
 
-      await tx.execute(sql`
+      const tumaUpd = await tx.execute(sql`
         UPDATE tenant_user_module_access SET module_id = ${targetId}
         WHERE module_id = ${legacyId}
           AND NOT EXISTS (
@@ -93,16 +110,43 @@ export async function launchFixPreSeed(): Promise<void> {
               AND tuma2.user_id   = tenant_user_module_access.user_id
               AND tuma2.module_id = ${targetId}
           )`);
-      await tx.execute(sql`DELETE FROM tenant_user_module_access WHERE module_id = ${legacyId}`);
+      repointed.tenant_user_module_access = tumaUpd.rowCount ?? 0;
+      const tumaDel = await tx.execute(sql`DELETE FROM tenant_user_module_access WHERE module_id = ${legacyId}`);
+      dropped.tenant_user_module_access = tumaDel.rowCount ?? 0;
 
       // addon_subscriptions + entitlement_overrides: re-point in place;
       // there's no composite uniqueness preventing a straight UPDATE.
-      await tx.execute(sql`UPDATE addon_subscriptions   SET module_id = ${targetId} WHERE module_id = ${legacyId}`);
-      await tx.execute(sql`UPDATE entitlement_overrides SET module_id = ${targetId} WHERE module_id = ${legacyId}`);
+      const addonUpd = await tx.execute(sql`UPDATE addon_subscriptions   SET module_id = ${targetId} WHERE module_id = ${legacyId}`);
+      repointed.addon_subscriptions = addonUpd.rowCount ?? 0;
+      const entUpd = await tx.execute(sql`UPDATE entitlement_overrides SET module_id = ${targetId} WHERE module_id = ${legacyId}`);
+      repointed.entitlement_overrides = entUpd.rowCount ?? 0;
 
       await tx.delete(modules).where(eq(modules.id, legacyId));
     });
     console.log('[launch-fix:pre] Migrated FK refs from bf-os -> brandforgeos and dropped duplicate row');
+
+    // Surface the heal through billing_events so admin DLQ / alert
+    // tooling picks it up. Repeated boots without the duplicate won't
+    // re-enter this branch, so this stays silent on healthy runs.
+    try {
+      await db.insert(billingEvents).values({
+        userId: null,
+        eventType: 'launch_fix_module_slug_heal',
+        metadata: {
+          legacySlug: 'bf-os',
+          canonicalSlug: 'brandforgeos',
+          legacyModuleId: legacyId,
+          canonicalModuleId: targetId,
+          repointed,
+          dropped,
+          source: 'launchFixPreSeed',
+          note: 'Duplicate legacy module row detected at boot; FK dependents migrated and legacy row dropped. Investigate why both bf-os and brandforgeos exist.',
+        },
+        processedAt: new Date(),
+      });
+    } catch (err) {
+      console.error('[launch-fix:pre] failed to record duplicate-heal billing_event:', err);
+    }
   }
 }
 
@@ -162,29 +206,61 @@ async function alignPlanPricesAndStripeIds(): Promise<void> {
   }
 }
 
-async function fixShotgunTenant(): Promise<void> {
+// Task #81: ensure the canonical "Shotgun Ninjas Productions" tenant
+// exists with slug=shotgun-ninjas, status=active, type=company, and
+// john@shotgunninjas.com as owner.
+//
+// Strategy is FIND-OR-CREATE by slug. We never rename or modify any
+// tenant that doesn't already match the canonical slug. If the canonical
+// row exists we only heal owner + membership; otherwise we create it
+// from scratch and re-point john's `current_tenant_id` to it.
+//
+// Exported so the bootstrap idempotency test can call it directly.
+export async function fixShotgunTenant(): Promise<void> {
   const adminEmail =
     process.env.OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL ||
     process.env.ADMIN_EMAIL ||
     'john@shotgunninjas.com';
 
   const [john] = await db.select().from(users).where(eq(users.email, adminEmail)).limit(1);
-  if (!john || !john.currentTenantId) {
-    console.log(`[launch-fix:post] super-admin ${adminEmail} or current_tenant_id missing; skipping`);
+  if (!john) {
+    console.log(`[launch-fix:post] super-admin ${adminEmail} not found; skipping`);
     return;
   }
 
   const desiredName = process.env.SHOTGUN_TENANT_NAME || 'Shotgun Ninjas Productions';
-  const tenantId = john.currentTenantId;
+  const desiredSlug = 'shotgun-ninjas';
 
-  // Idempotent rename + type flip.
-  const [tenantBefore] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-  if (tenantBefore && (tenantBefore.name !== desiredName || tenantBefore.type !== 'company')) {
-    await db.update(tenants)
-      .set({ name: desiredName, type: 'company' })
-      .where(eq(tenants.id, tenantId));
-    console.log(`[launch-fix:post] Renamed John's tenant -> "${desiredName}" (company)`);
+  // Find-or-create the canonical tenant strictly by slug.
+  let [canonical] = await db.select().from(tenants).where(eq(tenants.slug, desiredSlug)).limit(1);
+  if (!canonical) {
+    [canonical] = await db.insert(tenants).values({
+      name: desiredName,
+      slug: desiredSlug,
+      type: 'company',
+      status: 'active',
+      ownerUserId: john.id,
+    }).returning();
+    console.log(`[bootstrap] shotgun-ninjas created (${canonical.id})`);
+  } else {
+    console.log(`[bootstrap] shotgun-ninjas already-present (${canonical.id})`);
   }
+
+  // Ensure john has an owner-role membership row on the canonical tenant.
+  // We DO NOT modify any other field on an already-existing canonical
+  // tenant — name, slug, type, status, ownerUserId are left as-is.
+  await db.insert(tenantUsers).values({
+    tenantId: canonical.id, userId: john.id, role: 'owner',
+  }).onConflictDoNothing({ target: [tenantUsers.tenantId, tenantUsers.userId] });
+
+  // Re-point john's current_tenant_id to canonical only if it isn't
+  // already (so subsequent module backfill writes to the right place).
+  if (john.currentTenantId !== canonical.id) {
+    await db.update(users).set({ currentTenantId: canonical.id }).where(eq(users.id, john.id));
+  }
+  const tenantId = canonical.id;
+
+  await ensureShotgunCoreModuleEntitlements(tenantId, john.id);
 
   // Back-fill tenant_modules for every plan-included live module on
   // John's tenant. Mirrors the Demo Co pattern.
@@ -224,5 +300,64 @@ async function fixShotgunTenant(): Promise<void> {
   }
   if (backfilled > 0) {
     console.log(`[launch-fix:post] Back-filled ${backfilled} tenant_modules rows on John's tenant`);
+  }
+}
+
+async function ensureShotgunCoreModuleEntitlements(tenantId: string, johnUserId: string): Promise<void> {
+  const coreSlugs = ['techdeck', 'pulsedesk', 'tradeflowkit'];
+  let granted = 0;
+
+  for (const slug of coreSlugs) {
+    const [mod] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+    if (!mod) {
+      console.warn(`[launch-fix:post] module ${slug} not found; skipping Shotgun entitlement seed`);
+      continue;
+    }
+
+    await db.insert(tenantModules).values({
+      tenantId,
+      moduleId: mod.id,
+      status: 'enabled',
+      source: 'admin',
+      allowAllMembers: true,
+      metadata: { seededBy: 'fixShotgunTenant', phase: 'operatoros_phase_6' },
+    }).onConflictDoNothing({ target: [tenantModules.tenantId, tenantModules.moduleId] });
+
+    await db.insert(tenantUserModuleAccess).values({
+      tenantId,
+      userId: johnUserId,
+      moduleId: mod.id,
+      accessLevel: 'manager',
+      grantedByUserId: johnUserId,
+    }).onConflictDoNothing({
+      target: [tenantUserModuleAccess.tenantId, tenantUserModuleAccess.userId, tenantUserModuleAccess.moduleId],
+    });
+
+    const [activeEntitlement] = await db.select().from(tenantEntitlements)
+      .where(and(
+        eq(tenantEntitlements.tenantId, tenantId),
+        eq(tenantEntitlements.entitlementKey, slug),
+        eq(tenantEntitlements.active, true),
+      ))
+      .limit(1);
+    if (!activeEntitlement) {
+      await db.insert(tenantEntitlements).values({
+        tenantId,
+        entitlementKey: slug,
+        entitlementType: 'system',
+        source: 'admin',
+        active: true,
+        metadata: {
+          seededBy: 'fixShotgunTenant',
+          phase: 'operatoros_phase_6',
+          moduleId: mod.id,
+        },
+      });
+      granted++;
+    }
+  }
+
+  if (granted > 0) {
+    console.log(`[launch-fix:post] Seeded ${granted} Shotgun Ninjas module entitlement(s)`);
   }
 }

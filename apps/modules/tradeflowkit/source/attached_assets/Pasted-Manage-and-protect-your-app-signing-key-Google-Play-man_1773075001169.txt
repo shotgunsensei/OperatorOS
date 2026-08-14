@@ -1,0 +1,39 @@
+Manage and protect your app signing key
+Google Play manages and protects your app's signing key for you. It's used to sign optimized, distribution APKs generated from your Android App Bundles. Play App Signing stores your app signing key on Google's secure infrastructure, and offers upgrades to increase security.
+
+
+App signing key certificate
+This is the public certificate for the app signing key that Google uses to sign each of your releases. Use it to register your key with API providers. The app signing key itself is not accessible, and is kept on a secure Google server.
+MD5 certificate fingerprint
+51:57:25:3D:B7:7F:54:52:F2:90:8C:14:33:BC:03:EB
+SHA-1 certificate fingerprint
+DB:82:39:C8:06:51:9C:5D:54:67:76:FB:07:0B:2C:F8:5C:D5:AE:A1
+SHA-256 certificate fingerprint
+63:1A:1C:D8:F0:7E:D0:D4:8B:8F:BF:3F:36:0B:63:1C:90:92:35:1E:F2:13:84:62:B9:D0:0E:31:24:06:81:50
+Upgrade your app signing key
+Your current app signing key's encryption strength meets or exceeds Google Play's recommended minimum standard
+Once annually, you can upgrade your app signing key to move your users to a new key. Learn more
+
+Upload key certificate
+This is the public certificate for your private upload key. Use your upload key to sign each release so that Google knows updates are from you. Use the certificate below to register your upload key with API providers.
+MD5 certificate fingerprint
+C0:20:DC:9A:03:14:78:1C:E7:3F:82:59:F4:1D:76:AA
+SHA-1 certificate fingerprint
+91:FB:DD:77:9C:23:84:EE:A7:F1:4C:B3:75:2F:92:9B:60:BE:3C:8F
+SHA-256 certificate fingerprint
+F0:21:04:1C:12:B5:9D:D2:E9:F1:55:78:D2:62:D1:DE:E8:51:F5:88:B2:83:01:51:B9:D5:FA:AD:AF:05:87:EB
+Request upload key reset
+To start using a new upload certificate, request an upload key reset
+Digital Asset Links JSON
+To associate your app with a website domain, copy and paste this snippet into your Digital Asset Links JSON file. If you already have a non-empty JSON file, merge this snippet with the existing statements according to documentation. Digital Asset Links JSON file is required if you want to use Android App Links to direct mobile web users to your app. Learn more
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "",
+      "sha256_cert_fingerprints":
+        ["63:1A:1C:D8:F0:7E:D0:D4:8B:8F:BF:3F:36:0B:63:1C:90:92:35:1E:F2:13:84:62:B9:D0:0E:31:24:06:81:50"]
+    }
+  }
+]

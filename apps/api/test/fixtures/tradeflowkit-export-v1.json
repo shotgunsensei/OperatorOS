@@ -1,0 +1,22 @@
+{
+  "exportVersion": 1,
+  "users": [{ "id": "legacy-user", "email": "excluded@example.test" }],
+  "orgs": [{ "id": "legacy-org", "name": "Excluded authority organization" }],
+  "memberships": [{ "id": "legacy-membership", "userId": "legacy-user", "orgId": "legacy-org" }],
+  "sessions": [{ "id": "legacy-session" }],
+  "subscriptions": [{ "id": "legacy-subscription" }],
+  "processedStripeEvents": [{ "id": "legacy-stripe-event" }],
+  "customers": [{ "id": "customer-1", "name": "Northstar Mechanical" }],
+  "jobs": [{ "id": "job-1", "customerId": "customer-1", "title": "Compressor replacement" }],
+  "quotes": [{ "id": "quote-1", "customerId": "customer-1", "jobId": "job-1", "status": "sent" }],
+  "quoteItems": [
+    { "id": "quote-item-1", "quoteId": "quote-1", "description": "Equipment", "qty": "1.00", "unitPrice": "1800.00" },
+    { "id": "quote-item-2", "quoteId": "quote-1", "description": "Labor", "qty": "4.00", "unitPrice": "150.00" }
+  ],
+  "invoices": [{ "id": "invoice-1", "customerId": "customer-1", "jobId": "job-1", "status": "paid", "taxRate": "8.00", "discount": "0.00" }],
+  "invoiceItems": [
+    { "id": "invoice-item-1", "invoiceId": "invoice-1", "description": "Equipment", "qty": "1.00", "unitPrice": "1800.00" },
+    { "id": "invoice-item-2", "invoiceId": "invoice-1", "description": "Labor", "qty": "4.00", "unitPrice": "150.00" }
+  ],
+  "leads": [{ "id": "lead-1", "customerId": "customer-1", "jobId": "job-1", "name": "Northstar Mechanical" }]
+}

@@ -19,16 +19,17 @@
  * so the test never hits the real Stripe API. The seam is hard-gated
  * on (super_admin) AND (NODE_ENV !== 'production').
  *
- * Known workaround: PlatformPage.apiCall reads the JWT from
- * localStorage key 'auth_token' while AuthProvider stores it under
- * 'token'. We mirror both keys in addInitScript so the Pricing page
- * can authenticate. (Tracked separately as a real bug.)
+ * Authentication uses the production HttpOnly host-only session cookie.
+ * No JWT is returned to or persisted by browser JavaScript.
  */
-import { test, expect, request as pwRequest } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { Client } from 'pg';
-
-const API = process.env.E2E_API_URL ?? 'http://localhost:5001';
-const WEB = process.env.E2E_WEB_URL ?? 'http://localhost:5000';
+import {
+  E2E_API_URL as API,
+  E2E_WEB_URL as WEB,
+  expectNoScriptReadableAuth,
+  registerAndLogin,
+} from './session-auth';
 
 async function withDb<T>(fn: (c: Client) => Promise<T>): Promise<T> {
   const url = process.env.DATABASE_URL;
@@ -47,15 +48,14 @@ test('super-admin can sync a drifted module price from Stripe via the Pricing ta
   const declaredCents = 999;
   const stripeCents = 2499; // what the stubbed Stripe price reports
 
-  const api = await pwRequest.newContext();
+  const api = page.context().request;
 
-  // 1) Register a fresh user and elevate to super_admin via direct DB.
-  const reg = await api.post(`${API}/v1/auth/register`, {
-    data: { email: adminEmail, password, name: 'Task36 SuperAdmin' },
+  // 1) Register and sign in a fresh user with the browser's cookie jar.
+  const user = await registerAndLogin(api, {
+    email: adminEmail,
+    password,
+    name: 'Task36 SuperAdmin',
   });
-  expect(reg.ok(), `register: ${reg.status()} ${await reg.text()}`).toBeTruthy();
-  const { token, user } = await reg.json();
-  const auth = { Authorization: `Bearer ${token}` };
 
   // 2) Seed: elevate to super_admin and create the drifted module.
   //    metadata.addonPriceCents=999, metadata.stripePriceId points at
@@ -72,7 +72,6 @@ test('super-admin can sync a drifted module price from Stripe via the Pricing ta
   // 3) Install the in-process Stripe stub. retrievePrice is what
   //    /v1/platform/pricing's lookup will see for `oldPriceId`.
   const stubRes = await api.post(`${API}/v1/platform/__test__/stripe-override`, {
-    headers: auth,
     data: {
       enabled: true,
       retrievePrice: { unit_amount: stripeCents, currency: 'usd', active: true },
@@ -81,28 +80,23 @@ test('super-admin can sync a drifted module price from Stripe via the Pricing ta
   expect(stubRes.ok(), `install stripe stub: ${stubRes.status()} ${await stubRes.text()}`).toBeTruthy();
 
   try {
-    // 4) Seed browser auth (mirror to the legacy key PlatformPage reads).
-    await page.addInitScript(({ token }) => {
-      localStorage.setItem('token', token);
-      localStorage.setItem('auth_token', token);
-    }, { token });
-
-    // 5) Load the Platform → Pricing page directly.
+    // 4) Load the Platform → Pricing page directly with cookie auth.
     await page.goto(`${WEB}/platform/pricing`);
+    await expectNoScriptReadableAuth(page);
 
-    // 6) The drifted row should render with declared=999, stripe=2499, mismatch.
+    // 5) The drifted row should render with declared=999, stripe=2499, mismatch.
     const row = page.getByTestId(`row-pricing-${slug}`);
     await expect(row).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId(`text-declared-${slug}`)).toHaveText(String(declaredCents));
     await expect(page.getByTestId(`text-stripe-${slug}`)).toHaveText(String(stripeCents));
     await expect(row).toContainText(/mismatch/i);
 
-    // 7) Click "Sync from Stripe".
+    // 6) Click "Sync from Stripe".
     const syncBtn = page.getByTestId(`button-sync-${slug}`);
     await expect(syncBtn).toBeEnabled();
     await syncBtn.click();
 
-    // 8) Success notice appears with the slug + new cents; declared cell updates.
+    // 7) Success notice appears with the slug + new cents; declared cell updates.
     const notice = page.getByTestId('pricing-notice');
     await expect(notice).toBeVisible({ timeout: 10_000 });
     await expect(notice).toContainText(slug);
@@ -111,7 +105,7 @@ test('super-admin can sync a drifted module price from Stripe via the Pricing ta
     // Status pill flips from "mismatch" to "ok" once declared==stripe.
     await expect(row).not.toContainText(/mismatch/i);
 
-    // 9) DB persistence + audit row written.
+    // 8) DB persistence + audit row written.
     await withDb(async (c) => {
       const mod = await c.query(`SELECT metadata FROM modules WHERE slug = $1`, [slug]);
       expect(mod.rows[0].metadata.addonPriceCents).toBe(stripeCents);
@@ -127,9 +121,9 @@ test('super-admin can sync a drifted module price from Stripe via the Pricing ta
       expect(audit.rows[0].details.previousCents).toBe(declaredCents);
     });
   } finally {
-    // 10) Cleanup: clear the Stripe stub, drop the fixture module + user.
+    // 9) Cleanup: clear the Stripe stub, drop the fixture module + user.
     await api.post(`${API}/v1/platform/__test__/stripe-override`, {
-      headers: auth, data: { reset: true },
+      data: { reset: true },
     }).catch(() => undefined);
     await withDb(async (c) => {
       await c.query(`DELETE FROM admin_audit_logs WHERE details->>'slug' = $1`, [slug]);

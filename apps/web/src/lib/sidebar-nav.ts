@@ -1,6 +1,6 @@
 import {
   LayoutGrid, Store, Sparkles, Receipt, Settings as SettingsIcon,
-  Building2, Users as UsersIcon, Boxes, ShieldCheck,
+  Building2, Users as UsersIcon, Boxes, ShieldCheck, Mail, ServerCog,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -8,6 +8,9 @@ export interface NavItem {
   id: string;
   label: string;
   Icon: LucideIcon;
+  // When set, the item is an external link (rendered as an anchor) instead of
+  // an internal page navigation handled by the console router.
+  href?: string;
 }
 
 export interface NavSection {
@@ -24,23 +27,24 @@ export function buildNavSections(opts: SidebarRoleFlags): NavSection[] {
   const sections: NavSection[] = [];
 
   sections.push({
-    label: 'Launch',
+    label: 'Workspace',
     items: [
-      { id: 'my-apps', label: 'My Apps', Icon: LayoutGrid },
-      { id: 'apps', label: 'App Marketplace', Icon: Store },
-      { id: 'ai-tools', label: 'AI Assistant', Icon: Sparkles },
+      { id: 'my-apps', label: 'Home', Icon: LayoutGrid },
+      { id: 'apps', label: 'Browse tools', Icon: Store },
+      { id: 'ai-tools', label: 'AI tools', Icon: Sparkles },
     ],
   });
 
   if (opts.isTenantAdmin) {
     sections.push({
-      label: 'Tenant',
+      label: 'Organization',
       items: [
-        { id: 'command-center', label: 'Command Center', Icon: Building2 },
-        { id: 'tenant-users', label: 'Members', Icon: UsersIcon },
-        { id: 'tenant-modules', label: 'Modules', Icon: Boxes },
-        { id: 'tenant-billing', label: 'Tenant Billing', Icon: Receipt },
-        { id: 'tenant-settings', label: 'Tenant Settings', Icon: SettingsIcon },
+        { id: 'command-center', label: 'Overview', Icon: Building2 },
+        { id: 'tenant-users', label: 'Team members', Icon: UsersIcon },
+        { id: 'tenant-modules', label: 'Tool access', Icon: Boxes },
+        { id: 'tenant-billing', label: 'Billing and add-ons', Icon: Receipt },
+        { id: 'tenant-settings', label: 'Organization settings', Icon: SettingsIcon },
+        { id: 'tenant-shared-services', label: 'Shared services', Icon: ServerCog },
       ],
     });
   }
@@ -48,15 +52,16 @@ export function buildNavSections(opts: SidebarRoleFlags): NavSection[] {
   if (opts.isSuperAdmin) {
     sections.push({
       label: 'Platform',
-      items: [{ id: 'platform', label: 'Platform Command', Icon: ShieldCheck }],
+      items: [{ id: 'platform', label: 'Platform administration', Icon: ShieldCheck }],
     });
   }
 
   sections.push({
     label: 'Account',
     items: [
-      { id: 'billing', label: 'Billing', Icon: Receipt },
-      { id: 'settings', label: 'Settings', Icon: SettingsIcon },
+      { id: 'billing', label: 'Workspace plan', Icon: Receipt },
+      { id: 'settings', label: 'Profile and security', Icon: SettingsIcon },
+      { id: 'contact', label: 'Help and support', Icon: Mail, href: 'https://operatoros.net/john' },
     ],
   });
 

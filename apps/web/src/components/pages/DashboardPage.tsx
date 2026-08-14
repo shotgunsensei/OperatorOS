@@ -4,6 +4,18 @@ import { useEffect, useState } from 'react';
 import { saasApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import { useToast } from '../Toast';
+import { ErrorState, LoadingState, PageHeader } from '../ExperiencePrimitives';
+import { badgeStyles, cardStyle } from '@/lib/design-tokens';
+
+const featureDisplayNames: Record<string, string> = {
+  ssoEnabled: 'Single sign-on',
+  auditLog: 'Audit log',
+  customBranding: 'Custom branding',
+  advancedReporting: 'Advanced reporting',
+};
+
+const friendlyFeatureName = (key: string) =>
+  featureDisplayNames[key] ?? key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').replace(/^./, s => s.toUpperCase());
 
 function StatCard({ label, value, icon, color }: { label: string; value: number | string; icon: string; color: string }) {
   return (
@@ -49,39 +61,35 @@ export default function DashboardPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    saasApi.dashboard().then(setData).catch(() => toast('Failed to load dashboard', 'error')).finally(() => setLoading(false));
+    saasApi.dashboard().then(setData).catch(() => toast('Unable to load command center', 'error')).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return (
-    <div style={{ padding: '32px 24px' }}>
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ width: 200, height: 24, background: colors.bgSecondary, borderRadius: 6, marginBottom: 12 }} />
-        <div style={{ width: 300, height: 14, background: colors.bgSecondary, borderRadius: 4 }} />
-      </div>
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        {[1,2,3,4].map(i => (
-          <div key={i} style={{ flex: '1 1 200px', minWidth: 180, height: 88, background: colors.bgSecondary, borderRadius: 12, border: `1px solid ${colors.border}` }} />
-        ))}
-      </div>
-    </div>
+  if (loading) return <LoadingState label="Loading your command center…" />;
+  if (!data) return (
+    <ErrorState title="The command center is unavailable" description="We couldn’t load your organization overview. Try again in a moment." />
   );
-  if (!data) return <div style={{ padding: 40, color: colors.accentRed }}>Failed to load dashboard</div>;
 
   const { stats, limits, usage, features, recentActivity } = data;
 
   return (
     <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 1200 }} data-testid="dashboard-page">
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Dashboard</h1>
-        <p style={{ fontSize: 14, color: colors.textMuted, margin: 0 }}>
-          Your operations at a glance
-          <span style={{
-            display: 'inline-block', marginLeft: 10, padding: '2px 10px',
-            borderRadius: 20, fontSize: 11, fontWeight: 600,
-            background: limits.planSlug === 'elite' ? 'rgba(188,140,255,0.15)' : limits.planSlug === 'pro' ? 'rgba(88,166,255,0.15)' : 'rgba(139,148,158,0.15)',
-            color: limits.planSlug === 'elite' ? colors.accentPurple : limits.planSlug === 'pro' ? colors.accent : colors.textMuted,
-          }} data-testid="plan-badge">{limits.planName}</span>
-        </p>
+        <PageHeader
+          title="Command center"
+          description="Your organization, plan, apps, and current work at a glance."
+          actions={
+            <span
+              style={{
+                ...badgeStyles[limits.planSlug === 'elite' || limits.planSlug === 'pro' ? 'info' : 'neutral'],
+                color: limits.planSlug === 'elite' ? colors.accentPurple : limits.planSlug === 'pro' ? colors.accent : colors.textMuted,
+                alignSelf: 'flex-start',
+              }}
+              data-testid="plan-badge"
+            >
+              {limits.planName}
+            </span>
+          }
+        />
       </div>
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 32 }}>
@@ -161,20 +169,19 @@ export default function DashboardPage() {
               border: `1px solid ${enabled ? colors.accentGreen + '33' : colors.border}`,
               color: enabled ? colors.accentGreen : colors.textDim,
             }}>
-              {enabled ? '\u2713' : '\ud83d\udd12'} {key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}
+              {enabled ? 'Enabled' : 'Not enabled'} · {friendlyFeatureName(key)}
             </span>
           ))}
         </div>
       )}
 
       <div style={{
-        marginTop: 24, background: colors.bgSecondary, border: `1px solid ${colors.border}`,
-        borderRadius: 12, padding: 24,
+        marginTop: 24, ...cardStyle,
       }}>
         <h3 style={{ fontSize: 14, fontWeight: 600, color: '#fff', margin: '0 0 16px' }}>Recent Activity</h3>
         {recentActivity.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 20, color: colors.textMuted, fontSize: 13 }}>
-            No recent activity. Start by creating a workspace!
+            No activity yet. Create a workspace, launch a module, or invite a teammate to start building an audit trail.
           </div>
         ) : (
           <div>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TradeFlowKit — Business Operations Software for Trade Contractors</title>
+    <meta name="description" content="Jobs, quotes, invoices, customers, and team — all in one place. The complete operations platform for electricians, plumbers, HVAC, and carpenters. Built by Shotgun Ninjas Productions. Start free." />
+    <meta name="author" content="Shotgun Ninjas Productions" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tradeflowkit.com/" />
+    <meta property="og:title" content="TradeFlowKit — Business Operations Software for Trade Contractors" />
+    <meta property="og:description" content="Run your trade business from your phone. Jobs, quotes, invoices, customers, and team — all in one place. Part of the Shotgun Ninjas Productions ecosystem." />
+    <meta property="og:image" content="/icons/icon-512x512.png" />
+    <meta property="og:site_name" content="TradeFlowKit" />
+    <meta property="article:publisher" content="https://shotgunninjas.com" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TradeFlowKit — Business Operations Software for Trade Contractors" />
+    <meta name="twitter:description" content="Run your trade business from your phone. Jobs, quotes, invoices, customers, and team — all in one place." />
+    <meta name="twitter:image" content="/icons/icon-512x512.png" />
+
+    <!-- PWA & Icons -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <meta name="theme-color" content="#dc2626" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="TradeFlowKit" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = stored ? stored === 'dark' : prefersDark;
+          if (isDark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
+    <div id="root"></div>
+    <div id="boot-error" style="display:none;position:fixed;inset:0;z-index:99999;background:#111;color:#f87171;padding:2rem;font-family:monospace;white-space:pre-wrap;overflow:auto"></div>
+    <script>
+      window.addEventListener('error', function(e) {
+        var el = document.getElementById('boot-error');
+        if (el) { el.style.display = 'block'; el.textContent += 'ERROR: ' + e.message + '\n' + (e.filename||'') + ':' + (e.lineno||'') + '\n\n'; }
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        var el = document.getElementById('boot-error');
+        if (el) { el.style.display = 'block'; el.textContent += 'REJECTION: ' + (e.reason && e.reason.message || e.reason || 'unknown') + '\n' + (e.reason && e.reason.stack || '') + '\n\n'; }
+      });
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      window.__pwaInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__pwaInstallPrompt = e;
+      });
+
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>

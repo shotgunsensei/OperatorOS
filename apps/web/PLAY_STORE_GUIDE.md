@@ -200,7 +200,7 @@ A privacy policy is **required** by Google Play. It must cover:
 - User rights regarding their data
 - Contact information
 
-Host it on your website (e.g., `https://operator-os.replit.app/privacy`).
+Host it on the canonical website (for example, `https://operatoros.net/privacy`).
 
 ---
 

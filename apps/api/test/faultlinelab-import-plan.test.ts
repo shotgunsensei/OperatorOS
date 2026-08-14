@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { planFaultlineLabImport } from '../src/lib/faultlinelab-import.js';
+
+test('P25-COMPILER-001: FaultlineLab dry-run maps every compiler-discovered source case as playable', () => {
+  const first = planFaultlineLabImport();
+  const second = planFaultlineLabImport();
+  assert.deepEqual(second, first);
+  assert.equal(first.mode, 'dry-run');
+  assert.equal(first.planVersion, 2);
+  assert.equal(first.playableSourceCount, first.discoveredSourceCount);
+  assert.equal(first.plannedCatalogOnlyCount, 0);
+  assert.equal(first.mappings.length, first.discoveredSourceCount);
+  assert.equal(first.reconciliation.uniqueSourceIds, first.discoveredSourceCount);
+  assert.equal(first.reconciliation.uniqueSlugs, first.discoveredSourceCount);
+  assert.equal(first.reconciliation.contentHashesVerified, first.discoveredSourceCount);
+  assert.equal(first.reconciliation.publishedPlayableVersions, first.discoveredSourceCount);
+  assert.equal(first.reconciliation.authorityRecordsImported, 0);
+  assert.equal(first.reconciliation.billingRecordsImported, 0);
+  assert.equal(first.reconciliation.plannedCatalogEntriesImported, 0);
+  assert.equal(first.reconciliation.standaloneDataApplyRequired, false);
+  assert.equal(first.applySupported, false);
+  assert.deepEqual(first.errors, []);
+  assert.equal(first.readyToInitialize, true);
+  assert.match(first.sourceCommit, /^[0-9a-f]{40}$/);
+  assert.match(first.sourceManifestHash, /^[0-9a-f]{64}$/);
+  assert.equal(new Set(first.mappings.map((item) => item.sourceId)).size, first.discoveredSourceCount);
+  assert.equal(new Set(first.mappings.map((item) => item.sourceSlug)).size, first.discoveredSourceCount);
+  assert.ok(first.discoveredSourceCount > 4, 'the compiler must not regress to the former starter-only subset');
+});

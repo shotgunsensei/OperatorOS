@@ -33,6 +33,7 @@ import { authenticate } from '../lib/auth.js';
 import { requireTenantAdmin, requireTenantOwner } from '../lib/tenant-auth.js';
 import { writeAudit, pickSafe, TENANT_USER_ACCESS_SAFE_FIELDS } from '../lib/audit.js';
 import { sendInviteEmail, buildInviteAcceptUrl } from '../lib/email-service.js';
+import { isTenantOwner } from '../lib/rbac.js';
 
 const INVITE_TTL_DAYS = 14;
 const TENANT_USER_SAFE_FIELDS = ['id', 'tenantId', 'userId', 'role'] as const;
@@ -45,8 +46,34 @@ function badRequest(reply: any, msg: string) {
 function notFound(reply: any, code: string, msg: string) {
   return reply.code(404).send({ error: msg, code });
 }
-function isValidRole(r: any): r is 'owner' | 'admin' | 'member' {
-  return r === 'owner' || r === 'admin' || r === 'member';
+/**
+ * Task #108 — accept either the internal vocabulary
+ * (owner|admin|member) or the public spec vocabulary
+ * (owner|tenant_admin|billing_admin|user|viewer). Returns the
+ * normalized stored value, preserving read-only `viewer`, or null when
+ * nothing matches.
+ *
+ * Delegates to the canonical mapper in `role-aliases.ts` so every
+ * write path agrees on the public→stored mapping.
+ */
+import {
+  normalizeIncomingTenantRole,
+  normalizeIncomingModuleAccessLevel,
+  type EffectiveTenantRole,
+  type StoredModuleAccessLevel,
+} from '../lib/role-aliases.js';
+
+function normalizeRoleInput(r: any): EffectiveTenantRole | null {
+  return normalizeIncomingTenantRole(r);
+}
+/**
+ * Task #108 — accept either internal access levels (none|user|manager)
+ * or public module role aliases (none|module_user|module_admin|viewer).
+ * Delegates to the canonical mapper so `viewer` stays a distinct read-only
+ * grant instead of becoming a writer or a silent revocation.
+ */
+function normalizeAccessLevelInput(v: any): StoredModuleAccessLevel | null {
+  return normalizeIncomingModuleAccessLevel(v);
 }
 function isValidEmail(e: any): e is string {
   return typeof e === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -117,21 +144,23 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
       const actor = (request as any).user;
       const { tenantId, userId } = request.params;
       const body = (request.body ?? {}) as any;
-      if (!isValidRole(body.role)) return badRequest(reply, 'role must be owner|admin|member');
+      const normalizedRole = normalizeRoleInput(body.role);
+      if (!normalizedRole) return badRequest(reply, 'role must be owner|tenant_admin|billing_admin|user|viewer (or legacy owner|admin|member)');
+      body.role = normalizedRole;
 
       const [target] = await db.select().from(tenantUsers)
         .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, userId))).limit(1);
       if (!target) return notFound(reply, 'TENANT_USER_NOT_FOUND', 'User is not a member of this tenant');
 
       // Only owners may promote/demote owner role; admins cannot manage owners.
-      if ((target.role === 'owner' || body.role === 'owner') && ctx.role !== 'owner') {
+      if ((isTenantOwner(target.role) || isTenantOwner(body.role)) && !isTenantOwner(ctx.role)) {
         return reply.code(403).send({
           error: 'Only tenant owners can change owner roles',
           code: 'TENANT_ROLE_INSUFFICIENT',
         });
       }
       // Blocking demotion of the last owner — keep at least one owner alive.
-      if (target.role === 'owner' && body.role !== 'owner') {
+      if (isTenantOwner(target.role) && !isTenantOwner(body.role)) {
         const owners = await db.select().from(tenantUsers)
           .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.role, 'owner')));
         if (owners.length <= 1) {
@@ -168,13 +197,13 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
         .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, userId))).limit(1);
       if (!target) return notFound(reply, 'TENANT_USER_NOT_FOUND', 'User is not a member of this tenant');
 
-      if (target.role === 'owner' && ctx.role !== 'owner') {
+      if (isTenantOwner(target.role) && !isTenantOwner(ctx.role)) {
         return reply.code(403).send({
           error: 'Only tenant owners can remove other owners',
           code: 'TENANT_ROLE_INSUFFICIENT',
         });
       }
-      if (target.role === 'owner') {
+      if (isTenantOwner(target.role)) {
         const owners = await db.select().from(tenantUsers)
           .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.role, 'owner')));
         if (owners.length <= 1) {
@@ -226,10 +255,10 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
       const { tenantId } = request.params;
       const body = (request.body ?? {}) as any;
       const email = (body.email ?? '').trim().toLowerCase();
-      const role = body.role ?? 'member';
+      const role = normalizeRoleInput(body.role ?? 'member') ?? null;
       if (!isValidEmail(email)) return badRequest(reply, 'email is required');
-      if (!isValidRole(role)) return badRequest(reply, 'role must be owner|admin|member');
-      if (role === 'owner' && ctx.role !== 'owner') {
+      if (!role) return badRequest(reply, 'role must be owner|tenant_admin|billing_admin|user|viewer (or legacy owner|admin|member)');
+      if (isTenantOwner(role) && !isTenantOwner(ctx.role)) {
         return reply.code(403).send({
           error: 'Only tenant owners can invite new owners',
           code: 'TENANT_ROLE_INSUFFICIENT',
@@ -519,10 +548,12 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
       const actor = (request as any).user;
       const { tenantId, userId } = request.params;
       const body = (request.body ?? {}) as any;
-      const { moduleSlug, accessLevel } = body;
-      if (!moduleSlug || !['none', 'user', 'manager'].includes(accessLevel)) {
-        return badRequest(reply, 'moduleSlug and accessLevel (none|user|manager) are required');
+      const { moduleSlug } = body;
+      const accessLevel = normalizeAccessLevelInput(body.accessLevel);
+      if (!moduleSlug || !accessLevel) {
+        return badRequest(reply, 'moduleSlug and accessLevel (none|module_user|module_admin|viewer, or legacy none|user|manager) are required');
       }
+      body.accessLevel = accessLevel;
       const [member] = await db.select().from(tenantUsers)
         .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, userId))).limit(1);
       if (!member) return notFound(reply, 'TENANT_USER_NOT_FOUND', 'User is not a member of this tenant');
@@ -564,6 +595,20 @@ export async function registerTenantAdminRoutes(app: FastifyInstance) {
         extra: { moduleSlug, targetUserId: userId },
         ipAddress: request.ip,
       }, request);
+
+      // Task #108: centralized propagation. The grant for one user
+      // changed; recompute the whole tenant snapshot and push to every
+      // tenant-enabled receiver with a registered webhook URL.
+      try {
+        const { schedulePropagation } = await import('../lib/entitlement-propagation.js');
+        schedulePropagation(tenantId, {
+          reason: 'tenant_user_module_access_set',
+          actorUserId: actor.id,
+        });
+      } catch (err) {
+        request.log.warn({ err }, 'entitlement propagate import failed');
+      }
+
       return { access: after };
     },
   );

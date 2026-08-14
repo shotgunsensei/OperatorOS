@@ -2,12 +2,14 @@ import { db } from '../db.js';
 import {
   users, subscriptions, subscriptionPlans,
   modules, planModules, addonSubscriptions, entitlementOverrides,
-  tenantModules, tenantUsers, tenantUserModuleAccess,
+  platformComponents,
 } from '../schema.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { authenticate } from './auth.js';
 import { isAddonPurchasable } from './billing-service.js';
+import { hasPlatformAdminAuthority } from './rbac.js';
+import { resolveTenantModuleAccess } from './tenant-entitlements.js';
 
 /**
  * Access-source taxonomy — the single source of truth for how a user got
@@ -39,6 +41,19 @@ export interface ModuleAccess {
   expiresAt?: Date | null;
 }
 
+/**
+ * Task #115: the platform component a module belongs to, denormalized onto
+ * the module summary so the web marketplace can group cards under component
+ * headings without hardcoding the slug→component mapping. `null` when the
+ * module has no `component_id` assigned (admin-created modules outside the
+ * SDK catalog, or components with no live modules).
+ */
+export interface ModuleComponentRef {
+  slug: string;
+  name: string;
+  ord: number;
+}
+
 export interface UserModuleSummary {
   module: {
     id: string;
@@ -51,6 +66,7 @@ export interface UserModuleSummary {
     planMin: string;
     baseUrl: string;
     ord: number;
+    component: ModuleComponentRef | null;
   };
   // Server-authoritative rendering hints. The UI MUST NOT recompute these.
   unlocked: boolean;
@@ -181,7 +197,7 @@ async function activeOverrideForUser(userId: string, moduleId: string) {
 export async function evaluateUserEntitlement(userId: string, moduleId: string): Promise<AccessSource> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user || user.status !== 'active') return null;
-  if (user.role === 'admin') return 'admin_role';
+  if (hasPlatformAdminAuthority(user)) return 'admin_role';
 
   const override = await activeOverrideForUser(userId, moduleId);
   if (override) return override.grant ? 'override' : null;
@@ -240,6 +256,23 @@ function pickCta(args: {
 }
 
 /**
+ * Task #115: load all platform components keyed by id. Used to denormalize
+ * each module's component (slug/name/ord) onto the catalog summary so the
+ * web marketplace can group cards by component without a hardcoded map.
+ */
+async function loadComponentMap(): Promise<Map<string, ModuleComponentRef>> {
+  const rows = await db.select().from(platformComponents);
+  return new Map(rows.map(c => [c.id, { slug: c.slug, name: c.name, ord: c.ord }]));
+}
+
+/** Single-component lookup by id (for the per-module summary path). */
+async function loadComponentRef(componentId: string): Promise<ModuleComponentRef | null> {
+  const [c] = await db.select().from(platformComponents)
+    .where(eq(platformComponents.id, componentId)).limit(1);
+  return c ? { slug: c.slug, name: c.name, ord: c.ord } : null;
+}
+
+/**
  * Returns every module in the catalog with the user's access state attached
  * AND server-resolved rendering fields (unlocked / cta / upgrade target /
  * addon price). UI consumes this directly — never compute access on the client.
@@ -247,6 +280,7 @@ function pickCta(args: {
 export async function getUserModules(userId: string, tenantId: string): Promise<UserModuleSummary[]> {
   const allModules = await db.select().from(modules);
   const sorted = allModules.sort((a, b) => a.ord - b.ord);
+  const componentMap = await loadComponentMap();
   const out: UserModuleSummary[] = [];
   for (const m of sorted) {
     const access = await hasModuleAccess(userId, tenantId, m.slug);
@@ -272,6 +306,7 @@ export async function getUserModules(userId: string, tenantId: string): Promise<
         planMin: m.planMin,
         baseUrl: m.baseUrl,
         ord: m.ord,
+        component: m.componentId ? componentMap.get(m.componentId) ?? null : null,
       },
       unlocked: access.hasAccess && (m.status === 'live' || m.status === 'beta') && !!m.baseUrl,
       access_source: access.source,
@@ -301,11 +336,12 @@ export async function getModuleForUser(userId: string, tenantId: string, moduleS
     addonPriceCents,
     addonPurchasable: isAddonPurchasable(m),
   });
+  const component = m.componentId ? await loadComponentRef(m.componentId) : null;
   return {
     module: {
       id: m.id, slug: m.slug, name: m.name, description: m.description,
       iconUrl: m.iconUrl, category: m.category, status: m.status,
-      planMin: m.planMin, baseUrl: m.baseUrl, ord: m.ord,
+      planMin: m.planMin, baseUrl: m.baseUrl, ord: m.ord, component,
     },
     unlocked: access.hasAccess && (m.status === 'live' || m.status === 'beta') && !!m.baseUrl,
     access_source: access.source,
@@ -345,7 +381,7 @@ export async function getModuleAccessTrace(userId: string, tenantId: string, mod
     planGrants,
     addonGrants,
     overrideGrants,
-    isAdmin: user?.role === 'admin',
+    isAdmin: hasPlatformAdminAuthority(user),
     moduleStatus: mod.status,
     reason: access.reason,
   };
@@ -360,7 +396,7 @@ export async function getModuleAccessTrace(userId: string, tenantId: string, mod
  */
 export async function getAccessBreakdown(userId: string): Promise<AccessBreakdown> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = hasPlatformAdminAuthority(user);
   const planSlug = await getUserPlanSlug(userId);
 
   const allModules = await db.select().from(modules);
@@ -440,58 +476,35 @@ export async function getAccessBreakdown(userId: string): Promise<AccessBreakdow
 export function requireModuleAccess(moduleSlug: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     await authenticate(request, reply);
-    if (reply.sent) return;
+    if (reply.sent) return reply;
     const user = (request as any).user;
 
     const { resolveTenantContext } = await import('./tenant-auth.js');
     const ctx = await resolveTenantContext(request);
     if (!ctx) {
-      reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
-      return;
+      return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
     }
     const access = await hasModuleAccess(user.id, ctx.tenantId, moduleSlug);
     if (!access.hasAccess) {
-      reply.code(403).send({
+      return reply.code(403).send({
         error: `Access to "${moduleSlug}" requires an upgraded plan or add-on.`,
         code: 'MODULE_ACCESS_DENIED',
         moduleSlug,
         source: access.source,
         reason: access.reason,
       });
-      return;
     }
     (request as any).moduleAccess = access;
   };
 }
 
 // ===========================================================================
-// Gate 1 — Tenant-aware entitlement (PRIMARY contract)
+// Tenant-aware entitlement facade
 // ===========================================================================
 //
-// `hasModuleAccess(userId, tenantId, slug)` is the canonical entitlement
-// check. Resolution order:
-//   1. user inactive        -> denied
-//   2. platform super_admin -> granted (source = 'admin_role')
-//   3. module not found     -> denied
-//   4. tenant_modules row missing or status not in
-//      {enabled, trial, purchased, beta} -> denied
-//      (NB: an `archived` or `disabled` tenant_module always denies, even
-//       for explicit grants, so revocation cascades cleanly.)
-//   5. tenant_user_module_access row with accessLevel='none' -> DENIED
-//      (explicit deny overrides the tenant-wide allowAllMembers opt-in)
-//   6. tenant_user_module_access row with accessLevel ∈ {user, manager}
-//      -> granted
-//   7. tm.allowAllMembers && user is a tenant member -> granted
-//   8. otherwise -> denied
-//
-// `source` is reported as 'plan' for any tenant-grant path so existing UI
-// badges keep working without a breaking shape change. A future gate will
-// likely introduce a more specific 'tenant_grant' source.
-//
-// LEGACY FALLBACK: callers that have not yet been migrated to tenants
-// pass `{ legacy: true }` and a placeholder tenantId; the call delegates to
-// the original per-user plan/addon/override check (`hasModuleAccessLegacy`).
-// Every legacy call site is tagged with a TODO referencing follow-up #19.
+// `tenant-entitlements.ts` is the central Phase 6 decision engine for
+// tenant/module access. This file keeps the legacy marketplace-facing return
+// shape stable while delegating the actual access decision to that helper.
 
 async function hasModuleAccessTenantScoped(
   userId: string,
@@ -499,78 +512,13 @@ async function hasModuleAccessTenantScoped(
   moduleSlug: string,
 ): Promise<ModuleAccess> {
   try {
-    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (!user || user.status !== 'active') {
-      return { moduleSlug, hasAccess: false, source: null, reason: 'user_inactive' };
-    }
-    if (user.platformRole === 'super_admin') {
-      return { moduleSlug, hasAccess: true, source: 'admin_role' };
-    }
-
-    const [mod] = await db.select().from(modules).where(eq(modules.slug, moduleSlug)).limit(1);
-    if (!mod) {
-      return { moduleSlug, hasAccess: false, source: null, reason: 'module_not_found' };
-    }
-
-    const [tm] = await db.select().from(tenantModules)
-      .where(and(eq(tenantModules.tenantId, tenantId), eq(tenantModules.moduleId, mod.id)))
-      .limit(1);
-    const launchable = ['enabled', 'trial', 'purchased', 'beta'];
-    if (!tm) {
-      // Task #66: default-enabled fallback. The data layer often lags
-      // behind plan changes — a tenant on Elite can have ZERO
-      // tenant_modules rows on first boot. Rather than denying every
-      // plan-included module until an admin clicks through the
-      // marketplace, we look up plan inclusion at runtime and grant
-      // (source='plan'). Explicit-deny semantics still win below
-      // because we only enter this branch when the row is *absent*.
-      const [planGrant] = await db.select({ planId: subscriptions.planId })
-        .from(subscriptions)
-        .innerJoin(planModules, eq(planModules.planId, subscriptions.planId))
-        .where(and(
-          eq(subscriptions.userId, userId),
-          eq(subscriptions.status, 'active'),
-          eq(planModules.moduleId, mod.id),
-        ))
-        .limit(1);
-      if (planGrant) {
-        return { moduleSlug, hasAccess: true, source: 'plan' };
-      }
-      return { moduleSlug, hasAccess: false, source: null, reason: 'no_plan_grant' };
-    }
-    if (!launchable.includes(tm.status)) {
-      // Explicit disabled / archived / etc. — never override with the
-      // plan fallback. Admins shut these off intentionally.
-      return { moduleSlug, hasAccess: false, source: null, reason: 'tenant_module_disabled' };
-    }
-    // The tenant_modules row encodes how the tenant got access. 'purchased'
-    // is the addon path (Stripe subscription); everything else (enabled,
-    // trial, beta) is the plan path. We surface that distinction to the
-    // UI through `source` so the marketplace badge stays correct.
-    const tmSource: 'addon' | 'plan' = tm.status === 'purchased' ? 'addon' : 'plan';
-
-    const [acc] = await db.select().from(tenantUserModuleAccess)
-      .where(and(
-        eq(tenantUserModuleAccess.tenantId, tenantId),
-        eq(tenantUserModuleAccess.userId, userId),
-        eq(tenantUserModuleAccess.moduleId, mod.id),
-      ))
-      .limit(1);
-    if (acc) {
-      if (acc.accessLevel === 'none') {
-        return { moduleSlug, hasAccess: false, source: null, reason: 'explicit_deny' };
-      }
-      return { moduleSlug, hasAccess: true, source: tmSource };
-    }
-
-    if (tm.allowAllMembers) {
-      const [tu] = await db.select().from(tenantUsers)
-        .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, userId)))
-        .limit(1);
-      if (tu) return { moduleSlug, hasAccess: true, source: tmSource };
-    }
-
-    return { moduleSlug, hasAccess: false, source: null, reason: 'no_tenant_grant' };
+    const decision = await resolveTenantModuleAccess(userId, tenantId, moduleSlug);
+    return {
+      moduleSlug: decision.moduleSlug,
+      hasAccess: decision.hasAccess,
+      source: decision.source,
+      reason: decision.reason,
+    };
   } catch (err) {
     console.error('[entitlement] hasModuleAccess (tenant-scoped) error:', err);
     return { moduleSlug, hasAccess: false, source: null, reason: 'evaluation_error' };

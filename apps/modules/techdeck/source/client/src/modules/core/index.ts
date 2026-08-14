@@ -1,0 +1,11 @@
+export { default as DashboardPage } from "./pages/dashboard";
+export { default as ClientsPage } from "./pages/clients";
+export { default as ClientDetailPage } from "./pages/client-detail";
+export { default as SitesPage } from "./pages/sites";
+export { default as AssetsPage } from "./pages/assets";
+export { default as TeamPage } from "./pages/team";
+export { default as AuditPage } from "./pages/audit";
+export { default as ClientAccessPage } from "./pages/client-access";
+export { default as SettingsPage } from "./pages/settings";
+export { default as OnboardingPage } from "./pages/onboarding";
+export { default as LandingPage } from "./pages/landing";

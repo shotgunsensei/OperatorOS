@@ -1,6 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-    <rect width="512" height="512" rx="77" fill="#0d1117"/>
-    <rect x="41" y="41" width="430" height="430" rx="51" fill="#161b22" stroke="#30363d" stroke-width="10"/>
-    <text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="143" fill="#58a6ff">OS</text>
-    <text x="50%" y="78%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-weight="400" font-size="41" fill="#8b949e">OperatorOS</text>
-  </svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 64 64">
+  <title>OperatorOS</title>
+  <rect width="64" height="64" rx="14" fill="#080B12"/>
+  <circle cx="32" cy="32" r="24" fill="none" stroke="#00E5FF" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="32" cy="32" r="16" fill="none" stroke="#00E5FF" stroke-opacity="0.28" stroke-width="1" stroke-dasharray="2 3"/>
+  <circle cx="32" cy="32" r="16" fill="none" stroke="#00E5FF" stroke-opacity="0.28" stroke-width="1" stroke-dasharray="2 3"/>
+  <circle cx="32" cy="8"  r="2.6" fill="#7C3AED"/>
+  <circle cx="56" cy="32" r="2.6" fill="#7C3AED"/>
+  <circle cx="32" cy="56" r="2.6" fill="#7C3AED"/>
+  <circle cx="8"  cy="32" r="2.6" fill="#7C3AED"/>
+  <path d="M25 26 L31 32 L25 38" fill="none" stroke="#F8FAFC" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="33" y1="40" x2="42" y2="40" stroke="#F8FAFC" stroke-width="2.8" stroke-linecap="round"/>
+</svg>

@@ -1,3 +1,30 @@
 packages:
   - "apps/*"
   - "packages/*"
+allowBuilds:
+  bufferutil: true
+  esbuild: true
+overrides:
+  rollup: ">=4.62.2"
+  tar: ">=7.5.21"
+  flatted: ">=3.4.2"
+  picomatch: "4.0.5"
+  "@xmldom/xmldom": ">=0.9.10"
+  ws: ">=8.21.1"
+  vite: "7.3.6"
+  "express>router": ">=2.2.0"
+  "router>path-to-regexp": ">=8.4.0"
+  "recharts>lodash": ">=4.18.0"
+  "@fastify/ajv-compiler>fast-uri": ">=3.1.4"
+  "ajv>fast-uri": ">=3.1.4"
+  "fast-json-stringify>fast-uri": ">=3.1.4"
+  "fastify>find-my-way": ">=9.7.0"
+  "minimatch>brace-expansion": ">=5.0.8"
+  "next>sharp": ">=0.35.0"
+  "next>postcss": ">=8.5.18"
+  "@vitejs/plugin-react>@babel/core": "7.29.6"
+  "express>body-parser": ">=2.3.0"
+  "express>qs": ">=6.15.2"
+  "tsx>esbuild": ">=0.28.1"
+  "vite>esbuild": ">=0.28.1"
+  "@esbuild-kit/core-utils>esbuild": ">=0.25.0"

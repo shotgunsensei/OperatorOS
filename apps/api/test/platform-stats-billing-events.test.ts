@@ -49,7 +49,7 @@ after(async () => {
   for (const u of [owner, superAdmin]) if (u) await cleanupUser(u.id);
 });
 
-const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role })}` });
+const bearer = (u: any) => ({ authorization: `Bearer ${signToken({ userId: u.id, email: u.email, role: u.role, sessionType: 'platform' })}` });
 
 async function fetchStats() {
   const res = await app.inject({

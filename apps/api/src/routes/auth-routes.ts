@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { db } from '../db.js';
-import { users, passwordResetTokens } from '../schema.js';
-import { eq } from 'drizzle-orm';
+import { users, passwordResetTokens, revokedSessionTokens } from '../schema.js';
+import { eq, sql } from 'drizzle-orm';
 import crypto from 'crypto';
 import {
   hashPassword,
@@ -13,7 +13,33 @@ import {
   logUserActivity,
   recordFailedLogin,
   resetFailedLogins,
+  sessionNeedsRefresh,
 } from '../lib/auth.js';
+import { checkRateLimit } from '../lib/rate-limiter.js';
+import {
+  ensureFreeAccountAppsWithDatabase,
+  ensurePersonalTenantWithDatabase,
+} from '../lib/saas-db-init.js';
+import {
+  getSessionClearCookieOptions,
+  getSessionCookieOptions,
+  SESSION_COOKIE_NAME,
+} from '../../../../packages/auth/index.js';
+import { enforcePlatformPublicAuthHost } from '../lib/public-auth-host.js';
+
+const AUTH_IP_RATE_LIMIT = 10;
+const AUTH_RATE_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_PER_ACCOUNT_LIMIT = 4;
+
+function getIp(request: any): string {
+  return (request.ip as string) ?? 'unknown';
+}
+
+function setAuthResponseHeaders(reply: any) {
+  reply.header('Cache-Control', 'no-store');
+  reply.header('Pragma', 'no-cache');
+  reply.header('Referrer-Policy', 'no-referrer');
+}
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 8;
@@ -41,6 +67,12 @@ function validateName(name: string): string | null {
 
 export async function registerAuthRoutes(app: FastifyInstance) {
   app.post('/v1/auth/register', async (request, reply) => {
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
+    const ip = getIp(request);
+    if (!checkRateLimit(`register:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
+      return reply.code(429).send({ error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' });
+    }
+
     const { email, password, name } = request.body as any;
 
     const emailErr = validateEmail(email);
@@ -54,35 +86,43 @@ export async function registerAuthRoutes(app: FastifyInstance) {
 
     const existing = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1);
     if (existing.length > 0) {
-      return reply.code(409).send({ error: 'Email already registered', code: 'EMAIL_EXISTS' });
+      return reply.code(202).send({ ok: true });
     }
 
     const passwordHash = await hashPassword(password);
-    const [user] = await db.insert(users).values({
-      email: normalizedEmail,
-      passwordHash,
-      name: name.trim(),
-      role: 'user',
-      status: 'active',
-    }).returning();
+    const user = await db.transaction(async tx => {
+      const [createdUser] = await tx.insert(users).values({
+        email: normalizedEmail,
+        passwordHash,
+        name: name.trim(),
+        role: 'user',
+        status: 'active',
+      }).onConflictDoNothing({ target: users.email }).returning();
+
+      // A concurrent request may have won the unique-email race. Preserve
+      // the non-enumerating response without mutating that existing account.
+      if (!createdUser) return null;
+
+      const { tenant } = await ensurePersonalTenantWithDatabase(tx, createdUser);
+      await ensureFreeAccountAppsWithDatabase(tx, tenant.id, createdUser.id);
+      return createdUser;
+    });
+
+    if (!user) return reply.code(202).send({ ok: true });
 
     await logUserActivity(user.id, 'registered', 'user', user.id);
     await logAudit(user.id, 'user_registered', user.id, { email: normalizedEmail });
 
-    const token = signToken({ userId: user.id, email: user.email, role: user.role });
-
-    reply.setCookie('token', token, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
-    });
-
-    return { user: sanitizeUser(user), token };
+    return reply.code(202).send({ ok: true });
   });
 
   app.post('/v1/auth/login', async (request, reply) => {
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
+    const ip = getIp(request);
+    if (!checkRateLimit(`login:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
+      return reply.code(429).send({ error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' });
+    }
+
     const { email, password } = request.body as any;
 
     const emailErr = validateEmail(email);
@@ -92,6 +132,11 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+
+    if (!checkRateLimit(`login:${ip}:${normalizedEmail}`, LOGIN_PER_ACCOUNT_LIMIT, AUTH_RATE_WINDOW_MS)) {
+      return reply.code(429).send({ error: 'Too many login attempts for this account. Please try again later.', code: 'RATE_LIMITED' });
+    }
+
     const [user] = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1);
 
     if (!user) {
@@ -119,7 +164,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) {
       await recordFailedLogin(user.id);
-      await logAudit(user.id, 'login_failed', user.id, { reason: 'wrong_password', failedCount: (user.failedLoginCount || 0) + 1 }, request.ip);
+      await logAudit(user.id, 'login_failed', user.id, { reason: 'wrong_password' }, request.ip);
       return reply.code(401).send({ error: 'Invalid email or password', code: 'INVALID_CREDENTIALS' });
     }
 
@@ -127,31 +172,131 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
     await logAudit(user.id, 'login_success', user.id, { email: normalizedEmail }, request.ip);
 
-    const token = signToken({ userId: user.id, email: user.email, role: user.role });
-
-    reply.setCookie('token', token, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
+    const token = signToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      tokenVersion: user.tokenVersion,
+      sessionType: 'platform',
     });
 
-    return { user: sanitizeUser(user), token };
+    reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
+
+    return { user: sanitizeUser(user) };
   });
 
-  app.post('/v1/auth/logout', { preHandler: [authenticate] }, async (request, reply) => {
+  const logoutHandler = async (request: any, reply: any) => {
     const user = (request as any).user;
-    await logAudit(user.id, 'logout', user.id, {}, request.ip);
-    reply.clearCookie('token', { path: '/' });
+    const session = (request as any).authSession;
+    const tokenHash = (request as any).authTokenFingerprint;
+    if (!tokenHash || typeof session?.exp !== 'number') {
+      return reply.code(500).send({ error: 'Session metadata unavailable', code: 'SESSION_METADATA_MISSING' });
+    }
+    await db.insert(revokedSessionTokens).values({
+      tokenHash,
+      userId: user.id,
+      sessionType: session.sessionType,
+      tenantId: session.tenantId ?? null,
+      moduleId: session.moduleId ?? null,
+      expiresAt: new Date(session.exp * 1000),
+      reason: 'local_logout',
+    }).onConflictDoNothing();
+    await logAudit(user.id, 'logout', user.id, {
+      scope: 'current_host_session',
+      sessionType: session.sessionType,
+      moduleId: session.moduleId ?? null,
+    }, request.ip);
+    reply.clearCookie(SESSION_COOKIE_NAME, getSessionClearCookieOptions());
     return { ok: true };
-  });
+  };
+  app.post('/v1/auth/logout', { preHandler: [authenticate] }, logoutHandler);
+  app.post('/api/auth/logout', { preHandler: [authenticate] }, logoutHandler);
 
-  app.get('/v1/auth/me', { preHandler: [authenticate] }, async (request) => {
-    return { user: sanitizeUser((request as any).user) };
-  });
+  const globalLogoutHandler = async (request: any, reply: any) => {
+    setAuthResponseHeaders(reply);
+    const user = (request as any).user;
+    await db.update(users)
+      .set({ tokenVersion: sql`token_version + 1`, updatedAt: new Date() })
+      .where(eq(users.id, user.id));
+    await logAudit(user.id, 'logout_all', user.id, { scope: 'all_operatoros_hosts' }, request.ip);
+    reply.clearCookie(SESSION_COOKIE_NAME, getSessionClearCookieOptions());
+    return { ok: true, revokedAllSessions: true };
+  };
+  app.post('/v1/auth/logout-all', { preHandler: [authenticate] }, globalLogoutHandler);
+  app.post('/api/auth/logout-all', { preHandler: [authenticate] }, globalLogoutHandler);
+
+  const meHandler = async (request: any) => {
+    const session = (request as any).authSession;
+    const user = sanitizeUser((request as any).user) as Record<string, unknown>;
+    if (session?.sessionType === 'module' && session.tenantId && session.moduleId) {
+      user.currentTenantId = session.tenantId;
+      return {
+        user,
+        session: {
+          type: 'module',
+          tenantId: session.tenantId,
+          moduleId: session.moduleId,
+        },
+      };
+    }
+    return { user, session: { type: 'platform' } };
+  };
+  app.get('/v1/auth/me', { preHandler: [authenticate] }, meHandler);
+  app.get('/api/auth/me', { preHandler: [authenticate] }, meHandler);
+
+  const refreshHandler = async (request: any, reply: any) => {
+    setAuthResponseHeaders(reply);
+    const user = request.user;
+    const session = request.authSession;
+    if (!session || typeof session.exp !== 'number' || !request.authTokenFingerprint) {
+      return reply.code(500).send({ error: 'Session metadata unavailable', code: 'SESSION_METADATA_MISSING' });
+    }
+
+    if (!sessionNeedsRefresh(session)) {
+      return {
+        ok: true,
+        refreshed: false,
+        expiresAt: new Date(session.exp * 1000).toISOString(),
+      };
+    }
+
+    const token = signToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      tokenVersion: user.tokenVersion,
+      sessionType: session.sessionType,
+      ...(session.sessionType === 'module'
+        ? { tenantId: session.tenantId, moduleId: session.moduleId }
+        : {}),
+    });
+
+    await db.insert(revokedSessionTokens).values({
+      tokenHash: request.authTokenFingerprint,
+      userId: user.id,
+      sessionType: session.sessionType,
+      tenantId: session.tenantId ?? null,
+      moduleId: session.moduleId ?? null,
+      expiresAt: new Date(session.exp * 1000),
+      reason: 'session_refresh',
+    }).onConflictDoNothing();
+    reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
+    await logAudit(user.id, 'session_refreshed', user.id, {
+      scope: session.sessionType,
+      moduleId: session.moduleId ?? null,
+    }, request.ip);
+    return { ok: true, refreshed: true };
+  };
+  app.post('/v1/auth/refresh', { preHandler: [authenticate] }, refreshHandler);
+  app.post('/api/auth/refresh', { preHandler: [authenticate] }, refreshHandler);
 
   app.post('/v1/auth/forgot-password', async (request, reply) => {
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
+    const ip = getIp(request);
+    if (!checkRateLimit(`forgot:${ip}`, AUTH_IP_RATE_LIMIT, AUTH_RATE_WINDOW_MS)) {
+      return reply.code(429).send({ error: 'Too many requests. Please try again later.', code: 'RATE_LIMITED' });
+    }
+
     const { email } = request.body as any;
     const emailErr = validateEmail(email);
     if (emailErr) return reply.code(400).send({ error: emailErr, code: 'VALIDATION_ERROR' });
@@ -176,6 +321,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   app.post('/v1/auth/reset-password', async (request, reply) => {
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const { token, newPassword } = request.body as any;
     if (!token || typeof token !== 'string') {
       return reply.code(400).send({ error: 'Reset token is required', code: 'VALIDATION_ERROR' });
@@ -191,7 +337,11 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     const passwordHash = await hashPassword(newPassword);
-    await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, resetToken.userId));
+    await db.update(users).set({
+      passwordHash,
+      tokenVersion: sql`token_version + 1`,
+      updatedAt: new Date(),
+    }).where(eq(users.id, resetToken.userId));
     await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, resetToken.id));
 
     await resetFailedLogins(resetToken.userId);
@@ -201,6 +351,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   app.put('/v1/auth/profile', { preHandler: [authenticate] }, async (request, reply) => {
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const user = (request as any).user;
     const { name, avatarUrl } = request.body as any;
     const updates: any = { updatedAt: new Date() };
@@ -218,6 +369,8 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   app.put('/v1/auth/change-password', { preHandler: [authenticate] }, async (request, reply) => {
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
+    setAuthResponseHeaders(reply);
     const user = (request as any).user;
     const { currentPassword, newPassword } = request.body as any;
 
@@ -238,14 +391,30 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     const passwordHash = await hashPassword(newPassword);
-    await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, user.id));
+    const [updated] = await db.update(users).set({
+      passwordHash,
+      tokenVersion: sql`token_version + 1`,
+      updatedAt: new Date(),
+    }).where(eq(users.id, user.id)).returning();
     await logAudit(user.id, 'password_changed', user.id, {}, request.ip);
     await logUserActivity(user.id, 'password_changed', 'user', user.id);
 
-    return { message: 'Password changed successfully' };
+    const token = signToken({
+      userId: updated.id,
+      email: updated.email,
+      role: updated.role,
+      tokenVersion: updated.tokenVersion,
+      sessionType: 'platform',
+    });
+
+    reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
+
+    return { user: sanitizeUser(updated), message: 'Password changed successfully' };
   });
 
   app.put('/v1/auth/change-email', { preHandler: [authenticate] }, async (request, reply) => {
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
+    setAuthResponseHeaders(reply);
     const user = (request as any).user;
     const { newEmail, password } = request.body as any;
 
@@ -271,24 +440,29 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     }
 
     const oldEmail = user.email;
-    const [updated] = await db.update(users).set({ email: normalizedEmail, updatedAt: new Date() }).where(eq(users.id, user.id)).returning();
+    const [updated] = await db.update(users).set({
+      email: normalizedEmail,
+      tokenVersion: sql`token_version + 1`,
+      updatedAt: new Date(),
+    }).where(eq(users.id, user.id)).returning();
     await logAudit(user.id, 'email_changed', user.id, { oldEmail, newEmail: normalizedEmail }, request.ip);
     await logUserActivity(user.id, 'email_changed', 'user', user.id, { oldEmail, newEmail: normalizedEmail });
 
-    const token = signToken({ userId: updated.id, email: updated.email, role: updated.role });
-
-    reply.setCookie('token', token, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
+    const token = signToken({
+      userId: updated.id,
+      email: updated.email,
+      role: updated.role,
+      tokenVersion: updated.tokenVersion,
+      sessionType: 'platform',
     });
 
-    return { user: sanitizeUser(updated), token, message: 'Email updated successfully' };
+    reply.setCookie(SESSION_COOKIE_NAME, token, getSessionCookieOptions());
+
+    return { user: sanitizeUser(updated), message: 'Email updated successfully' };
   });
 
   app.post('/v1/auth/request-deletion', { preHandler: [authenticate] }, async (request, reply) => {
+    if (!enforcePlatformPublicAuthHost(request, reply)) return reply;
     const user = (request as any).user;
     const { password } = request.body as any;
 
@@ -314,7 +488,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     await logAudit(user.id, 'account_deletion_requested', user.id, {}, request.ip);
     await logUserActivity(user.id, 'account_deleted', 'user', user.id);
 
-    reply.clearCookie('token', { path: '/' });
+    reply.clearCookie(SESSION_COOKIE_NAME, getSessionClearCookieOptions());
     return { ok: true, message: 'Account has been deleted' };
   });
 }

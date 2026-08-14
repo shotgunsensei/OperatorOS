@@ -18,8 +18,55 @@ import { db } from '../db.js';
 import { tenants, tenantUsers, users } from '../schema.js';
 import { authenticate } from '../lib/auth.js';
 import { requireSuperAdmin, requireTenantMember } from '../lib/tenant-auth.js';
+import { hasPlatformAdminAuthority } from '../lib/rbac.js';
+import { checkRateLimit } from '../lib/rate-limiter.js';
+import {
+  ensureFreeAccountAppsWithDatabase,
+  ensurePersonalTenantWithDatabase,
+} from '../lib/saas-db-init.js';
+import { writeAudit } from '../lib/audit.js';
+
+const PERSONAL_TENANT_REPAIR_LIMIT = 5;
+const PERSONAL_TENANT_REPAIR_WINDOW_MS = 15 * 60 * 1000;
 
 export async function registerTenantRoutes(app: FastifyInstance) {
+  // Idempotent recovery for an account created before transactional personal-
+  // tenant provisioning existed. The client supplies no tenant identifier:
+  // the server derives the collision-safe personal slug from the session user.
+  app.post('/v1/me/tenant/ensure', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+    const key = `personal-tenant:${user.id}:${request.ip ?? 'unknown'}`;
+    if (!checkRateLimit(key, PERSONAL_TENANT_REPAIR_LIMIT, PERSONAL_TENANT_REPAIR_WINDOW_MS)) {
+      return reply.code(429).send({ error: 'Too many organization setup attempts. Please try again later.', code: 'RATE_LIMITED' });
+    }
+
+    const result = await db.transaction(async tx => {
+      const ensured = await ensurePersonalTenantWithDatabase(tx, user);
+      await ensureFreeAccountAppsWithDatabase(tx, ensured.tenant.id, user.id);
+      await writeAudit({
+        actorUserId: user.id,
+        tenantId: ensured.tenant.id,
+        targetType: 'tenant',
+        targetId: ensured.tenant.id,
+        action: ensured.created ? 'personal_tenant_created' : 'personal_tenant_reconciled',
+        after: { type: 'personal', freeAccountAppsEnsured: true },
+        ipAddress: request.ip,
+      }, request, tx);
+      return ensured;
+    });
+
+    return reply.code(result.created ? 201 : 200).send({
+      ok: true,
+      created: result.created,
+      tenant: {
+        id: result.tenant.id,
+        slug: result.tenant.slug,
+        name: result.tenant.name,
+        type: result.tenant.type,
+      },
+    });
+  });
+
   // ──────────────────────────────────────────────────────────────────────
   // Platform: list every tenant (super_admin only).
   // ──────────────────────────────────────────────────────────────────────
@@ -44,7 +91,11 @@ export async function registerTenantRoutes(app: FastifyInstance) {
       if (!tenant) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
       return reply.send({
         tenant,
-        membership: { role: ctx.role, viaPlatformRole: ctx.viaPlatformRole },
+        membership: {
+          role: ctx.role,
+          membershipRole: ctx.membershipRole,
+          viaPlatformRole: ctx.viaPlatformRole,
+        },
       });
     },
   );
@@ -54,6 +105,21 @@ export async function registerTenantRoutes(app: FastifyInstance) {
   // ──────────────────────────────────────────────────────────────────────
   app.get('/v1/me/tenants', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
+    const session = (request as any).authSession;
+    if (session?.sessionType === 'module' && session.tenantId) {
+      const [tenant] = await db.select().from(tenants).where(eq(tenants.id, session.tenantId)).limit(1);
+      if (!tenant) return reply.send({ tenants: [], current: null, sessionBound: true });
+      const [membership] = await db.select().from(tenantUsers)
+        .where(and(eq(tenantUsers.tenantId, session.tenantId), eq(tenantUsers.userId, user.id)))
+        .limit(1);
+      const role = membership?.role ?? (hasPlatformAdminAuthority(user) ? 'owner' : null);
+      if (!role) return reply.send({ tenants: [], current: null, sessionBound: true });
+      return reply.send({
+        tenants: [{ ...tenant, role }],
+        current: session.tenantId,
+        sessionBound: true,
+      });
+    }
     const memberships = await db.select().from(tenantUsers).where(eq(tenantUsers.userId, user.id));
     if (memberships.length === 0) {
       return reply.send({ tenants: [], current: null });
@@ -86,7 +152,7 @@ export async function registerTenantRoutes(app: FastifyInstance) {
       const [membership] = await db.select().from(tenantUsers)
         .where(and(eq(tenantUsers.tenantId, tenantId), eq(tenantUsers.userId, user.id)))
         .limit(1);
-      if (!membership && user.platformRole !== 'super_admin') {
+      if (!membership && !hasPlatformAdminAuthority(user)) {
         return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
       }
       const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
@@ -95,10 +161,10 @@ export async function registerTenantRoutes(app: FastifyInstance) {
       }
       // Archived tenants are invisible to non-super-admins; suspended tenants
       // are visible but cannot be made the active tenant for the session.
-      if ((tenant as any).status === 'archived' && user.platformRole !== 'super_admin') {
+      if ((tenant as any).status === 'archived' && !hasPlatformAdminAuthority(user)) {
         return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
       }
-      if ((tenant as any).status === 'suspended' && user.platformRole !== 'super_admin') {
+      if ((tenant as any).status === 'suspended' && !hasPlatformAdminAuthority(user)) {
         return reply.code(403).send({
           error: 'Tenant is suspended. Contact platform administrator.',
           code: 'TENANT_SUSPENDED',

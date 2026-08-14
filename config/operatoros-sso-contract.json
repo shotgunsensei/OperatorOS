@@ -1,0 +1,42 @@
+{
+  "contractVersion": "v1",
+  "authority": "https://auth.operatoros.net",
+  "issuer": "https://operatoros.net",
+  "authorizationCode": {
+    "ttlSeconds": 60,
+    "singleUse": true,
+    "browserParameter": "code",
+    "pkceMethods": ["S256"],
+    "exactRedirectUriRequired": true
+  },
+  "sessions": {
+    "cookieScope": "host-only",
+    "secure": true,
+    "httpOnly": true,
+    "sameSite": "Lax"
+  },
+  "forbiddenBrowserParameters": ["token", "access_token", "id_token", "refresh_token"],
+  "platformClients": [
+    "operatoros:web"
+  ],
+  "coreClients": [
+    "operatoros:tradeflowkit",
+    "operatoros:techdeck",
+    "operatoros:pulsedesk"
+  ],
+  "freeClients": [
+    "operatoros:torqueshed",
+    "operatoros:faultlinelab",
+    "operatoros:ninja-pool-hall"
+  ],
+  "addonClients": [
+    "operatoros:brandforgeos",
+    "operatoros:snapproofos",
+    "operatoros:studyforge-ai",
+    "operatoros:ninja-launch-kit",
+    "operatoros:callcommand-ai",
+    "operatoros:ninjamation",
+    "operatoros:outcall"
+  ],
+  "plannedClients": []
+}

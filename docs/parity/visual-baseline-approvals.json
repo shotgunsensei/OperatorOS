@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "policy": "Do not add an approval until a human has reviewed the exact PNG against its pinned source references. Updating screenshots alone never approves them.",
+  "approvals": []
+}

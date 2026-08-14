@@ -3,8 +3,9 @@
 /**
  * Task #66 — /admin/health
  *
- * Super-admin-only launch-readiness dashboard. Fetches
- * `GET /v1/platform/health` and renders every probe as a red/green dot.
+ * Super-admin-only launch-readiness dashboard. Fetches through the frontend
+ * proxy as `/api/platform/health`, which rewrites to backend
+ * `GET /v1/platform/health`, and renders every probe as a red/green dot.
  * Booleans only by design — secret values and PII never reach the DOM,
  * so a screenshot of this page is always safe to share.
  *
@@ -15,21 +16,8 @@
 
 import { useEffect, useState } from 'react';
 import AuthProvider, { useAuth } from '@/components/AuthProvider';
-
-// Local fetch helper — mirrors the apiCall pattern used in PlatformPage so
-// /admin/health doesn't take a dependency on the private auth.ts internals.
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-async function apiCall(path: string): Promise<unknown> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const res = await fetch(`${API}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
+import ContactLink from '@/components/ContactLink';
+import { platformApiCall } from '@/lib/platform-api';
 
 interface HealthResponse {
   ok: boolean;
@@ -38,7 +26,7 @@ interface HealthResponse {
   auth: { sessionSecretConfigured: boolean };
   ai: { openaiKeyConfigured: boolean };
   emailFrom: { configured: boolean };
-  emailProvider: { configured: boolean; provider: 'resend' | 'log' };
+  emailProvider: { configured: boolean; provider: 'resend' | 'test' | 'disabled' };
   baseUrl: { configured: boolean };
   plans: {
     seeded: boolean;
@@ -107,7 +95,7 @@ function HealthDashboard() {
     let alive = true;
     (async () => {
       try {
-        const res = (await apiCall('/v1/platform/health')) as HealthResponse;
+        const res = await platformApiCall<HealthResponse>('/platform/health');
         if (alive) setHealth(res);
       } catch (e) {
         const msg = (e as { error?: string; message?: string })?.error
@@ -160,7 +148,7 @@ function HealthDashboard() {
         <Row label="EMAIL_FROM configured" ok={health.emailFrom.configured} />
         <Row label="Email provider configured"
              ok={health.emailProvider?.configured ?? false}
-             sub={health.emailProvider?.provider ?? 'log'} />
+             sub={health.emailProvider?.provider ?? 'disabled'} />
         <Row label="OPERATOROS_BASE_URL configured" ok={health.baseUrl.configured} />
         <Row label="Bootstrap super-admin email set" ok={health.bootstrapSuperAdmin.emailConfigured} />
         <Row label="Shotgun tenant configured" ok={health.shotgunTenant.configured} />
@@ -237,6 +225,7 @@ export default function AdminHealthRoute() {
   return (
     <AuthProvider>
       <HealthDashboard />
+      <ContactLink />
     </AuthProvider>
   );
 }

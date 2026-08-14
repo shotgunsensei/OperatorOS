@@ -1,0 +1,216 @@
+You are working inside this existing Replit project. Do not rewrite the app from scratch.
+
+Goal:
+Add complete SSO login support from OperatorOS.net so this app can accept authenticated users launched from OperatorOS.
+
+OperatorOS is the identity provider and tenant/module control tower.
+
+This child app must trust short-lived SSO tokens issued by OperatorOS only.
+
+Inspect the existing stack first:
+- auth system
+- user/session model
+- database schema
+- routing framework
+- frontend routing
+- environment variable pattern
+- existing login/register behavior
+
+Do not break local login unless explicitly required. Add OperatorOS SSO as an additional login path.
+
+Required env vars:
+OPERATOROS_BASE_URL=https://operatoros.net
+OPERATOROS_SSO_ISSUER=https://operatoros.net
+OPERATOROS_SSO_PUBLIC_KEY=<paste OperatorOS public key or JWKS URL>
+OPERATOROS_SSO_AUDIENCE=<this app module key>
+OPERATOROS_SSO_ALLOWED_CLOCK_SKEW_SECONDS=60
+
+Set OPERATOROS_SSO_AUDIENCE based on this app:
+
+TradeFlowKit:
+TRADEFLOWKIT
+
+TechDeck:
+TECHDECK
+
+TorqueShed:
+TORQUESHED
+
+PulseDesk:
+PULSEDESK
+
+BrandForge OS:
+BF_OS
+
+Faultline Lab:
+FAULTLINELAB
+
+SnapProofOS:
+SNAPPROOFOS
+
+Ninjamation:
+NINJAMATION
+
+If this project already has a product/module key, use the existing key only if it matches OperatorOS.
+
+SSO consume route:
+Create:
+
+GET /sso/consume?token=<jwt>
+
+or use the closest existing route convention.
+
+This route must:
+1. Read token from query parameter or POST body.
+2. Verify signature using OperatorOS public key.
+3. Verify issuer equals OPERATOROS_SSO_ISSUER.
+4. Verify audience equals OPERATOROS_SSO_AUDIENCE.
+5. Verify exp, iat, and nbf if present.
+6. Reject expired tokens.
+7. Reject invalid signatures.
+8. Reject missing tenant_id.
+9. Reject missing email.
+10. Reject tokens for another module/app.
+11. Prevent replay if practical by storing jti for the token lifetime.
+
+Expected token claims from OperatorOS:
+- iss
+- aud
+- sub
+- email
+- name
+- tenant_id
+- tenant_slug
+- tenant_name
+- tenant_role
+- module_key
+- iat
+- exp
+- jti
+- entitlements optional
+- plan optional
+
+User mapping:
+When a valid OperatorOS SSO token is consumed:
+
+1. Find an existing local user by operatoros_user_id if present.
+2. If not found, find by email.
+3. If no user exists, create one.
+4. Store/update:
+   - operatoros_user_id from sub
+   - email
+   - name
+   - tenant_id
+   - tenant_slug
+   - tenant_name
+   - tenant_role
+   - last_sso_login_at
+5. Do not allow SSO to overwrite unrelated local admin privileges unless intentional.
+6. Map OperatorOS tenant roles to local app roles.
+
+Suggested role mapping:
+- tenant_admin -> admin or tenant_admin inside this app
+- module_admin -> app_admin or manager
+- billing_manager -> billing
+- support_user -> support
+- standard_user -> user
+
+Tenant isolation:
+If this app stores tenant-owned records, enforce tenant scoping using tenant_id from OperatorOS.
+
+A user from tenant A must never see tenant B records.
+
+Add middleware/helper:
+- requireAuth
+- requireTenantContext
+- requireRole if needed
+
+Session creation:
+After successful SSO verification and user mapping:
+1. Create a normal local session/JWT/cookie for this app.
+2. Redirect to the app dashboard.
+3. Do not keep the SSO token in the browser URL after login.
+4. Clear it from history if the frontend supports that.
+
+Recommended redirect:
+After consuming token, redirect to:
+
+/dashboard
+
+or the existing authenticated landing page.
+
+Logout:
+Add optional "Return to OperatorOS" link:
+https://operatoros.net
+
+Security:
+1. Never accept unsigned JWTs.
+2. Never decode without verifying.
+3. Never trust email alone without verifying token signature.
+4. Never allow SSO token to grant global app owner/admin unless this app intentionally treats OperatorOS tenant_admin as app admin for that tenant.
+5. Log failed SSO attempts without exposing token contents.
+6. Do not print tokens to console.
+7. Do not store raw SSO tokens long term.
+8. Use secure, httpOnly cookies if the existing app supports them.
+
+Database changes:
+Add only missing fields.
+
+Suggested users table additions if needed:
+- operatoros_user_id
+- operatoros_tenant_id
+- operatoros_tenant_slug
+- operatoros_tenant_name
+- operatoros_tenant_role
+- last_sso_login_at
+
+Suggested token replay table if practical:
+- id
+- jti
+- expires_at
+- consumed_at
+
+Frontend:
+Add a clean SSO error page for:
+- expired token
+- invalid token
+- module not authorized
+- missing tenant
+- server configuration missing
+
+Error page should include:
+- a button back to OperatorOS
+- a short message that access must be launched from OperatorOS
+
+Do not expose technical secrets or raw token details in the UI.
+
+Testing:
+Add or document manual verification steps:
+1. Invalid token is rejected.
+2. Expired token is rejected.
+3. Token with wrong audience is rejected.
+4. Token with wrong issuer is rejected.
+5. Valid OperatorOS token creates or updates user.
+6. Valid OperatorOS token creates local app session.
+7. User lands on dashboard.
+8. Tenant ID is saved and used for tenant isolation.
+9. Replayed token is rejected if replay protection is implemented.
+10. Logout still works.
+
+Deliverables:
+1. SSO consume route.
+2. Token verification helper.
+3. User mapping logic.
+4. Session creation logic.
+5. Tenant context storage.
+6. SSO error page.
+7. Env var documentation.
+8. Manual test checklist.
+9. Final summary of changed files and exact env vars required.
+
+Important:
+This app should not manage tenants globally. OperatorOS is the tenant authority.
+
+This app should only accept the tenant/user/module context provided by a valid OperatorOS SSO token.
+
+Do not break existing local login or existing users unless absolutely necessary.

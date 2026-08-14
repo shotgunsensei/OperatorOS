@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { authApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
+import { brand } from '@/lib/brand';
 
 interface ForgotPasswordPageProps {
   onSwitch: (page: 'login' | 'reset-password') => void;
@@ -22,7 +23,7 @@ export default function ForgotPasswordPage({ onSwitch }: ForgotPasswordPageProps
       await authApi.forgotPassword(email);
       setSent(true);
     } catch (err: any) {
-      setError(err.error || 'Failed to send reset email');
+      setError(err.error || 'We could not process that reset request. Try again in a moment.');
     } finally {
       setLoading(false);
     }
@@ -31,22 +32,23 @@ export default function ForgotPasswordPage({ onSwitch }: ForgotPasswordPageProps
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: colors.bg, padding: 20,
+      background: brand.bgPrimary, padding: 'clamp(16px, 4vw, 32px)',
     }}>
       <div style={{
-        width: '100%', maxWidth: 420, background: colors.bgSecondary,
-        border: `1px solid ${colors.border}`, borderRadius: 16, padding: 40,
+        width: '100%', maxWidth: 440, background: brand.bgSecondary,
+        border: `1px solid ${brand.borderSoft}`, borderRadius: 16,
+        padding: 'clamp(24px, 7vw, 40px)', boxSizing: 'border-box',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
             width: 48, height: 48, borderRadius: 12, margin: '0 auto 16px',
-            background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)',
+            background: `linear-gradient(135deg, ${brand.accentCyan} 0%, ${brand.accentViolet} 100%)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 24, fontWeight: 800, color: '#fff',
+            fontSize: 24, fontWeight: 800, color: brand.accentInk,
           }}>O</div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Forgot password</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: brand.textPrimary, margin: 0 }}>Reset your OperatorOS access</h1>
           <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>
-            {sent ? 'Check your email for reset instructions' : 'Enter your email to receive a reset link'}
+            {sent ? 'If an account uses this email, reset instructions are on the way.' : 'Enter your email and we’ll send a reset link.'}
           </p>
         </div>
 
@@ -63,18 +65,18 @@ export default function ForgotPasswordPage({ onSwitch }: ForgotPasswordPageProps
             <div style={{ marginBottom: 24 }}>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>Email</label>
               <input data-testid="input-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required
-                style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.bg, color: colors.text, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: `1px solid ${brand.borderSoft}`, background: brand.bgPrimary, color: brand.textPrimary, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
                 placeholder="you@example.com" />
             </div>
             <button type="submit" data-testid="button-reset" disabled={loading}
-              style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', background: loading ? colors.textDim : colors.accent, color: '#fff', fontSize: 14, fontWeight: 600, cursor: loading ? 'default' : 'pointer' }}>
-              {loading ? 'Sending...' : 'Send reset link'}
+              style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: loading ? brand.textMuted : `linear-gradient(135deg, ${brand.accentCyan}, ${brand.accentViolet})`, color: brand.accentInk, fontSize: 14, fontWeight: 700, cursor: loading ? 'default' : 'pointer' }}>
+              {loading ? 'Sending…' : 'Send reset link'}
             </button>
           </form>
         ) : (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <div data-testid="reset-sent" style={{ color: colors.accentGreen, fontSize: 14, marginBottom: 16 }}>
-              Reset instructions have been sent to your email.
+              If that email exists, reset instructions have been sent.
             </div>
             <button
               data-testid="link-reset-password"

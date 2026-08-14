@@ -11,8 +11,8 @@
  *   1. Peek the invite (public, unauthenticated) so we can pre-fill the
  *      invitee's email and surface friendly errors (expired / already used /
  *      not found) before asking them to sign in.
- *   2. If the visitor is not signed in, stash the token + email in
- *      localStorage and send them to the app root, which already renders
+ *   2. If the visitor is not signed in, keep the token + email in this tab's
+ *      sessionStorage and send them to the app root, which already renders
  *      the login/register flow. The login/register pages read the parked
  *      email and pre-fill it. After auth, the root page bounces back here
  *      and we accept the invite automatically.
@@ -28,6 +28,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { tenantApi } from '@/lib/auth';
 import AuthProvider, { useAuth } from '@/components/AuthProvider';
+import ContactLink from '@/components/ContactLink';
 
 const PENDING_INVITE_KEY = 'operatoros.pendingInviteToken';
 const PENDING_INVITE_EMAIL_KEY = 'operatoros.pendingInviteEmail';
@@ -103,8 +104,8 @@ function InviteAcceptInner() {
     // stale parked invite so a later sign-in doesn't try to redeem it.
     if (peek.status !== 'pending') {
       try {
-        localStorage.removeItem(PENDING_INVITE_KEY);
-        localStorage.removeItem(PENDING_INVITE_EMAIL_KEY);
+        sessionStorage.removeItem(PENDING_INVITE_KEY);
+        sessionStorage.removeItem(PENDING_INVITE_EMAIL_KEY);
       } catch {}
       return;
     }
@@ -114,11 +115,16 @@ function InviteAcceptInner() {
       // the root which already renders the auth flow. The root page picks
       // the token back up after sign-in and sends them right back here.
       try {
-        localStorage.setItem(PENDING_INVITE_KEY, token);
-        if (peek.email) localStorage.setItem(PENDING_INVITE_EMAIL_KEY, peek.email);
+        sessionStorage.setItem(PENDING_INVITE_KEY, token);
+        if (peek.email) sessionStorage.setItem(PENDING_INVITE_EMAIL_KEY, peek.email);
       } catch {}
       setPhase('redirecting-login');
-      router.replace('/');
+      // Marketing redesign: `/` is the public landing; the console
+      // (with its embedded LoginPage for signed-out users) lives at
+      // `/app`, and ConsolePage re-reads PENDING_INVITE_KEY after
+      // sign-in to bring the user back to this invite page at the
+      // canonical /app/invites/:token path.
+      router.replace('/app');
       return;
     }
 
@@ -131,8 +137,8 @@ function InviteAcceptInner() {
       try {
         const result = await tenantApi.acceptInvite(token);
         try {
-          localStorage.removeItem(PENDING_INVITE_KEY);
-          localStorage.removeItem(PENDING_INVITE_EMAIL_KEY);
+          sessionStorage.removeItem(PENDING_INVITE_KEY);
+          sessionStorage.removeItem(PENDING_INVITE_EMAIL_KEY);
         } catch {}
         // Switch the active tenant server-side so users.current_tenant_id
         // matches the X-Tenant-Id header — otherwise the next page load
@@ -150,8 +156,10 @@ function InviteAcceptInner() {
         setPhase('accepted');
         // Hard navigate so TenantProvider re-fetches with the new tenant.
         setTimeout(() => {
-          if (typeof window !== 'undefined') window.location.href = '/';
-          else router.replace('/');
+          // Hard-navigate to `/app` (the console) so TenantProvider
+          // re-fetches with the new tenant. `/` is now marketing.
+          if (typeof window !== 'undefined') window.location.href = '/app';
+          else router.replace('/app');
         }, 600);
       } catch (e: any) {
         // Only surface this error if we haven't already reached a terminal
@@ -254,6 +262,7 @@ export default function InviteAcceptPage() {
   return (
     <AuthProvider>
       <InviteAcceptInner />
+      <ContactLink />
     </AuthProvider>
   );
 }

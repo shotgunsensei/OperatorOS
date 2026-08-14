@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /account
+Disallow: /dashboard
+Disallow: /builder
+Disallow: /kits
+Disallow: /exports
+Disallow: /brands
+Disallow: /api/
+
+Sitemap: {{BASE_URL}}/sitemap.xml

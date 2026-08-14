@@ -1,0 +1,2306 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: CallCommand AI API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: calls
+    description: Call records
+  - name: actionItems
+    description: Action items
+  - name: integrations
+    description: Webhook integrations
+  - name: storage
+    description: Object storage
+  - name: stats
+    description: Dashboard stats
+  - name: billing
+    description: Billing & plans
+  - name: automation
+    description: Automation rules
+  - name: tickets
+    description: Tickets created from calls
+  - name: leads
+    description: Leads created from calls
+  - name: tasks
+    description: Tasks created from calls
+  - name: followups
+    description: Follow-up messages
+  - name: ingestion
+    description: External ingestion sources
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /me:
+    get:
+      operationId: getMe
+      tags: [health]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestUploadUrlBody"
+      responses:
+        "200":
+          description: Upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestUploadUrlResponse"
+
+  /calls:
+    get:
+      operationId: listCalls
+      tags: [calls]
+      summary: List call records
+      parameters:
+        - in: query
+          name: q
+          required: false
+          schema: { type: string }
+        - in: query
+          name: status
+          required: false
+          schema: { type: string }
+        - in: query
+          name: priority
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CallList"
+    post:
+      operationId: createCall
+      tags: [calls]
+      summary: Create a call record from an upload (kicks off processing)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCallBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Call"
+
+  /calls/{id}:
+    get:
+      operationId: getCall
+      tags: [calls]
+      summary: Get a single call record
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Call
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Call"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteCall
+      tags: [calls]
+      summary: Delete a call record
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Deleted
+
+  /calls/{id}/process:
+    post:
+      operationId: processCall
+      tags: [calls]
+      summary: (Re)process the call - transcribe and analyze
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Call"
+
+  /calls/{id}/webhook:
+    post:
+      operationId: sendCallWebhook
+      tags: [calls]
+      summary: Send the call payload to a configured webhook
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendWebhookBody"
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResult"
+
+  /calls/{id}/pdf:
+    get:
+      operationId: getCallPdf
+      tags: [calls]
+      summary: Download a PDF report of the call
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: PDF stream
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /action-items/{id}:
+    patch:
+      operationId: updateActionItem
+      tags: [actionItems]
+      summary: Update an action item (toggle status / change due date)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateActionItemBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionItem"
+
+  /integrations:
+    get:
+      operationId: listIntegrations
+      tags: [integrations]
+      summary: List configured webhook integrations
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationList"
+    post:
+      operationId: createIntegration
+      tags: [integrations]
+      summary: Create a new webhook integration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIntegrationBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Integration"
+
+  /integrations/{id}:
+    patch:
+      operationId: updateIntegration
+      tags: [integrations]
+      summary: Update an integration
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIntegrationBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Integration"
+    delete:
+      operationId: deleteIntegration
+      tags: [integrations]
+      summary: Delete an integration
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Deleted
+
+  /integrations/{id}/test:
+    post:
+      operationId: testIntegration
+      tags: [integrations]
+      summary: Send a test payload to a webhook
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResult"
+
+  /stats/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [stats]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /billing/checkout:
+    post:
+      operationId: createCheckoutSession
+      tags: [billing]
+      summary: Create a Stripe checkout session (placeholder if Stripe not configured)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutBody"
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSession"
+
+  /billing/plan:
+    get:
+      operationId: getBillingPlan
+      tags: [billing]
+      summary: Get current plan details
+      responses:
+        "200":
+          description: Plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingPlan"
+
+  /me/ingestion-token:
+    get:
+      operationId: getIngestionToken
+      tags: [ingestion]
+      summary: Get the current user's ingestion token (for external webhooks)
+      responses:
+        "200":
+          description: Token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestionTokenResponse"
+    post:
+      operationId: rotateIngestionToken
+      tags: [ingestion]
+      summary: Rotate (regenerate) the ingestion token
+      responses:
+        "200":
+          description: New token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestionTokenResponse"
+
+  /automation-rules:
+    get:
+      operationId: listAutomationRules
+      tags: [automation]
+      summary: List automation rules
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationRuleList"
+    post:
+      operationId: createAutomationRule
+      tags: [automation]
+      summary: Create a new automation rule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAutomationRuleBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationRule"
+
+  /automation-rules/{id}:
+    patch:
+      operationId: updateAutomationRule
+      tags: [automation]
+      summary: Update a rule
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAutomationRuleBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationRule"
+    delete:
+      operationId: deleteAutomationRule
+      tags: [automation]
+      summary: Delete a rule
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Deleted
+
+  /tickets:
+    get:
+      operationId: listTickets
+      tags: [tickets]
+      summary: List tickets
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketList"
+
+  /tickets/{id}:
+    patch:
+      operationId: updateTicket
+      tags: [tickets]
+      summary: Update a ticket
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTicketBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+    delete:
+      operationId: deleteTicket
+      tags: [tickets]
+      summary: Delete a ticket
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Deleted
+
+  /leads:
+    get:
+      operationId: listLeads
+      tags: [leads]
+      summary: List leads
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadList"
+
+  /leads/{id}:
+    patch:
+      operationId: updateLead
+      tags: [leads]
+      summary: Update a lead
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLeadBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+    delete:
+      operationId: deleteLead
+      tags: [leads]
+      summary: Delete a lead
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Deleted
+
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List tasks
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskList"
+
+  /tasks/{id}:
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update a task
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    delete:
+      operationId: deleteTask
+      tags: [tasks]
+      summary: Delete a task
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Deleted
+
+  /follow-ups:
+    get:
+      operationId: listFollowups
+      tags: [followups]
+      summary: List sent follow-ups
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowupList"
+
+  /calls/{id}/follow-up:
+    post:
+      operationId: sendFollowup
+      tags: [followups]
+      summary: Send a follow-up message for a call (simulated email)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendFollowupBody"
+      responses:
+        "200":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Followup"
+
+  /calls/{id}/run-rules:
+    post:
+      operationId: runRulesForCall
+      tags: [automation]
+      summary: Re-run automation rules against a single call
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuleExecutionResult"
+
+  /ingestion-events:
+    get:
+      operationId: listIngestionEvents
+      tags: [ingestion]
+      summary: List recent ingestion events
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestionEventList"
+
+  /demo/simulate-call:
+    post:
+      operationId: simulateInboundCall
+      tags: [ingestion]
+      summary: Simulate an inbound call event (for demo / no integrations setup)
+      responses:
+        "200":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Call"
+
+  /telephony/twilio/status:
+    get:
+      operationId: getTwilioStatus
+      tags: [telephony]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TwilioStatus"
+
+  /telephony/events:
+    get:
+      operationId: listTelephonyEvents
+      tags: [telephony]
+      parameters:
+        - in: query
+          name: callId
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelephonyEventList"
+
+  /switchboard:
+    get:
+      operationId: getSwitchboard
+      tags: [switchboard]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SwitchboardResponse"
+
+  /setup/product-modes:
+    get:
+      operationId: listProductModes
+      tags: [setup]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductModeList"
+
+  /setup/state:
+    get:
+      operationId: getSetupState
+      tags: [setup]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetupState"
+
+  /setup/apply-mode:
+    post:
+      operationId: applyProductMode
+      tags: [setup]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplyProductModeBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplyProductModeResponse"
+
+  /calls/{id}/retry-processing:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    post:
+      operationId: retryCallProcessing
+      tags: [calls]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Call"
+
+  /channels:
+    get:
+      operationId: listChannels
+      tags: [channels]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelList"
+    post:
+      operationId: createChannel
+      tags: [channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChannelBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Channel"
+
+  /channels/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    patch:
+      operationId: updateChannel
+      tags: [channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateChannelBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Channel"
+    delete:
+      operationId: deleteChannel
+      tags: [channels]
+      responses:
+        "204": { description: Deleted }
+
+  /flows:
+    get:
+      operationId: listFlows
+      tags: [flows]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CallFlowList"
+    post:
+      operationId: createFlow
+      tags: [flows]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCallFlowBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CallFlow"
+
+  /flows/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getFlow
+      tags: [flows]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CallFlow"
+    patch:
+      operationId: updateFlow
+      tags: [flows]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCallFlowBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CallFlow"
+    delete:
+      operationId: deleteFlow
+      tags: [flows]
+      responses:
+        "204": { description: Deleted }
+
+  /calls/{id}/flow-logs:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getFlowLogsForCall
+      tags: [flows]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowLogList"
+
+  /receptionist-profiles:
+    get:
+      operationId: listReceptionistProfiles
+      tags: [receptionist]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceptionistProfileList"
+    post:
+      operationId: createReceptionistProfile
+      tags: [receptionist]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReceptionistProfileBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceptionistProfile"
+
+  /receptionist-profiles/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getReceptionistProfile
+      tags: [receptionist]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceptionistProfile"
+    patch:
+      operationId: updateReceptionistProfile
+      tags: [receptionist]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReceptionistProfileBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceptionistProfile"
+    delete:
+      operationId: deleteReceptionistProfile
+      tags: [receptionist]
+      responses:
+        "204": { description: Deleted }
+
+  /transfer-targets:
+    get:
+      operationId: listTransferTargets
+      tags: [transferTargets]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferTargetList"
+    post:
+      operationId: createTransferTarget
+      tags: [transferTargets]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransferTargetBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferTarget"
+
+  /transfer-targets/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    patch:
+      operationId: updateTransferTarget
+      tags: [transferTargets]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTransferTargetBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferTarget"
+    delete:
+      operationId: deleteTransferTarget
+      tags: [transferTargets]
+      responses:
+        "204": { description: Deleted }
+
+  /live-sessions:
+    get:
+      operationId: listLiveSessions
+      tags: [liveSessions]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveCallSessionList"
+
+  /live-sessions/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getLiveSession
+      tags: [liveSessions]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveCallSession"
+
+  /live-sessions/{id}/mark-urgent:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    post:
+      operationId: markLiveSessionUrgent
+      tags: [liveSessions]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveCallSession"
+
+  /live-sessions/{id}/transfer:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    post:
+      operationId: transferLiveSession
+      tags: [liveSessions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferLiveSessionBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveCallSession"
+
+  /live-sessions/{id}/end:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    post:
+      operationId: endLiveSession
+      tags: [liveSessions]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveCallSession"
+
+  /live-sessions/{id}/add-note:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    post:
+      operationId: addLiveSessionNote
+      tags: [liveSessions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddLiveSessionNoteBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveCallSession"
+
+  /simulate/live-call/start:
+    post:
+      operationId: startSimulatedLiveCall
+      tags: [simulate]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartSimulatedLiveCallBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveCallSession"
+
+  /simulate/live-call/{id}/say:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    post:
+      operationId: simulateLiveCallSay
+      tags: [simulate]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulatedLiveCallSayBody"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulatedLiveCallTurn"
+
+  /simulate/live-call/{id}/end:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string }
+    post:
+      operationId: endSimulatedLiveCall
+      tags: [simulate]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveCallSession"
+
+  /simulate-call:
+    post:
+      operationId: simulateCallWithFlow
+      tags: [flows]
+      summary: Simulate an inbound call against a chosen channel and run the flow engine.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulateCallBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlowExecutionResult"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status: { type: string }
+      required: [status]
+
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+
+    Me:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        name: { type: ["string", "null"] }
+        avatarUrl: { type: ["string", "null"] }
+        plan: { type: string }
+        role:
+          type: string
+          enum: [user, admin]
+          description: |
+            Workspace role. "admin" bypasses plan limits and unlocks all
+            workspace-admin features in the UI.
+        callsThisMonth: { type: integer }
+        monthlyLimit: { type: integer }
+        demoMode: { type: boolean }
+      required:
+        [id, email, plan, role, callsThisMonth, monthlyLimit, demoMode]
+
+    RequestUploadUrlBody:
+      type: object
+      properties:
+        name: { type: string }
+        size: { type: integer }
+        contentType: { type: string }
+      required: [name, size, contentType]
+
+    RequestUploadUrlResponse:
+      type: object
+      properties:
+        uploadURL: { type: string }
+        objectPath: { type: string }
+      required: [uploadURL, objectPath]
+
+    CreateCallBody:
+      type: object
+      properties:
+        objectPath: { type: string }
+        originalFilename: { type: string }
+      required: [objectPath, originalFilename]
+
+    ActionItem:
+      type: object
+      properties:
+        id: { type: string }
+        callRecordId: { type: string }
+        title: { type: string }
+        description: { type: ["string", "null"] }
+        dueDate: { type: ["string", "null"], format: date-time }
+        priority: { type: string }
+        status: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        [id, callRecordId, title, priority, status, createdAt, updatedAt]
+
+    UpdateActionItemBody:
+      type: object
+      properties:
+        status: { type: string }
+        priority: { type: string }
+        title: { type: string }
+        description: { type: ["string", "null"] }
+        dueDate: { type: ["string", "null"], format: date-time }
+
+    Call:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        originalFilename: { type: string }
+        fileUrl: { type: ["string", "null"] }
+        transcriptText: { type: ["string", "null"] }
+        summary: { type: ["string", "null"] }
+        customerName: { type: ["string", "null"] }
+        companyName: { type: ["string", "null"] }
+        callerPhone: { type: ["string", "null"] }
+        callType: { type: ["string", "null"] }
+        intent: { type: ["string", "null"] }
+        priority: { type: ["string", "null"] }
+        sentiment: { type: ["string", "null"] }
+        status: { type: string }
+        durationSeconds: { type: ["integer", "null"] }
+        keyPoints:
+          type: array
+          items: { type: string }
+        followUpMessage: { type: ["string", "null"] }
+        internalNotes: { type: ["string", "null"] }
+        crmJson: { type: ["object", "null"] }
+        suggestedTags:
+          type: array
+          items: { type: string }
+        isDemo: { type: string }
+        errorMessage: { type: ["string", "null"] }
+        channelId: { type: ["string", "null"] }
+        assignedUserId: { type: ["string", "null"] }
+        provider: { type: ["string", "null"] }
+        providerCallSid: { type: ["string", "null"] }
+        calledNumber: { type: ["string", "null"] }
+        callDirection: { type: ["string", "null"] }
+        recordingUrl: { type: ["string", "null"] }
+        recordingDurationSeconds: { type: ["integer", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        actionItems:
+          type: array
+          items: { $ref: "#/components/schemas/ActionItem" }
+      required:
+        [
+          id,
+          userId,
+          originalFilename,
+          status,
+          keyPoints,
+          suggestedTags,
+          isDemo,
+          createdAt,
+          updatedAt,
+          actionItems,
+        ]
+
+    CallList:
+      type: array
+      items: { $ref: "#/components/schemas/Call" }
+
+    SendWebhookBody:
+      type: object
+      properties:
+        integrationId: { type: string }
+      required: [integrationId]
+
+    WebhookResult:
+      type: object
+      properties:
+        ok: { type: boolean }
+        status: { type: ["integer", "null"] }
+        message: { type: ["string", "null"] }
+      required: [ok]
+
+    Integration:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        type: { type: string }
+        name: { type: string }
+        webhookUrl: { type: string }
+        enabled: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        [id, userId, type, name, webhookUrl, enabled, createdAt, updatedAt]
+
+    IntegrationList:
+      type: array
+      items: { $ref: "#/components/schemas/Integration" }
+
+    CreateIntegrationBody:
+      type: object
+      properties:
+        type: { type: string }
+        name: { type: string }
+        webhookUrl: { type: string }
+        enabled: { type: boolean }
+      required: [type, name, webhookUrl]
+
+    UpdateIntegrationBody:
+      type: object
+      properties:
+        name: { type: string }
+        webhookUrl: { type: string }
+        enabled: { type: boolean }
+
+    SentimentBucket:
+      type: object
+      properties:
+        sentiment: { type: string }
+        count: { type: integer }
+      required: [sentiment, count]
+
+    TagCount:
+      type: object
+      properties:
+        tag: { type: string }
+        count: { type: integer }
+      required: [tag, count]
+
+    DashboardStats:
+      type: object
+      properties:
+        totalCalls: { type: integer }
+        callsThisMonth: { type: integer }
+        openActionItems: { type: integer }
+        highPriorityCalls: { type: integer }
+        openTickets: { type: integer }
+        newLeadsThisWeek: { type: integer }
+        openTasks: { type: integer }
+        angrySentimentAlerts: { type: integer }
+        activeChannels: { type: integer }
+        missedCalls: { type: integer }
+        escalations: { type: integer }
+        callsByChannel:
+          type: array
+          items:
+            type: object
+            properties:
+              channelId: { type: ["string", "null"] }
+              name: { type: string }
+              count: { type: integer }
+            required: [name, count]
+        conversionFunnel:
+          type: object
+          properties:
+            calls: { type: integer }
+            leads: { type: integer }
+            closedLeads: { type: integer }
+          required: [calls, leads, closedLeads]
+        recentCalls:
+          type: array
+          items: { $ref: "#/components/schemas/Call" }
+        sentimentBreakdown:
+          type: array
+          items: { $ref: "#/components/schemas/SentimentBucket" }
+        topTags:
+          type: array
+          items: { $ref: "#/components/schemas/TagCount" }
+      required:
+        [
+          totalCalls,
+          callsThisMonth,
+          openActionItems,
+          highPriorityCalls,
+          openTickets,
+          newLeadsThisWeek,
+          openTasks,
+          angrySentimentAlerts,
+          activeChannels,
+          missedCalls,
+          escalations,
+          callsByChannel,
+          conversionFunnel,
+          recentCalls,
+          sentimentBreakdown,
+          topTags,
+        ]
+
+    CreateCheckoutBody:
+      type: object
+      properties:
+        plan: { type: string }
+      required: [plan]
+
+    CheckoutSession:
+      type: object
+      properties:
+        url: { type: ["string", "null"] }
+        configured: { type: boolean }
+        message: { type: ["string", "null"] }
+      required: [configured]
+
+    BillingPlan:
+      type: object
+      properties:
+        plan: { type: string }
+        callsThisMonth: { type: integer }
+        monthlyLimit: { type: integer }
+        stripeConfigured: { type: boolean }
+      required: [plan, callsThisMonth, monthlyLimit, stripeConfigured]
+
+    IngestionTokenResponse:
+      type: object
+      properties:
+        # Raw token. Only populated immediately after rotation (POST) — the
+        # server only stores a SHA-256 hash, so subsequent GETs return null.
+        token: { type: ["string", "null"] }
+        hasToken: { type: boolean }
+        endpoints:
+          type: object
+          properties:
+            twilio: { type: string }
+            email: { type: string }
+            webhook: { type: string }
+          required: [twilio, email, webhook]
+      required: [token, hasToken, endpoints]
+
+    AutomationRule:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        name: { type: string }
+        triggerType: { type: string }
+        conditions: { type: object }
+        actions:
+          type: array
+          items: { type: object }
+        enabled: { type: boolean }
+        isDefault: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        [id, userId, name, triggerType, conditions, actions, enabled, isDefault, createdAt, updatedAt]
+
+    AutomationRuleList:
+      type: array
+      items: { $ref: "#/components/schemas/AutomationRule" }
+
+    CreateAutomationRuleBody:
+      type: object
+      properties:
+        name: { type: string }
+        triggerType: { type: string }
+        conditions: { type: object }
+        actions:
+          type: array
+          items: { type: object }
+        enabled: { type: boolean }
+      required: [name, conditions, actions]
+
+    UpdateAutomationRuleBody:
+      type: object
+      properties:
+        name: { type: string }
+        conditions: { type: object }
+        actions:
+          type: array
+          items: { type: object }
+        enabled: { type: boolean }
+
+    Ticket:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        title: { type: string }
+        description: { type: ["string", "null"] }
+        priority: { type: string }
+        status: { type: string }
+        linkedCallId: { type: ["string", "null"] }
+        createdByRuleId: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, userId, title, priority, status, createdAt, updatedAt]
+
+    TicketList:
+      type: array
+      items: { $ref: "#/components/schemas/Ticket" }
+
+    UpdateTicketBody:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: ["string", "null"] }
+        priority: { type: string }
+        status: { type: string }
+
+    Lead:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        name: { type: string }
+        phone: { type: ["string", "null"] }
+        company: { type: ["string", "null"] }
+        intent: { type: ["string", "null"] }
+        status: { type: string }
+        linkedCallId: { type: ["string", "null"] }
+        createdByRuleId: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, userId, name, status, createdAt, updatedAt]
+
+    LeadList:
+      type: array
+      items: { $ref: "#/components/schemas/Lead" }
+
+    UpdateLeadBody:
+      type: object
+      properties:
+        name: { type: string }
+        phone: { type: ["string", "null"] }
+        company: { type: ["string", "null"] }
+        intent: { type: ["string", "null"] }
+        status: { type: string }
+
+    Task:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        title: { type: string }
+        description: { type: ["string", "null"] }
+        dueDate: { type: ["string", "null"], format: date-time }
+        status: { type: string }
+        linkedCallId: { type: ["string", "null"] }
+        createdByRuleId: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, userId, title, status, createdAt, updatedAt]
+
+    TaskList:
+      type: array
+      items: { $ref: "#/components/schemas/Task" }
+
+    UpdateTaskBody:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: ["string", "null"] }
+        dueDate: { type: ["string", "null"], format: date-time }
+        status: { type: string }
+
+    Followup:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        callRecordId: { type: string }
+        channel: { type: string }
+        recipient: { type: ["string", "null"] }
+        subject: { type: ["string", "null"] }
+        message: { type: string }
+        status: { type: string }
+        sentAt: { type: string, format: date-time }
+      required: [id, userId, callRecordId, channel, message, status, sentAt]
+
+    FollowupList:
+      type: array
+      items: { $ref: "#/components/schemas/Followup" }
+
+    SendFollowupBody:
+      type: object
+      properties:
+        message: { type: ["string", "null"] }
+        recipient: { type: ["string", "null"] }
+        subject: { type: ["string", "null"] }
+
+    IngestionEvent:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        source: { type: string }
+        callRecordId: { type: ["string", "null"] }
+        status: { type: string }
+        errorMessage: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+      required: [id, userId, source, status, createdAt]
+
+    IngestionEventList:
+      type: array
+      items: { $ref: "#/components/schemas/IngestionEvent" }
+
+    RuleExecutionResult:
+      type: object
+      properties:
+        rulesEvaluated: { type: integer }
+        rulesMatched: { type: integer }
+        actionsExecuted: { type: integer }
+        log:
+          type: array
+          items:
+            type: object
+            properties:
+              ruleId: { type: string }
+              ruleName: { type: string }
+              actionType: { type: string }
+              ok: { type: boolean }
+              message: { type: ["string", "null"] }
+            required: [ruleId, ruleName, actionType, ok]
+      required: [rulesEvaluated, rulesMatched, actionsExecuted, log]
+
+    Channel:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        name: { type: string }
+        phoneNumber: { type: ["string", "null"] }
+        type: { type: string }
+        defaultRoute: { type: ["string", "null"] }
+        isActive: { type: boolean }
+        isDefault: { type: boolean }
+        greetingText: { type: ["string", "null"] }
+        recordCalls: { type: boolean }
+        allowVoicemail: { type: boolean }
+        businessHours: { type: ["object", "null"] }
+        afterHoursBehavior: { type: ["string", "null"] }
+        forwardNumber: { type: ["string", "null"] }
+        maxCallDurationSeconds: { type: ["integer", "null"] }
+        recordingConsentText: { type: ["string", "null"] }
+        assignedFlowId: { type: ["string", "null"] }
+        productMode: { type: ["string", "null"] }
+        liveBehavior: { type: ["string", "null"] }
+        receptionistProfileId: { type: ["string", "null"] }
+        requireRecordingConsent: { type: ["boolean", "null"] }
+        consentScript: { type: ["string", "null"] }
+        consentRequiredBeforeRecording: { type: ["boolean", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        [id, userId, name, type, isActive, isDefault, recordCalls, allowVoicemail, createdAt, updatedAt]
+
+    ChannelList:
+      type: array
+      items: { $ref: "#/components/schemas/Channel" }
+
+    CreateChannelBody:
+      type: object
+      properties:
+        name: { type: string }
+        phoneNumber: { type: ["string", "null"] }
+        type: { type: string }
+        defaultRoute: { type: ["string", "null"] }
+        isActive: { type: boolean }
+        greetingText: { type: ["string", "null"] }
+        recordCalls: { type: boolean }
+        allowVoicemail: { type: boolean }
+        businessHours: { type: ["object", "null"] }
+        afterHoursBehavior: { type: ["string", "null"] }
+        forwardNumber: { type: ["string", "null"] }
+        maxCallDurationSeconds: { type: ["integer", "null"] }
+        recordingConsentText: { type: ["string", "null"] }
+        assignedFlowId: { type: ["string", "null"] }
+        productMode: { type: ["string", "null"] }
+        liveBehavior: { type: ["string", "null"] }
+        receptionistProfileId: { type: ["string", "null"] }
+        requireRecordingConsent: { type: ["boolean", "null"] }
+        consentScript: { type: ["string", "null"] }
+        consentRequiredBeforeRecording: { type: ["boolean", "null"] }
+      required: [name, type]
+
+    UpdateChannelBody:
+      type: object
+      properties:
+        name: { type: string }
+        phoneNumber: { type: ["string", "null"] }
+        type: { type: string }
+        defaultRoute: { type: ["string", "null"] }
+        isActive: { type: boolean }
+        greetingText: { type: ["string", "null"] }
+        recordCalls: { type: boolean }
+        allowVoicemail: { type: boolean }
+        businessHours: { type: ["object", "null"] }
+        afterHoursBehavior: { type: ["string", "null"] }
+        forwardNumber: { type: ["string", "null"] }
+        maxCallDurationSeconds: { type: ["integer", "null"] }
+        recordingConsentText: { type: ["string", "null"] }
+        assignedFlowId: { type: ["string", "null"] }
+        productMode: { type: ["string", "null"] }
+        liveBehavior: { type: ["string", "null"] }
+        receptionistProfileId: { type: ["string", "null"] }
+        requireRecordingConsent: { type: ["boolean", "null"] }
+        consentScript: { type: ["string", "null"] }
+        consentRequiredBeforeRecording: { type: ["boolean", "null"] }
+
+    TelephonyEvent:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        callRecordId: { type: ["string", "null"] }
+        provider: { type: string }
+        eventType: { type: string }
+        providerEventId: { type: ["string", "null"] }
+        message: { type: ["string", "null"] }
+        rawPayload: { type: ["object", "null"] }
+        createdAt: { type: string, format: date-time }
+      required: [id, userId, provider, eventType, createdAt]
+
+    TelephonyEventList:
+      type: array
+      items: { $ref: "#/components/schemas/TelephonyEvent" }
+
+    TwilioStatus:
+      type: object
+      properties:
+        configured: { type: boolean }
+        hasAccountSid: { type: boolean }
+        hasAuthToken: { type: boolean }
+        webhookBaseUrl: { type: ["string", "null"] }
+        webhooks:
+          type: object
+          properties:
+            incoming: { type: string }
+            status: { type: string }
+            recording: { type: string }
+            transcription: { type: string }
+          required: [incoming, status, recording, transcription]
+      required: [configured, hasAccountSid, hasAuthToken, webhooks]
+
+    SwitchboardChannelEntry:
+      type: object
+      properties:
+        channel: { $ref: "#/components/schemas/Channel" }
+        callsLast24h: { type: integer }
+        recentCalls:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              status: { type: string }
+              callerPhone: { type: ["string", "null"] }
+              calledNumber: { type: ["string", "null"] }
+              customerName: { type: ["string", "null"] }
+              callType: { type: ["string", "null"] }
+              priority: { type: ["string", "null"] }
+              durationSeconds: { type: ["integer", "null"] }
+              provider: { type: ["string", "null"] }
+              createdAt: { type: string, format: date-time }
+            required: [id, status, createdAt]
+      required: [channel, callsLast24h, recentCalls]
+
+    SwitchboardResponse:
+      type: object
+      properties:
+        generatedAt: { type: string, format: date-time }
+        entries:
+          type: array
+          items: { $ref: "#/components/schemas/SwitchboardChannelEntry" }
+        liveSessions:
+          type: array
+          items: { $ref: "#/components/schemas/LiveCallSessionSummary" }
+      required: [generatedAt, entries]
+
+    ProductModeChannelDefault:
+      type: object
+      properties:
+        name: { type: string }
+        type: { type: string }
+        greetingText: { type: ["string", "null"] }
+        recordCalls: { type: boolean }
+        allowVoicemail: { type: boolean }
+        isDefault: { type: boolean }
+      required: [name, type, recordCalls, allowVoicemail]
+
+    ProductMode:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        description: { type: string }
+        defaultChannels:
+          type: array
+          items: { $ref: "#/components/schemas/ProductModeChannelDefault" }
+      required: [id, label, description, defaultChannels]
+
+    ProductModeList:
+      type: array
+      items: { $ref: "#/components/schemas/ProductMode" }
+
+    ApplyProductModeBody:
+      type: object
+      properties:
+        modeId: { type: string }
+      required: [modeId]
+
+    ApplyProductModeResponse:
+      type: object
+      properties:
+        modeId: { type: string }
+        channelsCreated: { type: integer }
+        flowsCreated: { type: integer }
+        rulesCreated: { type: integer }
+      required: [modeId, channelsCreated, flowsCreated, rulesCreated]
+
+    SetupState:
+      type: object
+      properties:
+        productMode: { type: ["string", "null"] }
+        twilio: { $ref: "#/components/schemas/TwilioStatus" }
+        channelCount: { type: integer }
+        flowCount: { type: integer }
+        ruleCount: { type: integer }
+      required: [twilio, channelCount, flowCount, ruleCount]
+
+    FlowNode:
+      type: object
+      properties:
+        id: { type: string }
+        flowId: { type: string }
+        type: { type: string }
+        label: { type: ["string", "null"] }
+        config: { type: object }
+        nextNodeId: { type: ["string", "null"] }
+        nextNodeIdFalse: { type: ["string", "null"] }
+        orderIndex: { type: integer }
+      required: [id, flowId, type, config, orderIndex]
+
+    CallFlow:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        name: { type: string }
+        description: { type: ["string", "null"] }
+        channelId: { type: ["string", "null"] }
+        startNodeId: { type: ["string", "null"] }
+        isActive: { type: boolean }
+        nodes:
+          type: array
+          items: { $ref: "#/components/schemas/FlowNode" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, userId, name, isActive, nodes, createdAt, updatedAt]
+
+    CallFlowList:
+      type: array
+      items: { $ref: "#/components/schemas/CallFlow" }
+
+    CreateCallFlowBody:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: ["string", "null"] }
+        channelId: { type: ["string", "null"] }
+        isActive: { type: boolean }
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              type: { type: string }
+              label: { type: ["string", "null"] }
+              config: { type: object }
+              nextNodeRef: { type: ["string", "null"] }
+              nextNodeFalseRef: { type: ["string", "null"] }
+              ref: { type: ["string", "null"] }
+            required: [type, config]
+      required: [name]
+
+    UpdateCallFlowBody:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: ["string", "null"] }
+        channelId: { type: ["string", "null"] }
+        isActive: { type: boolean }
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              type: { type: string }
+              label: { type: ["string", "null"] }
+              config: { type: object }
+              nextNodeRef: { type: ["string", "null"] }
+              nextNodeFalseRef: { type: ["string", "null"] }
+              ref: { type: ["string", "null"] }
+            required: [type, config]
+
+    FlowLog:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        callRecordId: { type: string }
+        flowId: { type: ["string", "null"] }
+        nodeId: { type: ["string", "null"] }
+        nodeType: { type: string }
+        nodeLabel: { type: ["string", "null"] }
+        branch: { type: ["string", "null"] }
+        ok: { type: boolean }
+        message: { type: ["string", "null"] }
+        detail: { type: ["object", "null"] }
+        stepIndex: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+      required: [id, userId, callRecordId, nodeType, ok, createdAt]
+
+    FlowLogList:
+      type: array
+      items: { $ref: "#/components/schemas/FlowLog" }
+
+    SimulateCallBody:
+      type: object
+      properties:
+        channelId: { type: ["string", "null"] }
+        customerName: { type: ["string", "null"] }
+        callerPhone: { type: ["string", "null"] }
+        transcript: { type: ["string", "null"] }
+        intent: { type: ["string", "null"] }
+        priority: { type: ["string", "null"] }
+        sentiment: { type: ["string", "null"] }
+
+    FlowExecutionResult:
+      type: object
+      properties:
+        callId: { type: string }
+        flowId: { type: ["string", "null"] }
+        flowName: { type: ["string", "null"] }
+        nodesExecuted: { type: integer }
+        actionsExecuted: { type: integer }
+        endedAt: { type: ["string", "null"] }
+        log:
+          type: array
+          items: { $ref: "#/components/schemas/FlowLog" }
+      required: [callId, nodesExecuted, actionsExecuted, log]
+
+    IntakeField:
+      type: object
+      properties:
+        key: { type: string }
+        label: { type: string }
+        required: { type: boolean }
+        allowedValues:
+          type: array
+          items: { type: string }
+        prompt: { type: ["string", "null"] }
+      required: [key, label, required]
+
+    IntakeSchema:
+      type: object
+      properties:
+        fields:
+          type: array
+          items: { $ref: "#/components/schemas/IntakeField" }
+      required: [fields]
+
+    EscalationRules:
+      type: object
+      properties:
+        emergencyKeywords:
+          type: array
+          items: { type: string }
+        angrySentimentEscalates: { type: boolean }
+        vipNumbers:
+          type: array
+          items: { type: string }
+        afterHoursEmergencyTransferTargetId: { type: ["string", "null"] }
+
+    ReceptionistProfile:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        channelId: { type: ["string", "null"] }
+        name: { type: string }
+        voiceProvider: { type: string }
+        greetingScript: { type: string }
+        fallbackScript: { type: ["string", "null"] }
+        escalationScript: { type: ["string", "null"] }
+        voicemailScript: { type: ["string", "null"] }
+        tone: { type: string }
+        intakeSchema: { $ref: "#/components/schemas/IntakeSchema" }
+        escalationRules: { $ref: "#/components/schemas/EscalationRules" }
+        enabled: { type: boolean }
+        isDefault: { type: boolean }
+        productMode: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        [id, userId, name, voiceProvider, greetingScript, tone, enabled, isDefault, createdAt, updatedAt]
+
+    ReceptionistProfileList:
+      type: array
+      items: { $ref: "#/components/schemas/ReceptionistProfile" }
+
+    CreateReceptionistProfileBody:
+      type: object
+      properties:
+        name: { type: string }
+        channelId: { type: ["string", "null"] }
+        voiceProvider: { type: ["string", "null"] }
+        greetingScript: { type: string }
+        fallbackScript: { type: ["string", "null"] }
+        escalationScript: { type: ["string", "null"] }
+        voicemailScript: { type: ["string", "null"] }
+        tone: { type: ["string", "null"] }
+        intakeSchema: { $ref: "#/components/schemas/IntakeSchema" }
+        escalationRules: { $ref: "#/components/schemas/EscalationRules" }
+        enabled: { type: ["boolean", "null"] }
+        isDefault: { type: ["boolean", "null"] }
+        productMode: { type: ["string", "null"] }
+      required: [name, greetingScript]
+
+    UpdateReceptionistProfileBody:
+      type: object
+      properties:
+        name: { type: string }
+        channelId: { type: ["string", "null"] }
+        voiceProvider: { type: ["string", "null"] }
+        greetingScript: { type: ["string", "null"] }
+        fallbackScript: { type: ["string", "null"] }
+        escalationScript: { type: ["string", "null"] }
+        voicemailScript: { type: ["string", "null"] }
+        tone: { type: ["string", "null"] }
+        intakeSchema: { $ref: "#/components/schemas/IntakeSchema" }
+        escalationRules: { $ref: "#/components/schemas/EscalationRules" }
+        enabled: { type: ["boolean", "null"] }
+        isDefault: { type: ["boolean", "null"] }
+
+    TransferTarget:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        name: { type: string }
+        type: { type: string }
+        phoneNumber: { type: ["string", "null"] }
+        targetUserId: { type: ["string", "null"] }
+        queueName: { type: ["string", "null"] }
+        businessHours: { type: ["object", "null"] }
+        priority: { type: integer }
+        enabled: { type: boolean }
+        productMode: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, userId, name, type, priority, enabled, createdAt, updatedAt]
+
+    TransferTargetList:
+      type: array
+      items: { $ref: "#/components/schemas/TransferTarget" }
+
+    CreateTransferTargetBody:
+      type: object
+      properties:
+        name: { type: string }
+        type: { type: string }
+        phoneNumber: { type: ["string", "null"] }
+        targetUserId: { type: ["string", "null"] }
+        queueName: { type: ["string", "null"] }
+        businessHours: { type: ["object", "null"] }
+        priority: { type: ["integer", "null"] }
+        enabled: { type: ["boolean", "null"] }
+        productMode: { type: ["string", "null"] }
+      required: [name, type]
+
+    UpdateTransferTargetBody:
+      type: object
+      properties:
+        name: { type: string }
+        type: { type: string }
+        phoneNumber: { type: ["string", "null"] }
+        targetUserId: { type: ["string", "null"] }
+        queueName: { type: ["string", "null"] }
+        businessHours: { type: ["object", "null"] }
+        priority: { type: ["integer", "null"] }
+        enabled: { type: ["boolean", "null"] }
+
+    LiveSessionNote:
+      type: object
+      properties:
+        authorUserId: { type: string }
+        body: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [authorUserId, body, createdAt]
+
+    LiveCallSession:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        channelId: { type: ["string", "null"] }
+        callRecordId: { type: ["string", "null"] }
+        receptionistProfileId: { type: ["string", "null"] }
+        provider: { type: ["string", "null"] }
+        providerCallSid: { type: ["string", "null"] }
+        callerPhone: { type: ["string", "null"] }
+        calledNumber: { type: ["string", "null"] }
+        sessionStatus: { type: string }
+        currentStep: { type: ["string", "null"] }
+        lastQuestionKey: { type: ["string", "null"] }
+        askedFieldKeys:
+          type: array
+          items: { type: string }
+        collectedData: { type: ["object", "null"] }
+        intent: { type: ["string", "null"] }
+        priority: { type: ["string", "null"] }
+        sentiment: { type: ["string", "null"] }
+        transferTarget: { type: ["string", "null"] }
+        escalationReason: { type: ["string", "null"] }
+        transcriptLive: { type: ["string", "null"] }
+        aiSummaryLive: { type: ["string", "null"] }
+        notes:
+          type: array
+          items: { $ref: "#/components/schemas/LiveSessionNote" }
+        createdObjectIds: { type: ["object", "null"] }
+        isDemo: { type: ["string", "null"] }
+        startedAt: { type: string, format: date-time }
+        endedAt: { type: ["string", "null"], format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, userId, sessionStatus, startedAt, updatedAt]
+
+    LiveCallSessionList:
+      type: array
+      items: { $ref: "#/components/schemas/LiveCallSession" }
+
+    LiveCallSessionSummary:
+      type: object
+      properties:
+        id: { type: string }
+        channelId: { type: ["string", "null"] }
+        callRecordId: { type: ["string", "null"] }
+        receptionistProfileId: { type: ["string", "null"] }
+        provider: { type: ["string", "null"] }
+        callerPhone: { type: ["string", "null"] }
+        calledNumber: { type: ["string", "null"] }
+        sessionStatus: { type: string }
+        currentStep: { type: ["string", "null"] }
+        lastQuestionKey: { type: ["string", "null"] }
+        collectedData: { type: ["object", "null"] }
+        intent: { type: ["string", "null"] }
+        priority: { type: ["string", "null"] }
+        sentiment: { type: ["string", "null"] }
+        transferTarget: { type: ["string", "null"] }
+        escalationReason: { type: ["string", "null"] }
+        transcriptLive: { type: ["string", "null"] }
+        aiSummaryLive: { type: ["string", "null"] }
+        notesCount: { type: integer }
+        createdObjectIds: { type: ["object", "null"] }
+        isDemo: { type: boolean }
+        startedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, sessionStatus, isDemo, startedAt, updatedAt]
+
+    TransferLiveSessionBody:
+      type: object
+      properties:
+        targetId: { type: string }
+        reason: { type: ["string", "null"] }
+      required: [targetId]
+
+    AddLiveSessionNoteBody:
+      type: object
+      properties:
+        body: { type: string }
+      required: [body]
+
+    StartSimulatedLiveCallBody:
+      type: object
+      properties:
+        channelId: { type: ["string", "null"] }
+        receptionistProfileId: { type: ["string", "null"] }
+        callerPhone: { type: ["string", "null"] }
+        customerName: { type: ["string", "null"] }
+      required: []
+
+    SimulatedLiveCallSayBody:
+      type: object
+      properties:
+        text: { type: string }
+      required: [text]
+
+    SimulatedLiveCallTurn:
+      type: object
+      properties:
+        session: { $ref: "#/components/schemas/LiveCallSession" }
+        decision: { type: ["object", "null"] }
+        transcriptDelta: { type: ["string", "null"] }
+      required: [session]

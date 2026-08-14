@@ -1,0 +1,102 @@
+Investigate and repair the OperatorOS cross-subdomain module-launch authentication loop.
+
+Observed production flow:
+- Authenticated user is at https://operatoros.net/app.
+- Clicking the PulseDesk launch button redirects to:
+  https://auth.operatoros.net/login?next=https%3A%2F%2Fpulsedesk.operatoros.net%2Fsso%3Ftoken%3D...
+- The browser remains on or repeatedly returns to the auth login URL instead of completing PulseDesk SSO.
+- The generated JWT has issuer https://operatoros.net, audience pulsedesk, correct module and entitlement claims, and a 90-second lifetime.
+
+Tasks:
+
+1. Trace the complete launch implementation from the PulseDesk launch button through:
+   - OperatorOS frontend launch handler
+   - OperatorOS launch API
+   - auth.operatoros.net login/session middleware
+   - redirect validation
+   - PulseDesk /sso callback
+   - PulseDesk session creation
+
+2. Determine whether the OperatorOS authentication cookie is host-only or inaccessible to auth.operatoros.net.
+   Inspect cookie configuration for:
+   - Domain
+   - Path
+   - Secure
+   - HttpOnly
+   - SameSite
+   - cookie name collisions
+   - production proxy/trust-proxy behavior
+
+3. Ensure the authoritative OperatorOS session cookie works correctly across required subdomains by using Domain=.operatoros.net where appropriate, or redesign the flow so the module launcher does not unnecessarily pass authenticated users through auth.operatoros.net/login.
+
+4. Do not generate the module credential before authentication is confirmed.
+
+5. Replace JWT query-string launch tokens with a one-time opaque authorization-code flow:
+   - short-lived code
+   - single redemption
+   - module-bound
+   - tenant-bound
+   - redirect-URI-bound
+   - server-to-server exchange
+   - replay protection
+   - no raw JWT in browser history or logs
+
+6. Add a strict allowlist for all next/return/redirect URLs. Reject arbitrary external origins to prevent open redirects.
+
+7. Prevent infinite redirect behavior:
+   - track redirect attempts
+   - never redirect PulseDesk validation failures back into the exact same auth chain
+   - return the user to https://operatoros.net/app with a bounded launch error
+   - provide a visible error message and correlation ID
+
+8. Normalize JWT verification during migration:
+   - issuer exactly https://operatoros.net
+   - audience exactly pulsedesk
+   - production environment
+   - expected module ID and slug
+   - tenant entitlement
+   - clock tolerance no more than 30 seconds
+   - reject replayed jti/nonce values
+
+9. Add structured auth logs without logging tokens or secrets. Include:
+   - launchId
+   - requestId
+   - userId
+   - tenantId
+   - moduleId
+   - sessionCookiePresent
+   - sessionValid
+   - redirectTarget
+   - tokenJti or code ID
+   - normalized failure reason
+
+10. Add automated integration tests covering:
+   - logged-in launch succeeds
+   - logged-out launch prompts once, then succeeds
+   - expired credential
+   - invalid signature
+   - wrong audience
+   - wrong tenant
+   - missing entitlement
+   - reused code
+   - malicious external next URL
+   - missing cookie
+   - duplicate cookies
+   - redirect loop detection
+
+11. Verify the production proxy and Replit deployment correctly honor:
+   - X-Forwarded-Proto
+   - secure cookies
+   - trust proxy
+   - canonical HTTPS hosts
+   - no accidental localhost or replit.dev callback URLs
+
+12. Preserve OperatorOS SSO and branding, remove all placeholder behavior, and provide:
+   - exact root cause
+   - files changed
+   - environment variables required
+   - migration considerations
+   - test evidence
+   - final production redirect sequence
+
+Do not merely extend token expiration or suppress the redirect. Fix the underlying session and authorization architecture.

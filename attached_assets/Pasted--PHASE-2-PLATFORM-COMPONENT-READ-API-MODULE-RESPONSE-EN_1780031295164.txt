@@ -1,0 +1,234 @@
+[PHASE 2: PLATFORM COMPONENT READ API + MODULE RESPONSE ENRICHMENT]
+
+You are working inside the existing OperatorOS codebase. Do not rebuild from scratch.
+
+Global rules:
+- OperatorOS is the only operating system brand.
+- Do not create or reference child OS names such as WorkFlowOS, TechOpsOS, GrowthForgeOS, BusinessOS, or similar.
+- Use “platform components” for the major internal sections of OperatorOS.
+- Use “modules” for unlockable tools inside those components.
+- Preserve existing custom JWT auth, bcrypt, lockout, RBAC, seeded admin/demo accounts, tenant handling, billing, Stripe, entitlements, and SSO behavior.
+- Do not migrate auth.
+- Do not replace the database/ORM stack.
+- Do not break existing module slugs.
+- Do not delete current modules.
+- Do not expose unauthenticated admin, billing, tenant, entitlement, or module mutation endpoints.
+- Keep OperatorOS as the billing, identity, tenant, and entitlement source of truth.
+- Make additive changes only.
+- Reuse existing route conventions and response patterns.
+- At the end, report changed files, test results, and any unresolved risks.
+
+Context from Phase 1:
+- `PLATFORM_COMPONENTS` was added to `packages/sdk/src/catalog.ts`.
+- `platform_components` table was added.
+- `modules.component_id` was added.
+- Existing modules are mapped to:
+  - command-center
+  - operations-deck
+  - diagnostic-lab
+  - growth-forge
+- Existing entitlement behavior must remain unchanged.
+
+Goal:
+Expose platform components and module grouping through safe read APIs.
+
+Important:
+This phase should be read-only from the user perspective except for existing routes that already mutate data.
+Do not add component mutation APIs yet.
+Do not change billing, Stripe checkout, SSO payloads, entitlement snapshot shape, or plan access rules.
+
+Required API work:
+
+1. Add a helper/service function for component grouping.
+
+Create or update an appropriate API lib file, using existing conventions.
+
+Add something like:
+
+getPlatformComponentsWithModules(context)
+
+It should return active platform components ordered by `ord`, each with its modules ordered by existing module order.
+
+Each component should include:
+- id
+- slug
+- name
+- description
+- audience
+- ord
+- iconUrl if present
+- status
+- modules[]
+
+Each module inside a component should include existing safe module fields plus:
+- componentId
+- componentSlug
+- componentName
+
+Do not expose internal secrets, webhook secrets, service tokens, Stripe secret keys, or push bearer env var values.
+
+2. Add authenticated route:
+
+GET /v1/components
+
+Behavior:
+- Requires authenticated user.
+- Returns platform components with modules.
+- Modules should include current user/tenant access state if that can be derived from existing entitlement logic safely.
+- Use existing resolveEntitlements(userId, tenantId) behavior if available in the route context.
+- Do not change resolveEntitlements output shape.
+- Do not require tenant admin role; regular authenticated users should be able to read their component/module layout.
+
+Suggested response shape:
+
+{
+  "components": [
+    {
+      "id": "...",
+      "slug": "operations-deck",
+      "name": "Operations Deck",
+      "description": "...",
+      "audience": "...",
+      "ord": 20,
+      "status": "active",
+      "modules": [
+        {
+          "id": "...",
+          "slug": "tradeflowkit",
+          "name": "TradeFlowKit",
+          "description": "...",
+          "status": "active",
+          "planMin": "starter",
+          "componentId": "...",
+          "componentSlug": "operations-deck",
+          "componentName": "Operations Deck",
+          "access": {
+            "enabled": true,
+            "source": "plan|tenant|override|user|none"
+          }
+        }
+      ]
+    }
+  ]
+}
+
+If exact `access.source` cannot be safely derived without changing entitlement logic, include a simpler safe shape:
+{
+  "enabled": true|false
+}
+
+3. Add authenticated route:
+
+GET /v1/components/:slug
+
+Behavior:
+- Requires authenticated user.
+- Returns one component and its modules.
+- Return 404 for missing/inactive component.
+- Same safe module/access rules as GET /v1/components.
+
+4. Enrich existing module responses additively.
+
+Update these existing routes only if safe:
+- GET /v1/me/modules
+- GET /v1/modules
+- GET /v1/modules/:slug
+
+Add fields:
+- componentId
+- componentSlug
+- componentName
+
+Rules:
+- Do not remove or rename existing fields.
+- Do not change entitlement semantics.
+- Do not change launch URL behavior.
+- Do not change SSO handoff behavior.
+- Existing frontend consumers should continue working if they ignore the new fields.
+
+5. Add super-admin read-only route:
+
+GET /v1/platform/components
+
+Behavior:
+- Requires existing super_admin/platform admin guard.
+- Returns all components, including inactive if status exists.
+- Includes module counts:
+  - totalModules
+  - activeModules
+  - archivedModules if archivedAt exists
+  - unmappedModules count if useful
+
+6. Add super-admin read-only route:
+
+GET /v1/platform/components/matrix
+
+Behavior:
+- Requires existing super_admin/platform admin guard.
+- Returns a matrix useful for admin/debug display:
+  - components
+  - modules grouped by component
+  - unmapped modules
+  - plan/module inclusion if easy to derive from existing plan_modules
+- Read-only only.
+- Do not add mutation endpoints yet.
+
+7. Handle unmapped modules safely.
+
+Modules with null component_id should not crash the API.
+
+Return them under a synthetic group only in admin matrix if needed:
+
+{
+  "slug": "unmapped",
+  "name": "Unmapped Modules",
+  "modules": [...]
+}
+
+Do not expose “Unmapped Modules” as a normal user-facing component unless needed for safety. For user routes, either exclude unmapped archived modules or include unmapped active modules at the end under a safe fallback label if required.
+
+8. Tests
+
+Add or update API tests following the existing `apps/api/test` style.
+
+Test at minimum:
+- unauthenticated request to /v1/components is rejected
+- authenticated request to /v1/components succeeds
+- /v1/components returns the four expected component slugs:
+  - command-center
+  - operations-deck
+  - diagnostic-lab
+  - growth-forge
+- modules include component fields
+- existing /v1/me/modules still works
+- non-admin cannot access /v1/platform/components
+- super_admin can access /v1/platform/components
+- component routes do not expose secrets
+
+9. Verification commands
+
+Run:
+pnpm typecheck
+pnpm --filter @operatoros/api test
+
+If possible, also run:
+pnpm --filter @operatoros/api build
+
+If any command fails, report:
+- command
+- error
+- file
+- line
+- likely cause
+- recommended fix
+
+Acceptance criteria:
+- GET /v1/components works for authenticated users.
+- GET /v1/components/:slug works for authenticated users.
+- Existing module routes still work.
+- Existing module responses are only enriched, not broken.
+- Super-admin read-only component routes work.
+- Entitlement resolver output shape is unchanged.
+- SSO handoff payloads are unchanged.
+- Stripe/billing behavior is unchanged.
+- Tests/typecheck pass or failures are precisely documented.

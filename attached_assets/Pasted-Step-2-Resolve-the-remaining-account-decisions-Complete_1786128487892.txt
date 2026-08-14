@@ -1,0 +1,65 @@
+Step 2 - Resolve the remaining account decisions
+Complete these owner decisions before entering live values:
+1 Stripe mode: .replit currently documents STRIPE_MODE=test. Keep it only for a sandbox launch. A revenue-live promotion
+requires explicit owner approval, reviewed live keys/prices, a low-risk live transaction and refund, and a source/config change
+that makes production mode intentionally live.
+2 Legacy add-on prices: reconfirm STRIPE_PRICE_ADDON_NINJA_LAUNCH_KIT and STRIPE_PRICE_ADDON_STUDYFORGE_AI.
+The prior handoff reported old live-mode IDs that fail under the sandbox key. Replace them with correct same-mode
+$49/month prices, or remove them so checkout fails closed.
+3 OutCall commercial price: create and set STRIPE_PRICE_ADDON_OUTCALL only when OutCall is intentionally purchasable.
+Entitled accounts can launch the module without pretending checkout is ready.
+OPERATOROS / PHASE 18 HUMAN COMPLETION GUIDE
+Protected operations companion - do not record secrets in this document 03
+4 OpenAI quota: fund the intended OpenAI project/account and rerun the AI profile. A present key that returns
+insufficient_quota is not AI-ready.
+5 Twilio authority: use the intended production account and owned numbers. The Replit connector may support CallCommand,
+but signed webhooks and OutCall require the primary TWILIO_AUTH_TOKEN in the deployment secret manager.
+Step 3 - Configure Replit Publishing
+Enter secrets only in Publishing -> Edit Commands and Secrets. Development workspace values do not prove that the
+published deployment received them.
+Core required values
+- DATABASE_URL
+- SESSION_SECRET (high entropy, 24+ characters)
+- SSO_CODE_ENCRYPTION_SECRET (independent, high entropy, 32+ characters)
+- APP_ENV=production
+- NODE_ENV=production
+- OPERATOROS_BASE_URL=https://operatoros.net
+- OPERATOROS_APPS_URL=https://app.operatoros.net/
+- INTERNAL_API_URL=http://localhost:5001
+- OPERATOROS_DATABASE_RELEASE_MODE=apply
+- TRUST_PROXY=true
+- OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL=john@shotgunninjas.com
+- all thirteen canonical module URL values from config/production-environment.contract.json
+Leave APP_URL, COOKIE_DOMAIN, NEXT_PUBLIC_API_URL, OPERATOROS_DATABASE_RELEASE_APPLIED,
+OUTCALL_TEST_ADAPTER, and CALLCOMMAND_TEST_ADAPTER unset. Leave ALLOW_LEGACY_SSO_ROLLBACK and
+ALLOW_UNSAFE_COMMANDS unset or false. Never set a parent-domain session cookie.
+Revenue and email
+- Stripe secret key, webhook signing secret, intentional STRIPE_MODE, five shared plan/seat Price IDs, and each intentionally
+sellable add-on Price ID;
+- RESEND_API_KEY and the verified Shotgun Ninjas sender variable used by the deployment;
+- verify that shotgunninjas.com remains verified in the selected Resend account.
+CallCommand
+- a bound Replit Twilio connector or TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER;
+- TWILIO_PUBLIC_BASE_URL=https://callcommand-ai.operatoros.net.
+OutCall
+- OUTCALL_PUBLIC_URL=https://outcall.operatoros.net
+-
+independent versioned OUTCALL_FIELD_ENCRYPTION_KEY and OUTCALL_LOOKUP_HMAC_KEY (32+ characters each; never
+reuse session/SSO keys)
+- TWILIO_ACCOUNT_SID
+- TWILIO_AUTH_TOKEN
+- optional outbound API-key pair TWILIO_API_KEY_SID and TWILIO_API_KEY_SECRET
+OPERATOROS / PHASE 18 HUMAN COMPLETION GUIDE
+Protected operations companion - do not record secrets in this document 04
+- TWILIO_VERIFY_SERVICE_SID
+- TWILIO_PHONE_NUMBER (approved owned E.164 line)
+- TWILIO_ALLOWED_COUNTRIES=US,CA or the narrower approved controlled set
+- OUTCALL_LIVE_PROVIDER absent/disabled until the controlled provider gate; set exactly enabled only for that accepted
+activation step
+Configure the Twilio inbound SMS callback exactly as:
+https://outcall.operatoros.net/api/modules/outcall/webhooks/twilio/sms
+OperatorOS generates the voice status and gather callbacks for each controlled call. Do not replace them with a generic or
+standalone-domain callback.
+AI
+- OPENAI_API_KEY
+- reviewed model/project variables already documented by the repository

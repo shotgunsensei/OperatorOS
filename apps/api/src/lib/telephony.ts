@@ -1,0 +1,542 @@
+/**
+ * Task #75 — Twilio telephony adapter for the CallCommand AI shell.
+ * Task #89 — credentials may now come from the Replit Twilio connector
+ * (`connector:ccfg_twilio_...`) when running on Replit, falling back to
+ * the legacy env-var configuration. The connector path lets a tenant
+ * admin enable real test calls with a one-click OAuth handshake instead
+ * of pasting four env vars by hand.
+ *
+ * This module is intentionally thin: established REST operations retain the
+ * bounded `fetch` adapter, while the official Twilio SDK is used for webhook
+ * signature validation and Verify so those security-sensitive contracts are
+ * not reimplemented locally. It exposes:
+ *
+ *   1. `resolveTelephonyConfig()` — returns the active Twilio credentials
+ *      plus the source (`connector` or `env`), or `null` when neither is
+ *      configured. Result is cached for a short TTL because the connector
+ *      proxy is a network call.
+ *   2. `getTelephonyInfo()` — async status descriptor for the shell.
+ *   3. `placeTwilioCall()` / `verifyTwilioSignature()` /
+ *      `fetchTwilioTranscription()` — operational helpers.
+ *   4. `summarizeTranscript()` — AI-generated one-line call summary.
+ */
+
+import twilio from 'twilio';
+import { getAiProvider } from './ai-provider.js';
+
+const PERSONA_SCRIPTS: Record<string, string> = {
+  receptionist:
+    "You are a friendly receptionist for the customer. Greet the caller warmly, ask for their name and the reason for their call, capture the request, and let them know you will route it to the right team. Keep responses to one or two short sentences.",
+  qualifier:
+    "You are a B2B sales qualifier. Greet the caller, then ask three short discovery questions: company size, current solution, and timeline to evaluate. Confirm what you heard and offer to schedule a follow-up.",
+  collector:
+    "You are a polite accounts-receivable agent reminding the caller about an outstanding balance. Be empathetic, confirm their identity, restate the balance, and offer to schedule a payment or transfer them to a human agent.",
+};
+
+export type TelephonySource = 'connector' | 'env';
+
+export interface TelephonyConfig {
+  accountSid: string;
+  /**
+   * REST/basic-auth secret. For env-sourced config this is the account's
+   * primary auth token; for connector-sourced config it is the API key
+   * secret paired with `apiKeySid`.
+   */
+  authToken: string;
+  /**
+   * Present when credentials are a Twilio API key (SK…) rather than the
+   * primary auth token — the Replit connector serves API keys. Twilio
+   * basic auth must then be `apiKeySid:secret`, not `accountSid:secret`.
+   */
+  apiKeySid?: string;
+  fromNumber: string;
+  publicBaseUrl: string;
+  source: TelephonySource;
+}
+
+/**
+ * Basic auth header value for Twilio REST calls, honoring API-key auth.
+ * Exported so every Twilio REST call site (e.g. the shared SMS adapter)
+ * builds auth identically — `accountSid:secret` is invalid for API keys.
+ */
+export function restAuthHeader(cfg: Pick<TelephonyConfig, 'accountSid' | 'authToken' | 'apiKeySid'>): string {
+  const username = cfg.apiKeySid ?? cfg.accountSid;
+  return `Basic ${Buffer.from(`${username}:${cfg.authToken}`).toString('base64')}`;
+}
+
+function readEnvConfig(): TelephonyConfig | null {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_FROM_NUMBER;
+  const publicBaseUrl = process.env.TWILIO_PUBLIC_BASE_URL || process.env.APP_URL;
+  if (!accountSid || !authToken || !fromNumber || !publicBaseUrl) return null;
+  return { accountSid, authToken, fromNumber, publicBaseUrl, source: 'env' };
+}
+
+/**
+ * Pull Twilio credentials from the Replit connector proxy. Returns null
+ * when the proxy is unreachable, the connector is not wired up, or any
+ * required field is missing — callers should fall back to env vars.
+ *
+ * The proxy is documented at https://connectors.replit.com — it serves
+ * credentials for connectors the current Repl is bound to. We accept a
+ * variety of Twilio field names because the connector schema has shifted
+ * historically (e.g. `account_sid` vs `accountSid`, `phone_number` vs
+ * `from_number`).
+ */
+async function readConnectorConfig(): Promise<TelephonyConfig | null> {
+  // Tests always exercise the env-var path with synthetic credentials;
+  // the workspace's live connector must not shadow them.
+  if (process.env.NODE_ENV === 'test') return null;
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  // The proxy requires a scheme prefix on the identity token:
+  // `repl <token>` for workspace REPL_IDENTITY, `depl <token>` for
+  // deployment WEB_REPL_RENEWAL. A raw token is rejected with 401.
+  const token = process.env.REPL_IDENTITY
+    ? `repl ${process.env.REPL_IDENTITY}`
+    : process.env.WEB_REPL_RENEWAL
+      ? `depl ${process.env.WEB_REPL_RENEWAL}`
+      : null;
+  if (!hostname || !token) return null;
+  const publicBaseUrl = process.env.TWILIO_PUBLIC_BASE_URL || process.env.APP_URL;
+  if (!publicBaseUrl) return null;
+
+  try {
+    // Note: the `connector_names` query filter has been observed to return
+    // zero items even when the twilio connection exists, so fetch the full
+    // list and match on `connector_name` client-side.
+    const res = await fetch(`https://${hostname}/api/v2/connection?include_secrets=true`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        X_REPLIT_TOKEN: token,
+      },
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as {
+      items?: Array<{ connector_name?: string; settings?: Record<string, unknown> }>;
+    };
+    const settings = body.items?.find((i) => i.connector_name === 'twilio')?.settings;
+    if (!settings || typeof settings !== 'object') return null;
+
+    const pick = (...keys: string[]): string | null => {
+      for (const k of keys) {
+        const v = (settings as Record<string, unknown>)[k];
+        if (typeof v === 'string' && v.length > 0) return v;
+      }
+      return null;
+    };
+
+    const accountSid = pick('account_sid', 'accountSid', 'sid');
+    const fromNumber = pick('phone_number', 'phoneNumber', 'from_number', 'fromNumber', 'from');
+    if (!accountSid || !fromNumber) return null;
+
+    // The connector serves a Twilio API key pair (`api_key` SK… +
+    // `api_key_secret`) rather than the account's primary auth token.
+    const apiKeySid = pick('api_key', 'apiKey', 'api_key_sid', 'apiKeySid');
+    const apiKeySecret = pick('api_key_secret', 'apiKeySecret', 'secret');
+    if (apiKeySid && apiKeySecret) {
+      return {
+        accountSid,
+        authToken: apiKeySecret,
+        apiKeySid,
+        fromNumber,
+        publicBaseUrl,
+        source: 'connector',
+      };
+    }
+
+    // Fallback for older connector schemas that served the auth token.
+    const authToken = pick('auth_token', 'authToken', 'token');
+    if (!authToken) return null;
+    return { accountSid, authToken, fromNumber, publicBaseUrl, source: 'connector' };
+  } catch {
+    return null;
+  }
+}
+
+// Short TTL cache to avoid hitting the connector proxy on every webhook /
+// signature verification. 60s is long enough to bound the per-request
+// latency cost but short enough that revoking the connector or rotating
+// the auth token takes effect quickly.
+const CACHE_TTL_MS = 60_000;
+let cached: { at: number; value: TelephonyConfig | null } | null = null;
+
+export async function resolveTelephonyConfig(): Promise<TelephonyConfig | null> {
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.value;
+  // Prefer the connector when present — it represents an explicit admin
+  // choice via the Replit integration UI and survives credential rotation.
+  const fromConnector = await readConnectorConfig();
+  const value = fromConnector ?? readEnvConfig();
+  cached = { at: Date.now(), value };
+  return value;
+}
+
+/** Drop the cached resolution. Useful in tests and after admin actions. */
+export function clearTelephonyCache(): void {
+  cached = null;
+}
+
+export async function isTelephonyConfigured(): Promise<boolean> {
+  return (await resolveTelephonyConfig()) !== null;
+}
+
+/**
+ * Mask a Twilio Account SID for display. Twilio SIDs are `AC` + 32 hex
+ * chars; the prefix is not sensitive (it identifies the account type),
+ * but the body is. We surface the last 4 chars so admins can match
+ * against the Twilio console without exposing the full identifier in
+ * logs/UI. Example: `AC0123…cdef` -> `AC••••cdef`.
+ */
+export function maskAccountSid(sid: string): string {
+  if (sid.length <= 6) return '••••';
+  const prefix = sid.slice(0, 2);
+  const tail = sid.slice(-4);
+  return `${prefix}••••${tail}`;
+}
+
+export async function getTelephonyInfo(): Promise<{
+  configured: boolean;
+  provider: 'twilio';
+  source: TelephonySource | null;
+  connectorAvailable: boolean;
+  fromNumber: string | null;
+  accountSid: string | null;
+}> {
+  const cfg = await resolveTelephonyConfig();
+  return {
+    configured: cfg !== null,
+    provider: 'twilio',
+    source: cfg?.source ?? null,
+    // `connectorAvailable` tells the UI whether the one-click Replit
+    // connector path is even reachable from this environment. Self-hosted
+    // installs that lack the proxy fall back to "paste env vars" guidance.
+    connectorAvailable: Boolean(
+      process.env.REPLIT_CONNECTORS_HOSTNAME &&
+        (process.env.REPL_IDENTITY || process.env.WEB_REPL_RENEWAL),
+    ),
+    // Task #96 — surface the active Twilio identity so tenant admins can
+    // confirm which number CallCommand will dial from before placing a
+    // real test call. The from-number is the E.164 the call will
+    // originate from; the SID is masked because the body identifies the
+    // Twilio account and should not be exposed in full in the UI/logs.
+    fromNumber: cfg?.fromNumber ?? null,
+    accountSid: cfg ? maskAccountSid(cfg.accountSid) : null,
+  };
+}
+
+export interface PlaceCallInput {
+  to: string;
+  persona: string;
+  callerName: string;
+  callRowId: string;
+  recordingEnabled?: boolean;
+}
+
+export interface PlaceCallResult {
+  sid: string;
+  status: 'queued' | 'ringing' | 'completed' | 'failed';
+}
+
+function buildTwiml(persona: string, callerName: string): string {
+  const script = PERSONA_SCRIPTS[persona] ?? PERSONA_SCRIPTS.receptionist;
+  const safeName = callerName.replace(/[<>&"]/g, '');
+  const intro = `Hello ${safeName}, this is the CallCommand A I agent calling for a quick test.`;
+  const blurb = script.split('.')[0] + '.';
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<Response>',
+    `  <Say voice="Polly.Joanna">${intro}</Say>`,
+    `  <Say voice="Polly.Joanna">${blurb}</Say>`,
+    '  <Pause length="1"/>',
+    '  <Say voice="Polly.Joanna">If you are hearing this message, the integration is wired up correctly. Goodbye.</Say>',
+    '</Response>',
+  ].join('\n');
+}
+
+export function mapTwilioStatus(twilioStatus: string): 'queued' | 'ringing' | 'completed' | 'failed' {
+  switch (twilioStatus) {
+    case 'queued':
+    case 'initiated':
+      return 'queued';
+    case 'ringing':
+    case 'in-progress':
+      return 'ringing';
+    case 'completed':
+      return 'completed';
+    case 'busy':
+    case 'no-answer':
+    case 'canceled':
+    case 'failed':
+      return 'failed';
+    default:
+      return 'queued';
+  }
+}
+
+export async function placeTwilioCall(input: PlaceCallInput): Promise<PlaceCallResult> {
+  const cfg = await resolveTelephonyConfig();
+  if (!cfg) {
+    throw new Error('TELEPHONY_NOT_CONFIGURED');
+  }
+
+  const statusCallback = new URL(
+    `/v1/modules/callcommand-ai/webhooks/twilio/status?call_id=${encodeURIComponent(input.callRowId)}`,
+    cfg.publicBaseUrl,
+  ).toString();
+  const recordingCallback = new URL(
+    `/v1/modules/callcommand-ai/webhooks/twilio/recording?call_id=${encodeURIComponent(input.callRowId)}`,
+    cfg.publicBaseUrl,
+  ).toString();
+
+  const form = new URLSearchParams();
+  form.set('To', input.to);
+  form.set('From', cfg.fromNumber);
+  form.set('Twiml', buildTwiml(input.persona, input.callerName));
+  form.set('StatusCallback', statusCallback);
+  form.set('StatusCallbackMethod', 'POST');
+  for (const ev of ['initiated', 'ringing', 'answered', 'completed']) {
+    form.append('StatusCallbackEvent', ev);
+  }
+  if (input.recordingEnabled) {
+    form.set('Record', 'true');
+    form.set('RecordingStatusCallback', recordingCallback);
+    form.set('RecordingStatusCallbackMethod', 'POST');
+    form.set('RecordingStatusCallbackEvent', 'completed');
+  } else {
+    form.set('Record', 'false');
+  }
+
+  const res = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${cfg.accountSid}/Calls.json`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: restAuthHeader(cfg),
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: form.toString(),
+    },
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Twilio API error ${res.status}: ${text.slice(0, 400)}`);
+  }
+
+  const body = (await res.json()) as { sid?: string; status?: string };
+  if (!body.sid) throw new Error('Twilio response missing call sid');
+  return { sid: body.sid, status: mapTwilioStatus(body.status ?? 'queued') };
+}
+
+export interface RedirectLiveCallResult {
+  ok: boolean;
+  status: 'redirected' | 'provider_unavailable' | 'failed';
+  reason: string;
+  providerStatus?: number;
+}
+
+export interface StartLiveCallRecordingResult {
+  ok: boolean;
+  status: 'recording' | 'provider_unavailable' | 'failed';
+  reason: string;
+  recordingSid?: string;
+  providerStatus?: number;
+}
+
+/**
+ * Start recording an already-active inbound call through Twilio's Calls
+ * Recordings API. TwiML has no <Start><Recording> verb, so provider
+ * confirmation here is the only state that may be reported as recording.
+ */
+export async function startTwilioCallRecording(input: {
+  callSid: string;
+  recordingStatusCallbackUrl: string;
+}): Promise<StartLiveCallRecordingResult> {
+  const cfg = await resolveTelephonyConfig();
+  if (!cfg) return { ok: false, status: 'provider_unavailable', reason: 'Twilio provider is not configured' };
+  const callbackUrl = new URL(input.recordingStatusCallbackUrl, cfg.publicBaseUrl).toString();
+  const form = new URLSearchParams({
+    RecordingStatusCallback: callbackUrl,
+    RecordingStatusCallbackMethod: 'POST',
+    RecordingStatusCallbackEvent: 'completed',
+    Trim: 'do-not-trim',
+  });
+  try {
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(cfg.accountSid)}/Calls/${encodeURIComponent(input.callSid)}/Recordings.json`,
+      {
+        method: 'POST',
+        headers: { Authorization: restAuthHeader(cfg), 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString(),
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+    if (!response.ok) {
+      return { ok: false, status: 'failed', reason: `Twilio rejected recording with HTTP ${response.status}`, providerStatus: response.status };
+    }
+    const payload = await response.json() as { sid?: string };
+    if (!payload.sid) return { ok: false, status: 'failed', reason: 'Twilio accepted the request without a recording identifier', providerStatus: response.status };
+    return { ok: true, status: 'recording', reason: 'Twilio confirmed live call recording', recordingSid: payload.sid, providerStatus: response.status };
+  } catch {
+    return { ok: false, status: 'failed', reason: 'Twilio recording request failed before provider confirmation' };
+  }
+}
+
+/**
+ * Redirect an active Twilio call. A transfer is successful only after the
+ * provider accepts the Calls API update; missing credentials never degrade to
+ * a simulated success.
+ */
+export async function redirectTwilioCall(input: {
+  callSid: string;
+  targetPhoneE164: string;
+  announce?: string | null;
+  statusCallbackUrl?: string | null;
+}): Promise<RedirectLiveCallResult> {
+  const cfg = await resolveTelephonyConfig();
+  if (!cfg) return { ok: false, status: 'provider_unavailable', reason: 'Twilio provider is not configured' };
+  const say = input.announce
+    ? `<Say voice="Polly.Joanna">${input.announce.replace(/[<>&'\"]/g, '')}</Say>`
+    : '';
+  const action = input.statusCallbackUrl
+    ? ` action="${input.statusCallbackUrl.replace(/[<>&'\"]/g, '')}" method="POST"`
+    : '';
+  const phone = input.targetPhoneE164.replace(/[<>&'\"]/g, '');
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response>${say}<Dial${action}>${phone}</Dial></Response>`;
+  try {
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(cfg.accountSid)}/Calls/${encodeURIComponent(input.callSid)}.json`,
+      {
+        method: 'POST',
+        headers: { Authorization: restAuthHeader(cfg), 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ Twiml: twiml }).toString(),
+      },
+    );
+    if (!response.ok) {
+      return { ok: false, status: 'failed', reason: `Twilio rejected the transfer with HTTP ${response.status}`, providerStatus: response.status };
+    }
+    return { ok: true, status: 'redirected', reason: 'Twilio accepted the live call redirect', providerStatus: response.status };
+  } catch {
+    return { ok: false, status: 'failed', reason: 'Twilio transfer request failed before provider confirmation' };
+  }
+}
+
+/**
+ * Verify the X-Twilio-Signature header per
+ * https://www.twilio.com/docs/usage/webhooks/webhooks-security.
+ *
+ * Async because credentials may come from the Replit connector proxy
+ * (network call). The proxy result is cached, so the hot path is normally
+ * an in-memory lookup.
+ *
+ * Caveat: Twilio computes webhook signatures with the account's PRIMARY
+ * auth token. Connector-sourced credentials are an API key pair, whose
+ * secret is NOT the signing key, so signature verification cannot succeed
+ * for connector-sourced config unless TWILIO_AUTH_TOKEN is also set — we
+ * prefer that env var here when present.
+ */
+export async function verifyTwilioSignature(
+  url: string,
+  params: Record<string, string>,
+  signature: string | undefined,
+): Promise<boolean> {
+  if (!signature) return false;
+  const cfg = await resolveTelephonyConfig();
+  if (!cfg) return false;
+  // Twilio signs webhooks with the account's primary Auth Token, not an API
+  // key secret. Connector-only API-key credentials can place REST requests
+  // but cannot validate inbound signatures without TWILIO_AUTH_TOKEN.
+  const signingKey = process.env.TWILIO_AUTH_TOKEN || (cfg.apiKeySid ? null : cfg.authToken);
+  if (!signingKey) return false;
+  return twilio.validateRequest(signingKey, signature, url, params);
+}
+
+export interface TwilioVerificationResult {
+  ok: boolean;
+  status: 'pending' | 'approved' | 'failed' | 'provider_unavailable';
+  providerReference?: string;
+  reasonCode?: string;
+}
+
+function verifyServiceSid(): string | null {
+  const sid = process.env.TWILIO_VERIFY_SERVICE_SID?.trim();
+  return sid && /^VA[A-Za-z0-9]{20,62}$/.test(sid) ? sid : null;
+}
+
+function twilioClient(cfg: TelephonyConfig) {
+  return twilio(cfg.apiKeySid ?? cfg.accountSid, cfg.authToken, { accountSid: cfg.accountSid });
+}
+
+/** Send an SMS possession challenge to a previously registered destination. */
+export async function startTwilioVerification(destinationE164: string): Promise<TwilioVerificationResult> {
+  const [cfg, serviceSid] = await Promise.all([resolveTelephonyConfig(), Promise.resolve(verifyServiceSid())]);
+  if (!cfg || !serviceSid) return { ok: false, status: 'provider_unavailable', reasonCode: 'TWILIO_VERIFY_NOT_CONFIGURED' };
+  try {
+    const result = await twilioClient(cfg).verify.v2.services(serviceSid).verifications.create({ to: destinationE164, channel: 'sms' });
+    return { ok: result.status === 'pending', status: result.status === 'pending' ? 'pending' : 'failed', providerReference: result.sid, reasonCode: result.status === 'pending' ? undefined : 'TWILIO_VERIFY_NOT_PENDING' };
+  } catch {
+    return { ok: false, status: 'failed', reasonCode: 'TWILIO_VERIFY_DISPATCH_FAILED' };
+  }
+}
+
+/** Check a Twilio Verify challenge without retaining the submitted code. */
+export async function checkTwilioVerification(destinationE164: string, code: string): Promise<TwilioVerificationResult> {
+  const [cfg, serviceSid] = await Promise.all([resolveTelephonyConfig(), Promise.resolve(verifyServiceSid())]);
+  if (!cfg || !serviceSid) return { ok: false, status: 'provider_unavailable', reasonCode: 'TWILIO_VERIFY_NOT_CONFIGURED' };
+  if (!/^\d{4,10}$/.test(code)) return { ok: false, status: 'failed', reasonCode: 'TWILIO_VERIFY_CODE_INVALID' };
+  try {
+    const result = await twilioClient(cfg).verify.v2.services(serviceSid).verificationChecks.create({ to: destinationE164, code });
+    return { ok: result.status === 'approved', status: result.status === 'approved' ? 'approved' : 'failed', providerReference: result.sid, reasonCode: result.status === 'approved' ? undefined : 'TWILIO_VERIFY_CHALLENGE_FAILED' };
+  } catch {
+    return { ok: false, status: 'failed', reasonCode: 'TWILIO_VERIFY_CHECK_FAILED' };
+  }
+}
+
+export async function fetchTwilioTranscription(recordingSid: string): Promise<string | null> {
+  const cfg = await resolveTelephonyConfig();
+  if (!cfg) return null;
+  const res = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${cfg.accountSid}/Recordings/${recordingSid}/Transcriptions.json`,
+    { headers: { Authorization: restAuthHeader(cfg) } },
+  );
+  if (!res.ok) return null;
+  const body = (await res.json()) as { transcriptions?: Array<{ transcription_text?: string }> };
+  const first = body.transcriptions?.[0]?.transcription_text;
+  return typeof first === 'string' && first.length > 0 ? first : null;
+}
+
+export async function fetchTwilioRecording(recordingSid: string): Promise<Buffer | null> {
+  const cfg = await resolveTelephonyConfig();
+  if (!cfg || !/^RE[A-Za-z0-9]{20,62}$/.test(recordingSid)) return null;
+  const response = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(cfg.accountSid)}/Recordings/${encodeURIComponent(recordingSid)}.mp3`,
+    { headers: { Authorization: restAuthHeader(cfg) }, signal: AbortSignal.timeout(30_000) },
+  );
+  if (!response.ok) return null;
+  const declaredLength = Number(response.headers.get('content-length') || 0);
+  if (declaredLength > 52_428_800) throw Object.assign(new Error('Recording exceeds the configured size limit'), { code: 'CALLCOMMAND_RECORDING_TOO_LARGE' });
+  const content = Buffer.from(await response.arrayBuffer());
+  if (!content.length || content.length > 52_428_800) throw Object.assign(new Error('Recording is outside the configured size limit'), { code: 'CALLCOMMAND_RECORDING_SIZE_INVALID' });
+  return content;
+}
+
+export async function summarizeTranscript(
+  transcript: string,
+  persona: string,
+  callerName: string,
+): Promise<string> {
+  if (!transcript || transcript.trim().length === 0) {
+    return `Call with ${callerName} completed but produced no transcript.`;
+  }
+  const provider = getAiProvider();
+  const result = await provider.complete({
+    systemPrompt:
+      'You summarize a brief outbound test call between an AI agent and a caller. Reply with a single sentence (max 220 chars) describing what happened and any next step.',
+    userPrompt: `Persona: ${persona}\nCaller: ${callerName}\nTranscript:\n${transcript.slice(0, 4000)}`,
+    maxTokens: 160,
+    temperature: 0.3,
+  });
+  const oneLine = result.text.replace(/\s+/g, ' ').trim();
+  return oneLine.slice(0, 500);
+}

@@ -24,6 +24,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
+  logoutEverywhere: () => Promise<void>;
   refresh: () => Promise<void>;
   clearAuthError: () => void;
 }
@@ -35,9 +36,26 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   logout: async () => {},
+  logoutEverywhere: async () => {},
   refresh: async () => {},
   clearAuthError: () => {},
 });
+
+function shouldRestartCentralAuth(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname.toLowerCase();
+  const path = window.location.pathname;
+  if (host === 'auth.operatoros.net' || host === 'api.operatoros.net') return false;
+  if (host === 'operatoros.net') return path === '/app' || path.startsWith('/app/');
+  return host === 'app.operatoros.net' || host.endsWith('.operatoros.net');
+}
+
+function restartCentralAuthAfterInvalidSession(): boolean {
+  if (!shouldRestartCentralAuth()) return false;
+  const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  window.location.replace(`/logout?reauth=1&return_to=${encodeURIComponent(returnTo)}`);
+  return true;
+}
 
 export function useAuth() {
   return useContext(AuthContext);
@@ -61,8 +79,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       setAuthError(null);
     } catch (err: any) {
       setUser(null);
-      localStorage.removeItem('token');
       setActiveTenantId(null);
+      if (err?.status === 401 && restartCentralAuthAfterInvalidSession()) return;
       if (err?.code === 'ACCOUNT_SUSPENDED') {
         setAuthError({ code: 'ACCOUNT_SUSPENDED', message: err.error || 'Account suspended' });
       } else if (err?.code === 'ACCOUNT_DELETED') {
@@ -74,13 +92,31 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, []);
 
   useEffect(() => {
+    // One-time migration cleanup: v1 never reads or writes a browser bearer,
+    // but remove any token left by a pre-v1 release.
+    try { localStorage.removeItem('token'); } catch {}
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!user) return;
+    const renew = () => {
+      if (document.visibilityState !== 'visible') return;
+      void authApi.refresh().catch((err: any) => {
+        if (err?.status === 401) void refresh();
+      });
+    };
+    const interval = window.setInterval(renew, 30 * 60 * 1000);
+    document.addEventListener('visibilitychange', renew);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', renew);
+    };
+  }, [refresh, user]);
 
   const login = async (email: string, password: string) => {
     setAuthError(null);
     const data = await authApi.login(email, password);
-    localStorage.setItem('token', data.token);
     // Seed active tenant immediately so the very first post-login request
     // already carries X-Tenant-Id, instead of racing TenantProvider.refresh().
     setActiveTenantId(data.user?.currentTenantId ?? null);
@@ -89,24 +125,31 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const register = async (email: string, password: string, name: string) => {
     setAuthError(null);
-    const data = await authApi.register(email, password, name);
-    localStorage.setItem('token', data.token);
-    setActiveTenantId(data.user?.currentTenantId ?? null);
-    setUser(data.user);
+    await authApi.register(email, password, name);
+    throw { code: 'REGISTRATION_SUBMITTED', error: 'If this email is new, your account has been created. Please sign in to continue.' };
   };
 
   const logout = async () => {
     try {
       await authApi.logout();
     } catch {}
-    localStorage.removeItem('token');
+    setActiveTenantId(null);
+    setUser(null);
+    setAuthError(null);
+  };
+
+  const logoutEverywhere = async () => {
+    // Unlike local logout, do not swallow an API failure: the UI must not
+    // claim every host was revoked unless token_version was incremented by
+    // the authoritative server.
+    await authApi.logoutAll();
     setActiveTenantId(null);
     setUser(null);
     setAuthError(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, authError, login, register, logout, refresh, clearAuthError }}>
+    <AuthContext.Provider value={{ user, loading, authError, login, register, logout, logoutEverywhere, refresh, clearAuthError }}>
       {children}
     </AuthContext.Provider>
   );

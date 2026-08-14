@@ -1,0 +1,270 @@
+#125 - Ecosystem Launcher, Docs & Domain Tooling
+
+Review + Adjustment:
+This task is approved, but tighten implementation around one rule:
+
+Do not duplicate ecosystem/module data anywhere.
+
+The foundation task already owns:
+- MODULE_CATALOG-derived ecosystem registry
+- SDK helpers
+- host utility
+- env scaffolding
+- ecosystem.registry.json
+- API endpoint
+- foundation smoke tests
+
+This task must consume those outputs only.
+
+Primary implementation rule:
+Use the shared SDK helpers and/or ecosystem.registry.json as the source of truth. Do not create a second module list inside the /ecosystem page, scripts, docs generator, or README.
+
+Goal:
+Build the user-facing and operational layer on top of the ecosystem registry foundation:
+1. A new /ecosystem launcher page
+2. Domain migration documentation
+3. README ecosystem section
+4. Read-only domain validation scripts
+
+This should make the ecosystem visible to users and give the operator a safe documented path to migrate:
+techdeck.app → techdeck.operatoros.net
+
+Do not break the current Replit deployment.
+
+Brand / copy rules:
+- OperatorOS is the only “OS” platform brand.
+- Refer to unlockable products as “modules.”
+- Refer to top-level system areas such as app.operatoros.net, api.operatoros.net, docs.operatoros.net, etc. as “platform components.”
+- Frame OperatorOS as the central command layer for the product ecosystem.
+- Avoid copy that describes every module as its own OS.
+- If catalog names contain OS because they are existing product names, do not rename the underlying slugs or registry records. Just keep the page copy clean and ecosystem-focused.
+
+Hard constraints:
+- Do not modify the existing /apps route.
+- Do not create an /apps-area route.
+- Do not alter auth middleware.
+- Do not alter deployment scripts.
+- Do not modify package.json scripts.
+- Do not perform DNS changes.
+- Do not add redirects.
+- Do not build or embed the actual Tech Deck app.
+- Do not introduce a heavy UI library.
+- Do not create duplicate hard-coded module arrays.
+
+Expected files:
+- apps/web/src/app/ecosystem/page.tsx
+- docs/DOMAIN-MIGRATION.md
+- README.md
+- scripts/check-ecosystem-domains.ps1
+- scripts/check-ecosystem-domains.sh
+
+Only touch other files if required for imports, typing, or existing project conventions.
+
+Implementation steps:
+
+1. Ecosystem launcher page
+
+Add a new Next.js App Router route:
+
+apps/web/src/app/ecosystem/page.tsx
+
+The page should import module data from the shared SDK helpers created by the foundation task.
+
+Preferred imports, depending on available exports:
+- getAllModules()
+- getActiveModules()
+- getPlannedModules()
+- getModuleUrl()
+- getLegacyUrl()
+
+If the web app cannot directly import the SDK due to existing workspace/build constraints, use the existing project-approved import pattern. Do not create a new duplicate module list as a workaround unless absolutely necessary. If a fallback is required, use ecosystem.registry.json and document the reason in the summary.
+
+The page should render:
+- A strong heading positioning OperatorOS as the central command layer
+- A short explanation of platform components vs modules
+- Active modules section
+- Planned / upcoming modules section
+- Cards for every module from the registry
+- Tech Deck first, regardless of category or status
+- Module name
+- Category
+- Status
+- Description
+- Launch URL
+- Legacy URL when present
+
+Tech Deck card requirements:
+- Must link to https://techdeck.operatoros.net
+- Must show legacy reference: https://techdeck.app
+- Must not iframe, embed, or implement Tech Deck
+- Must label Tech Deck as an ecosystem module
+
+Visual requirements:
+- Reuse existing styling, brand tokens, components, utility classes, or layout conventions.
+- No new heavy UI library.
+- External links should use safe attributes where appropriate:
+  target="_blank"
+  rel="noreferrer"
+
+Grouping rule:
+- status === "active" goes in Active Modules.
+- status === "planned" goes in Planned Modules.
+- If statuses such as "internal" or "external" exist, include them in a secondary section such as “Additional Modules” or preserve their status badge. Do not hide them unless the registry marks them non-public.
+
+2. Domain migration documentation
+
+Create:
+
+docs/DOMAIN-MIGRATION.md
+
+Include step-by-step instructions for Tech Deck migration while using Replit as current host.
+
+Required sections:
+- Purpose
+- Current model
+- Target model
+- Manual Replit steps
+- Manual DNS steps
+- Verification steps
+- Legacy redirect steps
+- Rollback notes
+- Do-not-redirect warning
+
+The doc must explain this exact flow:
+
+1. Open Replit project.
+2. Go to Publishing / Deployments / Domains, using the naming that best matches current Replit UI.
+3. Add custom domain:
+   techdeck.operatoros.net
+4. Copy the DNS records Replit provides.
+5. Add the generated A/TXT/CNAME records at the DNS provider for operatoros.net.
+6. Wait for Replit to show verified.
+7. Test DNS resolution.
+8. Test HTTPS:
+   https://techdeck.operatoros.net
+9. Confirm the app loads successfully over HTTPS.
+10. Only after successful HTTPS testing, redirect:
+    techdeck.app → https://techdeck.operatoros.net
+11. Keep techdeck.app as a legacy alias or redirect.
+
+Explicit warning text required:
+
+Do not redirect techdeck.app until https://techdeck.operatoros.net resolves correctly and serves HTTPS successfully. Redirecting early can break the current public entry point.
+
+Do not perform any actual DNS changes or redirects in this task.
+
+3. README update
+
+Add a section:
+
+## OperatorOS Ecosystem Alignment
+
+Do not rewrite the entire README. Append or insert the section where it best fits.
+
+Include:
+- OperatorOS purpose as the central command layer
+- Replit as the current hosting model
+- Product/module subdomain pattern:
+  module.operatoros.net
+- Tech Deck as the first migration target:
+  techdeck.app → techdeck.operatoros.net
+- Manual DNS steps are required outside the codebase
+- Link to docs/DOMAIN-MIGRATION.md
+- How to run the domain-check scripts
+
+Example commands:
+
+PowerShell:
+./scripts/check-ecosystem-domains.ps1
+
+Bash:
+bash scripts/check-ecosystem-domains.sh
+
+4. Domain-check scripts
+
+Create:
+
+scripts/check-ecosystem-domains.ps1
+scripts/check-ecosystem-domains.sh
+
+Both scripts must be read-only.
+
+They should check:
+- DNS status
+- Resolved target
+- HTTPS status
+
+They should print a readable table with:
+
+Domain | DNS Status | Resolved Target | HTTPS Status
+
+Domain source rule:
+Prefer sourcing the domain list from ecosystem.registry.json.
+
+The script should include:
+- platform domains from the registry
+- every module ecosystemUrl from the registry
+
+If parsing ecosystem.registry.json is too fragile in shell/PowerShell, use a minimal fallback list but clearly comment that the preferred source is ecosystem.registry.json. Do not duplicate module metadata beyond bare domain names.
+
+Required platform domains:
+operatoros.net
+app.operatoros.net
+api.operatoros.net
+admin.operatoros.net
+auth.operatoros.net
+docs.operatoros.net
+status.operatoros.net
+
+Required module domains should come from the registry, including:
+techdeck.operatoros.net
+tradeflowkit.operatoros.net
+pulsedesk.operatoros.net
+snapproofos.operatoros.net
+brandforge.operatoros.net
+faultlinelab.operatoros.net
+studyforge.operatoros.net
+launchkit.operatoros.net
+callcommand.operatoros.net
+ninjamation.operatoros.net
+
+Also include any additional module domains present in ecosystem.registry.json, such as torqueshed if it exists in the registry.
+
+PowerShell behavior:
+- Use Resolve-DnsName where available.
+- Use Invoke-WebRequest -Method Head for HTTPS status.
+- Handle failures gracefully.
+- Do not stop the whole script on one failed domain.
+
+Bash behavior:
+- Use dig if available, fallback to nslookup if available.
+- Use curl -I -L --max-time 10 for HTTPS status.
+- Handle failures gracefully.
+- Do not stop the whole script on one failed domain.
+
+No infrastructure changes.
+No Cloudflare API calls.
+No Replit API calls.
+No writes except normal console output.
+
+5. Verification
+
+After implementation:
+- Load /ecosystem locally or through the Replit preview.
+- Confirm Tech Deck appears first.
+- Confirm active modules are visually separated from planned/upcoming modules.
+- Confirm Tech Deck links to https://techdeck.operatoros.net.
+- Confirm legacy techdeck.app reference is visible.
+- Run existing build.
+- Run existing typecheck if available.
+- Fix only errors caused by this task.
+- Do not modify package.json scripts.
+
+Expected final summary:
+At the end, report:
+- Files created
+- Files modified
+- Commands run
+- Build/typecheck results
+- Any manual DNS/Replit steps still required
+- Any assumptions made because of the existing repo structure

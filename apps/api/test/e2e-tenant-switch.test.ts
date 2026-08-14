@@ -181,9 +181,9 @@ test('member of two tenants: picker lists both, switch flips active context, sco
     payload: { email: alice.email, password: alicePassword },
   });
   assert.equal(loginRes.statusCode, 200, `login: ${loginRes.body}`);
-  const tokenCookie = loginRes.cookies.find((c: any) => c.name === 'token');
-  assert.ok(tokenCookie, 'login must set a token cookie');
-  const cookies = { token: tokenCookie.value };
+  const tokenCookie = loginRes.cookies.find((c: any) => c.name === 'operatoros_session');
+  assert.ok(tokenCookie, 'login must set the host-only OperatorOS session cookie');
+  const cookies = { operatoros_session: tokenCookie.value };
 
   // (a) The picker source: GET /v1/me/tenants must list BOTH tenants alice
   //     belongs to, with their roles, and report a current active tenant.
@@ -292,8 +292,9 @@ test('super_admin: "Show all tenants" reveals non-member tenants and switching i
     payload: { email: superAdmin.email, password: superAdminPassword },
   });
   assert.equal(loginRes.statusCode, 200, `super login: ${loginRes.body}`);
-  const tokenCookie = loginRes.cookies.find((c: any) => c.name === 'token');
-  const cookies = { token: tokenCookie.value };
+  const tokenCookie = loginRes.cookies.find((c: any) => c.name === 'operatoros_session');
+  assert.ok(tokenCookie, 'login must set the host-only OperatorOS session cookie');
+  const cookies = { operatoros_session: tokenCookie.value };
 
   // Membership-only listing (`meApi.tenants()`) must NOT include tenantC,
   // because super_admin was never added as a member there. This is what

@@ -1,0 +1,294 @@
+You are working inside the OperatorOS Replit project. The current production issue is that OperatorOS subdomains are not being handled correctly. When visiting a subdomain, the browser lags/hangs for a bit and then redirects or errors to something like:
+
+auth.operatoros.net:5000
+
+This is wrong for production. Public URLs should not include `:5000`. Replit may use an internal app port, but external production URLs must use normal HTTPS hostnames like:
+
+https://auth.operatoros.net
+https://app.operatoros.net
+https://techdeck.operatoros.net
+https://pulsedesk.operatoros.net
+https://tradeflowkit.operatoros.net
+
+Goal:
+Audit and fix OperatorOS subdomain routing, auth redirects, host detection, production URL generation, CORS, cookie domain behavior, and environment variable usage so the platform correctly supports multiple subdomains under operatoros.net.
+
+Critical constraints:
+
+1. Do not expose or print secrets.
+2. Do not hardcode production-only values directly into business logic if env/config can handle them.
+3. Do not remove working auth, SSO, tenant, billing, or module code unless clearly broken.
+4. Do not weaken security to make redirects work.
+5. Keep local development working.
+6. In production, never generate public URLs with `:5000`.
+7. In production, canonical public URLs must use HTTPS.
+8. The app should bind internally to Replit’s required port, but public redirects must not include the internal port.
+
+Known desired public hosts:
+
+* operatoros.net
+* app.operatoros.net
+* auth.operatoros.net
+* api.operatoros.net
+* techdeck.operatoros.net
+* pulsedesk.operatoros.net
+* tradeflowkit.operatoros.net
+
+Expected routing behavior:
+
+* operatoros.net should load the public/root OperatorOS surface or redirect intentionally to app.operatoros.net if that is how the app is designed.
+* app.operatoros.net should load the OperatorOS Command Center.
+* auth.operatoros.net should load login/session/SSO pages only.
+* api.operatoros.net should serve API routes or route safely according to current architecture.
+* techdeck.operatoros.net should resolve to the TechDeck module shell or currently configured placeholder/module route.
+* pulsedesk.operatoros.net should resolve to the PulseDesk module shell or currently configured placeholder/module route.
+* tradeflowkit.operatoros.net should resolve to the TradeFlowKit module shell or currently configured placeholder/module route.
+
+Investigate the following areas:
+
+1. Environment/config audit
+   Search for all environment variables and config constants related to:
+
+* BASE_URL
+* APP_URL
+* PUBLIC_URL
+* SITE_URL
+* ROOT_DOMAIN
+* AUTH_URL
+* AUTH_ORIGIN
+* API_URL
+* FRONTEND_URL
+* CORS_ORIGIN
+* CALLBACK_URL
+* REDIRECT_URL
+* PORT
+* HOST
+* DOMAIN
+* COOKIE_DOMAIN
+* VITE_
+* NEXT_PUBLIC_
+* REPLIT
+* REPL_SLUG
+* REPL_OWNER
+
+Identify any value or fallback that could generate:
+
+* auth.operatoros.net:5000
+* app.operatoros.net:5000
+* operatoros.net:5000
+* localhost:5000 in production
+* http:// instead of https:// in production
+
+2. Hardcoded port audit
+   Search the entire codebase for:
+
+* ":5000"
+* "localhost"
+* "127.0.0.1"
+* "0.0.0.0"
+* "auth.operatoros.net"
+* "app.operatoros.net"
+* "operatoros.net"
+* "window.location"
+* "location.href"
+* "redirect"
+* "callback"
+* "returnTo"
+* "origin"
+
+Determine whether any hardcoded redirect, SSO launch URL, auth callback, CORS config, or cookie config is incorrectly appending the internal dev port to public production URLs.
+
+3. Host/header handling audit
+   Review how the app detects the current hostname. Check whether it uses:
+
+* req.headers.host
+* req.headers.origin
+* x-forwarded-host
+* x-forwarded-proto
+* window.location.origin
+* URL constructors
+* Express/Next/Vite/Replit proxy headers
+
+Fix production host resolution so:
+
+* It trusts the correct forwarded host/protocol behind Replit when appropriate.
+* It strips ports from known production hosts.
+* It does not blindly reuse internal dev host/port for public redirects.
+* It normalizes hosts before module resolution.
+* It handles unknown hosts safely.
+
+Add or update a helper similar to:
+
+getPublicOrigin(request)
+normalizeHost(host)
+isProductionHost(host)
+resolveHostRole(host)
+buildPublicUrl(path, hostRole)
+
+Production behavior:
+
+* If request host is auth.operatoros.net or forwarded host is auth.operatoros.net, public origin must be https://auth.operatoros.net
+* If request host is app.operatoros.net, public origin must be https://app.operatoros.net
+* If request host is techdeck.operatoros.net, public origin must be https://techdeck.operatoros.net
+* Do not include :5000 on public origins.
+
+Local development behavior:
+
+* Allow localhost or Replit preview/dev URL with internal port where needed.
+* Keep local dev redirects usable.
+* Do not force .operatoros.net cookie domain locally.
+
+4. Auth redirect audit
+   Review login/logout/session/SSO redirect behavior:
+
+* login redirect
+* logout redirect
+* callback redirect
+* module launch redirect
+* access denied redirect
+* unauthenticated module redirect
+* returnTo/next URL validation
+
+Fix any redirect that produces `auth.operatoros.net:5000`.
+
+Expected production redirects:
+
+* Unauthenticated module visit should redirect to:
+  https://auth.operatoros.net/login?returnTo=<encoded-original-url>
+* Login success should redirect back to the original module or app URL without :5000.
+* Logout should redirect to a safe public URL without :5000.
+* SSO launch should redirect to the correct module subdomain without :5000.
+
+Also validate returnTo/next parameters:
+
+* Only allow same-site operatoros.net subdomains.
+* Reject or sanitize unknown external hosts.
+* Prevent open redirects.
+
+5. Cookie/session audit
+   Review session cookie settings. Production target:
+
+* HttpOnly: true
+* Secure: true
+* SameSite: Lax
+* Domain: .operatoros.net
+* Path: /
+
+Local development target:
+
+* HttpOnly: true
+* Secure based on local protocol
+* SameSite: Lax
+* Domain should be omitted or safely local-compatible
+* Path: /
+
+Fix any cookie logic that is tied incorrectly to host:port or that prevents subdomain session sharing.
+
+6. CORS audit
+   Review CORS settings for API/auth calls. Production allowed origins should include:
+
+* https://operatoros.net
+* https://app.operatoros.net
+* https://auth.operatoros.net
+* https://api.operatoros.net
+* https://techdeck.operatoros.net
+* https://pulsedesk.operatoros.net
+* https://tradeflowkit.operatoros.net
+
+Do not allow wildcard credentials in production.
+Do not include :5000 production origins.
+Keep local dev origins separate.
+
+7. Module host routing audit
+   Review the module registry and host routing. Confirm these hostnames are recognized:
+
+* techdeck.operatoros.net
+* pulsedesk.operatoros.net
+* tradeflowkit.operatoros.net
+
+Add or fix tests/helpers for:
+
+* getModuleByHost("techdeck.operatoros.net") returns TechDeck
+* getModuleByHost("pulsedesk.operatoros.net") returns PulseDesk
+* getModuleByHost("tradeflowkit.operatoros.net") returns TradeFlowKit
+* hostnames with incidental ports are normalized safely
+* auth.operatoros.net is not misclassified as a module
+* app.operatoros.net is not misclassified as a module
+* unknown hosts produce controlled behavior
+
+8. Add diagnostics endpoint or temporary safe debug route
+   If no safe diagnostics exist, add a protected or non-sensitive endpoint such as:
+
+GET /api/diagnostics/public-url
+
+It should return only non-secret info:
+
+* NODE_ENV
+* normalizedHost
+* forwardedHost
+* forwardedProto
+* resolvedPublicOrigin
+* resolvedHostRole
+* cookieDomainMode
+* knownSubdomainMatch true/false
+
+Do not return secrets or raw environment variable values.
+
+9. Documentation
+   Create or update:
+
+docs/subdomain-runtime-audit.md
+
+Include:
+
+* Root cause of auth.operatoros.net:5000 issue
+* Files changed
+* Public URL rules
+* Local dev URL rules
+* Cookie/session rules
+* CORS rules
+* Subdomain routing rules
+* Manual Replit checks I need to do
+* Remaining risks
+
+Also create or update:
+
+docs/replit-subdomain-checklist.md
+
+Include a manual checklist for:
+
+* confirming each subdomain is added in Replit Domains
+* confirming each subdomain is verified
+* confirming HTTPS works
+* confirming no public redirect includes :5000
+* confirming auth.operatoros.net loads login
+* confirming app.operatoros.net loads Command Center
+* confirming techdeck.operatoros.net routes to TechDeck
+* confirming logged-out redirects work
+* confirming login returnTo works
+
+10. Required tests/checks
+    Run whatever commands are available in this repo:
+
+* lint
+* typecheck
+* test
+* build
+
+If the repo has no test framework, add focused utility tests where practical for:
+
+* public URL builder
+* host normalization
+* subdomain resolver
+* safe redirect validator
+* cookie domain helper
+
+At the end, provide:
+
+1. Root cause found
+2. Exact files changed
+3. Exact redirect/config behavior before vs after
+4. Commands run
+5. Any failures or skipped checks
+6. Manual Replit settings I need to verify
+7. Whether it is safe to deploy

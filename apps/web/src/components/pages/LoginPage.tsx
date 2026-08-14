@@ -1,30 +1,36 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ArrowRight, CheckCircle2, KeyRound, Layers3, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../AuthProvider';
-import { colors } from '../SaasLayout';
+import OperatorLogo from '../brand/OperatorLogo';
+import { brand } from '@/lib/brand';
 
 interface LoginPageProps {
   onSwitch: (page: 'register' | 'forgot-password') => void;
 }
 
-// Set by the invite landing page when an unauthenticated visitor hits
-// /invites/<token>. Reading it here pre-fills the email so the recipient
-// doesn't have to retype the address the invite was issued to.
 const PENDING_INVITE_EMAIL_KEY = 'operatoros.pendingInviteEmail';
+
+const BENEFITS = [
+  { icon: KeyRound, title: 'Sign in once', body: 'Your account and organization access follow you into every unlocked app.' },
+  { icon: Layers3, title: 'Keep the stack connected', body: 'Apps, billing, roles, and access stay synchronized from one command layer.' },
+  { icon: ShieldCheck, title: 'Operate with confidence', body: 'Server-verified access and auditable handoffs protect every module launch.' },
+];
 
 export default function LoginPage({ onSwitch }: LoginPageProps) {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
-  useEffect(() => {
-    try {
-      const parked = localStorage.getItem(PENDING_INVITE_EMAIL_KEY);
-      if (parked) setEmail(parked);
-    } catch {}
-  }, []);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    try {
+      const parked = sessionStorage.getItem(PENDING_INVITE_EMAIL_KEY);
+      if (parked) setEmail(parked);
+    } catch {}
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,108 +39,232 @@ export default function LoginPage({ onSwitch }: LoginPageProps) {
     try {
       await login(email, password);
     } catch (err: any) {
-      setError(err.error || 'Login failed');
+      setError(err.error || 'We could not sign you in. Check your credentials and try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: colors.bg, padding: 20,
-    }}>
-      <div style={{
-        width: '100%', maxWidth: 420, background: colors.bgSecondary,
-        border: `1px solid ${colors.border}`, borderRadius: 16, padding: 40,
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: 12, margin: '0 auto 16px',
-            background: 'linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 24, fontWeight: 800, color: '#fff',
-          }}>O</div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Welcome back</h1>
-          <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>Sign in to OperatorOS</p>
+    <main className="operatoros-auth-shell">
+      <style>{`
+        .operatoros-auth-shell {
+          min-height: 100vh;
+          display: grid;
+          grid-template-columns: minmax(0, 1.08fr) minmax(440px, .92fr);
+          background: ${brand.bgPrimary};
+          color: ${brand.textPrimary};
+          overflow: hidden;
+        }
+        .operatoros-auth-story {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          min-height: 100vh;
+          padding: clamp(32px, 5vw, 72px);
+          box-sizing: border-box;
+          isolation: isolate;
+        }
+        .operatoros-auth-story::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          z-index: -2;
+          background:
+            linear-gradient(90deg, rgba(8,11,18,.28), rgba(8,11,18,.88)),
+            linear-gradient(0deg, rgba(8,11,18,.96), rgba(8,11,18,.1) 58%),
+            url('/media/operatoros/operatoros-command-nexus.png') center / cover no-repeat;
+          filter: saturate(.92) contrast(1.04);
+        }
+        .operatoros-auth-story::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          z-index: -1;
+          background: radial-gradient(circle at 28% 36%, rgba(0,229,255,.17), transparent 34%);
+        }
+        .operatoros-auth-panel {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: clamp(24px, 5vw, 64px);
+          box-sizing: border-box;
+          background: linear-gradient(180deg, rgba(13,17,23,.98), rgba(8,11,18,1));
+          border-left: 1px solid ${brand.borderSoft};
+        }
+        .operatoros-auth-form { width: 100%; max-width: 440px; }
+        .operatoros-auth-input {
+          width: 100%;
+          min-height: 48px;
+          padding: 12px 14px;
+          border-radius: 12px;
+          border: 1px solid ${brand.borderSoft};
+          background: rgba(8,11,18,.82);
+          color: ${brand.textPrimary};
+          font: inherit;
+          box-sizing: border-box;
+          outline: none;
+          transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+        }
+        .operatoros-auth-input:focus {
+          border-color: ${brand.accentCyan};
+          background: ${brand.bgPrimary};
+          box-shadow: 0 0 0 3px rgba(0,229,255,.1);
+        }
+        .operatoros-auth-primary:hover { box-shadow: ${brand.ctaGlowHover} !important; transform: translateY(-1px); }
+        .operatoros-auth-primary:focus-visible,
+        .operatoros-auth-link:focus-visible { outline: 2px solid ${brand.accentCyan}; outline-offset: 3px; }
+        @media (max-width: 940px) {
+          .operatoros-auth-shell { grid-template-columns: 1fr; overflow: visible; }
+          .operatoros-auth-story { min-height: auto; padding-bottom: 44px; }
+          .operatoros-auth-story-copy { margin-top: 88px !important; }
+          .operatoros-auth-panel { min-height: auto; border-left: 0; border-top: 1px solid ${brand.borderSoft}; }
+        }
+        @media (max-width: 560px) {
+          .operatoros-auth-benefits { grid-template-columns: 1fr !important; }
+          .operatoros-auth-story-copy { margin-top: 56px !important; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .operatoros-auth-primary { transition: none !important; }
+          .operatoros-auth-primary:hover { transform: none; }
+        }
+      `}</style>
+
+      <section className="operatoros-auth-story" aria-label="OperatorOS ecosystem overview">
+        <OperatorLogo href="/" size={36} wordmarkSize={18} tagline="One command layer" />
+
+        <div className="operatoros-auth-story-copy" style={{ marginTop: 'auto', maxWidth: 760 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 10px', borderRadius: 999,
+            border: `1px solid ${brand.borderStrong}`, background: brand.bgGlass, color: brand.accentCyan,
+            fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em',
+          }}>
+            <CheckCircle2 size={13} /> Your ecosystem, ready
+          </span>
+          <h1 style={{
+            margin: '18px 0 14px', maxWidth: 720, fontFamily: brand.fontDisplay,
+            fontSize: 'clamp(42px, 5.5vw, 76px)', lineHeight: .98, letterSpacing: '-.05em',
+          }}>
+            One secure entry to your entire operation.
+          </h1>
+          <p style={{ margin: 0, maxWidth: 620, color: brand.textSecondary, fontSize: 17, lineHeight: 1.65 }}>
+            Open every approved app with the right organization, role, and access already in place.
+          </p>
+
+          <div className="operatoros-auth-benefits" style={{
+            display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginTop: 30,
+          }}>
+            {BENEFITS.map(({ icon: Icon, title, body }) => (
+              <div key={title} style={{
+                padding: 15, borderRadius: 14, border: `1px solid ${brand.borderSoft}`,
+                background: 'rgba(8,11,18,.68)', backdropFilter: 'blur(12px)',
+              }}>
+                <Icon size={17} color={brand.accentCyan} />
+                <div style={{ marginTop: 10, fontWeight: 800, fontSize: 13 }}>{title}</div>
+                <div style={{ marginTop: 5, color: brand.textSecondary, fontSize: 11, lineHeight: 1.5 }}>{body}</div>
+              </div>
+            ))}
+          </div>
         </div>
+      </section>
 
-        {error && (
-          <div data-testid="login-error" style={{
-            padding: '10px 14px', marginBottom: 16, borderRadius: 8,
-            background: 'rgba(248,81,73,0.1)', border: `1px solid ${colors.accentRed}`,
-            color: colors.accentRed, fontSize: 13,
-          }}>{error}</div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>Email</label>
-            <input
-              data-testid="input-email"
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              style={{
-                width: '100%', padding: '10px 14px', borderRadius: 8,
-                border: `1px solid ${colors.border}`, background: colors.bg,
-                color: colors.text, fontSize: 14, outline: 'none', boxSizing: 'border-box',
-              }}
-              placeholder="you@example.com"
-            />
+      <section className="operatoros-auth-panel" aria-label="Sign in">
+        <div className="operatoros-auth-form">
+          <div style={{ marginBottom: 30 }}>
+            <div style={{ color: brand.accentCyan, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em' }}>
+              Welcome back
+            </div>
+            <h2 style={{ margin: '9px 0 8px', fontFamily: brand.fontDisplay, fontSize: 34, letterSpacing: '-.04em' }}>
+              Enter your command center.
+            </h2>
+            <p style={{ margin: 0, color: brand.textSecondary, fontSize: 14, lineHeight: 1.6 }}>
+              Your app access and active organization will be restored automatically.
+            </p>
           </div>
 
-          <div style={{ marginBottom: 8 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: colors.text }}>Password</label>
-            <input
-              data-testid="input-password"
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              style={{
-                width: '100%', padding: '10px 14px', borderRadius: 8,
-                border: `1px solid ${colors.border}`, background: colors.bg,
-                color: colors.text, fontSize: 14, outline: 'none', boxSizing: 'border-box',
-              }}
-              placeholder="••••••••"
-            />
-          </div>
+          {error && (
+            <div role="alert" data-testid="login-error" style={{
+              padding: '11px 14px', marginBottom: 18, borderRadius: 10,
+              background: 'rgba(239,35,60,.09)', border: `1px solid ${brand.accentRed}88`,
+              color: '#FF7185', fontSize: 13, lineHeight: 1.45,
+            }}>{error}</div>
+          )}
 
-          <div style={{ textAlign: 'right', marginBottom: 20 }}>
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: 17 }}>
+              <label htmlFor="operatoros-email" style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 7 }}>
+                Work email
+              </label>
+              <input
+                id="operatoros-email"
+                className="operatoros-auth-input"
+                data-testid="input-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                placeholder="you@company.com"
+              />
+            </div>
+
+            <div style={{ marginBottom: 8 }}>
+              <label htmlFor="operatoros-password" style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 7 }}>
+                Password
+              </label>
+              <input
+                id="operatoros-password"
+                className="operatoros-auth-input"
+                data-testid="input-password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                placeholder="Enter your password"
+              />
+            </div>
+
+            <div style={{ textAlign: 'right', marginBottom: 22 }}>
+              <button
+                type="button"
+                className="operatoros-auth-link"
+                data-testid="link-forgot-password"
+                onClick={() => onSwitch('forgot-password')}
+                style={{ background: 'none', border: 'none', color: brand.accentCyan, cursor: 'pointer', fontSize: 13, padding: 4 }}
+              >Forgot password?</button>
+            </div>
+
             <button
-              type="button"
-              data-testid="link-forgot-password"
-              onClick={() => onSwitch('forgot-password')}
+              type="submit"
+              className="operatoros-auth-primary"
+              data-testid="button-login"
+              disabled={loading}
               style={{
-                background: 'none', border: 'none', color: colors.accent,
-                cursor: 'pointer', fontSize: 13,
+                width: '100%', minHeight: 50, padding: '12px 16px', borderRadius: 12, border: 'none',
+                background: loading ? brand.textMuted : `linear-gradient(135deg, ${brand.accentCyan}, ${brand.accentViolet})`,
+                color: brand.accentInk, fontSize: 14, fontWeight: 850, cursor: loading ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                boxShadow: loading ? 'none' : brand.ctaGlowSoft, transition: 'transform 160ms ease, box-shadow 160ms ease',
               }}
-            >Forgot password?</button>
+            >
+              {loading ? 'Opening your command center…' : <>Continue to OperatorOS <ArrowRight size={16} /></>}
+            </button>
+          </form>
+
+          <div style={{ marginTop: 24, paddingTop: 22, borderTop: `1px solid ${brand.borderSoft}`, textAlign: 'center', fontSize: 13, color: brand.textSecondary }}>
+            New to the ecosystem?{' '}
+            <button
+              className="operatoros-auth-link"
+              data-testid="link-register"
+              onClick={() => onSwitch('register')}
+              style={{ background: 'none', border: 'none', color: brand.accentCyan, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
+            >Create your free command layer</button>
           </div>
-
-          <button
-            type="submit"
-            data-testid="button-login"
-            disabled={loading}
-            style={{
-              width: '100%', padding: '12px', borderRadius: 8, border: 'none',
-              background: loading ? colors.textDim : colors.accent,
-              color: '#fff', fontSize: 14, fontWeight: 600, cursor: loading ? 'default' : 'pointer',
-            }}
-          >{loading ? 'Signing in...' : 'Sign in'}</button>
-        </form>
-
-        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: colors.textMuted }}>
-          Don't have an account?{' '}
-          <button
-            data-testid="link-register"
-            onClick={() => onSwitch('register')}
-            style={{ background: 'none', border: 'none', color: colors.accent, cursor: 'pointer', fontSize: 13 }}
-          >Sign up</button>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

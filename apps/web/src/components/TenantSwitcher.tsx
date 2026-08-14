@@ -5,6 +5,7 @@ import { Building2, Check, ChevronDown, Shield } from 'lucide-react';
 import { useTenant, type TenantSummary } from './TenantProvider';
 import { useAuth } from './AuthProvider';
 import { useToast } from './Toast';
+import { isSuperAdmin } from '@/lib/rbac';
 
 const colors = {
   bgSecondary: '#0d1117',
@@ -26,7 +27,7 @@ export default function TenantSwitcher() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
-  const isSuperAdmin = (user as any)?.platformRole === 'super_admin';
+  const userIsSuperAdmin = isSuperAdmin((user as any)?.platformRole);
 
   useEffect(() => {
     if (!open) return;
@@ -67,7 +68,7 @@ export default function TenantSwitcher() {
   };
 
   const memberList = tenants;
-  const otherTenants = isSuperAdmin && showAll
+  const otherTenants = userIsSuperAdmin && showAll
     ? allTenants.filter((t) => !memberList.some((m) => m.id === t.id))
     : [];
 
@@ -155,7 +156,7 @@ export default function TenantSwitcher() {
             />
           ))}
 
-          {isSuperAdmin && (
+          {userIsSuperAdmin && (
             <>
               <div style={{ height: 1, background: colors.border, margin: '6px 4px' }} />
               <button

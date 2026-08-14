@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /portal/
+Disallow: /settings
+Disallow: /system-admin
+Disallow: /billing
+Disallow: /t/upload/
+
+Sitemap: https://techdeck.app/sitemap.xml

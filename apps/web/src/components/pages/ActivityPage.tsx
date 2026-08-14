@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { saasApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import {
-  Activity,
   Plus,
   UserPlus,
   CreditCard,
@@ -13,6 +12,8 @@ import {
   Circle,
   type LucideIcon,
 } from 'lucide-react';
+import { EmptyState, ErrorState, LoadingState, PageHeader } from '../ExperiencePrimitives';
+import { cardStyle } from '@/lib/design-tokens';
 
 const actionIcons: Record<string, LucideIcon> = {
   created: Plus,
@@ -25,28 +26,24 @@ const actionIcons: Record<string, LucideIcon> = {
 export default function ActivityPage() {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    saasApi.getActivity({ limit: 50 }).then(d => setActivities(d.activities)).catch(console.error).finally(() => setLoading(false));
+    saasApi.getActivity({ limit: 50 }).then(d => setActivities(d.activities)).catch(() => setLoadError(true)).finally(() => setLoading(false));
   }, []);
 
   return (
     <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 900 }} data-testid="activity-page">
-      <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Activity Feed</h1>
-      <p style={{ fontSize: 14, color: colors.textMuted, margin: '0 0 24px' }}>Your recent actions across all workspaces</p>
+      <PageHeader title="Activity feed" description="Your recent actions across all workspaces." />
 
       {loading ? (
-        <div style={{ padding: 40, color: colors.textMuted }}>Loading activity...</div>
+        <LoadingState label="Loading activity…" />
+      ) : loadError ? (
+        <ErrorState title="Activity is unavailable" description="We couldn’t load your recent activity. Try again in a moment." />
       ) : activities.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12 }}>
-          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
-            <Activity size={40} color={colors.textMuted} aria-hidden />
-          </div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 8 }}>No activity yet</div>
-          <div style={{ fontSize: 13, color: colors.textMuted }}>Your actions will appear here as you use the platform</div>
-        </div>
+        <EmptyState title="No activity yet" description="Your actions will appear here as you use OperatorOS." />
       ) : (
-        <div style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: 'hidden' }}>
+        <div style={cardStyle}>
           {activities.map((a, i) => {
             const Icon = actionIcons[a.action] ?? Circle;
             return (

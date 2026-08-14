@@ -1,0 +1,257 @@
+Refactor PulseDesk’s inbound email-to-ticket system away from username/password mailbox login and convert it into a secure multi-tenant “Mail Connector” architecture.
+
+CURRENT PROBLEM
+The current implementation asks each tenant to enter their company support email address and mailbox password for IMAP parsing. This is not acceptable for a production SaaS because major providers such as Google and Microsoft now favor OAuth-based authentication, passwordless authorization flows, and API-driven mailbox access. Storing mailbox credentials is fragile, harder to support, less secure, and creates onboarding issues.
+
+GOAL
+Replace the current email/password IMAP setup with a provider-based inbound mail connection system that supports:
+1. Gmail / Google Workspace via OAuth
+2. Microsoft 365 via OAuth
+3. Generic IMAP only as a fallback where supported
+4. Unique forwarding/routing address per tenant as the universal fallback
+
+This must be designed as a production-minded multi-tenant SaaS feature with secure token handling, plan gating, tenant isolation, audit logging, and a polished admin UI.
+
+BUSINESS RULES
+- PulseDesk is multi-tenant.
+- Email-to-ticket remains available only to Enterprise and Unlimited plan tenants.
+- Lower plans must not access or configure mail connectors.
+- Existing historical tickets stay intact if a tenant downgrades.
+- If a tenant loses entitlement, future inbound email ingestion must stop.
+- Entitlements must be enforced in backend middleware and services, not just the frontend.
+
+NEW FEATURE NAME
+Rename the feature from a raw “IMAP parser” concept to a cleaner product concept such as:
+- Mail Connectors
+- Connected Inboxes
+- Email Intake Connectors
+Use polished premium UI language.
+
+TARGET ARCHITECTURE
+Build a modular connector framework with these connection types:
+
+A) GOOGLE CONNECTOR
+- Add “Connect Google Workspace / Gmail” using OAuth 2.0
+- Use Sign in with Google flow
+- Request only necessary scopes for reading inbound mail and optionally labeling/archiving processed messages if configured
+- Store OAuth tokens securely, encrypted at rest
+- Support reconnect / token refresh / revoked token handling
+- Prefer a provider abstraction that can use Gmail API for mailbox sync
+- If Gmail API is too large for this phase, support OAuth-authenticated IMAP as an internal provider strategy, but keep the abstraction generic so Gmail API can replace it later
+- Never ask the tenant for their Gmail password
+
+B) MICROSOFT 365 CONNECTOR
+- Add “Connect Microsoft 365” using Microsoft OAuth
+- Store tokens securely, encrypted at rest
+- Support token refresh and revocation handling
+- Build abstraction so this can use Microsoft Graph or OAuth-backed IMAP depending on implementation path
+- Never ask the tenant for their Microsoft password
+
+C) GENERIC IMAP FALLBACK
+- Keep generic IMAP only as an advanced/manual option
+- Do not present it as the primary recommended setup
+- Support OAuth-authenticated IMAP where possible
+- If password auth is supported for some truly generic providers, isolate it behind a warning, document the risk, encrypt stored secrets, and make it clear this is legacy/fallback behavior only
+- Do not use generic password-based IMAP as the main architecture
+
+D) FORWARDING / ROUTING FALLBACK
+- Give each qualified tenant a unique inbound address such as:
+  support+tenant-slug@pulsedesk.support
+  or
+  tenant-slug@inbound.pulsedesk.support
+- Allow tenants to forward or route mail from their existing mailbox to this address
+- This must be the simplest universal fallback for providers where OAuth integration is not yet available
+- Build this as a first-class supported option, not an afterthought
+
+CONNECTOR ABSTRACTION
+Create a provider-agnostic connector system with clean interfaces and service separation. At minimum include:
+- entitlement service
+- connector registry
+- google connector service
+- microsoft connector service
+- generic imap connector service
+- forwarding alias service
+- inbound email processor
+- threading service
+- ticket creation service
+- contact/requester service
+- audit log service
+- token encryption / secret storage service
+- connection health monitor
+- webhook or poll scheduler abstraction depending on provider type
+
+INBOUND MESSAGE PROCESSING
+No matter how the mail arrives, normalize all inbound messages into one internal format before ticket logic runs.
+
+Normalize:
+- tenant_id
+- connector_id
+- provider type
+- sender name
+- sender email
+- recipient email / alias
+- subject
+- plain body
+- html body
+- received timestamp
+- message-id
+- in-reply-to
+- references
+- headers
+- attachment metadata
+- auth metadata if available
+- spam / spoof indicators if available
+
+Then process through shared logic:
+- identify tenant safely
+- verify feature entitlement
+- verify connector is healthy and enabled
+- create ticket if new thread
+- append ticket reply if existing thread
+- log accepted / rejected / failed / threaded / created events
+
+THREADING
+Implement robust reply matching using:
+- message-id
+- in-reply-to
+- references
+- optional subject token like [PD-1234]
+Do not rely on subject alone.
+
+SECURITY REQUIREMENTS
+- Never store plaintext mailbox passwords
+- Encrypt OAuth tokens and any fallback secrets at rest
+- Sanitize HTML email content before rendering
+- Add XSS protections
+- Validate attachments by extension and size
+- Add malware scan hook placeholder
+- Add anti-abuse/rate limiting for inbound routes
+- Add tenant isolation checks everywhere
+- Add connector status and failure reason logging
+- Add revoked-token / expired-token recovery UX
+- Add optional allowed sender domains per tenant
+- Add spoof warning flags when provider metadata supports it
+
+DATABASE CHANGES
+Add or refactor schema to support:
+- tenants
+- subscriptions / entitlements
+- inbound mail connectors
+- connector provider type
+- encrypted token/secret storage references
+- connector connection status
+- forwarding aliases
+- inbound email events
+- ticket thread mappings
+- contacts/requesters
+- tickets
+- ticket replies/comments
+- attachments
+- sync cursors / checkpoint state if polling or API sync is used
+
+Include indexes for:
+- tenant_id
+- connector_id
+- forwarding alias
+- message-id
+- in-reply-to
+- ticket_id
+
+TENANT ADMIN UI
+Replace the old “enter your email and password” IMAP section with a modern “Connected Inboxes” admin page.
+
+For Enterprise and Unlimited tenants show:
+- Connect Google button
+- Connect Microsoft 365 button
+- Advanced IMAP fallback option
+- Forwarding address option
+- connection health status
+- last successful sync / ingest time
+- default queue/team mapping
+- unknown sender behavior
+- auto-create contact toggle
+- append replies to existing tickets toggle
+- allowed sender domains
+- recent processing log
+- reconnect / disconnect actions
+- copy forwarding address button
+- setup instructions per provider
+
+For lower plans:
+- show locked premium feature card
+- upgrade CTA
+- no working controls
+
+SUPER ADMIN UI
+Add platform-level tooling to:
+- inspect all tenant connectors
+- see provider type and health
+- disable a broken connector
+- review failed sync or parsing events
+- replay safe failed events
+- regenerate forwarding alias if needed
+- view entitlement status
+- monitor provider-specific issues
+
+MIGRATION REQUIREMENT
+Migrate the existing IMAP settings section into the new connector model.
+- Preserve any existing tenant setup data where possible
+- Mark old email/password IMAP configs as legacy
+- Prompt users to upgrade to OAuth/provider connector setup
+- Do not break existing tenant ticket history
+
+PREFERRED PRODUCT STRATEGY
+Implement this in phases but keep the architecture future-proof:
+Phase 1:
+- forwarding alias per tenant
+- Google OAuth connector
+- Microsoft OAuth connector
+- shared inbound normalization
+- ticket creation + threading
+- entitlement enforcement
+Phase 2:
+- deeper Gmail API sync features
+- deeper Microsoft Graph sync features
+- better attachment handling
+- optional label/folder management
+- outbound email reply support
+
+IMPORTANT ANTI-PATTERNS TO AVOID
+- Do not keep mailbox password entry as the primary setup path
+- Do not store plaintext email credentials
+- Do not build fake connector buttons that do nothing
+- Do not hardcode entitlement checks only in frontend
+- Do not couple ticket logic directly to a single provider
+- Do not mix inbound messages across tenants
+- Do not rely on subject line alone for matching
+- Do not render raw HTML emails unsafely
+
+TESTING
+Add tests for:
+- enterprise/unlimited entitlement gating
+- lower-tier lockout
+- google connector authorization path
+- microsoft connector authorization path
+- forwarding alias routing
+- invalid alias rejection
+- tenant isolation
+- ticket creation from normalized inbound message
+- threading replies into existing tickets
+- revoked token / broken connection handling
+- downgrade behavior
+
+DELIVERABLES
+Return a fully integrated implementation that includes:
+- new connector architecture
+- updated schema
+- OAuth-ready Google connector
+- OAuth-ready Microsoft 365 connector
+- forwarding alias fallback
+- tenant admin Connected Inboxes UI
+- super admin monitoring tools
+- event logging and connector health tracking
+- migration of legacy IMAP settings
+- developer notes for provider configuration
+- test coverage
+
+Build this as a real production-minded multi-tenant SaaS feature with secure authentication, clean abstractions, tenant isolation, and a polished premium admin experience.

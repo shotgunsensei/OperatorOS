@@ -8,26 +8,19 @@
  * Modules / Billing / Pricing / Health / Audit, plus inline detail panes
  * for tenant/:id and module/:slug. Reuses the SaasLayout color palette.
  *
- * All API calls go through `apiCall` which threads JWT from localStorage
- * (matches AuthProvider's contract) and surfaces backend error codes
- * verbatim so admins see the policy reason for any 403/404/409.
+ * Platform Command API calls go through `platformApiCall` for /api/platform/*
+ * and `adminApiCall` for the Phase 8 /api/admin/* entitlement-management
+ * contract. Both helpers surface backend error codes verbatim so admins see
+ * the policy reason for any 403/404/409.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../AuthProvider';
+import { platformApiCall as apiCall } from '@/lib/platform-api';
+import { adminApiCall } from '@/lib/admin-api';
+import type { PlatformView } from '@/lib/platform-routes';
 
-export type PlatformView =
-  | { kind: 'dashboard' }
-  | { kind: 'tenants' }
-  | { kind: 'tenant'; id: string }
-  | { kind: 'modules' }
-  | { kind: 'module'; slug: string }
-  | { kind: 'users' }
-  | { kind: 'user'; id: string }
-  | { kind: 'billing' }
-  | { kind: 'pricing' }
-  | { kind: 'health' }
-  | { kind: 'audit' };
+export type { PlatformView } from '@/lib/platform-routes';
 
 const colors = {
   bg: '#010409',
@@ -44,39 +37,7 @@ const colors = {
   accentPurple: '#bc8cff',
 };
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-
 type View = PlatformView;
-
-async function apiCall(path: string, init: RequestInit = {}): Promise<any> {
-  // localStorage key 'token' is set by AuthProvider on login. (PlatformPage
-  // previously read 'auth_token' — that key is never set anywhere, so every
-  // /v1/platform/* call went out without an Authorization header and the
-  // entire surface 401'd. Aligning with the rest of the web app.)
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const tenantId = typeof window !== 'undefined' ? localStorage.getItem('activeTenantId') : null;
-  const res = await fetch(`${API}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(tenantId ? { 'X-Tenant-Id': tenantId } : {}),
-      ...(init.headers ?? {}),
-    },
-    credentials: 'include',
-  });
-  const text = await res.text();
-  let body: any = null;
-  try { body = text ? JSON.parse(text) : null; } catch { body = text; }
-  if (!res.ok) {
-    const err: any = new Error(body?.error || res.statusText);
-    err.status = res.status;
-    err.code = body?.code;
-    err.body = body;
-    throw err;
-  }
-  return body;
-}
 
 // -------------------------------------------------------------------------
 // Top-level
@@ -111,6 +72,7 @@ export default function PlatformPage(props: { view?: View; onNavigate?: (v: View
     { key: 'pricing',   label: 'Pricing' },
     { key: 'health',    label: 'Health' },
     { key: 'audit',     label: 'Audit' },
+    { key: 'sso',       label: 'SSO' },
   ];
 
   return (
@@ -153,6 +115,127 @@ export default function PlatformPage(props: { view?: View; onNavigate?: (v: View
       {view.kind === 'pricing'   && <Pricing />}
       {view.kind === 'health'    && <Health />}
       {view.kind === 'audit'     && <AuditLog />}
+      {view.kind === 'sso'       && <SsoSettings />}
+    </div>
+  );
+}
+
+// -------------------------------------------------------------------------
+// SSO Settings (Task #81)
+// -------------------------------------------------------------------------
+
+function SsoSettings() {
+  const [data, setData] = useState<any>(null);
+  const [err, setErr] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const load = () => { setErr(null); apiCall('/platform/sso/settings').then(setData).catch(setErr); };
+  useEffect(() => { load(); }, []);
+  const copyText = async (text: string): Promise<boolean> => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch { /* fall through */ }
+    return false;
+  };
+  const copyEnvBlock = async () => {
+    if (!data?.envBlock) return;
+    await copyText(data.envBlock);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  const moduleRegistrationBlock = (m: any): string => [
+    `# OperatorOS SSO v1 registration for ${m.displayName} (${m.slug})`,
+    `CLIENT_ID=${m.clientId}`,
+    `REDIRECT_URI=${m.redirectUri}`,
+    `LOGOUT_URI=${m.logoutUri}`,
+    `ALLOWED_ORIGIN=${m.allowedOrigin}`,
+    'CODE_CHALLENGE_METHOD=S256',
+  ].join('\n');
+  const copyModule = async (m: any) => {
+    await copyText(moduleRegistrationBlock(m));
+    setCopiedSlug(m.slug);
+    setTimeout(() => setCopiedSlug(s => s === m.slug ? null : s), 1500);
+  };
+  if (err) return <ErrorBlock err={err} onRetry={load} />;
+  if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
+  const codeSecretOk = data.codeSecretStatus === 'configured';
+  const sessionSecretOk = data.sessionSecretStatus === 'configured';
+  return (
+    <div data-testid="sso-settings">
+      <Card style={{ marginBottom: 12 }}>
+        <h3 style={{ margin: 0, fontSize: 14, marginBottom: 8 }}>Identity provider</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, fontSize: 13 }}>
+          <div>
+            <div style={{ color: colors.textMuted, fontSize: 11 }}>Issuer</div>
+            <div data-testid="sso-issuer"><code>{data.issuer || '(not set)'}</code></div>
+          </div>
+          <div>
+            <div style={{ color: colors.textMuted, fontSize: 11 }}>Environment</div>
+            <div data-testid="sso-env"><Pill tone={data.env === 'prod' ? 'green' : data.env === 'staging' ? 'yellow' : 'muted'}>{data.env}</Pill></div>
+          </div>
+          <div>
+            <div style={{ color: colors.textMuted, fontSize: 11 }}>One-time code TTL</div>
+            <div data-testid="sso-ttl">{data.ttlSeconds}s</div>
+          </div>
+          <div>
+            <div style={{ color: colors.textMuted, fontSize: 11 }}>SSO_CODE_ENCRYPTION_SECRET</div>
+            <div data-testid="sso-code-secret-status">
+              <Pill tone={codeSecretOk ? 'green' : 'red'}>{codeSecretOk ? 'configured' : 'missing'}</Pill>
+            </div>
+          </div>
+          <div>
+            <div style={{ color: colors.textMuted, fontSize: 11 }}>SESSION_SECRET</div>
+            <div data-testid="sso-session-secret-status">
+              <Pill tone={sessionSecretOk ? 'green' : 'red'}>{sessionSecretOk ? 'configured' : 'missing'}</Pill>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <h3 style={{ margin: 0, fontSize: 14 }}>Unified runtime secret names</h3>
+          <Btn data-testid="button-copy-env-block" variant="primary" onClick={copyEnvBlock}>{copied ? 'Copied!' : 'Copy'}</Btn>
+        </div>
+        <pre data-testid="sso-env-block" style={{
+          margin: 0, padding: 12, background: colors.bg, border: `1px solid ${colors.border}`,
+          borderRadius: 6, color: colors.text, fontSize: 12, overflow: 'auto',
+        }}>{data.envBlock}</pre>
+      </Card>
+
+      <Card style={{ padding: 0 }}>
+        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${colors.border}` }}>
+          <h3 style={{ margin: 0, fontSize: 14 }}>Exact module client registrations</h3>
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead><tr style={{ background: colors.bgHover, color: colors.textMuted }}>
+            <Th>Module</Th><Th>Client ID</Th><Th>Base URL</Th><Th>Callback pattern</Th><Th>Registration</Th>
+          </tr></thead>
+          <tbody>
+            {data.modules.map((m: any) => (
+              <tr key={m.slug} data-testid={`sso-module-row-${m.slug}`} style={{ borderTop: `1px solid ${colors.border}` }}>
+                <Td>{m.displayName}</Td>
+                <Td><code>{m.clientId}</code></Td>
+                <Td>
+                  {m.baseUrlConfigured
+                    ? <code style={{ fontSize: 11 }}>{m.baseUrl}</code>
+                    : <Pill tone="red">missing</Pill>}
+                </Td>
+                <Td><code style={{ fontSize: 11 }}>{m.launchUrlPattern}</code></Td>
+                <Td>
+                  <Btn
+                    data-testid={`button-copy-module-env-${m.slug}`}
+                    onClick={() => copyModule(m)}
+                  >{copiedSlug === m.slug ? 'Copied!' : 'Copy registration'}</Btn>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
     </div>
   );
 }
@@ -194,16 +277,47 @@ function Pill({ tone = 'muted', children }: { tone?: 'green' | 'red' | 'yellow' 
   }}>{children}</span>;
 }
 
-function ErrorBlock({ err }: { err: any }) {
+function ErrorBlock({
+  err,
+  onRetry,
+  retryLabel = 'Retry',
+}: {
+  err: any;
+  onRetry?: () => void;
+  retryLabel?: string;
+}) {
   if (!err) return null;
+  const status = typeof err.status === 'number' ? err.status : null;
+  const code = err.code || (status != null ? `HTTP_${status}` : 'ERROR');
+  const body = err.body && typeof err.body === 'object' ? err.body : null;
+  const message = err.message || body?.error || body?.message || String(err);
+  const endpoint = err.endpoint || null;
+  const action = err.action || null;
+  const remaining = body?.remaining && typeof body.remaining === 'object' ? body.remaining as Record<string, unknown> : null;
   return (
     <div data-testid="error-block" style={{
       padding: 12, marginBottom: 12, borderRadius: 6,
       background: 'rgba(248,81,73,0.1)', color: colors.accentRed,
       border: `1px solid ${colors.accentRed}`, fontSize: 13,
     }}>
-      <strong>{err.code || err.status || 'Error'}</strong>: {err.message}
-      {err.body?.activeSubscriptionCount != null && <div>Active subscriptions: {err.body.activeSubscriptionCount}</div>}
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+        <div>
+          <div><strong>{code}</strong>{status != null && <> · status {status}</>}: {message}</div>
+          {action && <div style={{ marginTop: 4, color: colors.textMuted }}>Action: <code>{action}</code></div>}
+          {endpoint && <div style={{ marginTop: 2, color: colors.textMuted }}>Endpoint: <code>{endpoint}</code></div>}
+        </div>
+        {onRetry && (
+          <Btn data-testid="button-error-retry" onClick={onRetry} style={{ flex: '0 0 auto' }}>
+            {retryLabel}
+          </Btn>
+        )}
+      </div>
+      {body?.activeSubscriptionCount != null && <div style={{ marginTop: 6 }}>Active subscriptions: {body.activeSubscriptionCount}</div>}
+      {remaining && (
+        <div style={{ marginTop: 6 }}>
+          Remaining data: {Object.entries(remaining).map(([k, v]) => `${k}=${String(v)}`).join(', ')}
+        </div>
+      )}
     </div>
   );
 }
@@ -216,9 +330,9 @@ function Dashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
   const [data, setData] = useState<any>(null);
   useEffect(() => {
     Promise.all([
-      apiCall('/v1/platform/stats').catch(() => null),
-      apiCall('/v1/platform/health').catch(() => null),
-      apiCall('/v1/platform/audit?limit=5').catch(() => ({ logs: [] })),
+      apiCall('/platform/stats').catch(() => null),
+      apiCall('/platform/health').catch(() => null),
+      apiCall('/platform/audit?limit=5').catch(() => ({ logs: [] })),
     ]).then(([s, h, a]) => setData({ stats: s, health: h, recent: a.logs ?? [] }));
   }, []);
   if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
@@ -276,7 +390,7 @@ function Dashboard({ onNavigate }: { onNavigate: (v: View) => void }) {
         <Card data-testid="card-stripe" onClick={() => onNavigate({ kind: 'health' })} style={{ cursor: 'pointer' }}>
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Stripe</div>
           <div style={{ fontSize: 16 }}><Pill tone={h.stripe?.live ? 'green' : 'yellow'}>{h.stripe?.mode ?? 'unknown'}</Pill></div>
-          <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>last webhook: {h.stripe?.lastSuccessfulWebhookAt ? new Date(h.stripe.lastSuccessfulWebhookAt).toLocaleString() : '—'}</div>
+          <div style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>Last billing sync: {h.stripe?.lastSuccessfulWebhookAt ? new Date(h.stripe.lastSuccessfulWebhookAt).toLocaleString() : '—'}</div>
         </Card>
         <Card data-testid="card-db" onClick={() => onNavigate({ kind: 'health' })} style={{ cursor: 'pointer' }}>
           <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 4 }}>Infrastructure</div>
@@ -319,7 +433,7 @@ function TenantList({ onOpen }: { onOpen: (id: string) => void }) {
     if (statusFilter) qs.set('status', statusFilter);
     else qs.set('includeArchived', '1');
     if (filter) qs.set('q', filter);
-    apiCall(`/v1/platform/tenants?${qs.toString()}`).then(d => setRows(d.tenants)).catch(setErr);
+    apiCall(`/platform/tenants?${qs.toString()}`).then(d => setRows(d.tenants)).catch(setErr);
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [statusFilter]);
 
@@ -361,7 +475,23 @@ function TenantList({ onOpen }: { onOpen: (id: string) => void }) {
                   <Td><Pill tone={t.status === 'active' ? 'green' : t.status === 'suspended' ? 'yellow' : 'red'}>{t.status}</Pill></Td>
                   <Td>{t.memberCount}</Td>
                   <Td>{t.enabledModuleCount}</Td>
-                  <Td><Btn data-testid={`button-tenant-open-${t.id}`} onClick={() => onOpen(t.id)}>Open</Btn></Td>
+                  <Td>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <Btn data-testid={`button-tenant-open-${t.id}`} onClick={() => onOpen(t.id)}>Open</Btn>
+                      {t.status === 'archived' && (
+                        <Btn
+                          data-testid={`button-tenant-restore-${t.id}`}
+                          variant="primary"
+                          onClick={async () => {
+                            try {
+                              await apiCall(`/platform/tenants/${t.id}/restore`, { method: 'POST' });
+                              load();
+                            } catch (e) { setErr(e); }
+                          }}
+                        >Restore</Btn>
+                      )}
+                    </div>
+                  </Td>
                 </tr>
               ))}
               {rows.length === 0 && <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: colors.textMuted }}>No tenants match.</td></tr>}
@@ -387,12 +517,12 @@ function CreateTenantForm({ onClose, onCreated }: { onClose: () => void; onCreat
       // raw user-id input if the field looks like a UUID.
       let ownerUserId = ownerEmail.trim();
       if (ownerUserId.includes('@')) {
-        const r = await apiCall(`/v1/platform/users?search=${encodeURIComponent(ownerUserId)}`).catch(() => ({ users: [] }));
+        const r = await apiCall(`/platform/users?search=${encodeURIComponent(ownerUserId)}`);
         const found = r.users?.find((u: any) => u.email.toLowerCase() === ownerUserId.toLowerCase());
         if (!found) throw Object.assign(new Error('Owner email not found'), { code: 'USER_NOT_FOUND' });
         ownerUserId = found.id;
       }
-      await apiCall('/v1/platform/tenants', { method: 'POST', body: JSON.stringify({ name, slug, ownerUserId, type: 'company' }) });
+      await apiCall('/platform/tenants', { method: 'POST', body: JSON.stringify({ name, slug, ownerUserId, type: 'company' }) });
       onCreated();
     } catch (e: any) { setErr(e); } finally { setBusy(false); }
   };
@@ -423,33 +553,45 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const [tab, setTab] = useState<TenantTab>('overview');
   const [audit, setAudit] = useState<any[] | null>(null);
 
-  const load = () => apiCall(`/v1/platform/tenants/${id}/detail`).then(setData).catch(setErr);
+  const load = () => { setErr(null); apiCall(`/platform/tenants/${id}/detail`).then(setData).catch(setErr); };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
   useEffect(() => {
     if (tab === 'audit') {
-      apiCall(`/v1/platform/audit?tenantId=${id}&limit=100`).then(d => setAudit(d.logs)).catch(setErr);
+      adminApiCall(`/admin/audit-logs?tenantId=${id}&limit=100`).then(d => setAudit(d.logs)).catch(setErr);
     }
   }, [tab, id]);
 
-  const lifecycle = async (action: 'suspend' | 'reactivate' | 'archive') => {
+  const lifecycle = async (action: 'suspend' | 'reactivate' | 'archive' | 'restore') => {
     setBusy(true); setErr(null);
-    try { await apiCall(`/v1/platform/tenants/${id}/${action}`, { method: 'POST' }); await load(); }
+    try { await apiCall(`/platform/tenants/${id}/${action}`, { method: 'POST' }); await load(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const hardDelete = () => { setErr(null); setShowDeleteDialog(true); };
+  const confirmDelete = async () => {
+    const slug = data?.tenant?.slug;
+    if (!slug) return;
+    setBusy(true);
+    try {
+      await apiCall(`/platform/tenants/${id}?confirm=${encodeURIComponent(slug)}`, { method: 'DELETE' });
+      setShowDeleteDialog(false);
+      onBack();
+    } catch (e) { setErr(e); } finally { setBusy(false); }
   };
   const enableModule = async (slug: string, allowAllMembers: boolean) => {
     setErr(null);
-    try { await apiCall(`/v1/platform/tenants/${id}/modules/${slug}/enable`, { method: 'POST', body: JSON.stringify({ allowAllMembers }) }); await load(); }
+    try { await adminApiCall(`/admin/tenants/${id}/entitlements`, { method: 'POST', body: { moduleId: slug, allowAllMembers } }); await load(); }
     catch (e) { setErr(e); }
   };
   const disableModule = async (slug: string) => {
     setErr(null);
-    try { await apiCall(`/v1/platform/tenants/${id}/modules/${slug}/disable`, { method: 'POST' }); await load(); }
+    try { await adminApiCall(`/admin/tenants/${id}/entitlements/${encodeURIComponent(slug)}`, { method: 'DELETE' }); await load(); }
     catch (e) { setErr(e); }
   };
   const setUserAccess = async (userId: string, moduleSlug: string, accessLevel: 'none' | 'user' | 'manager') => {
     setErr(null);
     try {
-      await apiCall(`/v1/platform/tenants/${id}/users/${userId}/module-access`, {
+      await apiCall(`/platform/tenants/${id}/users/${userId}/module-access`, {
         method: 'POST',
         body: JSON.stringify({ moduleSlug, accessLevel }),
       });
@@ -457,6 +599,7 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
     } catch (e) { setErr(e); }
   };
 
+  if (err && !data) return <ErrorBlock err={err} onRetry={load} />;
   if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
   const t = data.tenant;
   const enabledModules = data.modules.filter((m: any) => m.status === 'enabled');
@@ -486,6 +629,8 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
             {t.status !== 'suspended' && t.status !== 'archived' && <Btn data-testid="button-suspend" disabled={busy} onClick={() => lifecycle('suspend')}>Suspend</Btn>}
             {t.status !== 'active' && <Btn data-testid="button-reactivate" variant="primary" disabled={busy} onClick={() => lifecycle('reactivate')}>Reactivate</Btn>}
             {t.status !== 'archived' && <Btn data-testid="button-archive" variant="danger" disabled={busy} onClick={() => lifecycle('archive')}>Archive</Btn>}
+            {t.status === 'archived' && <Btn data-testid="button-restore" variant="primary" disabled={busy} onClick={() => lifecycle('restore')}>Restore</Btn>}
+            <Btn data-testid="button-hard-delete" variant="danger" disabled={busy} onClick={hardDelete}>Delete permanently</Btn>
           </div>
         </div>
       </Card>
@@ -636,6 +781,65 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
       )}
 
       {tab === 'settings' && <TenantSettings tenant={t} onSaved={load} />}
+
+      {showDeleteDialog && (
+        <DeleteTenantDialog
+          tenant={t}
+          busy={busy}
+          onCancel={() => setShowDeleteDialog(false)}
+          onConfirm={confirmDelete}
+        />
+      )}
+    </div>
+  );
+}
+
+// Modal: typed-slug confirmation gating the destructive Delete button.
+function DeleteTenantDialog({
+  tenant, busy, onCancel, onConfirm,
+}: { tenant: any; busy: boolean; onCancel: () => void; onConfirm: () => void }) {
+  const [typed, setTyped] = useState('');
+  const matches = typed === tenant.slug;
+  return (
+    <div
+      data-testid="dialog-hard-delete"
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+      }}
+    >
+      <Card style={{ width: 480, maxWidth: '92vw' }}>
+        <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Delete tenant permanently?</h3>
+        <p style={{ margin: '0 0 12px 0', color: colors.textMuted, fontSize: 13 }}>
+          This removes <strong>{tenant.name}</strong> and every member, module
+          assignment, invite, and module-shell row attached to it. This action
+          cannot be undone.
+        </p>
+        <p style={{ margin: '0 0 6px 0', fontSize: 13 }}>
+          Type <code>{tenant.slug}</code> to confirm you want to delete this organization:
+        </p>
+        <input
+          data-testid="input-confirm-slug"
+          autoFocus
+          value={typed}
+          onChange={e => setTyped(e.target.value)}
+          placeholder={tenant.slug}
+          style={{
+            width: '100%', background: colors.bgSecondary, color: colors.text,
+            border: `1px solid ${colors.border}`, borderRadius: 6,
+            padding: '8px 10px', fontSize: 13, marginBottom: 12,
+          }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <Btn data-testid="button-cancel-delete" onClick={onCancel} disabled={busy}>Cancel</Btn>
+          <Btn
+            data-testid="button-confirm-delete"
+            variant="danger"
+            disabled={!matches || busy}
+            onClick={onConfirm}
+          >Delete permanently</Btn>
+        </div>
+      </Card>
     </div>
   );
 }
@@ -643,7 +847,7 @@ function TenantDetail({ id, onBack }: { id: string; onBack: () => void }) {
 function ModuleCatalogPicker({ tenantModules, onEnable }: { tenantModules: any[]; onEnable: (slug: string) => void }) {
   const [catalog, setCatalog] = useState<any[] | null>(null);
   const [pick, setPick] = useState('');
-  useEffect(() => { apiCall('/v1/platform/modules').then(d => setCatalog(d.modules)).catch(() => setCatalog([])); }, []);
+  useEffect(() => { apiCall('/platform/modules').then(d => setCatalog(d.modules)).catch(() => setCatalog([])); }, []);
   const present = new Set(tenantModules.map((m: any) => m.module?.slug).filter(Boolean));
   const eligible = (catalog ?? []).filter(m => !m.archivedAt && !present.has(m.slug));
   if (eligible.length === 0) return null;
@@ -664,13 +868,15 @@ function ModuleCatalogPicker({ tenantModules, onEnable }: { tenantModules: any[]
 function TenantActivity({ tenantId }: { tenantId: string }) {
   const [data, setData] = useState<{ logs: any[]; subs: any[]; events: any[] } | null>(null);
   const [err, setErr] = useState<any>(null);
-  useEffect(() => {
+  const load = () => {
+    setErr(null);
     Promise.all([
-      apiCall(`/v1/platform/audit?tenantId=${tenantId}&limit=20`).catch(() => ({ logs: [] })),
-      apiCall(`/v1/platform/billing/events?tenantId=${tenantId}&limit=20`).catch(() => ({ events: [] })),
+      apiCall(`/platform/audit?tenantId=${tenantId}&limit=20`).catch(() => ({ logs: [] })),
+      apiCall(`/platform/billing/events?tenantId=${tenantId}&limit=20`).catch(() => ({ events: [] })),
     ]).then(([a, b]) => setData({ logs: a.logs ?? [], subs: [], events: b.events ?? [] })).catch(setErr);
-  }, [tenantId]);
-  if (err) return <ErrorBlock err={err} />;
+  };
+  useEffect(() => { load(); }, [tenantId]);
+  if (err) return <ErrorBlock err={err} onRetry={load} />;
   if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
   // Merge audit + billing events into one timeline keyed by created/processed time.
   type Item = { kind: 'audit' | 'billing'; at: string; title: string; body: string; id: string };
@@ -715,7 +921,7 @@ function TenantSettings({ tenant, onSaved }: { tenant: any; onSaved: () => void 
       const body: any = {};
       if (name !== tenant.name) body.name = name;
       if (slug !== tenant.slug) body.slug = slug;
-      await apiCall(`/v1/platform/tenants/${tenant.id}`, { method: 'PATCH', body: JSON.stringify(body) });
+      await apiCall(`/platform/tenants/${tenant.id}`, { method: 'PATCH', body: JSON.stringify(body) });
       onSaved();
     } catch (e) { setErr(e); } finally { setBusy(false); }
   };
@@ -743,11 +949,11 @@ function ModuleList({ onOpen }: { onOpen: (slug: string) => void }) {
   const [rows, setRows] = useState<any[] | null>(null);
   const [err, setErr] = useState<any>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const load = () => apiCall('/v1/platform/modules?includeArchived=1').then(d => setRows(d.modules)).catch(setErr);
+  const load = () => { setErr(null); apiCall('/platform/modules?includeArchived=1').then(d => setRows(d.modules)).catch(setErr); };
   useEffect(() => { load(); }, []);
   return (
     <div>
-      <ErrorBlock err={err} />
+      <ErrorBlock err={err} onRetry={load} />
       <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
         <Btn data-testid="button-module-create" variant="primary" onClick={() => setShowCreate(true)}>+ New module</Btn>
       </div>
@@ -785,7 +991,7 @@ function CreateModuleForm({ onClose, onCreated }: { onClose: () => void; onCreat
   const [busy, setBusy] = useState(false);
   const submit = async () => {
     setErr(null); setBusy(true);
-    try { await apiCall('/v1/platform/modules', { method: 'POST', body: JSON.stringify({ slug, name, planMin, status: 'coming_soon' }) }); onCreated(); }
+    try { await apiCall('/platform/modules', { method: 'POST', body: JSON.stringify({ slug, name, planMin, status: 'coming_soon' }) }); onCreated(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
   return (
@@ -815,22 +1021,26 @@ function ModuleDetail({ slug, onBack }: { slug: string; onBack: () => void }) {
   const [pricing, setPricing] = useState<any>(null);
   const [err, setErr] = useState<any>(null);
   const [busy, setBusy] = useState(false);
-  const load = () => Promise.all([
-    apiCall(`/v1/platform/modules?includeArchived=1`).then(d => d.modules.find((m: any) => m.slug === slug)),
-    apiCall(`/v1/platform/pricing`).catch(() => ({ pricing: [] })).then((p: any) => p.pricing?.find((r: any) => r.slug === slug)),
-  ]).then(([m, p]) => { setData(m); setPricing(p); }).catch(setErr);
+  const load = () => {
+    setErr(null);
+    return Promise.all([
+      apiCall(`/platform/modules?includeArchived=1`).then(d => d.modules.find((m: any) => m.slug === slug)),
+      apiCall(`/platform/pricing`).catch(() => ({ pricing: [] })).then((p: any) => p.pricing?.find((r: any) => r.slug === slug)),
+    ]).then(([m, p]) => { setData(m); setPricing(p); }).catch(setErr);
+  };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [slug]);
 
   const archive = async (confirm: boolean) => {
     setErr(null); setBusy(true);
-    try { await apiCall(`/v1/platform/modules/${slug}/archive${confirm ? '?confirm=1' : ''}`, { method: 'POST' }); await load(); }
+    try { await apiCall(`/platform/modules/${slug}/archive${confirm ? '?confirm=1' : ''}`, { method: 'POST' }); await load(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
+  if (err && !data) return <ErrorBlock err={err} onRetry={load} />;
   if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
   return (
     <div>
       <Btn data-testid="button-module-back" onClick={onBack} style={{ marginBottom: 12 }}>← Back</Btn>
-      <ErrorBlock err={err} />
+      <ErrorBlock err={err} onRetry={load} />
       <Card>
         <h2 style={{ margin: 0, fontSize: 18 }} data-testid="text-module-name">{data.name}</h2>
         <div style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>
@@ -859,6 +1069,7 @@ function ModuleDetail({ slug, onBack }: { slug: string; onBack: () => void }) {
         </div>
       </Card>
       {!data.archivedAt && <ModuleEditForm module={data} onSaved={load} />}
+      {!data.archivedAt && <ModuleComponentEditor module={data} onSaved={load} />}
       {!data.archivedAt && <ModulePlanMapping moduleSlug={slug} onSaved={load} />}
       {!data.archivedAt && <ModuleAddonPriceEditor module={data} onSaved={load} />}
       <ModuleMembers moduleSlug={slug} />
@@ -874,20 +1085,18 @@ function ModulePlanMapping({ moduleSlug, onSaved }: { moduleSlug: string; onSave
   const [included, setIncluded] = useState<Set<string> | null>(null);
   const [err, setErr] = useState<any>(null);
   const [busy, setBusy] = useState(false);
-  const load = () => Promise.all([
-    apiCall('/v1/platform/pricing').catch(() => ({ pricing: [] })),
-    apiCall('/v1/platform/modules?includeArchived=1'),
-  ]).then(([_p, m]) => {
-    const mod = m.modules.find((x: any) => x.slug === moduleSlug);
-    setIncluded(new Set(mod?.includedInPlans ?? []));
-  }).catch(setErr);
+  const load = () => {
+    setErr(null);
+    return Promise.all([
+      apiCall('/platform/plans'),
+      apiCall('/platform/modules?includeArchived=1'),
+    ]).then(([p, m]) => {
+      setAllPlans(p.plans ?? []);
+      const mod = m.modules.find((x: any) => x.slug === moduleSlug);
+      setIncluded(new Set(mod?.includedInPlans ?? []));
+    }).catch(setErr);
+  };
   useEffect(() => {
-    apiCall('/v1/platform/plans').catch(() => null).then((d) => {
-      // /v1/platform/plans may not exist; fall back to a hard-coded set
-      // matching the legacy AdminPage's plan picker if necessary.
-      const fallback = [{ slug: 'free' }, { slug: 'starter' }, { slug: 'pro' }, { slug: 'elite' }];
-      setAllPlans(d?.plans ?? fallback);
-    });
     load(); /* eslint-disable-next-line */
   }, [moduleSlug]);
   const toggle = (slug: string) => {
@@ -900,12 +1109,20 @@ function ModulePlanMapping({ moduleSlug, onSaved }: { moduleSlug: string; onSave
     if (!included) return;
     setErr(null); setBusy(true);
     try {
-      await apiCall(`/v1/platform/modules/${moduleSlug}/plan-mapping`, {
+      await apiCall(`/platform/modules/${moduleSlug}/plan-mapping`, {
         method: 'POST', body: JSON.stringify({ planSlugs: Array.from(included) }),
       });
       onSaved();
     } catch (e) { setErr(e); } finally { setBusy(false); }
   };
+  if (err && (!allPlans || !included)) {
+    return (
+      <Card style={{ marginTop: 12 }} data-testid="form-module-plan-mapping">
+        <h3 style={{ marginTop: 0, fontSize: 14 }}>Plan mapping</h3>
+        <ErrorBlock err={err} onRetry={load} />
+      </Card>
+    );
+  }
   if (!allPlans || !included) return null;
   return (
     <Card style={{ marginTop: 12 }} data-testid="form-module-plan-mapping">
@@ -913,7 +1130,7 @@ function ModulePlanMapping({ moduleSlug, onSaved }: { moduleSlug: string; onSave
       <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8 }}>
         Plans that bundle this module out of the box. Leaving all unchecked makes the module add-on-only.
       </div>
-      <ErrorBlock err={err} />
+      <ErrorBlock err={err} onRetry={load} />
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 8 }}>
         {allPlans.map(p => (
           <label key={p.slug} data-testid={`check-plan-${p.slug}`} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -961,11 +1178,11 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
 
   const checkStripe = async () => {
     setErr(null);
-    try { setDrift(await apiCall(`/v1/platform/modules/${m.slug}/stripe-price`)); }
+    try { setDrift(await apiCall(`/platform/modules/${m.slug}/stripe-price`)); }
     catch (e) { setErr(e); }
   };
   const writePrice = async (n: number) => {
-    await apiCall(`/v1/platform/modules/${m.slug}/addon-price`, {
+    await apiCall(`/platform/modules/${m.slug}/addon-price`, {
       method: 'PUT', body: JSON.stringify({ addonPriceCents: n }),
     });
   };
@@ -982,7 +1199,7 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
   const loadHistory = async () => {
     setHistoryLoading(true); setHistoryErr(null);
     try {
-      const d = await apiCall(`/v1/platform/modules/${m.slug}/addon-price-history`);
+      const d = await apiCall(`/platform/modules/${m.slug}/addon-price-history`);
       const next = d.history as AddonPriceHistoryEntry[];
       setHistory(next);
       setCompareIds(prev => prev.filter(id => next.some(h => h.id === id)));
@@ -1007,7 +1224,7 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
   const savePriceId = async (clear = false) => {
     setErr(null); setPriceIdResult(null); setPriceIdBusy(true);
     try {
-      const r = await apiCall(`/v1/platform/modules/${m.slug}/stripe-price-id`, {
+      const r = await apiCall(`/platform/modules/${m.slug}/stripe-price-id`, {
         method: 'PUT',
         body: JSON.stringify({ stripePriceId: clear ? null : priceId.trim() }),
       });
@@ -1257,10 +1474,9 @@ function ModuleAddonPriceEditor({ module: m, onSaved }: { module: any; onSaved: 
 function ModuleMembers({ moduleSlug }: { moduleSlug: string }) {
   const [data, setData] = useState<any>(null);
   const [err, setErr] = useState<any>(null);
-  useEffect(() => {
-    apiCall(`/v1/platform/modules/${moduleSlug}/members`).then(setData).catch(setErr);
-  }, [moduleSlug]);
-  if (err) return <ErrorBlock err={err} />;
+  const load = () => { setErr(null); apiCall(`/platform/modules/${moduleSlug}/members`).then(setData).catch(setErr); };
+  useEffect(() => { load(); }, [moduleSlug]);
+  if (err) return <ErrorBlock err={err} onRetry={load} />;
   if (!data) return null;
   return (
     <Card style={{ marginTop: 12 }} data-testid="block-module-members">
@@ -1296,17 +1512,18 @@ function UserList({ onOpen }: { onOpen: (id: string) => void }) {
   const [roleFilter, setRoleFilter] = useState('');
   const [page, setPage] = useState(1);
   const load = (p = page) => {
+    setErr(null);
     const qs = new URLSearchParams();
     if (search) qs.set('search', search);
     if (statusFilter) qs.set('status', statusFilter);
     if (roleFilter) qs.set('role', roleFilter);
     qs.set('page', String(p));
-    apiCall(`/v1/platform/users?${qs.toString()}`).then(d => setRows(d.users)).catch(setErr);
+    apiCall(`/platform/users?${qs.toString()}`).then(d => setRows(d.users)).catch(setErr);
   };
   useEffect(() => { load(1); /* eslint-disable-next-line */ }, [statusFilter, roleFilter]);
   return (
     <div>
-      <ErrorBlock err={err} />
+      <ErrorBlock err={err} onRetry={() => load(page)} />
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <input
           data-testid="input-user-search"
@@ -1365,47 +1582,52 @@ function UserDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const [data, setData] = useState<any>(null);
   const [err, setErr] = useState<any>(null);
   const [busy, setBusy] = useState(false);
-  const load = () => apiCall(`/v1/platform/users/${id}`).then(setData).catch(setErr);
+  const load = () => { setErr(null); apiCall(`/platform/users/${id}`).then(setData).catch(setErr); };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
 
   const setStatus = async (status: string, label: string) => {
     if (!confirm(`${label} this user?`)) return;
     setErr(null); setBusy(true);
-    try { await apiCall(`/v1/platform/users/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }); await load(); }
+    try { await apiCall(`/platform/users/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }); await load(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
   const unlock = async () => {
     setErr(null); setBusy(true);
-    try { await apiCall(`/v1/platform/users/${id}/unlock`, { method: 'PUT' }); await load(); }
+    try { await apiCall(`/platform/users/${id}/unlock`, { method: 'PUT' }); await load(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
   const hardDelete = async () => {
     if (!confirm('PERMANENTLY delete this user? This cannot be undone.')) return;
     setErr(null); setBusy(true);
-    try { await apiCall(`/v1/platform/users/${id}/hard`, { method: 'DELETE' }); onBack(); }
+    try { await apiCall(`/platform/users/${id}/hard`, { method: 'DELETE' }); onBack(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
   const changeRole = async (role: string) => {
     setErr(null); setBusy(true);
-    try { await apiCall(`/v1/platform/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role }) }); await load(); }
+    try { await apiCall(`/platform/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role }) }); await load(); }
+    catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+  const changePlatformRole = async (platformRole: string) => {
+    setErr(null); setBusy(true);
+    try { await apiCall(`/platform/users/${id}/platform-role`, { method: 'PUT', body: JSON.stringify({ platformRole }) }); await load(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
   const changePlan = async (planSlug: string) => {
     if (!planSlug) return;
     setErr(null); setBusy(true);
-    try { await apiCall(`/v1/platform/users/${id}/plan`, { method: 'PUT', body: JSON.stringify({ planSlug }) }); await load(); }
+    try { await apiCall(`/platform/users/${id}/plan`, { method: 'PUT', body: JSON.stringify({ planSlug }) }); await load(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
   const setSubStatus = async (status: string) => {
     setErr(null); setBusy(true);
-    try { await apiCall(`/v1/platform/users/${id}/subscription-status`, { method: 'PUT', body: JSON.stringify({ status }) }); await load(); }
+    try { await apiCall(`/platform/users/${id}/subscription-status`, { method: 'PUT', body: JSON.stringify({ status }) }); await load(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
   const setTrial = async () => {
     const v = prompt('Trial end date (YYYY-MM-DD or ISO):');
     if (!v) return;
     setErr(null); setBusy(true);
-    try { await apiCall(`/v1/platform/users/${id}/trial`, { method: 'PUT', body: JSON.stringify({ trialEndDate: v }) }); await load(); }
+    try { await apiCall(`/platform/users/${id}/trial`, { method: 'PUT', body: JSON.stringify({ trialEndDate: v }) }); await load(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
   const [resyncResult, setResyncResult] = useState<{
@@ -1419,18 +1641,27 @@ function UserDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const resync = async () => {
     setErr(null); setBusy(true);
     try {
-      const r = await apiCall(`/v1/platform/billing/resync/${id}`, { method: 'POST' });
+      const r = await apiCall(`/platform/billing/resync/${id}`, { method: 'POST' });
       setResyncResult(r);
       await load();
     }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
+  if (err && !data) return <ErrorBlock err={err} onRetry={load} />;
   if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
   const u = data.user;
+  const loadedPlans = Array.isArray(data.plans) ? data.plans.filter((p: any) => p?.slug) : [];
+  const planOptions = loadedPlans.length > 0
+    ? loadedPlans
+    : [
+        { slug: 'starter', name: 'Starter' },
+        { slug: 'pro', name: 'Pro' },
+        { slug: 'elite', name: 'Elite' },
+      ];
   return (
     <div>
       <Btn data-testid="button-user-back" onClick={onBack} style={{ marginBottom: 12 }}>← Back</Btn>
-      <ErrorBlock err={err} />
+      <ErrorBlock err={err} onRetry={load} />
       <Card>
         <h2 style={{ margin: 0, fontSize: 18 }} data-testid="text-user-email">{u.email}</h2>
         <div style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>
@@ -1462,14 +1693,17 @@ function UserDetail({ id, onBack }: { id: string; onBack: () => void }) {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <select data-testid="select-change-plan" defaultValue="" disabled={busy} onChange={e => { const v = e.target.value; e.target.value = ''; changePlan(v); }} style={inp}>
             <option value="">Change plan…</option>
-            <option value="free">free</option>
-            <option value="starter">starter</option>
-            <option value="pro">pro</option>
-            <option value="elite">elite</option>
+            {planOptions.map((p: any) => (
+              <option key={p.slug} value={p.slug}>{p.slug}</option>
+            ))}
           </select>
           <select data-testid="select-change-role" value={u.role} disabled={busy} onChange={e => changeRole(e.target.value)} style={inp}>
             <option value="user">user</option>
             <option value="admin">admin</option>
+          </select>
+          <select data-testid="select-change-platform-role" value={u.platformRole ?? 'user'} disabled={busy} onChange={e => changePlatformRole(e.target.value)} style={inp}>
+            <option value="user">platform user</option>
+            <option value="super_admin">super_admin</option>
           </select>
           <select data-testid="select-sub-status" defaultValue="" disabled={busy} onChange={e => { const v = e.target.value; e.target.value = ''; if (v) setSubStatus(v); }} style={inp}>
             <option value="">Force sub status…</option>
@@ -1590,13 +1824,13 @@ function UserModuleOverrides({ userId }: { userId: string }) {
   const [grant, setGrant] = useState(true);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const load = () => apiCall(`/v1/platform/users/${userId}/module-overrides`).then(setData).catch(setErr);
+  const load = () => { setErr(null); apiCall(`/platform/users/${userId}/module-overrides`).then(setData).catch(setErr); };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [userId]);
   const add = async () => {
     if (!moduleSlug) return;
     setErr(null); setBusy(true);
     try {
-      await apiCall(`/v1/platform/users/${userId}/module-overrides`, {
+      await apiCall(`/platform/users/${userId}/module-overrides`, {
         method: 'POST', body: JSON.stringify({ moduleSlug, grant, reason: reason || undefined }),
       });
       setModuleSlug(''); setReason(''); await load();
@@ -1604,14 +1838,15 @@ function UserModuleOverrides({ userId }: { userId: string }) {
   };
   const remove = async (overrideId: string) => {
     setErr(null); setBusy(true);
-    try { await apiCall(`/v1/platform/users/${userId}/module-overrides/${overrideId}`, { method: 'DELETE' }); await load(); }
+    try { await apiCall(`/platform/users/${userId}/module-overrides/${overrideId}`, { method: 'DELETE' }); await load(); }
     catch (e) { setErr(e); } finally { setBusy(false); }
   };
+  if (err && !data) return <ErrorBlock err={err} onRetry={load} />;
   if (!data) return null;
   return (
     <Card style={{ marginTop: 12 }} data-testid="block-user-overrides">
       <h3 style={{ marginTop: 0, fontSize: 14 }}>Per-user module overrides</h3>
-      <ErrorBlock err={err} />
+      <ErrorBlock err={err} onRetry={load} />
       {(data.overrides ?? []).length === 0
         ? <div style={{ color: colors.textMuted, fontSize: 13, marginBottom: 8 }}>No overrides set.</div>
         : <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', marginBottom: 8 }}>
@@ -1753,7 +1988,7 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
       if (JSON.stringify(nextMeta) !== JSON.stringify(meta)) body.metadata = nextMeta;
 
       if (Object.keys(body).length === 0) return;
-      await apiCall(`/v1/platform/modules/${m.slug}`, { method: 'PATCH', body: JSON.stringify(body) });
+      await apiCall(`/platform/modules/${m.slug}`, { method: 'PATCH', body: JSON.stringify(body) });
       onSaved();
     } catch (e) { setErr(e); } finally { setBusy(false); }
   };
@@ -1832,6 +2067,77 @@ function ModuleEditForm({ module: m, onSaved }: { module: any; onSaved: () => vo
   );
 }
 
+// Task #116: lets a super-admin pick which platform component (section) a
+// module belongs to, or clear the assignment. Loads the live component list
+// and PATCHes the dedicated /component endpoint, which validates the choice
+// and audits the change. An admin selection persists across reboots because
+// the seeder only back-fills NULL component_id.
+function ModuleComponentEditor({ module: m, onSaved }: { module: any; onSaved: () => void }) {
+  const [components, setComponents] = useState<any[] | null>(null);
+  const [componentId, setComponentId] = useState<string>(m.componentId ?? '');
+  const [err, setErr] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadComponents = () => {
+    setErr(null);
+    apiCall('/platform/components')
+      .then(d => setComponents(d.components ?? []))
+      .catch(e => { setComponents([]); setErr(e); });
+  };
+  useEffect(() => { loadComponents(); }, []);
+  useEffect(() => { setComponentId(m.componentId ?? ''); }, [m.componentId]);
+
+  const current = (components ?? []).find((c: any) => c.id === m.componentId);
+  const dirty = (componentId || null) !== (m.componentId ?? null);
+
+  const save = async () => {
+    setErr(null); setBusy(true);
+    try {
+      await apiCall(`/platform/modules/${m.slug}/component`, {
+        method: 'PATCH',
+        body: JSON.stringify({ componentId: componentId === '' ? null : componentId }),
+      });
+      onSaved();
+    } catch (e) { setErr(e); } finally { setBusy(false); }
+  };
+
+  return (
+    <Card style={{ marginTop: 12 }} data-testid="form-module-component">
+      <h3 style={{ marginTop: 0, fontSize: 14 }}>Platform component (section)</h3>
+      <div style={{ color: colors.textMuted, fontSize: 12, marginBottom: 8 }}>
+        Controls which top-level section this app is grouped under in the marketplace and sidebar.
+        Currently: {current ? <strong data-testid="text-current-component">{current.name}</strong> : <span data-testid="text-current-component">— Unassigned —</span>}
+      </div>
+      <ErrorBlock err={err} onRetry={loadComponents} />
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ display: 'block', fontSize: 11, color: colors.textMuted, marginBottom: 4 }}>Component</label>
+          <select
+            data-testid="select-module-component"
+            value={componentId}
+            onChange={e => setComponentId(e.target.value)}
+            disabled={components === null}
+            style={{ ...inp, width: '100%' }}
+          >
+            <option value="">— Unassigned —</option>
+            {(components ?? []).map((c: any) => (
+              <option key={c.id} value={c.id}>{c.name} ({c.slug})</option>
+            ))}
+          </select>
+        </div>
+        <Btn
+          data-testid="button-save-module-component"
+          variant="primary"
+          disabled={busy || !dirty || components === null}
+          onClick={save}
+        >
+          {busy ? 'Saving…' : 'Save section'}
+        </Btn>
+      </div>
+    </Card>
+  );
+}
+
 // -------------------------------------------------------------------------
 // Other tabs
 // -------------------------------------------------------------------------
@@ -1844,24 +2150,25 @@ function BillingEvents() {
   const [err, setErr] = useState<any>(null);
   const [retrying, setRetrying] = useState<string | null>(null);
   const load = () => {
+    setErr(null);
     const qs = new URLSearchParams();
     if (onlyFailed) qs.set('onlyFailed', '1');
     if (eventType)  qs.set('eventType', eventType);
     if (userId)     qs.set('userId', userId);
     const q = qs.toString();
-    apiCall(`/v1/platform/billing/events${q ? `?${q}` : ''}`).then(d => setRows(d.events)).catch(setErr);
+    apiCall(`/platform/billing/events${q ? `?${q}` : ''}`).then(d => setRows(d.events)).catch(setErr);
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [onlyFailed]);
   const retry = async (id: string) => {
     setErr(null); setRetrying(id);
     try {
-      await apiCall(`/v1/platform/billing/events/${id}/retry`, { method: 'POST' });
+      await apiCall(`/platform/billing/events/${id}/retry`, { method: 'POST' });
       await load();
     } catch (e) { setErr(e); } finally { setRetrying(null); }
   };
   return (
     <div>
-      <ErrorBlock err={err} />
+      <ErrorBlock err={err} onRetry={load} />
       <div style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <label style={{ fontSize: 13, color: colors.textMuted }}>
           <input data-testid="checkbox-only-failed" type="checkbox" checked={onlyFailed} onChange={e => setOnlyFailed(e.target.checked)} /> Only failed/unprocessed
@@ -1924,15 +2231,18 @@ function Pricing() {
   const [err, setErr] = useState<any>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const reload = () => apiCall('/v1/platform/pricing')
+  const reload = () => {
+    setErr(null);
+    return apiCall('/platform/pricing')
     .then(d => { setRows(d.pricing); setStripeMode(d.stripeMode || 'off'); })
     .catch(setErr);
+  };
   useEffect(() => { reload(); }, []);
 
   const sync = async (slug: string) => {
     setErr(null); setNotice(null); setBusy(`sync:${slug}`);
     try {
-      const r = await apiCall(`/v1/platform/pricing/${encodeURIComponent(slug)}/sync-from-stripe`, { method: 'POST' });
+      const r = await apiCall(`/platform/pricing/${encodeURIComponent(slug)}/sync-from-stripe`, { method: 'POST' });
       setNotice(`Synced ${slug}: declared price is now ${r.nextCents}¢ (was ${r.previousCents ?? '—'}¢).`);
       await reload();
     } catch (e) { setErr(e); } finally { setBusy(null); }
@@ -1950,7 +2260,7 @@ function Pricing() {
     if (!Number.isFinite(cents) || cents <= 0) { setErr(new Error('Invalid cents value')); return; }
     setBusy(`create:${slug}`);
     try {
-      const r = await apiCall(`/v1/platform/pricing/${encodeURIComponent(slug)}/create-stripe-price`, {
+      const r = await apiCall(`/platform/pricing/${encodeURIComponent(slug)}/create-stripe-price`, {
         method: 'POST',
         body: JSON.stringify({ unitAmountCents: cents }),
       });
@@ -1966,6 +2276,7 @@ function Pricing() {
     } catch (e) { setErr(e); } finally { setBusy(null); }
   };
 
+  if (err && !rows) return <ErrorBlock err={err} onRetry={reload} />;
   if (!rows) return <div style={{ color: colors.textMuted }}>Loading…</div>;
 
   const mismatchCount = rows.filter(r => r.mismatch).length;
@@ -2060,7 +2371,10 @@ function Pricing() {
 
 function Health() {
   const [data, setData] = useState<any>(null);
-  useEffect(() => { apiCall('/v1/platform/health').then(setData); }, []);
+  const [err, setErr] = useState<any>(null);
+  const load = () => { setErr(null); apiCall('/platform/health').then(setData).catch(setErr); };
+  useEffect(() => { load(); }, []);
+  if (err && !data) return <ErrorBlock err={err} onRetry={load} />;
   if (!data) return <div style={{ color: colors.textMuted }}>Loading…</div>;
   return (
     <Card data-testid="card-health">
@@ -2080,6 +2394,7 @@ function AuditLog() {
   const [offset, setOffset] = useState(0);
   const [err, setErr] = useState<any>(null);
   const load = (newOffset = offset) => {
+    setErr(null);
     const qs = new URLSearchParams();
     if (action)       qs.set('action', action);
     if (actorUserId)  qs.set('actorUserId', actorUserId);
@@ -2088,7 +2403,7 @@ function AuditLog() {
     if (toDate)       qs.set('toDate',   new Date(toDate).toISOString());
     qs.set('limit', String(limit));
     qs.set('offset', String(newOffset));
-    apiCall(`/v1/platform/audit?${qs.toString()}`).then(d => setRows(d.logs)).catch(setErr);
+    apiCall(`/platform/audit?${qs.toString()}`).then(d => setRows(d.logs)).catch(setErr);
   };
   useEffect(() => { load(0); /* eslint-disable-next-line */ }, []);
   const search = () => { setOffset(0); load(0); };
@@ -2096,7 +2411,7 @@ function AuditLog() {
   const prev = () => { const o = Math.max(0, offset - limit); setOffset(o); load(o); };
   return (
     <div>
-      <ErrorBlock err={err} />
+      <ErrorBlock err={err} onRetry={() => load(offset)} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8, marginBottom: 12 }}>
         <input data-testid="input-audit-action"     placeholder="action contains…"      value={action}       onChange={e => setAction(e.target.value)}       style={inp} />
         <input data-testid="input-audit-actor"      placeholder="actor user id…"        value={actorUserId}  onChange={e => setActorUserId(e.target.value)}  style={inp} />

@@ -1,14 +1,21 @@
 'use client';
 
+import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
+
 /**
  * Gate 2 — Path-addressable Platform Command surface.
  *
- *   /platform                            → Overview
- *   /platform/tenants                    → Tenant list
- *   /platform/tenants/:id                → Tenant detail
- *   /platform/modules                    → Module list
- *   /platform/modules/:slug              → Module detail
- *   /platform/billing | /pricing | /health | /audit
+ * Canonical:
+ *   /app/platform                         -> Overview
+ *   /app/platform/tenants                 -> Tenant list
+ *   /app/platform/tenants/:id             -> Tenant detail
+ *   /app/platform/modules                 -> Module list
+ *   /app/platform/modules/:slug           -> Module detail
+ *   /app/platform/users                   -> User list
+ *   /app/platform/users/:id               -> User detail
+ *   /app/platform/billing | /pricing | /health | /audit | /sso
+ *
+ * Legacy `/platform[/...]` URLs 308-redirect here through next.config.js.
  *
  * The catch-all segment is parsed into the `view` prop that PlatformPage
  * expects, and PlatformPage receives an `onNavigate` callback that pushes
@@ -23,45 +30,10 @@ import { useParams, useRouter } from 'next/navigation';
 import AuthProvider, { useAuth } from '@/components/AuthProvider';
 import { ToastProvider } from '@/components/Toast';
 import LoginPage from '@/components/pages/LoginPage';
-import PlatformPage, { type PlatformView } from '@/components/pages/PlatformPage';
+import PlatformPage from '@/components/pages/PlatformPage';
+import { pathToPlatformView, platformViewToPath, type PlatformView } from '@/lib/platform-routes';
+import ContactLink from '@/components/ContactLink';
 import { useState, useEffect } from 'react';
-
-function pathToView(slug: string[] | undefined): PlatformView {
-  if (!slug || slug.length === 0) return { kind: 'dashboard' };
-  const [head, ...rest] = slug;
-  switch (head) {
-    case 'tenants':
-      if (rest[0]) return { kind: 'tenant', id: rest[0] };
-      return { kind: 'tenants' };
-    case 'modules':
-      if (rest[0]) return { kind: 'module', slug: rest[0] };
-      return { kind: 'modules' };
-    case 'users':
-      if (rest[0]) return { kind: 'user', id: rest[0] };
-      return { kind: 'users' };
-    case 'billing': return { kind: 'billing' };
-    case 'pricing': return { kind: 'pricing' };
-    case 'health':  return { kind: 'health' };
-    case 'audit':   return { kind: 'audit' };
-    default:        return { kind: 'dashboard' };
-  }
-}
-
-function viewToPath(v: PlatformView): string {
-  switch (v.kind) {
-    case 'dashboard': return '/platform';
-    case 'tenants':   return '/platform/tenants';
-    case 'tenant':    return `/platform/tenants/${v.id}`;
-    case 'modules':   return '/platform/modules';
-    case 'module':    return `/platform/modules/${v.slug}`;
-    case 'users':     return '/platform/users';
-    case 'user':      return `/platform/users/${v.id}`;
-    case 'billing':   return '/platform/billing';
-    case 'pricing':   return '/platform/pricing';
-    case 'health':    return '/platform/health';
-    case 'audit':     return '/platform/audit';
-  }
-}
 
 function PlatformGate() {
   const { user, loading } = useAuth();
@@ -69,10 +41,10 @@ function PlatformGate() {
   const router = useRouter();
   const rawSlug = (params as any)?.slug;
   const slug: string[] | undefined = Array.isArray(rawSlug) ? rawSlug : (rawSlug ? [rawSlug] : undefined);
-  const [view, setView] = useState<PlatformView>(() => pathToView(slug));
+  const [view, setView] = useState<PlatformView>(() => pathToPlatformView(slug));
 
   // Re-derive view whenever the URL changes (browser back/forward).
-  useEffect(() => { setView(pathToView(slug)); }, [JSON.stringify(slug)]);
+  useEffect(() => { setView(pathToPlatformView(slug)); }, [JSON.stringify(slug)]);
 
   if (loading) {
     return <div style={{ padding: 48, color: '#8b949e', textAlign: 'center' }}>Loading…</div>;
@@ -82,14 +54,14 @@ function PlatformGate() {
     return (
       <div style={{ padding: 48, color: '#f85149', textAlign: 'center' }}>
         <h1 style={{ fontSize: 20 }}>403 — Platform Command requires super-admin role.</h1>
-        <a href="/" style={{ color: '#58a6ff' }}>← Return to your workspace</a>
+        <a href={DEFAULT_OPERATOROS_NAVIGATION_URLS.appsUrl} style={{ color: '#58a6ff' }}>← Return to your workspace</a>
       </div>
     );
   }
   return (
     <PlatformPage
       view={view}
-      onNavigate={(v) => { setView(v); router.push(viewToPath(v)); }}
+      onNavigate={(v) => { setView(v); router.push(platformViewToPath(v)); }}
     />
   );
 }
@@ -99,6 +71,7 @@ export default function PlatformRoute() {
     <AuthProvider>
       <ToastProvider>
         <PlatformGate />
+        <ContactLink />
       </ToastProvider>
     </AuthProvider>
   );

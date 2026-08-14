@@ -1,4 +1,7 @@
 export * from './catalog.js';
+export * from './ecosystem.js';
+export * from './products.js';
+export * from './shared-platform.js';
 
 export interface HealthResponse {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -6,6 +9,20 @@ export interface HealthResponse {
   version: string;
   timestamp: string;
   uptime: number;
+  release?: {
+    status: 'identified' | 'unavailable';
+    commit?: string;
+    buildId?: string;
+    builtAt?: string;
+    deployedAt?: string;
+    lockfileSha256?: string;
+    databaseRelease?: {
+      contractVersion: number;
+      releaseVersion: number;
+      stepCount: number;
+      lastStep: string;
+    };
+  };
 }
 
 export interface Workspace {

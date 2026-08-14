@@ -5,6 +5,7 @@ import { Pencil } from 'lucide-react';
 import { saasApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import { useToast } from '../Toast';
+import { LoadingState } from '../ExperiencePrimitives';
 
 export default function NotesPage() {
   const [notes, setNotes] = useState<any[]>([]);
@@ -78,7 +79,7 @@ export default function NotesPage() {
         </div>
         <button data-testid="button-create-note" onClick={() => { setShowCreate(true); setTitle(''); setContent(''); }}
           style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: colors.accent, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          New note
+          Create note
         </button>
       </div>
 
@@ -98,7 +99,7 @@ export default function NotesPage() {
       )}
 
       {loading ? (
-        <div style={{ padding: 40, color: colors.textMuted }}>Loading notes...</div>
+        <LoadingState label="Loading notes…" />
       ) : sorted.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12 }}>
           <div style={{

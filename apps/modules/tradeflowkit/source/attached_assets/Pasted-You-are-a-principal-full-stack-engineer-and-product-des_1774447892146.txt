@@ -1,0 +1,243 @@
+You are a principal full-stack engineer and product designer tasked with upgrading TradeFlow into a production-ready, visually premium, conversion-focused SaaS platform for trade businesses.
+
+The current app is a React + TypeScript + Express + PostgreSQL + Drizzle multi-tenant service management platform with:
+- auth
+- organizations and memberships
+- customers
+- jobs
+- quotes
+- invoices
+- subscriptions via Stripe
+- admin panel
+- PWA support
+- call recovery via Twilio/AI
+
+Your mission is to perform a full product hardening and UX enhancement pass WITHOUT breaking existing business logic.
+
+PRIMARY GOALS
+1. Fix all build/type/runtime issues first
+2. Harden security and production readiness
+3. Upgrade UX/UI so the product feels premium and trustworthy
+4. Improve mobile-first usability for field technicians and business owners
+5. Refactor architecture for maintainability
+6. Add the most valuable missing features that improve adoption and retention
+7. Preserve the existing schema and flows where possible, but improve them cleanly
+
+NON-NEGOTIABLE TECHNICAL FIXES
+- Fix all current TypeScript errors
+- Fix Stripe integration typing/version issues
+- Fix Set iteration / TS target issues
+- Remove incorrect migration config usage
+- Eliminate unsafe `any` usage wherever practical
+- Ensure app builds cleanly in production
+
+SECURITY / PROD HARDENING
+- Replace SHA-256 password hashing with Argon2 or bcrypt
+- Add migration logic for legacy password hashes if needed
+- Require strong environment validation with a typed env config module
+- Use secure session cookie settings in production
+- Remove dangerous fallback secrets in production
+- Add rate limiting for auth endpoints and sensitive public endpoints
+- Add request validation everywhere using zod
+- Redact sensitive values from logs
+- Add helmet, safer headers, and proxy-aware cookie/session handling
+- Ensure demo/admin seed logic only runs in explicitly allowed development/demo environments
+- Add centralized error handling with safe user-facing errors
+
+ARCHITECTURE REFACTOR
+Refactor the backend into clean modules:
+- server/routes/auth.ts
+- server/routes/orgs.ts
+- server/routes/customers.ts
+- server/routes/jobs.ts
+- server/routes/quotes.ts
+- server/routes/invoices.ts
+- server/routes/subscriptions.ts
+- server/routes/callRecovery.ts
+- server/routes/admin.ts
+- server/routes/webhooks.ts
+
+Add service/domain layers where appropriate:
+- auth service
+- billing service
+- job workflow service
+- invoice/quote calculation service
+- call recovery service
+- notification service abstraction
+
+Keep storage logic organized and typed. Improve separation of concerns.
+
+PRODUCT / UX DIRECTION
+TradeFlow should feel like a premium field-service operating system for small trade businesses, not a generic admin panel.
+
+TARGET USERS
+- owner-operators
+- small teams
+- electricians
+- plumbers
+- HVAC
+- carpenters
+- general contractors
+
+DESIGN GOALS
+- modern premium SaaS aesthetic
+- stronger visual hierarchy
+- more polished spacing, typography, cards, empty states, and interactions
+- responsive layouts that feel excellent on desktop and mobile
+- fast, obvious workflows with less friction
+- a brand identity that feels trustworthy, efficient, and contractor-friendly
+- every major page should look “launch-ready”
+
+IMPROVE THE PUBLIC/ENTRY EXPERIENCE
+Replace the plain auth-first experience with a much better landing/auth flow:
+- hero section with clear value proposition
+- strong CTA buttons
+- feature blocks
+- trade-specific messaging
+- trust indicators
+- product screenshots/mock sections
+- concise pricing summary
+- social proof/testimonial placeholders
+- “works on phone in the field” emphasis
+- keep login/register accessible but visually secondary to product value
+
+DASHBOARD IMPROVEMENTS
+Redesign dashboard into an executive command center:
+- today’s jobs
+- overdue invoices
+- quotes awaiting approval
+- unpaid balance
+- revenue trend
+- recent activity feed
+- jobs by status with better visuals
+- quick actions panel
+- technician workload summary if team exists
+- stronger empty states for new orgs
+- compact mobile dashboard layout
+
+CUSTOMERS MODULE
+Enhance customers page:
+- server-side search/filtering
+- bulk actions
+- better import flow
+- proper CSV parsing library
+- import preview step
+- duplicate detection
+- notes/activity area on customer detail
+- quick actions from customer record
+
+JOBS MODULE
+Upgrade jobs into a stronger workflow system:
+- kanban/pipeline view by status
+- list/table view toggle
+- quick status changes
+- better scheduling fields
+- assigned technician display
+- timeline/activity feed
+- job priority field
+- job tags/category
+- richer job detail page
+- sticky mobile action buttons
+- “convert to quote/invoice” shortcuts
+
+QUOTES / INVOICES
+Improve the quote and invoice experience:
+- better line item editor
+- subtotal/tax/discount UX polish
+- draft autosave
+- preview mode
+- printable/shareable layout
+- email/SMS-ready share actions
+- conversion flow quote -> invoice
+- status transitions with confirmation
+- overdue and aging indicators
+- cleaner customer-facing presentation if public views exist
+
+CALL RECOVERY MODULE
+Keep this as a differentiated premium feature.
+Enhance it with:
+- better subscription state clarity
+- usage meter
+- recovery analytics
+- simple funnel metrics
+- recovered revenue estimate
+- recent conversations/messages panel
+- better onboarding/setup flow
+- strong compliance copy and admin controls
+- cleaner status cards and subscription management UI
+
+SETTINGS / ORG / TEAM
+Improve settings:
+- better organization profile editor
+- invite team UX
+- clearer role management
+- plan/usage clarity
+- account security section
+- theme preference support if not already solid
+- billing section clarity
+
+ADMIN
+Improve master admin page for internal operations:
+- tenant search
+- plan controls
+- account health flags
+- usage summary
+- cleaner tables/filters
+- safer admin actions with confirmation
+
+DATA TABLE / COMPONENT SYSTEM
+Upgrade shared components:
+- better reusable table system
+- column visibility
+- sort persistence
+- filter chips
+- loading skeletons
+- empty states
+- error states
+- mobile-friendly row rendering
+- stronger form component consistency
+
+PWA / MOBILE
+Improve mobile readiness:
+- install prompts where appropriate
+- better tap targets
+- sticky bottom actions for important views
+- faster mobile layouts
+- clean offline/failure messaging
+- ensure dashboard, jobs, quotes, invoices, and customer details feel usable on phones
+
+ANALYTICS / INSIGHT LAYER
+Add lightweight but useful business insight widgets:
+- quote acceptance rate
+- invoice collection rate
+- outstanding aging
+- recent revenue trend
+- jobs completed this week
+- missed call recovery metrics if enabled
+
+QUALITY REQUIREMENTS
+- No placeholder junk
+- No fake data in production paths
+- No broken routes
+- No unfinished visual fragments
+- No dead UI buttons
+- No console noise left in production-critical code
+- Everything should compile cleanly
+- Keep code modular, typed, and commented where helpful
+
+OUTPUT FORMAT
+Provide the upgraded code directly in the project structure.
+For every major change:
+1. implement the code
+2. explain what changed
+3. explain why it improves product quality, trust, conversion, or maintainability
+
+PRIORITY ORDER
+Phase 1: make the codebase stable and production-safe
+Phase 2: refactor architecture and tighten typing
+Phase 3: redesign public entry, dashboard, and core CRUD UX
+Phase 4: upgrade jobs/quotes/invoices/customers into a polished field-service workflow
+Phase 5: enhance call recovery and business intelligence features
+Phase 6: final visual polish, responsiveness, and cleanup
+
+Do not give shallow summaries. Make concrete, high-quality upgrades throughout the codebase.

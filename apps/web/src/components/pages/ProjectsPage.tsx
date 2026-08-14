@@ -5,6 +5,7 @@ import { saasApi, billingApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import UpgradeModal from '../UpgradeModal';
 import { useToast } from '../Toast';
+import { EmptyState, LoadingState } from '../ExperiencePrimitives';
 
 interface ProjectsPageProps {
   onNavigateToTasks: (projectId: string, projectName: string) => void;
@@ -219,16 +220,9 @@ export default function ProjectsPage({ onNavigateToTasks }: ProjectsPageProps) {
           <div style={{ fontSize: 13, color: colors.textMuted }}>Create a workspace first to start adding projects</div>
         </div>
       ) : loading ? (
-        <div style={{ padding: 40, color: colors.textMuted }}>Loading projects...</div>
+        <LoadingState label="Loading projects…" />
       ) : projects.length === 0 ? (
-        <div style={{
-          textAlign: 'center', padding: 60, background: colors.bgSecondary,
-          border: `1px solid ${colors.border}`, borderRadius: 12,
-        }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>{'\u25e7'}</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 8 }}>No projects yet</div>
-          <div style={{ fontSize: 13, color: colors.textMuted }}>Create your first project to get started</div>
-        </div>
+        <EmptyState title="No projects yet" description="Create a project to start organizing work." />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
           {projects.map(p => (

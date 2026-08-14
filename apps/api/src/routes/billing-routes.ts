@@ -1,10 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import { db } from '../db.js';
-import { subscriptions, subscriptionPlans, billingEvents } from '../schema.js';
-import { eq, desc } from 'drizzle-orm';
+import { subscriptions, subscriptionPlans, billingEvents, modules, tenantEntitlements, tenants } from '../schema.js';
+import { eq, desc, isNull, asc, and } from 'drizzle-orm';
 import { authenticate, getUserPlanLimits } from '../lib/auth.js';
 import { writeAudit } from '../lib/audit.js';
 import { canPurchaseAddon, resolveTenantContext } from '../lib/tenant-auth.js';
+import { hasPlatformAdminAuthority } from '../lib/rbac.js';
 import {
   getUserPlanConfig, getUserUsageSummary, getDowngradeViolations,
   isDowngrade, PLAN_CONFIGS, FEATURE_LABELS, LIMIT_LABELS,
@@ -13,13 +14,135 @@ import {
 import {
   subscribeToPlan, cancelSubscription, reactivateSubscription,
   createCheckoutSession, createPortalSession, processWebhookEvent,
-  verifyWebhookSignature, isStripeEnabled, getBillingMode,
+  isStripeEnabled, getBillingMode,
   subscribeToAddon, cancelAddon, processAddonWebhookEvent,
   AddonNotPurchasableError, classifyWebhookEvent, claimStripeEvent,
   markStripeEventProcessed, markStripeEventFailed,
+  createStackCheckoutSession,
+  recordTorqueStripeEventDispatch,
 } from '../lib/billing-service.js';
+import {
+  isTorqueTokenStripeEvent,
+  OperatorOsTokenBillingError,
+  receiveVerifiedTorqueTokenStripeEvent,
+  registerTorqueTokenWebhookHandler,
+} from '../lib/operatoros-token-billing.js';
+import { getPaymentProviderAdapter } from '../lib/shared-provider-adapters.js';
+import {
+  COMPANION_MODULES,
+  COMPANION_MODULE_PRICE_CENTS,
+  CORE_PRODUCTS,
+  getAdditionalSeatPriceCents,
+  FREE_WITH_ANY_ACCOUNT,
+} from '@operatoros/sdk';
+import { changeFreeCompanionModule } from '../lib/product-entitlements.js';
 
 export async function registerBillingRoutes(app: FastifyInstance) {
+  registerTorqueTokenWebhookHandler();
+  app.get('/v1/billing/catalog', async () => ({
+    operatorOsMonthlyPriceCents: 0,
+    coreProducts: CORE_PRODUCTS,
+    includedApps: FREE_WITH_ANY_ACCOUNT,
+    companionModules: COMPANION_MODULES,
+    companionModuleMonthlyPriceCents: COMPANION_MODULE_PRICE_CENTS,
+    additionalSeatMonthlyPriceCents: getAdditionalSeatPriceCents(process.env.ADDITIONAL_SEAT_PRICE_CENTS),
+    stripeConfigured: {
+      tradeflowkit: !!process.env.STRIPE_PRICE_TRADEFLOWKIT_MONTHLY,
+      pulsedesk: !!process.env.STRIPE_PRICE_PULSEDESK_MONTHLY,
+      techdeck: !!process.env.STRIPE_PRICE_TECHDECK_MONTHLY,
+      companionModule: !!process.env.STRIPE_PRICE_COMPANION_MODULE_MONTHLY,
+      additionalSeat: !!process.env.STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY,
+    },
+  }));
+
+  app.get('/v1/billing/stack', { preHandler: [authenticate] }, async (request, reply) => {
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    const [tenant] = await db.select({ seatLimit: tenants.seatLimit })
+      .from(tenants)
+      .where(eq(tenants.id, ctx.tenantId))
+      .limit(1);
+    const entitlements = await db.select().from(tenantEntitlements)
+      .where(and(
+        eq(tenantEntitlements.tenantId, ctx.tenantId),
+        eq(tenantEntitlements.active, true),
+      ))
+      .orderBy(asc(tenantEntitlements.createdAt));
+    return { tenantId: ctx.tenantId, seatLimit: tenant?.seatLimit ?? 0, entitlements };
+  });
+
+  app.post('/v1/billing/stack/checkout', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    if (!ctx.viaPlatformRole && ctx.role !== 'owner' && ctx.role !== 'admin') {
+      return reply.code(403).send({ error: 'Tenant owner or admin access required', code: 'TENANT_ROLE_INSUFFICIENT' });
+    }
+    if (!isStripeEnabled()) {
+      return reply.code(409).send({ error: 'Stripe checkout is not configured', code: 'STRIPE_NOT_CONFIGURED' });
+    }
+
+    try {
+      const body = (request.body ?? {}) as any;
+      const result = await createStackCheckoutSession({
+        tenantId: ctx.tenantId,
+        userId: user.id,
+        coreProduct: body.coreProduct,
+        freeCompanionModule: body.freeCompanionModule,
+        additionalModules: body.additionalModules,
+        additionalSeats: body.additionalSeats,
+      });
+      await writeAudit({
+        actorUserId: user.id,
+        tenantId: ctx.tenantId,
+        targetType: 'stripe_checkout',
+        targetId: result.sessionId,
+        action: 'core_product_stack_checkout_created',
+        extra: {
+          coreProduct: body.coreProduct,
+          freeCompanionModule: body.freeCompanionModule,
+          additionalModules: body.additionalModules ?? [],
+          additionalSeats: body.additionalSeats ?? 0,
+        },
+        ipAddress: request.ip,
+      }, request);
+      return result;
+    } catch (error) {
+      return reply.code(400).send({
+        error: error instanceof Error ? error.message : 'Could not create checkout',
+        code: 'STACK_CHECKOUT_INVALID',
+      });
+    }
+  });
+
+  app.post('/v1/billing/stack/free-companion', { preHandler: [authenticate] }, async (request, reply) => {
+    const user = (request as any).user;
+    const ctx = await resolveTenantContext(request);
+    if (!ctx) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+    if (!ctx.viaPlatformRole && ctx.role !== 'owner' && ctx.role !== 'admin') {
+      return reply.code(403).send({ error: 'Tenant owner or admin access required', code: 'TENANT_ROLE_INSUFFICIENT' });
+    }
+    try {
+      const moduleKey = (request.body as any)?.moduleKey;
+      await changeFreeCompanionModule(ctx.tenantId, moduleKey);
+      await writeAudit({
+        actorUserId: user.id,
+        tenantId: ctx.tenantId,
+        targetType: 'tenant_entitlement',
+        targetId: moduleKey,
+        action: 'free_companion_changed',
+        after: { moduleKey },
+        ipAddress: request.ip,
+      }, request);
+      return { ok: true, moduleKey };
+    } catch (error) {
+      return reply.code(400).send({
+        error: error instanceof Error ? error.message : 'Could not change companion module',
+        code: 'FREE_COMPANION_INVALID',
+      });
+    }
+  });
+
   app.get('/v1/billing/subscription', { preHandler: [authenticate] }, async (request) => {
     const user = (request as any).user;
     const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id)).limit(1);
@@ -58,6 +181,28 @@ export async function registerBillingRoutes(app: FastifyInstance) {
   });
 
   app.get('/v1/billing/plans', async () => {
+    // Task #98: marketing /pricing now sources live amounts from this
+    // endpoint, so we also surface the per-add-on display prices that
+    // the platform admin sets on `modules.metadata.addonPriceCents`.
+    // Returned shape is public-safe: slug, name, and display price only —
+    // no Stripe price IDs, env keys, or admin-only fields.
+    const addonRows = await db.select({
+      slug: modules.slug,
+      name: modules.name,
+      metadata: modules.metadata,
+    })
+      .from(modules)
+      .where(isNull(modules.archivedAt))
+      .orderBy(asc(modules.ord), asc(modules.slug));
+    const addons = addonRows.map(row => {
+      const cents = (row.metadata as Record<string, unknown> | null)?.addonPriceCents;
+      return {
+        slug: row.slug,
+        name: row.name,
+        addonPriceCents: typeof cents === 'number' ? cents : null,
+      };
+    });
+
     return {
       plans: PLAN_CONFIGS.map(p => {
         // Task #66 round 3: thread shared display pricing through to the
@@ -74,6 +219,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
           displayAnnualPriceCents: cat?.annualPriceCents ?? null,
         };
       }),
+      addons,
       featureLabels: FEATURE_LABELS,
       limitLabels: LIMIT_LABELS,
     };
@@ -218,7 +364,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       // billed to tenant B (whose entitlement they'd then receive via the
       // webhook). canPurchaseAddon also enforces module existence,
       // purchasability, and the no-double-buy invariant in one shot.
-      if (tenantId && user.platformRole !== 'super_admin') {
+      if (tenantId && !hasPlatformAdminAuthority(user)) {
         const check = await canPurchaseAddon(user.id, tenantId, moduleSlug);
         if (!check.allowed) {
           // Mirror the documented HTTP code policy:
@@ -285,9 +431,13 @@ export async function registerBillingRoutes(app: FastifyInstance) {
   });
 
   app.post('/v1/billing/webhook', async (request, reply) => {
-    if (!isStripeEnabled()) {
-      console.log('[billing webhook] Stripe not enabled, ignoring webhook');
-      return { received: true, mode: 'local' };
+    const paymentAdapter = getPaymentProviderAdapter();
+    if (paymentAdapter.status.state === 'disabled') {
+      request.log.warn('billing_webhook_rejected_stripe_not_configured');
+      return reply.code(503).send({
+        error: 'Stripe webhook processing is not configured',
+        code: 'STRIPE_NOT_CONFIGURED',
+      });
     }
 
     try {
@@ -306,7 +456,32 @@ export async function registerBillingRoutes(app: FastifyInstance) {
         console.error('[billing webhook] Raw body unavailable; rejecting unverifiable webhook');
         return reply.code(400).send({ error: 'Raw body unavailable for signature verification' });
       }
-      const event = verifyWebhookSignature(rawBody, signature);
+      const event = await paymentAdapter.verifyWebhook(rawBody, signature) as any;
+
+      // Canonical revenue dispatcher: Torque credit events are routed before
+      // the generic plan/add-on claim. Signature verification happens exactly
+      // once, and the shared receipt owns exactly-once fulfillment.
+      if (await isTorqueTokenStripeEvent(event)) {
+        const received = await receiveVerifiedTorqueTokenStripeEvent({ event, rawBody });
+        const receipt = received.receipt as Record<string, any>;
+        const payload = (receipt.safe_payload_json ?? {}) as Record<string, any>;
+        await recordTorqueStripeEventDispatch({
+          event,
+          tenantId: String(receipt.tenant_id),
+          userId: String(payload.userId),
+          purchaseId: String(payload.purchaseId),
+          receiptId: String(receipt.id),
+          status: received.status,
+          errorCode: receipt.last_error_code ? String(receipt.last_error_code) : null,
+        });
+        return reply.code(received.status === 'processed' ? 200 : 202).send({
+          received: true,
+          kind: 'torque_assist_credit',
+          handled: received.status === 'processed',
+          duplicate: received.duplicate,
+          status: received.status,
+        });
+      }
 
       // Single idempotency point for ALL Stripe webhook events. Classify
       // first (checks metadata in object / subscription_data /
@@ -318,7 +493,7 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       const { claimedRowId, isDuplicate } = await claimStripeEvent(event, classification);
 
       if (isDuplicate) {
-        console.log(`[billing webhook] ${event.type} (${classification.isAddon ? 'addon' : 'plan'}): duplicate event.id=${event.id}, no-op`);
+        console.log(`[billing webhook] ${event.type} (${classification.isAddon ? 'addon' : 'plan'}): duplicate event, no-op`);
         return { received: true, kind: classification.isAddon ? 'addon' : 'plan', handled: true, action: 'duplicate_ignored' };
       }
 
@@ -343,8 +518,19 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       console.log(`[billing webhook] ${event.type} (${classification.isAddon ? 'addon' : 'plan'}): handled=${result.handled} action=${result.action || 'none'} matched=${classification.matchedAt}`);
       return { received: true, kind: classification.isAddon ? 'addon' : 'plan', ...result };
     } catch (err: any) {
-      console.error('[billing webhook] Error:', err.message);
-      return reply.code(400).send({ error: err.message });
+      console.error('[billing webhook] Verification or processing failed', {
+        code: typeof err?.code === 'string' ? err.code : 'WEBHOOK_REJECTED',
+      });
+      if (err instanceof OperatorOsTokenBillingError) {
+        return reply.code(err.statusCode).send({
+          error: 'Torque payment event validation failed',
+          code: err.code,
+        });
+      }
+      return reply.code(400).send({
+        error: 'Webhook verification or processing failed',
+        code: 'WEBHOOK_REJECTED',
+      });
     }
   });
 }

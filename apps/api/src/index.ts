@@ -1,7 +1,7 @@
-import Fastify from 'fastify';
+import Fastify, { LogController } from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, inArray, and, isNull, sql } from 'drizzle-orm';
 import type {
   HealthResponse,
   CreateWorkspaceRequest,
@@ -21,45 +21,193 @@ import {
 } from '../../../apps/runner-gateway/src/provisioner.js';
 import { isCommandAllowed, clampTimeout, truncateOutput } from '../../../apps/runner-gateway/src/safety.js';
 import cookie from '@fastify/cookie';
-import { db } from './db.js';
-import { workspaces, runners, tasks, taskEvents, toolTraces, publishRuns } from './schema.js';
+import { closeDatabasePool, db } from './db.js';
+import { workspaces, runners, tasks, taskEvents, toolTraces, publishRuns, users } from './schema.js';
 import { serveUI } from './ui.js';
-import { ensureExtendedTables } from './lib/db-init.js';
-import { ensureSaasTables, seedPlansAndAdmin, seedModules, ensureTenantTables, backfillPersonalTenants, bootstrapSuperAdmin, seedDemoCoTenant } from './lib/saas-db-init.js';
+import {
+  applyOperatorOSDatabaseRelease,
+  verifyOperatorOSDatabaseRelease,
+} from './lib/database-release.js';
+import { createRuntimeReleaseIdentity, loadReleaseMetadata } from './lib/release-metadata.js';
 import { registerOsRoutes } from './routes/os-routes.js';
 import { registerAuthRoutes } from './routes/auth-routes.js';
 import { registerSaasRoutes } from './routes/saas-routes.js';
 import { registerBillingRoutes } from './routes/billing-routes.js';
 import { registerAiRoutes } from './routes/ai-routes.js';
 import { registerModuleRoutes } from './routes/module-routes.js';
+import { registerModuleShellRoutes } from './routes/module-shell-routes.js';
 import { registerTenantRoutes } from './routes/tenant-routes.js';
 import { registerTenantAdminRoutes } from './routes/tenant-admin-routes.js';
+import { registerSsoRoutes } from './routes/sso-routes.js';
+import { registerAdminRoutes } from './routes/admin-routes.js';
 import { registerPlatformRoutes } from './routes/platform-routes.js';
+import { registerEntitlementRoutes } from './routes/entitlement-routes.js';
+import { registerEcosystemRoutes } from './routes/ecosystem-routes.js';
+import { registerDiagnosticsRoutes } from './routes/diagnostics-routes.js';
+import { registerDirectoryRoutes } from './routes/directory-routes.js';
+import { registerSharedServiceRoutes } from './routes/shared-service-routes.js';
+import { registerSharedPlatformRoutes } from './routes/shared-platform-routes.js';
+import { registerSnapProofOsRoutes } from './routes/snapproofos-routes.js';
+import { registerSnapProofOsPhase32Routes } from './routes/snapproofos-phase32-routes.js';
+import { registerOperatorOsMessagingComplianceRoutes } from './routes/operatoros-messaging-compliance-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
+import {
+  getSharedServiceWorkerStatus,
+  startSharedServiceWorker,
+  stopSharedServiceWorker,
+} from './lib/shared-service-worker.js';
 import { runAgentLoop } from './agent.js';
 import type { AgentEvent } from './agent.js';
 import { analyzeWorkspace, generatePlan, generateArtifacts, runProof } from './publish/index.js';
 import type { DetectionResult } from './publish/types.js';
-import { buildCorsOriginValidator } from './lib/cors-origin.js';
-import { requireSessionSecret } from './lib/session-secrets.js';
+import { requireSessionSecret } from './lib/session-secret.js';
+import { authenticate } from './lib/auth.js';
+import { hasPlatformAdminAuthority } from './lib/rbac.js';
+import { isProductionEnv, isSameSiteHost } from './lib/public-url.js';
+import { OPERATOROS_MODULE_REGISTRY } from '../../../packages/modules/registry.js';
+import { isBrowserRequestOriginAllowed } from './lib/request-origin.js';
+import { resolveSsoCodeSecret } from '../../../packages/sso/index.js';
+import { runtimeTrustsProxy } from './lib/proxy-trust.js';
+import { getSharedSecretVaultReadiness } from './lib/shared-secret-vault.js';
+
+/**
+ * CORS origin policy. Production permits only registered OperatorOS platform
+ * and module origins, plus explicit CORS_ALLOWED_ORIGINS entries. Merely being
+ * a sibling `*.operatoros.net` hostname is not sufficient. Development also
+ * permits loopback origins. Missing Origin (same-origin or
+ * non-browser callers like Stripe webhooks) is always permitted.
+ */
+const REGISTERED_PRODUCTION_ORIGINS = new Set<string>([
+  ...OPERATOROS_MODULE_REGISTRY
+    .filter(module => module.status === 'active')
+    .flatMap(module => module.exactAllowedOrigins),
+]);
+
+function configuredCorsOrigins(): Set<string> {
+  const values = String(process.env.CORS_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean)
+    .flatMap(value => {
+      try {
+        const parsed = new URL(value);
+        if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return [];
+        return [parsed.origin];
+      } catch {
+        return [];
+      }
+    });
+  return new Set(values);
+}
+
+function isAllowedCorsOrigin(origin: string | undefined): boolean {
+  if (!origin) return true;
+  let url: URL;
+  try {
+    url = new URL(origin);
+  } catch {
+    return false;
+  }
+  if (!isProductionEnv()) return isSameSiteHost(url.hostname);
+  return REGISTERED_PRODUCTION_ORIGINS.has(url.origin) || configuredCorsOrigins().has(url.origin);
+}
 
 const startTime = Date.now();
+const releaseMetadata = loadReleaseMetadata();
+const releaseIdentity = createRuntimeReleaseIdentity(
+  releaseMetadata,
+  new Date(startTime).toISOString(),
+);
+const sessionSecret = requireSessionSecret();
+const trustProxy = runtimeTrustsProxy();
+const prettyLogs = !isProductionEnv() && process.env.LOG_PRETTY !== 'false';
 
 const app = Fastify({
+  // Fastify derives request.ip from X-Forwarded-For only when this explicit
+  // deployment switch is enabled. Audit events and auth/SSO rate-limit keys
+  // already use request.ip, so they inherit the same fail-closed boundary.
+  trustProxy,
+  // Default request logs include the raw URL. Keep them disabled so an
+  // accidentally supplied code/token query cannot enter log storage; the
+  // sanitized onResponse record below logs only the route template.
+  logController: new LogController({ disableRequestLogging: true }),
   logger: {
-    transport: {
-      target: 'pino-pretty',
-      options: { colorize: true },
+    level: process.env.LOG_LEVEL || 'info',
+    redact: {
+      paths: [
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'res.headers.set-cookie',
+        'password',
+        'token',
+        '*.password',
+        '*.token',
+        '*.secret',
+      ],
+      censor: '[REDACTED]',
     },
+    ...(prettyLogs
+      ? { transport: { target: 'pino-pretty', options: { colorize: true } } }
+      : {}),
   },
 });
 
+app.addHook('onRequest', async (request, reply) => {
+  reply.header('X-Request-Id', request.id);
+  reply.header('X-Content-Type-Options', 'nosniff');
+  reply.header('X-Frame-Options', 'DENY');
+  reply.header('Referrer-Policy', 'no-referrer');
+  reply.header(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+  );
+  if (isProductionEnv()) {
+    reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+});
+
+app.addHook('onResponse', async (request, reply) => {
+  const route = request.routeOptions?.url || String(request.url || '').split('?')[0] || 'unknown';
+  const moduleMatch = /^\/(?:v1|api)\/modules\/([^/]+)/.exec(route);
+  const user = (request as any).user;
+  const tenant = (request as any).tenantContext;
+  request.log.info({
+    requestId: request.id,
+    method: request.method,
+    route,
+    statusCode: reply.statusCode,
+    responseTimeMs: Math.round(reply.elapsedTime),
+    userId: user?.id ?? null,
+    tenantId: tenant?.tenantId ?? (request as any).authSession?.tenantId ?? null,
+    moduleId: moduleMatch?.[1] ?? (request as any).authSession?.moduleId ?? null,
+  }, 'request_completed');
+});
+
 await app.register(cors, {
-  origin: buildCorsOriginValidator(process.env.CORS_ALLOWED_ORIGINS, process.env.NODE_ENV),
+  origin: (origin, cb) => cb(null, isAllowedCorsOrigin(origin ?? undefined)),
   credentials: true,
 });
-await app.register(cookie, {
-  secret: requireSessionSecret(process.env.NODE_ENV, process.env.SESSION_SECRET),
+await app.register(cookie, { secret: sessionSecret });
+
+// CORS controls whether a browser can read a response; it does not stop the
+// request from mutating server state. Because sibling operatoros.net hosts are
+// same-site, enforce the stronger rule here: production browser requests must
+// have an Origin matching the public request host. Server-to-server calls and
+// signed webhooks normally omit Origin and remain unaffected.
+app.addHook('onRequest', async (request, reply) => {
+  const allowed = isBrowserRequestOriginAllowed({
+    origin: typeof request.headers.origin === 'string' ? request.headers.origin : undefined,
+    host: request.headers.host,
+    forwardedHost: request.headers['x-forwarded-host'],
+    trustProxy,
+    production: isProductionEnv(),
+  });
+  if (!allowed) {
+    return reply.code(403).send({
+      error: 'Browser request origin does not match the target host',
+      code: 'ORIGIN_HOST_MISMATCH',
+    });
+  }
 });
 
 // Replace the default JSON parser with one that preserves the raw buffer on
@@ -75,6 +223,27 @@ app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, 
     done(err as Error);
   }
 });
+
+// Twilio status / recording webhooks POST application/x-www-form-urlencoded.
+// We need access to the parsed key/value pairs to verify the X-Twilio-Signature
+// header (HMAC of URL + sorted form fields) and to react to call state.
+app.addContentTypeParser(
+  'application/x-www-form-urlencoded',
+  { parseAs: 'string' },
+  (_req, body, done) => {
+    try {
+      const text = typeof body === 'string' ? body : (body as Buffer).toString('utf8');
+      (_req as any).rawBody = Buffer.from(text, 'utf8');
+      if (!text) return done(null, {});
+      const params = new URLSearchParams(text);
+      const out: Record<string, string> = {};
+      for (const [k, v] of params.entries()) out[k] = v;
+      done(null, out);
+    } catch (err) {
+      done(err as Error);
+    }
+  },
+);
 await app.register(websocket);
 await registerOsRoutes(app);
 await registerAuthRoutes(app);
@@ -82,118 +251,33 @@ await registerSaasRoutes(app);
 await registerBillingRoutes(app);
 await registerAiRoutes(app);
 await registerModuleRoutes(app);
+await registerSsoRoutes(app);
+await registerModuleShellRoutes(app);
 await registerTenantRoutes(app);
 await registerTenantAdminRoutes(app);
+await registerAdminRoutes(app);
 await registerPlatformRoutes(app);
+await registerEntitlementRoutes(app);
+await registerEcosystemRoutes(app);
+await registerDiagnosticsRoutes(app);
+await registerDirectoryRoutes(app);
+await registerSharedServiceRoutes(app);
+await registerSharedPlatformRoutes(app);
+await registerSnapProofOsRoutes(app);
+await registerSnapProofOsPhase32Routes(app);
+await registerOperatorOsMessagingComplianceRoutes(app);
 
-async function ensureTables() {
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS workspaces (
-      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
-      git_url TEXT NOT NULL,
-      git_ref TEXT NOT NULL DEFAULT 'main',
-      profile_id TEXT NOT NULL DEFAULT 'node20',
-      status TEXT NOT NULL DEFAULT 'pending',
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
-      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_workspaces_status ON workspaces(status);
-
-    CREATE TABLE IF NOT EXISTS runners (
-      workspace_id VARCHAR(36) PRIMARY KEY REFERENCES workspaces(id),
-      mode TEXT NOT NULL DEFAULT 'docker',
-      pod_name TEXT,
-      namespace TEXT,
-      pvc_name TEXT,
-      container_id TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      started_at TIMESTAMP,
-      stopped_at TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS tasks (
-      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
-      workspace_id VARCHAR(36) NOT NULL REFERENCES workspaces(id),
-      title TEXT NOT NULL,
-      goal TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      required_checks JSONB,
-      check_results JSONB,
-      result_summary TEXT,
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
-      started_at TIMESTAMP,
-      finished_at TIMESTAMP
-    );
-    CREATE INDEX IF NOT EXISTS idx_tasks_workspace ON tasks(workspace_id);
-
-    CREATE TABLE IF NOT EXISTS task_events (
-      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
-      task_id VARCHAR(36) NOT NULL REFERENCES tasks(id),
-      ts TIMESTAMP DEFAULT NOW() NOT NULL,
-      type TEXT NOT NULL,
-      payload JSONB
-    );
-    CREATE INDEX IF NOT EXISTS idx_task_events_task_ts ON task_events(task_id, ts);
-
-    CREATE TABLE IF NOT EXISTS tool_traces (
-      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
-      task_id VARCHAR(36) NOT NULL REFERENCES tasks(id),
-      ts TIMESTAMP DEFAULT NOW() NOT NULL,
-      tool_name TEXT NOT NULL,
-      input JSONB,
-      output JSONB,
-      success BOOLEAN,
-      duration_ms INTEGER
-    );
-    CREATE INDEX IF NOT EXISTS idx_tool_traces_task_ts ON tool_traces(task_id, ts);
-
-    CREATE TABLE IF NOT EXISTS workspace_ports (
-      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
-      workspace_id VARCHAR(36) NOT NULL REFERENCES workspaces(id),
-      port INTEGER NOT NULL,
-      protocol TEXT NOT NULL DEFAULT 'http',
-      is_primary BOOLEAN NOT NULL DEFAULT false,
-      health_path TEXT,
-      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS publish_runs (
-      id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid(),
-      workspace_id VARCHAR(36) NOT NULL REFERENCES workspaces(id),
-      status TEXT NOT NULL DEFAULT 'analyzing',
-      detected_json JSONB,
-      plan_json JSONB,
-      proof_json JSONB,
-      created_at TIMESTAMP DEFAULT NOW() NOT NULL,
-      updated_at TIMESTAMP DEFAULT NOW() NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_publish_runs_workspace ON publish_runs(workspace_id);
-  `);
+if (process.env.OPERATOROS_DATABASE_RELEASE_APPLIED === '1') {
+  await verifyOperatorOSDatabaseRelease();
+} else {
+  await applyOperatorOSDatabaseRelease();
 }
-
-await ensureTables();
-await ensureExtendedTables();
-await ensureSaasTables();
-// Gate 1: tenant DDL must run BEFORE any seed step that touches `users`,
-// because Drizzle's implicit SELECT * needs `platform_role` /
-// `current_tenant_id` to exist on row reads.
-await ensureTenantTables();
-await seedPlansAndAdmin();
-// Task #66: launch-fix bootstrap. Pre-seed runs the `bf-os ->
-// brandforgeos` slug rename + `subscription_plans.stripe_price_id_annual`
-// column add BEFORE seedModules so the seeder finds the renamed row.
-const { launchFixPreSeed, launchFixPostSeed } = await import('./lib/launch-fix-init.js');
-await launchFixPreSeed();
-await seedModules();
-// Backfill + tenant-aware seeds run last so the data they need is present.
-await backfillPersonalTenants();
-await bootstrapSuperAdmin();
-await seedDemoCoTenant();
-// Task #66: post-seed aligns plan prices to PLAN_CONFIGS, back-fills
-// monthly/annual Stripe price IDs, renames John's tenant + flips type to
-// company, and back-fills tenant_modules for plan-included live modules.
-await launchFixPostSeed();
 startSsoTokenCleanup();
+startSharedServiceWorker();
+app.addHook('onClose', async () => {
+  await stopSharedServiceWorker();
+  await closeDatabasePool();
+});
 
 const streamSubscribers = new Map<string, Set<import('ws').WebSocket>>();
 
@@ -271,6 +355,31 @@ async function runVerifyWithFallbacks(workspaceId: string, commands: string[]): 
   return lastResult!;
 }
 
+type AuthUser = { id: string; platformRole: string };
+
+async function getAuthorizedWorkspace(
+  id: string,
+  user: AuthUser,
+  reply: import('fastify').FastifyReply,
+) {
+  const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
+  if (!ws) {
+    reply.status(404).send({ error: 'Workspace not found' });
+    return null;
+  }
+  if (!hasPlatformAdminAuthority(user) && ws.userId !== user.id) {
+    reply.status(404).send({ error: 'Workspace not found' });
+    return null;
+  }
+  return ws;
+}
+
+async function getUserWorkspaceIds(user: AuthUser): Promise<string[]> {
+  if (hasPlatformAdminAuthority(user)) return [];
+  const rows = await db.select({ id: workspaces.id }).from(workspaces).where(eq(workspaces.userId, user.id));
+  return rows.map((r) => r.id);
+}
+
 app.get('/', async (req, reply) => {
   const accept = req.headers.accept ?? '';
   if (accept.includes('text/html')) {
@@ -306,19 +415,87 @@ app.get('/', async (req, reply) => {
   });
 });
 
-app.get('/healthz', async (_req, reply) => {
-  const response: HealthResponse = {
+function healthSnapshot(): HealthResponse {
+  return {
     status: 'healthy',
     service: 'operatoros-api',
     version: '0.2.0',
     timestamp: new Date().toISOString(),
     uptime: Math.floor((Date.now() - startTime) / 1000),
+    release: releaseIdentity,
   };
-  return reply.send(response);
+}
+
+app.get('/healthz', async (_req, reply) => {
+  return reply.send(healthSnapshot());
 });
 
+// Non-breaking health aliases. `/healthz` above is unchanged. `/v1/health`
+// makes the check reachable from the web as `/api/health` via the existing
+// `/api/* -> /v1/*` rewrite; `/health` and `/api/health` answer for direct
+// API callers regardless of the proxy.
+app.get('/health', async (_req, reply) => reply.send(healthSnapshot()));
+app.get('/v1/health', async (_req, reply) => reply.send(healthSnapshot()));
+app.get('/api/health', async (_req, reply) => reply.send(healthSnapshot()));
+
 app.get('/readyz', async (_req, reply) => {
-  return reply.send({ ready: true });
+  const ssoCodeEncryptionConfigured = !!resolveSsoCodeSecret();
+  let database: 'healthy' | 'unavailable' = 'healthy';
+  let liveProviderCount = 0;
+  let blockedLiveProviderCount = 0;
+  try {
+    await db.execute(sql`select 1 as operatoros_readiness`);
+    const providerReadiness = await db.execute(sql`
+      SELECT COUNT(*) FILTER (WHERE mode = 'live')::int AS live_count,
+        COUNT(*) FILTER (WHERE mode = 'live' AND health_state <> 'ready')::int AS blocked_count
+      FROM shared_provider_configs
+    `);
+    liveProviderCount = Number(providerReadiness.rows[0]?.live_count || 0);
+    blockedLiveProviderCount = Number(providerReadiness.rows[0]?.blocked_count || 0);
+  } catch {
+    database = 'unavailable';
+    // Do not serialize driver errors here: connection strings and credentials
+    // can be embedded in nested database error metadata.
+    app.log.error({ check: 'database' }, 'readiness_database_failed');
+  }
+
+  const sharedSecretVault = getSharedSecretVaultReadiness();
+
+  const checks = {
+    database,
+    auth: 'configured' as const,
+    ssoCodeEncryption: ssoCodeEncryptionConfigured ? 'configured' : 'missing',
+    moduleRegistry: OPERATOROS_MODULE_REGISTRY.filter(module => module.status === 'active').length > 0
+      ? 'configured'
+      : 'missing',
+    sharedServiceWorker: getSharedServiceWorkerStatus().started ? 'configured' : 'missing',
+    sharedSecretEncryption: sharedSecretVault.mode,
+    sharedProviderControlPlane: liveProviderCount === 0 ? 'not_configured'
+      : blockedLiveProviderCount > 0 ? 'blocked'
+        : 'ready',
+    releaseIdentity: releaseIdentity.status === 'identified' ? 'configured' : 'missing',
+  };
+  const externalDependencies = {
+    stripe: process.env.STRIPE_SECRET_KEY && process.env.STRIPE_MODE === 'live' ? 'configured' : 'disabled',
+    email: process.env.RESEND_API_KEY ? 'configured' : 'disabled',
+    twilio: process.env.TWILIO_ACCOUNT_SID || process.env.REPLIT_CONNECTORS_HOSTNAME ? 'configured' : 'disabled',
+    openai: process.env.OPENAI_API_KEY ? 'configured' : 'disabled',
+  };
+  const ready = database === 'healthy'
+    && getSharedServiceWorkerStatus().started
+    && (!isProductionEnv() || (
+      ssoCodeEncryptionConfigured
+      && releaseIdentity.status === 'identified'
+      && blockedLiveProviderCount === 0
+      && (liveProviderCount === 0 || sharedSecretVault.configured)
+    ));
+  return reply.code(ready ? 200 : 503).send({
+    ready,
+    checks,
+    externalDependencies,
+    release: releaseIdentity,
+    requestId: _req.id,
+  });
 });
 
 app.get('/v1/profiles', async (_req, reply) => {
@@ -327,6 +504,7 @@ app.get('/v1/profiles', async (_req, reply) => {
 
 app.post<{ Body: CreateWorkspaceRequest }>(
   '/v1/workspaces',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { gitUrl, gitRef, profileId } = req.body;
     if (!gitUrl) return reply.status(400).send({ error: 'gitUrl is required' });
@@ -334,7 +512,9 @@ app.post<{ Body: CreateWorkspaceRequest }>(
     const profile = getProfile(profileId ?? 'node20');
     if (!profile) return reply.status(400).send({ error: `Unknown profile: ${profileId}` });
 
+    const user = (req as any).user as AuthUser;
     const [ws] = await db.insert(workspaces).values({
+      userId: user.id,
       gitUrl,
       gitRef: gitRef ?? 'main',
       profileId: profileId ?? 'node20',
@@ -345,17 +525,54 @@ app.post<{ Body: CreateWorkspaceRequest }>(
   },
 );
 
-app.get('/v1/workspaces', async (_req, reply) => {
-  const rows = await db.select().from(workspaces);
+app.get('/v1/workspaces', { preHandler: [authenticate] }, async (req, reply) => {
+  const user = (req as any).user as AuthUser;
+  const rows = hasPlatformAdminAuthority(user)
+    ? await db.select().from(workspaces)
+    : await db.select().from(workspaces).where(eq(workspaces.userId, user.id));
   return reply.send({ workspaces: rows, total: rows.length });
 });
 
-app.get<{ Params: { id: string } }>(
-  '/v1/workspaces/:id',
+app.get('/v1/workspaces/unowned', { preHandler: [authenticate] }, async (req, reply) => {
+  const user = (req as any).user as AuthUser;
+  if (!hasPlatformAdminAuthority(user)) {
+    return reply.status(403).send({ error: 'PLATFORM_ROLE_REQUIRED' });
+  }
+  const rows = await db.select().from(workspaces).where(isNull(workspaces.userId));
+  return reply.send({ workspaces: rows, total: rows.length });
+});
+
+app.patch<{ Params: { id: string }; Body: { userId: string } }>(
+  '/v1/workspaces/:id/owner',
+  { preHandler: [authenticate] },
   async (req, reply) => {
+    const user = (req as any).user as AuthUser;
+    if (!hasPlatformAdminAuthority(user)) {
+      return reply.status(403).send({ error: 'PLATFORM_ROLE_REQUIRED' });
+    }
     const { id } = req.params;
+    const { userId: newOwnerId } = req.body;
+    if (!newOwnerId) return reply.status(400).send({ error: 'userId is required' });
+    const [targetUser] = await db.select({ id: users.id }).from(users).where(eq(users.id, newOwnerId));
+    if (!targetUser) return reply.status(404).send({ error: 'User not found' });
     const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
     if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const [updated] = await db.update(workspaces)
+      .set({ userId: newOwnerId, updatedAt: new Date() })
+      .where(eq(workspaces.id, id))
+      .returning();
+    return reply.send(updated);
+  },
+);
+
+app.get<{ Params: { id: string } }>(
+  '/v1/workspaces/:id',
+  { preHandler: [authenticate] },
+  async (req, reply) => {
+    const { id } = req.params;
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     let runnerStatus = null;
     try {
@@ -368,10 +585,12 @@ app.get<{ Params: { id: string } }>(
 
 app.post<{ Params: { id: string } }>(
   '/v1/workspaces/:id/start',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     const profileImage = getProfileImage(ws.profileId);
     await db.update(workspaces).set({ status: 'provisioning', updatedAt: new Date() }).where(eq(workspaces.id, id));
@@ -407,10 +626,12 @@ app.post<{ Params: { id: string } }>(
 
 app.post<{ Params: { id: string } }>(
   '/v1/workspaces/:id/stop',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const result = await stopWorkspaceRunner(id);
@@ -429,11 +650,13 @@ app.post<{ Params: { id: string } }>(
 
 app.post<{ Params: { id: string }; Body: { cmd: string; timeoutSec?: number } }>(
   '/v1/workspaces/:id/exec',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
     const { cmd, timeoutSec } = req.body;
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const result = await localExec(id, cmd, timeoutSec);
@@ -446,6 +669,7 @@ app.post<{ Params: { id: string }; Body: { cmd: string; timeoutSec?: number } }>
 
 app.post<{ Params: { id: string }; Body: { diff: string } }>(
   '/v1/workspaces/:id/apply-patch',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
     const { diff } = req.body;
@@ -460,8 +684,9 @@ app.post<{ Params: { id: string }; Body: { diff: string } }>(
       return reply.status(400).send({ error: 'Patch modifies denied paths', deniedPaths: pathCheck.deniedPaths });
     }
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const writeTemp = await localExec(id, `cat > /tmp/_patch.diff`, 10, diff);
@@ -486,6 +711,7 @@ app.post<{ Params: { id: string }; Body: { diff: string } }>(
 
 app.get<{ Params: { id: string }; Querystring: { path?: string; depth?: string } }>(
   '/v1/workspaces/:id/tree',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
     const subPath = req.query.path ?? '.';
@@ -498,8 +724,9 @@ app.get<{ Params: { id: string }; Querystring: { path?: string; depth?: string }
       return reply.status(400).send({ error: 'Invalid path characters' });
     }
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const safePath = subPath.replace(/'/g, "'\\''");
@@ -518,6 +745,7 @@ app.get<{ Params: { id: string }; Querystring: { path?: string; depth?: string }
 
 app.post<{ Params: { id: string }; Body: { path: string } }>(
   '/v1/workspaces/:id/read-file',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
     const { path: filePath } = req.body;
@@ -525,8 +753,9 @@ app.post<{ Params: { id: string }; Body: { path: string } }>(
     if (filePath.includes('..') || filePath.startsWith('/')) {
       return reply.status(400).send({ error: 'Invalid path' });
     }
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const result = await localExec(id, `cd /workspace && cat ${JSON.stringify(filePath)}`, 10);
@@ -542,10 +771,12 @@ app.post<{ Params: { id: string }; Body: { path: string } }>(
 
 app.post<{ Params: { id: string } }>(
   '/v1/workspaces/:id/git-status',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const result = await localExec(id, 'cd /workspace && git status --porcelain', 10);
@@ -558,13 +789,15 @@ app.post<{ Params: { id: string } }>(
 
 app.post<{ Params: { id: string }; Body: { name: string } }>(
   '/v1/workspaces/:id/create-branch',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
     const { name } = req.body;
     if (!name) return reply.status(400).send({ error: 'Branch name required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const result = await localExec(id, `cd /workspace && git checkout -b '${name.replace(/'/g, "'\\''")}'`, 10);
@@ -577,13 +810,15 @@ app.post<{ Params: { id: string }; Body: { name: string } }>(
 
 app.post<{ Params: { id: string }; Body: { message: string } }>(
   '/v1/workspaces/:id/commit',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
     const { message } = req.body;
     if (!message) return reply.status(400).send({ error: 'Commit message required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     try {
       const safeMsg = message.replace(/'/g, "'\\''");
@@ -597,10 +832,12 @@ app.post<{ Params: { id: string }; Body: { message: string } }>(
 
 app.post<{ Params: { id: string } }>(
   '/v1/workspaces/:id/verify',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { id } = req.params;
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, id));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(id, user, reply);
+    if (!ws) return;
 
     const profile = getProfile(ws.profileId);
     if (!profile) return reply.status(400).send({ error: `Unknown profile: ${ws.profileId}` });
@@ -642,12 +879,14 @@ app.post<{ Params: { id: string } }>(
 
 app.post<{ Body: { workspaceId: string; profileId?: string } }>(
   '/v1/verify/run',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId, profileId } = req.body;
     if (!workspaceId) return reply.status(400).send({ error: 'workspaceId required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const profile = getProfile(profileId ?? ws.profileId);
     if (!profile) return reply.status(400).send({ error: `Unknown profile: ${profileId ?? ws.profileId}` });
@@ -681,13 +920,15 @@ app.post<{ Body: { workspaceId: string; profileId?: string } }>(
 
 app.post<{ Body: { workspaceId: string; title?: string; goal?: string; profileId?: string } }>(
   '/v1/tasks',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId, title, goal, profileId } = req.body;
     if (!workspaceId) return reply.status(400).send({ error: 'workspaceId required' });
     if (!goal && !title) return reply.status(400).send({ error: 'goal or title required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const pid = profileId ?? ws.profileId;
     const plan = getVerifyPlan(pid);
@@ -717,6 +958,7 @@ function broadcastTaskEvent(taskId: string, eventData: Record<string, unknown>) 
 
 app.post<{ Params: { taskId: string } }>(
   '/v1/tasks/:taskId/run',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { taskId } = req.params;
     const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
@@ -724,8 +966,9 @@ app.post<{ Params: { taskId: string } }>(
 
     if (task.status === 'running') return reply.status(409).send({ error: 'Task already running' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, task.workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(task.workspaceId, user, reply);
+    if (!ws) return;
 
     await db.update(tasks).set({ status: 'running', startedAt: new Date() }).where(eq(tasks.id, taskId));
 
@@ -871,18 +1114,28 @@ app.post<{ Params: { taskId: string } }>(
 
 app.get<{ Params: { taskId: string } }>(
   '/v1/tasks/:taskId',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { taskId } = req.params;
     const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
     if (!task) return reply.status(404).send({ error: 'Task not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(task.workspaceId, user, reply);
+    if (!ws) return;
     return reply.send(task);
   },
 );
 
 app.get<{ Params: { taskId: string } }>(
   '/v1/tasks/:taskId/events',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { taskId } = req.params;
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+    if (!task) return reply.status(404).send({ error: 'Task not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(task.workspaceId, user, reply);
+    if (!ws) return;
     const events = await db.select().from(taskEvents).where(eq(taskEvents.taskId, taskId)).orderBy(taskEvents.ts);
     return reply.send({ events, total: events.length });
   },
@@ -890,17 +1143,30 @@ app.get<{ Params: { taskId: string } }>(
 
 app.get<{ Params: { taskId: string } }>(
   '/v1/tasks/:taskId/events/stream',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { taskId } = req.params;
     const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
     if (!task) return reply.status(404).send({ error: 'Task not found' });
+    const user = (req as any).user as AuthUser;
+    const wsAuth = await getAuthorizedWorkspace(task.workspaceId, user, reply);
+    if (!wsAuth) return;
 
-    reply.raw.writeHead(200, {
+    // The event stream sets its own CORS headers because it writes the raw
+    // response directly (bypassing @fastify/cors). Never emit a wildcard with
+    // credentials — reflect the request origin only when it is on the allowlist.
+    const sseOrigin = req.headers.origin;
+    const sseHeaders: Record<string, string> = {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-    });
+    };
+    if (sseOrigin && isAllowedCorsOrigin(sseOrigin)) {
+      sseHeaders['Access-Control-Allow-Origin'] = sseOrigin;
+      sseHeaders['Access-Control-Allow-Credentials'] = 'true';
+      sseHeaders['Vary'] = 'Origin';
+    }
+    reply.raw.writeHead(200, sseHeaders);
 
     const existingEvents = await db.select().from(taskEvents).where(eq(taskEvents.taskId, taskId)).orderBy(taskEvents.ts);
     for (const evt of existingEvents) {
@@ -951,29 +1217,49 @@ app.get<{ Params: { taskId: string } }>(
 
 app.get<{ Params: { taskId: string } }>(
   '/v1/tasks/:taskId/traces',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { taskId } = req.params;
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+    if (!task) return reply.status(404).send({ error: 'Task not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(task.workspaceId, user, reply);
+    if (!ws) return;
     const traces = await db.select().from(toolTraces).where(eq(toolTraces.taskId, taskId)).orderBy(toolTraces.ts);
     return reply.send({ traces, total: traces.length });
   },
 );
 
-app.get('/v1/tasks', async (req, reply) => {
+app.get('/v1/tasks', { preHandler: [authenticate] }, async (req, reply) => {
+  const user = (req as any).user as AuthUser;
   const wsId = (req.query as any).workspaceId;
   let rows;
   if (wsId) {
+    const ws = await getAuthorizedWorkspace(wsId, user, reply);
+    if (!ws) return;
     rows = await db.select().from(tasks).where(eq(tasks.workspaceId, wsId)).orderBy(desc(tasks.createdAt));
-  } else {
+  } else if (hasPlatformAdminAuthority(user)) {
     rows = await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+  } else {
+    const userWsIds = await getUserWorkspaceIds(user);
+    rows = userWsIds.length
+      ? await db.select().from(tasks).where(inArray(tasks.workspaceId, userWsIds)).orderBy(desc(tasks.createdAt))
+      : [];
   }
   return reply.send({ tasks: rows, total: rows.length });
 });
 
 app.get<{ Params: { workspaceId: string } }>(
   '/v1/runner/stream/:workspaceId',
-  { websocket: true },
-  (socket, req) => {
+  { websocket: true, preHandler: [authenticate] },
+  async (socket, req) => {
     const workspaceId = (req.params as { workspaceId: string }).workspaceId;
+    const user = (req as any).user as AuthUser;
+    const [wsRecord] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
+    if (!wsRecord || (!hasPlatformAdminAuthority(user) && wsRecord.userId !== user.id)) {
+      socket.close(4403, 'Workspace not found or access denied');
+      return;
+    }
 
     if (!streamSubscribers.has(workspaceId)) {
       streamSubscribers.set(workspaceId, new Set());
@@ -1002,12 +1288,14 @@ app.get<{ Params: { workspaceId: string } }>(
 
 app.post<{ Body: { workspaceId: string } }>(
   '/v1/publish/analyze',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId } = req.body;
     if (!workspaceId) return reply.status(400).send({ error: 'workspaceId is required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const exec = async (cmd: string, timeoutSec = 30) => {
       const r = await localExec(workspaceId, cmd, timeoutSec);
@@ -1028,12 +1316,14 @@ app.post<{ Body: { workspaceId: string } }>(
 
 app.post<{ Body: { workspaceId: string; intent: 'web-domain' | 'mobile-store' | 'pwa'; preferences?: { platform?: string } } }>(
   '/v1/publish/plan',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId, intent, preferences } = req.body;
     if (!workspaceId || !intent) return reply.status(400).send({ error: 'workspaceId and intent are required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const existingRuns = await db.select().from(publishRuns)
       .where(eq(publishRuns.workspaceId, workspaceId))
@@ -1057,12 +1347,14 @@ app.post<{ Body: { workspaceId: string; intent: 'web-domain' | 'mobile-store' | 
 
 app.post<{ Body: { workspaceId: string; platform: string } }>(
   '/v1/publish/artifacts',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId, platform } = req.body;
     if (!workspaceId || !platform) return reply.status(400).send({ error: 'workspaceId and platform are required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const existingRuns = await db.select().from(publishRuns)
       .where(eq(publishRuns.workspaceId, workspaceId))
@@ -1096,12 +1388,14 @@ app.post<{ Body: { workspaceId: string; platform: string } }>(
 
 app.post<{ Body: { workspaceId: string; planId?: string } }>(
   '/v1/publish/proof',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId } = req.body;
     if (!workspaceId) return reply.status(400).send({ error: 'workspaceId is required' });
 
-    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
-    if (!ws) return reply.status(404).send({ error: 'Workspace not found' });
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const existingRuns = await db.select().from(publishRuns)
       .where(eq(publishRuns.workspaceId, workspaceId))
@@ -1145,12 +1439,22 @@ app.post<{ Body: { workspaceId: string; planId?: string } }>(
 
 app.post<{ Body: { workspaceId: string; planId: string } }>(
   '/v1/publish/explain',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return reply.status(501).send({ error: 'OPENAI_API_KEY not configured' });
+    if (!apiKey) {
+      return reply.status(503).send({
+        error: 'AI explanation is unavailable until the shared provider is configured.',
+        code: 'AI_PROVIDER_DISABLED',
+      });
+    }
 
     const { workspaceId, planId } = req.body;
     if (!workspaceId) return reply.status(400).send({ error: 'workspaceId is required' });
+
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
 
     const existingRuns = await db.select().from(publishRuns)
       .where(eq(publishRuns.workspaceId, workspaceId))
@@ -1194,8 +1498,12 @@ app.post<{ Body: { workspaceId: string; planId: string } }>(
 
 app.get<{ Params: { workspaceId: string } }>(
   '/v1/publish/runs/:workspaceId',
+  { preHandler: [authenticate] },
   async (req, reply) => {
     const { workspaceId } = req.params;
+    const user = (req as any).user as AuthUser;
+    const ws = await getAuthorizedWorkspace(workspaceId, user, reply);
+    if (!ws) return;
     const runs = await db.select().from(publishRuns)
       .where(eq(publishRuns.workspaceId, workspaceId))
       .orderBy(desc(publishRuns.createdAt))
@@ -1216,11 +1524,13 @@ const host = '0.0.0.0';
 function logCapabilityBanner(): void {
   const onOff = (cond: boolean) => (cond ? 'ON ' : 'off');
   const env = process.env.NODE_ENV ?? 'development';
+  const production = isProductionEnv();
 
+  const stripeMode = process.env.STRIPE_MODE ?? '';
   const stripeOn =
-    !!process.env.STRIPE_SECRET_KEY && process.env.STRIPE_MODE === 'live';
+    !!process.env.STRIPE_SECRET_KEY && (stripeMode === 'test' || stripeMode === 'live');
   const openaiOn = !!process.env.OPENAI_API_KEY;
-  const ssoOn = !!process.env.MODULE_SSO_SECRET;
+  const ssoOn = !!resolveSsoCodeSecret();
   const bootstrapAdminOn = !!process.env.OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL;
 
   const moduleUrlEnv: Record<string, string> = {
@@ -1229,12 +1539,14 @@ function logCapabilityBanner(): void {
     techdeck: 'TECHDECK_URL',
     pulsedesk: 'PULSEDESK_URL',
     faultlinelab: 'FAULTLINELAB_URL',
-    'bf-os': 'BF_OS_URL',
+    'ninja-pool-hall': 'NINJA_POOL_HALL_URL',
+    brandforgeos: 'BRANDFORGEOS_URL',
     snapproofos: 'SNAPPROOFOS_URL',
     'studyforge-ai': 'STUDYFORGE_AI_URL',
     'ninja-launch-kit': 'NINJA_LAUNCH_KIT_URL',
     'callcommand-ai': 'CALLCOMMAND_AI_URL',
     ninjamation: 'NINJAMATION_URL',
+    outcall: 'OUTCALL_URL',
   };
   const moduleEntries = Object.entries(moduleUrlEnv);
   const configuredModules = moduleEntries.filter(([, k]) => !!process.env[k]).map(([s]) => s);
@@ -1246,8 +1558,8 @@ function logCapabilityBanner(): void {
   console.info(`  env             : ${env}`);
   console.info(`  runner          : ${getRunnerMode()}`);
   console.info(`  Stripe          : ${onOff(stripeOn)}  (mode=${process.env.STRIPE_MODE ?? 'unset'})`);
-  console.info(`  OpenAI          : ${onOff(openaiOn)}  (falls back to mock provider when off)`);
-  console.info(`  Module SSO      : ${onOff(ssoOn)}  (handoff JWT issuance)`);
+  console.info(`  OpenAI          : ${onOff(openaiOn)}  (disabled when unconfigured)`);
+  console.info(`  Browser SSO v1  : ${onOff(ssoOn)}  (hub-only opaque-code sealing)`);
   console.info(`  Bootstrap admin : ${onOff(bootstrapAdminOn)}`);
   console.info(`  Module URLs     : ${configuredModules.length}/${moduleEntries.length} configured`);
   if (missingModules.length > 0) {
@@ -1255,11 +1567,11 @@ function logCapabilityBanner(): void {
   }
 
   if (!stripeOn) console.warn('  [warn] Stripe disabled — billing checkout buttons will show configuration-needed state.');
-  if (!ssoOn && env === 'production') {
-    console.warn('  [warn] MODULE_SSO_SECRET unset in production — Open App will fail closed.');
+  if (!ssoOn && production) {
+    console.warn('  [warn] SSO_CODE_ENCRYPTION_SECRET missing/short — readiness and module launch fail closed.');
   }
-  if (!ssoOn && env !== 'production') {
-    console.warn('  [warn] MODULE_SSO_SECRET unset — Open App falls back to plain URL (dev only).');
+  if (!ssoOn && !production) {
+    console.warn('  [warn] Browser SSO code sealing is unset in development.');
   }
   console.info('');
 }
@@ -1274,7 +1586,38 @@ try {
 try {
   await app.listen({ port, host });
   console.info(`OperatorOS API listening on http://${host}:${port} [runner=${getRunnerMode()}]`);
-} catch (err) {
-  app.log.error(err);
+} catch (error) {
+  // Startup failures are intentionally detail-free in process output because
+  // dependency error messages can contain credentials. Preserve only the
+  // safe socket metadata operators need to diagnose a failed bind.
+  const socketError = error as NodeJS.ErrnoException & { address?: string; port?: number };
+  app.log.error({
+    phase: 'listen',
+    code: socketError.code ?? 'UNKNOWN',
+    syscall: socketError.syscall ?? null,
+    address: socketError.address ?? host,
+    port: socketError.port ?? port,
+  }, 'operatoros_api_start_failed');
   process.exit(1);
+}
+
+let shutdownStarted = false;
+async function shutdownApi(signal: NodeJS.Signals): Promise<void> {
+  if (shutdownStarted) return;
+  shutdownStarted = true;
+  app.log.info({ signal }, 'operatoros_api_shutdown_started');
+  try {
+    // Fastify stops accepting new requests and runs the shared-worker
+    // onClose hook, which drains the active lease cycle for up to 10s.
+    await app.close();
+    app.log.info({ signal }, 'operatoros_api_shutdown_complete');
+    process.exit(0);
+  } catch {
+    app.log.error({ signal, code: 'API_SHUTDOWN_FAILED' }, 'operatoros_api_shutdown_failed');
+    process.exit(1);
+  }
+}
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.once(signal, () => { void shutdownApi(signal); });
 }

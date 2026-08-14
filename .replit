@@ -26,8 +26,8 @@ PORT = "5000"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["bash", "-c", "PORT=5001 tsx apps/api/src/index.ts & sleep 2 && cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:5001 npx next start -p ${PORT:-5000}"]
-build = ["bash", "-c", "export NEXT_PUBLIC_API_URL=http://localhost:5001 && cd apps/web && NODE_OPTIONS='--max-old-space-size=4096' npx next build"]
+run = ["node", "scripts/start-unified-runtime.mjs"]
+build = ["bash", "-c", "export CI=true && npm exec --yes --package=pnpm@10.34.5 -- pnpm install --frozen-lockfile && export INTERNAL_API_URL=http://localhost:5001 && export NODE_OPTIONS='--max-old-space-size=4096' && npm exec --yes --package=pnpm@10.34.5 -- pnpm build:production"]
 
 [workflows]
 runButton = "Project"
@@ -50,22 +50,56 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=5001 tsx apps/api/src/index.ts & PORT=5002 tsx apps/runner-gateway/src/index.ts & sleep 2 && cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:5001 npx next dev -p 5000"
+args = "PORT=5001 tsx apps/api/src/index.ts & PORT=5002 tsx apps/runner-gateway/src/index.ts & sleep 2 && cd apps/web && INTERNAL_API_URL=http://localhost:5001 npx next dev -p 5000"
 waitForPort = 5000
 
 [userenv]
 
-[userenv.shared]
-ADMIN_EMAIL = "john@shotgunninjas.com"
-ADMIN_PASSWORD = "Dr0p$0fJup1t3r"
-
 [userenv.production]
+NODE_ENV = "production"
 OPERATOROS_BASE_URL = "https://operatoros.net"
-STRIPE_MODE = "live"
+OPERATOROS_APPS_URL = "https://app.operatoros.net/"
 APP_ENV = "production"
+TRUST_PROXY = "true"
+INTERNAL_API_URL = "http://localhost:5001"
+OPERATOROS_DATABASE_RELEASE_MODE = "apply"
+TRADEFLOWKIT_URL = "https://tradeflowkit.operatoros.net"
+TORQUESHED_URL = "https://torqueshed.operatoros.net"
+TECHDECK_URL = "https://techdeck.operatoros.net"
+PULSEDESK_URL = "https://pulsedesk.operatoros.net"
+FAULTLINELAB_URL = "https://faultlinelab.operatoros.net"
+NINJA_POOL_HALL_URL = "https://ninja-pool-hall.operatoros.net"
+BRANDFORGEOS_URL = "https://brandforgeos.operatoros.net"
+SNAPPROOFOS_URL = "https://snapproofos.operatoros.net"
+STUDYFORGE_AI_URL = "https://studyforge-ai.operatoros.net"
+NINJA_LAUNCH_KIT_URL = "https://ninjalaunchkit.operatoros.net"
+CALLCOMMAND_AI_URL = "https://callcommand-ai.operatoros.net"
+TWILIO_PUBLIC_BASE_URL = "https://callcommand-ai.operatoros.net"
+NINJAMATION_URL = "https://ninjamation.operatoros.net"
+OUTCALL_URL = "https://outcall.operatoros.net"
+API_PORT = "5001"
+PORT = "5000"
+EMAIL_FROM = "john@shotgunninjas.com"
+INVITE_FROM_EMAIL = "john@shotgunninjas.com"
+OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL = "john@shotgunninjas.com"
+OUTCALL_PUBLIC_URL = "https://outcall.operatoros.net"
+TWILIO_ALLOWED_COUNTRIES = "US"
+STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY = "price_1U1ur3Lb6JkgBESXeCTVX6gb"
+STRIPE_PRICE_ADDON_NINJA_LAUNCH_KIT = "price_1U1ur3Lb6JkgBESXY9rfrLRs"
+STRIPE_PRICE_ADDON_OUTCALL = "price_1U1ur5Lb6JkgBESXtVDywhtW"
+STRIPE_PRICE_ADDON_STUDYFORGE_AI = "price_1U1ur4Lb6JkgBESX0Q85nIuj"
+STRIPE_PRICE_COMPANION_MODULE_MONTHLY = "price_1U1ur2Lb6JkgBESXix4w0nFg"
+STRIPE_PRICE_PULSEDESK_MONTHLY = "price_1U1ur1Lb6JkgBESXB7rWCTPj"
+STRIPE_PRICE_TECHDECK_MONTHLY = "price_1U1ur2Lb6JkgBESXQoZAKtj7"
+STRIPE_PRICE_TRADEFLOWKIT_MONTHLY = "price_1U1ur1Lb6JkgBESXhGexJoSZ"
+# OutCall is an active module. Live provider operations remain fail-closed until
+# the documented protection, Twilio, and public callback secrets are configured.
 
 [userenv.development]
 OPERATOROS_BOOTSTRAP_SUPER_ADMIN_EMAIL = "john@shotgunninjas.com"
+
+[userenv.shared]
+STRIPE_MODE = "live"
 
 [postMerge]
 path = "scripts/post-merge.sh"

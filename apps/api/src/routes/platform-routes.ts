@@ -24,20 +24,29 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq, gte, lte, ilike, isNull, isNotNull, inArray, ne, or } from 'drizzle-orm';
+import { and, desc, eq, gte, lte, ilike, isNull, isNotNull, inArray, ne, or, sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import {
   tenants, tenantUsers, users, modules, tenantModules, tenantUserModuleAccess,
+  moduleCallLogs, moduleStudySessions, moduleAutomations, moduleScaffolds, moduleWorkflowItems,
+  techdeckTickets, techdeckTicketSequences, techdeckAssets, techdeckRunbooks,
   addonSubscriptions, entitlementOverrides, billingEvents, adminAuditLogs,
-  subscriptions, subscriptionPlans, planModules,
+  subscriptions, subscriptionPlans, planModules, platformComponents,
   saasWorkspaces, saasProjects, saasTasks, notes, workspaceMemberships,
-  activityFeed,
+  activityFeed, ninjaPoolMatchEvents, ninjaPoolMatchSessions,
+  ninjaPoolPlayerProfiles, ninjaPoolPracticeSessions,
+  ninjaPoolOnlineEvents, ninjaPoolOnlineRooms, ninjaPoolOnlineRateLimits,
+  tradeflowkitInvoices, tradeflowkitQuotes, tradeflowkitJobs, tradeflowkitCustomers,
+  brandforgeCalendarItems, brandforgeCopyAssets, brandforgeCampaignMetrics,
+  brandforgeGenerations, brandforgeCampaigns, brandforgePersonas,
+  brandforgeBrands, brandforgeWorkspaceSettings,
 } from '../schema.js';
 import { count } from 'drizzle-orm';
 import { requireSuperAdmin } from '../lib/tenant-auth.js';
 import { sanitizeUser } from '../lib/auth.js';
+import { hasPlatformAdminAuthority } from '../lib/rbac.js';
 import {
-  writeAudit, pickSafe, registerAuditEnforcement,
+  writeAudit, pickSafe, registerAuditEnforcement, registerPlatformFailureLogging, AUDIT_FLAG,
   TENANT_SAFE_FIELDS, MODULE_SAFE_FIELDS,
   TENANT_MODULE_SAFE_FIELDS, TENANT_USER_ACCESS_SAFE_FIELDS,
 } from '../lib/audit.js';
@@ -46,12 +55,61 @@ import { getModuleAccessTrace } from '../lib/entitlement-service.js';
 import { getSsoCleanupHealth } from '../lib/sso-cleanup.js';
 import { getEmailFromHealth } from '../lib/email-service.js';
 import { PLAN_CONFIGS } from '../lib/plans.js';
-import { PLAN_CATALOG, MODULE_CATALOG, pickEnv } from '@operatoros/sdk';
+import {
+  ensureFreeAccountApps,
+  ensureFreeAccountAppsWithDatabase,
+} from '../lib/saas-db-init.js';
+import {
+  PLAN_CATALOG,
+  MODULE_CATALOG,
+  getCanonicalModuleBaseUrl,
+  getCanonicalModuleBaseUrlMismatch,
+  pickEnv,
+} from '@operatoros/sdk';
 import { tenantInvites } from '../schema.js';
+import { OPERATOROS_MODULE_REGISTRY } from '../../../../packages/modules/registry.js';
+import { SSO_TOKEN_TTL_SECONDS } from '../../../../packages/sso/index.js';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────
+
+type SqlExecutor = Pick<typeof db, 'execute'>;
+
+async function existingStudyForgeTables(executor: SqlExecutor): Promise<Set<string>> {
+  const result = await executor.execute(sql`SELECT tablename
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = current_schema() AND tablename LIKE 'studyforge_%'`);
+  return new Set(result.rows.map((row) => String(row.tablename)));
+}
+
+async function existingLaunchKitTables(executor: SqlExecutor): Promise<Set<string>> {
+  const result = await executor.execute(sql`SELECT tablename
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = current_schema() AND tablename LIKE 'launchkit_%'`);
+  return new Set(result.rows.map((row) => String(row.tablename)));
+}
+
+async function existingCallCommandTables(executor: SqlExecutor): Promise<Set<string>> {
+  const result = await executor.execute(sql`SELECT tablename
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = current_schema() AND tablename LIKE 'callcommand_%'`);
+  return new Set(result.rows.map((row) => String(row.tablename)));
+}
+
+async function existingNinjamationTables(executor: SqlExecutor): Promise<Set<string>> {
+  const result = await executor.execute(sql`SELECT tablename
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = current_schema() AND tablename LIKE 'ninjamation_%'`);
+  return new Set(result.rows.map((row) => String(row.tablename)));
+}
+
+async function existingOutCallTables(executor: SqlExecutor): Promise<Set<string>> {
+  const result = await executor.execute(sql`SELECT tablename
+    FROM pg_catalog.pg_tables
+    WHERE schemaname = current_schema() AND tablename LIKE 'outcall_%'`);
+  return new Set(result.rows.map((row) => String(row.tablename)));
+}
 
 // Gate 2 status taxonomy: 'live' (legacy) and 'active' both signify a
 // shipping module; 'hidden' suppresses from public catalog while keeping
@@ -83,6 +141,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
   // surface). Billing endpoints already self-audit but are not enforced here
   // to avoid noisy `audit_missing` rows from low-risk routes.
   registerAuditEnforcement(app, { prefixes: ['/v1/platform/'] });
+  registerPlatformFailureLogging(app, { prefixes: ['/v1/platform/'] });
 
   // =====================================================================
   // TENANTS — list / detail / create / patch / lifecycle
@@ -199,7 +258,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       db.select().from(modules),
       db.select().from(addonSubscriptions),
       db.select().from(billingEvents),
-      db.select({ id: users.id, status: users.status, platformRole: users.platformRole }).from(users),
+      db.select({ id: users.id, email: users.email, status: users.status, platformRole: users.platformRole }).from(users),
     ]);
     const byStatus = (rows: any[], k = 'status') => rows.reduce((acc: Record<string, number>, r) => {
       const v = r[k] ?? 'unknown';
@@ -246,7 +305,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       },
       users: {
         total: usersAll.length,
-        superAdmins: usersAll.filter(u => u.platformRole === 'super_admin').length,
+        superAdmins: usersAll.filter(u => hasPlatformAdminAuthority(u)).length,
         active: usersAll.filter(u => u.status === 'active').length,
       },
       warnings,
@@ -271,18 +330,19 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     if (collision) return reply.code(409).send({ error: 'Slug already in use', code: 'SLUG_TAKEN' });
 
     const type = body.type === 'personal' ? 'personal' : 'company';
-    const [created] = await db.insert(tenants).values({
-      name, slug, type, ownerUserId, status: 'active',
-      metadata: body.metadata ?? null,
-    }).returning();
+    const created = await db.transaction(async (tx) => {
+      const [tenant] = await tx.insert(tenants).values({
+        name, slug, type, ownerUserId, status: 'active',
+        metadata: body.metadata ?? null,
+      }).returning();
+      await tx.insert(tenantUsers).values({ tenantId: tenant.id, userId: ownerUserId, role: 'owner' });
 
-    // Owner mapping (idempotent — defensive in case caller passed an
-    // owner who is already linked from a prior failed run).
-    const [existingMembership] = await db.select().from(tenantUsers)
-      .where(and(eq(tenantUsers.tenantId, created.id), eq(tenantUsers.userId, ownerUserId))).limit(1);
-    if (!existingMembership) {
-      await db.insert(tenantUsers).values({ tenantId: created.id, userId: ownerUserId, role: 'owner' });
-    }
+      // Tenant, owner membership, and baseline free grants commit together.
+      // A provisioning failure therefore cannot leave a partial tenant whose
+      // retry collides on slug.
+      await ensureFreeAccountAppsWithDatabase(tx, tenant.id, ownerUserId);
+      return tenant;
+    });
 
     await writeAudit({
       actorUserId: admin.id,
@@ -359,6 +419,323 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
   app.post('/v1/platform/tenants/:id/suspend',    { preHandler: [requireSuperAdmin] }, lifecycleHandler('suspended', 'tenant_suspended'));
   app.post('/v1/platform/tenants/:id/reactivate', { preHandler: [requireSuperAdmin] }, lifecycleHandler('active',    'tenant_reactivated'));
   app.post('/v1/platform/tenants/:id/archive',    { preHandler: [requireSuperAdmin] }, lifecycleHandler('archived',  'tenant_archived'));
+
+  // Task #81: explicit restore endpoint. Distinct from `reactivate`
+  // because it only flips an ARCHIVED tenant back to active and audits
+  // as `tenant_restored` (operationally distinct from "un-suspend").
+  app.post<{ Params: { id: string } }>(
+    '/v1/platform/tenants/:id/restore',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const [before] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+      if (before.status !== 'archived') {
+        return reply.code(409).send({
+          error: 'Tenant is not archived; nothing to restore.',
+          code: 'TENANT_NOT_ARCHIVED',
+          currentStatus: before.status,
+        });
+      }
+      const [after] = await db.update(tenants).set({
+        status: 'active', archivedAt: null, suspendedAt: null, updatedAt: new Date(),
+      }).where(eq(tenants.id, id)).returning();
+
+      // Archived tenants are intentionally skipped by the boot backfill. Once
+      // restored, reconcile the free-account grants immediately so a legacy
+      // tenant does not have to wait for the next process restart.
+      await ensureFreeAccountApps(after.id, after.ownerUserId);
+
+      await writeAudit({
+        actorUserId: admin.id, tenantId: id,
+        targetType: 'tenant', targetId: id,
+        action: 'tenant.restored',
+        before: pickSafe(before, [...TENANT_SAFE_FIELDS]),
+        after:  pickSafe(after,  [...TENANT_SAFE_FIELDS]),
+        ipAddress: request.ip,
+      }, request);
+      return { tenant: after };
+    },
+  );
+
+  // Task #81: hard-delete tenant (transactional). Refuses with 409
+  // TENANT_HAS_DEPENDENTS if any of the following exist:
+  //   - active or trialing addon_subscriptions for the tenant
+  //   - launchable tenant_modules (status enabled/trial/purchased/beta)
+  //   - members other than the calling super_admin (i.e. anyone whose
+  //     own platform role is NOT super_admin)
+  // Caller must pass `?confirm=<slug>` matching the tenant's slug —
+  // a typed-confirmation guard against fat-finger DELETEs.
+  app.delete<{ Params: { id: string }; Querystring: { confirm?: string } }>(
+    '/v1/platform/tenants/:id',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const confirm = request.query?.confirm;
+
+      const [before] = await db.select().from(tenants).where(eq(tenants.id, id)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'Tenant not found', code: 'TENANT_NOT_FOUND' });
+
+      if (typeof confirm !== 'string' || confirm !== before.slug) {
+        return reply.code(400).send({
+          error: 'Pass ?confirm=<tenant-slug> to confirm hard-delete.',
+          code: 'TENANT_DELETE_CONFIRM_REQUIRED',
+        });
+      }
+
+      const launchableModuleStatuses: ('enabled' | 'trial' | 'purchased' | 'beta')[] = ['enabled', 'trial', 'purchased', 'beta'];
+      const activeAddonStatuses: string[] = ['active', 'trialing'];
+      const activeSubscriptionStatuses: ('active' | 'trialing')[] = ['active', 'trialing'];
+
+      const [activeAddons, launchableModulesRows, memberRows, activeSubsRows] = await Promise.all([
+        db.select().from(addonSubscriptions).where(and(
+          eq(addonSubscriptions.tenantId, id),
+          inArray(addonSubscriptions.status, activeAddonStatuses),
+        )),
+        db.select().from(tenantModules).where(and(
+          eq(tenantModules.tenantId, id),
+          inArray(tenantModules.status, launchableModuleStatuses),
+        )),
+        db.select({ userId: tenantUsers.userId, email: users.email, platformRole: users.platformRole })
+          .from(tenantUsers).innerJoin(users, eq(users.id, tenantUsers.userId))
+          .where(eq(tenantUsers.tenantId, id)),
+        db.select().from(subscriptions).where(and(
+          eq(subscriptions.tenantId, id),
+          inArray(subscriptions.status, activeSubscriptionStatuses),
+        )),
+      ]);
+
+      const nonAdminMembers = memberRows.filter(m => !hasPlatformAdminAuthority(m));
+      const dependents = {
+        activeAddons: activeAddons.length,
+        launchableModules: launchableModulesRows.length,
+        nonAdminMembers: nonAdminMembers.length,
+        activeSubscriptions: activeSubsRows.length,
+      };
+      if (dependents.activeAddons > 0 || dependents.launchableModules > 0 || dependents.nonAdminMembers > 0 || dependents.activeSubscriptions > 0) {
+        return reply.code(409).send({
+          error: 'Tenant has dependents that block hard-delete.',
+          code: 'TENANT_HAS_DEPENDENTS',
+          dependents,
+        });
+      }
+
+      const beforeSnapshot = pickSafe(before, [...TENANT_SAFE_FIELDS]);
+
+      try {
+        await db.transaction(async (tx) => {
+          // Audit `tenant.deleted` BEFORE the actual delete commits so
+          // the snapshot exists and an operator can replay state. We
+          // write the audit row inside the same tx (raw insert because
+          // writeAudit() uses the top-level db handle); if any step
+          // below fails, the audit row is rolled back with the rest.
+          await tx.insert(adminAuditLogs).values({
+            adminId: admin.id,
+            action: 'tenant.deleted',
+            targetUserId: null,
+            tenantId: id,
+            details: {
+              targetType: 'tenant',
+              targetId: id,
+              before: beforeSnapshot,
+              after: null,
+              dependents,
+            },
+            ipAddress: request.ip ?? null,
+          });
+          (request as any)[AUDIT_FLAG] = true;
+          // Order matters: every table that has an FK back to tenants.id
+          // (no cascade) must be cleared first. We also blank out the
+          // optional cross-tenant pointer on `users.current_tenant_id`
+          // so it doesn't FK-fail.
+          //
+          // tenant-FK tables in scope (per schema.ts):
+          //   - tenant_user_module_access, tenant_modules, tenant_invites,
+          //     tenant_users
+          //   - module shell tables (Task #72): module_call_logs,
+          //     module_study_sessions, module_automations, module_scaffolds,
+          //     ninja_pool_practice_sessions
+          await tx.execute(sql`SET LOCAL operatoros.tenant_hard_delete = 'on'`);
+          await tx.execute(sql`DELETE FROM snapproof_exports WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_custody_events WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_comments WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_findings WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_reports WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_evidence_items WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_cases WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM snapproof_settings WHERE tenant_id = ${id}`);
+          const studyForgeTables = await existingStudyForgeTables(tx);
+          if (studyForgeTables.has('studyforge_card_progress')) await tx.execute(sql`DELETE FROM studyforge_card_progress WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_quiz_attempts')) await tx.execute(sql`DELETE FROM studyforge_quiz_attempts WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_cards')) await tx.execute(sql`DELETE FROM studyforge_cards WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_questions')) await tx.execute(sql`DELETE FROM studyforge_questions WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_plan_sessions')) await tx.execute(sql`DELETE FROM studyforge_plan_sessions WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_decks')) await tx.execute(sql`DELETE FROM studyforge_decks WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_quizzes')) await tx.execute(sql`DELETE FROM studyforge_quizzes WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_plans')) await tx.execute(sql`DELETE FROM studyforge_plans WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_generations')) await tx.execute(sql`DELETE FROM studyforge_generations WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_sources')) await tx.execute(sql`DELETE FROM studyforge_sources WHERE tenant_id = ${id}`);
+          if (studyForgeTables.has('studyforge_subjects')) await tx.execute(sql`DELETE FROM studyforge_subjects WHERE tenant_id = ${id}`);
+          const launchKitTables = await existingLaunchKitTables(tx);
+          if (launchKitTables.has('launchkit_exports')) await tx.execute(sql`DELETE FROM launchkit_exports WHERE tenant_id = ${id}`);
+          if (launchKitTables.has('launchkit_artifacts')) await tx.execute(sql`DELETE FROM launchkit_artifacts WHERE tenant_id = ${id}`);
+          if (launchKitTables.has('launchkit_tasks')) await tx.execute(sql`DELETE FROM launchkit_tasks WHERE tenant_id = ${id}`);
+          if (launchKitTables.has('launchkit_milestones')) await tx.execute(sql`DELETE FROM launchkit_milestones WHERE tenant_id = ${id}`);
+          if (launchKitTables.has('launchkit_phases')) await tx.execute(sql`DELETE FROM launchkit_phases WHERE tenant_id = ${id}`);
+          if (launchKitTables.has('launchkit_generations')) await tx.execute(sql`DELETE FROM launchkit_generations WHERE tenant_id = ${id}`);
+          if (launchKitTables.has('launchkit_launches')) await tx.execute(sql`DELETE FROM launchkit_launches WHERE tenant_id = ${id}`);
+          const callCommandTables = await existingCallCommandTables(tx);
+          if (callCommandTables.has('callcommand_followups')) await tx.execute(sql`DELETE FROM callcommand_followups WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_events')) await tx.execute(sql`DELETE FROM callcommand_events WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_calls')) await tx.execute(sql`DELETE FROM callcommand_calls WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_suppressions')) await tx.execute(sql`DELETE FROM callcommand_suppressions WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_consents')) await tx.execute(sql`DELETE FROM callcommand_consents WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_transfer_targets')) await tx.execute(sql`DELETE FROM callcommand_transfer_targets WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_profiles')) await tx.execute(sql`DELETE FROM callcommand_profiles WHERE tenant_id = ${id}`);
+          if (callCommandTables.has('callcommand_channels')) await tx.execute(sql`DELETE FROM callcommand_channels WHERE tenant_id = ${id}`);
+          const ninjamationTables = await existingNinjamationTables(tx);
+          if (ninjamationTables.has('ninjamation_generations')) await tx.execute(sql`DELETE FROM ninjamation_generations WHERE tenant_id = ${id}`);
+          if (ninjamationTables.has('ninjamation_downloads')) await tx.execute(sql`DELETE FROM ninjamation_downloads WHERE tenant_id = ${id}`);
+          if (ninjamationTables.has('ninjamation_reviews')) await tx.execute(sql`DELETE FROM ninjamation_reviews WHERE tenant_id = ${id}`);
+          if (ninjamationTables.has('ninjamation_script_versions')) await tx.execute(sql`DELETE FROM ninjamation_script_versions WHERE tenant_id = ${id}`);
+          if (ninjamationTables.has('ninjamation_scripts')) await tx.execute(sql`DELETE FROM ninjamation_scripts WHERE tenant_id = ${id}`);
+          const outCallTables = await existingOutCallTables(tx);
+          if (outCallTables.has('outcall_events')) await tx.execute(sql`DELETE FROM outcall_events WHERE tenant_id = ${id}`);
+          if (outCallTables.has('outcall_call_requests')) await tx.execute(sql`DELETE FROM outcall_call_requests WHERE tenant_id = ${id}`);
+          if (outCallTables.has('outcall_triggers')) await tx.execute(sql`DELETE FROM outcall_triggers WHERE tenant_id = ${id}`);
+          if (outCallTables.has('outcall_profiles')) await tx.execute(sql`DELETE FROM outcall_profiles WHERE tenant_id = ${id}`);
+          if (outCallTables.has('outcall_settings')) await tx.execute(sql`DELETE FROM outcall_settings WHERE tenant_id = ${id}`);
+          await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.tenantId, id));
+          await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.tenantId, id));
+          await tx.delete(moduleAutomations).where(eq(moduleAutomations.tenantId, id));
+          await tx.delete(moduleScaffolds).where(eq(moduleScaffolds.tenantId, id));
+          await tx.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.tenantId, id));
+          await tx.delete(techdeckTickets).where(eq(techdeckTickets.tenantId, id));
+          await tx.delete(techdeckTicketSequences).where(eq(techdeckTicketSequences.tenantId, id));
+          await tx.delete(techdeckAssets).where(eq(techdeckAssets.tenantId, id));
+          await tx.delete(techdeckRunbooks).where(eq(techdeckRunbooks.tenantId, id));
+          await tx.delete(ninjaPoolMatchEvents).where(eq(ninjaPoolMatchEvents.tenantId, id));
+          await tx.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.tenantId, id));
+          await tx.delete(ninjaPoolPlayerProfiles).where(eq(ninjaPoolPlayerProfiles.tenantId, id));
+          await tx.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.tenantId, id));
+          await tx.delete(ninjaPoolOnlineEvents).where(eq(ninjaPoolOnlineEvents.tenantId, id));
+          await tx.delete(ninjaPoolOnlineRooms).where(eq(ninjaPoolOnlineRooms.tenantId, id));
+          await tx.delete(ninjaPoolOnlineRateLimits).where(eq(ninjaPoolOnlineRateLimits.tenantId, id));
+          await tx.delete(brandforgeCalendarItems).where(eq(brandforgeCalendarItems.tenantId, id));
+          await tx.delete(brandforgeCopyAssets).where(eq(brandforgeCopyAssets.tenantId, id));
+          await tx.delete(brandforgeCampaignMetrics).where(eq(brandforgeCampaignMetrics.tenantId, id));
+          await tx.delete(brandforgeGenerations).where(eq(brandforgeGenerations.tenantId, id));
+          await tx.delete(brandforgeCampaigns).where(eq(brandforgeCampaigns.tenantId, id));
+          await tx.delete(brandforgePersonas).where(eq(brandforgePersonas.tenantId, id));
+          await tx.delete(brandforgeBrands).where(eq(brandforgeBrands.tenantId, id));
+          await tx.delete(brandforgeWorkspaceSettings).where(eq(brandforgeWorkspaceSettings.tenantId, id));
+          await tx.execute(sql`DELETE FROM shared_notifications WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_outbox_messages WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_attachment_blobs WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_attachments WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_notification_templates WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_jobs WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_webhook_receipts WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_usage_events WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_activity_events WHERE tenant_id = ${id}`);
+          await tx.execute(sql`DELETE FROM shared_idempotency_keys WHERE tenant_id = ${id}`);
+          await tx.delete(tradeflowkitInvoices).where(eq(tradeflowkitInvoices.tenantId, id));
+          await tx.delete(tradeflowkitQuotes).where(eq(tradeflowkitQuotes.tenantId, id));
+          await tx.delete(tradeflowkitJobs).where(eq(tradeflowkitJobs.tenantId, id));
+          await tx.delete(tradeflowkitCustomers).where(eq(tradeflowkitCustomers.tenantId, id));
+          await tx.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, id));
+          await tx.delete(tenantModules).where(eq(tenantModules.tenantId, id));
+          await tx.delete(tenantInvites).where(eq(tenantInvites.tenantId, id));
+          await tx.delete(tenantUsers).where(eq(tenantUsers.tenantId, id));
+          await tx.update(users).set({ currentTenantId: null })
+            .where(eq(users.currentTenantId, id));
+          await tx.delete(tenants).where(eq(tenants.id, id));
+        });
+      } catch (err: any) {
+        // Drizzle wraps everything in a SQL transaction, so on throw the
+        // DB is rolled back: tenant row + audit row are both gone. Log
+        // the raw error server-side; only return the raw `detail` to the
+        // client outside production to avoid leaking schema info.
+        console.error('[platform.tenants.delete] tx failed', err);
+        return reply.code(500).send({
+          error: 'Hard-delete failed; tenant rolled back to prior state.',
+          code: 'TENANT_DELETE_FAILED',
+          ...(process.env.NODE_ENV === 'production'
+            ? {}
+            : { detail: err?.message || String(err) }),
+        });
+      }
+
+      return { ok: true, deletedTenant: beforeSnapshot };
+    },
+  );
+
+  // Super-admin SSO Settings endpoint for the unified runtime. It exposes
+  // only public client registration metadata and secret *presence*; secret
+  // values are never returned. The old child-app HS256/JWT configuration is
+  // deliberately absent because every canonical subdomain is now served by
+  // this OperatorOS deployment and uses the browser code + PKCE lane.
+  app.get(
+    '/v1/platform/sso/settings',
+    { preHandler: [requireSuperAdmin] },
+    async () => {
+      const issuer = (process.env.OPERATOROS_BASE_URL || 'https://operatoros.net').replace(/\/+$/, '');
+      const rawEnv = (process.env.APP_ENV || process.env.NODE_ENV || '').toLowerCase().trim();
+      const env: 'prod' | 'staging' | 'dev' =
+        rawEnv === 'prod' || rawEnv === 'production' ? 'prod'
+        : rawEnv === 'staging' || rawEnv === 'stage' ? 'staging'
+        : 'dev';
+      const codeSecretStatus: 'configured' | 'missing' =
+        process.env.SSO_CODE_ENCRYPTION_SECRET && process.env.SSO_CODE_ENCRYPTION_SECRET.length >= 32
+          ? 'configured' : 'missing';
+      const sessionSecretStatus: 'configured' | 'missing' =
+        process.env.SESSION_SECRET && process.env.SESSION_SECRET.length >= 24
+          ? 'configured' : 'missing';
+
+      const modulesOut = MODULE_CATALOG.map(c => {
+        const registration = OPERATOROS_MODULE_REGISTRY.find(entry => entry.slug === c.slug);
+        const trimmed = registration?.productionBaseUrl.replace(/\/+$/, '') || '';
+        return {
+          slug: c.slug,
+          displayName: c.name,
+          baseUrlConfigured: !!trimmed,
+          baseUrl: trimmed || null,
+          clientId: registration?.clientId ?? null,
+          redirectUri: registration?.exactRedirectUris[0] ?? null,
+          logoutUri: registration?.exactLogoutUris[0] ?? null,
+          allowedOrigin: registration?.exactAllowedOrigins[0] ?? null,
+          launchUrlPattern: trimmed
+            ? `${trimmed}/sso?code={opaque_one_time_code}&state={state}`
+            : `{module_base_url}/sso?code={opaque_one_time_code}&state={state}`,
+        };
+      });
+
+      // These are the only SSO-related secret names required by the shared
+      // runtime. Per-module client secrets are intentionally not emitted.
+      const envBlock = [
+        '# OperatorOS unified browser SSO (deployment secret manager)',
+        `OPERATOROS_BASE_URL=${issuer}`,
+        `APP_ENV=${env === 'prod' ? 'production' : env}`,
+        'SESSION_SECRET=<unique-high-entropy-host-session-key>',
+        'SSO_CODE_ENCRYPTION_SECRET=<unique-high-entropy-hub-only-code-key>',
+        'TRUST_PROXY=true',
+      ].join('\n');
+
+      return {
+        contractVersion: 'v1',
+        runtimeMode: 'unified_shared_runtime',
+        issuer,
+        env,
+        ttlSeconds: SSO_TOKEN_TTL_SECONDS,
+        codeSecretStatus,
+        sessionSecretStatus,
+        modules: modulesOut,
+        envBlock,
+      };
+    },
+  );
 
   // =====================================================================
   // Per-tenant module assignment
@@ -534,6 +911,15 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     if (body.planMin && !VALID_PLAN_MIN.includes(body.planMin)) {
       return badRequest(reply, `planMin must be one of ${VALID_PLAN_MIN.join(', ')}`);
     }
+    const canonicalBaseUrl = getCanonicalModuleBaseUrl(slug);
+    const canonicalUrlMismatch = getCanonicalModuleBaseUrlMismatch(slug, body.baseUrl);
+    if (canonicalUrlMismatch) {
+      return badRequest(
+        reply,
+        `baseUrl for catalog module '${slug}' must exactly match its canonical OperatorOS origin`,
+        { code: 'CANONICAL_MODULE_URL_REQUIRED', slug, ...canonicalUrlMismatch },
+      );
+    }
     for (const k of ['baseUrl', 'iconUrl'] as const) {
       if (body[k] && !isValidHttpUrl(body[k])) {
         return badRequest(reply, `${k} must be an http(s) URL`);
@@ -548,7 +934,7 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       description: body.description ?? '',
       iconUrl: body.iconUrl ?? null,
       category: body.category ?? 'app',
-      baseUrl: body.baseUrl ?? '',
+      baseUrl: canonicalBaseUrl ?? body.baseUrl ?? '',
       status: body.status ?? 'coming_soon',
       planMin: body.planMin ?? 'elite',
       requiresOrg: body.requiresOrg ?? false,
@@ -605,6 +991,16 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       if (body.planMin && !VALID_PLAN_MIN.includes(body.planMin)) {
         return badRequest(reply, `planMin must be one of ${VALID_PLAN_MIN.join(', ')}`);
       }
+      const targetSlug = typeof body.slug === 'string' ? body.slug : slug;
+      const canonicalBaseUrl = getCanonicalModuleBaseUrl(targetSlug);
+      const canonicalUrlMismatch = getCanonicalModuleBaseUrlMismatch(targetSlug, body.baseUrl);
+      if (canonicalUrlMismatch) {
+        return badRequest(
+          reply,
+          `baseUrl for catalog module '${targetSlug}' must exactly match its canonical OperatorOS origin`,
+          { code: 'CANONICAL_MODULE_URL_REQUIRED', slug: targetSlug, ...canonicalUrlMismatch },
+        );
+      }
       for (const k of ['baseUrl', 'iconUrl'] as const) {
         if (body[k] && !isValidHttpUrl(body[k])) {
           return badRequest(reply, `${k} must be an http(s) URL`);
@@ -629,6 +1025,9 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       for (const k of ['slug','name','description','iconUrl','category','baseUrl','status','planMin','requiresOrg','ord','metadata'] as const) {
         if (body[k] !== undefined) updates[k] = body[k];
       }
+      // Any mutation of a known first-party row also heals pre-existing URL
+      // drift. Custom/admin-created modules retain their validated URL.
+      if (canonicalBaseUrl) updates.baseUrl = canonicalBaseUrl;
       const [after] = await db.update(modules).set(updates).where(eq(modules.slug, slug)).returning();
 
       await writeAudit({
@@ -641,6 +1040,75 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         ipAddress: request.ip,
       }, request);
       return { module: after };
+    },
+  );
+
+  // Task #116: list platform components (the top-level grouping layer above
+  // modules). Used by the Platform Command surface to let a super-admin pick
+  // which component a module belongs to. Ordered by `ord` for stable display.
+  app.get('/v1/platform/components', { preHandler: [requireSuperAdmin] }, async () => {
+    const rows = await db.select().from(platformComponents).orderBy(platformComponents.ord);
+    return { components: rows, total: rows.length };
+  });
+
+  // Task #116: set or clear a module's platform component (the section it
+  // belongs to). `componentId` must be either the id of an existing
+  // platform_components row, or null to clear the assignment. The module
+  // seeder only back-fills NULL component_id, so an admin choice made here is
+  // never overwritten on reboot. Gated by super_admin and fully audited.
+  app.patch<{ Params: { slug: string } }>(
+    '/v1/platform/modules/:slug/component',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { slug } = request.params;
+      const body = (request.body ?? {}) as any;
+      if (!('componentId' in body)) {
+        return badRequest(reply, 'componentId is required (the id of a platform component, or null to clear)');
+      }
+      const componentId = body.componentId;
+      if (componentId !== null && typeof componentId !== 'string') {
+        return badRequest(reply, 'componentId must be a string id or null');
+      }
+
+      const [before] = await db.select().from(modules).where(eq(modules.slug, slug)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
+      if (before.archivedAt) {
+        return reply.code(409).send({ error: 'Module is archived', code: 'MODULE_ARCHIVED' });
+      }
+
+      // Validate the target component exists before assigning. Clearing
+      // (null) skips this check.
+      let component: typeof platformComponents.$inferSelect | null = null;
+      if (componentId !== null) {
+        const [found] = await db.select().from(platformComponents)
+          .where(eq(platformComponents.id, componentId)).limit(1);
+        if (!found) {
+          return reply.code(404).send({ error: 'Platform component not found', code: 'COMPONENT_NOT_FOUND' });
+        }
+        component = found;
+      }
+
+      // No-op if unchanged — return current state without writing/auditing.
+      if (before.componentId === componentId) {
+        return { module: before, component };
+      }
+
+      const [after] = await db.update(modules)
+        .set({ componentId, updatedAt: new Date() })
+        .where(eq(modules.slug, slug)).returning();
+
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'module',
+        targetId: before.id,
+        action: componentId === null ? 'module_component_cleared' : 'module_component_set',
+        before: pickSafe(before, [...MODULE_SAFE_FIELDS]),
+        after: pickSafe(after, [...MODULE_SAFE_FIELDS]),
+        ipAddress: request.ip,
+      }, request);
+
+      return { module: after, component };
     },
   );
 
@@ -745,8 +1213,11 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       ]));
     const allPlanMonthlyPriceIdsConfigured = Object.values(planPriceIds).every(p => p.monthly);
     const allPlanAnnualPriceIdsConfigured  = Object.values(planPriceIds).every(p => p.annual);
+    const readinessAddons = MODULE_CATALOG.filter(module =>
+      module.commercialType === 'addon' && module.defaultStatus !== 'coming_soon'
+    );
     const addonPriceIds: Record<string, boolean> = Object.fromEntries(
-      MODULE_CATALOG.map(m => [m.slug, !!pickEnv([...m.stripeAddonEnvKeys])])
+      readinessAddons.map(m => [m.slug, !!pickEnv([...m.stripeAddonEnvKeys])])
     );
     const allAddonPriceIdsConfigured = Object.values(addonPriceIds).every(Boolean);
 
@@ -779,12 +1250,8 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       // these as red/green dots; counts/diagnostics live behind the
       // existing `/v1/platform/pricing` and `/v1/platform/audit` routes.
       emailFrom: { configured: getEmailFromHealth().configured },
-      // Email *provider* (vs the FROM address). 'resend' when RESEND_API_KEY
-      // is present, otherwise 'log' (dev fallback that prints to stdout).
-      emailProvider: {
-        configured: !!process.env.RESEND_API_KEY,
-        provider: (process.env.RESEND_API_KEY ? 'resend' : 'log') as 'resend' | 'log',
-      },
+      // Email provider is explicit: configured, deterministic test, or disabled.
+      emailProvider: getEmailFromHealth(),
       baseUrl: { configured: !!process.env.OPERATOROS_BASE_URL },
       plans: {
         seeded: planRows.length > 0,
@@ -819,6 +1286,61 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       lastWebhookAt: lastWebhook?.createdAt ?? null,
       lastAuditAt:   lastAudit?.createdAt ?? null,
       now: new Date().toISOString(),
+    };
+  });
+
+  app.get('/v1/platform/plans', { preHandler: [requireSuperAdmin] }, async () => {
+    const dbPlans = await db.select().from(subscriptionPlans);
+    const dbPlanBySlug = Object.fromEntries(dbPlans.map(p => [p.slug, p]));
+    const catalogBySlug = Object.fromEntries(PLAN_CATALOG.map(p => [p.slug, p]));
+    const configuredSlugs = new Set(PLAN_CONFIGS.map(p => p.slug));
+
+    const plans = PLAN_CONFIGS.map(cfg => {
+      const row = dbPlanBySlug[cfg.slug];
+      const catalog = catalogBySlug[cfg.slug];
+      return {
+        id: row?.id ?? null,
+        slug: cfg.slug,
+        name: row?.name ?? cfg.name,
+        price: row?.price ?? cfg.price,
+        interval: row?.interval ?? cfg.interval,
+        description: cfg.description,
+        highlight: cfg.highlight ?? false,
+        limits: cfg.limits,
+        features: cfg.features,
+        isActive: row?.isActive ?? false,
+        createdAt: row?.createdAt ?? null,
+        stripePriceConfigured: !!row?.stripePriceId,
+        stripeProductConfigured: !!row?.stripeProductId,
+        displayMonthlyPriceCents: catalog?.monthlyPriceCents ?? cfg.price,
+        displayAnnualPriceCents: catalog?.annualPriceCents ?? null,
+      };
+    });
+
+    const extras = dbPlans
+      .filter(row => !configuredSlugs.has(row.slug))
+      .map(row => ({
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        price: row.price,
+        interval: row.interval,
+        description: '',
+        highlight: false,
+        limits: null,
+        features: null,
+        isActive: row.isActive,
+        createdAt: row.createdAt,
+        stripePriceConfigured: !!row.stripePriceId,
+        stripeProductConfigured: !!row.stripeProductId,
+        displayMonthlyPriceCents: row.interval === 'month' ? row.price : null,
+        displayAnnualPriceCents: row.interval === 'year' ? row.price : null,
+      }));
+
+    return {
+      plans: [...plans, ...extras],
+      total: plans.length + extras.length,
+      seeded: dbPlans.length >= PLAN_CONFIGS.length,
     };
   });
 
@@ -1051,9 +1573,17 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     if (process.env.NODE_ENV === 'production') {
       return reply.code(404).send({ error: 'not found', code: 'NOT_FOUND' });
     }
+    const admin = (request as any).user;
     const body = (request.body ?? {}) as any;
     if (body.reset === true) {
       __setStripeTestOverrides(null);
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'stripe_test_override',
+        action: 'stripe_test_override_reset',
+        extra: { reset: true },
+        ipAddress: request.ip,
+      }, request);
       return { ok: true, action: 'reset' };
     }
     const retrievePrice = body.retrievePrice || null;
@@ -1065,6 +1595,17 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       },
     };
     __setStripeTestOverrides({ enabled: body.enabled !== false, client });
+    await writeAudit({
+      actorUserId: admin.id,
+      targetType: 'stripe_test_override',
+      action: 'stripe_test_override_installed',
+      extra: {
+        enabled: body.enabled !== false,
+        hasRetrievePrice: !!retrievePrice,
+        hasCreatePrice: !!createPrice,
+      },
+      ipAddress: request.ip,
+    }, request);
     return { ok: true, action: 'installed' };
   });
 
@@ -1173,6 +1714,47 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
     'id', 'userId', 'planId', 'status', 'currentPeriodStart',
     'currentPeriodEnd', 'cancelAtPeriodEnd',
   ] as const;
+  const PLATFORM_ROLES = ['user', 'super_admin'] as const;
+
+  async function countPlatformSuperAdmins(options: { excludeUserId?: string; activeOnly?: boolean } = {}) {
+    const rows = await db.select({
+      id: users.id,
+      email: users.email,
+      status: users.status,
+      platformRole: users.platformRole,
+    }).from(users);
+    return rows.filter(u =>
+      u.id !== options.excludeUserId &&
+      (!options.activeOnly || u.status === 'active') &&
+      hasPlatformAdminAuthority(u)
+    ).length;
+  }
+
+  async function wouldRemoveLastPlatformSuperAdmin(
+    target: any,
+    changes: { platformRole?: string; status?: string; hardDelete?: boolean },
+  ): Promise<boolean> {
+    if (!hasPlatformAdminAuthority(target)) return false;
+
+    if (changes.hardDelete) {
+      return (await countPlatformSuperAdmins({ excludeUserId: target.id })) === 0;
+    }
+
+    const nextPlatformRole = changes.platformRole ?? target.platformRole;
+    const nextStatus = changes.status ?? target.status;
+    const removesActiveAuthority = target.status === 'active'
+      && (!hasPlatformAdminAuthority({ ...target, platformRole: nextPlatformRole }) || nextStatus !== 'active');
+
+    if (!removesActiveAuthority) return false;
+    return (await countPlatformSuperAdmins({ excludeUserId: target.id, activeOnly: true })) === 0;
+  }
+
+  function lastPlatformSuperAdmin(reply: any) {
+    return reply.code(409).send({
+      error: 'Cannot remove the last active platform super admin',
+      code: 'LAST_SUPER_ADMIN',
+    });
+  }
 
   app.get('/v1/platform/users', { preHandler: [requireSuperAdmin] }, async (request) => {
     const q = (request.query ?? {}) as any;
@@ -1249,11 +1831,22 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       const recentActivity = await db.select().from(activityFeed).where(eq(activityFeed.userId, id)).orderBy(desc(activityFeed.createdAt)).limit(10);
       const auditHistory = await db.select().from(adminAuditLogs).where(eq(adminAuditLogs.targetUserId, id)).orderBy(desc(adminAuditLogs.createdAt)).limit(20);
       const userBillingEvents = await db.select().from(billingEvents).where(eq(billingEvents.userId, id)).orderBy(desc(billingEvents.createdAt)).limit(20);
+      const planRank = new Map(PLAN_CONFIGS.map((p, index) => [p.slug, index]));
+      const activePlans = (await db.select({
+        id: subscriptionPlans.id,
+        slug: subscriptionPlans.slug,
+        name: subscriptionPlans.name,
+        price: subscriptionPlans.price,
+        interval: subscriptionPlans.interval,
+        isActive: subscriptionPlans.isActive,
+      }).from(subscriptionPlans).where(eq(subscriptionPlans.isActive, true)))
+        .sort((a, b) => (planRank.get(a.slug) ?? 999) - (planRank.get(b.slug) ?? 999));
 
       return {
         user: sanitizeUser(user),
         subscription: sub ?? null,
         plan,
+        plans: activePlans,
         stats: { workspaces: wsCount, projects: projCount, tasks: taskCount, notes: noteCount },
         recentActivity,
         auditHistory,
@@ -1275,6 +1868,9 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       if (id === admin.id) return badRequest(reply, 'Cannot change your own status');
       const [before] = await db.select().from(users).where(eq(users.id, id)).limit(1);
       if (!before) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      if (await wouldRemoveLastPlatformSuperAdmin(before, { status })) {
+        return lastPlatformSuperAdmin(reply);
+      }
 
       const updates: any = { status, updatedAt: new Date() };
       if (status === 'deleted') updates.deletedAt = new Date();
@@ -1324,6 +1920,36 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
         ipAddress: request.ip,
       }, request);
       return { user: sanitizeUser(after), previousRole: before.role };
+    },
+  );
+
+  app.put<{ Params: { id: string }; Body: any }>(
+    '/v1/platform/users/:id/platform-role',
+    { preHandler: [requireSuperAdmin] },
+    async (request, reply) => {
+      const admin = (request as any).user;
+      const { id } = request.params;
+      const { platformRole } = (request.body ?? {}) as any;
+      if (!PLATFORM_ROLES.includes(platformRole)) {
+        return badRequest(reply, 'Invalid platformRole. Allowed: user, super_admin');
+      }
+      if (id === admin.id) return badRequest(reply, 'Cannot change your own platform role');
+      const [before] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      if (!before) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      if (await wouldRemoveLastPlatformSuperAdmin(before, { platformRole })) {
+        return lastPlatformSuperAdmin(reply);
+      }
+      const [after] = await db.update(users).set({ platformRole, updatedAt: new Date() }).where(eq(users.id, id)).returning();
+      await writeAudit({
+        actorUserId: admin.id,
+        targetType: 'user',
+        targetId: id,
+        action: 'user_platform_role_changed',
+        before: pickSafe(before, [...USER_SAFE_FIELDS]),
+        after: pickSafe(after, [...USER_SAFE_FIELDS]),
+        ipAddress: request.ip,
+      }, request);
+      return { user: sanitizeUser(after), previousPlatformRole: before.platformRole };
     },
   );
 
@@ -1469,6 +2095,9 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       if (id === admin.id) return badRequest(reply, 'Cannot delete yourself');
       const [before] = await db.select().from(users).where(eq(users.id, id)).limit(1);
       if (!before) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      if (await wouldRemoveLastPlatformSuperAdmin(before, { status: 'deleted' })) {
+        return lastPlatformSuperAdmin(reply);
+      }
       const [after] = await db.update(users).set({
         status: 'deleted', deletedAt: new Date(), updatedAt: new Date(),
       }).where(eq(users.id, id)).returning();
@@ -1495,6 +2124,9 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
       if (id === admin.id) return badRequest(reply, 'Cannot delete yourself');
       const [target] = await db.select().from(users).where(eq(users.id, id)).limit(1);
       if (!target) return reply.code(404).send({ error: 'User not found', code: 'USER_NOT_FOUND' });
+      if (await wouldRemoveLastPlatformSuperAdmin(target, { hardDelete: true })) {
+        return lastPlatformSuperAdmin(reply);
+      }
       if (target.status !== 'deleted') {
         return reply.code(400).send({ error: 'User must be soft-deleted first before hard delete', code: 'USER_NOT_SOFT_DELETED' });
       }
@@ -1507,22 +2139,112 @@ export async function registerPlatformRoutes(app: FastifyInstance) {
           remaining: { workspaces: wsCount, projects: projCount },
         });
       }
-      await db.delete(activityFeed).where(eq(activityFeed.userId, id));
-      await db.delete(saasTasks).where(eq(saasTasks.userId, id));
-      await db.delete(notes).where(eq(notes.userId, id));
-      await db.delete(workspaceMemberships).where(eq(workspaceMemberships.userId, id));
-      await db.delete(billingEvents).where(eq(billingEvents.userId, id));
-      await db.delete(subscriptions).where(eq(subscriptions.userId, id));
-      await db.delete(users).where(eq(users.id, id));
-      await writeAudit({
-        actorUserId: admin.id,
-        targetType: 'user',
-        targetId: id,
-        action: 'user_hard_deleted',
-        before: pickSafe(target, [...USER_SAFE_FIELDS]),
-        extra: { email: target.email },
-        ipAddress: request.ip,
-      }, request);
+      const beforeSnapshot = pickSafe(target, [...USER_SAFE_FIELDS]);
+      try {
+        await db.transaction(async (tx) => {
+          // All destructive steps, including the immutable audit snapshot,
+          // commit or roll back together. This prevents a later FK failure
+          // from erasing module history while leaving the account.
+          await tx.insert(adminAuditLogs).values({
+            adminId: admin.id,
+            action: 'user_hard_deleted',
+            targetUserId: id,
+            tenantId: null,
+            details: {
+              targetType: 'user',
+              targetId: id,
+              before: beforeSnapshot,
+              after: null,
+              email: target.email,
+            },
+            ipAddress: request.ip ?? null,
+          });
+          (request as any)[AUDIT_FLAG] = true;
+          await tx.delete(moduleCallLogs).where(eq(moduleCallLogs.userId, id));
+          await tx.delete(moduleStudySessions).where(eq(moduleStudySessions.userId, id));
+          await tx.delete(moduleAutomations).where(eq(moduleAutomations.userId, id));
+          await tx.delete(moduleScaffolds).where(eq(moduleScaffolds.userId, id));
+          await tx.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.createdByUserId, id));
+          const studyForgeTables = await existingStudyForgeTables(tx);
+          if (studyForgeTables.has('studyforge_card_progress')) await tx.execute(sql`DELETE FROM studyforge_card_progress WHERE user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_quiz_attempts')) await tx.execute(sql`UPDATE studyforge_quiz_attempts SET user_id = NULL WHERE user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_plan_sessions')) await tx.execute(sql`UPDATE studyforge_plan_sessions SET completed_by_user_id = NULL WHERE completed_by_user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_generations')) await tx.execute(sql`UPDATE studyforge_generations SET user_id = NULL WHERE user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_subjects')) await tx.execute(sql`UPDATE studyforge_subjects SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_sources')) await tx.execute(sql`UPDATE studyforge_sources SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_decks')) await tx.execute(sql`UPDATE studyforge_decks SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_quizzes')) await tx.execute(sql`UPDATE studyforge_quizzes SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          if (studyForgeTables.has('studyforge_plans')) await tx.execute(sql`UPDATE studyforge_plans SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          const launchKitTables = await existingLaunchKitTables(tx);
+          if (launchKitTables.has('launchkit_generations')) await tx.execute(sql`UPDATE launchkit_generations SET user_id = NULL WHERE user_id = ${id}`);
+          if (launchKitTables.has('launchkit_artifacts')) await tx.execute(sql`UPDATE launchkit_artifacts SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          if (launchKitTables.has('launchkit_exports')) await tx.execute(sql`UPDATE launchkit_exports SET created_by_user_id = NULL WHERE created_by_user_id = ${id}`);
+          if (launchKitTables.has('launchkit_tasks')) await tx.execute(sql`UPDATE launchkit_tasks SET owner_user_id = NULL WHERE owner_user_id = ${id}`);
+          if (launchKitTables.has('launchkit_milestones')) await tx.execute(sql`UPDATE launchkit_milestones SET owner_user_id = NULL WHERE owner_user_id = ${id}`);
+          if (launchKitTables.has('launchkit_launches')) await tx.execute(sql`UPDATE launchkit_launches SET
+            created_by_user_id=CASE WHEN created_by_user_id=${id} THEN NULL ELSE created_by_user_id END,
+            owner_user_id=CASE WHEN owner_user_id=${id} THEN NULL ELSE owner_user_id END
+            WHERE created_by_user_id=${id} OR owner_user_id=${id}`);
+          const callCommandTables = await existingCallCommandTables(tx);
+          if (callCommandTables.has('callcommand_channels')) await tx.execute(sql`UPDATE callcommand_channels SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
+          if (callCommandTables.has('callcommand_profiles')) await tx.execute(sql`UPDATE callcommand_profiles SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
+          if (callCommandTables.has('callcommand_transfer_targets')) await tx.execute(sql`UPDATE callcommand_transfer_targets SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
+          if (callCommandTables.has('callcommand_consents')) await tx.execute(sql`UPDATE callcommand_consents SET recorded_by_user_id=NULL WHERE recorded_by_user_id=${id}`);
+          if (callCommandTables.has('callcommand_suppressions')) await tx.execute(sql`UPDATE callcommand_suppressions SET recorded_by_user_id=NULL WHERE recorded_by_user_id=${id}`);
+          if (callCommandTables.has('callcommand_calls')) await tx.execute(sql`UPDATE callcommand_calls SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
+          if (callCommandTables.has('callcommand_followups')) await tx.execute(sql`UPDATE callcommand_followups SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
+          const ninjamationTables = await existingNinjamationTables(tx);
+          if (ninjamationTables.has('ninjamation_generations')) await tx.execute(sql`UPDATE ninjamation_generations SET user_id=NULL WHERE user_id=${id}`);
+          if (ninjamationTables.has('ninjamation_downloads')) await tx.execute(sql`UPDATE ninjamation_downloads SET downloaded_by_user_id=NULL WHERE downloaded_by_user_id=${id}`);
+          if (ninjamationTables.has('ninjamation_reviews')) await tx.execute(sql`UPDATE ninjamation_reviews SET reviewer_user_id=NULL WHERE reviewer_user_id=${id}`);
+          if (ninjamationTables.has('ninjamation_script_versions')) await tx.execute(sql`UPDATE ninjamation_script_versions SET created_by_user_id=NULL WHERE created_by_user_id=${id}`);
+          if (ninjamationTables.has('ninjamation_scripts')) await tx.execute(sql`UPDATE ninjamation_scripts SET
+            created_by_user_id=CASE WHEN created_by_user_id=${id} THEN NULL ELSE created_by_user_id END,
+            approved_by_user_id=CASE WHEN approved_by_user_id=${id} THEN NULL ELSE approved_by_user_id END
+            WHERE created_by_user_id=${id} OR approved_by_user_id=${id}`);
+          const outCallTables = await existingOutCallTables(tx);
+          if (outCallTables.has('outcall_events')) await tx.execute(sql`
+            DELETE FROM outcall_events WHERE call_request_id IN (
+              SELECT id FROM outcall_call_requests WHERE user_id=${id}
+            )`);
+          if (outCallTables.has('outcall_call_requests')) await tx.execute(sql`DELETE FROM outcall_call_requests WHERE user_id=${id}`);
+          if (outCallTables.has('outcall_triggers')) await tx.execute(sql`DELETE FROM outcall_triggers WHERE user_id=${id}`);
+          if (outCallTables.has('outcall_profiles')) await tx.execute(sql`DELETE FROM outcall_profiles WHERE user_id=${id}`);
+          if (outCallTables.has('outcall_settings')) await tx.execute(sql`DELETE FROM outcall_settings WHERE user_id=${id}`);
+          if (outCallTables.has('outcall_phone_owners')) await tx.execute(sql`DELETE FROM outcall_phone_owners WHERE user_id=${id}`);
+          await tx.delete(techdeckTickets).where(eq(techdeckTickets.createdByUserId, id));
+          await tx.delete(ninjaPoolMatchEvents).where(eq(ninjaPoolMatchEvents.userId, id));
+          await tx.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.userId, id));
+          await tx.delete(ninjaPoolPlayerProfiles).where(eq(ninjaPoolPlayerProfiles.userId, id));
+          await tx.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.userId, id));
+          await tx.delete(ninjaPoolOnlineEvents).where(eq(ninjaPoolOnlineEvents.actorUserId, id));
+          await tx.delete(ninjaPoolOnlineRooms).where(or(eq(ninjaPoolOnlineRooms.hostUserId, id), eq(ninjaPoolOnlineRooms.guestUserId, id)));
+          await tx.delete(ninjaPoolOnlineRateLimits).where(eq(ninjaPoolOnlineRateLimits.userId, id));
+          await tx.execute(sql`UPDATE shared_usage_events SET user_id = NULL WHERE user_id = ${id}`);
+          await tx.execute(sql`UPDATE shared_activity_events SET actor_user_id = NULL WHERE actor_user_id = ${id}`);
+          await tx.delete(activityFeed).where(eq(activityFeed.userId, id));
+          await tx.delete(saasTasks).where(eq(saasTasks.userId, id));
+          await tx.delete(notes).where(eq(notes.userId, id));
+          await tx.delete(workspaceMemberships).where(eq(workspaceMemberships.userId, id));
+          await tx.delete(billingEvents).where(eq(billingEvents.userId, id));
+          await tx.delete(subscriptions).where(eq(subscriptions.userId, id));
+          await tx.delete(users).where(eq(users.id, id));
+        });
+      } catch (err: any) {
+        // Keep production logs useful without emitting target IDs, row
+        // values, or PostgreSQL's detail string.
+        console.error('[platform.users.hard-delete] tx failed', {
+          code: typeof err?.code === 'string' ? err.code : 'unknown',
+          constraint: typeof err?.constraint === 'string' ? err.constraint : null,
+        });
+        return reply.code(500).send({
+          error: 'Hard-delete failed; user rolled back to prior state.',
+          code: 'USER_DELETE_FAILED',
+          ...(process.env.NODE_ENV === 'production'
+            ? {}
+            : { detail: err?.message || String(err) }),
+        });
+      }
       return { ok: true, message: 'User permanently deleted' };
     },
   );

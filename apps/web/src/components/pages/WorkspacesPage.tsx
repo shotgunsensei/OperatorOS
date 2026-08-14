@@ -5,6 +5,8 @@ import { saasApi, billingApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import UpgradeModal from '../UpgradeModal';
 import { useToast } from '../Toast';
+import { EmptyState, LoadingState } from '../ExperiencePrimitives';
+import { buttonStyles } from '@/lib/design-tokens';
 
 export default function WorkspacesPage() {
   const [workspaces, setWorkspaces] = useState<any[]>([]);
@@ -93,7 +95,7 @@ export default function WorkspacesPage() {
             display: 'flex', alignItems: 'center', gap: 6,
           }}>
           {isAtLimit && <span style={{ fontSize: 12 }}>{'\ud83d\udd12'}</span>}
-          New workspace
+          Create workspace
         </button>
       </div>
 
@@ -135,27 +137,11 @@ export default function WorkspacesPage() {
       )}
 
       {loading ? (
-        <div style={{ padding: 40, color: colors.textMuted }}>Loading workspaces...</div>
+        <LoadingState label="Loading workspaces…" />
       ) : workspaces.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12 }}>
-          <div style={{
-            width: 64, height: 64, borderRadius: 16, margin: '0 auto 20px',
-            background: 'linear-gradient(135deg, rgba(88,166,255,0.15), rgba(188,140,255,0.15))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
-          }}>{'\u2b21'}</div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: '#fff', marginBottom: 8 }}>Welcome to OperatorOS</div>
-          <div style={{ fontSize: 14, color: colors.textMuted, marginBottom: 20, maxWidth: 360, margin: '0 auto 20px' }}>
-            Workspaces are where you organize projects and collaborate with your team. Create one to get started.
-          </div>
-          <button data-testid="button-empty-create-workspace" onClick={() => setShowCreate(true)}
-            style={{
-              padding: '10px 24px', borderRadius: 8, border: 'none',
-              background: 'linear-gradient(135deg, #58a6ff, #bc8cff)', color: '#fff',
-              fontSize: 14, fontWeight: 600, cursor: 'pointer',
-            }}>
-            Create your first workspace
-          </button>
-        </div>
+        <EmptyState title="No workspaces yet" description="Create a workspace to organize projects and collaborate with your team." action={
+          <button data-testid="button-empty-create-workspace" onClick={() => setShowCreate(true)} style={buttonStyles.primary}>Create workspace</button>
+        } />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
           {workspaces.map(ws => (

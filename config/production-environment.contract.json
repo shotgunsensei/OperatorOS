@@ -1,0 +1,59 @@
+{
+  "contractVersion": 1,
+  "deploymentTarget": "replit-autoscale",
+  "core": {
+    "required": [
+      "DATABASE_URL",
+      "SESSION_SECRET",
+      "SSO_CODE_ENCRYPTION_SECRET",
+      "SHARED_SECRET_ENCRYPTION_KEY"
+    ],
+    "minimumLengths": {
+      "SESSION_SECRET": 24,
+      "SSO_CODE_ENCRYPTION_SECRET": 32,
+      "SHARED_SECRET_ENCRYPTION_KEY": 43
+    },
+    "exact": {
+      "APP_ENV": "production",
+      "NODE_ENV": "production",
+      "OPERATOROS_BASE_URL": "https://operatoros.net",
+      "OPERATOROS_APPS_URL": "https://app.operatoros.net/",
+      "INTERNAL_API_URL": "http://localhost:5001",
+      "OPERATOROS_DATABASE_RELEASE_MODE": "apply"
+    },
+    "unset": [
+      "APP_URL",
+      "COOKIE_DOMAIN",
+      "NEXT_PUBLIC_API_URL"
+    ],
+    "internalOnly": [
+      "OPERATOROS_DATABASE_RELEASE_APPLIED"
+    ],
+    "falseOrUnset": [
+      "ALLOW_LEGACY_SSO_ROLLBACK",
+      "ALLOW_UNSAFE_COMMANDS"
+    ]
+  },
+  "canonicalModuleUrls": {
+    "TRADEFLOWKIT_URL": "https://tradeflowkit.operatoros.net",
+    "TORQUESHED_URL": "https://torqueshed.operatoros.net",
+    "TECHDECK_URL": "https://techdeck.operatoros.net",
+    "PULSEDESK_URL": "https://pulsedesk.operatoros.net",
+    "FAULTLINELAB_URL": "https://faultlinelab.operatoros.net",
+    "NINJA_POOL_HALL_URL": "https://ninja-pool-hall.operatoros.net",
+    "BRANDFORGEOS_URL": "https://brandforgeos.operatoros.net",
+    "SNAPPROOFOS_URL": "https://snapproofos.operatoros.net",
+    "STUDYFORGE_AI_URL": "https://studyforge-ai.operatoros.net",
+    "NINJA_LAUNCH_KIT_URL": "https://ninjalaunchkit.operatoros.net",
+    "CALLCOMMAND_AI_URL": "https://callcommand-ai.operatoros.net",
+    "NINJAMATION_URL": "https://ninjamation.operatoros.net",
+    "OUTCALL_URL": "https://outcall.operatoros.net"
+  },
+  "cors": {
+    "variable": "CORS_ALLOWED_ORIGINS",
+    "scheme": "https",
+    "wildcards": false,
+    "credentialsInUrl": false,
+    "loopback": false
+  }
+}

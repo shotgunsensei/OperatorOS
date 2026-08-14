@@ -1,0 +1,285 @@
+We have working SSO login between OperatorOS and multiple child applications. I now need OperatorOS to become the single source of truth for subscription plans, tenant rights, module access, and user permissions.
+
+Goal:
+Centralize all subscription and entitlement logic inside OperatorOS so child apps no longer independently decide or store paid subscription plan information. Child apps should receive read-only access/feature entitlement data from OperatorOS during SSO login and from an entitlement sync endpoint.
+
+Existing assumptions:
+- OperatorOS already has authentication working.
+- OperatorOS already has custom JWT auth.
+- SSO handoff to child apps is working or partially working.
+- Stripe billing/plans already exist or are being added through OperatorOS.
+- Users belong to tenants.
+- Tenants purchase OperatorOS subscription plans.
+- Child apps/modules include apps such as TechDeck, TradeFlowKit, TorqueShed, PulseDesk, BrandForge OS, SnapProofOS, and similar modules.
+
+Required architecture:
+1. OperatorOS must be the authority for:
+   - tenant subscription plan
+   - Stripe customer ID
+   - Stripe subscription ID
+   - subscription status
+   - plan tier
+   - purchased modules
+   - add-on modules
+   - tenant users
+   - tenant roles
+   - module-level user access
+   - feature flags per module
+   - admin/user rights
+
+2. Child apps must not own Stripe billing plan logic.
+   - Remove or disable independent subscription-plan assignment inside child apps.
+   - If a child app currently has a subscription/pricing section, convert it to a read-only “Managed by OperatorOS” panel.
+   - Any upgrade/manage billing buttons inside child apps should redirect to OperatorOS billing.
+   - Child apps may display two sections:
+     A. OperatorOS Subscription
+     B. This App Access Details
+   - Child apps may keep local app-specific settings, but not independent plan truth.
+
+3. Add or update these OperatorOS data models/tables as needed:
+
+   tenants:
+   - id
+   - name
+   - owner_user_id
+   - created_at
+   - updated_at
+
+   users:
+   - id
+   - email
+   - name
+   - password_hash or existing auth field
+   - global_role
+   - created_at
+   - updated_at
+
+   tenant_users:
+   - id
+   - tenant_id
+   - user_id
+   - tenant_role
+   - status
+   - created_at
+   - updated_at
+
+   tenant_role allowed values:
+   - owner
+   - tenant_admin
+   - billing_admin
+   - user
+   - viewer
+
+   subscription_plans:
+   - id
+   - slug
+   - name
+   - stripe_price_id
+   - price_cents
+   - billing_interval
+   - seat_limit
+   - is_active
+   - created_at
+   - updated_at
+
+   plan_modules:
+   - id
+   - plan_id
+   - module_key
+   - access_level
+   - feature_flags_json
+   - created_at
+   - updated_at
+
+   tenant_subscriptions:
+   - id
+   - tenant_id
+   - plan_id
+   - stripe_customer_id
+   - stripe_subscription_id
+   - status
+   - current_period_end
+   - cancel_at_period_end
+   - created_at
+   - updated_at
+
+   tenant_entitlements:
+   - id
+   - tenant_id
+   - module_key
+   - enabled
+   - access_level
+   - source
+   - feature_flags_json
+   - created_at
+   - updated_at
+
+   source allowed values:
+   - plan
+   - addon
+   - manual
+   - trial
+   - comped
+
+   user_module_access:
+   - id
+   - tenant_id
+   - user_id
+   - module_key
+   - module_role
+   - enabled
+   - created_at
+   - updated_at
+
+   module_role allowed values:
+   - module_admin
+   - module_user
+   - viewer
+   - none
+
+   entitlement_audit_log:
+   - id
+   - tenant_id
+   - user_id
+   - action
+   - details_json
+   - created_at
+
+4. Create an entitlement resolver service in OperatorOS.
+
+   Add a reusable server-side function:
+
+   resolveEntitlements(userId, tenantId)
+
+   It should return a normalized entitlement object like this:
+
+   {
+     "tenant": {
+       "id": "tenant_id",
+       "name": "Tenant Name"
+     },
+     "user": {
+       "id": "user_id",
+       "email": "user@email.com",
+       "tenantRole": "owner | tenant_admin | billing_admin | user | viewer"
+     },
+     "subscription": {
+       "planSlug": "starter | pro_operator | business_command | elite",
+       "status": "active | trialing | past_due | canceled | unpaid",
+       "currentPeriodEnd": "date"
+     },
+     "modules": {
+       "techdeck": {
+         "enabled": true,
+         "accessLevel": "pro",
+         "moduleRole": "module_admin",
+         "features": {}
+       },
+       "tradeflowkit": {
+         "enabled": true,
+         "accessLevel": "basic",
+         "moduleRole": "module_user",
+         "features": {}
+       }
+     }
+   }
+
+5. Entitlement rules:
+   - Tenant owner gets admin access to all modules included in the purchased plan.
+   - Tenant admin gets admin access to assigned modules unless explicitly disabled.
+   - Regular users only get access to modules assigned by owner/admin and allowed by the tenant’s purchased plan.
+   - Billing admin can view/manage billing but does not automatically get admin access to every module.
+   - If subscription status is canceled, unpaid, or past_due beyond grace period, paid module access should be disabled or downgraded according to configuration.
+   - If a tenant upgrades, newly included modules should become available to the owner and tenant admins automatically.
+   - If a tenant downgrades, modules no longer included should be disabled and access should be revoked cleanly.
+   - Manual/comped entitlements should override plan rules only when explicitly configured.
+
+6. Stripe integration:
+   - Stripe webhooks must update tenant_subscriptions.
+   - On successful subscription update, recompute tenant_entitlements.
+   - On cancellation, downgrade, failed payment, or plan change, recompute entitlements.
+   - Log changes in entitlement_audit_log.
+   - Do not require each child app to process Stripe webhooks.
+
+7. SSO JWT handoff:
+   When OperatorOS launches a child app, include a short-lived signed SSO token containing:
+
+   - iss: OperatorOS
+   - aud: target child app key
+   - exp: short expiration
+   - jti: unique token ID
+   - operatoros_user_id
+   - operatoros_tenant_id
+   - user_email
+   - tenant_role
+   - subscription_plan
+   - subscription_status
+   - target_module_key
+   - target_module_enabled
+   - target_module_access_level
+   - target_module_role
+   - target_module_features
+   - all_enabled_modules summary
+
+   The child app should validate the JWT, verify the audience, verify expiration, create or update the local user record, and apply local access based on this entitlement data.
+
+8. Add an OperatorOS entitlement introspection endpoint:
+
+   GET /api/entitlements/me
+   Requires logged-in OperatorOS user.
+
+   GET /api/sso/entitlements/introspect
+   Server-to-server only.
+   Requires secure service token.
+   Used by child apps to refresh entitlement data when needed.
+
+   POST /api/sso/entitlements/sync
+   Server-to-server only.
+   Allows OperatorOS to push entitlement updates to child apps after Stripe changes or admin permission changes.
+
+9. Admin UI:
+   Add a tenant admin permission page inside OperatorOS where owner/admin can:
+   - See current OperatorOS plan.
+   - See included modules.
+   - See add-on modules.
+   - See all tenant users.
+   - Assign users to available modules.
+   - Set module role: module_admin, module_user, viewer, none.
+   - Disable a user’s module access.
+   - See billing status.
+   - Redirect billing changes to the OperatorOS billing page.
+
+10. Child app behavior:
+   Each child app should:
+   - Trust OperatorOS entitlements.
+   - Keep local app profile/settings/data.
+   - Store operatoros_user_id and operatoros_tenant_id.
+   - Store the latest read-only entitlement snapshot.
+   - Not allow local upgrade/downgrade of subscription.
+   - Not allow local plan edits.
+   - Redirect billing/manage-plan actions to OperatorOS.
+   - Use local app roles only as a mapping layer from OperatorOS module_role.
+   - Deny access if target_module_enabled is false.
+   - Show a friendly “Access managed by OperatorOS” page if access is denied.
+
+11. Backward compatibility:
+   If child apps already have subscription tables, do not delete data immediately.
+   Rename/mark them as legacy or stop using them for access decisions.
+   Add a migration path so existing app users are mapped to operatoros_user_id and operatoros_tenant_id.
+   Access decisions must come from OperatorOS entitlements going forward.
+
+12. Acceptance tests:
+   - A tenant on Starter only sees Starter modules.
+   - A tenant on Pro Operator sees Pro modules.
+   - A tenant owner gets module_admin rights by default.
+   - A tenant admin can assign users only to modules the tenant owns.
+   - A regular user cannot access unassigned modules.
+   - A canceled subscription disables paid module access.
+   - A downgraded subscription removes access to modules not included in the new plan.
+   - A child app cannot locally override paid access.
+   - A child app correctly displays OperatorOS plan info first, then app-specific access info second.
+   - Billing buttons in child apps redirect to OperatorOS.
+   - SSO login creates/updates local child-app users correctly.
+   - Entitlement sync updates child apps after plan changes.
+
+Please implement this carefully without breaking existing login. Make the changes incrementally, add comments around entitlement resolution, and provide a summary of modified files, database migrations, and any environment variables required.

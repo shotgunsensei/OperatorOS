@@ -1,21 +1,35 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 import { db } from '../db.js';
 import {
   users, subscriptions, subscriptionPlans,
   modules, ssoHandoffTokens, activityFeed, adminAuditLogs,
-  tenantUsers, tenantModules, tenantUserModuleAccess,
+  tenantUsers, tenantModules, tenantUserModuleAccess, platformComponents,
 } from '../schema.js';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { authenticate, logAudit } from '../lib/auth.js';
-import { resolveTenantContext, requireTenantMember } from '../lib/tenant-auth.js';
+import { resolveTenantContext, requireTenantMember, requireSuperAdmin } from '../lib/tenant-auth.js';
+import { hasPlatformAdminAuthority } from '../lib/rbac.js';
 import { recordModuleUsage } from '../lib/plans.js';
+import { resolveAppBaseUrl, resolvePlatformBaseUrl } from '../lib/public-url.js';
+import {
+  buildOperatorOSNavigationUrls,
+  OPERATOROS_NAVIGATION_CONTRACT_VERSION,
+} from '../../../../packages/modules/navigation.js';
 import {
   hasModuleAccess, getUserModules, getModuleForUser,
   getAccessBreakdown, getModuleAccessTrace, evaluateUserEntitlement,
   getActiveSubscription,
 } from '../lib/entitlement-service.js';
+import {
+  createSsoExchangeCode,
+  parseSsoExchangeCode,
+  resolveSsoCodeSecret,
+} from '../../../../packages/sso/index.js';
+import {
+  getCanonicalModuleBaseUrl,
+  getCanonicalModuleBaseUrlMismatch,
+} from '@operatoros/sdk';
 
 // Map APP_ENV/NODE_ENV to the spec env tri-state: prod | staging | dev.
 function normalizeEnv(raw: string | undefined): 'prod' | 'staging' | 'dev' {
@@ -25,21 +39,25 @@ function normalizeEnv(raw: string | undefined): 'prod' | 'staging' | 'dev' {
   return 'dev';
 }
 const APP_ENV: 'prod' | 'staging' | 'dev' = normalizeEnv(process.env.APP_ENV || process.env.NODE_ENV);
-const SSO_TOKEN_TTL_SECONDS = 90;
-const OPERATOROS_BASE_URL = process.env.OPERATOROS_BASE_URL || 'http://localhost:5000';
+const LEGACY_SSO_ROLLBACK_ENABLED =
+  APP_ENV !== 'prod' || process.env.ALLOW_LEGACY_SSO_ROLLBACK === 'true';
+const SSO_TOKEN_TTL_SECONDS = 60;
+const OPERATOROS_BASE_URL = resolvePlatformBaseUrl();
 
-// Shared HS256 signing key. When unset we fall back to issuing unsigned
-// launch URLs (the response carries `ssoFallback: true` + a warning) so
-// the platform stays usable while operators rotate keys.
+// Retired standalone-receiver key. The unified browser lane uses the
+// independent hub-only SSO_CODE_ENCRYPTION_SECRET through
+// resolveSsoCodeSecret(); this value is available only to the explicitly
+// gated rollback endpoints below.
 function resolveModuleSsoSecret(): { secret: string | null; fallback: boolean } {
   if (process.env.MODULE_SSO_SECRET && process.env.MODULE_SSO_SECRET.length >= 16) {
     return { secret: process.env.MODULE_SSO_SECRET, fallback: false };
   }
   return { secret: null, fallback: true };
 }
-const { secret: MODULE_SSO_SECRET, fallback: SSO_FALLBACK } = resolveModuleSsoSecret();
+const { secret: MODULE_SSO_SECRET, fallback: LEGACY_SSO_FALLBACK } = resolveModuleSsoSecret();
+const SSO_FALLBACK = !resolveSsoCodeSecret();
 const SSO_FALLBACK_WARNING =
-  'MODULE_SSO_SECRET is not set. Module launches are sending plain URLs with no signed token.';
+  'SSO_CODE_ENCRYPTION_SECRET is missing or too short. Browser SSO launches are disabled.';
 if (SSO_FALLBACK) console.warn('[module-sso] ' + SSO_FALLBACK_WARNING);
 
 // 10 handoffs / user / minute, 10 consumes / source-IP / minute.
@@ -101,16 +119,43 @@ interface SsoClaims {
   jti: string;
   iat: number;
   exp: number;
+  // ---- Task #108: append-only entitlement claims (do NOT rename above) ----
+  /** Active tenant the launch is scoped to (legacy short name). */
+  tenant_id?: string;
+  /** Spec name — duplicate of tenant_id so receivers can match on the
+   *  canonical key without breaking older receivers that read tenant_id. */
+  operatoros_tenant_id?: string;
+  /** Internal tenant role (owner|admin|member). */
+  tenant_role?: string;
+  /** Public tenant role alias (owner|tenant_admin|billing_admin|user|viewer). */
+  tenant_role_alias?: string;
+  /** Current subscription.status at issue time (active|trialing|past_due|canceled|null). */
+  subscription_status?: string | null;
+  /** TRUE iff target module is enabled for this user right now. */
+  target_module_enabled?: boolean;
+  /** Internal access level for the target module (none|user|manager). */
+  target_module_access_level?: string;
+  /** Public role for the target module (module_admin|module_user|viewer|none). */
+  target_module_role?: string;
+  /** Merged feature flags for the target module. */
+  target_module_features?: Record<string, boolean | number | string>;
+  /** Summary list of slugs for every module currently enabled for the user. */
+  all_enabled_modules?: string[];
+  /** Internal per-module access level (legacy name, kept for back-compat). */
+  module_role?: string;
+  /** Public module role alias (legacy name, kept for back-compat). */
+  module_role_alias?: string;
+  /** Plan capability map (feature flags) at issue time. */
+  plan_capabilities?: Record<string, boolean>;
+  /** Plan limit map (numeric/boolean caps) at issue time. */
+  limits?: Record<string, number | boolean>;
 }
 
-// Launch URL shape: `{module_base_url}/sso?token={jwt}`. baseUrl is the
-// module ROOT; we always navigate to {root}/sso. Token-less fallback
-// returns the bare root.
-function buildLaunchUrl(baseUrl: string, token: string | null): string {
+// SSO contract v1 carries only a short-lived opaque authorization code.
+function buildLaunchUrl(baseUrl: string, code: string): string {
   if (!baseUrl) return '';
   const trimmed = baseUrl.replace(/\/+$/, '');
-  if (!token) return trimmed;
-  return `${trimmed}/sso?token=${encodeURIComponent(token)}`;
+  return `${trimmed}/sso?code=${encodeURIComponent(code)}`;
 }
 
 // Audit helper. Always writes a structured stdout line; best-effort DB
@@ -122,9 +167,15 @@ async function auditSso(opts: {
   ip: string;
   level?: 'info' | 'warn';
 }) {
+  const consoleDetails = Object.fromEntries(
+    Object.entries(opts.details).filter(([key]) => ![
+      'authorization', 'code', 'cookie', 'cookies', 'jti', 'password',
+      'secret', 'sessionToken', 'token',
+    ].includes(key)),
+  );
   // Envelope fields go LAST so callers can't overwrite them via `details`.
   const line = '[AUDIT sso] ' + JSON.stringify({
-    ...opts.details,
+    ...consoleDetails,
     ts: new Date().toISOString(),
     action: opts.action,
     userId: opts.userId,
@@ -210,6 +261,21 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
     const allowed = await db.select().from(modules)
       .where(inArray(modules.id, Array.from(allowedModuleIds)));
+
+    // Task #115: denormalize each module's platform component (slug/name/ord)
+    // so the launchpad can group cards by component without hardcoding the
+    // slug→component map. Only fetch the components actually referenced.
+    const componentIds = Array.from(
+      new Set(allowed.map(m => m.componentId).filter((id): id is string => !!id)),
+    );
+    const componentRows = componentIds.length
+      ? await db.select().from(platformComponents)
+          .where(inArray(platformComponents.id, componentIds))
+      : [];
+    const componentById = new Map(
+      componentRows.map(c => [c.id, { slug: c.slug, name: c.name, ord: c.ord }]),
+    );
+
     // Launchpad only surfaces actually-launchable modules: live OR beta
     // status AND a baseUrl configured.
     const unlocked = allowed
@@ -222,6 +288,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
         category: m.category,
         iconUrl: m.iconUrl,
         baseUrl: m.baseUrl,
+        component: m.componentId ? componentById.get(m.componentId) ?? null : null,
       }));
     return { modules: unlocked };
   });
@@ -237,7 +304,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // not an end-user concern. Surface the human-readable warning to
     // admins only; non-admins get the boolean so the UI can still adapt
     // its launch flow without exposing internal misconfiguration.
-    const isAdmin = user.role === 'admin';
+    const isAdmin = hasPlatformAdminAuthority(user);
     return {
       modules: summary,
       ssoFallback: SSO_FALLBACK,
@@ -250,10 +317,10 @@ export async function registerModuleRoutes(app: FastifyInstance) {
   app.get('/v1/modules/debug', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     const { user_id: queryUserId } = request.query as { user_id?: string };
-    if (queryUserId && queryUserId !== user.id && user.role !== 'admin') {
+    if (queryUserId && queryUserId !== user.id && !hasPlatformAdminAuthority(user)) {
       return reply.code(403).send({
-        error: 'Only admins may inspect another user\'s entitlement state.',
-        code: 'FORBIDDEN',
+        error: 'Only super-admins may inspect another user\'s entitlement state.',
+        code: 'PLATFORM_ROLE_REQUIRED',
       });
     }
     const targetUserId = queryUserId || user.id;
@@ -285,15 +352,71 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     return summary;
   });
 
+  // Shared, authenticated navigation contract consumed by each module host.
+  // It is deliberately module-scoped so an SSO module session remains within
+  // the allowlisted /v1/modules/:moduleId API boundary.
+  app.get('/v1/modules/:slug/navigation', { preHandler: [requireTenantMember] }, async (request, reply) => {
+    const user = (request as any).user;
+    const ctx = (request as any).tenantContext;
+    const { slug } = request.params as { slug: string };
+    const moduleSummary = await getModuleForUser(user.id, ctx.tenantId, slug);
+    if (!moduleSummary) {
+      return reply.code(404).send({ error: 'Module not found', code: 'MODULE_NOT_FOUND' });
+    }
+    if (moduleSummary.module.status === 'disabled' || moduleSummary.module.status === 'coming_soon') {
+      return reply.code(409).send({ error: 'Module is not enabled', code: 'MODULE_DISABLED' });
+    }
+    if (!moduleSummary.unlocked) {
+      return reply.code(403).send({ error: 'Module entitlement required', code: 'MODULE_ACCESS_DENIED' });
+    }
+
+    const allModules = await getUserModules(user.id, ctx.tenantId);
+    return {
+      version: OPERATOROS_NAVIGATION_CONTRACT_VERSION,
+      module: {
+        id: moduleSummary.module.id,
+        slug: moduleSummary.module.slug,
+        name: moduleSummary.module.name,
+      },
+      ...buildOperatorOSNavigationUrls(resolveAppBaseUrl()),
+      currentUser: {
+        id: user.id,
+        email: user.email,
+        name: user.name ?? null,
+      },
+      tenant: {
+        id: ctx.tenantId,
+        slug: ctx.tenantSlug,
+        type: ctx.tenantType,
+        status: ctx.status,
+      },
+      role: {
+        tenant: ctx.role,
+        platform: user.platformRole ?? 'user',
+      },
+      entitlements: allModules.map(entry => ({
+        key: entry.module.slug,
+        enabled: entry.unlocked,
+        source: entry.access_source,
+      })),
+      theme: {
+        brand: 'OperatorOS',
+        mode: 'dark',
+        accent: '#ef4444',
+        logoUrl: `${resolvePlatformBaseUrl()}/favicon.ico`,
+      },
+    };
+  });
+
   // GET /v1/modules/debug/:slug — single-module verbose breakdown.
   app.get('/v1/modules/debug/:slug', { preHandler: [authenticate] }, async (request, reply) => {
     const user = (request as any).user;
     const { slug } = request.params as { slug: string };
     const { user_id: queryUserId } = request.query as { user_id?: string };
-    if (queryUserId && queryUserId !== user.id && user.role !== 'admin') {
+    if (queryUserId && queryUserId !== user.id && !hasPlatformAdminAuthority(user)) {
       return reply.code(403).send({
-        error: 'Only admins may inspect another user\'s entitlement state.',
-        code: 'FORBIDDEN',
+        error: 'Only super-admins may inspect another user\'s entitlement state.',
+        code: 'PLATFORM_ROLE_REQUIRED',
       });
     }
     const targetUserId = queryUserId || user.id;
@@ -304,9 +427,10 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     return { breakdown, evaluated_for: targetUserId, env: APP_ENV };
   });
 
-  // POST /v1/modules/:slug/handoff — issue short-lived signed JWT + launch URL.
-  // Order: rate-limit -> module exists -> entitlement (403) -> status (400) -> issue.
-  app.post('/v1/modules/:slug/handoff', { preHandler: [requireTenantMember] }, async (request, reply) => {
+  // Retired standalone-receiver issuer. Production keeps this route
+  // unmounted unless the time-boxed rollback flag is explicitly enabled.
+  if (LEGACY_SSO_ROLLBACK_ENABLED) {
+    app.post('/v1/modules/:slug/handoff', { preHandler: [requireTenantMember] }, async (request, reply) => {
     const user = (request as any).user;
     const ctx = (request as any).tenantContext;
     const { slug } = request.params as { slug: string };
@@ -370,16 +494,14 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Module has no launch URL configured.', code: 'NO_BASE_URL' });
     }
 
-    const sub = await getActiveSubscription(user.id);
-    let planSlug: string | null = null;
-    if (sub) {
-      const [plan] = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, sub.planId)).limit(1);
-      planSlug = plan?.slug ?? null;
-    }
-
     const jti = crypto.randomBytes(24).toString('hex');
     const now = Math.floor(Date.now() / 1000);
-    let token: string | null = null;
+    if (!MODULE_SSO_SECRET) {
+      return reply.code(503).send({
+        error: 'SSO code encryption is not configured.',
+        code: 'SSO_NOT_CONFIGURED',
+      });
+    }
     // Wrap the signing + persistence + activity insert in a single try
     // so any internal failure (sign error, DB outage, FK violation) is
     // explicitly audited instead of falling through Fastify's generic
@@ -387,25 +509,6 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // trail captures *which* user attempted *which* module *when* and
     // *why* it failed — required for handoff reject-path observability.
     try {
-      if (MODULE_SSO_SECRET) {
-        const claims: SsoClaims = {
-          iss: OPERATOROS_BASE_URL,
-          aud: slug,
-          env: APP_ENV,
-          sub: user.id,
-          user_id: user.id,
-          email: user.email,
-          role: user.role,
-          module_slug: slug,
-          plan_slug: planSlug,
-          organization_id: null,
-          jti,
-          iat: now,
-          exp: now + SSO_TOKEN_TTL_SECONDS,
-        };
-        token = jwt.sign(claims, MODULE_SSO_SECRET, { algorithm: 'HS256' });
-      }
-
       await db.insert(ssoHandoffTokens).values({
         jti,
         userId: user.id,
@@ -424,7 +527,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
         action: 'module_launched',
         entityType: 'module',
         entityId: mod.id,
-        metadata: { moduleSlug: slug, source: entitlementSource, jti, fallback: SSO_FALLBACK },
+        metadata: { moduleSlug: slug, source: entitlementSource, jti, authContractVersion: 'v1' },
       });
 
       // Task #31: per-module telemetry. Recorded on issue (intent + the
@@ -445,7 +548,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
         userId: user.id, action: 'module_handoff_internal_error',
         details: {
           moduleSlug: slug, jti,
-          stage: token ? 'persist' : 'sign',
+          stage: 'persist',
           error: err?.message || String(err),
         },
         ip: getClientIp(request),
@@ -460,7 +563,7 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       userId: user.id, action: 'module_handoff_issued',
       details: {
         moduleSlug: slug, jti, source: entitlementSource,
-        signed: !!token, fallback: SSO_FALLBACK,
+        authContractVersion: 'v1',
         userAgent: userAgent ? userAgent.slice(0, 200) : null,
       },
       ip: getClientIp(request), level: 'info',
@@ -469,10 +572,10 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     // Spec contract uses `redirect_url`; older clients (Apps UI in this
     // repo) consume `launchUrl`. Emit both so the spec name is
     // canonical and the existing UI keeps working.
-    const launchUrl = buildLaunchUrl(mod.baseUrl, token);
-    const isAdmin = user.role === 'admin';
+    const code = createSsoExchangeCode({ jti, aud: slug }, MODULE_SSO_SECRET);
+    const launchUrl = buildLaunchUrl(mod.baseUrl, code);
     return {
-      token,
+      code,
       redirect_url: launchUrl,
       launchUrl,
       expiresIn: SSO_TOKEN_TTL_SECONDS,
@@ -480,16 +583,16 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       env: APP_ENV,
       issuer: OPERATOROS_BASE_URL,
       jti,
-      ssoFallback: SSO_FALLBACK,
-      warning: SSO_FALLBACK && isAdmin ? SSO_FALLBACK_WARNING : null,
+      authContractVersion: 'v1',
     };
-  });
+    });
+  }
 
   // POST /v1/modules/sso/consume — receiver-side single-use validation.
   // Body: { jti, aud, env }. Status semantics:
   //   200 ok | 400 bad_request|audience|env_mismatch | 404 unknown_jti
   //   409 replayed | 410 expired_or_revoked | 429 rate_limited
-  app.post('/v1/modules/sso/consume', async (request, reply) => {
+  const consumeHandler = async (request: FastifyRequest, reply: FastifyReply) => {
     const ip = getClientIp(request);
     const userAgent = (request.headers['user-agent'] as string) || null;
 
@@ -659,26 +762,349 @@ export async function registerModuleRoutes(app: FastifyInstance) {
       console.warn('[module-sso] recordModuleUsage (consume) failed:', usageErr);
     }
 
+    // Task #108: echo the canonical snapshot byte-for-byte. Receivers
+    // get the SAME shape they would get from /v1/sso/entitlements/introspect
+    // — no renamed/transformed fields, so the same client-side code path
+    // can consume both responses.
+    let snapshot: any = null;
+    try {
+      const { resolveEntitlements } = await import('../lib/entitlement-resolver.js');
+      snapshot = await resolveEntitlements(row.userId, row.tenantId);
+    } catch (err) {
+      request.log.warn({ err }, '[module-sso] consume entitlement enrichment failed');
+    }
+
+    // Task #108 — backward-compatible canonical contract. ALL legacy
+    // top-level fields (ok, user, moduleSlug, operatoros_tenant_id,
+    // planSlug, jti, env, issuer, accessSource, ...) are preserved
+    // for existing SDK consumers. The canonical snapshot blocks
+    // (version, computedAt, tenant, subscription, modules[], limits,
+    // capabilities) are added ALONGSIDE so new receivers can read the
+    // same shape that /v1/sso/entitlements/introspect returns. The
+    // only field that exists in both is `user`: we merge it so the
+    // legacy `{id,email,name,role}` is preserved AND the canonical
+    // `{platformRole, ...}` is appended (snapshot fields take
+    // precedence on overlap so id/email always reflect the snapshot
+    // truth). `event: 'consumed'` mirrors the webhook envelope.
+    // Task #109 — pin legacy `user.role` to the documented 2-value
+    // taxonomy ('super_admin' | 'user'). Receivers like TradeFlowKit
+    // branch on this field to mirror `isSuperAdmin` and the doc is
+    // explicit: super_admin promotes, anything-else demotes. Without
+    // the clamp, a DB-level admin/user/owner could surface verbatim
+    // and silently no-op the demotion path.
+    const legacyRole: 'super_admin' | 'user' =
+      (snapshot?.user?.platformRole === 'super_admin' || hasPlatformAdminAuthority(user))
+        ? 'super_admin'
+        : 'user';
+    const legacyUser = user
+      ? { id: user.id, email: user.email, name: user.name, role: legacyRole }
+      : null;
+    const mergedUser =
+      snapshot && legacyUser
+        ? { ...legacyUser, ...snapshot.user, role: legacyRole }
+        : (snapshot?.user
+            ? { ...snapshot.user, role: legacyRole }
+            : legacyUser);
     return {
+      // Legacy top-level (preserved verbatim, except `user` is merged).
       ok: true,
-      user: user ? { id: user.id, email: user.email, name: user.name, role: user.role } : null,
+      user: mergedUser,
       moduleSlug: row.moduleSlug,
+      operatoros_tenant_id: row.tenantId,
       planSlug,
       organizationId: null,
       env: row.env,
       jti,
       issuer: OPERATOROS_BASE_URL,
       accessSource: access.source,
+      // Canonical snapshot blocks (added — append-only). All omitted
+      // when the resolver failed so callers can detect the gap.
+      ...(snapshot
+        ? {
+            event: 'consumed',
+            version: snapshot.version,
+            computedAt: snapshot.computedAt,
+            tenant: snapshot.tenant,
+            subscription: snapshot.subscription,
+            modules: snapshot.modules,
+            limits: snapshot.limits,
+            capabilities: snapshot.capabilities,
+          }
+        : { snapshot: null }),
     };
-  });
+  };
+  if (LEGACY_SSO_ROLLBACK_ENABLED) {
+    app.post('/v1/modules/sso/consume', consumeHandler);
+    // Bounded rollback alias for pre-v1 standalone receivers. Production
+    // leaves both raw-jti consume routes unmounted unless an operator sets
+    // ALLOW_LEGACY_SSO_ROLLBACK=true for a time-boxed rollback.
+    app.post('/modules/sso/consume', consumeHandler);
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /v1/modules/sso/exchange — Task #140 opaque-code redemption.
+  //
+  // The browser-facing launch now carries an opaque AES-GCM `?code=` (the
+  // encrypted `{ jti, aud }` binding) instead of a JWT. The receiver redeems
+  // that code here, server-to-server, for the same single-use consume result
+  // (identity `user` + canonical snapshot) it used to get from
+  // /modules/sso/consume. Because this response returns identity, the
+  // endpoint is gated by a bearer `MODULE_SSO_SECRET` (which migrated
+  // receivers already send on consume) — one step stronger than the open
+  // consume path. The code's GCM auth tag is verified (and its `aud` binding
+  // enforced) before any database work; single-use is still enforced by the
+  // atomic consume claim inside `consumeHandler`, so a redeemed code cannot
+  // be replayed.
+  //
+  // Body: { code, aud, env }. On success returns the byte-for-byte consume
+  // payload. Status set: 200 | 400 invalid_code | 401 unauthorized |
+  // 503 sso_not_configured, plus every status `consumeHandler` can emit.
+  const exchangeHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+    reply.header('Cache-Control', 'no-store');
+    reply.header('Pragma', 'no-cache');
+    reply.header('Referrer-Policy', 'no-referrer');
+    const ip = getClientIp(request);
+
+    if (!MODULE_SSO_SECRET) {
+      return reply.code(503).send({ error: 'SSO is not configured', code: 'SSO_NOT_CONFIGURED' });
+    }
+
+    const body = (request.body || {}) as { code?: string; aud?: string; env?: string };
+    const codeSecret = resolveSsoCodeSecret();
+    const binding = (codeSecret ? parseSsoExchangeCode(body.code, codeSecret) : null)
+      ?? (codeSecret !== MODULE_SSO_SECRET ? parseSsoExchangeCode(body.code, MODULE_SSO_SECRET) : null);
+    if (!binding) {
+      await auditSsoReject({
+        userId: null, action: 'module_exchange_invalid_code',
+        details: { ip, hasCode: typeof body.code === 'string' && body.code.length > 0 }, ip,
+      });
+      return reply.code(400).send({ error: 'Invalid or malformed code', code: 'INVALID_CODE' });
+    }
+
+    // Every receiver has an independent exchange secret. The hub-only code
+    // encryption secret is never distributed to modules, and compromise of
+    // one module cannot redeem another module's code.
+    const envSuffix = binding.aud.toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+    const expectedClientSecret = process.env[`OPERATOROS_SSO_CLIENT_SECRET_${envSuffix}`] || '';
+    if (!expectedClientSecret) {
+      return reply.code(503).send({ error: 'SSO client is not configured', code: 'CLIENT_NOT_CONFIGURED' });
+    }
+    const authz = (request.headers['authorization'] as string) || '';
+    const presented = authz.startsWith('Bearer ') ? authz.slice(7) : '';
+    const secretOk =
+      presented.length === expectedClientSecret.length &&
+      crypto.timingSafeEqual(Buffer.from(presented), Buffer.from(expectedClientSecret));
+    const presentedClient = String(request.headers['x-module-slug'] || '');
+    if (!secretOk || presentedClient !== binding.aud) {
+      await auditSsoReject({
+        userId: null, action: 'module_exchange_unauthorized',
+        details: { ip, clientId: presentedClient || null, boundClientId: binding.aud }, ip,
+      });
+      return reply.code(401).send({ error: 'Unauthorized', code: 'CLIENT_INVALID' });
+    }
+
+    // Enforce the code's module binding: a code minted for module A must not
+    // be redeemable by a receiver claiming to be module B. If the caller
+    // asserts an `aud`, it must equal the `aud` sealed into the code at issue
+    // time. The code's bound `aud` (not the caller-supplied one) is then
+    // treated as authoritative downstream.
+    if (typeof body.aud === 'string' && body.aud.length > 0 && body.aud !== binding.aud) {
+      await auditSsoReject({
+        userId: null, action: 'module_exchange_binding_mismatch',
+        details: { ip, presentedAud: body.aud, boundAud: binding.aud }, ip,
+      });
+      return reply.code(403).send({ error: 'Code is not bound to this module', code: 'BINDING_MISMATCH' });
+    }
+
+    // Delegate to the exact single-use consume logic, keyed by the recovered
+    // jti and the code's authoritative bound aud. Rewriting the body to the
+    // canonical { jti, aud, env } contract means the exchange path shares one
+    // implementation (and one audit trail) with the legacy token/jti path —
+    // no logic drift possible.
+    (request as any).body = { jti: binding.jti, aud: binding.aud, env: body.env };
+    return consumeHandler(request, reply);
+  };
+  if (LEGACY_SSO_ROLLBACK_ENABLED) {
+    app.post('/v1/modules/sso/exchange', exchangeHandler);
+    app.post('/modules/sso/exchange', exchangeHandler);
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /v1/modules/sso/diagnose — operator-side smoke test for child apps.
+  //
+  // Onboarding a child module into the SSO handoff requires SIX env values
+  // to line up exactly across the hub and the child:
+  //
+  //   1. The module slug must exist in the hub's `modules` table.
+  //   2. The module row must carry a `base_url` (else handoff 400s).
+  //   3. The hub must have `MODULE_SSO_SECRET` set (else it falls into
+  //      unsigned-fallback mode and the child receives no token).
+  //   4. The child's `OPERATOROS_BASE_URL` must match the hub's
+  //      `OPERATOROS_BASE_URL` byte-for-byte (compared against `iss`).
+  //   5. The child's `APP_ENV` must normalize to the same tri-state
+  //      (`prod`/`staging`/`dev`) as the hub's.
+  //   6. The child's `MODULE_SSO_SECRET` must equal the hub's — we can't
+  //      verify equality without transmitting it (and we won't), but we
+  //      can rule out a one-side-not-set / length-drift bug if the child
+  //      reports the LENGTH of its secret.
+  //
+  // Hitting this endpoint with a one-line curl from the operator's
+  // console shortens onboarding from "stare at silent failures for an
+  // hour" to "see exactly which value is off".
+  //
+  // Super-admin only — the response leaks the hub's `OPERATOROS_BASE_URL`,
+  // its normalized `APP_ENV`, and whether `MODULE_SSO_SECRET` is set.
+  // That's harmless to operators and toxic to anonymous callers.
+  // -------------------------------------------------------------------------
+  if (LEGACY_SSO_ROLLBACK_ENABLED) {
+    app.post('/v1/modules/sso/diagnose', { preHandler: [requireSuperAdmin] }, async (request, reply) => {
+    const body = (request.body ?? {}) as {
+      moduleSlug?: string;
+      claimedIssuer?: string;
+      claimedEnv?: string;
+      claimedSecretLength?: number;
+    };
+    if (!body.moduleSlug || typeof body.moduleSlug !== 'string') {
+      return reply.code(400).send({ error: 'moduleSlug is required', code: 'BAD_REQUEST' });
+    }
+
+    const checks: Record<string, {
+      ok: boolean;
+      expected: unknown;
+      claimed: unknown;
+      hint?: string;
+    }> = {};
+
+    // 1 + 2. Module slug + base_url.
+    const [mod] = await db.select().from(modules).where(eq(modules.slug, body.moduleSlug)).limit(1);
+    checks.moduleExists = {
+      ok: !!mod,
+      expected: 'row in modules table',
+      claimed: body.moduleSlug,
+      hint: mod ? undefined : 'No `modules` row with this slug. Check spelling, or seed the module.',
+    };
+    checks.moduleHasBaseUrl = {
+      ok: !!mod?.baseUrl,
+      expected: 'non-empty modules.base_url',
+      claimed: mod?.baseUrl ?? null,
+      hint: mod?.baseUrl
+        ? undefined
+        : 'Handoff would fail with NO_BASE_URL. Set modules.base_url (or the matching <SLUG>_URL env var).',
+    };
+
+    // 2b. Module status gate mirrors the handoff path: an entitled caller
+    // launching a `coming_soon` or `disabled` module gets a 400 with the
+    // matching code. Diagnose must surface this — otherwise the operator
+    // sees ok:true here but the actual launch still rejects.
+    const launchableStatuses = ['live', 'beta'];
+    const launchable = !!mod && launchableStatuses.includes(mod.status as string);
+    checks.moduleLaunchable = {
+      ok: launchable,
+      expected: `module.status in [${launchableStatuses.join(', ')}]`,
+      claimed: mod?.status ?? null,
+      hint: launchable
+        ? undefined
+        : !mod
+          ? 'Module row missing — see moduleExists above.'
+          : mod.status === 'coming_soon'
+            ? 'Handoff would reject with MODULE_COMING_SOON.'
+            : mod.status === 'disabled'
+              ? 'Handoff would reject with MODULE_DISABLED.'
+              : `Module status "${mod.status}" is not in the launchable set.`,
+    };
+
+    // 3. Hub secret configured (not in fallback mode).
+    checks.hubSecretConfigured = {
+      ok: !LEGACY_SSO_FALLBACK,
+      expected: 'MODULE_SSO_SECRET set on the hub (>=16 chars)',
+      claimed: LEGACY_SSO_FALLBACK ? 'missing or too short' : 'set',
+      hint: LEGACY_SSO_FALLBACK
+        ? 'Legacy rollback handoff is disabled because MODULE_SSO_SECRET is missing or too short.'
+        : undefined,
+    };
+
+    // 4. Issuer string equality (compared verbatim against JWT `iss`).
+    const issuerOk = typeof body.claimedIssuer === 'string'
+      && body.claimedIssuer === OPERATOROS_BASE_URL;
+    checks.issuerMatch = {
+      ok: issuerOk,
+      expected: OPERATOROS_BASE_URL,
+      claimed: body.claimedIssuer ?? null,
+      hint: issuerOk
+        ? undefined
+        : 'Child app would reject with launchError=bad_issuer. Match this string exactly — no trailing slash, same protocol/port.',
+    };
+
+    // 5. Env tri-state equality after normalization on both sides.
+    const claimedEnvNormalized = normalizeEnv(body.claimedEnv);
+    const envOk = body.claimedEnv != null && claimedEnvNormalized === APP_ENV;
+    checks.envMatch = {
+      ok: envOk,
+      expected: APP_ENV,
+      claimed: body.claimedEnv == null
+        ? null
+        : { raw: body.claimedEnv, normalized: claimedEnvNormalized },
+      hint: envOk
+        ? undefined
+        : 'Child app would reject with launchError=env_mismatch. Set the child APP_ENV so it normalizes to the hub value above.',
+    };
+
+    // 6. Shared secret LENGTH parity (never the secret itself).
+    // Read from the startup-resolved constant — NOT process.env directly —
+    // so diagnose reports the same value the handoff signer is actually
+    // using. Env edits without a restart would otherwise cause drift.
+    const hubSecretLen = MODULE_SSO_SECRET?.length ?? 0;
+    const lenOk = typeof body.claimedSecretLength === 'number'
+      && body.claimedSecretLength === hubSecretLen
+      && hubSecretLen >= 16;
+    checks.secretLengthMatch = {
+      ok: lenOk,
+      expected: hubSecretLen,
+      claimed: body.claimedSecretLength ?? null,
+      hint: lenOk
+        ? undefined
+        : 'Length parity check only — does NOT prove the strings are equal, but a mismatch here guarantees signature verification will fail with launchError=bad_signature. Use the same secret on hub and child.',
+    };
+
+    const overallOk = Object.values(checks).every(c => c.ok);
+
+    // Log every diagnose call for audit — operators running this against
+    // prod from arbitrary IPs is exactly the kind of thing we want
+    // observable in admin_audit_logs after the fact.
+    await auditSso({
+      userId: (request as any).user?.id ?? null,
+      action: 'module_sso_diagnose',
+      details: {
+        moduleSlug: body.moduleSlug,
+        overallOk,
+        failed: Object.entries(checks).filter(([, v]) => !v.ok).map(([k]) => k),
+      },
+      ip: getClientIp(request),
+      level: 'info',
+    });
+
+    return {
+      ok: overallOk,
+      hub: {
+        issuer: OPERATOROS_BASE_URL,
+        env: APP_ENV,
+        secretConfigured: !LEGACY_SSO_FALLBACK,
+        secretLength: hubSecretLen,
+      },
+      module: mod
+        ? { slug: mod.slug, baseUrl: mod.baseUrl, status: mod.status }
+        : null,
+      checks,
+    };
+    });
+  }
 
   // Spec-aliased admin surfaces under /v1/modules/admin/*.
   // Returns the catalog plus per-module entitlement counts grouped by source
   // (plan / addon / override) and a deduplicated total. Used by the admin
   // Modules tab to surface adoption per module.
-  app.get('/v1/modules/admin/all', { preHandler: [authenticate] }, async (request, reply) => {
+  app.get('/v1/modules/admin/all', { preHandler: [requireSuperAdmin] }, async (request, reply) => {
     const user = (request as any).user;
-    if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
     const { planModules, addonSubscriptions, entitlementOverrides, subscriptions } = await import('../schema.js');
     const rows = await db.select().from(modules).orderBy(modules.ord);
     const allPlans = await db.select().from(subscriptionPlans);
@@ -744,9 +1170,8 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
   // POST /v1/modules/admin/grant — admin grants a per-user module override.
   // Body: { user_id, module_slug, reason?, expires_at? }
-  app.post('/v1/modules/admin/grant', { preHandler: [authenticate] }, async (request, reply) => {
+  app.post('/v1/modules/admin/grant', { preHandler: [requireSuperAdmin] }, async (request, reply) => {
     const user = (request as any).user;
-    if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
     const { user_id, module_slug, reason, expires_at } = (request.body ?? {}) as {
       user_id?: string; module_slug?: string; reason?: string; expires_at?: string;
     };
@@ -773,9 +1198,8 @@ export async function registerModuleRoutes(app: FastifyInstance) {
 
   // POST /v1/modules/admin/revoke — admin revokes a per-user module override.
   // Body: { user_id, module_slug, reason? }
-  app.post('/v1/modules/admin/revoke', { preHandler: [authenticate] }, async (request, reply) => {
+  app.post('/v1/modules/admin/revoke', { preHandler: [requireSuperAdmin] }, async (request, reply) => {
     const user = (request as any).user;
-    if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
     const { user_id, module_slug, reason } = (request.body ?? {}) as {
       user_id?: string; module_slug?: string; reason?: string;
     };
@@ -796,11 +1220,21 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     return { override: row };
   });
 
-  app.patch('/v1/modules/admin/:slug', { preHandler: [authenticate] }, async (request, reply) => {
+  app.patch('/v1/modules/admin/:slug', { preHandler: [requireSuperAdmin] }, async (request, reply) => {
     const user = (request as any).user;
-    if (user.role !== 'admin') return reply.code(403).send({ error: 'Admin only' });
     const { slug } = request.params as { slug: string };
-    const body = request.body as any;
+    const body = (request.body ?? {}) as any;
+
+    const canonicalBaseUrl = getCanonicalModuleBaseUrl(slug);
+    const canonicalUrlMismatch = getCanonicalModuleBaseUrlMismatch(slug, body.baseUrl);
+    if (canonicalUrlMismatch) {
+      return reply.code(400).send({
+        error: `baseUrl for catalog module '${slug}' must exactly match its canonical OperatorOS origin`,
+        code: 'CANONICAL_MODULE_URL_REQUIRED',
+        slug,
+        ...canonicalUrlMismatch,
+      });
+    }
 
     for (const k of ['baseUrl', 'iconUrl'] as const) {
       const v = body[k];
@@ -819,6 +1253,9 @@ export async function registerModuleRoutes(app: FastifyInstance) {
     const updates: any = { updatedAt: new Date() };
     ['name', 'description', 'iconUrl', 'category', 'baseUrl', 'status', 'planMin', 'requiresOrg', 'ord', 'metadata']
       .forEach(k => { if (body[k] !== undefined) updates[k] = body[k]; });
+    // Repair any historical drift whenever a known first-party row is
+    // touched. Custom/admin-created modules retain their validated URL.
+    if (canonicalBaseUrl) updates.baseUrl = canonicalBaseUrl;
     const [updated] = await db.update(modules).set(updates).where(eq(modules.slug, slug)).returning();
     if (!updated) return reply.code(404).send({ error: 'Module not found' });
     await logAudit(user.id, 'module_updated', undefined, { slug, updates }, getClientIp(request));

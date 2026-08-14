@@ -6,9 +6,26 @@ import {
   modules, addonSubscriptions,
 } from '../schema.js';
 import { eq, and, sql } from 'drizzle-orm';
+import { resolveAppBaseUrl } from './public-url.js';
 import {
   getUserPlanConfig, getDowngradeViolations, isUpgrade, isDowngrade, PLAN_CONFIGS,
 } from './plans.js';
+import {
+  COMPANION_MODULE_KEYS,
+  COMPANION_MODULE_PRICE_CENTS,
+  CORE_PRODUCTS_BY_KEY,
+  MODULE_CATALOG_BY_SLUG,
+  getAdditionalSeatPriceCents,
+  normalizeStackSelection,
+  type CompanionModuleKey,
+  type StackSelection,
+} from '@operatoros/sdk';
+import {
+  deactivateSubscriptionEntitlements,
+  grantStackEntitlements,
+  isCoreProductKey,
+} from './product-entitlements.js';
+import { writeAudit } from './audit.js';
 
 // Task #66: `apps/api/package.json` is `"type":"module"`, so the previous
 // `require('stripe')` inside `getStripe()` was undefined and every checkout
@@ -22,22 +39,30 @@ const esmRequire = createRequire(import.meta.url);
 // — the only call sites use the narrow methods through the public
 // helpers below (checkout/create, subscriptions/update, webhooks/etc).
 type StripeClient = {
-  checkout: { sessions: { create: (args: unknown) => Promise<{ id: string; url: string | null }> } };
+  checkout: { sessions: {
+    create: (args: unknown) => Promise<{ id: string; url: string | null }>;
+    list: (args: unknown) => Promise<{ data: any[] }>;
+  } };
   customers: { create: (args: unknown) => Promise<{ id: string }> };
   subscriptions: { update: (id: string, args: unknown) => Promise<unknown> };
   billingPortal: { sessions: { create: (args: unknown) => Promise<{ url: string }> } };
   webhooks: { constructEvent: (payload: string | Buffer, sig: string, secret: string) => unknown };
+  paymentIntents: { retrieve: (id: string) => Promise<any> };
+  charges: { retrieve: (id: string) => Promise<any> };
+  events: { list: (args: unknown) => Promise<{ data: any[] }> };
+  accounts: { retrieve: () => Promise<any> };
 };
 let __stripeSingleton: StripeClient | null = null;
 
 // ---------------------------------------------------------------------------
 // Stripe Configuration
 // ---------------------------------------------------------------------------
-// To enable live Stripe:
+// To enable Stripe (test sandbox OR live production):
 //   1. Set STRIPE_SECRET_KEY in your environment secrets
+//      (sk_test_… for the sandbox, sk_live_… for production)
 //   2. Set STRIPE_WEBHOOK_SECRET in your environment secrets
 //   3. Set stripePriceId on each subscription_plans row (or STRIPE_PRICE_MAP below)
-//   4. Set STRIPE_MODE=live
+//   4. Set STRIPE_MODE=test (sandbox) or STRIPE_MODE=live (production)
 //
 // Price ID mapping — fill these in when you create Stripe products:
 //   STRIPE_PRICE_STARTER = price_xxx (free tier — no checkout needed)
@@ -47,7 +72,9 @@ let __stripeSingleton: StripeClient | null = null;
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
-const STRIPE_MODE = process.env.STRIPE_MODE || 'test';
+// Raw env value (empty string when unset). Stripe is only enabled when this is
+// EXPLICITLY 'test' or 'live' — a missing/unknown mode leaves billing disabled.
+const STRIPE_MODE = process.env.STRIPE_MODE ?? '';
 
 // Test-only injection seam. Allows tests to force Stripe-mode behavior and
 // substitute a stubbed Stripe client without touching real env vars or
@@ -61,7 +88,7 @@ export function isStripeEnabled(): boolean {
   if (__stripeTestOverride && typeof __stripeTestOverride.enabled === 'boolean') {
     return __stripeTestOverride.enabled;
   }
-  return !!STRIPE_SECRET_KEY && STRIPE_MODE === 'live';
+  return !!STRIPE_SECRET_KEY && (STRIPE_MODE === 'test' || STRIPE_MODE === 'live');
 }
 
 function getStripe() {
@@ -76,7 +103,7 @@ function getStripe() {
     const StripeModule = esmRequire('stripe') as { default?: unknown } | unknown;
     const StripeCtor = (StripeModule as { default?: unknown })?.default ?? StripeModule;
     type StripeFactory = new (key: string, opts: { apiVersion: string }) => StripeClient;
-    __stripeSingleton = new (StripeCtor as StripeFactory)(STRIPE_SECRET_KEY, { apiVersion: '2024-04-10' });
+    __stripeSingleton = new (StripeCtor as StripeFactory)(STRIPE_SECRET_KEY, { apiVersion: '2026-02-25.clover' });
     return __stripeSingleton;
   } catch (err) {
     throw new Error(`Stripe SDK could not be loaded: ${(err as Error)?.message ?? 'unknown'}`);
@@ -119,6 +146,11 @@ export interface SubscribeResult {
 export interface CheckoutSessionResult {
   url: string;
   sessionId: string;
+}
+
+export interface StackCheckoutInput extends StackSelection {
+  tenantId: string;
+  userId: string;
 }
 
 export interface PortalSessionResult {
@@ -265,7 +297,7 @@ export async function createCheckoutSession(
   interval: BillingInterval = 'month',
 ): Promise<CheckoutSessionResult> {
   if (!isStripeEnabled()) {
-    throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE=live');
+    throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE (test or live).');
   }
 
   const stripe = getStripe();
@@ -301,7 +333,7 @@ export async function createCheckoutSession(
     }
   }
 
-  const appUrl = process.env.APP_URL || 'http://localhost:5000';
+  const appUrl = resolveAppBaseUrl();
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
@@ -316,9 +348,157 @@ export async function createCheckoutSession(
   return { url: session.url!, sessionId: session.id };
 }
 
+export async function createStackCheckoutSession(
+  input: StackCheckoutInput,
+): Promise<CheckoutSessionResult> {
+  if (!isStripeEnabled()) {
+    throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE (test or live).');
+  }
+
+  const normalized = normalizeStackSelection(input);
+  const product = CORE_PRODUCTS_BY_KEY[normalized.coreProduct];
+  const corePriceId = process.env[product.stripePriceEnvKey] || '';
+  const companionPriceId = process.env.STRIPE_PRICE_COMPANION_MODULE_MONTHLY || '';
+  const seatPriceId = process.env.STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY || '';
+
+  if (!corePriceId) throw new Error(`Set ${product.stripePriceEnvKey}`);
+  if ((normalized.additionalModules?.length ?? 0) > 0 && !companionPriceId) {
+    throw new Error('Set STRIPE_PRICE_COMPANION_MODULE_MONTHLY');
+  }
+  if ((normalized.additionalSeats ?? 0) > 0 && !seatPriceId) {
+    throw new Error('Set STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY');
+  }
+
+  const [user] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
+  if (!user) throw new Error('User not found');
+
+  const [existingSub] = await db.select().from(subscriptions)
+    .where(eq(subscriptions.userId, input.userId))
+    .limit(1);
+  let customerId = existingSub?.stripeCustomerId;
+  const stripe = getStripe();
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: user.email,
+      name: user.name,
+      metadata: { userId: input.userId, tenantId: input.tenantId },
+    });
+    customerId = customer.id;
+    if (existingSub) {
+      await db.update(subscriptions)
+        .set({ stripeCustomerId: customerId })
+        .where(eq(subscriptions.id, existingSub.id));
+    }
+  }
+
+  const lineItems: Array<{ price: string; quantity: number }> = [
+    { price: corePriceId, quantity: 1 },
+  ];
+  if (normalized.additionalModules?.length) {
+    lineItems.push({ price: companionPriceId, quantity: normalized.additionalModules.length });
+  }
+  if ((normalized.additionalSeats ?? 0) > 0) {
+    lineItems.push({ price: seatPriceId, quantity: normalized.additionalSeats! });
+  }
+
+  const metadata = {
+    billing_model: 'core_product_stack',
+    tenant_id: input.tenantId,
+    user_id: input.userId,
+    selected_core_product: normalized.coreProduct,
+    selected_free_companion_module: normalized.freeCompanionModule,
+    additional_module_keys: (normalized.additionalModules ?? []).join(','),
+    additional_seats: String(normalized.additionalSeats ?? 0),
+  };
+  const appUrl = resolveAppBaseUrl();
+  const session = await stripe.checkout.sessions.create({
+    customer: customerId,
+    mode: 'subscription',
+    line_items: lineItems,
+    success_url: `${appUrl}/pricing?billing=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl}/pricing?billing=canceled`,
+    metadata,
+    subscription_data: { metadata },
+  });
+
+  return { url: session.url!, sessionId: session.id };
+}
+
+export interface UsageCreditCheckoutInput {
+  purchaseId: string;
+  tenantId: string;
+  userId: string;
+  moduleId: string;
+  packageKey: string;
+  packageName: string;
+  units: number;
+  amountMinor: number;
+  currency: string;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+/**
+ * OperatorOS-owned one-time usage-credit checkout. The caller supplies only a
+ * server-resolved package snapshot and canonical return URLs; no client amount,
+ * units, tenant, user, or payment-success assertion reaches Stripe.
+ */
+export async function createUsageCreditCheckoutSession(
+  input: UsageCreditCheckoutInput,
+): Promise<CheckoutSessionResult> {
+  if (!isStripeEnabled()) {
+    throw Object.assign(new Error('Stripe checkout is not configured'), {
+      code: 'STRIPE_NOT_CONFIGURED',
+    });
+  }
+  if (
+    !Number.isSafeInteger(input.units) ||
+    input.units <= 0 ||
+    !Number.isSafeInteger(input.amountMinor) ||
+    input.amountMinor <= 0 ||
+    !/^[A-Z]{3}$/.test(input.currency)
+  ) {
+    throw Object.assign(new Error('Usage-credit package snapshot is invalid'), {
+      code: 'USAGE_CREDIT_PACKAGE_INVALID',
+    });
+  }
+  const metadata = {
+    operatoros_kind: 'torque_assist_credit',
+    purchase_id: input.purchaseId,
+    tenant_id: input.tenantId,
+    user_id: input.userId,
+    module_id: input.moduleId,
+    package_key: input.packageKey,
+    units: String(input.units),
+  };
+  const session = await getStripe().checkout.sessions.create({
+    mode: 'payment',
+    line_items: [
+      {
+        price_data: {
+          currency: input.currency.toLowerCase(),
+          unit_amount: input.amountMinor,
+          product_data: { name: `Torque Assist ${input.packageName} credits` },
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: input.successUrl,
+    cancel_url: input.cancelUrl,
+    metadata,
+    payment_intent_data: { metadata },
+  });
+  if (!session.id || !session.url) {
+    throw Object.assign(new Error('Stripe did not return a checkout URL'), {
+      code: 'STRIPE_CHECKOUT_INVALID',
+    });
+  }
+  return { url: session.url, sessionId: session.id };
+}
+
 export async function createPortalSession(userId: string): Promise<PortalSessionResult> {
   if (!isStripeEnabled()) {
-    throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE=live');
+    throw new Error('Stripe is not enabled. Set STRIPE_SECRET_KEY and STRIPE_MODE (test or live).');
   }
 
   const stripe = getStripe();
@@ -328,7 +508,7 @@ export async function createPortalSession(userId: string): Promise<PortalSession
     throw new Error('No Stripe customer found. The user must have a Stripe subscription first.');
   }
 
-  const appUrl = process.env.APP_URL || 'http://localhost:5000';
+  const appUrl = resolveAppBaseUrl();
 
   const session = await stripe.billingPortal.sessions.create({
     customer: sub.stripeCustomerId,
@@ -346,6 +526,15 @@ export interface WebhookProcessResult {
   handled: boolean;
   action?: string;
   error?: string;
+  /**
+   * Task #108: gate the centralized entitlement propagation. Set true
+   * ONLY when local subscription state is durably written so the
+   * recompute pass sees the correct owner plan. Out-of-order
+   * `customer.subscription.created` events that arrive before checkout
+   * has persisted the local row set this false to avoid revoking
+   * valid module access based on missing subscription state.
+   */
+  shouldPropagate?: boolean;
   /**
    * For addon update/delete branches: the number of local
    * addon_subscriptions rows that were actually mutated. `0` means the
@@ -368,6 +557,132 @@ export function verifyWebhookSignature(payload: string | Buffer, signature: stri
   }
   const stripe = getStripe();
   return stripe.webhooks.constructEvent(payload, signature, STRIPE_WEBHOOK_SECRET);
+}
+
+function stripeId(value: unknown, prefix: string): string | null {
+  const id = typeof value === 'string' ? value : value && typeof value === 'object' && 'id' in value
+    ? String((value as { id: unknown }).id)
+    : '';
+  return id.startsWith(prefix) ? id : null;
+}
+
+/**
+ * Resolve signed payment metadata for event families such as refunds and
+ * disputes whose event object does not echo Checkout Session metadata. The
+ * provider reads are scoped to already signature-verified events.
+ */
+export async function resolveStripePaymentMetadata(event: {
+  type: string;
+  data: { object: Record<string, any> };
+}) {
+  const object = event.data?.object ?? {};
+  if (object.metadata?.operatoros_kind === 'torque_assist_credit') {
+    return {
+      metadata: object.metadata as Record<string, string>,
+      paymentIntentId: stripeId(object.payment_intent ?? object.id, 'pi_'),
+      chargeId: stripeId(object.charge ?? object.id, 'ch_'),
+    };
+  }
+  let chargeId = stripeId(object.charge ?? object.id, 'ch_');
+  let paymentIntentId = stripeId(object.payment_intent ?? object.id, 'pi_');
+  if (!paymentIntentId && chargeId) {
+    const charge = await getStripe().charges.retrieve(chargeId);
+    paymentIntentId = stripeId(charge.payment_intent, 'pi_');
+  }
+  if (!paymentIntentId) return { metadata: {}, paymentIntentId: null, chargeId };
+  const paymentIntent = await getStripe().paymentIntents.retrieve(paymentIntentId);
+  chargeId ||= stripeId(paymentIntent.latest_charge, 'ch_');
+  return {
+    metadata: paymentIntent.metadata && typeof paymentIntent.metadata === 'object'
+      ? paymentIntent.metadata as Record<string, string>
+      : {},
+    paymentIntentId,
+    chargeId,
+  };
+}
+
+const TORQUE_STRIPE_EVENT_TYPES = Object.freeze([
+  'checkout.session.completed',
+  'checkout.session.async_payment_succeeded',
+  'checkout.session.async_payment_failed',
+  'checkout.session.expired',
+  'payment_intent.payment_failed',
+  'charge.refunded',
+  'charge.dispute.created',
+  'charge.dispute.closed',
+]);
+
+/** Read-only, redacted provider truth used by the guarded reconciliation CLI. */
+export async function retrieveTorqueStripeReconciliationSnapshot(paymentIntentId: string) {
+  if (!/^pi_[A-Za-z0-9]+$/.test(paymentIntentId)) {
+    throw Object.assign(new Error('PaymentIntent id is invalid'), { code: 'TORQUE_RECONCILE_PAYMENT_INTENT_INVALID' });
+  }
+  if (!isStripeEnabled()) {
+    throw Object.assign(new Error('Stripe read access is unavailable'), { code: 'STRIPE_NOT_CONFIGURED' });
+  }
+  const stripe = getStripe();
+  const [account, paymentIntent, sessions] = await Promise.all([
+    stripe.accounts.retrieve(),
+    stripe.paymentIntents.retrieve(paymentIntentId),
+    stripe.checkout.sessions.list({ payment_intent: paymentIntentId, limit: 10 }),
+  ]);
+  const session = sessions.data.find((candidate: any) => candidate.payment_intent === paymentIntentId)
+    ?? sessions.data[0]
+    ?? null;
+  const latestChargeId = stripeId(paymentIntent.latest_charge, 'ch_');
+  const charge = latestChargeId ? await stripe.charges.retrieve(latestChargeId) : null;
+  const created = Number(paymentIntent.created || 0);
+  const eventPages = await Promise.all(
+    TORQUE_STRIPE_EVENT_TYPES.map((type) => stripe.events.list({
+      type,
+      created: created ? { gte: Math.max(0, created - 86_400) } : undefined,
+      limit: 100,
+    })),
+  );
+  const events = eventPages
+    .flatMap((page) => page.data)
+    .filter((event) => {
+      const object = event.data?.object ?? {};
+      return object.id === paymentIntentId
+        || object.id === session?.id
+        || object.id === latestChargeId
+        || object.payment_intent === paymentIntentId
+        || object.charge === latestChargeId;
+    })
+    .map((event) => ({
+      id: String(event.id),
+      type: String(event.type),
+      created: Number(event.created || 0),
+      livemode: event.livemode === true,
+    }))
+    .sort((a, b) => a.created - b.created || a.id.localeCompare(b.id));
+  const safeMetadata = (value: unknown) => value && typeof value === 'object'
+    ? Object.fromEntries(Object.entries(value as Record<string, unknown>)
+        .filter(([key]) => ['operatoros_kind', 'purchase_id', 'tenant_id', 'user_id', 'module_id', 'package_key', 'units'].includes(key))
+        .map(([key, metadataValue]) => [key, String(metadataValue)]))
+    : {};
+  return {
+    account: { id: String(account.id || ''), livemode: paymentIntent.livemode === true },
+    paymentIntent: {
+      id: String(paymentIntent.id), livemode: paymentIntent.livemode === true,
+      status: String(paymentIntent.status || ''), amount: Number(paymentIntent.amount || 0),
+      amountReceived: Number(paymentIntent.amount_received || 0),
+      currency: String(paymentIntent.currency || '').toLowerCase(), created,
+      latestChargeId, metadata: safeMetadata(paymentIntent.metadata),
+    },
+    checkoutSession: session ? {
+      id: String(session.id), livemode: session.livemode === true, mode: String(session.mode || ''),
+      paymentStatus: String(session.payment_status || ''), status: String(session.status || ''),
+      amountTotal: Number(session.amount_total || 0), currency: String(session.currency || '').toLowerCase(),
+      paymentIntentId: stripeId(session.payment_intent, 'pi_'), metadata: safeMetadata(session.metadata),
+    } : null,
+    charge: charge ? {
+      id: String(charge.id), amountRefunded: Number(charge.amount_refunded || 0),
+      refunded: charge.refunded === true, disputed: charge.disputed === true,
+      paymentIntentId: stripeId(charge.payment_intent, 'pi_'),
+    } : null,
+    events,
+  };
 }
 
 // Classify a Stripe event as addon vs plan. Looks at metadata in
@@ -475,6 +790,43 @@ export async function claimStripeEvent(
   return { claimedRowId: claim[0].id, isDuplicate: false };
 }
 
+/**
+ * Record canonical Torque routing in the existing billing event ledger. An old
+ * plan-classified claim is explicitly reclassified instead of suppressing the
+ * shared Torque receipt. No payment method or client secret is added here.
+ */
+export async function recordTorqueStripeEventDispatch(input: {
+  event: Record<string, any> & { id: string; type: string };
+  tenantId: string;
+  userId: string;
+  purchaseId: string;
+  receiptId?: string | null;
+  status: string;
+  errorCode?: string | null;
+}) {
+  const payloadHash = crypto.createHash('sha256').update(JSON.stringify(input.event)).digest('hex');
+  const safeMetadata = {
+    mode: 'stripe', kind: 'torque_assist_credit', purchaseId: input.purchaseId,
+    sharedReceiptId: input.receiptId ?? null, canonicalWebhook: '/v1/billing/webhook',
+    settlementStatus: input.status, reclassifiedAt: new Date().toISOString(),
+  };
+  await db.execute(sql`
+    INSERT INTO billing_events (
+      user_id,tenant_id,event_type,stripe_event_id,payload_hash,metadata,processed_at,error_message
+    ) VALUES (
+      ${input.userId},${input.tenantId},${`torque_${input.event.type.replaceAll('.', '_')}`},
+      ${input.event.id},${payloadHash},${safeMetadata},
+      ${input.status === 'processed' ? new Date() : null},${input.errorCode ?? null}
+    )
+    ON CONFLICT (stripe_event_id) WHERE stripe_event_id IS NOT NULL DO UPDATE SET
+      user_id=COALESCE(billing_events.user_id,EXCLUDED.user_id),
+      tenant_id=COALESCE(billing_events.tenant_id,EXCLUDED.tenant_id),
+      event_type=EXCLUDED.event_type,payload_hash=EXCLUDED.payload_hash,
+      metadata=COALESCE(billing_events.metadata,'{}'::jsonb)||EXCLUDED.metadata,
+      processed_at=EXCLUDED.processed_at,error_message=EXCLUDED.error_message
+  `);
+}
+
 export async function markStripeEventProcessed(claimedRowId: string, action: string | undefined) {
   await db.update(billingEvents).set({
     processedAt: new Date(),
@@ -496,32 +848,84 @@ export async function processWebhookEvent(event: { type: string; data: { object:
 
   console.log(`[billing-service] Processing webhook: ${type}`);
 
+  let result: WebhookProcessResult;
   switch (type) {
     case 'checkout.session.completed':
-      return await handleCheckoutCompleted(obj);
-
+      result = await handleCheckoutCompleted(obj); break;
     case 'customer.subscription.created':
-      return await handleSubscriptionCreated(obj);
-
+      result = await handleSubscriptionCreated(obj); break;
     case 'customer.subscription.updated':
-      return await handleSubscriptionUpdated(obj);
-
+      result = await handleSubscriptionUpdated(obj); break;
     case 'customer.subscription.deleted':
-      return await handleSubscriptionDeleted(obj);
-
+      result = await handleSubscriptionDeleted(obj); break;
     case 'invoice.payment_failed':
-      return await handlePaymentFailed(obj);
-
+      result = await handlePaymentFailed(obj); break;
+    // Stripe sends both `invoice.paid` and `invoice.payment_succeeded` for a
+    // successful invoice. Route them to the same handler so subscribing to
+    // EITHER event in the dashboard works (no silently-ignored events).
     case 'invoice.paid':
-      return await handleInvoicePaid(obj);
-
+    case 'invoice.payment_succeeded':
+      result = await handleInvoicePaid(obj); break;
     default:
       console.log(`[billing-service] Unhandled webhook event: ${type}`);
       return { handled: false };
   }
+
+  // Task #108: centralized recompute + propagation. After any successful
+  // plan-affecting event, fire entitlement push for the affected user
+  // across every tenant they belong to. Fire-and-forget — receivers'
+  // availability MUST NOT block our webhook ack.
+  //
+  // SOURCE-OF-TRUTH for userId (in order of reliability):
+  //   1. Stripe metadata.userId / user_id (set on checkout we initiated)
+  //   2. Local subscriptions row joined by stripe_subscription_id
+  //      (covers subscription.updated/deleted where Stripe doesn't echo
+  //      our metadata back)
+  //   3. Local subscriptions row joined by stripe_customer_id (invoice.*)
+  if (result.handled && result.shouldPropagate !== false) {
+    let userId: string | null = obj?.metadata?.userId
+      ?? obj?.metadata?.user_id
+      ?? null;
+    if (!userId) {
+      const stripeSubId = obj?.subscription ?? obj?.id ?? null;
+      if (stripeSubId && typeof stripeSubId === 'string') {
+        const [row] = await db.select({ userId: subscriptions.userId })
+          .from(subscriptions)
+          .where(eq(subscriptions.stripeSubscriptionId, stripeSubId))
+          .limit(1);
+        if (row) userId = row.userId;
+      }
+    }
+    if (!userId) {
+      const stripeCustomerId = obj?.customer ?? null;
+      if (stripeCustomerId && typeof stripeCustomerId === 'string') {
+        const [row] = await db.select({ userId: subscriptions.userId })
+          .from(subscriptions)
+          .where(eq(subscriptions.stripeCustomerId, stripeCustomerId))
+          .limit(1);
+        if (row) userId = row.userId;
+      }
+    }
+    if (userId) {
+      try {
+        const { schedulePropagationForUser } = await import('./entitlement-propagation.js');
+        schedulePropagationForUser(userId, { reason: `stripe:${type}` });
+      } catch (err) {
+        console.warn('[billing-service] entitlement propagation unavailable', {
+          code: typeof err === 'object' && err ? (err as { code?: unknown }).code ?? 'unknown' : 'unknown',
+        });
+      }
+    } else {
+      console.warn(`[billing-service] could not resolve userId for ${type}; skipping entitlement push`);
+    }
+  }
+  return result;
 }
 
 async function handleCheckoutCompleted(session: any): Promise<WebhookProcessResult> {
+  if (session.metadata?.billing_model === 'core_product_stack') {
+    return handleStackCheckoutCompleted(session);
+  }
   const userId = session.metadata?.userId;
   const planSlug = session.metadata?.planSlug;
   const stripeSubscriptionId = session.subscription;
@@ -557,8 +961,69 @@ async function handleCheckoutCompleted(session: any): Promise<WebhookProcessResu
     metadata: { planName: plan.name, planSlug, via: 'stripe_checkout' },
   });
 
-  console.log(`[billing-service] Checkout completed: user=${userId} plan=${planSlug}`);
-  return { handled: true, action: 'checkout_completed' };
+  console.log(`[billing-service] Checkout completed: plan=${planSlug}`);
+  return { handled: true, action: 'checkout_completed', shouldPropagate: true };
+}
+
+async function handleStackCheckoutCompleted(session: any): Promise<WebhookProcessResult> {
+  const metadata = session.metadata ?? {};
+  const tenantId = metadata.tenant_id;
+  const userId = metadata.user_id;
+  const coreProduct = metadata.selected_core_product;
+  const freeCompanionModule = metadata.selected_free_companion_module;
+  const stripeSubscriptionId = typeof session.subscription === 'string'
+    ? session.subscription
+    : session.subscription?.id;
+  if (!tenantId || !userId || !stripeSubscriptionId || !isCoreProductKey(coreProduct)) {
+    return { handled: false, error: 'Invalid core product checkout metadata' };
+  }
+
+  const additionalModules = String(metadata.additional_module_keys ?? '')
+    .split(',')
+    .map((value: string) => value.trim())
+    .filter((value: string): value is CompanionModuleKey =>
+      COMPANION_MODULE_KEYS.has(value as CompanionModuleKey),
+    );
+  const additionalSeats = Number.parseInt(metadata.additional_seats ?? '0', 10);
+  const product = CORE_PRODUCTS_BY_KEY[coreProduct];
+
+  await grantStackEntitlements({
+    tenantId,
+    coreProduct,
+    freeCompanionModule,
+    additionalModules,
+    additionalSeats,
+    stripeSubscriptionId,
+    corePriceId: process.env[product.stripePriceEnvKey] || null,
+    companionPriceId: process.env.STRIPE_PRICE_COMPANION_MODULE_MONTHLY || null,
+    additionalSeatPriceId: process.env.STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY || null,
+  });
+
+  await db.insert(billingEvents).values({
+    userId,
+    tenantId,
+    eventType: 'core_product_stack_activated',
+    amount:
+      product.monthlyPriceCents +
+      additionalModules.length * COMPANION_MODULE_PRICE_CENTS +
+      additionalSeats * getAdditionalSeatPriceCents(process.env.ADDITIONAL_SEAT_PRICE_CENTS),
+    metadata: {
+      coreProduct,
+      freeCompanionModule,
+      additionalModules,
+      additionalSeats,
+      stripeSubscriptionId,
+    },
+  });
+  await writeAudit({
+    actorUserId: userId,
+    tenantId,
+    targetType: 'tenant_entitlements',
+    targetId: stripeSubscriptionId,
+    action: 'core_product_stack_activated',
+    after: { coreProduct, freeCompanionModule, additionalModules, additionalSeats },
+  });
+  return { handled: true, action: 'core_product_stack_activated', shouldPropagate: true };
 }
 
 async function handleSubscriptionCreated(subscription: any): Promise<WebhookProcessResult> {
@@ -569,6 +1034,12 @@ async function handleSubscriptionCreated(subscription: any): Promise<WebhookProc
   const customerId = subscription.customer;
   const status = mapStripeStatus(subscription.status);
 
+  // Task #108: only propagate when the local subscription row already
+  // exists (was upserted by checkout.session.completed). If Stripe
+  // delivers `customer.subscription.created` BEFORE the checkout
+  // webhook lands — perfectly legal under out-of-order delivery — we
+  // would otherwise propagate against an empty subscriptions table
+  // and the recompute pass would mass-revoke module access.
   const [existingSub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
   if (existingSub) {
     await db.update(subscriptions).set({
@@ -577,10 +1048,15 @@ async function handleSubscriptionCreated(subscription: any): Promise<WebhookProc
       currentPeriodStart: new Date(subscription.current_period_start * 1000),
       currentPeriodEnd: new Date(subscription.current_period_end * 1000),
     }).where(eq(subscriptions.id, existingSub.id));
+    console.log('[billing-service] Subscription created and synchronized');
+    return { handled: true, action: 'subscription_created', shouldPropagate: true };
   }
 
-  console.log(`[billing-service] Subscription created: user=${userId} stripe_sub=${stripeSubId}`);
-  return { handled: true, action: 'subscription_created' };
+  console.warn(
+    '[billing-service] subscription.created arrived before its local row; ' +
+    'skipping propagation until checkout synchronization completes.',
+  );
+  return { handled: true, action: 'subscription_created_deferred', shouldPropagate: false };
 }
 
 async function handleSubscriptionUpdated(subscription: any): Promise<WebhookProcessResult> {
@@ -592,7 +1068,7 @@ async function handleSubscriptionUpdated(subscription: any): Promise<WebhookProc
     .where(eq(subscriptions.stripeSubscriptionId, stripeSubId)).limit(1);
 
   if (!existingSub) {
-    console.log(`[billing-service] No local subscription for stripe_sub=${stripeSubId}`);
+    console.log('[billing-service] No local subscription matched the update');
     return { handled: false, error: 'No matching local subscription' };
   }
 
@@ -612,12 +1088,17 @@ async function handleSubscriptionUpdated(subscription: any): Promise<WebhookProc
     updatedAt: new Date(),
   }).where(eq(subscriptions.id, existingSub.id));
 
-  console.log(`[billing-service] Subscription updated: stripe_sub=${stripeSubId} status=${status}`);
+  console.log(`[billing-service] Subscription updated: status=${status}`);
   return { handled: true, action: 'subscription_updated' };
 }
 
 async function handleSubscriptionDeleted(subscription: any): Promise<WebhookProcessResult> {
   const stripeSubId = subscription.id;
+
+  const deactivatedTenantId = await deactivateSubscriptionEntitlements(stripeSubId);
+  if (deactivatedTenantId) {
+    return { handled: true, action: 'core_product_stack_deactivated', shouldPropagate: true };
+  }
 
   const [existingSub] = await db.select().from(subscriptions)
     .where(eq(subscriptions.stripeSubscriptionId, stripeSubId)).limit(1);
@@ -640,7 +1121,7 @@ async function handleSubscriptionDeleted(subscription: any): Promise<WebhookProc
     entityType: 'subscription', metadata: { via: 'stripe' },
   });
 
-  console.log(`[billing-service] Subscription deleted: stripe_sub=${stripeSubId}`);
+  console.log('[billing-service] Subscription deleted');
   return { handled: true, action: 'subscription_deleted' };
 }
 
@@ -657,7 +1138,7 @@ async function handlePaymentFailed(invoice: any): Promise<WebhookProcessResult> 
     status: 'past_due', updatedAt: new Date(),
   }).where(eq(subscriptions.id, existingSub.id));
 
-  console.log(`[billing-service] Payment failed: stripe_sub=${stripeSubId}`);
+  console.log('[billing-service] Payment failed');
   return { handled: true, action: 'payment_failed' };
 }
 
@@ -674,7 +1155,7 @@ async function handleInvoicePaid(invoice: any): Promise<WebhookProcessResult> {
     status: 'active', updatedAt: new Date(),
   }).where(eq(subscriptions.id, existingSub.id));
 
-  console.log(`[billing-service] Invoice paid: stripe_sub=${stripeSubId}`);
+  console.log('[billing-service] Invoice paid');
   return { handled: true, action: 'invoice_paid' };
 }
 
@@ -780,6 +1261,26 @@ export interface AddonStripePriceLookup {
   error: string | null;
 }
 
+type AddonModuleCandidate = {
+  slug: string;
+  status?: string;
+  metadata?: Record<string, unknown> | null;
+};
+
+/**
+ * Known ecosystem modules are classified only by MODULE_CATALOG. Explicit
+ * metadata is accepted solely for admin-created modules outside that catalog.
+ * A metadata value can never override a canonical core/free classification.
+ */
+export function isCommercialAddonModule(
+  mod: AddonModuleCandidate | null | undefined,
+): boolean {
+  if (!mod) return false;
+  const catalogEntry = MODULE_CATALOG_BY_SLUG[mod.slug];
+  if (catalogEntry) return catalogEntry.commercialType === 'addon';
+  return mod.metadata?.commercialType === 'addon';
+}
+
 export async function lookupAddonStripePrice(
   moduleSlug: string,
   preloaded?: { slug: string; metadata?: Record<string, unknown> | null } | null,
@@ -815,7 +1316,10 @@ export async function lookupAddonStripePrice(
     error: null,
   };
   if (!priceId) return base;
-  if (!STRIPE_SECRET_KEY) {
+  // The explicit in-process test seam supplies a complete client and must not
+  // depend on a real Stripe secret. In every production path the override is
+  // null, so a missing deployment secret still fails closed exactly as before.
+  if (!STRIPE_SECRET_KEY && !__stripeTestOverride?.client) {
     return { ...base, error: 'STRIPE_SECRET_KEY is not configured; cannot verify price.' };
   }
   try {
@@ -836,8 +1340,8 @@ export async function lookupAddonStripePrice(
 // Creates a brand-new recurring (monthly) Stripe Price for a module's add-on.
 // Used by the super-admin "Create new Stripe price" drift-fix action so an
 // admin can rotate to a corrected unit_amount without leaving the UI.
-// Requires Stripe to be live (secret + STRIPE_MODE=live) — local/test stubs
-// are intentionally rejected so we never invent priceIds against a real env.
+// Requires Stripe to be enabled (secret + STRIPE_MODE=test or live) — when no
+// key is configured we reject so we never invent priceIds against a dead env.
 export interface CreateAddonStripePriceArgs {
   moduleSlug: string;
   moduleName: string;
@@ -854,7 +1358,7 @@ export async function createAddonStripePrice(
   args: CreateAddonStripePriceArgs,
 ): Promise<CreateAddonStripePriceResult> {
   if (!isStripeEnabled()) {
-    throw new Error('Stripe is not enabled (set STRIPE_SECRET_KEY and STRIPE_MODE=live)');
+    throw new Error('Stripe is not enabled (set STRIPE_SECRET_KEY and STRIPE_MODE=test or live)');
   }
   if (!Number.isInteger(args.unitAmountCents) || args.unitAmountCents <= 0) {
     throw new Error('unitAmountCents must be a positive integer (cents)');
@@ -904,7 +1408,7 @@ export async function validateAddonStripePriceId(priceId: string): Promise<Addon
   if (!/^price_[A-Za-z0-9]+$/.test(trimmed)) {
     return { ...base, error: 'Stripe Price ID must look like "price_XXXX"' };
   }
-  if (!STRIPE_SECRET_KEY) {
+  if (!STRIPE_SECRET_KEY && !__stripeTestOverride?.client) {
     return { ...base, error: 'STRIPE_SECRET_KEY is not configured; cannot validate price id' };
   }
   try {
@@ -928,8 +1432,10 @@ export async function validateAddonStripePriceId(priceId: string): Promise<Addon
 // Accepts the loaded module row so the metadata override on
 // `modules.metadata.stripePriceId` is honored without a second DB roundtrip.
 export function isAddonPurchasable(
-  mod: { slug: string; metadata?: Record<string, unknown> | null } | null | undefined,
+  mod: AddonModuleCandidate | null | undefined,
 ): boolean {
+  if (!isCommercialAddonModule(mod)) return false;
+  if (mod?.status === 'disabled' || mod?.status === 'coming_soon') return false;
   if (!isStripeEnabled()) return true;
   return !!getAddonStripePriceIdFromModule(mod);
 }
@@ -947,8 +1453,14 @@ export class AddonNotPurchasableError extends Error {
 // the purchase endpoint must refuse instead of falling through to the
 // local-mode insert (which would grant a free addon).
 export function assertAddonPurchasableOrThrow(
-  mod: { slug: string; metadata?: Record<string, unknown> | null },
+  mod: AddonModuleCandidate,
 ): void {
+  if (!isCommercialAddonModule(mod)) {
+    throw new AddonNotPurchasableError(
+      mod.slug,
+      `Module "${mod.slug}" is not classified as an OperatorOS add-on.`,
+    );
+  }
   if (isStripeEnabled() && !getAddonStripePriceIdFromModule(mod)) {
     throw new AddonNotPurchasableError(
       mod.slug,
@@ -1007,7 +1519,7 @@ export async function subscribeToAddon(
       });
       customerId = customer.id;
     }
-    const appUrl = process.env.APP_URL || 'http://localhost:5000';
+    const appUrl = resolveAppBaseUrl();
 
     // Gate 2: pre-create the addon_subscriptions row in 'incomplete' so
     // the webhook handler can `UPDATE` instead of `INSERT`. This row is
@@ -1484,4 +1996,9 @@ export function getBillingMode() {
       elite: !!getStripePriceIdForInterval('elite', 'month'),
     },
   };
+}
+
+export function getStripeRuntimeMode(): 'test' | 'live' | 'disabled' {
+  if (!isStripeEnabled()) return 'disabled';
+  return STRIPE_MODE === 'live' ? 'live' : 'test';
 }

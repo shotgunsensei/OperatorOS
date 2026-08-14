@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { ArrowRight, CheckCircle2, Layers3, Lock, Users } from 'lucide-react';
 import { billingApi } from '@/lib/auth';
 import { colors } from '../SaasLayout';
 import UpgradeModal from '../UpgradeModal';
+import { CORE_PRODUCTS_BY_KEY, FREE_WITH_ANY_ACCOUNT } from '@operatoros/sdk';
+import { brand } from '@/lib/brand';
+import { EmptyState, ErrorState, PageHeader } from '../ExperiencePrimitives';
 
 function UsageBar({ label, used, limit, percentage }: { label: string; used: number; limit: number; percentage: number }) {
   const isUnlimited = limit >= 999;
@@ -44,20 +48,24 @@ export default function BillingPage() {
   const [downgradeCheck, setDowngradeCheck] = useState<{ slug: string; violations: any[] } | null>(null);
 
   const [billingMode, setBillingMode] = useState<any>(null);
+  const [stackData, setStackData] = useState<any>(null);
   const [interval, setInterval] = useState<'month' | 'year'>('month');
+  const [actionError, setActionError] = useState('');
 
   const loadData = async () => {
     try {
-      const [usage, plansData, historyData, mode] = await Promise.all([
+      const [usage, plansData, historyData, mode, stack] = await Promise.all([
         billingApi.getUsage(),
         billingApi.getPlans(),
         billingApi.getHistory(),
         billingApi.getMode(),
+        billingApi.getStack().catch(() => null),
       ]);
       setUsageData(usage);
       setPlans(plansData.plans);
       setHistory(historyData.events);
       setBillingMode(mode);
+      setStackData(stack);
     } catch {} finally { setLoading(false); }
   };
 
@@ -84,6 +92,7 @@ export default function BillingPage() {
   const doSubscribe = async (slug: string) => {
     setSwitching(slug);
     setDowngradeCheck(null);
+    setActionError('');
     try {
       const result = await billingApi.subscribe(slug, interval);
       if (result.checkoutUrl) {
@@ -91,32 +100,54 @@ export default function BillingPage() {
         return;
       }
       await loadData();
-    } catch {} finally { setSwitching(''); }
+    } catch {
+      setActionError('We could not start this plan change. Nothing was charged and your current plan is unchanged. Try again or contact support.');
+    } finally { setSwitching(''); }
   };
 
   const handleManageSubscription = async () => {
+    setActionError('');
     try {
       const result = await billingApi.createPortalSession();
       if (result.url) {
         window.location.href = result.url;
       }
     } catch {
+      setActionError('We could not open billing management. Your plan and payment method are unchanged. Try again in a moment.');
     }
   };
 
   const handleCancel = async () => {
-    await billingApi.cancel();
-    setCancelConfirm(false);
-    await loadData();
+    setActionError('');
+    try {
+      await billingApi.cancel();
+      setCancelConfirm(false);
+      await loadData();
+    } catch {
+      setActionError('We could not schedule cancellation. Your current plan remains active. Try again in a moment.');
+    }
   };
 
   const handleReactivate = async () => {
-    await billingApi.reactivate();
-    await loadData();
+    setActionError('');
+    try {
+      await billingApi.reactivate();
+      await loadData();
+    } catch {
+      setActionError('We could not reactivate this plan. Your existing cancellation date has not changed. Try again in a moment.');
+    }
   };
 
-  if (loading) return <div style={{ padding: 40, color: colors.textMuted }}>Loading billing...</div>;
-  if (!usageData) return <div style={{ padding: 40, color: colors.accentRed }}>Failed to load billing data</div>;
+  if (loading) return <div className="ops-page" style={{ color: colors.textMuted }}>Loading your workspace plan and billing details…</div>;
+  if (!usageData) return (
+    <div className="ops-page">
+      <ErrorState
+        title="Billing details could not be loaded"
+        description="Your plan and payment information have not changed. Refresh the page and try again. If the problem continues, contact support."
+        action={<button type="button" onClick={() => { setLoading(true); void loadData(); }} style={{ minHeight: 40, padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.bgHover, color: colors.text, cursor: 'pointer', fontWeight: 700 }}>Reload billing details</button>}
+      />
+    </div>
+  );
 
   const { plan: currentPlan, usage, features, subscription } = usageData;
   const currentSlug = currentPlan.slug;
@@ -127,10 +158,94 @@ export default function BillingPage() {
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : null;
 
+  const activeEntitlements = (stackData?.entitlements ?? []).filter((row: any) => row.active !== false);
+  const coreEntitlement = activeEntitlements.find((row: any) => row.entitlementType === 'core_product');
+  const coreProduct = coreEntitlement
+    ? CORE_PRODUCTS_BY_KEY[coreEntitlement.entitlementKey as keyof typeof CORE_PRODUCTS_BY_KEY]
+    : null;
+  const coreProductName = coreProduct?.name ?? coreEntitlement?.entitlementKey ?? 'No core product active';
+  const includedApps = activeEntitlements.filter((row: any) => row.entitlementType === 'included_app');
+  const companions = activeEntitlements.filter((row: any) => row.entitlementType === 'companion_module');
+  const includedSeatCount = coreProduct?.includedSeats ?? 0;
+  const seatLimit = stackData?.seatLimit ?? includedSeatCount;
+  const extraSeats = Math.max(0, seatLimit - includedSeatCount);
+
   return (
-    <div style={{ padding: 'clamp(16px, 3vw, 40px)', maxWidth: 1200 }} data-testid="billing-page">
-      <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: '0 0 8px' }}>Billing & Subscription</h1>
-      <p style={{ fontSize: 14, color: colors.textMuted, margin: '0 0 32px' }}>Manage your plan, usage, and billing history</p>
+    <div className="ops-page" style={{ maxWidth: 1200 }} data-testid="billing-page">
+      <style>{`
+        .billing-stack-hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); }
+        @media (max-width: 820px) { .billing-stack-hero { grid-template-columns: 1fr; } }
+      `}</style>
+      <PageHeader
+        eyebrow="Account"
+        title="Workspace plan and billing"
+        description="See what your OperatorOS plan covers, when it renews, and what would change before you switch. Paid tools for your organization are managed under Billing and add-ons."
+      />
+
+      {actionError && (
+        <div role="alert" style={{ marginBottom: 20, padding: '12px 14px', borderRadius: 10, border: `1px solid ${colors.accentRed}66`, background: 'rgba(255,107,99,.08)', color: colors.text, lineHeight: 1.5 }}>
+          {actionError}
+        </div>
+      )}
+
+      <section
+        className="billing-stack-hero"
+        data-testid="billing-ecosystem-stack"
+        style={{
+          marginBottom: 28,
+          borderRadius: 18,
+          border: `1px solid ${brand.borderStrong}`,
+          background: 'linear-gradient(135deg, rgba(0,229,255,.09), rgba(124,58,237,.08) 54%, rgba(13,17,23,.98))',
+          overflow: 'hidden',
+          boxShadow: '0 24px 70px rgba(0,0,0,.24)',
+        }}
+      >
+        <div style={{ padding: 'clamp(22px, 4vw, 34px)' }}>
+          <div style={{ color: brand.accentCyan, fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em' }}>
+            Your tools and team access
+          </div>
+          <h2 style={{ margin: '9px 0 8px', color: '#fff', fontSize: 28, fontWeight: 800, letterSpacing: '-.03em' }}>
+            {coreProductName}
+          </h2>
+          <p style={{ margin: 0, color: brand.textSecondary, fontSize: 14, lineHeight: 1.6, maxWidth: 620 }}>
+            {coreProduct
+              ? 'This package determines which tools are included and how many people can use them. Your organization data stays separate from other customers.'
+              : 'Choose a tool package to start working. You can review the price and included access before checkout.'}
+          </p>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginTop: 18 }}>
+            <StackMetric icon={<Users size={14} />} label={`${seatLimit} seat${seatLimit === 1 ? '' : 's'}`} />
+            <StackMetric icon={<CheckCircle2 size={14} />} label={`${includedApps.length || (coreProduct ? FREE_WITH_ANY_ACCOUNT.length : 0)} included tools`} />
+            <StackMetric icon={<Layers3 size={14} />} label={`${companions.length} additional tool${companions.length === 1 ? '' : 's'}`} />
+            {extraSeats > 0 && <StackMetric icon={<Users size={14} />} label={`${extraSeats} extra seat${extraSeats === 1 ? '' : 's'}`} />}
+          </div>
+
+          <button
+            data-testid="button-build-ecosystem-stack"
+            onClick={() => { window.location.href = '/pricing#build-stack'; }}
+            style={{
+              marginTop: 22, minHeight: 42, padding: '10px 16px', borderRadius: 10, border: 'none',
+              background: `linear-gradient(135deg, ${brand.accentCyan}, ${brand.accentViolet})`,
+              color: brand.accentInk, fontSize: 13, fontWeight: 800, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 8, boxShadow: brand.ctaGlowSoft,
+            }}
+          >
+            {coreProduct ? 'Review tool packages' : 'Choose a tool package'} <ArrowRight size={14} />
+          </button>
+        </div>
+
+        <div style={{ position: 'relative', minHeight: 260, background: brand.bgPrimary }}>
+          <img
+            src="/media/operatoros/operatoros-command-nexus.png"
+            alt="OperatorOS tools connected to one secure business account."
+            style={{ width: '100%', height: '100%', minHeight: 260, objectFit: 'cover', display: 'block', opacity: .82 }}
+          />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(8,11,18,.96), transparent 48%), linear-gradient(0deg, rgba(8,11,18,.42), transparent)' }} />
+          <div style={{ position: 'absolute', right: 18, bottom: 18, padding: '7px 10px', borderRadius: 999, border: `1px solid ${brand.borderStrong}`, background: brand.bgGlass, color: brand.textSecondary, fontSize: 11, fontWeight: 700 }}>
+            OperatorOS account access included
+          </div>
+        </div>
+      </section>
 
       {downgradeCheck && (
         <div style={{
@@ -138,7 +253,7 @@ export default function BillingPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
         }}>
           <div style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 16, padding: 32, maxWidth: 520, width: '90%' }}>
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#fff', margin: '0 0 12px' }}>Downgrade Warning</h3>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#fff', margin: '0 0 12px' }}>Reduce workspace capacity?</h2>
             <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 16px' }}>
               Your current usage exceeds the limits of this plan. Your data will be preserved, but you won't be able to create new items until you're within the limits.
             </p>
@@ -150,11 +265,11 @@ export default function BillingPage() {
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
               <button onClick={() => setDowngradeCheck(null)}
                 style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.text, cursor: 'pointer', fontSize: 13 }}>
-                Cancel
+                Keep current plan
               </button>
               <button data-testid="button-confirm-downgrade" onClick={() => doSubscribe(downgradeCheck.slug)}
                 style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: colors.accentYellow, color: '#000', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                {switching ? 'Processing...' : 'Downgrade anyway'}
+                {switching ? 'Updating plan…' : `Reduce to ${plans.find((plan: any) => plan.slug === downgradeCheck.slug)?.name ?? downgradeCheck.slug}`}
               </button>
             </div>
           </div>
@@ -163,7 +278,7 @@ export default function BillingPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, marginBottom: 32 }}>
         <div style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 24 }}>
-          <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Plan</div>
+          <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current OperatorOS plan</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <span style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>{currentPlan.name}</span>
             <span style={{
@@ -193,32 +308,32 @@ export default function BillingPage() {
             {currentSlug !== 'elite' && (
               <button data-testid="button-upgrade-plan" onClick={() => setShowUpgradeModal(true)}
                 style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #58a6ff, #bc8cff)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                Upgrade plan
+                Increase capacity
               </button>
             )}
             {billingMode?.mode === 'stripe' && (
               <button data-testid="button-manage-stripe" onClick={handleManageSubscription}
                 style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.accent, fontSize: 13, cursor: 'pointer' }}>
-                Manage via Stripe
+                Manage payment method and invoices
               </button>
             )}
             {subscription && !subscription.cancelAtPeriodEnd && currentSlug !== 'starter' && (
               cancelConfirm ? (
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ fontSize: 12, color: colors.accentYellow }}>Are you sure?</span>
+                  <span style={{ fontSize: 12, color: colors.accentYellow }}>Access continues through the current billing period.</span>
                   <button onClick={handleCancel}
                     style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: colors.accentRed, color: '#fff', fontSize: 12, cursor: 'pointer' }}>
-                    Yes, cancel
+                    Cancel plan at renewal
                   </button>
                   <button onClick={() => setCancelConfirm(false)}
                     style={{ padding: '6px 12px', borderRadius: 6, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.text, fontSize: 12, cursor: 'pointer' }}>
-                    No
+                    Keep plan
                   </button>
                 </div>
               ) : (
                 <button data-testid="button-cancel-sub" onClick={() => setCancelConfirm(true)}
                   style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${colors.border}`, background: 'transparent', color: colors.accentRed, fontSize: 13, cursor: 'pointer' }}>
-                  Cancel plan
+                  Cancel OperatorOS plan
                 </button>
               )
             )}
@@ -232,7 +347,8 @@ export default function BillingPage() {
         </div>
 
         <div style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 24 }}>
-          <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Usage Summary</div>
+          <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Plan usage</div>
+          <p style={{ color: colors.textMuted, fontSize: 12, margin: '0 0 16px', lineHeight: 1.5 }}>These limits apply to OperatorOS planning and AI features, not to records stored inside your business tools.</p>
           <UsageBar label="Workspaces" {...usage.workspaces} />
           <UsageBar label="Projects" {...usage.projects} />
           <UsageBar label="Tasks" {...usage.tasks} />
@@ -243,7 +359,12 @@ export default function BillingPage() {
 
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: 0 }}>Plan Comparison</h3>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: 0 }}>Compare OperatorOS plans</h3>
+            <p style={{ color: colors.textMuted, fontSize: 12, margin: '5px 0 0' }}>
+               Compare limits and prices here. Included business tools are shown separately above.
+            </p>
+          </div>
           <div role="group" aria-label="Billing interval"
                style={{ display: 'inline-flex', borderRadius: 8, border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
             {(['month', 'year'] as const).map((v) => (
@@ -357,7 +478,7 @@ export default function BillingPage() {
                       color: isUpgradeOption ? '#fff' : colors.text,
                       fontSize: 13, fontWeight: 600, cursor: 'pointer', boxSizing: 'border-box',
                     }}>
-                    {switching === p.slug ? 'Processing...' : isUpgradeOption ? 'Upgrade' : 'Downgrade'}
+                    {switching === p.slug ? 'Updating plan…' : isUpgradeOption ? `Increase to ${p.name}` : `Reduce to ${p.name}`}
                   </button>
                 )}
               </div>
@@ -367,8 +488,8 @@ export default function BillingPage() {
       </div>
 
       <div style={{ marginBottom: 32 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>Feature Access</h3>
-        <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 16px' }}>Your current plan includes these features:</p>
+        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>Features in your current plan</h3>
+        <p style={{ fontSize: 13, color: colors.textMuted, margin: '0 0 16px' }}>These OperatorOS features are available now. Locked features show the plan-change action.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
           {Object.entries(features).map(([key, enabled]: [string, any]) => (
             <div key={key} style={{
@@ -377,8 +498,8 @@ export default function BillingPage() {
               border: `1px solid ${enabled ? colors.accentGreen + '33' : colors.border}`,
               display: 'flex', alignItems: 'center', gap: 8,
             }}>
-              <span style={{ fontSize: 14, color: enabled ? colors.accentGreen : colors.textDim }}>
-                {enabled ? '\u2713' : '\ud83d\udd12'}
+              <span aria-hidden="true" style={{ display: 'inline-flex', fontSize: 14, color: enabled ? colors.accentGreen : colors.textDim }}>
+                {enabled ? <CheckCircle2 size={15} /> : <Lock size={15} />}
               </span>
               <span style={{ fontSize: 13, color: enabled ? colors.text : colors.textDim }}>
                 {key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}
@@ -386,7 +507,7 @@ export default function BillingPage() {
               {!enabled && (
                 <button onClick={() => setShowUpgradeModal(true)}
                   style={{ marginLeft: 'auto', padding: '2px 8px', borderRadius: 4, border: 'none', background: colors.accent + '22', color: colors.accent, fontSize: 10, cursor: 'pointer', fontWeight: 600 }}>
-                  Unlock
+                  Increase capacity
                 </button>
               )}
             </div>
@@ -397,7 +518,10 @@ export default function BillingPage() {
       <div style={{ background: colors.bgSecondary, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 24, marginBottom: 32 }}>
         <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 16px' }}>Billing History</h3>
         {history.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 24, color: colors.textMuted, fontSize: 13 }}>No billing history yet</div>
+          <EmptyState
+            title="No billing activity yet"
+            description="Plan changes, invoices, and payment events will appear here after your first billable account action. No action is required now."
+          />
         ) : (
           <div style={{ overflow: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -434,7 +558,7 @@ export default function BillingPage() {
       </div>
 
       <div style={{ padding: 16, borderRadius: 8, background: colors.bgHover, fontSize: 12, color: colors.textDim }}>
-        <strong>Stripe Integration:</strong> This billing system is Stripe-ready. Connect Stripe by adding STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET environment variables.
+        Payments, invoices, and subscription changes are handled through secure Stripe checkout and the customer billing portal when enabled.
       </div>
 
       <UpgradeModal
@@ -443,5 +567,18 @@ export default function BillingPage() {
         onUpgraded={() => loadData()}
       />
     </div>
+  );
+}
+
+function StackMetric({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 32,
+      padding: '6px 10px', borderRadius: 999, border: `1px solid ${brand.borderSoft}`,
+      background: 'rgba(8,11,18,.54)', color: brand.textSecondary, fontSize: 12, fontWeight: 700,
+    }}>
+      <span style={{ color: brand.accentCyan, display: 'inline-flex' }}>{icon}</span>
+      {label}
+    </span>
   );
 }

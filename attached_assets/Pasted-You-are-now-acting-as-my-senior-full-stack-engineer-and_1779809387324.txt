@@ -1,0 +1,344 @@
+You are now acting as my senior full-stack engineer and product design lead.
+
+Project context:
+This Replit project is the OperatorOS ecosystem at operatoros.net. OperatorOS is the central gateway and command hub for my SaaS/product ecosystem. I want you to create a professional technical authority portfolio for John Travis Williams Jr. and attach it into the existing OperatorOS environment without breaking current production functionality.
+
+Primary goal:
+Create a polished portfolio section/subpage that positions John Travis Williams Jr. as a Senior Infrastructure, Security, Automation, Healthcare IT, and Cloud/Solutions Architect candidate. This portfolio should support job applications, recruiter review, consulting opportunities, and technical authority building.
+
+Preferred route:
+Add the portfolio inside the current OperatorOS app as either:
+
+/portfolio
+
+or, if routing supports it cleanly:
+
+/john
+
+Do not replace the existing OperatorOS landing page unless the current app architecture makes that clearly better. Preserve existing auth, billing, modules, routing, health checks, APIs, Stripe logic, and environment variables.
+
+Brand / visual direction:
+Use a clean dark operations-console aesthetic. Think senior engineer command center, not junior developer portfolio. Use modern SaaS styling, strong spacing, responsive layout, crisp typography, subtle gradients, card-based sections, professional iconography, and clear CTAs. It should feel like a polished technical authority page connected to OperatorOS.
+
+Person to profile:
+John Travis Williams Jr.
+Senior Infrastructure & Security Engineer
+Founder / Systems Architect of Shotgun Ninjas Productions, LLC
+GitHub: https://github.com/shotgunsensei
+LinkedIn: https://www.linkedin.com/in/shotgunsensei
+Email: john@shotgunninjas.com
+Location: Salemburg, North Carolina
+
+Positioning headline:
+Infrastructure • Security • Automation • Healthcare IT • Systems Architecture
+
+Hero copy:
+Senior infrastructure and security engineer specializing in MSP operations, healthcare IT, automation systems, hybrid infrastructure, Microsoft ecosystems, endpoint security, networking, and scalable operational tooling.
+
+Primary CTAs:
+View Projects
+View Case Studies
+Download Resume
+GitHub
+LinkedIn
+Contact
+
+Important:
+Create a resume hub section with three downloadable resume cards. If PDF files are not currently present in the repo, create placeholder links and clearly mark the expected file paths:
+
+/public/resumes/Infrastructure_MSP_Engineer_Resume.pdf
+/public/resumes/Security_Automation_Engineer_Resume.pdf
+/public/resumes/Cloud_Solutions_Architect_Resume.pdf
+
+Create the folder path if needed and add README instructions explaining where to place these PDFs.
+
+Core technical identity:
+John has 20+ years of hands-on IT experience across MSP operations, healthcare IT, Windows Server, Microsoft 365, Entra ID, Azure administration, Active Directory, Group Policy, DNS, DHCP, Hyper-V, endpoint lifecycle management, backup and disaster recovery, networking, security operations, VoIP, automation, and hybrid infrastructure.
+
+Current professional role:
+Senior Support Engineer / Infrastructure & Security Specialist at Xodus Technology Professionals.
+Reframe publicly as:
+Senior Infrastructure & Security Engineer / MSP Escalation Engineer
+
+Key experience themes:
+- Top-tier escalation engineer for healthcare, radiology, and MSP-managed environments
+- Microsoft 365, Entra ID, Active Directory, Group Policy, Windows Server, DNS, DHCP
+- Datto RMM, Kaseya BMS, Datto EDR, Datto AV, RocketCyber SOC, Graphus, Dark Web ID
+- HIPAA-regulated medical and radiology environments
+- Intelerad/InteleViewer, PowerScribe 360, diagnostic imaging workstations
+- Multi-site networking, VPNs, VLANs, ArubaOS switching, Metro-E, WAN troubleshooting
+- Allworx VoIP and PBX systems
+- Endpoint hardening, ransomware response, suspicious process investigation, mailbox compromise review
+- PowerShell automation, RMM remediation components, operational scripting
+- SOP development, client-facing incident summaries, escalation documentation
+- Mentorship of junior technicians and practical troubleshooting frameworks
+
+Technical specialization cards:
+Create polished cards for:
+
+1. Infrastructure Engineering
+Include:
+Windows Server, Active Directory, Microsoft 365, Entra ID, Azure, Hyper-V, DNS, DHCP, Group Policy, backup/disaster recovery, endpoint lifecycle management.
+
+2. Security Operations
+Include:
+Datto EDR, Datto AV, RocketCyber SOC, Graphus, Dark Web ID, ransomware response, endpoint detections, mailbox compromise investigation, MFA, conditional access, vulnerability management, HIPAA security practices.
+
+3. MSP Operations
+Include:
+Datto RMM, Kaseya BMS, alert tuning, RMM scripting, PSA workflows, ticket escalation, SOP development, client onboarding, operational process improvement.
+
+4. Healthcare IT
+Include:
+Radiology IT, Intelerad/InteleViewer, PowerScribe 360, diagnostic imaging workstations, remote reading workflows, multi-monitor clinical workstations, HIPAA-regulated operations.
+
+5. Networking & Communications
+Include:
+VLANs, routing, switching, VPNs, Metro-E, WAN troubleshooting, ArubaOS switching, wireless infrastructure, Allworx VoIP, PBX systems, structured cabling.
+
+6. Automation & Product Development
+Include:
+PowerShell, remediation scripting, GitHub, Replit, AI-assisted process design, SaaS/PWA product architecture, prompt engineering, technical product planning.
+
+Featured projects:
+Create a section called “Featured Systems & Product Architecture.”
+
+Include these project cards:
+
+1. OperatorOS
+Description:
+Central SaaS gateway and command hub for modular business, operations, automation, diagnostics, and workflow tools. Designed around tenant access, module entitlements, SSO-style access patterns, billing integration, and scalable product expansion.
+
+Mention:
+- operatoros.net
+- module gateway
+- entitlement-based access
+- Stripe add-on strategy
+- SaaS ecosystem architecture
+- central identity and product hub
+
+2. TechDeck
+Description:
+MSP and IT operations console concept focused on technician workflows, automation runbooks, ticket context, scripts, alerts, and infrastructure support tooling.
+
+Mention:
+- techdeck.app
+- MSP automation
+- operations console
+- technician command center
+- RMM/script workflow concepts
+
+3. PulseDesk
+Description:
+Healthcare operations management platform concept focused on clinical coordination, visibility, operational workflows, and healthcare support clarity. Not a generic helpdesk.
+
+Mention:
+- pulsedesk.support
+- healthcare workflow coordination
+- radiology/clinical operations context
+- white/blue clinical SaaS design direction
+
+4. TradeFlowKit
+Description:
+Business operations and revenue workflow platform focused on quote-to-invoice-to-payment flows, service workflows, and operational visibility.
+
+Mention:
+- tradeflowkit.com
+- business operations
+- revenue workflows
+- service management
+- quote/invoice/payment flow
+
+5. TorqueShed
+Description:
+Automotive diagnostics and knowledge platform designed around symptom trees, repair workflows, technician reasoning, community validation, and diagnostic intelligence.
+
+Mention:
+- torqueshed.pro
+- automotive diagnostics
+- technician knowledge system
+- repair workflow intelligence
+- diagnostic challenge/community potential
+
+6. FaultlineLab
+Description:
+Advanced diagnostic challenge and problem-solving platform built around complex troubleshooting scenarios, clue-based investigation, and technical reasoning.
+
+Mention:
+- faultlinelab.com
+- diagnostic challenge platform
+- problem-solving lab
+- technical reasoning
+- systems troubleshooting
+
+7. BrandForge OS / BF-OS
+Description:
+Brand and marketing tooling concept for creating structured brand assets, campaign materials, and marketing systems.
+
+Mention:
+- bf-os.com
+- brand operations
+- campaign workflow
+- marketing asset system
+
+8. SnapProofOS
+Description:
+Operational proof, documentation, and evidence capture system concept for service businesses and field workflows.
+
+Mention:
+- snapproofos.com
+- field proof
+- documentation workflows
+- service evidence
+- operational accountability
+
+9. Shotgun Ninjas Virtual Studio
+Description:
+Browser-based creative studio / DAW concept for music production, sound design, creative workflows, and accessible production tools.
+
+Mention:
+- shotgunninjas.studio
+- browser DAW
+- creative tooling
+- music production
+- AI-assisted enhancement roadmap
+
+Case studies:
+Create a section called “Operational Case Studies.”
+
+Create 4 polished case study cards:
+
+1. Healthcare Security Incident Response
+Problem:
+Healthcare client environments require rapid security investigation while preserving HIPAA-sensitive operational continuity.
+Actions:
+Investigated suspicious endpoint behavior, ransomware exposure, mailbox compromise indicators, malicious forwarding/rules, endpoint detections, and email-header anomalies.
+Outcome:
+Produced remediation plans, client-facing summaries, internal reports, and hardened operational workflows.
+
+2. Radiology Infrastructure & Remote Reading Support
+Problem:
+Radiology workflows depend on high-performance workstations, PACS viewers, PowerScribe, diagnostic monitors, and reliable remote reading workflows.
+Actions:
+Supported Intelerad/InteleViewer, PowerScribe 360, diagnostic workstations, multi-monitor clinical setups, remote radiologist access, and latency troubleshooting.
+Outcome:
+Improved technical clarity, operational support consistency, and escalation quality for clinical imaging environments.
+
+3. MSP Automation & Endpoint Standardization
+Problem:
+Recurring endpoint issues, noisy alerts, inconsistent remediation, and technician workflow gaps create operational drag.
+Actions:
+Built PowerShell scripts, RMM components, SOPs, alert-handling workflows, cleanup routines, and standardized troubleshooting processes.
+Outcome:
+Reduced repeat work, improved ticket consistency, and created reusable technical playbooks.
+
+4. Multi-Site Infrastructure Troubleshooting
+Problem:
+Business and healthcare clients often suffer from complex connectivity issues across firewalls, switches, VPNs, VoIP, VLANs, wireless, and WAN paths.
+Actions:
+Troubleshot ArubaOS switching, VPN routing, Metro-E circuits, firewall policies, Allworx VoIP, DNS/DHCP, workstation/network interactions, and segmentation problems.
+Outcome:
+Restored operational stability and created clear escalation documentation for future support.
+
+Resume hub:
+Create section:
+“Resume Variants”
+
+Cards:
+1. Infrastructure & MSP Operations Engineer
+Best for MSP escalation, systems engineering, healthcare infrastructure, and operations roles.
+
+2. Security Operations & Automation Engineer
+Best for SOC, MSSP, EDR, incident response, remediation, identity security, and automation roles.
+
+3. Cloud Infrastructure & Solutions Architect
+Best for cloud infrastructure, platform engineering, solutions architecture, technical consulting, and systems design roles.
+
+Each card should have a download button.
+
+Contact section:
+Include:
+Available for:
+- Infrastructure Engineering
+- Security Operations
+- MSP Escalation
+- Healthcare IT
+- Cloud / Solutions Architecture
+- Automation Engineering
+- Consulting & Strategic Projects
+
+Contact methods:
+Email: john@shotgunninjas.com
+GitHub: https://github.com/shotgunsensei
+LinkedIn: https://www.linkedin.com/in/shotgunsensei
+
+Important design requirements:
+- Fully responsive desktop/mobile
+- Dark theme preferred
+- Use cards, badges, iconography, and concise technical copy
+- Avoid cheesy hacker visuals
+- Avoid military/weapon-heavy themes for this employment portfolio
+- Do not overuse the Shotgun Ninjas brand here
+- Keep it professional enough for recruiters, CTOs, MSP owners, and healthcare IT leaders
+- Make it feel like a senior technical operator’s portfolio
+
+Implementation requirements:
+1. First inspect the existing project structure.
+2. Identify framework, routing system, styling system, and existing deployment constraints.
+3. Add the portfolio route in the least disruptive way.
+4. Reuse existing design tokens/components where reasonable.
+5. Do not break the existing OperatorOS landing page, API routes, auth, billing, health check, module seeding, or entitlement logic.
+6. Add any new components under a clean structure such as:
+   /components/portfolio
+   /app/portfolio/page.tsx
+   /public/resumes
+   or equivalent paths depending on the project’s actual framework.
+7. If this is not a Next.js app, adapt the route/component structure to the current stack.
+8. Add comments only where helpful.
+9. Ensure TypeScript/build/lint issues are resolved.
+10. Run the project’s build/test command if available.
+11. Confirm the final local route and production route.
+
+Suggested component structure if Next.js App Router:
+- app/portfolio/page.tsx
+- components/portfolio/PortfolioHero.tsx
+- components/portfolio/SpecializationCards.tsx
+- components/portfolio/FeaturedProjects.tsx
+- components/portfolio/CaseStudies.tsx
+- components/portfolio/ResumeHub.tsx
+- components/portfolio/ContactPanel.tsx
+- public/resumes/README.md
+
+Suggested metadata:
+Title:
+John Travis Williams Jr. | Infrastructure, Security & Automation Portfolio
+
+Description:
+Senior Infrastructure & Security Engineer specializing in MSP operations, healthcare IT, automation, cloud infrastructure, and systems architecture.
+
+OpenGraph:
+Use a clean OperatorOS/technical authority style. If no image exists, create a simple OG placeholder or use existing OperatorOS branding.
+
+Optional enhancements:
+- Add a “Systems Thinking” section with a simple visual flow:
+Problem → Investigation → Automation → Documentation → Repeatable System
+- Add animated but subtle hover effects
+- Add project tags
+- Add downloadable resume cards
+- Add “Built through OperatorOS” footer link
+- Add JSON-LD person/profile schema if appropriate
+- Add clean SEO metadata
+
+Final output expected:
+A working portfolio page deployed inside the existing OperatorOS project at:
+
+https://operatoros.net/portfolio
+
+or equivalent route if the project structure requires another route.
+
+After implementation, provide:
+1. Summary of files changed
+2. Route created
+3. How to add the resume PDFs
+4. Any environment/deployment notes
+5. Confirmation that existing OperatorOS functionality was preserved

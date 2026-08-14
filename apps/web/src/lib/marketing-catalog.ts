@@ -1,0 +1,229 @@
+/**
+ * Marketing-side module catalog.
+ *
+ * A public-safe mirror of the Shotgun Ninjas module ecosystem used
+ * by Phase 2 marketing surfaces (homepage orbit, gateway grid,
+ * /modules page, /how-it-works page). Mirrors the slug/name/plan/ord
+ * from `packages/sdk/src/catalog.ts` and adds the outcome-led
+ * one-sentence copy plus the four-label status mapping.
+ *
+ * Inlined intentionally — the SDK uses explicit `.js` extensions on
+ * its ESM imports for Node's bundler resolver, which Next/webpack
+ * cannot resolve from a `.ts` source. If a module is added or
+ * renamed in `packages/sdk/src/catalog.ts`, mirror it here too.
+ *
+ * Colors come from `brand.ts` only — no raw hex/rgba literals live
+ * here, which keeps token discipline consistent with Phase 1.
+ */
+
+import { brand } from './brand';
+
+export type ModulePlanTier = 'starter' | 'pro' | 'elite';
+export type ModuleDefaultStatus = 'live' | 'beta' | 'coming_soon';
+export type MarketingPackageType = 'core' | 'included' | 'companion';
+
+export interface MarketingCatalogSource {
+  slug: string;
+  name: string;
+  description: string;
+  planMin: ModulePlanTier;
+  ord: number;
+  defaultStatus: ModuleDefaultStatus;
+}
+
+const SOURCE: readonly MarketingCatalogSource[] = [
+  { slug: 'tradeflowkit',     name: 'TradeFlowKit',     description: 'Quote-to-payment revenue and operations control', planMin: 'starter', ord: 1,  defaultStatus: 'live' },
+  { slug: 'torqueshed',       name: 'TorqueShed',       description: 'Automotive diagnostics, repair, and proof of knowledge', planMin: 'starter', ord: 2,  defaultStatus: 'live' },
+  { slug: 'techdeck',         name: 'TechDeck',         description: 'Engineer-first IT and MSP operations console', planMin: 'starter', ord: 3,  defaultStatus: 'live' },
+  { slug: 'pulsedesk',        name: 'PulseDesk',        description: 'Healthcare operations and department escalation', planMin: 'pro',     ord: 4,  defaultStatus: 'live' },
+  { slug: 'faultlinelab',     name: 'FaultlineLab',     description: 'Diagnostic challenges and proof-of-skill labs', planMin: 'starter', ord: 5,  defaultStatus: 'live' },
+  { slug: 'ninja-pool-hall',  name: 'Ninja Pool Hall',  description: 'Companion engagement experience',            planMin: 'starter', ord: 6,  defaultStatus: 'live' },
+  { slug: 'brandforgeos',     name: 'BrandForgeOS',     description: 'Brand and marketing command system',         planMin: 'pro',     ord: 7,  defaultStatus: 'live' },
+  { slug: 'snapproofos',      name: 'SnapProofOS',      description: 'Photo-based proof of work',                  planMin: 'elite',   ord: 8,  defaultStatus: 'live' },
+  { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                planMin: 'elite',   ord: 9,  defaultStatus: 'live' },
+  { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Plan, review, and prove launch campaigns are ready', planMin: 'elite', ord: 10, defaultStatus: 'live' },
+  { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'Secure MSP phone intake, ticket orchestration, and policy-gated automation', planMin: 'elite', ord: 11, defaultStatus: 'live' },
+  { slug: 'ninjamation',      name: 'Ninjamation',      description: 'Reviewed PC automation scripts + AI drafts', planMin: 'elite',   ord: 12, defaultStatus: 'live' },
+  { slug: 'outcall',          name: 'OutCall',           description: 'Discreet exit-assistance and personal-safety calling', planMin: 'starter', ord: 13, defaultStatus: 'coming_soon' },
+];
+
+export type MarketingStatus = 'Available' | 'Coming Soon' | 'Beta' | 'Locked';
+
+export interface MarketingModule {
+  slug: string;
+  name: string;
+  /** Current OperatorOS product-packaging lane. */
+  packageType: MarketingPackageType;
+  /** Public packaging label used on marketing cards. */
+  packageLabel: string;
+  /** One-sentence outcome (not feature). */
+  outcome: string;
+  /** Primary user or buyer the module is built for. */
+  audience: string;
+  /** Plain-language problem the module solves. */
+  solves: string;
+  /** Optional curated public media asset for card thumbnails. */
+  imageSrc?: string;
+  /** Default public-facing status — overlaid with entitlement data when signed in. */
+  status: MarketingStatus;
+  /** Source-of-truth entry for plan tier / ord. */
+  source: MarketingCatalogSource;
+}
+
+const OUTCOMES: Record<string, string> = {
+  'tradeflowkit':     'Turn a new lead into a scheduled job, approved quote, invoice, and recorded payment.',
+  'torqueshed':       'Keep each vehicle’s service history, repair evidence, reminders, and diagnostic work together.',
+  'techdeck':         'Triage tickets while keeping client systems, procedures, evidence, and technician time connected.',
+  'pulsedesk':        'Route facility and department requests without losing ownership, deadlines, or escalation history.',
+  'faultlinelab':     'Practice difficult troubleshooting scenarios and keep a clear evidence trail for every attempt.',
+  'ninja-pool-hall':  'Play deterministic 8-ball in practice, CPU, local hot-seat, or protected online rooms.',
+  'brandforgeos':     'Build campaigns, review brand assets, and keep approved creative work organized.',
+  'snapproofos':      'Capture dated proof of work before a customer, auditor, or teammate asks for it.',
+  'studyforge-ai':    'Turn team knowledge into guided study sessions that can be reused and reviewed.',
+  'ninja-launch-kit': 'Create the launch plan, checklist, approvals, and exportable assets needed to ship.',
+  'callcommand-ai':   'Handle repetitive phone work with reviewed scripts, routing, and call history.',
+  'ninjamation':      'Create, review, approve, and download repeatable PC automation scripts.',
+  'outcall':          'Schedule a discreet safety call with a clear fallback plan and trusted contact details.',
+};
+
+const AUDIENCES: Record<string, string> = {
+  'tradeflowkit':     'Service businesses and operators',
+  'torqueshed':       'Mechanics and repair shops',
+  'techdeck':         'MSP teams and field technicians',
+  'pulsedesk':        'Healthcare operations teams',
+  'faultlinelab':     'Troubleshooters and technical leads',
+  'ninja-pool-hall':  'Pool players and friendly rivals',
+  'brandforgeos':     'Founders, marketers, and creators',
+  'snapproofos':      'Teams that need proof and verification',
+  'studyforge-ai':    'Training teams and operators',
+  'ninja-launch-kit': 'Operators shipping internal tools',
+  'callcommand-ai':   'Teams with high-volume calls',
+  'ninjamation':      'IT operators building repeatable PC automation',
+  'outcall':          'People who want discreet personal-safety support',
+};
+
+const SOLVES: Record<string, string> = {
+  'tradeflowkit':     'Revenue work scattered across quotes, invoices, and status updates.',
+  'torqueshed':       'Repair knowledge trapped in conversations and disconnected tickets.',
+  'techdeck':         'Technicians jumping between notes, scripts, tickets, and tools.',
+  'pulsedesk':        'Escalations and handoffs disappearing between busy departments.',
+  'faultlinelab':     'Root-cause analysis that never becomes reusable knowledge.',
+  'ninja-pool-hall':  'Browser pool games that fake gameplay or lose the table when a connection drops.',
+  'brandforgeos':     'Campaign assets and positioning spread across disconnected docs.',
+  'snapproofos':      'Missing evidence when customers, auditors, or teams ask what happened.',
+  'studyforge-ai':    'Training material that is hard to reuse, test, or operationalize.',
+  'ninja-launch-kit': 'Slow setup work before a new product or internal tool can ship.',
+  'callcommand-ai':   'Missed calls and repetitive phone workflows draining operator time.',
+  'ninjamation':      'Unreviewed one-off scripts with no version, approval, or download trail.',
+  'outcall':          'Awkward or unsafe situations where a planned check-in can help someone leave.',
+};
+
+export const PACKAGE_LABELS: Record<MarketingPackageType, string> = {
+  core: 'Full business tool',
+  included: 'Included with account',
+  companion: 'Optional add-on',
+};
+
+export const PACKAGE_DESCRIPTIONS: Record<MarketingPackageType, string> = {
+  core: 'Fully unlocked flagship products that anchor the OperatorOS stack.',
+  included: 'Utility and diagnostic apps free with any OperatorOS account — no paid product required.',
+  companion: 'One companion can be selected free; additional companions can be added as paid modules.',
+};
+
+const PACKAGE_BY_SLUG: Record<string, MarketingPackageType> = {
+  'tradeflowkit': 'core',
+  'pulsedesk': 'core',
+  'techdeck': 'core',
+  'torqueshed': 'included',
+  'faultlinelab': 'included',
+  'ninja-pool-hall': 'included',
+  'snapproofos': 'companion',
+  'brandforgeos': 'companion',
+  'studyforge-ai': 'companion',
+  'ninja-launch-kit': 'companion',
+  'callcommand-ai': 'companion',
+  'ninjamation': 'companion',
+  'outcall': 'companion',
+};
+
+const IMAGE_SRC: Record<string, string> = {
+  'tradeflowkit': '/media/operatoros/module-tradeflowkit.png',
+  'torqueshed': '/media/operatoros/module-torqueshed.png',
+  'techdeck': '/media/operatoros/module-techdeck.png',
+  'pulsedesk': '/media/operatoros/module-pulsedesk.png',
+  'faultlinelab': '/media/operatoros/module-faultlinelab.png',
+  'ninja-pool-hall': '/media/operatoros/module-ninja-pool-hall.png',
+  'brandforgeos': '/media/operatoros/module-brandforgeos.png',
+  'snapproofos': '/media/operatoros/module-snapproofos.png',
+  'studyforge-ai': '/media/operatoros/module-studyforge-ai.png',
+  'ninja-launch-kit': '/media/operatoros/module-ninja-launch-kit.png',
+  'callcommand-ai': '/media/operatoros/module-callcommand-ai.png',
+  'ninjamation': '/media/operatoros/module-ninjamation.png',
+};
+
+function statusFor(entry: MarketingCatalogSource): MarketingStatus {
+  switch (entry.defaultStatus) {
+    case 'live':        return 'Available';
+    case 'beta':        return 'Beta';
+    case 'coming_soon': return 'Coming Soon';
+    default:            return 'Coming Soon';
+  }
+}
+
+export const MARKETING_MODULES: readonly MarketingModule[] = SOURCE
+  .slice()
+  .sort((a, b) => a.ord - b.ord)
+  .map((entry) => ({
+    slug: entry.slug,
+    name: entry.name,
+    packageType: PACKAGE_BY_SLUG[entry.slug] ?? 'companion',
+    packageLabel: PACKAGE_LABELS[PACKAGE_BY_SLUG[entry.slug] ?? 'companion'],
+    outcome: OUTCOMES[entry.slug] ?? entry.description,
+    audience: AUDIENCES[entry.slug] ?? 'Operations teams',
+    solves: SOLVES[entry.slug] ?? entry.description,
+    imageSrc: IMAGE_SRC[entry.slug],
+    status: statusFor(entry),
+    source: entry,
+  }));
+
+/**
+ * Overlay live entitlement state onto the static marketing catalog.
+ *
+ * `entitledSlugs` is a Set of module slugs the signed-in viewer has
+ * actual access to (sourced from `modulesApi.list()` at the
+ * AuthProvider boundary — see `useEntitlements()`). When the viewer
+ * is signed in but the module is not in the set, the badge flips to
+ * `'Locked'` so the CTA helper routes them to `/pricing` instead of
+ * `/app`. Anonymous viewers (entitledSlugs === null) see the static
+ * defaults.
+ */
+export function applyEntitlements(
+  modules: readonly MarketingModule[],
+  entitledSlugs: ReadonlySet<string> | null,
+): MarketingModule[] {
+  if (!entitledSlugs) return modules.slice();
+  return modules.map((m) => {
+    if (m.status === 'Coming Soon' || m.status === 'Beta') return m;
+    if (entitledSlugs.has(m.slug)) return { ...m, status: 'Available' as const };
+    return { ...m, status: 'Locked' as const };
+  });
+}
+
+export interface StatusBadgePalette {
+  text: string;
+  bg: string;
+  border: string;
+}
+
+export function statusBadgeColor(status: MarketingStatus): StatusBadgePalette {
+  switch (status) {
+    case 'Available':
+      return { text: brand.statusAvailableText, bg: brand.statusAvailableBg, border: brand.statusAvailableBorder };
+    case 'Beta':
+      return { text: brand.statusBetaText,      bg: brand.statusBetaBg,      border: brand.statusBetaBorder };
+    case 'Coming Soon':
+      return { text: brand.statusComingSoonText, bg: brand.statusComingSoonBg, border: brand.statusComingSoonBorder };
+    case 'Locked':
+      return { text: brand.statusLockedText,    bg: brand.statusLockedBg,    border: brand.statusLockedBorder };
+  }
+}

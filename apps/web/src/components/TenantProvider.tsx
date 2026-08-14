@@ -13,7 +13,7 @@ export interface TenantSummary {
   // Membership role for the current user. Absent when listed via the
   // super-admin "all tenants" surface for a tenant the user is not a
   // member of.
-  role?: 'owner' | 'admin' | 'member' | null;
+  role?: 'owner' | 'admin' | 'member' | 'viewer' | null;
 }
 
 interface TenantContextValue {
@@ -22,7 +22,7 @@ interface TenantContextValue {
   // Every tenant on the platform — only populated for super_admin users.
   allTenants: TenantSummary[];
   activeTenant: TenantSummary | null;
-  activeRole: 'owner' | 'admin' | 'member' | null;
+  activeRole: 'owner' | 'admin' | 'member' | 'viewer' | null;
   loading: boolean;
   // Switches the active tenant: writes users.current_tenant_id server-side,
   // updates localStorage so the X-Tenant-Id header tracks, and reloads the

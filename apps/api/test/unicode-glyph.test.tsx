@@ -72,7 +72,7 @@ for (const flags of [
       `Rendered HTML:\n${html}`,
     );
     // Sanity: the renderer actually produced section labels.
-    assert.ok(html.includes('Launch'), 'sidebar should always show Launch section');
+    assert.ok(html.includes('Workspace'), 'sidebar should always show Workspace section');
   });
 }
 

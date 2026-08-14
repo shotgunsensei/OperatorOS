@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "phase": 20,
+  "declaration": "SOURCE/LOCAL PUBLIC-LAUNCH FUNCTIONAL CLOSURE: PASS",
+  "recordedAtUtc": "2026-08-03T14:20:00Z",
+  "repository": "C:/Dev/OperatorOS",
+  "branch": "codex/phase20-public-launch-closure-final2",
+  "baseCommit": "a146be3b2d00ff1dfe3c365f4d8a9f6ae2f40b57",
+  "productionTouched": false,
+  "databaseRelease": {
+    "version": 33,
+    "steps": 33,
+    "container": "operatoros-phase20-db",
+    "aggregateDatabase": "operatoros_phase20_api5",
+    "restoredDatabase": "operatoros_phase20_restore3",
+    "host": "127.0.0.1",
+    "port": 55432,
+    "tableCount": 239,
+    "invalidForeignKeys": 0,
+    "backupTocEntries": 2109,
+    "backupSha256": "511feaeea698f2573f4a980089d69e37e3c4688a21e7a7492495a3dc19918d3d"
+  },
+  "capabilityCounts": {
+    "ACTIVE_AND_PROVEN": 20,
+    "SHARED_OPERATOROS_REPLACEMENT": 0,
+    "APPROVED_SECURITY_RETIREMENT": 0,
+    "APPROVED_PRODUCT_BOUNDARY": 0,
+    "HUMAN_PHASE18": 10,
+    "FIX_NOW": 0,
+    "UNCLASSIFIED": 0
+  },
+  "sourceLedgerCounts": {
+    "TradeFlowKit": { "active": 145, "shared": 58, "security": 43, "productBoundary": 31, "gaps": 0, "unclassified": 0 },
+    "TechDeck": { "active": 91, "shared": 109, "security": 48, "productBoundary": 134, "gaps": 0, "unclassified": 0 },
+    "PulseDesk": { "active": 91, "shared": 74, "security": 53, "productBoundary": 91, "gaps": 0, "unclassified": 0 }
+  },
+  "finalEvidence": [
+    { "command": "corepack pnpm verify:public-launch", "result": "PASS; 13 modules, 30 capabilities, 140 provider variables, 20 ACTIVE_AND_PROVEN, 10 HUMAN_PHASE18, zero FIX_NOW/unclassified" },
+    { "command": "corepack pnpm --dir apps/api test", "result": "PASS; 930 total, 924 pass, 0 fail, 6 intentional HTTP-only skips on operatoros_phase20_api5" },
+    { "command": "corepack pnpm typecheck", "result": "PASS; API, runner-gateway, web" },
+    { "command": "corepack pnpm build:production", "result": "PASS; build 312564d8a52867e6caba7eab" },
+    { "command": "node scripts/start-unified-runtime.mjs", "result": "PASS; health healthy, readiness true, web 200, release v33/33, clean shutdown" },
+    { "command": "corepack pnpm --dir apps/web test:e2e:sso", "result": "PASS 14/14 in 3.2 minutes against compiled exact-host HTTPS topology" },
+    { "command": "playwright test e2e/tradeflowkit-core-crud.spec.ts", "result": "PASS 1/1 in 35.2 seconds" },
+    { "command": "corepack pnpm audit --prod", "result": "PASS; no known vulnerabilities" },
+    { "command": "phase14 load baseline", "result": "PASS 600/600, zero failures, every p95 below 750 ms" },
+    { "command": "git diff --check", "result": "PASS" }
+  ],
+  "browserEvidence": {
+    "activeModuleWorkflows": 13,
+    "ssoAggregate": "14/14",
+    "tradeflowkitVertical": "1/1",
+    "distinctScreenshots": 28,
+    "representativeWidths": [390, 768, 1440],
+    "artifactRoots": [
+      "apps/web/test-results/playwright",
+      "apps/web/test-results/phase20-tradeflowkit"
+    ]
+  },
+  "invalidOrCorrectedIntermediateRuns": [
+    "Release-seeded database aggregate was rejected as an invalid harness because canonical fixtures collided.",
+    "A wrong disposable database password was rejected before application assertions.",
+    "Valid correction aggregates exposed and drove TradeFlowKit, TorqueShed, TechDeck, and PulseDesk fixes.",
+    "The first expanded screenshot aggregate was 13/14 and exposed the entitlement-denial semantic-heading defect; the corrected full rerun passed 14/14.",
+    "The first exact-revision aggregate on the reused disposable database passed 923 and failed one seed-order-dependent launchpad assertion when a canonical free companion was correctly present; the strengthened focused test passed 1/1 and the final aggregate passed 924/0/6."
+  ],
+  "currentBlockers": [],
+  "humanPhase18": {
+    "status": "READY_FOR_OWNER_OPERATED_GATES",
+    "guide": "docs/PHASE18_HUMAN_COMPLETION_GUIDE.md",
+    "remainingSteps": 10,
+    "scope": "Candidate freeze, account decisions, production secrets, preflight, backup, deploy, public identity and 48/48, authenticated 3/3, controlled provider acceptance, and final promotion/rollback decision."
+  }
+}
