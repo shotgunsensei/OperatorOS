@@ -26,7 +26,7 @@ import {
   TORQUESHED_VISIBILITIES,
   TorqueShedValidationError,
 } from '../lib/torqueshed-foundation.js';
-import { createAttachment, listAttachments } from '../lib/shared-attachments.js';
+import { createAttachmentWithOutcome, listAttachments } from '../lib/shared-attachments.js';
 
 const readGuards = [requireTenantMember, requireTenantModuleAccess('torqueshed')];
 const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
@@ -1474,28 +1474,32 @@ async function attachmentRoute(
       min: 4,
     })!;
     const content = Buffer.from(encoded, 'base64');
-    const attachment = await createAttachment({
-      tenantId: tenant(request),
-      moduleId: mod,
-      objectType: target.storage,
-      objectId: id,
-      originalName: torqueText(b.originalName, 'originalName', 240, {
-        required: true,
-        min: 1,
-        singleLine: true,
-      })!,
-      declaredMimeType: torqueText(b.declaredMimeType, 'declaredMimeType', 120, {
-        singleLine: true,
-      }),
-      content,
-      createdByUserId: user(request),
-      correlationId: request.id,
+    const outcome = await db.transaction(async tx => {
+      const created = await createAttachmentWithOutcome({
+        tenantId: tenant(request),
+        moduleId: mod,
+        objectType: target.storage,
+        objectId: id,
+        originalName: torqueText(b.originalName, 'originalName', 240, {
+          required: true,
+          min: 1,
+          singleLine: true,
+        })!,
+        declaredMimeType: torqueText(b.declaredMimeType, 'declaredMimeType', 120, {
+          singleLine: true,
+        }),
+        content,
+        createdByUserId: user(request),
+        correlationId: request.id,
+        idempotencyKey: idempotencyKey(request),
+      }, tx);
+      if (!created.duplicate) await audit(tx, request, 'attachment_created', 'attachment', String(created.attachment.id), {
+        objectType: target.storage,
+        objectId: id,
+      });
+      return created;
     });
-    await audit(db, request, 'attachment_created', 'attachment', String(attachment.id), {
-      objectType: target.storage,
-      objectId: id,
-    });
-    return reply.code(201).send(camelRow(attachment));
+    return reply.code(outcome.duplicate ? 200 : 201).send(camelRow(outcome.attachment));
   } catch (error) {
     const code = (error as any)?.code;
     if (code && String(code).startsWith('ATTACHMENT_'))

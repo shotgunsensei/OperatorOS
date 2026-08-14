@@ -1928,6 +1928,11 @@ export const moduleShellApi = {
         headers: { 'Idempotency-Key': idempotencyKey },
         body: JSON.stringify(input),
       }) as Promise<TorqueAssistResponse>,
+    authorizeNative: (input: Record<string, unknown>): Promise<{ redirectUri: string; expiresAt: string }> =>
+      apiFetch('/modules/torqueshed/native/authorize', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
   },
   pulsedesk: {
     listConnectors: () => apiFetch('/modules/pulsedesk/connectors') as Promise<any>,

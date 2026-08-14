@@ -11,13 +11,13 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 46);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 47);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 46);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 46);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 47);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 47);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'callcommand_msp_automation_fabric_tables');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'torqueshed_native_tables');
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_msp_automation_fabric_tables')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'ninjamation_complete_product_tables'),
@@ -82,6 +82,11 @@ test('database release plan is explicit, ordered, additive, and reusable by star
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'ninja_pool_online_tables')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'torqueshed_web_api_tables'),
     'Ninja Pool Hall online authority must be an additive release step after v38',
+  );
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'torqueshed_native_tables')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'callcommand_msp_automation_fabric_tables'),
+    'TorqueShed Phase 29 native sessions must be an additive release step after v46',
   );
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'directory_tables')

@@ -131,7 +131,7 @@ export function getAttachmentStorageAdapter(): AttachmentStorageAdapter {
   return postgresAttachmentStorage;
 }
 
-export async function createAttachment(input: {
+export type CreateAttachmentInput = {
   tenantId: string;
   moduleId: string;
   objectType: string;
@@ -142,7 +142,14 @@ export async function createAttachment(input: {
   createdByUserId: string;
   retentionUntil?: Date | null;
   correlationId?: string | null;
-}, executor: Executor = db) {
+  idempotencyKey?: string | null;
+};
+
+export async function createAttachmentWithOutcome(
+  input: CreateAttachmentInput,
+  executor?: Executor,
+): Promise<{ attachment: Record<string, unknown>; duplicate: boolean }> {
+  if (!executor) return db.transaction(tx => createAttachmentWithOutcome(input, tx));
   if (input.content.length === 0 || input.content.length > getMaxAttachmentBytes()) {
     throw Object.assign(new Error('Attachment size is outside the configured limit'), { code: 'ATTACHMENT_SIZE_INVALID' });
   }
@@ -151,17 +158,53 @@ export async function createAttachment(input: {
   assertDeclaredMimeMatches(input.declaredMimeType, detectedMimeType);
   const sha256 = createHash('sha256').update(input.content).digest('hex');
   const storage = getAttachmentStorageAdapter();
+  if (input.idempotencyKey) {
+    const existing = await executor.execute(sql`
+      SELECT * FROM shared_attachments
+      WHERE tenant_id=${input.tenantId} AND module_id=${input.moduleId}
+        AND object_type=${input.objectType} AND object_id=${input.objectId}
+        AND client_mutation_id=${input.idempotencyKey}
+      LIMIT 1
+    `);
+    if (existing.rows[0]) {
+      const attachment = existing.rows[0] as Record<string, unknown>;
+      if (String(attachment.sha256) !== sha256) {
+        throw Object.assign(new Error('Idempotency key was already used for different attachment content'), {
+          code: 'ATTACHMENT_IDEMPOTENCY_MISMATCH',
+        });
+      }
+      const attachmentId = String(attachment.id);
+      const stored = await storage.get({ tenantId: input.tenantId, attachmentId }, executor);
+      if (!stored) {
+        await storage.put({ tenantId: input.tenantId, attachmentId, content: input.content }, executor);
+      } else if (createHash('sha256').update(stored).digest('hex') !== sha256) {
+        throw Object.assign(new Error('Stored attachment content failed its integrity check'), {
+          code: 'ATTACHMENT_STORAGE_INTEGRITY',
+        });
+      }
+      await enqueueSharedJob({
+        tenantId: input.tenantId,
+        moduleId: input.moduleId,
+        requestedByUserId: input.createdByUserId,
+        handlerKey: ATTACHMENT_SCAN_JOB,
+        payload: { attachmentId },
+        idempotencyKey: `scan:${attachmentId}:${sha256}`,
+        correlationId: input.correlationId,
+      }, executor);
+      return { attachment, duplicate: true };
+    }
+  }
   const storageKey = `${input.tenantId}/${input.moduleId}/${new Date().toISOString().slice(0, 7)}/${randomBytes(24).toString('hex')}`;
   const result = await executor.execute(sql`
     INSERT INTO shared_attachments (
       tenant_id, module_id, object_type, object_id, original_name, storage_adapter,
       storage_key, size_bytes, declared_mime_type, detected_mime_type, sha256,
-      retention_until, created_by_user_id
+      retention_until, created_by_user_id, client_mutation_id
     ) VALUES (
       ${input.tenantId}, ${input.moduleId}, ${input.objectType}, ${input.objectId},
       ${originalName}, ${storage.name}, ${storageKey}, ${input.content.length},
       ${input.declaredMimeType ?? null}, ${detectedMimeType}, ${sha256},
-      ${input.retentionUntil ?? null}, ${input.createdByUserId}
+      ${input.retentionUntil ?? null}, ${input.createdByUserId}, ${input.idempotencyKey ?? null}
     )
     RETURNING *
   `);
@@ -176,7 +219,14 @@ export async function createAttachment(input: {
     idempotencyKey: `scan:${attachment.id}:${sha256}`,
     correlationId: input.correlationId,
   }, executor);
-  return attachment;
+  return { attachment, duplicate: false };
+}
+
+export async function createAttachment(
+  input: CreateAttachmentInput,
+  executor?: Executor,
+): Promise<Record<string, unknown>> {
+  return (await createAttachmentWithOutcome(input, executor)).attachment;
 }
 
 export async function listAttachments(input: {

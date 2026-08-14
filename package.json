@@ -15,6 +15,8 @@
     "phase26:report:write": "node scripts/phase26-techdeck-report.mjs --write",
     "phase27:report:write": "node scripts/phase27-pulsedesk-report.mjs --write",
     "phase28:report:write": "node scripts/phase28-torqueshed-report.mjs --write",
+    "phase29:report:write": "node scripts/phase29-torqueshed-native-report.mjs --write",
+    "verify:torqueshed:phase29": "pnpm --filter @operatoros/torqueshed-native test && pnpm --filter @operatoros/torqueshed-native typecheck && pnpm --filter @operatoros/torqueshed-native validate:config && pnpm --filter @operatoros/torqueshed-native export:mobile && pnpm --filter @operatoros/api exec tsx --test --test-concurrency=1 test/torqueshed-native-auth.test.ts test/torqueshed-native-static.test.ts && node scripts/phase29-torqueshed-native-report.mjs",
     "phase30:report:write": "node scripts/phase30-ninja-pool-hall-report.mjs --write",
     "phase31:report:write": "node scripts/phase31-brandforgeos-report.mjs --write",
     "phase32:report:write": "node scripts/phase32-snapproofos-report.mjs --write",
@@ -54,7 +56,7 @@
     "parity:discover-target": "node scripts/parity/discover-target.mjs",
     "parity:build": "node scripts/parity/build-ledger.mjs",
     "parity:report": "node scripts/parity/report-parity.mjs",
-    "lint": "eslint scripts apps/api/src apps/api/test apps/runner-gateway/src apps/web/src apps/web/e2e packages --max-warnings=0",
+    "lint": "eslint scripts apps/api/src apps/api/test apps/runner-gateway/src apps/web/src apps/web/e2e apps/torqueshed-native/src apps/torqueshed-native/scripts packages --max-warnings=0",
     "test": "pnpm test:unit && pnpm test:api && pnpm test:integration",
     "test:unit": "node scripts/parity/run-unit-tests.mjs",
     "test:api": "node scripts/parity/run-api-tests.mjs",
@@ -93,7 +95,7 @@
     "build": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web build",
     "build:production": "pnpm verify:faultlinelab:catalog && node scripts/generate-release-metadata.mjs && pnpm typecheck && pnpm build",
     "start": "pnpm -r --parallel --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web start",
-    "typecheck": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web typecheck"
+    "typecheck": "pnpm -r --filter ./apps/api --filter ./apps/runner-gateway --filter ./apps/web --filter ./apps/torqueshed-native typecheck"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",

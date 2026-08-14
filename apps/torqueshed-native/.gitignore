@@ -1,0 +1,9 @@
+.expo/
+android/
+ios/
+dist/
+web-build/
+*.keystore
+*.jks
+*.p8
+*.mobileprovision

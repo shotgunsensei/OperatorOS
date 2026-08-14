@@ -100,6 +100,7 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/settings': { sectionId: 'pulsedesk-settings', label: 'Settings' },
   },
   torqueshed: {
+    '/native-auth': { sectionId: 'torqueshed-native-authorize', label: 'Native Device Authorization' },
     '/dashboard': { sectionId: 'torqueshed-dashboard', label: 'Dashboard' },
     '/garage': { sectionId: 'torqueshed-garage', label: 'Garage' },
     '/vehicles': { sectionId: 'torqueshed-garage', label: 'Vehicles' },

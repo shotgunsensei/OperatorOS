@@ -1,0 +1,123 @@
+name: TorqueShed native release contract
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/torqueshed-native/**'
+      - 'apps/api/src/lib/auth.ts'
+      - 'apps/api/src/lib/shared-attachments.ts'
+      - 'apps/api/src/lib/torqueshed-native-*'
+      - 'apps/api/src/routes/torqueshed-*'
+      - 'apps/web/src/app/.well-known/**'
+      - 'apps/web/src/components/module-shells/TorqueShed*'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/torqueshed-native.yml'
+  pull_request:
+    paths:
+      - 'apps/torqueshed-native/**'
+      - 'apps/api/src/lib/auth.ts'
+      - 'apps/api/src/lib/shared-attachments.ts'
+      - 'apps/api/src/lib/torqueshed-native-*'
+      - 'apps/api/src/routes/torqueshed-*'
+      - 'apps/web/src/app/.well-known/**'
+      - 'apps/web/src/components/module-shells/TorqueShed*'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/torqueshed-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: phase29_ci_only
+          POSTGRES_DB: operatoros_phase29
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d operatoros_phase29"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:phase29_ci_only@127.0.0.1:5432/operatoros_phase29
+      SESSION_SECRET: phase29-ci-session-secret-only
+      APP_ENV: test
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.34.5, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: pnpm-lock.yaml }
+      - run: pnpm install --frozen-lockfile
+      - name: Native TypeScript, unit, config, and dual bundle
+        run: |
+          pnpm --filter @operatoros/torqueshed-native typecheck
+          pnpm --filter @operatoros/torqueshed-native test
+          pnpm --filter @operatoros/torqueshed-native validate:config
+          pnpm --filter @operatoros/torqueshed-native export:mobile
+      - name: Opaque auth, tenant, revocation, and static contracts
+        run: pnpm --filter @operatoros/api exec tsx --test --test-concurrency=1 test/torqueshed-native-auth.test.ts test/torqueshed-native-static.test.ts
+
+  android-device:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.34.5, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: pnpm-lock.yaml }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @operatoros/torqueshed-native prebuild:android
+      - name: Build Android emulator APK
+        run: ./apps/torqueshed-native/android/gradlew -p apps/torqueshed-native/android assembleDebug -PreactNativeArchitectures=x86_64
+      - name: Enable KVM acceleration
+        run: |
+          sudo chmod 0666 /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+      - name: Smoke Android app plus deep link
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_7
+          script: |
+            adb install --no-streaming -r apps/torqueshed-native/android/app/build/outputs/apk/debug/app-debug.apk
+            adb shell am start -W -n pro.torqueshed.app/.MainActivity
+            adb shell am start -W -a android.intent.action.VIEW -d 'torqueshed://settings' pro.torqueshed.app
+            adb shell dumpsys activity activities | grep pro.torqueshed.app
+
+  ios-device:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.34.5, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: pnpm-lock.yaml }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @operatoros/torqueshed-native prebuild:ios
+      - name: Install CocoaPods
+        run: cd apps/torqueshed-native/ios && pod install
+      - name: Build and smoke iOS simulator app plus deep link
+        shell: bash
+        run: |
+          UDID=$(xcrun simctl list devices available -j | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);for(const r of Object.values(j.devices))for(const d of r)if(d.isAvailable&&d.name.startsWith('iPhone')){console.log(d.udid);return}})")
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          cd apps/torqueshed-native
+          xcodebuild -workspace ios/TorqueShed.xcworkspace -scheme TorqueShed -configuration Debug -sdk iphonesimulator -destination "id=$UDID" -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build
+          xcrun simctl install "$UDID" build/ios/Build/Products/Debug-iphonesimulator/TorqueShed.app
+          xcrun simctl launch "$UDID" pro.torqueshed.app
+          xcrun simctl openurl "$UDID" 'torqueshed://settings'
+          xcrun simctl get_app_container "$UDID" pro.torqueshed.app app

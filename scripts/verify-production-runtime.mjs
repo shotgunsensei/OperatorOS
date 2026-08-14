@@ -136,11 +136,11 @@ export function validateReleaseIdentity(payload, expectedCommit) {
   }
   if (
     payload?.databaseRelease?.contractVersion !== 1
-      || payload?.databaseRelease?.releaseVersion !== 40
-      || payload?.databaseRelease?.stepCount !== 40
-      || payload?.databaseRelease?.lastStep !== 'brandforgeos_complete_product_tables'
+    || payload?.databaseRelease?.releaseVersion !== 47
+    || payload?.databaseRelease?.stepCount !== 47
+    || payload?.databaseRelease?.lastStep !== 'torqueshed_native_tables'
   ) {
-      issues.push('database release identity does not match version 40');
+    issues.push('database release identity does not match version 47');
   }
   return issues;
 }
