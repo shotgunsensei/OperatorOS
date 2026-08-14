@@ -136,11 +136,11 @@ export function validateReleaseIdentity(payload, expectedCommit) {
   }
   if (
     payload?.databaseRelease?.contractVersion !== 1
-    || payload?.databaseRelease?.releaseVersion !== 47
-    || payload?.databaseRelease?.stepCount !== 47
-    || payload?.databaseRelease?.lastStep !== 'torqueshed_native_tables'
+    || payload?.databaseRelease?.releaseVersion !== 48
+    || payload?.databaseRelease?.stepCount !== 48
+    || payload?.databaseRelease?.lastStep !== 'cross_module_data_fabric_tables'
   ) {
-    issues.push('database release identity does not match version 47');
+    issues.push('database release identity does not match version 48');
   }
   return issues;
 }

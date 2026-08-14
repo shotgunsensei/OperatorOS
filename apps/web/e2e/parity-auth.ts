@@ -7,6 +7,7 @@ export interface ParitySession {
   userId: string;
   tenantId: string;
   email: string;
+  password: string;
 }
 
 export async function establishParitySession(request: APIRequestContext): Promise<ParitySession> {
@@ -49,5 +50,5 @@ export async function establishParitySession(request: APIRequestContext): Promis
   } finally {
     await pg.end();
   }
-  return { userId: loginBody.user.id, tenantId, email };
+  return { userId: loginBody.user.id, tenantId, email, password };
 }

@@ -87,7 +87,7 @@ const pageCopy: Record<TradeFlowKitScreen, { eyebrow: string; title: string; des
   dashboard: {
     eyebrow: 'Service management overview',
     title: 'Dashboard',
-    description: 'See the real lead, job, task, invoice, and collection state for this organization.',
+    description: 'Move leads into customers, jobs, quotes, invoices, payments, and a clear collection state for this organization.',
   },
   leads: {
     eyebrow: 'Sales pipeline',
@@ -262,7 +262,7 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
               <Link className={styles.iconButton} href={`${hrefFor('/dashboard')}#tradeflowkit-global-search-input`} aria-label="Open TradeFlowKit search"><Search size={17} /></Link>
               <Link className={styles.iconButton} href={hrefFor('/settings')} aria-label="TradeFlowKit settings"><Settings size={17} /></Link>
               <button className={styles.iconButton} type="button" onClick={toggleTheme} aria-label={`Use ${darkThemeActive ? 'light' : 'dark'} TradeFlowKit theme`} title={`Use ${darkThemeActive ? 'light' : 'dark'} TradeFlowKit theme`}>{darkThemeActive ? <Sun size={17} /> : <Moon size={17} />}</button>
-              <span className={styles.iconButton} aria-label="OperatorOS session protected" title="OperatorOS session protected"><ShieldCheck size={17} /></span>
+              <span className={styles.iconButton} aria-label="Protected by OperatorOS" title="Protected by OperatorOS"><ShieldCheck size={17} /></span>
               <span className={styles.iconButton} aria-label="Notifications are delivered by OperatorOS" title="Notifications are delivered by OperatorOS"><Bell size={17} /></span>
             </div>
           </div>
@@ -274,7 +274,7 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
                 <h1>{route.recordId ? `${pageCopy[route.screen].title} detail` : pageCopy[route.screen].title}</h1>
                 <p>{pageCopy[route.screen].description}</p>
               </div>
-              {route.screen === 'dashboard' && <Link className={styles.primaryLink} href={hrefFor('/leads')} data-testid="tradeflowkit-start-with-lead"><ClipboardList size={15} /> Add a lead</Link>}
+              {route.screen === 'dashboard' && <Link className={styles.primaryLink} href={hrefFor('/leads')} data-testid="tradeflowkit-start-with-lead"><ClipboardList size={15} /> Start with a lead</Link>}
               {route.screen === 'quotes' && canManageModule && <Link className={styles.primaryLink} href={hrefFor('/quotes/new')}><FileText size={15} /> New quote</Link>}
               {route.screen === 'invoices' && canManageModule && <Link className={styles.primaryLink} href={hrefFor('/invoices/new')}><Receipt size={15} /> New invoice</Link>}
             </header>

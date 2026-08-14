@@ -49,6 +49,7 @@ import { registerSharedServiceRoutes } from './routes/shared-service-routes.js';
 import { registerSharedPlatformRoutes } from './routes/shared-platform-routes.js';
 import { registerSnapProofOsRoutes } from './routes/snapproofos-routes.js';
 import { registerSnapProofOsPhase32Routes } from './routes/snapproofos-phase32-routes.js';
+import { registerCrossModuleDataFabricRoutes } from './routes/cross-module-data-fabric-routes.js';
 import { registerOperatorOsMessagingComplianceRoutes } from './routes/operatoros-messaging-compliance-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
 import {
@@ -265,6 +266,7 @@ await registerSharedServiceRoutes(app);
 await registerSharedPlatformRoutes(app);
 await registerSnapProofOsRoutes(app);
 await registerSnapProofOsPhase32Routes(app);
+await registerCrossModuleDataFabricRoutes(app);
 await registerOperatorOsMessagingComplianceRoutes(app);
 
 if (process.env.OPERATOROS_DATABASE_RELEASE_APPLIED === '1') {

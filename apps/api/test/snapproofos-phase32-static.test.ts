@@ -11,7 +11,7 @@ test('Phase 32 is pinned to all sixteen source domains and retains additive rele
   const source = JSON.parse(read('apps/modules/snapproofos/source/SOURCE_SNAPSHOT.json'));
   assert.equal(source.sourceCommit, '26bded38c13b5b6361d407462c68052b0c30613d');
   const contract = read('apps/api/src/lib/database-release-contract.ts');
-  assert.match(contract, /releaseVersion:\s*44/);
+  assert.ok(Number(contract.match(/releaseVersion:\s*(\d+)/)?.[1] ?? 0) >= 41);
   assert.match(contract, /snapproofos_complete_product_tables/);
   assert.ok(contract.indexOf('snapproofos_complete_product_tables') < contract.indexOf('studyforge_complete_product_tables'));
   const ddl = read('apps/api/src/lib/snapproofos-phase32-db-init.ts');

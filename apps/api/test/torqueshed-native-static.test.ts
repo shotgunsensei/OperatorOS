@@ -25,7 +25,7 @@ test('native security, offline, association, and release gates are explicit', ()
   assert.match(read('apps/torqueshed-native/src/lib/api.ts'), /refreshInFlightByAccessToken/); assert.match(read('apps/torqueshed-native/src/lib/api.ts'), /validateRefreshResult/);
   assert.match(rootLayout, /if \(!auth\.session\)/); assert.match(rootLayout, /resume this route/);
   assert.match(server, /tsn_a_/); assert.match(server, /resolveTenantModuleAccess/); assert.match(server, /timingSafeEqual/); assert.match(server, /revokeTorqueShedNativeRefreshToken/);
-  assert.match(read('apps/api/src/lib/database-release-contract.ts'), /releaseVersion:\s*47/);
+  assert.match(read('apps/api/src/lib/database-release-contract.ts'), /releaseVersion:\s*48/);
   assert.match(read('apps/web/src/app/.well-known/apple-app-site-association/route.ts'), /TORQUESHED_IOS_TEAM_ID/);
   assert.match(read('apps/web/src/app/.well-known/assetlinks.json/route.ts'), /TORQUESHED_ANDROID_SHA256_CERT_FINGERPRINT/);
   assert.doesNotMatch(read('apps/torqueshed-native/app.config.ts'), /YOUR_|PLACEHOLDER|REPLACE_ME|0000000000|AA:AA:AA/i);

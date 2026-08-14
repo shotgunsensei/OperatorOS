@@ -270,6 +270,10 @@ export const sharedPlatformApi = {
     apiFetch(`/tenants/${tenantId}/shared-platform/exports`, { method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify(data) }),
   createDownloadGrant: (tenantId: string, attachmentId: string, moduleSlug: string) =>
     apiFetch(`/tenants/${tenantId}/shared-platform/attachments/${attachmentId}/download-grant`, { method: 'POST', body: JSON.stringify({ moduleSlug }) }),
+  dataFabricActivity: (tenantId: string) => apiFetch(`/tenants/${tenantId}/data-fabric/activity`),
+  dataFabricRun: (tenantId: string, runId: string) => apiFetch(`/tenants/${tenantId}/data-fabric/runs/${runId}`),
+  replayDataFabricInbox: (tenantId: string, inboxId: string) =>
+    apiFetch(`/tenants/${tenantId}/data-fabric/inbox/${inboxId}/replay`, { method: 'POST' }),
 };
 
 export type TechDeckTicketPriority = 'critical' | 'high' | 'medium' | 'low';

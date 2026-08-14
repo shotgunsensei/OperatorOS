@@ -18,7 +18,7 @@ import {
   tradeflowkitCustomerProfiles,
 } from '../schema.js';
 
-export const DIRECTORY_MODULE_SLUGS = ['tradeflowkit', 'techdeck', 'pulsedesk'] as const;
+export const DIRECTORY_MODULE_SLUGS = ['tradeflowkit', 'techdeck', 'pulsedesk', 'snapproofos'] as const;
 export type DirectoryModuleSlug = (typeof DIRECTORY_MODULE_SLUGS)[number];
 
 export interface DirectoryActor {
@@ -136,7 +136,9 @@ export async function getOrganization(actor: DirectoryActor, id: string) {
     ? db.select().from(tradeflowkitCustomerProfiles).where(and(eq(tradeflowkitCustomerProfiles.tenantId, actor.tenantId), eq(tradeflowkitCustomerProfiles.organizationId, id))).limit(1)
     : actor.moduleSlug === 'techdeck'
       ? db.select().from(techdeckManagedClientProfiles).where(and(eq(techdeckManagedClientProfiles.tenantId, actor.tenantId), eq(techdeckManagedClientProfiles.organizationId, id))).limit(1)
-      : db.select().from(pulsedeskServiceClientProfiles).where(and(eq(pulsedeskServiceClientProfiles.tenantId, actor.tenantId), eq(pulsedeskServiceClientProfiles.organizationId, id))).limit(1);
+      : actor.moduleSlug === 'pulsedesk'
+        ? db.select().from(pulsedeskServiceClientProfiles).where(and(eq(pulsedeskServiceClientProfiles.tenantId, actor.tenantId), eq(pulsedeskServiceClientProfiles.organizationId, id))).limit(1)
+        : Promise.resolve([]);
   const [sites, contactLinks, relationships, profile] = await Promise.all([
     db.select().from(directorySites).where(and(eq(directorySites.tenantId, actor.tenantId), eq(directorySites.organizationId, id), isNull(directorySites.archivedAt))).orderBy(asc(directorySites.normalizedName)),
     db.select({ association: directoryOrganizationContacts, contact: directoryContacts })

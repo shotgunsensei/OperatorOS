@@ -37,7 +37,7 @@ test('MSP schema is additive, tenant-bearing, constrained, idempotent, and relea
   assert.match(schema, /FOREIGN KEY \(tenant_id,call_context_id\)/);
   assert.match(schema, /UNIQUE \(tenant_id,idempotency_key\)/);
   assert.match(schema, /previous_event_hash CHAR\(64\)/);
-  assert.match(release, /releaseVersion: 46/);
+  assert.ok(Number(release.match(/releaseVersion:\s*(\d+)/)?.[1] ?? 0) >= 46);
   assert.match(release, /ninjamation_complete_product_tables[\s\S]*callcommand_msp_automation_fabric_tables/);
 });
 

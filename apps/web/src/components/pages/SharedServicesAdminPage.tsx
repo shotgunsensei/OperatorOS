@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, Boxes, KeyRound, Link2, RefreshCw, Send, ServerCog, ShieldCheck, Users } from 'lucide-react';
+import { Activity, ArrowRight, Boxes, KeyRound, Link2, RefreshCw, RotateCcw, Send, ServerCog, ShieldCheck, Users } from 'lucide-react';
 import { sharedPlatformApi, tenantApi } from '@/lib/auth';
 import { getActiveTenantId } from '@/lib/auth';
 import { cardStyle, buttonStyles, semantic, space, fontSize, radius } from '@/lib/design-tokens';
@@ -32,6 +32,7 @@ export default function SharedServicesAdminPage({ onNavigate }: Props) {
   const [operations, setOperations] = useState<any>(null);
   const [modules, setModules] = useState<any[]>([]);
   const [endpoints, setEndpoints] = useState<any[]>([]);
+  const [fabricRuns, setFabricRuns] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [oneTimeToken, setOneTimeToken] = useState<string | null>(null);
@@ -40,12 +41,13 @@ export default function SharedServicesAdminPage({ onNavigate }: Props) {
     if (!tenantId) return;
     setError(null);
     try {
-      const [nextOverview, nextOperations, moduleData, endpointData] = await Promise.all([
+      const [nextOverview, nextOperations, moduleData, endpointData, fabricData] = await Promise.all([
         sharedPlatformApi.overview(tenantId), sharedPlatformApi.operations(tenantId),
-        tenantApi.listModules(tenantId), sharedPlatformApi.webhookEndpoints(tenantId),
+        tenantApi.listModules(tenantId), sharedPlatformApi.webhookEndpoints(tenantId), sharedPlatformApi.dataFabricActivity(tenantId),
       ]);
       setOverview(nextOverview); setOperations(nextOperations);
       setModules(moduleData.modules ?? []); setEndpoints(endpointData.endpoints ?? []);
+      setFabricRuns(fabricData.runs ?? []);
     } catch (e: any) { setError(e?.error || 'Shared service control data could not be loaded.'); }
   }, [tenantId]);
 
@@ -66,7 +68,7 @@ export default function SharedServicesAdminPage({ onNavigate }: Props) {
       <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'center', marginBottom: space.xl }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 24, display: 'flex', gap: 9, alignItems: 'center' }}><ServerCog size={23} color={semantic.accent} /> Shared services</h1>
-          <p style={{ color: semantic.textMuted, margin: '5px 0 0' }}>Tenant-scoped providers, workers, quarantine, webhooks, API tokens, usage, and exports.</p>
+          <p style={{ color: semantic.textMuted, margin: '5px 0 0' }}>Tenant-scoped providers, workers, cross-module provenance, quarantine, webhooks, API tokens, usage, and exports.</p>
         </div>
         <button data-testid="button-refresh-shared-services" style={buttonStyles.secondary} onClick={() => void refresh()}><RefreshCw size={14} /> Refresh</button>
       </header>
@@ -98,8 +100,30 @@ export default function SharedServicesAdminPage({ onNavigate }: Props) {
       </div>
 
       <OperationsTable operations={operations} modules={modules} busy={busy} run={run} tenantId={tenantId} />
+      <DataFabricActivity runs={fabricRuns} busy={busy} run={run} tenantId={tenantId} />
     </div>
   );
+}
+
+function DataFabricActivity({ runs, busy, run, tenantId }: any) {
+  return <section style={{ ...cardStyle, marginTop: space.lg }} data-testid="cross-module-provenance">
+    <h2 style={{ margin: '0 0 5px', fontSize: 16, display: 'flex', alignItems: 'center', gap: 7 }}><Link2 size={16} /> Cross-module activity and provenance</h2>
+    <p style={{ color: semantic.textMuted, fontSize: 12, margin: '0 0 10px' }}>Every row is tenant-bound, entitlement-filtered, idempotent, and linked to its native source and destination records.</p>
+    {runs.length ? runs.map((item: any) => <article key={item.id} data-testid={`fabric-run-${item.id}`} style={{ borderTop: `1px solid ${semantic.border}`, padding: '10px 0', display: 'grid', gap: 7 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', fontSize: 12 }}>
+        <strong>{item.source_module_name || item.source_module_slug}</strong><ArrowRight size={13} aria-hidden="true" /><strong>{item.destination_module_name || item.destination_module_slug}</strong>
+        <StateBadge value={item.status} />
+        <span style={{ color: semantic.textMuted }}>attempts {item.attempt_count ?? 0}/{item.max_attempts ?? 0} · replays {item.replay_count ?? 0}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', fontSize: 12 }}>
+        {item.source_deep_link && <a href={item.source_deep_link} style={{ color: semantic.accent }}>Open source</a>}
+        {item.destination_deep_link && <a href={item.destination_deep_link} style={{ color: semantic.accent }}>Open destination</a>}
+        <span style={{ color: semantic.textMuted }}>{item.workflow_key} · actor {item.actor_email || 'removed user'}</span>
+        {item.last_error_code && <code style={{ color: semantic.accentDanger }}>{item.last_error_code}</code>}
+        {item.delivery_status === 'dead_letter' && <button style={buttonStyles.secondary} disabled={busy === `fabric-${item.inbox_id}`} onClick={() => run(`fabric-${item.inbox_id}`, () => sharedPlatformApi.replayDataFabricInbox(tenantId,item.inbox_id))}><RotateCcw size={13} /> Replay</button>}
+      </div>
+    </article>) : <div style={{ color: semantic.textMuted, fontSize: 12 }}>No cross-module workflows have been queued for this organization.</div>}
+  </section>;
 }
 
 function ProviderSetup({ busy, providers, run, tenantId }: any) {

@@ -43,6 +43,7 @@ import { ensureNinjamationTables } from './ninjamation-db-init.js';
 import { ensureNinjamationPhase36Tables } from './ninjamation-phase36-db-init.js';
 import { ensureOutCallProductTables, ensureOutCallTables } from './outcall-db-init.js';
 import { ensureOperatorOsMessagingComplianceTables } from './operatoros-messaging-compliance-db-init.js';
+import { ensureCrossModuleDataFabricTables } from './cross-module-data-fabric-db-init.js';
 import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db-init.js';
 import { ensureTradeFlowKitLeadOperationsTables } from './tradeflowkit-lead-operations-db-init.js';
 import { ensureTradeFlowKitPublicOperationsTables } from './tradeflowkit-public-operations-db-init.js';
@@ -104,6 +105,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   ninjamation_complete_product_tables: ensureNinjamationPhase36Tables,
   callcommand_msp_automation_fabric_tables: ensureCallCommandMspTables,
   torqueshed_native_tables: ensureTorqueShedNativeTables,
+  cross_module_data_fabric_tables: ensureCrossModuleDataFabricTables,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -267,6 +269,13 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.operatoros_sms_consent_records') IS NOT NULL AS operatoros_sms_consent_records,
       to_regclass('public.operatoros_sms_consent_events') IS NOT NULL AS operatoros_sms_consent_events,
       to_regclass('public.operatoros_sms_consent_rate_limits') IS NOT NULL AS operatoros_sms_consent_rate_limits
+      ,to_regclass('public.shared_resource_references') IS NOT NULL AS shared_resource_references
+      ,to_regclass('public.shared_workflow_rules') IS NOT NULL AS shared_workflow_rules
+      ,to_regclass('public.shared_workflow_runs') IS NOT NULL AS shared_workflow_runs
+      ,to_regclass('public.shared_domain_events') IS NOT NULL AS shared_domain_events
+      ,to_regclass('public.shared_event_inbox') IS NOT NULL AS shared_event_inbox
+      ,to_regclass('public.shared_resource_links') IS NOT NULL AS shared_resource_links
+      ,to_regclass('public.shared_workflow_compensations') IS NOT NULL AS shared_workflow_compensations
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
   const missing = Object.entries(row ?? {})

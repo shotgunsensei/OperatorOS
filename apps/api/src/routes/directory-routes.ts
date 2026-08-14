@@ -69,6 +69,9 @@ const profileSchemas = {
     phiRestricted: z.boolean().optional(),
     notes: z.string().trim().max(4000).nullable().optional(),
   }).strict(),
+  // SnapProofOS consumes the canonical organization/site/contact records
+  // directly; it intentionally has no duplicate child profile authority.
+  snapproofos: z.never(),
 } satisfies Record<DirectoryModuleSlug, z.ZodTypeAny>;
 
 function moduleSlug(request: FastifyRequest): DirectoryModuleSlug | null {

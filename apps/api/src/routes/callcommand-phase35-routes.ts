@@ -40,6 +40,8 @@ import { createAttachment } from '../lib/shared-attachments.js';
 import { getOutboundProviderAdapter, getSharedProviderStatuses } from '../lib/shared-provider-adapters.js';
 import { enqueueOutboundWebhook, listOutboundWebhookEndpoints } from '../lib/shared-outbound-webhooks.js';
 import { appendActivityEvent, recordUsageEvent, summarizeUsage } from '../lib/shared-usage-activity.js';
+import { publishConfiguredCallWorkflows } from '../lib/cross-module-data-fabric.js';
+import { safeFailureCode } from '../lib/shared-service-safety.js';
 
 const MODULE_SLUG = 'callcommand-ai';
 const base = '/v1/modules/callcommand-ai/product';
@@ -249,7 +251,21 @@ async function processCall(input: { tenantId: string; userId: string; callId: st
   }
   const modId = await moduleId();
   await recordUsageEvent({ tenantId: input.tenantId, moduleId: modId, userId: input.userId, operation: 'call_analysis', units: 1, unitKind: 'call', idempotencyKey: `call-analysis:${input.callId}`, externalReference: input.callId, metadata: { provider: resolved.provider, provenance: resolved.provenance } });
-  return { call: camel(updated), actions: actionResults, flow: flowResult, provenance: { provider: resolved.provider, model: resolved.model, mode: resolved.provenance } };
+  // Cross-module routing is outbox-backed and intentionally cannot roll back
+  // the analyzed call. Disabled/revoked destinations become observable fabric
+  // failures while CallCommand remains authoritative for its call record.
+  let fabric: Array<Record<string, unknown>>;
+  try {
+    fabric = await publishConfiguredCallWorkflows({
+      tenantId: input.tenantId,
+      actorUserId: input.userId,
+      callId: input.callId,
+      correlationId: input.correlationId ?? `call-analysis:${input.callId}`,
+    });
+  } catch (error) {
+    fabric = [{ queued: false, errorCode: safeFailureCode(error, 'FABRIC_RULE_QUEUE_FAILED') }];
+  }
+  return { call: camel(updated), actions: actionResults, flow: flowResult, fabric, provenance: { provider: resolved.provider, model: resolved.model, mode: resolved.provenance } };
 }
 
 export async function registerCallCommandPhase35Routes(app: FastifyInstance) {

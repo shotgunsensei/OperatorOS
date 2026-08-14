@@ -202,6 +202,23 @@ async function assertTenantUser(tenantId: string, userId: string | null) {
     );
 }
 
+async function assertDirectorySelection(tenantId: string, organizationId: string | null, siteId: string | null, contactId: string | null) {
+  if (siteId && !organizationId)
+    throw new InputError('directoryOrganizationId is required when selecting a site', 'SNAPPROOF_DIRECTORY_SELECTION_INVALID');
+  if (organizationId) {
+    const organization = await db.execute(sql`SELECT 1 FROM directory_organizations WHERE tenant_id=${tenantId} AND id=${organizationId} AND archived_at IS NULL LIMIT 1`);
+    if (!organization.rows[0]) throw new InputError('Directory organization was not found', 'SNAPPROOF_DIRECTORY_SELECTION_INVALID', 404);
+  }
+  if (siteId) {
+    const site = await db.execute(sql`SELECT 1 FROM directory_sites WHERE tenant_id=${tenantId} AND organization_id=${organizationId} AND id=${siteId} AND archived_at IS NULL LIMIT 1`);
+    if (!site.rows[0]) throw new InputError('Directory site was not found for this organization', 'SNAPPROOF_DIRECTORY_SELECTION_INVALID', 404);
+  }
+  if (contactId) {
+    const contact = await db.execute(sql`SELECT 1 FROM directory_contacts WHERE tenant_id=${tenantId} AND id=${contactId} AND archived_at IS NULL LIMIT 1`);
+    if (!contact.rows[0]) throw new InputError('Directory contact was not found', 'SNAPPROOF_DIRECTORY_SELECTION_INVALID', 404);
+  }
+}
+
 async function consumePublicRateLimit(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -411,8 +428,12 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
   app.post(`${base}/customers`, { preHandler: writeGuards }, async (request, reply) => {
     try {
       const input = body(request);
+      const directoryOrganizationId = text(input.directoryOrganizationId, 'directoryOrganizationId', 36);
+      const directorySiteId = text(input.directorySiteId, 'directorySiteId', 36);
+      const directoryContactId = text(input.directoryContactId, 'directoryContactId', 36);
+      await assertDirectorySelection(tenant(request), directoryOrganizationId, directorySiteId, directoryContactId);
       const result = await db.execute(
-        sql`INSERT INTO snapproof_customers(tenant_id,created_by_user_id,name,email,phone,company,address,notes) VALUES (${tenant(request)},${actor(request)},${text(input.name, 'name', 200, true)},${text(input.email, 'email', 320)},${text(input.phone, 'phone', 40)},${text(input.company, 'company', 200)},${text(input.address, 'address', 2000)},${text(input.notes, 'notes', 5000)}) RETURNING *`,
+        sql`INSERT INTO snapproof_customers(tenant_id,created_by_user_id,name,email,phone,company,address,notes,directory_organization_id,directory_site_id,directory_contact_id) VALUES (${tenant(request)},${actor(request)},${text(input.name, 'name', 200, true)},${text(input.email, 'email', 320)},${text(input.phone, 'phone', 40)},${text(input.company, 'company', 200)},${text(input.address, 'address', 2000)},${text(input.notes, 'notes', 5000)},${directoryOrganizationId},${directorySiteId},${directoryContactId}) RETURNING *`,
       );
       const row = result.rows[0] as Row;
       await activity(
@@ -451,8 +472,15 @@ export async function registerSnapProofOsPhase32Routes(app: FastifyInstance): Pr
     try {
       const input = body(request);
       const customerId = identifier(request);
+      const existing = await db.execute(sql`SELECT directory_organization_id,directory_site_id,directory_contact_id FROM snapproof_customers WHERE tenant_id=${tenant(request)} AND id=${customerId} AND archived_at IS NULL LIMIT 1`);
+      if (!existing.rows[0]) return reply.code(404).send({ error: 'Customer not found', code: 'SNAPPROOF_CUSTOMER_NOT_FOUND' });
+      const current = existing.rows[0] as Row;
+      const directoryOrganizationId = 'directoryOrganizationId' in input ? text(input.directoryOrganizationId, 'directoryOrganizationId', 36) : current.directory_organization_id;
+      const directorySiteId = 'directorySiteId' in input ? text(input.directorySiteId, 'directorySiteId', 36) : current.directory_site_id;
+      const directoryContactId = 'directoryContactId' in input ? text(input.directoryContactId, 'directoryContactId', 36) : current.directory_contact_id;
+      await assertDirectorySelection(tenant(request), directoryOrganizationId, directorySiteId, directoryContactId);
       const result = await db.execute(
-        sql`UPDATE snapproof_customers SET name=COALESCE(${text(input.name, 'name', 200)},name),email=CASE WHEN ${'email' in input} THEN ${text(input.email, 'email', 320)} ELSE email END,phone=CASE WHEN ${'phone' in input} THEN ${text(input.phone, 'phone', 40)} ELSE phone END,company=CASE WHEN ${'company' in input} THEN ${text(input.company, 'company', 200)} ELSE company END,address=CASE WHEN ${'address' in input} THEN ${text(input.address, 'address', 2000)} ELSE address END,notes=CASE WHEN ${'notes' in input} THEN ${text(input.notes, 'notes', 5000)} ELSE notes END,version=version+1,updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${customerId} AND archived_at IS NULL RETURNING *`,
+        sql`UPDATE snapproof_customers SET name=COALESCE(${text(input.name, 'name', 200)},name),email=CASE WHEN ${'email' in input} THEN ${text(input.email, 'email', 320)} ELSE email END,phone=CASE WHEN ${'phone' in input} THEN ${text(input.phone, 'phone', 40)} ELSE phone END,company=CASE WHEN ${'company' in input} THEN ${text(input.company, 'company', 200)} ELSE company END,address=CASE WHEN ${'address' in input} THEN ${text(input.address, 'address', 2000)} ELSE address END,notes=CASE WHEN ${'notes' in input} THEN ${text(input.notes, 'notes', 5000)} ELSE notes END,directory_organization_id=${directoryOrganizationId},directory_site_id=${directorySiteId},directory_contact_id=${directoryContactId},version=version+1,updated_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${customerId} AND archived_at IS NULL RETURNING *`,
       );
       if (!result.rows[0])
         return reply

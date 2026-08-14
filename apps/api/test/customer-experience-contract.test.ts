@@ -111,6 +111,7 @@ test('every module receives organization context and customer-facing account nav
 test('six representative customer workflows expose a plain first action and trust boundary', () => {
   const home = read('apps/web/src/components/pages/MyAppsPage.tsx');
   const tradeFlowKit = read('apps/web/src/components/module-shells/TradeFlowKitShell.tsx');
+  const tradeFlowKitStyles = read('apps/web/src/components/module-shells/TradeFlowKitShell.module.css');
   const tradeFlowKitRevenue = read('apps/web/src/components/module-shells/TradeFlowKitRevenueFlow.tsx');
   const torqueShed = read('apps/web/src/components/module-shells/TorqueShedWorkspace.tsx');
   const pulseDesk = read('apps/web/src/components/module-shells/PulseDeskShell.tsx');
@@ -125,10 +126,10 @@ test('six representative customer workflows expose a plain first action and trus
 
   assert.match(tradeFlowKit, /Start with a lead/);
   assert.match(tradeFlowKit, /Protected by OperatorOS/);
-  assert.match(tradeFlowKit, /bg: '#07110e'/);
-  assert.match(tradeFlowKit, /color-scheme: dark/);
-  assert.match(tradeFlowKitRevenue, /panel: '#0f1b17'/);
-  assert.doesNotMatch(tradeFlowKit, /bg: '#f6fbf8'/);
+  assert.match(tradeFlowKitStyles, /\.shell\[data-theme='dark'\][\s\S]*color-scheme:\s*dark/);
+  assert.match(tradeFlowKitStyles, /@media \(prefers-color-scheme: dark\)/);
+  assert.match(tradeFlowKitRevenue, /panel: 'var\(--tfk-panel\)'/);
+  assert.doesNotMatch(tradeFlowKitStyles, /#f6fbf8/);
   assert.match(torqueShed, /Start diagnostic/);
   assert.match(torqueShed, /More tools/);
   assert.match(pulseDesk, /Open request queue/);

@@ -86,6 +86,8 @@ export async function ensureSchemaReady() {
   await ensurePulseDeskTables();
   const { ensureTorqueShedTables } = await import('../src/lib/torqueshed-db-init.js');
   await ensureTorqueShedTables();
+  const { ensureFaultlineLabTables } = await import('../src/lib/faultlinelab-db-init.js');
+  await ensureFaultlineLabTables();
   const { ensureNinjaPoolHallTables } = await import('../src/lib/ninja-pool-hall-db-init.js');
   await ensureNinjaPoolHallTables();
   const { ensureNinjaPoolOnlineTables } = await import('../src/lib/ninja-pool-online-db-init.js');
@@ -113,12 +115,22 @@ export async function ensureSchemaReady() {
   await ensureSnapProofOsTables();
   const { ensureSnapProofOsPhase32Tables } = await import('../src/lib/snapproofos-phase32-db-init.js');
   await ensureSnapProofOsPhase32Tables();
+  const { ensureNinjaLaunchKitTables } = await import('../src/lib/ninja-launch-kit-db-init.js');
+  await ensureNinjaLaunchKitTables();
+  const { ensureNinjaLaunchKitPhase34Tables } = await import('../src/lib/ninja-launch-kit-phase34-db-init.js');
+  await ensureNinjaLaunchKitPhase34Tables();
+  const { ensureNinjamationTables } = await import('../src/lib/ninjamation-db-init.js');
+  await ensureNinjamationTables();
+  const { ensureNinjamationPhase36Tables } = await import('../src/lib/ninjamation-phase36-db-init.js');
+  await ensureNinjamationPhase36Tables();
   const { ensureCallCommandTables } = await import('../src/lib/callcommand-db-init.js');
   await ensureCallCommandTables();
   const { ensureCallCommandPhase35Tables } = await import('../src/lib/callcommand-phase35-db-init.js');
   await ensureCallCommandPhase35Tables();
   const { ensureCallCommandMspTables } = await import('../src/lib/callcommand-msp-db-init.js');
   await ensureCallCommandMspTables();
+  const { ensureCrossModuleDataFabricTables } = await import('../src/lib/cross-module-data-fabric-db-init.js');
+  await ensureCrossModuleDataFabricTables();
   await ensureTestPlans();
 }
 
@@ -237,6 +249,13 @@ export async function cleanupUser(userId: string) {
       // Shared-service tables deliberately use restrictive foreign keys so
       // tests exercise the same deletion ordering required by production
       // retention workflows. Remove tenant-scoped leaves before the tenant.
+      try { await db.execute(sql`DELETE FROM shared_workflow_compensations WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_resource_links WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_event_inbox WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_domain_events WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_workflow_runs WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_workflow_rules WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM shared_resource_references WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM shared_download_grants WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM shared_delivery_attempts WHERE tenant_id = ${t.id}`); } catch {}
       try { await db.execute(sql`DELETE FROM shared_webhook_deliveries WHERE tenant_id = ${t.id}`); } catch {}
