@@ -19,3 +19,5 @@ apps/web/android/local.properties
 test-results/
 playwright-report/
 build/
+!apps/torqueshed-native/src/app/build/
+!apps/torqueshed-native/src/app/build/**

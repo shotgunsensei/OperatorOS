@@ -44,3 +44,5 @@ overrides:
   "tsx>esbuild": ">=0.28.1"
   "vite>esbuild": ">=0.28.1"
   "@esbuild-kit/core-utils>esbuild": ">=0.25.0"
+patchedDependencies:
+  '@expo/plist@0.8.1': patches/@expo__plist@0.8.1.patch
