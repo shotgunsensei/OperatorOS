@@ -89,7 +89,9 @@ test('one-use PKCE exchange returns tenant-bound opaque tokens and supports head
   const mediaHeaders = { ...nativeHeaders, 'idempotency-key': 'native-media-mutation-0001' };
   const mediaOne = await app.inject({ method: 'POST', url: `/v1/modules/torqueshed/builds/${build.id}/attachments`, headers: mediaHeaders, payload: { originalName: 'proof.png', declaredMimeType: 'image/png', contentBase64: image } });
   const mediaReplay = await app.inject({ method: 'POST', url: `/v1/modules/torqueshed/builds/${build.id}/attachments`, headers: mediaHeaders, payload: { originalName: 'proof.png', declaredMimeType: 'image/png', contentBase64: image } });
-  assert.equal(mediaOne.statusCode, 201, mediaOne.body); assert.equal(mediaReplay.statusCode, 201, mediaReplay.body); assert.equal(mediaReplay.json().id, mediaOne.json().id);
+  assert.equal(mediaOne.statusCode, 201, mediaOne.body); assert.equal(mediaReplay.statusCode, 200, mediaReplay.body); assert.equal(mediaReplay.json().id, mediaOne.json().id);
+  const mediaAudit = await db.execute(sql`SELECT count(*)::int AS count FROM activity_feed WHERE tenant_id=${ownerA.currentTenantId} AND action='torqueshed_attachment_created' AND entity_type='torqueshed_attachment' AND entity_id=${mediaOne.json().id}`);
+  assert.equal(Number(mediaAudit.rows[0]?.count), 1);
   const replay = await exchange(proof); assert.equal(replay.statusCode, 401, replay.body);
 });
 

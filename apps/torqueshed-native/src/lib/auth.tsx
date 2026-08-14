@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
+import NetInfo from '@react-native-community/netinfo';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { nativeConfig } from './config';
@@ -27,6 +28,7 @@ export type NativeSession = {
 
 type SessionMeta = Omit<NativeSession, 'accessToken' | 'refreshToken'>;
 type PendingRevocation = { refreshToken: string; deviceId: string };
+let revocationFlushInFlight: Promise<void> | null = null;
 type AuthContextValue = {
   session: NativeSession | null;
   loading: boolean;
@@ -113,7 +115,7 @@ async function sendRevocation(entry: PendingRevocation): Promise<'complete' | 'r
   }
 }
 
-async function flushPendingRevocations(): Promise<void> {
+async function performPendingRevocationFlush(): Promise<void> {
   const pending = await readPendingRevocations();
   if (pending.length === 0) return;
   const remaining: PendingRevocation[] = [];
@@ -121,6 +123,13 @@ async function flushPendingRevocations(): Promise<void> {
     if (await sendRevocation(entry) === 'retry') remaining.push(entry);
   }
   await writePendingRevocations(remaining);
+}
+
+function flushPendingRevocations(): Promise<void> {
+  revocationFlushInFlight ??= performPendingRevocationFlush().finally(() => {
+    revocationFlushInFlight = null;
+  });
+  return revocationFlushInFlight;
 }
 
 async function readSession(): Promise<NativeSession | null> {
@@ -161,6 +170,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(setSession)
       .finally(() => setLoading(false));
   }, []);
+  useEffect(() => NetInfo.addEventListener(state => {
+    if (state.isConnected === true && state.isInternetReachable !== false) void flushPendingRevocations();
+  }), []);
 
   const refresh = useCallback(async (): Promise<string | null> => {
     const current = await readSession();

@@ -1,7 +1,7 @@
 import NetInfo from '@react-native-community/netinfo';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Crypto from 'expo-crypto';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { apiRequest, ApiError, configureApiRefresh } from './api';
 import { useAuth } from './auth';
 import { enqueueMutation, flushMutationQueue, loadQueue, type QueueScope, type QueuedMutation } from './offline-queue';
@@ -26,6 +26,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [online, setOnline] = useState(true);
   const [pending, setPending] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const syncingRef = useRef(false);
   const [lastError, setLastError] = useState<string | null>(null);
 
   useEffect(() => configureApiRefresh(auth.refresh), [auth.refresh]);
@@ -39,7 +40,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   useEffect(() => { void recount(); }, [recount]);
 
   const flush = useCallback(async () => {
-    if (!online || !scope || syncing) return;
+    if (!online || !scope || syncingRef.current) return;
+    syncingRef.current = true;
     setSyncing(true);
     try {
       const result = await flushMutationQueue(scope, async item => {
@@ -51,8 +53,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         await apiRequest(item.path, { method: item.method, body: requestBody, idempotencyKey: item.id });
       }, (_item, error) => setLastError(error));
       setPending(result.pending);
-    } finally { setSyncing(false); }
-  }, [online, scope?.tenantId, scope?.userId, syncing]);
+    } finally {
+      syncingRef.current = false;
+      setSyncing(false);
+    }
+  }, [online, scope?.tenantId, scope?.userId]);
 
   useEffect(() => NetInfo.addEventListener(state => {
     const connected = state.isConnected === true && state.isInternetReachable !== false;

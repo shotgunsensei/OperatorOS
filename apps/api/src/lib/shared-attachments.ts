@@ -131,7 +131,7 @@ export function getAttachmentStorageAdapter(): AttachmentStorageAdapter {
   return postgresAttachmentStorage;
 }
 
-export async function createAttachment(input: {
+export type CreateAttachmentInput = {
   tenantId: string;
   moduleId: string;
   objectType: string;
@@ -143,8 +143,13 @@ export async function createAttachment(input: {
   retentionUntil?: Date | null;
   correlationId?: string | null;
   idempotencyKey?: string | null;
-}, executor?: Executor): Promise<Record<string, unknown>> {
-  if (!executor) return db.transaction(tx => createAttachment(input, tx));
+};
+
+export async function createAttachmentWithOutcome(
+  input: CreateAttachmentInput,
+  executor?: Executor,
+): Promise<{ attachment: Record<string, unknown>; duplicate: boolean }> {
+  if (!executor) return db.transaction(tx => createAttachmentWithOutcome(input, tx));
   if (input.content.length === 0 || input.content.length > getMaxAttachmentBytes()) {
     throw Object.assign(new Error('Attachment size is outside the configured limit'), { code: 'ATTACHMENT_SIZE_INVALID' });
   }
@@ -186,7 +191,7 @@ export async function createAttachment(input: {
         idempotencyKey: `scan:${attachmentId}:${sha256}`,
         correlationId: input.correlationId,
       }, executor);
-      return attachment;
+      return { attachment, duplicate: true };
     }
   }
   const storageKey = `${input.tenantId}/${input.moduleId}/${new Date().toISOString().slice(0, 7)}/${randomBytes(24).toString('hex')}`;
@@ -214,7 +219,14 @@ export async function createAttachment(input: {
     idempotencyKey: `scan:${attachment.id}:${sha256}`,
     correlationId: input.correlationId,
   }, executor);
-  return attachment;
+  return { attachment, duplicate: false };
+}
+
+export async function createAttachment(
+  input: CreateAttachmentInput,
+  executor?: Executor,
+): Promise<Record<string, unknown>> {
+  return (await createAttachmentWithOutcome(input, executor)).attachment;
 }
 
 export async function listAttachments(input: {

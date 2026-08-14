@@ -18,8 +18,9 @@ test('Phase 29 active native product is Expo Router and never imports migration 
 test('native security, offline, association, and release gates are explicit', () => {
   const auth = read('apps/torqueshed-native/src/lib/auth.tsx'); const queue = read('apps/torqueshed-native/src/lib/offline-queue.ts'); const sync = read('apps/torqueshed-native/src/lib/sync.tsx'); const server = read('apps/api/src/lib/torqueshed-native-auth.ts'); const rootLayout = read('apps/torqueshed-native/src/app/_layout.tsx');
   assert.match(auth, /SecureStore/); assert.match(auth, /WHEN_UNLOCKED_THIS_DEVICE_ONLY/); assert.match(auth, /codeChallenge/); assert.doesNotMatch(auth, /AsyncStorage\.setItem\([^\n]*(accessToken|refreshToken)/);
-  assert.match(auth, /pending-revocations/); assert.match(auth, /public\/torqueshed\/native\/logout/);
+  assert.match(auth, /pending-revocations/); assert.match(auth, /public\/torqueshed\/native\/logout/); assert.match(auth, /NetInfo\.addEventListener/); assert.match(auth, /revocationFlushInFlight/);
   assert.match(queue, /client mutation|idempotency|Idempotency|QueuedMutation/i); assert.match(queue, /tenantId.*userId/); assert.match(sync, /status !== 408 && error\.status !== 429/);
+  assert.match(sync, /syncingRef/); assert.doesNotMatch(sync, /\[online, scope\?\.tenantId, scope\?\.userId, syncing\]/);
   assert.match(rootLayout, /if \(!auth\.session\)/); assert.match(rootLayout, /resume this route/);
   assert.match(server, /tsn_a_/); assert.match(server, /resolveTenantModuleAccess/); assert.match(server, /timingSafeEqual/); assert.match(server, /revokeTorqueShedNativeRefreshToken/);
   assert.match(read('apps/api/src/lib/database-release-contract.ts'), /releaseVersion:\s*47/);
