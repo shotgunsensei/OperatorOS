@@ -33,8 +33,8 @@ The imported source exposes eight route/layout files: root layout, SSO return, t
 
 ## Offline, media, and realtime behavior
 
-- Non-secret queued mutation bodies live in AsyncStorage; credentials never do. File URIs remain local until connectivity returns.
-- Queue flush is serial and durable. Stable client mutation IDs back journal entries, attachments, diagnostic entries, and live-bay messages so lost responses/retries reconcile once.
+- Non-secret queued mutation bodies live in AsyncStorage; credentials never do. Picker/cache media is copied into tenant/user-scoped app document storage before the queue entry is persisted, so cache eviction or restart cannot strand captured evidence.
+- Queue read/modify/write operations are serialized per tenant/user scope and storage failures propagate without overwriting known state. Stable client mutation IDs back journal entries, attachments, diagnostic entries, and live-bay messages so lost responses/retries reconcile once; durable file copies remain for retry and are removed on success or permanent rejection.
 - Native camera/library capture queues base64 upload through the shared attachment service. MIME signature validation, size limits, SHA-256 integrity, scanning, retention, and visibility remain server-authoritative.
 - Permanent 4xx failures leave the optimistic surface on reload and are reported; retryable/network/429/5xx failures remain queued. 401 performs a single refresh/re-auth path.
 - Live bay history uses persisted sequence cursors and stable client message IDs for reconnect and duplicate suppression.
@@ -53,7 +53,7 @@ The imported source exposes eight route/layout files: root layout, SSO return, t
 | Gate | Result |
 | --- | --- |
 | Mobile TypeScript | PASS |
-| Mobile unit queue/reconciliation/session-transition tests | PASS (5/5) |
+| Mobile unit queue/reconciliation/session-transition tests | PASS (8/8) |
 | Expo SDK dependency compatibility | PASS |
 | Expo public configuration / no-placeholder validation | PASS |
 | Android and iOS production JS/Hermes bundles | PASS |
@@ -64,11 +64,11 @@ The imported source exposes eight route/layout files: root layout, SSO return, t
 | API/web/mobile TypeScript | PASS |
 | Local Android device/emulator | UNAVAILABLE: no Android SDK/device attached |
 | Local iOS simulator | UNAVAILABLE: Windows host |
-| GitHub native contracts | PASS — run `31817468802`, `contracts` job |
-| GitHub Android API-35 emulator | PASS — run `31817468802`; x86_64 APK build, non-streaming install, launch, and `torqueshed://settings` deep link |
-| GitHub iOS simulator | PASS — run `31817468802`; native build, install, launch, and `torqueshed://settings` deep link |
+| GitHub native contracts | PASS — run `31823429449`, `contracts` job, commit `8231c55` |
+| GitHub Android API-35 emulator | PASS — run `31823429449`; x86_64 APK build, non-streaming install, launch, and `torqueshed://settings` deep link |
+| GitHub iOS simulator | PASS — run `31823429449`; native build, install, launch, and `torqueshed://settings` deep link |
 
-The dedicated `.github/workflows/torqueshed-native.yml` contract provides clean-checkout Android emulator and macOS iOS simulator prebuild, native build, install, launch, and deep-link smoke jobs. Corrective run [`31817468802`](https://github.com/shotgunsensei/OperatorOS/actions/runs/31817468802) completed successfully on commit `95d7cae1409ae289475d59898c9a00c7e994260d` with all three jobs green.
+The dedicated `.github/workflows/torqueshed-native.yml` contract provides clean-checkout Android emulator and macOS iOS simulator prebuild, native build, install, launch, and deep-link smoke jobs. Exact reviewed-code run [`31823429449`](https://github.com/shotgunsensei/OperatorOS/actions/runs/31823429449) completed successfully on commit `8231c55ae20db9ffb607f989c3e3360ec30f8ede` with all three jobs green. Intermediate runs `31821501637` and `31822695436` were cancelled when subsequent review fixes superseded their commits; neither is counted as passing evidence.
 
 ### Android CI incident and correction trace
 
@@ -77,6 +77,7 @@ The dedicated `.github/workflows/torqueshed-native.yml` contract provides clean-
 | `31813537047` / `68d73df` | FAIL | The full four-ABI Gradle build completed successfully; the Ubuntu runner lacked usable KVM acceleration and streamed `adb install` ended with `Broken pipe (32)`. This is retained as failed device-gate evidence, not counted green. |
 | `31816492952` / `c91f7c6` | FAIL | The x86_64-only APK build completed successfully in ten minutes, but `udevadm trigger --name-match=kvm` returned exit 1 before emulator startup. This is retained as failed infrastructure-gate evidence, not counted green. |
 | `31817468802` / `95d7cae` | PASS | Direct ephemeral-runner `/dev/kvm` permission verification passed; the accelerated API-35 emulator installed the APK with `adb --no-streaming`, launched `pro.torqueshed.app`, opened the settings deep link, and reported the app activity. Contracts and iOS simulator jobs also passed. |
+| `31823429449` / `8231c55` | PASS | Final reviewed code passed contracts, the accelerated Android API-35 build/install/launch/deep-link smoke, and the macOS iOS simulator build/install/launch/deep-link smoke. |
 
 ## Required external release gates
 

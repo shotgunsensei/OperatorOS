@@ -205,22 +205,28 @@ against the Phase 28 API and additive database release v47. OperatorOS remains
 the identity, tenant, entitlement, role, and revocation authority. Opaque
 access/rotating refresh credentials use OS secure storage; queued mutations are
 account-scoped, replay-safe, reconnect-safe, and protected from cross-account
-flush and refresh races. Root authentication gates preserve protected deep
-links, and journal, parts, media, diagnostic, live-bay, and marketplace
-mutations retain stable idempotency identities.
+flush and refresh races. Captured media is copied into durable app-owned
+document storage before queue persistence and removed only on a terminal queue
+outcome. Root authentication gates preserve protected deep links, and journal,
+parts, media, diagnostic, live-bay, and marketplace mutations retain stable
+idempotency identities.
 
-Local native/API typechecks, 5/5 queue/session-transition tests, 2/2 static release
+Local native/API typechecks, 8/8 queue/session-transition tests, 2/2 static release
 contracts, Android prebuild, dual Android/iOS Hermes export, and the 3/3
 disposable-PostgreSQL native auth/tenant/revocation journey pass. GitHub run
 `31813537047` recorded an Android infrastructure failure after the four-ABI APK
 build passed: the unaccelerated Ubuntu emulator broke its streamed `adb`
 install pipe. Run `31816492952` proved the optimized x86_64 APK build in ten
 minutes but failed before device startup because a `udevadm` KVM-rule reload
-returned nonzero. Corrective run
+returned nonzero. Corrective infrastructure run
 [`31817468802`](https://github.com/shotgunsensei/OperatorOS/actions/runs/31817468802)
-passes all three jobs: contracts, accelerated Android API-35 emulator
-build/install/launch/deep-link smoke, and macOS iOS simulator
-build/install/launch/deep-link smoke.
+first passed all three jobs. Exact reviewed-code run
+[`31823429449`](https://github.com/shotgunsensei/OperatorOS/actions/runs/31823429449)
+at commit `8231c55ae20db9ffb607f989c3e3360ec30f8ede` passes contracts,
+accelerated Android API-35 emulator build/install/launch/deep-link smoke, and
+macOS iOS simulator build/install/launch/deep-link smoke. Intermediate runs
+`31821501637` and `31822695436` were cancelled after review fixes superseded
+their commits and are not counted as passing evidence.
 
 Real Apple team/signing identity, Android release-signing fingerprint, EAS/store
 build IDs, public AASA/assetlinks deployment verification, physical-device
