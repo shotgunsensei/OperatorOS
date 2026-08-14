@@ -6,6 +6,7 @@ import {
   exchangeTorqueShedNativeCode,
   refreshTorqueShedNativeSession,
   revokeTorqueShedNativeAccessToken,
+  revokeTorqueShedNativeRefreshToken,
   TORQUESHED_NATIVE_REDIRECT_URI,
   TorqueShedNativeAuthError,
 } from '../lib/torqueshed-native-auth.js';
@@ -87,6 +88,19 @@ export async function registerTorqueShedNativeAuthRoutes(app: FastifyInstance): 
         refreshToken: text(input.refreshToken, 'refreshToken', 40, 100, /^tsn_r_[A-Za-z0-9_-]+$/),
         deviceId: text(input.deviceId, 'deviceId', 24, 160, /^[A-Za-z0-9_-]+$/),
       });
+    } catch (error) {
+      if (!handle(reply, error)) throw error;
+    }
+  });
+
+  app.post('/v1/public/torqueshed/native/logout', async (request, reply) => {
+    try {
+      const input = body(request);
+      await revokeTorqueShedNativeRefreshToken({
+        refreshToken: text(input.refreshToken, 'refreshToken', 40, 100, /^tsn_r_[A-Za-z0-9_-]+$/),
+        deviceId: text(input.deviceId, 'deviceId', 24, 160, /^[A-Za-z0-9_-]+$/),
+      });
+      return reply.code(204).send();
     } catch (error) {
       if (!handle(reply, error)) throw error;
     }

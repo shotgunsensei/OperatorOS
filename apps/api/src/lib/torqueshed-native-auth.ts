@@ -265,3 +265,15 @@ export async function revokeTorqueShedNativeAccessToken(token: string, reason = 
     WHERE access_token_hash=${sha256(token)} AND revoked_at IS NULL
   `);
 }
+
+export async function revokeTorqueShedNativeRefreshToken(input: {
+  refreshToken: string;
+  deviceId: string;
+}, reason = 'logout'): Promise<void> {
+  if (!input.refreshToken.startsWith('tsn_r_')) return;
+  await db.execute(sql`
+    UPDATE torqueshed_native_sessions SET revoked_at=now(), revoked_reason=${reason}, updated_at=now()
+    WHERE refresh_token_hash=${sha256(input.refreshToken)}
+      AND device_id_hash=${sha256(input.deviceId)} AND revoked_at IS NULL
+  `);
+}

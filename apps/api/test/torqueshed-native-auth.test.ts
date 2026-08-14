@@ -49,7 +49,7 @@ before(async () => {
 after(async () => {
   if (app) await app.close();
   for (const owner of [ownerA, ownerB]) if (owner) {
-    for (const table of ['shared_attachment_blobs','shared_jobs','shared_attachments','torqueshed_build_journal_entries','torqueshed_builds','torqueshed_vehicles']) {
+    for (const table of ['shared_attachment_blobs','shared_jobs','shared_attachments','torqueshed_build_parts','torqueshed_build_journal_entries','torqueshed_builds','torqueshed_vehicles']) {
       try { await db.execute(sql.raw(`DELETE FROM ${table} WHERE tenant_id='${String(owner.currentTenantId).replaceAll("'", "''")}'`)); } catch {}
     }
     await db.execute(sql`DELETE FROM torqueshed_native_sessions WHERE tenant_id=${owner.currentTenantId}`);
@@ -75,7 +75,16 @@ test('one-use PKCE exchange returns tenant-bound opaque tokens and supports head
   const journalHeaders = { ...nativeHeaders, 'idempotency-key': 'native-journal-mutation-0001' };
   const journalOne = await app.inject({ method: 'POST', url: `/v1/modules/torqueshed/builds/${build.id}/journal`, headers: journalHeaders, payload: { title: 'Queued note', body: 'Sent once after reconnect.' } });
   const journalReplay = await app.inject({ method: 'POST', url: `/v1/modules/torqueshed/builds/${build.id}/journal`, headers: journalHeaders, payload: { title: 'Queued note', body: 'Sent once after reconnect.' } });
-  assert.equal(journalOne.statusCode, 201, journalOne.body); assert.equal(journalReplay.statusCode, 201, journalReplay.body); assert.equal(journalReplay.json().entry.id, journalOne.json().entry.id);
+  assert.equal(journalOne.statusCode, 201, journalOne.body); assert.equal(journalReplay.statusCode, 200, journalReplay.body); assert.equal(journalReplay.json().entry.id, journalOne.json().entry.id);
+  const journalActivity = await db.execute(sql`SELECT count(*)::int AS count FROM shared_activity_events WHERE tenant_id=${ownerA.currentTenantId} AND object_id=${build.id} AND event_type='journal_entry'`);
+  const journalAudit = await db.execute(sql`SELECT count(*)::int AS count FROM admin_audit_logs WHERE tenant_id=${ownerA.currentTenantId} AND action='created' AND details->>'targetType'='torqueshed_build_journal_entry' AND details->>'targetId'=${journalOne.json().entry.id}`);
+  assert.equal(Number(journalActivity.rows[0]?.count), 1); assert.equal(Number(journalAudit.rows[0]?.count), 1);
+  const partHeaders = { ...nativeHeaders, 'idempotency-key': 'native-part-mutation-0001' };
+  const partOne = await app.inject({ method: 'POST', url: `/v1/modules/torqueshed/builds/${build.id}/parts`, headers: partHeaders, payload: { name: 'Coilovers', quantity: 1, unitCostMinor: 95000 } });
+  const partReplay = await app.inject({ method: 'POST', url: `/v1/modules/torqueshed/builds/${build.id}/parts`, headers: partHeaders, payload: { name: 'Coilovers', quantity: 1, unitCostMinor: 95000 } });
+  assert.equal(partOne.statusCode, 201, partOne.body); assert.equal(partReplay.statusCode, 200, partReplay.body); assert.equal(partReplay.json().part.id, partOne.json().part.id);
+  const partCount = await db.execute(sql`SELECT count(*)::int AS count FROM torqueshed_build_parts WHERE tenant_id=${ownerA.currentTenantId} AND build_id=${build.id} AND client_mutation_id='native-part-mutation-0001'`);
+  assert.equal(Number(partCount.rows[0]?.count), 1);
   const image = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
   const mediaHeaders = { ...nativeHeaders, 'idempotency-key': 'native-media-mutation-0001' };
   const mediaOne = await app.inject({ method: 'POST', url: `/v1/modules/torqueshed/builds/${build.id}/attachments`, headers: mediaHeaders, payload: { originalName: 'proof.png', declaredMimeType: 'image/png', contentBase64: image } });
@@ -84,13 +93,16 @@ test('one-use PKCE exchange returns tenant-bound opaque tokens and supports head
   const replay = await exchange(proof); assert.equal(replay.statusCode, 401, replay.body);
 });
 
-test('refresh rotates both credentials, enforces device binding, and logout revokes access', async () => {
+test('refresh rotates both credentials and refresh-bound logout revokes the device session', async () => {
   const proof = await authorize(); const first = (await exchange(proof)).json();
   const refresh = await app.inject({ method: 'POST', url: '/v1/public/torqueshed/native/refresh', payload: { refreshToken: first.refreshToken, deviceId: proof.deviceId } });
   assert.equal(refresh.statusCode, 200, refresh.body); const next = refresh.json(); assert.notEqual(next.accessToken, first.accessToken); assert.notEqual(next.refreshToken, first.refreshToken);
   assert.equal((await app.inject({ method: 'GET', url: '/v1/modules/torqueshed/dashboard', headers: { authorization: `Bearer ${first.accessToken}` } })).statusCode, 401);
-  assert.equal((await app.inject({ method: 'POST', url: '/v1/modules/torqueshed/native/logout', headers: { authorization: `Bearer ${next.accessToken}` } })).statusCode, 204);
+  assert.equal((await app.inject({ method: 'POST', url: '/v1/public/torqueshed/native/logout', payload: { refreshToken: next.refreshToken, deviceId: raw() } })).statusCode, 204);
+  assert.equal((await app.inject({ method: 'GET', url: '/v1/modules/torqueshed/dashboard', headers: { authorization: `Bearer ${next.accessToken}` } })).statusCode, 200);
+  assert.equal((await app.inject({ method: 'POST', url: '/v1/public/torqueshed/native/logout', payload: { refreshToken: next.refreshToken, deviceId: proof.deviceId } })).statusCode, 204);
   assert.equal((await app.inject({ method: 'GET', url: '/v1/modules/torqueshed/dashboard', headers: { authorization: `Bearer ${next.accessToken}` } })).statusCode, 401);
+  assert.equal((await app.inject({ method: 'POST', url: '/v1/public/torqueshed/native/refresh', payload: { refreshToken: next.refreshToken, deviceId: proof.deviceId } })).statusCode, 401);
 });
 
 test('cross-tenant authorization and changed global token version fail closed', async () => {

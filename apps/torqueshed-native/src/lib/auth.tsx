@@ -10,6 +10,7 @@ const ACCESS_KEY = 'torqueshed.native.access';
 const REFRESH_KEY = 'torqueshed.native.refresh';
 const DEVICE_KEY = 'torqueshed.native.device';
 const META_KEY = 'torqueshed.native.meta';
+const PENDING_REVOCATIONS_KEY = 'torqueshed.native.pending-revocations';
 const secureOptions: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
 };
@@ -25,6 +26,7 @@ export type NativeSession = {
 };
 
 type SessionMeta = Omit<NativeSession, 'accessToken' | 'refreshToken'>;
+type PendingRevocation = { refreshToken: string; deviceId: string };
 type AuthContextValue = {
   session: NativeSession | null;
   loading: boolean;
@@ -68,6 +70,59 @@ async function clearSession(): Promise<void> {
   ]);
 }
 
+async function readPendingRevocations(): Promise<PendingRevocation[]> {
+  try {
+    const raw = await SecureStore.getItemAsync(PENDING_REVOCATIONS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is PendingRevocation => Boolean(
+        item && typeof item.refreshToken === 'string' && typeof item.deviceId === 'string',
+      ))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writePendingRevocations(items: PendingRevocation[]): Promise<void> {
+  if (items.length === 0) {
+    await SecureStore.deleteItemAsync(PENDING_REVOCATIONS_KEY);
+    return;
+  }
+  await SecureStore.setItemAsync(PENDING_REVOCATIONS_KEY, JSON.stringify(items.slice(-8)), secureOptions);
+}
+
+async function queuePendingRevocation(entry: PendingRevocation): Promise<void> {
+  const current = await readPendingRevocations();
+  if (current.some(item => item.refreshToken === entry.refreshToken)) return;
+  await writePendingRevocations([...current, entry]);
+}
+
+async function sendRevocation(entry: PendingRevocation): Promise<'complete' | 'retry'> {
+  try {
+    const response = await fetch(`${nativeConfig.apiBaseUrl}/public/torqueshed/native/logout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    });
+    return response.ok || response.status === 400 || response.status === 401 || response.status === 404
+      ? 'complete'
+      : 'retry';
+  } catch {
+    return 'retry';
+  }
+}
+
+async function flushPendingRevocations(): Promise<void> {
+  const pending = await readPendingRevocations();
+  if (pending.length === 0) return;
+  const remaining: PendingRevocation[] = [];
+  for (const entry of pending) {
+    if (await sendRevocation(entry) === 'retry') remaining.push(entry);
+  }
+  await writePendingRevocations(remaining);
+}
+
 async function readSession(): Promise<NativeSession | null> {
   const [accessToken, refreshToken, metaRaw] = await Promise.all([
     SecureStore.getItemAsync(ACCESS_KEY),
@@ -101,7 +156,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    readSession().then(setSession).finally(() => setLoading(false));
+    flushPendingRevocations()
+      .then(readSession)
+      .then(setSession)
+      .finally(() => setLoading(false));
   }, []);
 
   const refresh = useCallback(async (): Promise<string | null> => {
@@ -123,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async () => {
+    await flushPendingRevocations();
     const verifier = await randomUrlSafe(48);
     const state = await randomUrlSafe(32);
     const nonce = await randomUrlSafe(32);
@@ -161,10 +220,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     const current = await readSession();
     if (current) {
-      await fetch(`${nativeConfig.apiBaseUrl}/modules/torqueshed/native/logout`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${current.accessToken}` },
-      }).catch(() => undefined);
+      const revocation = { refreshToken: current.refreshToken, deviceId: await deviceId() };
+      if (await sendRevocation(revocation) === 'retry') await queuePendingRevocation(revocation);
     }
     await clearSession();
     setSession(null);

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const QUEUE_KEY = 'torqueshed.native.mutation-queue.v1';
+export type QueueScope = { tenantId: string; userId: string };
 export type QueuedMutation = {
   id: string;
   method: 'POST' | 'PATCH' | 'DELETE';
@@ -13,34 +14,39 @@ export type QueuedMutation = {
 
 export type QueueOutcome = { kind: 'success' } | { kind: 'retry' } | { kind: 'permanent'; error: string };
 
+export function queueStorageKey(scope: QueueScope): string {
+  return `${QUEUE_KEY}:${scope.tenantId}:${scope.userId}`;
+}
+
 export function applyQueueOutcome(queue: QueuedMutation[], id: string, outcome: QueueOutcome): QueuedMutation[] {
   if (outcome.kind === 'success' || outcome.kind === 'permanent') return queue.filter(item => item.id !== id);
   return queue.map(item => item.id === id ? { ...item, attempts: item.attempts + 1 } : item);
 }
 
-export async function loadQueue(): Promise<QueuedMutation[]> {
+export async function loadQueue(scope: QueueScope): Promise<QueuedMutation[]> {
   try {
-    const raw = await AsyncStorage.getItem(QUEUE_KEY);
+    const raw = await AsyncStorage.getItem(queueStorageKey(scope));
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch { return []; }
 }
 
-async function saveQueue(queue: QueuedMutation[]): Promise<void> {
-  await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+async function saveQueue(scope: QueueScope, queue: QueuedMutation[]): Promise<void> {
+  await AsyncStorage.setItem(queueStorageKey(scope), JSON.stringify(queue));
 }
 
-export async function enqueueMutation(mutation: Omit<QueuedMutation, 'createdAt' | 'attempts'>): Promise<void> {
-  const queue = await loadQueue();
+export async function enqueueMutation(scope: QueueScope, mutation: Omit<QueuedMutation, 'createdAt' | 'attempts'>): Promise<void> {
+  const queue = await loadQueue(scope);
   if (queue.some(item => item.id === mutation.id)) return;
-  await saveQueue([...queue, { ...mutation, createdAt: new Date().toISOString(), attempts: 0 }]);
+  await saveQueue(scope, [...queue, { ...mutation, createdAt: new Date().toISOString(), attempts: 0 }]);
 }
 
 export async function flushMutationQueue(
+  scope: QueueScope,
   sender: (item: QueuedMutation) => Promise<void>,
   onPermanentFailure?: (item: QueuedMutation, error: string) => void,
 ): Promise<{ sent: number; pending: number; failed: number }> {
-  let queue = await loadQueue();
+  let queue = await loadQueue(scope);
   let sent = 0;
   let failed = 0;
   for (const item of [...queue]) {
@@ -64,7 +70,7 @@ export async function flushMutationQueue(
       }
     }
     queue = applyQueueOutcome(queue, item.id, outcome);
-    await saveQueue(queue);
+    await saveQueue(scope, queue);
     if (outcome.kind === 'retry') break;
   }
   return { sent, pending: queue.length, failed };

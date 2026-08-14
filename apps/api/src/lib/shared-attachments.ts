@@ -143,7 +143,8 @@ export async function createAttachment(input: {
   retentionUntil?: Date | null;
   correlationId?: string | null;
   idempotencyKey?: string | null;
-}, executor: Executor = db) {
+}, executor?: Executor): Promise<Record<string, unknown>> {
+  if (!executor) return db.transaction(tx => createAttachment(input, tx));
   if (input.content.length === 0 || input.content.length > getMaxAttachmentBytes()) {
     throw Object.assign(new Error('Attachment size is outside the configured limit'), { code: 'ATTACHMENT_SIZE_INVALID' });
   }
@@ -151,6 +152,7 @@ export async function createAttachment(input: {
   const detectedMimeType = detectAttachmentMimeType(input.content, input.declaredMimeType);
   assertDeclaredMimeMatches(input.declaredMimeType, detectedMimeType);
   const sha256 = createHash('sha256').update(input.content).digest('hex');
+  const storage = getAttachmentStorageAdapter();
   if (input.idempotencyKey) {
     const existing = await executor.execute(sql`
       SELECT * FROM shared_attachments
@@ -159,9 +161,34 @@ export async function createAttachment(input: {
         AND client_mutation_id=${input.idempotencyKey}
       LIMIT 1
     `);
-    if (existing.rows[0]) return existing.rows[0] as Record<string, unknown>;
+    if (existing.rows[0]) {
+      const attachment = existing.rows[0] as Record<string, unknown>;
+      if (String(attachment.sha256) !== sha256) {
+        throw Object.assign(new Error('Idempotency key was already used for different attachment content'), {
+          code: 'ATTACHMENT_IDEMPOTENCY_MISMATCH',
+        });
+      }
+      const attachmentId = String(attachment.id);
+      const stored = await storage.get({ tenantId: input.tenantId, attachmentId }, executor);
+      if (!stored) {
+        await storage.put({ tenantId: input.tenantId, attachmentId, content: input.content }, executor);
+      } else if (createHash('sha256').update(stored).digest('hex') !== sha256) {
+        throw Object.assign(new Error('Stored attachment content failed its integrity check'), {
+          code: 'ATTACHMENT_STORAGE_INTEGRITY',
+        });
+      }
+      await enqueueSharedJob({
+        tenantId: input.tenantId,
+        moduleId: input.moduleId,
+        requestedByUserId: input.createdByUserId,
+        handlerKey: ATTACHMENT_SCAN_JOB,
+        payload: { attachmentId },
+        idempotencyKey: `scan:${attachmentId}:${sha256}`,
+        correlationId: input.correlationId,
+      }, executor);
+      return attachment;
+    }
   }
-  const storage = getAttachmentStorageAdapter();
   const storageKey = `${input.tenantId}/${input.moduleId}/${new Date().toISOString().slice(0, 7)}/${randomBytes(24).toString('hex')}`;
   const result = await executor.execute(sql`
     INSERT INTO shared_attachments (

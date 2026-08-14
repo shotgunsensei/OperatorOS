@@ -1,5 +1,6 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '../src/db.js';
 import { modules } from '../src/schema.js';
@@ -160,6 +161,37 @@ test('soft-deleted attachments purge private blobs only after retention expires'
   `);
   assert.ok(state.rows[0]?.blob_purged_at);
   assert.equal(state.rows[0]?.attachment_id, null);
+});
+
+test('idempotent attachment retry repairs a legacy partial metadata write', async () => {
+  const content = Buffer.from('recoverable attachment proof', 'utf8');
+  const sha256 = createHash('sha256').update(content).digest('hex');
+  const idempotencyKey = uniqueId('attachment-recovery');
+  const partial = await db.execute(sql`
+    INSERT INTO shared_attachments (
+      tenant_id, module_id, object_type, object_id, original_name, storage_adapter,
+      storage_key, size_bytes, declared_mime_type, detected_mime_type, sha256,
+      created_by_user_id, client_mutation_id
+    ) VALUES (
+      ${user.currentTenantId!}, ${moduleId}, 'test_object', 'partial-proof', 'partial.txt',
+      'postgres', ${`partial/${idempotencyKey}`}, ${content.length}, 'text/plain', 'text/plain',
+      ${sha256}, ${user.id}, ${idempotencyKey}
+    ) RETURNING id
+  `);
+  const recovered = await createAttachment({
+    tenantId: user.currentTenantId!, moduleId, objectType: 'test_object', objectId: 'partial-proof',
+    originalName: 'partial.txt', declaredMimeType: 'text/plain', content,
+    createdByUserId: user.id, idempotencyKey,
+  });
+  assert.equal(recovered.id, partial.rows[0]?.id);
+  const state = await db.execute(sql`
+    SELECT
+      (SELECT count(*)::int FROM shared_attachment_blobs WHERE attachment_id=${String(recovered.id)}) AS blobs,
+      (SELECT count(*)::int FROM shared_jobs WHERE tenant_id=${user.currentTenantId!}
+        AND handler_key='shared.attachment.scan.v1' AND idempotency_key=${`scan:${recovered.id}:${sha256}`}) AS jobs
+  `);
+  assert.equal(Number(state.rows[0]?.blobs), 1);
+  assert.equal(Number(state.rows[0]?.jobs), 1);
 });
 
 test('P22-ADAPTER-ATTACHMENT-001 / P22-ADAPTER-USAGE-001: attachment, scan job, outbox, usage, and activity survive independent queue cycles', async () => {

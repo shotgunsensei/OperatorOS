@@ -8,6 +8,10 @@ export async function ensureTorqueShedNativeTables(): Promise<void> {
       ADD COLUMN IF NOT EXISTS client_mutation_id varchar(200);
     CREATE UNIQUE INDEX IF NOT EXISTS uq_torqueshed_journal_client_mutation
       ON torqueshed_build_journal_entries(tenant_id, build_id, client_mutation_id);
+    ALTER TABLE torqueshed_build_parts
+      ADD COLUMN IF NOT EXISTS client_mutation_id varchar(200);
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_torqueshed_build_part_client_mutation
+      ON torqueshed_build_parts(tenant_id, build_id, client_mutation_id);
     ALTER TABLE shared_attachments
       ADD COLUMN IF NOT EXISTS client_mutation_id varchar(200);
     CREATE UNIQUE INDEX IF NOT EXISTS uq_shared_attachment_client_mutation
