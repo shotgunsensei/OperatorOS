@@ -36,7 +36,7 @@ test('all active production modules use the code path by default', () => {
       assert.equal(moduleSupportsExchangeCode(slug), true, `${slug} supports opaque-code SSO`);
     }
     assert.equal(moduleSupportsExchangeCode('PulseDesk'), true);
-    assert.equal(moduleSupportsExchangeCode('outcall'), true, 'active OutCall uses opaque-code SSO by default');
+    assert.equal(moduleSupportsExchangeCode('outcall'), false, 'planned OutCall cannot mint an SSO exchange by default');
   });
 });
 

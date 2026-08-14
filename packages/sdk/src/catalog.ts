@@ -270,7 +270,10 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['OUTCALL_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_OUTCALL'],
     internal: false,
-    defaultStatus: 'live',
+    // Phase 37: source recovery and a real provider lifecycle are hard
+    // activation gates. The existing reconstructed workload stays in the
+    // tree for evidence, but it must not be sold or launched as source parity.
+    defaultStatus: 'coming_soon',
     component: 'operations-deck',
   },
 ] as const;

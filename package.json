@@ -27,6 +27,8 @@
     "phase35:browser": "node scripts/phase35-callcommand-browser.mjs",
     "phase36:report:write": "node scripts/phase36-ninjamation-report.mjs --write",
     "phase36:browser": "node scripts/phase36-ninjamation-browser.mjs",
+    "phase37:report:write": "node scripts/phase37-outcall-source-gate.mjs --write",
+    "verify:outcall:phase37": "node scripts/phase20-product-truth.mjs && node scripts/phase37-outcall-source-gate.mjs && node --test scripts/phase37/outcall-source-gate.test.mjs scripts/phase20-product-truth.test.mjs",
     "verify:ninjamation:phase36": "node scripts/phase20-product-truth.mjs && node scripts/phase36-ninjamation-report.mjs && node --test scripts/phase36/ninjamation-contract.test.mjs scripts/phase20-product-truth.test.mjs",
     "verify:callcommand:phase35": "node scripts/phase20-product-truth.mjs && node scripts/phase35-callcommand-report.mjs && node --test scripts/phase35/callcommand-contract.test.mjs scripts/phase20-product-truth.test.mjs",
     "verify:techdeck:phase26": "node scripts/phase20-product-truth.mjs && node scripts/phase26-techdeck-report.mjs",

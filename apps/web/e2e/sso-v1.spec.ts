@@ -53,8 +53,8 @@ const ENABLED_MODULES: BrowserModule[] = deploymentRegistry
     };
   });
 
-if (ENABLED_MODULES.length !== 13) {
-  throw new Error(`Expected 13 enabled OperatorOS modules, found ${ENABLED_MODULES.length}`);
+if (ENABLED_MODULES.length !== 12) {
+  throw new Error(`Expected 12 enabled modules while OutCall is source-recovery locked, found ${ENABLED_MODULES.length}`);
 }
 
 const PUBLIC_AUTH_HEADERS = {
@@ -1492,7 +1492,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(overflow, JSON.stringify(overflow, null, 2)).toEqual([]);
   });
 
-  test('tenant entitlement denial fails closed for TechDeck and OutCall without issuing a handoff', async ({ page, request }) => {
+  test('tenant denial and the global OutCall activation lock fail closed without issuing a handoff', async ({ page, request }) => {
     test.setTimeout(90_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
@@ -1550,7 +1550,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(denied.tenant.body.code).not.toMatch(/TOKEN|CREDENTIAL/);
 
     expect(denied.outcall.status).toBe(403);
-    expect(denied.outcall.body.code).toBe('MODULE_ACCESS_DENIED');
+    expect(denied.outcall.body.code).toBe('MODULE_UNAVAILABLE');
     expect(denied.outcall.body.launchUrl).toBeUndefined();
     expect(denied.outcall.body.code).not.toMatch(/TOKEN|CREDENTIAL/);
 
@@ -2558,69 +2558,4 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     assertNoCredentialQuery(modulePage.url());
   });
 
-  test('OutCall persists verified safety setup, a private trigger, and a durable test call across deep-link reauthentication', async ({ page, request }) => {
-    test.setTimeout(180_000);
-    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
-    const identity = await registerAndSeed(request, pg);
-    identities.push(identity);
-    const suffix = Date.now().toString(36);
-    const profileName = `E2E trusted exit ${suffix}`;
-
-    await page.goto('https://outcall.operatoros.net/setup');
-    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
-    await page.getByTestId('input-email').fill(identity.email);
-    await page.getByTestId('input-password').fill(PASSWORD);
-    await Promise.all([
-      page.waitForURL('https://outcall.operatoros.net/setup', { timeout: 30_000 }),
-      page.getByTestId('button-login').click(),
-    ]);
-    await expect(page.getByTestId('shell-outcall')).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText('Calls ready', { exact: true }).first()).toBeVisible();
-    await page.getByTestId('button-outcall-accept-safety').click();
-    await expect(page.getByText('Safety acknowledgement saved.', { exact: true })).toBeVisible();
-    await page.getByTestId('input-outcall-phone').fill('+15551234567');
-    await page.getByTestId('button-outcall-verify-phone').click();
-    await expect(page.getByText('Phone ownership verified.', { exact: true })).toBeVisible();
-    await page.getByTestId('input-outcall-profile-name').fill(profileName);
-    await page.getByTestId('input-outcall-profile-message').fill('Please call me with a neutral reminder that my scheduled appointment is ready.');
-    await page.getByTestId('button-outcall-create-profile').click();
-    await expect(page.getByText('Rescue profile created.', { exact: true })).toBeVisible();
-    await page.getByTestId('input-outcall-trigger').fill(`private-${suffix}`);
-    await page.getByTestId('button-outcall-create-trigger').click();
-    await expect(page.getByText('Private trigger created.', { exact: true })).toBeVisible();
-    await page.getByTestId('button-outcall-schedule').click();
-    await expect(page.getByText('Durable call request scheduled.', { exact: true })).toBeVisible();
-
-    const call = await pg.query<{ id: string; status: string; destination_masked: string }>(
-      `select id, status, destination_masked from outcall_call_requests
-       where tenant_id = $1 and user_id = $2 order by created_at desc limit 1`,
-      [identity.tenantId, identity.userId],
-    );
-    expect(call.rows).toHaveLength(1);
-    expect(call.rows[0].destination_masked).not.toContain('5551234567');
-    const deepUrl = `https://outcall.operatoros.net/calls/${call.rows[0].id}`;
-    await page.goto(deepUrl);
-    await page.reload();
-    await expect(page.getByTestId('shell-outcall')).toContainText(profileName, { timeout: 30_000 });
-    await capturePhase20Evidence(page, 'outcall-completed', { width: 1440, height: 1000 });
-    await expect(page.getByTestId('shell-outcall')).toContainText(call.rows[0].destination_masked);
-    await Promise.all([
-      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
-      page.getByRole('link', { name: 'My Apps' }).first().click(),
-    ]);
-    const logoutAll = await browserJson(page, '/api/auth/logout-all', 'POST', {});
-    expect(logoutAll.status, JSON.stringify(logoutAll.body)).toBe(200);
-    await page.goto(deepUrl);
-    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
-    await page.getByTestId('input-email').fill(identity.email);
-    await page.getByTestId('input-password').fill(PASSWORD);
-    await Promise.all([
-      page.waitForURL(deepUrl, { timeout: 30_000 }),
-      page.getByTestId('button-login').click(),
-    ]);
-    await expect(page.getByTestId('shell-outcall')).toContainText(profileName, { timeout: 30_000 });
-    await assertHostOnlySession(page.context(), 'outcall.operatoros.net');
-    await assertNoBrowserCredentialStorage(page);
-    assertNoCredentialQuery(page.url());
-  });
 });

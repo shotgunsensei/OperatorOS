@@ -61,8 +61,8 @@ const ENABLED_MODULES = registry
     return { ...entry, shellTestId };
   });
 
-if (ENABLED_MODULES.length !== 13) {
-  throw new Error(`Expected 13 enabled Phase 17 modules, found ${ENABLED_MODULES.length}`);
+if (ENABLED_MODULES.length !== 12) {
+  throw new Error(`Expected 12 enabled modules while OutCall is source-recovery locked, found ${ENABLED_MODULES.length}`);
 }
 
 function assertNoCredentialQuery(rawUrl: string) {
@@ -115,7 +115,8 @@ test.describe('Phase 17 deployed production acceptance', () => {
     await login(page, ENTITLED);
     await page.getByTestId('nav-my-apps').click();
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
-    await expect(page.getByTestId('button-launch-outcall')).toBeVisible();
+    await expect(page.getByTestId('button-launch-outcall')).toHaveCount(0);
+    await expect(page.getByTestId('module-status-outcall')).toContainText('Coming soon');
 
     let lastModulePage: Page | null = null;
     for (const [index, module] of ENABLED_MODULES.entries()) {
@@ -171,7 +172,7 @@ test.describe('Phase 17 deployed production acceptance', () => {
     await assertHostOnlySession(pulseDesk.context(), 'pulsedesk.operatoros.net');
   });
 
-  test('tenant denial for TechDeck and OutCall returns no authorization handoff', async ({ page }) => {
+  test('tenant denial and the global OutCall activation lock return no authorization handoff', async ({ page }) => {
     test.setTimeout(60_000);
     await login(page, DENIED);
     const denied = await page.evaluate(async (tenantId) => {
@@ -204,7 +205,7 @@ test.describe('Phase 17 deployed production acceptance', () => {
     expect(denied.tenant.body.code).toBe('MODULE_ACCESS_DENIED');
     expect(denied.tenant.body.launchUrl).toBeUndefined();
     expect(denied.outcall.status).toBe(403);
-    expect(denied.outcall.body.code).toBe('MODULE_ACCESS_DENIED');
+    expect(denied.outcall.body.code).toBe('MODULE_UNAVAILABLE');
     expect(denied.outcall.body.launchUrl).toBeUndefined();
     assertNoCredentialQuery(page.url());
     await assertNoBrowserCredentialStorage(page);

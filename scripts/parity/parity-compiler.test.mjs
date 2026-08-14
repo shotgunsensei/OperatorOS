@@ -46,7 +46,8 @@ test('shared equivalents carry original outcomes and compatibility assertions', 
 
 test('current release contract fails closed on required blockers', () => {
   const counts = issueSummary(effectiveIssues(baseline.ledger));
-  assert.equal(counts.BLOCKED_REQUIRED, 2563);
+  assert.equal(counts.BLOCKED_REQUIRED, baseline.source.totals.stateCounts.BLOCKED);
+  assert.ok(counts.BLOCKED_REQUIRED > 0);
 });
 
 for (const [fixture, expectedCode] of [

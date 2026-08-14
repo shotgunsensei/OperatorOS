@@ -210,6 +210,19 @@ test('startup seeding repairs known URL drift and ignores legacy URL env values'
   }
 });
 
+test('startup seeding relocks OutCall while Phase 37 source and provider gates are incomplete', async () => {
+  await db.update(modules)
+    .set({ status: 'live' })
+    .where(eq(modules.slug, 'outcall'));
+
+  await seedModules();
+
+  const [outcall] = await db.select().from(modules)
+    .where(eq(modules.slug, 'outcall'))
+    .limit(1);
+  assert.equal(outcall?.status, 'coming_soon');
+});
+
 test('Platform Command rejects catalog URL mutation and heals drift on other edits', async () => {
   const rejected = await app.inject({
     method: 'PATCH',
