@@ -85,9 +85,8 @@ jobs:
           arch: x86_64
           profile: pixel_7
           script: |
-            cd apps/torqueshed-native
-            ./android/gradlew assembleDebug
-            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            ./apps/torqueshed-native/android/gradlew -p apps/torqueshed-native/android assembleDebug
+            adb install -r apps/torqueshed-native/android/app/build/outputs/apk/debug/app-debug.apk
             adb shell am start -W -n pro.torqueshed.app/.MainActivity
             adb shell am start -W -a android.intent.action.VIEW -d 'torqueshed://settings' pro.torqueshed.app
             adb shell dumpsys activity activities | grep pro.torqueshed.app
