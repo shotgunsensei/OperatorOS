@@ -6,9 +6,10 @@
  * admin enable real test calls with a one-click OAuth handshake instead
  * of pasting four env vars by hand.
  *
- * This module is intentionally thin: it talks to Twilio over the REST API
- * via `fetch` so the project does not need to take a dependency on the
- * twilio SDK. It exposes:
+ * This module is intentionally thin: established REST operations retain the
+ * bounded `fetch` adapter, while the official Twilio SDK is used for webhook
+ * signature validation and Verify so those security-sensitive contracts are
+ * not reimplemented locally. It exposes:
  *
  *   1. `resolveTelephonyConfig()` — returns the active Twilio credentials
  *      plus the source (`connector` or `env`), or `null` when neither is
@@ -20,7 +21,7 @@
  *   4. `summarizeTranscript()` — AI-generated one-line call summary.
  */
 
-import { createHmac } from 'node:crypto';
+import twilio from 'twilio';
 import { getAiProvider } from './ai-provider.js';
 
 const PERSONA_SCRIPTS: Record<string, string> = {
@@ -328,6 +329,99 @@ export async function placeTwilioCall(input: PlaceCallInput): Promise<PlaceCallR
   return { sid: body.sid, status: mapTwilioStatus(body.status ?? 'queued') };
 }
 
+export interface RedirectLiveCallResult {
+  ok: boolean;
+  status: 'redirected' | 'provider_unavailable' | 'failed';
+  reason: string;
+  providerStatus?: number;
+}
+
+export interface StartLiveCallRecordingResult {
+  ok: boolean;
+  status: 'recording' | 'provider_unavailable' | 'failed';
+  reason: string;
+  recordingSid?: string;
+  providerStatus?: number;
+}
+
+/**
+ * Start recording an already-active inbound call through Twilio's Calls
+ * Recordings API. TwiML has no <Start><Recording> verb, so provider
+ * confirmation here is the only state that may be reported as recording.
+ */
+export async function startTwilioCallRecording(input: {
+  callSid: string;
+  recordingStatusCallbackUrl: string;
+}): Promise<StartLiveCallRecordingResult> {
+  const cfg = await resolveTelephonyConfig();
+  if (!cfg) return { ok: false, status: 'provider_unavailable', reason: 'Twilio provider is not configured' };
+  const callbackUrl = new URL(input.recordingStatusCallbackUrl, cfg.publicBaseUrl).toString();
+  const form = new URLSearchParams({
+    RecordingStatusCallback: callbackUrl,
+    RecordingStatusCallbackMethod: 'POST',
+    RecordingStatusCallbackEvent: 'completed',
+    Trim: 'do-not-trim',
+  });
+  try {
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(cfg.accountSid)}/Calls/${encodeURIComponent(input.callSid)}/Recordings.json`,
+      {
+        method: 'POST',
+        headers: { Authorization: restAuthHeader(cfg), 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString(),
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+    if (!response.ok) {
+      return { ok: false, status: 'failed', reason: `Twilio rejected recording with HTTP ${response.status}`, providerStatus: response.status };
+    }
+    const payload = await response.json() as { sid?: string };
+    if (!payload.sid) return { ok: false, status: 'failed', reason: 'Twilio accepted the request without a recording identifier', providerStatus: response.status };
+    return { ok: true, status: 'recording', reason: 'Twilio confirmed live call recording', recordingSid: payload.sid, providerStatus: response.status };
+  } catch {
+    return { ok: false, status: 'failed', reason: 'Twilio recording request failed before provider confirmation' };
+  }
+}
+
+/**
+ * Redirect an active Twilio call. A transfer is successful only after the
+ * provider accepts the Calls API update; missing credentials never degrade to
+ * a simulated success.
+ */
+export async function redirectTwilioCall(input: {
+  callSid: string;
+  targetPhoneE164: string;
+  announce?: string | null;
+  statusCallbackUrl?: string | null;
+}): Promise<RedirectLiveCallResult> {
+  const cfg = await resolveTelephonyConfig();
+  if (!cfg) return { ok: false, status: 'provider_unavailable', reason: 'Twilio provider is not configured' };
+  const say = input.announce
+    ? `<Say voice="Polly.Joanna">${input.announce.replace(/[<>&'\"]/g, '')}</Say>`
+    : '';
+  const action = input.statusCallbackUrl
+    ? ` action="${input.statusCallbackUrl.replace(/[<>&'\"]/g, '')}" method="POST"`
+    : '';
+  const phone = input.targetPhoneE164.replace(/[<>&'\"]/g, '');
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response>${say}<Dial${action}>${phone}</Dial></Response>`;
+  try {
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(cfg.accountSid)}/Calls/${encodeURIComponent(input.callSid)}.json`,
+      {
+        method: 'POST',
+        headers: { Authorization: restAuthHeader(cfg), 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ Twiml: twiml }).toString(),
+      },
+    );
+    if (!response.ok) {
+      return { ok: false, status: 'failed', reason: `Twilio rejected the transfer with HTTP ${response.status}`, providerStatus: response.status };
+    }
+    return { ok: true, status: 'redirected', reason: 'Twilio accepted the live call redirect', providerStatus: response.status };
+  } catch {
+    return { ok: false, status: 'failed', reason: 'Twilio transfer request failed before provider confirmation' };
+  }
+}
+
 /**
  * Verify the X-Twilio-Signature header per
  * https://www.twilio.com/docs/usage/webhooks/webhooks-security.
@@ -350,12 +444,53 @@ export async function verifyTwilioSignature(
   if (!signature) return false;
   const cfg = await resolveTelephonyConfig();
   if (!cfg) return false;
-  const sortedKeys = Object.keys(params).sort();
-  let data = url;
-  for (const k of sortedKeys) data += k + params[k];
-  const signingKey = process.env.TWILIO_AUTH_TOKEN || cfg.authToken;
-  const expected = createHmac('sha1', signingKey).update(data, 'utf8').digest('base64');
-  return expected === signature;
+  // Twilio signs webhooks with the account's primary Auth Token, not an API
+  // key secret. Connector-only API-key credentials can place REST requests
+  // but cannot validate inbound signatures without TWILIO_AUTH_TOKEN.
+  const signingKey = process.env.TWILIO_AUTH_TOKEN || (cfg.apiKeySid ? null : cfg.authToken);
+  if (!signingKey) return false;
+  return twilio.validateRequest(signingKey, signature, url, params);
+}
+
+export interface TwilioVerificationResult {
+  ok: boolean;
+  status: 'pending' | 'approved' | 'failed' | 'provider_unavailable';
+  providerReference?: string;
+  reasonCode?: string;
+}
+
+function verifyServiceSid(): string | null {
+  const sid = process.env.TWILIO_VERIFY_SERVICE_SID?.trim();
+  return sid && /^VA[A-Za-z0-9]{20,62}$/.test(sid) ? sid : null;
+}
+
+function twilioClient(cfg: TelephonyConfig) {
+  return twilio(cfg.apiKeySid ?? cfg.accountSid, cfg.authToken, { accountSid: cfg.accountSid });
+}
+
+/** Send an SMS possession challenge to a previously registered destination. */
+export async function startTwilioVerification(destinationE164: string): Promise<TwilioVerificationResult> {
+  const [cfg, serviceSid] = await Promise.all([resolveTelephonyConfig(), Promise.resolve(verifyServiceSid())]);
+  if (!cfg || !serviceSid) return { ok: false, status: 'provider_unavailable', reasonCode: 'TWILIO_VERIFY_NOT_CONFIGURED' };
+  try {
+    const result = await twilioClient(cfg).verify.v2.services(serviceSid).verifications.create({ to: destinationE164, channel: 'sms' });
+    return { ok: result.status === 'pending', status: result.status === 'pending' ? 'pending' : 'failed', providerReference: result.sid, reasonCode: result.status === 'pending' ? undefined : 'TWILIO_VERIFY_NOT_PENDING' };
+  } catch {
+    return { ok: false, status: 'failed', reasonCode: 'TWILIO_VERIFY_DISPATCH_FAILED' };
+  }
+}
+
+/** Check a Twilio Verify challenge without retaining the submitted code. */
+export async function checkTwilioVerification(destinationE164: string, code: string): Promise<TwilioVerificationResult> {
+  const [cfg, serviceSid] = await Promise.all([resolveTelephonyConfig(), Promise.resolve(verifyServiceSid())]);
+  if (!cfg || !serviceSid) return { ok: false, status: 'provider_unavailable', reasonCode: 'TWILIO_VERIFY_NOT_CONFIGURED' };
+  if (!/^\d{4,10}$/.test(code)) return { ok: false, status: 'failed', reasonCode: 'TWILIO_VERIFY_CODE_INVALID' };
+  try {
+    const result = await twilioClient(cfg).verify.v2.services(serviceSid).verificationChecks.create({ to: destinationE164, code });
+    return { ok: result.status === 'approved', status: result.status === 'approved' ? 'approved' : 'failed', providerReference: result.sid, reasonCode: result.status === 'approved' ? undefined : 'TWILIO_VERIFY_CHALLENGE_FAILED' };
+  } catch {
+    return { ok: false, status: 'failed', reasonCode: 'TWILIO_VERIFY_CHECK_FAILED' };
+  }
 }
 
 export async function fetchTwilioTranscription(recordingSid: string): Promise<string | null> {
@@ -369,6 +504,21 @@ export async function fetchTwilioTranscription(recordingSid: string): Promise<st
   const body = (await res.json()) as { transcriptions?: Array<{ transcription_text?: string }> };
   const first = body.transcriptions?.[0]?.transcription_text;
   return typeof first === 'string' && first.length > 0 ? first : null;
+}
+
+export async function fetchTwilioRecording(recordingSid: string): Promise<Buffer | null> {
+  const cfg = await resolveTelephonyConfig();
+  if (!cfg || !/^RE[A-Za-z0-9]{20,62}$/.test(recordingSid)) return null;
+  const response = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(cfg.accountSid)}/Recordings/${encodeURIComponent(recordingSid)}.mp3`,
+    { headers: { Authorization: restAuthHeader(cfg) }, signal: AbortSignal.timeout(30_000) },
+  );
+  if (!response.ok) return null;
+  const declaredLength = Number(response.headers.get('content-length') || 0);
+  if (declaredLength > 52_428_800) throw Object.assign(new Error('Recording exceeds the configured size limit'), { code: 'CALLCOMMAND_RECORDING_TOO_LARGE' });
+  const content = Buffer.from(await response.arrayBuffer());
+  if (!content.length || content.length > 52_428_800) throw Object.assign(new Error('Recording is outside the configured size limit'), { code: 'CALLCOMMAND_RECORDING_SIZE_INVALID' });
+  return content;
 }
 
 export async function summarizeTranscript(

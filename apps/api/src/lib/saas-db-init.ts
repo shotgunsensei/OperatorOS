@@ -669,6 +669,13 @@ export async function seedModules() {
       if (spec.defaultStatus === 'live') {
         updates.status = 'live';
       }
+      // Phase 37 intentionally overrides the normal admin-promotion policy
+      // for OutCall. Its source tree has not been recovered and provider
+      // sandbox acceptance has not been recorded, so an older active row
+      // must fail closed again on the next release/seed run.
+      if (spec.slug === 'outcall' && spec.defaultStatus === 'coming_soon') {
+        updates.status = 'coming_soon';
+      }
       // Task #66 catalog rename: existing rows that pre-date the
       // BrandForgeOS rename keep getting nudged to the canonical name.
       // (The slug rename itself is handled idempotently by

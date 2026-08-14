@@ -211,9 +211,10 @@ test('marketing shell · console-internal links point at /app, not /', () => {
   }
 });
 
-test('marketing shell · root layout loads Space Grotesk, brand tokens, and canonical metadata', () => {
+test('marketing shell · root layout uses deterministic brand typography, tokens, and canonical metadata', () => {
   const layout = read('src/app/layout.tsx');
-  assert.match(layout, /Space_Grotesk/, 'layout.tsx should load Space Grotesk through next/font');
+  assert.match(layout, /className="operatoros-fonts"/, 'layout.tsx should use the deterministic brand font boundary');
+  assert.doesNotMatch(layout, /next\/font\/google/, 'production builds must not depend on external font downloads');
   assert.match(layout, /brandCssVariables/, 'layout.tsx should inject brand CSS variables');
   assert.match(layout, /brand\.bgPrimary/, 'layout.tsx should use the brand background token');
   assert.match(layout, /metadataBase:\s*new URL\(['"]https:\/\/operatoros\.net['"]\)/);

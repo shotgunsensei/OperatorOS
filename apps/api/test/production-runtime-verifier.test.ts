@@ -27,8 +27,8 @@ test('production verifier loads OperatorOS plus exactly 13 canonical module regi
   const registry = await verifier.loadRegistry();
   assert.equal(registry.filter((entry: { moduleId: string }) => entry.moduleId === 'operatoros').length, 1);
   assert.equal(registry.filter((entry: { moduleId: string }) => entry.moduleId !== 'operatoros').length, 13);
-  assert.equal(registry.filter((entry: { enabled: boolean }) => entry.enabled).length, 14);
-  assert.equal(registry.find((entry: { slug: string }) => entry.slug === 'outcall')?.enabled, true);
+  assert.equal(registry.filter((entry: { enabled: boolean }) => entry.enabled).length, 13);
+  assert.equal(registry.find((entry: { slug: string }) => entry.slug === 'outcall')?.enabled, false);
 });
 
 test('authorization redirect validator enforces exact PKCE request, safe next, headers, and host-only cookies', () => {
@@ -83,8 +83,8 @@ test('release identity validator requires the intended commit, database release,
     lockfileSha256: 'c'.repeat(64),
     databaseRelease: {
       contractVersion: 1,
-      releaseVersion: 39,
-      stepCount: 39,
+      releaseVersion: 47,
+      stepCount: 47,
       lastStep: 'torqueshed_native_tables',
     },
   };

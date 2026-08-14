@@ -237,7 +237,7 @@ export async function ensureTorqueShedTables(): Promise<void> {
       package_key VARCHAR(80) NOT NULL, units BIGINT NOT NULL, amount_minor INTEGER NOT NULL,
       currency CHAR(3) NOT NULL DEFAULT 'USD', provider VARCHAR(40) NOT NULL,
       provider_mode VARCHAR(20) NOT NULL, provider_checkout_id VARCHAR(200), provider_checkout_url TEXT,
-      status VARCHAR(30) NOT NULL DEFAULT 'pending', idempotency_key VARCHAR(200) NOT NULL,
+      status VARCHAR(30) NOT NULL DEFAULT 'payment_pending', idempotency_key VARCHAR(200) NOT NULL,
       failure_code VARCHAR(120), created_at TIMESTAMP NOT NULL DEFAULT NOW(), updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
       credited_at TIMESTAMP, refunded_at TIMESTAMP,
       CONSTRAINT uq_operatoros_token_purchase_tenant_id UNIQUE (tenant_id, id),
@@ -245,8 +245,20 @@ export async function ensureTorqueShedTables(): Promise<void> {
       CONSTRAINT operatoros_token_purchase_units_check CHECK (units > 0),
       CONSTRAINT operatoros_token_purchase_amount_check CHECK (amount_minor > 0),
       CONSTRAINT operatoros_token_purchase_mode_check CHECK (provider_mode IN ('test','live')),
-      CONSTRAINT operatoros_token_purchase_status_check CHECK (status IN ('pending','credited','failed','partially_refunded','refunded'))
+      CONSTRAINT operatoros_token_purchase_status_check CHECK (status IN (
+        'pending','payment_pending','checkout_created','paid_pending_credit','credited',
+        'cancelled','expired','failed','partially_refunded','refunded','disputed'
+      ))
     );
+    ALTER TABLE operatoros_token_purchase_intents
+      ALTER COLUMN status SET DEFAULT 'payment_pending';
+    ALTER TABLE operatoros_token_purchase_intents
+      DROP CONSTRAINT IF EXISTS operatoros_token_purchase_status_check;
+    ALTER TABLE operatoros_token_purchase_intents
+      ADD CONSTRAINT operatoros_token_purchase_status_check CHECK (status IN (
+        'pending','payment_pending','checkout_created','paid_pending_credit','credited',
+        'cancelled','expired','failed','partially_refunded','refunded','disputed'
+      ));
     CREATE UNIQUE INDEX IF NOT EXISTS uq_operatoros_token_purchase_checkout
       ON operatoros_token_purchase_intents(provider, provider_mode, provider_checkout_id)
       WHERE provider_checkout_id IS NOT NULL;
@@ -309,6 +321,8 @@ export async function ensureTorqueShedTables(): Promise<void> {
     );
     CREATE UNIQUE INDEX IF NOT EXISTS uq_torqueshed_token_ledger_external_event
       ON torqueshed_token_ledger_entries(external_event_ref) WHERE external_event_ref IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_torqueshed_token_ledger_purchase_credit
+      ON torqueshed_token_ledger_entries(tenant_id, purchase_intent_id) WHERE entry_kind = 'credit';
     CREATE UNIQUE INDEX IF NOT EXISTS uq_torqueshed_token_ledger_debit_request
       ON torqueshed_token_ledger_entries(tenant_id, assist_request_id) WHERE entry_kind = 'debit';
     CREATE INDEX IF NOT EXISTS idx_torqueshed_token_ledger_balance

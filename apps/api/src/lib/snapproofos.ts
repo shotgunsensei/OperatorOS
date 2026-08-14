@@ -86,7 +86,7 @@ export function sanitizeContext(value: unknown, label: string): JsonObject {
 
 export const CASE_STATUSES = ['draft', 'collecting', 'in_review', 'approved', 'rejected', 'archived'] as const;
 export const EVIDENCE_STATUSES = ['captured', 'in_review', 'verified', 'rejected', 'archived'] as const;
-export const EVIDENCE_TYPES = ['photo', 'document', 'screenshot', 'log', 'note'] as const;
+export const EVIDENCE_TYPES = ['photo', 'document', 'screenshot', 'log', 'note', 'audio'] as const;
 
 export function parseCaseInput(value: unknown) {
   const input = object(value);

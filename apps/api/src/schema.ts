@@ -2019,6 +2019,85 @@ export const ninjaPoolMatchEvents = pgTable('ninja_pool_match_events', {
   index('idx_ninja_pool_events_match').on(t.tenantId, t.matchId, t.sequenceNumber),
 ]);
 
+export type NinjaPoolStoredOnlinePendingShot = {
+  expectedVersion: number;
+  clientShotId: string;
+  shooterSeat: 0 | 1;
+  shot: {
+    angle: number;
+    power: number;
+    tipOffset?: { x: number; y: number };
+    cuePlacement?: { x: number; y: number };
+    calledPocket?: number;
+  };
+  requestedByUserId: string;
+};
+
+/** Durable authority for authenticated host/guest rooms and reconnect snapshots. */
+export const ninjaPoolOnlineRooms = pgTable('ninja_pool_online_rooms', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  code: varchar('code', { length: 4 }).notNull(),
+  hostUserId: varchar('host_user_id', { length: 36 }).notNull().references(() => users.id),
+  guestUserId: varchar('guest_user_id', { length: 36 }).references(() => users.id),
+  status: text('status', { enum: ['waiting', 'active', 'completed', 'abandoned', 'expired'] }).notNull().default('waiting'),
+  rulesSettings: jsonb('rules_settings').$type<NinjaPoolStoredPreferences>().notNull(),
+  authoritativeState: jsonb('authoritative_state').$type<NinjaPoolStoredLogicalState>().notNull(),
+  stateHash: varchar('state_hash', { length: 8 }).notNull(),
+  pendingShot: jsonb('pending_shot').$type<NinjaPoolStoredOnlinePendingShot | null>(),
+  sequenceNumber: integer('sequence_number').notNull().default(0),
+  version: integer('version').notNull().default(1),
+  clientRoomId: varchar('client_room_id', { length: 160 }).notNull(),
+  hostLeftAt: timestamp('host_left_at'),
+  guestLeftAt: timestamp('guest_left_at'),
+  expiresAt: timestamp('expires_at').notNull(),
+  lastActivityAt: timestamp('last_activity_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_ninja_pool_online_room_tenant_id').on(t.tenantId, t.id),
+  uniqueIndex('uq_ninja_pool_online_room_code').on(t.code),
+  uniqueIndex('uq_ninja_pool_online_room_client').on(t.tenantId, t.hostUserId, t.clientRoomId),
+  index('idx_ninja_pool_online_room_host').on(t.tenantId, t.hostUserId, t.status, t.updatedAt.desc()),
+  index('idx_ninja_pool_online_room_guest').on(t.tenantId, t.guestUserId, t.status, t.updatedAt.desc()),
+  index('idx_ninja_pool_online_room_expiry').on(t.status, t.expiresAt),
+]);
+
+/** Append-only transport/rule trace used for replay, audit, and desync evidence. */
+export const ninjaPoolOnlineEvents = pgTable('ninja_pool_online_events', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  roomId: varchar('room_id', { length: 36 }).notNull().references(() => ninjaPoolOnlineRooms.id),
+  actorUserId: varchar('actor_user_id', { length: 36 }).references(() => users.id),
+  sequenceNumber: integer('sequence_number').notNull(),
+  clientActionId: varchar('client_action_id', { length: 160 }),
+  eventKind: text('event_kind', { enum: ['create', 'join', 'intent', 'shot', 'choice', 'leave', 'resync', 'expire'] }).notNull(),
+  input: jsonb('input').$type<Record<string, unknown>>().notNull(),
+  outcome: jsonb('outcome').$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_ninja_pool_online_event_sequence').on(t.tenantId, t.roomId, t.sequenceNumber),
+  uniqueIndex('uq_ninja_pool_online_event_client')
+    .on(t.tenantId, t.roomId, t.clientActionId)
+    .where(sql`${t.clientActionId} IS NOT NULL`),
+  index('idx_ninja_pool_online_event_room').on(t.tenantId, t.roomId, t.sequenceNumber),
+  index('idx_ninja_pool_online_event_rate').on(t.tenantId, t.actorUserId, t.createdAt),
+]);
+
+export const ninjaPoolOnlineRateLimits = pgTable('ninja_pool_online_rate_limits', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar('tenant_id', { length: 36 }).notNull().references(() => tenants.id),
+  userId: varchar('user_id', { length: 36 }).notNull().references(() => users.id),
+  action: varchar('action', { length: 20 }).notNull(),
+  windowStartedAt: timestamp('window_started_at').defaultNow().notNull(),
+  count: integer('count').notNull().default(1),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('uq_ninja_pool_online_rate').on(t.tenantId, t.userId, t.action),
+  index('idx_ninja_pool_online_rate_updated').on(t.updatedAt),
+]);
+
 export type BrandForgeWorkspaceProfile = {
   industry?: string;
   businessType?: string;
@@ -2054,6 +2133,8 @@ export const brandforgeBrands = pgTable('brandforge_brands', {
   bodyFont: varchar('body_font', { length: 80 }),
   voiceTone: text('voice_tone'),
   guidelines: text('guidelines'),
+  logoAttachmentId: varchar('logo_attachment_id', { length: 36 }),
+  assetSummary: jsonb('asset_summary').$type<string[]>().notNull().default([]),
   version: integer('version').notNull().default(1),
   deletedAt: timestamp('deleted_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -2133,6 +2214,8 @@ export const brandforgeCopyAssets = pgTable('brandforge_copy_assets', {
     enum: ['draft', 'review', 'approved', 'published', 'archived'],
   }).notNull().default('draft'),
   generationId: varchar('generation_id', { length: 36 }),
+  favorite: boolean('favorite').notNull().default(false),
+  scores: jsonb('scores').$type<Record<string, unknown>>().notNull().default({}),
   version: integer('version').notNull().default(1),
   deletedAt: timestamp('deleted_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),

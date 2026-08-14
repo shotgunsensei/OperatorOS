@@ -59,8 +59,8 @@ export const brand = {
   statusLockedText:   '#7C3AED',
   statusLockedBg:     'rgba(124, 58, 237, 0.12)',
   statusLockedBorder: 'rgba(124, 58, 237, 0.35)',
-  fontDisplay: 'var(--brand-font-space-grotesk), var(--brand-font-inter), Inter, system-ui, sans-serif',
-  fontBody: 'var(--brand-font-inter), Inter, system-ui, sans-serif',
+  fontDisplay: 'Arial, "Helvetica Neue", system-ui, sans-serif',
+  fontBody: '"Segoe UI", Arial, system-ui, sans-serif',
   contentMaxWidth: 1200,
 } as const;
 

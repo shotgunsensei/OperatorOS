@@ -1,0 +1,72 @@
+process.env.NODE_ENV = 'test';
+process.env.APP_ENV = 'test';
+
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import {
+  CALLCOMMAND_MAX_FLOW_STEPS,
+  analyzeTranscript,
+  buildAfterHoursTwiml,
+  buildCallPdf,
+  buildIncomingTwiml,
+  createIngestionToken,
+  decideReceptionistTurn,
+  deterministicAnalysis,
+  executeFlowGraph,
+  hashValue,
+  isWithinBusinessHours,
+  nextIntakeQuestion,
+  normalizeCallAnalysis,
+  normalizeIntakeSchema,
+  parseIntakeAnswer,
+  validateFlowGraph,
+  xml,
+} from '../src/lib/callcommand-phase35.js';
+
+const cases: Array<{ name: string; run: () => void | Promise<void> }> = [
+  { name: '1 always-open business hours resolve in-hours', run: () => assert.equal(isWithinBusinessHours({ always: true }), true) },
+  { name: '2 missing business hours fail closed', run: () => assert.equal(isWithinBusinessHours(null), false) },
+  { name: '3 malformed timezone fails closed', run: () => assert.equal(isWithinBusinessHours({ timezone: 'Not/AZone', weekly: {} }), false) },
+  { name: '4 standard interval resolves open', run: () => assert.equal(isWithinBusinessHours({ timezone: 'UTC', weekly: { mon: [{ open: '08:00', close: '17:00' }] } }, new Date('2026-08-10T12:00:00Z')), true) },
+  { name: '5 standard interval resolves closed', run: () => assert.equal(isWithinBusinessHours({ timezone: 'UTC', weekly: { mon: [{ open: '08:00', close: '17:00' }] } }, new Date('2026-08-10T20:00:00Z')), false) },
+  { name: '6 overnight interval resolves before midnight', run: () => assert.equal(isWithinBusinessHours({ timezone: 'UTC', weekly: { mon: [{ open: '22:00', close: '05:00' }] } }, new Date('2026-08-10T23:00:00Z')), true) },
+  { name: '7 overnight interval resolves after midnight on configured day fixture', run: () => assert.equal(isWithinBusinessHours({ timezone: 'UTC', weekly: { tue: [{ open: '22:00', close: '05:00' }] } }, new Date('2026-08-11T02:00:00Z')), true) },
+  { name: '8 malformed interval stays closed', run: () => assert.equal(isWithinBusinessHours({ timezone: 'UTC', weekly: { mon: [{ open: 'bad', close: '17:00' }] } }, new Date('2026-08-10T12:00:00Z')), false) },
+  { name: '9 intake schema normalizes unique keys', run: () => assert.deepEqual(normalizeIntakeSchema([{ label: 'Caller Name' }])[0]?.key, 'caller_name') },
+  { name: '10 duplicate intake keys reject', run: () => assert.throws(() => normalizeIntakeSchema([{ key: 'name', label: 'Name' }, { key: 'name', label: 'Again' }]), /unique/) },
+  { name: '11 next intake question selects first missing required field', run: () => assert.equal(nextIntakeQuestion(normalizeIntakeSchema([{ key: 'name', label: 'Name' }, { key: 'reason', label: 'Reason' }]), {})?.key, 'name') },
+  { name: '12 completed intake returns no question', run: () => assert.equal(nextIntakeQuestion(normalizeIntakeSchema([{ key: 'name', label: 'Name' }]), { name: 'Jordan' }), null) },
+  { name: '13 phone intake normalizes spoken punctuation', run: () => assert.equal(parseIntakeAnswer({ key: 'phone', label: 'Phone', type: 'phone' }, '+1 (415) 555-0142'), '+14155550142') },
+  { name: '14 invalid email intake is rejected', run: () => assert.equal(parseIntakeAnswer({ key: 'email', label: 'Email', type: 'email' }, 'not an email'), null) },
+  { name: '15 choice intake is case-insensitive', run: () => assert.equal(parseIntakeAnswer({ key: 'priority', label: 'Priority', type: 'choice', options: ['High'] }, 'high'), 'High') },
+  { name: '16 deterministic receptionist asks next question', run: async () => { const result = await decideReceptionistTurn({ productMode: 'general', schema: normalizeIntakeSchema([{ key: 'name', label: 'Name' }, { key: 'reason', label: 'Reason' }]), collected: {}, currentField: { key: 'name', label: 'Name' }, speech: 'Jordan', transcript: '' }); assert.equal(result.next?.key, 'reason'); assert.equal(result.action, 'ask_next'); } },
+  { name: '17 MSP receptionist completion creates ticket action', run: async () => { const schema = normalizeIntakeSchema([{ key: 'name', label: 'Name' }]); const result = await decideReceptionistTurn({ productMode: 'msp', schema, collected: {}, currentField: schema[0]!, speech: 'Jordan', transcript: '' }); assert.equal(result.action, 'create_ticket'); } },
+  { name: '18 sales receptionist completion creates lead action', run: async () => { const schema = normalizeIntakeSchema([{ key: 'name', label: 'Name' }]); const result = await decideReceptionistTurn({ productMode: 'sales', schema, collected: {}, currentField: schema[0]!, speech: 'Jordan', transcript: '' }); assert.equal(result.action, 'create_lead'); } },
+  { name: '19 medical receptionist completion creates administrative task', run: async () => { const schema = normalizeIntakeSchema([{ key: 'name', label: 'Name' }]); const result = await decideReceptionistTurn({ productMode: 'medical', schema, collected: {}, currentField: schema[0]!, speech: 'Jordan', transcript: '' }); assert.equal(result.action, 'create_task'); } },
+  { name: '20 in-hours receptionist TwiML requests consent without an invalid recording verb', run: () => { const value = buildIncomingTwiml({ greeting: 'Hello', consentRequired: true, consentAction: '/consent', gatherAction: '/gather', behavior: 'ai_receptionist' }); assert.match(value, /input="dtmf"/); assert.match(value, /Press 1/); assert.doesNotMatch(value, /<Start><Recording/); } },
+  { name: '21 consent-free receptionist TwiML gathers speech', run: () => assert.match(buildIncomingTwiml({ greeting: 'Hello', consentRequired: false, consentAction: '/consent', gatherAction: '/gather', behavior: 'ai_receptionist' }), /input="speech"/) },
+  { name: '22 forward-only TwiML dials configured number', run: () => assert.match(buildIncomingTwiml({ greeting: 'Hello', consentRequired: false, consentAction: '/consent', gatherAction: '/gather', behavior: 'forward_only', forwardPhone: '+15555550100' }), /<Dial>\+15555550100<\/Dial>/) },
+  { name: '23 voicemail-only TwiML records with callback', run: () => assert.match(buildIncomingTwiml({ greeting: 'Hello', consentRequired: false, consentAction: '/consent', gatherAction: '/gather', behavior: 'voicemail_only', recordingCallback: '/recording' }), /recordingStatusCallback="\/recording"/) },
+  { name: '24 after-hours voicemail records', run: () => assert.match(buildAfterHoursTwiml({ behavior: 'voicemail', greeting: 'Closed', gatherAction: '/gather' }), /<Record/) },
+  { name: '25 after-hours forwarding dials', run: () => assert.match(buildAfterHoursTwiml({ behavior: 'forward', greeting: 'Closed', gatherAction: '/gather', forwardPhone: '+15555550100' }), /<Dial>/) },
+  { name: '26 after-hours AI intake gathers speech', run: () => assert.match(buildAfterHoursTwiml({ behavior: 'ai_intake', greeting: 'Closed', gatherAction: '/gather' }), /input="speech"/) },
+  { name: '27 after-hours hangup never records', run: () => { const value = buildAfterHoursTwiml({ behavior: 'hangup', greeting: 'Closed', gatherAction: '/gather' }); assert.match(value, /<Hangup\/>/); assert.doesNotMatch(value, /<Record/); } },
+  { name: '28 TwiML escapes caller-controlled XML', run: () => assert.equal(xml('<script>&"'), '&lt;script&gt;&amp;&quot;') },
+  { name: '29 valid condition/action flow passes validation', run: () => assert.equal(validateFlowGraph({ start: 'a', nodes: [{ key: 'a', type: 'condition', config: {}, yes: 'b', no: 'c' }, { key: 'b', type: 'action', config: { actionType: 'ticket' } }, { key: 'c', type: 'action', config: { actionType: 'task' } }] }).reachable, 3) },
+  { name: '30 dangling flow pointer rejects', run: () => assert.throws(() => validateFlowGraph({ start: 'a', nodes: [{ key: 'a', type: 'route', config: {}, next: 'missing' }] }), /missing node/) },
+  { name: '31 unreachable flow node rejects', run: () => assert.throws(() => validateFlowGraph({ start: 'a', nodes: [{ key: 'a', type: 'route', config: {} }, { key: 'b', type: 'route', config: {} }] }), /unreachable/) },
+  { name: '32 high-priority condition selects ticket action', run: () => { const result = executeFlowGraph({ start: 'a', nodes: [{ key: 'a', type: 'condition', config: { field: 'priority', operator: 'equals', value: 'urgent' }, yes: 'b', no: 'c' }, { key: 'b', type: 'action', config: { actionType: 'ticket' } }, { key: 'c', type: 'action', config: { actionType: 'task' } }] }, { priority: 'urgent' }); assert.equal(result.actions[0]?.actionType, 'ticket'); } },
+  { name: '33 normal-priority condition selects task action', run: () => { const result = executeFlowGraph({ start: 'a', nodes: [{ key: 'a', type: 'condition', config: { field: 'priority', operator: 'equals', value: 'urgent' }, yes: 'b', no: 'c' }, { key: 'b', type: 'action', config: { actionType: 'ticket' } }, { key: 'c', type: 'action', config: { actionType: 'task' } }] }, { priority: 'medium' }); assert.equal(result.actions[0]?.actionType, 'task'); } },
+  { name: '34 cyclic flow stops at the 50-step loop guard', run: () => { const result = executeFlowGraph({ start: 'a', nodes: [{ key: 'a', type: 'route', config: {}, next: 'b' }, { key: 'b', type: 'route', config: {}, next: 'a' }] }, {}); assert.equal(result.outcome, 'loop_guard'); assert.equal(result.traces.length, CALLCOMMAND_MAX_FLOW_STEPS); } },
+  { name: '35 deterministic analysis identifies outage urgency', run: () => assert.equal(deterministicAnalysis('The production service is down. We cannot operate and need a technician now.').priority, 'urgent') },
+  { name: '36 deterministic analysis identifies sales intent', run: () => assert.equal(deterministicAnalysis('I need pricing and a proposal for your service this week.').callType, 'sales') },
+  { name: '37 deterministic analysis preserves phone entity', run: () => assert.equal(deterministicAnalysis('Please call me back at +1 415-555-0142 about the service request.').callerPhone, '+14155550142') },
+  { name: '38 structured analysis normalizes invalid enum fields', run: () => { const value = normalizeCallAnalysis({ summary: 'Valid summary', priority: 'impossible', sentiment: 'wild', actionItems: [] }); assert.equal(value.priority, 'medium'); assert.equal(value.sentiment, 'neutral'); } },
+  { name: '39 shared AI test path records deterministic provenance', run: async () => { const result = await analyzeTranscript('The production service is down and needs an urgent response.', 'auto'); assert.equal(result.provenance, 'deterministic'); assert.equal(result.provider, 'deterministic'); } },
+  { name: '40 ingestion tokens are high entropy and stored by hash', run: () => { const value = createIngestionToken(); assert.match(value.token, /^cci_[A-Za-z0-9_-]{40,}$/); assert.equal(value.hash, hashValue(value.token)); assert.notEqual(value.hash, value.token); } },
+  { name: '41 call report is a standards-valid PDF with trace', run: () => { const pdf = buildCallPdf({ id: 'call-1', status: 'completed', phone_masked: '+15••••0100', summary: 'Resolved', transcript: 'Caller requested support.' }, [{ sequence: 1, node_key: 'start', node_type: 'route', outcome: 'next' }], [{ action_type: 'ticket', status: 'completed' }]); assert.equal(pdf.subarray(0, 5).toString('ascii'), '%PDF-'); assert.ok(pdf.includes(Buffer.from('xref'))); assert.ok(pdf.includes(Buffer.from('%%EOF'))); } },
+  { name: '42 caller-controlled PDF fields cannot inject control bytes', run: () => { const pdf = buildCallPdf({ id: 'call\u0000-1', status: 'completed', transcript: 'Caller (requested) \\ support.' }); assert.ok(pdf.length > 200); assert.ok(!pdf.includes(Buffer.from('\u0000'))); } },
+];
+
+assert.equal(cases.length, 42, 'Phase 35 must preserve the source 42-check live-call gate shape');
+for (const gate of cases) test(`Phase 35 live-call gate ${gate.name}`, gate.run);

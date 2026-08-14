@@ -1,28 +1,12 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
-import { Inter, Space_Grotesk } from 'next/font/google';
 import { brand, brandCssVariables } from '@/lib/brand';
 import './globals.css';
 
-// Brand typography loaded via next/font so Next self-hosts the files and
-// fully manages the document <head>. Hand-writing <link> tags for Google
-// Fonts in a manual <head> conflicts with the <link>s the Metadata API
-// injects (favicon/manifest/apple-icon), which broke hydration and caused
-// sections to overlap on first paint. next/font removes that conflict and
-// exposes a CSS variable each font is bound to.
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  display: 'swap',
-  variable: '--brand-font-inter',
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-  variable: '--brand-font-space-grotesk',
-});
+// Keep production builds deterministic. The prior next/font Google loader
+// depended on WOFF2 URLs that now return 404 and blocked every deployment.
+// Brand typography remains centralized in brandCssVariables and uses native
+// platform fonts without a runtime or build-time third-party request.
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://operatoros.net'),
@@ -80,7 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${spaceGrotesk.variable}`}
+      className="operatoros-fonts"
       suppressHydrationWarning
     >
       {/* No manual <head>: in the App Router Next.js owns the document head

@@ -176,6 +176,7 @@ test('Ninjamation persists versions, blocks unsafe approval, and isolates foreig
   assert.equal(created.statusCode, 201, created.body);
   scriptId = created.json().script.id;
   assert.equal(created.json().script.status, 'draft');
+  assert.equal(created.json().script.fileName, 'Phase-12A-inventory.ps1');
   assert.equal(created.json().script.staticAnalysis.criticalCount, 0);
 
   const foreign = await app.inject({

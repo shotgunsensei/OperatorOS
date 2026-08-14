@@ -27,7 +27,7 @@ The imported source exposes eight route/layout files: root layout, SSO return, t
 
 - Browser authorization is performed on the exact TorqueShed OperatorOS host after the existing browser SSO/cookie gate.
 - The app creates state, nonce, a device identifier, and an S256 PKCE verifier. The callback contains only a one-use opaque code and state; it never carries a JWT, password, provider credential, or session token.
-- Access and refresh credentials are opaque random values. Only SHA-256 hashes are persisted in additive v39 tables; only the opaque values are stored through OS secure storage using `WHEN_UNLOCKED_THIS_DEVICE_ONLY`.
+- Access and refresh credentials are opaque random values. Only SHA-256 hashes are persisted in additive v47 tables; only the opaque values are stored through OS secure storage using `WHEN_UNLOCKED_THIS_DEVICE_ONLY`.
 - Access expires after 15 minutes; refresh expires after 30 days and rotates both credentials. Replay, device mismatch, expired codes, consumed codes, tenant mismatch, entitlement loss, inactive users, token-version revocation, and logout fail closed.
 - Native sessions are module-bound to TorqueShed and cannot call another OperatorOS module path. Standard API guards re-check the user, tenant, membership, role/write authority, and entitlement.
 
@@ -60,7 +60,7 @@ The imported source exposes eight route/layout files: root layout, SSO return, t
 | Android Expo prebuild | PASS |
 | iOS Expo prebuild on Windows | EXTERNAL: Expo requires macOS or Linux |
 | Disposable PostgreSQL native auth/API workflow | PASS (3/3) |
-| Additive database release v39 apply + immediate reapply | PASS |
+| Additive database release v47 apply + immediate reapply | PASS |
 | API/web/mobile TypeScript | PASS |
 | Local Android device/emulator | UNAVAILABLE: no Android SDK/device attached |
 | Local iOS simulator | UNAVAILABLE: Windows host |
@@ -72,7 +72,7 @@ The dedicated `.github/workflows/torqueshed-native.yml` contract provides clean-
 1. Supply the real Apple team ID, Android release signing SHA-256 fingerprint, and immutable mobile build ID in protected deployment/EAS environments.
 2. Provision the Expo/EAS project, Apple distribution/App Store Connect credentials, Android upload/app-signing keys, package ownership, and store records.
 3. Run the native workflow and capture successful Android/iOS CI build IDs plus device results for auth, media permission/upload, offline/reconnect, deep links, revocation, and logout.
-4. Deploy the exact reviewed OperatorOS API/web commit with additive database release v39, then verify both association documents from the public exact host before submitting either store build.
+4. Deploy the exact reviewed OperatorOS API/web commit with additive database release v47, then verify both association documents from the public exact host before submitting either store build.
 
 ## Acceptance disposition
 

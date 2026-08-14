@@ -79,6 +79,46 @@ server.on('clientError', (_error, socket) => {
   socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n');
 });
 
+server.on('upgrade', (req, socket, head) => {
+  const publicHost = req.headers.host || 'operatoros.net';
+  const headers = {
+    ...req.headers,
+    host: publicHost,
+    'x-forwarded-host': publicHost,
+    'x-forwarded-proto': 'https',
+    'x-forwarded-for': forwardedFor(req),
+  };
+  const upstream = http.request({
+    protocol: target.protocol,
+    hostname: target.hostname,
+    port: target.port || '80',
+    method: req.method,
+    path: req.url,
+    headers,
+  });
+
+  upstream.on('upgrade', (upstreamResponse, upstreamSocket, upstreamHead) => {
+    const responseHeaders = Object.entries(upstreamResponse.headers).flatMap(([name, value]) => {
+      if (value == null) return [];
+      return Array.isArray(value) ? value.map((item) => `${name}: ${item}`) : [`${name}: ${value}`];
+    });
+    socket.write(
+      `HTTP/1.1 ${upstreamResponse.statusCode || 101} ${upstreamResponse.statusMessage || 'Switching Protocols'}\r\n`
+      + `${responseHeaders.join('\r\n')}\r\n\r\n`,
+    );
+    if (head.length) upstreamSocket.write(head);
+    if (upstreamHead.length) socket.write(upstreamHead);
+    socket.pipe(upstreamSocket).pipe(socket);
+  });
+  upstream.on('response', (response) => {
+    socket.end(`HTTP/1.1 ${response.statusCode || 502} ${response.statusMessage || 'WebSocket upgrade failed'}\r\nConnection: close\r\n\r\n`);
+  });
+  upstream.on('error', (error) => {
+    socket.end(`HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\nContent-Type: text/plain\r\n\r\n${error.message}`);
+  });
+  upstream.end();
+});
+
 server.listen(listenPort, listenHost, () => {
   process.stdout.write(
     `OperatorOS production-host E2E proxy listening on https://${listenHost}:${listenPort} -> ${target.origin}\n`,

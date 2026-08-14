@@ -27,6 +27,16 @@ const REVENUE_PRICE_VARS = [
   'STRIPE_PRICE_COMPANION_MODULE_MONTHLY',
   'STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY',
 ];
+const TORQUE_REVENUE_EVENTS = [
+  'checkout.session.completed',
+  'checkout.session.async_payment_succeeded',
+  'checkout.session.async_payment_failed',
+  'checkout.session.expired',
+  'payment_intent.payment_failed',
+  'charge.refunded',
+  'charge.dispute.created',
+  'charge.dispute.closed',
+];
 
 export const CANONICAL_MODULE_URLS = Object.freeze({
   ...PRODUCTION_ENVIRONMENT_CONTRACT.canonicalModuleUrls,
@@ -140,12 +150,29 @@ function checkRevenue(env, issues) {
   if (env.STRIPE_MODE !== 'live') {
     addIssue(issues, 'revenue', 'STRIPE_MODE', 'must equal live');
   }
-  requirePresent(env, issues, 'revenue', ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', ...REVENUE_PRICE_VARS]);
+  requirePresent(env, issues, 'revenue', [
+    'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_WEBHOOK_ENDPOINT_URL',
+    'STRIPE_WEBHOOK_EVENTS', 'STRIPE_EXPECTED_ACCOUNT_ID', ...REVENUE_PRICE_VARS,
+  ]);
   if (isPresent(env, 'STRIPE_SECRET_KEY') && !env.STRIPE_SECRET_KEY.startsWith('sk_live_')) {
     addIssue(issues, 'revenue', 'STRIPE_SECRET_KEY', 'must be a live Stripe secret key');
   }
   if (isPresent(env, 'STRIPE_WEBHOOK_SECRET') && !env.STRIPE_WEBHOOK_SECRET.startsWith('whsec_')) {
     addIssue(issues, 'revenue', 'STRIPE_WEBHOOK_SECRET', 'must be a Stripe webhook signing secret');
+  }
+  if (isPresent(env, 'STRIPE_WEBHOOK_ENDPOINT_URL') && env.STRIPE_WEBHOOK_ENDPOINT_URL !== 'https://api.operatoros.net/v1/billing/webhook') {
+    addIssue(issues, 'revenue', 'STRIPE_WEBHOOK_ENDPOINT_URL', 'must equal the one canonical Stripe webhook URL');
+  }
+  if (isPresent(env, 'STRIPE_EXPECTED_ACCOUNT_ID') && !/^acct_[A-Za-z0-9]+$/.test(env.STRIPE_EXPECTED_ACCOUNT_ID)) {
+    addIssue(issues, 'revenue', 'STRIPE_EXPECTED_ACCOUNT_ID', 'must be the live Stripe account ID');
+  }
+  if (isPresent(env, 'STRIPE_WEBHOOK_EVENTS')) {
+    const configuredEvents = new Set(env.STRIPE_WEBHOOK_EVENTS.split(',').map((value) => value.trim()).filter(Boolean));
+    for (const eventType of TORQUE_REVENUE_EVENTS) {
+      if (!configuredEvents.has(eventType)) {
+        addIssue(issues, 'revenue', 'STRIPE_WEBHOOK_EVENTS', `must include ${eventType}`);
+      }
+    }
   }
   for (const name of REVENUE_PRICE_VARS) {
     if (isPresent(env, name) && !env[name].startsWith('price_')) {

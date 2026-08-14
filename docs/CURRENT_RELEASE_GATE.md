@@ -1,5 +1,65 @@
 # OperatorOS current release gate
 
+## Current Phase 36 source/local overlay - RELEASE BLOCKED (2026-08-13)
+
+Ninjamation Phase 36 is source/local implemented at cumulative additive
+database release v45. Its compiler-derived ledger is 189/189 active or
+shared-equivalent: 111 native, 78 shared-equivalent, zero waiver, and zero
+blocker. Focused domain/database tests pass 7/7, static/deep-link/release
+contracts pass, typecheck/build pass, clean/idempotent v45 passes, and the
+compiled exact-host private/public browser gate passes.
+
+This is not a production promotion. Live GitHub/OpenAI provider acceptance,
+production source reconciliation, backup/apply, deployed restart and
+exact-host/mobile acceptance, rollback rehearsal, merge, and deployment remain
+owner gates. The historical records below remain provenance and do not
+override this overlay.
+
+## Current Phase 35 source/local overlay - RELEASE BLOCKED (2026-08-13)
+
+CallCommand Phase 35 is source/local implemented at cumulative additive
+database release v44. Its exact ledger is 589/589 active or shared-equivalent
+with zero waiver or blocker. Root lint/typecheck, production build, restored
+42/42 live-call gate, focused 66/66 regression, disposable PostgreSQL 5/5,
+clean/idempotent v44, parity/report 8/8, and compiled local browser 1/1 pass.
+
+This is not a production promotion. The cross-product API aggregate still has
+unrelated existing Ninja Pool/TradeFlowKit static-contract failures, although
+all Phase 35 tests pass. Production backup/apply, configured real-provider
+acceptance, deployed exact-host/mobile verification, source reconciliation,
+restart, restore/rollback, merge, and deployment remain owner gates. The
+historical records below remain provenance and do not override this overlay.
+
+## Current Phase 33 source/local overlay - RELEASE BLOCKED (2026-08-12)
+
+StudyForge Phase 33 is source/local implemented at cumulative additive database
+release v42. Its exact ledger is 317/317 active or shared-equivalent with zero
+waiver or blocker. Typecheck, focused 8/8 plus PostgreSQL 7/7, combined
+StudyForge 29/29, integration 28/28, clean/reapplied v42, production build, and
+compiled local exact-host 2/2 pass.
+
+This is not a production promotion. The broad API aggregate remains non-green
+because of existing unrelated cross-product failures. Production backup/apply,
+live shared-AI configuration,
+deployed exact-host/mobile acceptance, data reconciliation, restore/rollback,
+commit/merge, and deployment are owner gates. The historical release records
+below remain provenance and do not override this current overlay.
+
+## Current Phase 32 source/local overlay - RELEASE BLOCKED (2026-08-12)
+
+SnapProofOS Phase 32 is source/local implemented at additive database release
+v41. Its exact ledger is 341/341 active or shared-equivalent with no waiver or
+blocker. Root lint/typecheck, focused 10/10 contracts, disposable PostgreSQL
+4/4 workflow, release apply/reapply, and exact-ledger 6/6 pass.
+
+This is not a promotable production identity. The existing global `next/font`
+configuration received HTTP 404 for Google-hosted WOFF2 files during the final
+web production build, so compiled browser acceptance remains open. Production
+backup/apply, scanner readiness, source-data reconciliation, exact-host
+desktop/tablet/mobile acceptance, rollback, commit/merge, and deployment are
+owner gates. The historical Phase 20 release record below is retained as prior
+evidence and does not override this current overlay.
+
 ## Current source/local gate - Phase 20 PASS (2026-08-03)
 
 `SOURCE/LOCAL PUBLIC-LAUNCH FUNCTIONAL CLOSURE: PASS`. Release v33 remains the

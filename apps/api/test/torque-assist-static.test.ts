@@ -56,6 +56,7 @@ test('Torque Assist UI/API routes and release verification are registered withou
   const registration = read('apps/api/src/routes/module-shell-routes.ts');
   const release = read('apps/api/src/lib/database-release.ts');
   const routes = read('apps/api/src/routes/torque-assist-routes.ts');
+  const billingRoutes = read('apps/api/src/routes/billing-routes.ts');
   const web = read('apps/web/src/components/module-shells/TorqueShedWorkspace.tsx');
   const client = read('apps/web/src/lib/auth.ts');
   assert.match(registration, /registerTorqueAssistRoutes/);
@@ -65,14 +66,17 @@ test('Torque Assist UI/API routes and release verification are registered withou
   for (const path of [
     '/torque-assist/status',
     '/token-purchases/checkout',
+    '/token-purchases/:id/status',
     '/token-ledger',
     '/token-ledger/reconciliation',
     '/torque-assist',
   ]) {
     assert.ok(routes.includes(`/v1/modules/torqueshed${path}`), path);
   }
-  assert.match(routes, /\/v1\/billing\/torque-assist\/webhook/);
-  assert.match(routes, /Raw body unavailable for signature verification/);
+  assert.doesNotMatch(routes, /\/v1\/billing\/torque-assist\/webhook/);
+  assert.match(billingRoutes, /isTorqueTokenStripeEvent/);
+  assert.match(billingRoutes, /receiveVerifiedTorqueTokenStripeEvent/);
+  assert.match(billingRoutes, /\/v1\/billing\/webhook/);
   assert.doesNotMatch(routes, /body\.tenantId|input\.tenantId|body\.userId|input\.userId/);
   assert.match(web, /data-testid="torqueshed-torque-assist"/);
   assert.match(web, /Retry same request without duplicate charge/);
@@ -81,7 +85,25 @@ test('Torque Assist UI/API routes and release verification are registered withou
   assert.match(web, /Ranked hypotheses/);
   assert.match(web, /Safety warnings/);
   assert.match(web, /Recommended tests/);
+  assert.match(web, /Verifying payment/);
+  assert.match(web, /Credits added/);
+  assert.match(web, /reference \$\{requestId\}/);
   assert.match(client, /getTorqueAssistContext/);
   assert.match(client, /purchaseTorqueTokens/);
   assert.match(client, /runTorqueAssist/);
+  assert.match(client, /getTorqueTokenPurchaseStatus/);
+});
+
+test('Torque payment reconciliation is dry-run first and live apply is explicitly gated', () => {
+  const command = read('apps/api/src/scripts/torque-payment-reconcile.ts');
+  const reconciliation = read('apps/api/src/lib/operatoros-token-reconciliation.ts');
+  const dbInit = read('apps/api/src/lib/torqueshed-db-init.ts');
+  const pkg = JSON.parse(read('package.json'));
+  assert.match(pkg.scripts['billing:reconcile:torque'], /torque-payment-reconcile/);
+  assert.match(command, /--dry-run/);
+  assert.match(command, /BILLING_RECONCILIATION_LIVE_APPLY/);
+  assert.match(reconciliation, /retrieveTorqueStripeReconciliationSnapshot/);
+  assert.match(reconciliation, /settleTorqueTokenPurchase/);
+  assert.match(dbInit, /uq_torqueshed_token_ledger_purchase_credit/);
+  assert.doesNotMatch(reconciliation, /INSERT INTO torqueshed_token_ledger_entries/);
 });

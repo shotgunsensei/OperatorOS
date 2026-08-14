@@ -37,6 +37,7 @@ jobs:
       DATABASE_URL: postgresql://postgres:phase21_disposable_only@127.0.0.1:5432/operatoros_phase21_release
       SESSION_SECRET: phase21-disposable-session-secret-only
       SSO_CODE_ENCRYPTION_SECRET: phase21-disposable-sso-encryption-secret-only
+      SHARED_SECRET_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       APP_ENV: production
       NODE_ENV: production
       OPERATOROS_BASE_URL: https://operatoros.net

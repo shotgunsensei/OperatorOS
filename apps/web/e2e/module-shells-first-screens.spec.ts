@@ -1,6 +1,6 @@
 /**
- * Playwright coverage for five polished module first-screens
- * (CallCommand AI, Ninjamation, OutCall, StudyForge AI, Ninja Launch Kit) end-to-end
+ * Playwright coverage for four launchable polished module first-screens
+ * (CallCommand AI, Ninjamation, StudyForge AI, Ninja Launch Kit) end-to-end
  * for an Elite-plan tenant member, plus:
  *   - the "Back to My Apps" link is present on every shell route
  *   - a non-entitled tenant member sees the `app-shell-not-accessible`
@@ -25,7 +25,7 @@ import { Client } from 'pg';
 const API = process.env.E2E_API_URL ?? 'http://localhost:5001';
 const WEB = process.env.E2E_WEB_URL ?? 'http://localhost:5000';
 
-const SHELL_SLUGS = ['callcommand-ai', 'ninjamation', 'outcall', 'studyforge-ai', 'ninja-launch-kit'] as const;
+const SHELL_SLUGS = ['callcommand-ai', 'ninjamation', 'studyforge-ai', 'ninja-launch-kit'] as const;
 
 type Slug = typeof SHELL_SLUGS[number];
 
@@ -208,26 +208,19 @@ async function exerciseShell(page: Page, slug: Slug) {
   switch (slug) {
     case 'callcommand-ai': {
       const channelPhone = `+1555${String(Date.now() % 10_000_000).padStart(7, '0')}`;
+      await page.getByTestId('button-callcommand-create-profile').click();
+      await expect(page.locator('#callcommand-receptionists')).toContainText('Operations receptionist');
       await page.getByTestId('input-callcommand-channel-phone').fill(channelPhone);
       await page.getByTestId('button-callcommand-create-channel').click();
-      await expect(page.locator('#callcommand-configuration')).toContainText('Primary support line');
-      await page.getByTestId('button-callcommand-create-profile').click();
-      await expect(page.locator('#callcommand-configuration')).toContainText('Support intake');
-      await page.getByTestId('input-callcommand-phone').fill('+15551234567');
-      await page.getByTestId('input-callcommand-name').fill('Task73 Caller');
-      await page.getByTestId('button-callcommand-grant-consent').click();
-      await expect(page.getByTestId('text-callcommand-consent-active')).toBeVisible();
-      if ((await page.getByTestId('banner-callcommand-provider').textContent())?.includes('Preview calling is ready')) {
-        await page.getByTestId('button-callcommand-place-test-call').click();
-        await expect(page.getByTestId('list-callcommand-calls')).toBeVisible({ timeout: 10_000 });
-        await expect(page.locator('[data-testid^="row-callcommand-call-"]').first().getByTestId('status-callcommand-completed')).toBeVisible();
-      } else {
-        await expect(page.getByTestId('banner-callcommand-provider')).toContainText('Calling setup required');
-      }
+      await expect(page.locator('#callcommand-configuration')).toContainText('Primary operations line');
+      await page.getByTestId('button-callcommand-place-test-call').click();
+      await expect(page.locator('#callcommand-calls')).toContainText('urgent', { timeout: 20_000 });
+      await expect(page.getByTestId('banner-callcommand-provider')).toContainText('voice provider');
       break;
     }
     case 'ninjamation': {
       const suffix = Date.now().toString(36);
+      await page.getByTestId('nav-ninjamation-admin').click();
       await page.getByTestId('input-ninjamation-name').fill(`Inventory ${suffix}`);
       await page.getByTestId('textarea-ninjamation-content').fill(
         'param([string]$Path)\nGet-ChildItem -LiteralPath $Path -ErrorAction Stop',
@@ -243,21 +236,6 @@ async function exerciseShell(page: Page, slug: Slug) {
       await page.getByTestId('button-ninjamation-download').click();
       const download = await downloadPromise;
       expect(download.suggestedFilename()).toMatch(/\.ps1$/);
-      break;
-    }
-    case 'outcall': {
-      await page.getByTestId('button-outcall-accept-safety').click();
-      await page.getByTestId('input-outcall-phone').fill('+15551234568');
-      await page.getByTestId('button-outcall-verify-phone').click();
-      await expect(page.locator('#outcall-readiness')).toContainText('Verified +15');
-      await page.getByTestId('input-outcall-profile-name').fill(`Neutral exit ${Date.now()}`);
-      await page.getByTestId('input-outcall-profile-message').fill('Please stay on the line while I share an update.');
-      await page.getByTestId('button-outcall-create-profile').click();
-      await page.getByTestId('input-outcall-trigger').fill(`feed the cat ${Date.now()}`);
-      await page.getByTestId('button-outcall-create-trigger').click();
-      await page.getByTestId('button-outcall-schedule').click();
-      await expect(page.locator('#outcall-schedule')).toContainText(/scheduled|completed/, { timeout: 10_000 });
-      await expect(page.locator('#outcall-schedule')).not.toContainText('15551234568');
       break;
     }
     case 'studyforge-ai': {

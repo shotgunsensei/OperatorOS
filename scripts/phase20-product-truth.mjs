@@ -116,11 +116,14 @@ const sourceDefinitions = [
       remote: null,
       commit: null,
       ref: null,
-      remoteVerification: 'No OutCall repository in the owner public repository list; direct shotgunsensei/OutCall probe returned repository not found on 2026-08-08.',
+      remoteVerification: 'Authenticated GitHub repository and code-name searches, including private repositories visible to shotgunsensei, returned no OutCall repository on 2026-08-13.',
       recoverySearch: [
-        'apps/modules/outcall/source contains only README.md',
-        'No matching source in C:/Dev sibling repositories',
-        'No matching entry in C:/Dev/OperatorOS.zip or C:/Dev/TorqueShed.zip',
+        'apps/modules/outcall/source contains only the 627-byte README.md Git blob a724a70d40a72d47b4fa8bf2ac1c972bdd35474e',
+        'C:/Dev/Outcall exists but is empty and has no Git repository',
+        'No matching source path in Downloads, Documents, Desktop, OneDrive, or Codex attachments; Downloads/outcall.ts is byte-identical to the reconstructed OperatorOS helper',
+        'No matching source in the 2026-03-04 Replit export or its embedded repositories',
+        'No matching reachable, unreachable, or dangling source tree in the inspected OperatorOS Git archives and current Git object database',
+        'The owner prompt attachment describes a requested build and is not executable source or runtime provenance',
       ],
     },
   },
@@ -248,7 +251,10 @@ function sourceFingerprint(sourceRoot) {
   const hash = createHash('sha256');
   let totalBytes = 0;
   for (const file of files) {
-    const bytes = readFileSync(file);
+    const sourceBytes = readFileSync(file);
+    const bytes = new Set(['.jpg', '.jpeg', '.png', '.pdf']).has(extname(file).toLowerCase())
+      ? sourceBytes
+      : Buffer.from(sourceBytes.toString('utf8').replaceAll('\r\n', '\n'), 'utf8');
     const path = normalizePath(relative(sourceRoot, file));
     const pathBytes = Buffer.from(path, 'utf8');
     const length = Buffer.alloc(8);
@@ -260,7 +266,7 @@ function sourceFingerprint(sourceRoot) {
     totalBytes += bytes.length;
   }
   return {
-    algorithm: 'sha256(path NUL uint64be(size) content)',
+    algorithm: 'sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)',
     treeSha256: hash.digest('hex'),
     fileCount: files.length,
     totalBytes,
@@ -773,7 +779,7 @@ function specialCapabilities(definition, sourceRoot) {
       title: 'Recover the canonical OutCall source application',
       state: 'BLOCKED',
       blockerCode: 'SOURCE_RECOVERY_REQUIRED',
-      note: 'The current source boundary is one README and no owner repository or local/archive implementation was found.',
+      note: 'Phase 37 repeated authenticated remote, local path, archive, Replit export, attachment, and Git-object recovery. The current source boundary remains one README; prompts and reconstructed OperatorOS code are not authoritative source.',
     }));
   }
   if (definition.slug === 'tradeflowkit') {
@@ -850,6 +856,424 @@ function specialCapabilities(definition, sourceRoot) {
 }
 
 function applyCurrentRestorationMappings(definition, capabilities) {
+  if (definition.slug === 'ninjamation') {
+    const nativeTargets = [
+      'apps/api/src/lib/ninjamation-db-init.ts',
+      'apps/api/src/lib/ninjamation-phase36-db-init.ts',
+      'apps/api/src/lib/ninjamation.ts',
+      'apps/api/src/lib/ninjamation-phase36.ts',
+      'apps/api/src/lib/ninjamation-access.ts',
+      'apps/api/src/lib/ninjamation-sync.ts',
+      'apps/api/src/routes/ninjamation-routes.ts',
+      'apps/api/src/routes/ninjamation-phase36-routes.ts',
+      'apps/web/src/components/module-shells/NinjamationShell.tsx',
+      'apps/web/src/app/public/ninjamation/[page]/page.tsx',
+      'apps/web/src/lib/auth.ts',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+      'apps/web/src/middleware.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/entitlement-resolver.ts',
+      'apps/api/src/lib/ai-provider.ts',
+      'apps/api/src/lib/shared-provider-adapters.ts',
+      'apps/api/src/lib/shared-background-jobs.ts',
+      'apps/api/src/lib/shared-schedules-exports.ts',
+      'apps/api/src/lib/shared-usage-activity.ts',
+      'apps/api/src/lib/shared-services-db-init.ts',
+      'apps/api/src/lib/saas-db-init.ts',
+      'apps/api/src/routes/auth-routes.ts',
+      'apps/api/src/routes/billing-routes.ts',
+      'apps/api/src/routes/tenant-admin-routes.ts',
+      'apps/api/src/lib/database-release-contract.ts',
+    ];
+    const evidence = [
+      'apps/api/test/ninjamation-phase36-domain.test.ts',
+      'apps/api/test/ninjamation-phase36-db.test.ts',
+      'apps/api/test/ninjamation-phase36-static.test.ts',
+      'apps/api/test/ninjamation-domain.test.ts',
+      'apps/api/test/ninjamation-db.test.ts',
+      'apps/web/e2e/ninjamation-phase36.spec.ts',
+    ];
+    const sharedBoundary = /(?:routes\/auth|\/auth\/|\/login|\/sign.?in|\/sign.?up|\/logout|\/me\b|billing|subscription|checkout|plan|entitlement|stripe|user.?owner|tenant|membership|session|password|admin.?user|account.?profile|health|openai|provider|integration|secret|object.?storage|storage\/|email.?provider|operatoros|replit|database.?url|\bport\b)/iu;
+    const sharedSchemaBoundary = /^(?:users|user_roles|payments|subscriptions)(?:\.|$)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const sourceText = [capability.title, capability.canonicalSourceIdentity, ...capability.sourcePointers].join(' ');
+      const shared = capability.type === 'integration'
+        || ((capability.type === 'database_table' || capability.type === 'database_column') && sharedSchemaBoundary.test(capability.title))
+        || sharedBoundary.test(sourceText);
+      const typedTargets = capability.type === 'database_table'
+        ? (shared ? ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-services-db-init.ts'] : ['apps/api/src/lib/ninjamation-phase36-db-init.ts'])
+        : capability.type === 'ui_page' || capability.type === 'ui_route'
+          ? ['apps/web/src/app/modules/[slug]/[...path]/page.tsx','apps/web/src/components/module-shells/NinjamationShell.tsx','apps/web/src/app/public/ninjamation/[page]/page.tsx']
+          : [];
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...(capability.currentTargets || []), ...(shared ? sharedTargets : nativeTargets), ...typedTargets])].sort(),
+        automatedEvidence: [...new Set([...(capability.automatedEvidence || []), ...evidence])].sort(),
+        note: [capability.note, shared
+          ? 'Phase 36 preserves this outcome through OperatorOS identity, tenant, role, entitlement, billing, shared AI/provider, scheduler, usage, audit, or administration authority.'
+          : 'Phase 36 restores this outcome through additive v45 persistence, fixed-source commit-provenanced AutomationPacks synchronization, immutable versions, search and ownership workflows, validated AI drafts, exact checksum downloads, source-compatible routes, and an explicit no-execution boundary.'].filter(Boolean).join(' '),
+      };
+    });
+  }
+  if (definition.slug === 'callcommand-ai') {
+    const nativeTargets = [
+      'apps/api/src/lib/callcommand-db-init.ts',
+      'apps/api/src/lib/callcommand-phase35-db-init.ts',
+      'apps/api/src/lib/callcommand.ts',
+      'apps/api/src/lib/callcommand-phase35.ts',
+      'apps/api/src/lib/telephony.ts',
+      'apps/api/src/routes/callcommand-routes.ts',
+      'apps/api/src/routes/callcommand-phase35-routes.ts',
+      'apps/web/src/components/module-shells/CallCommandShell.tsx',
+      'apps/web/src/lib/auth.ts',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/ai-provider.ts',
+      'apps/api/src/lib/shared-attachments.ts',
+      'apps/api/src/lib/shared-provider-adapters.ts',
+      'apps/api/src/lib/shared-outbound-webhooks.ts',
+      'apps/api/src/lib/shared-webhooks.ts',
+      'apps/api/src/lib/shared-usage-activity.ts',
+      'apps/api/src/lib/shared-secret-vault.ts',
+      'apps/api/src/lib/shared-services-db-init.ts',
+      'apps/api/src/lib/saas-db-init.ts',
+      'apps/api/src/routes/auth-routes.ts',
+      'apps/api/src/routes/billing-routes.ts',
+      'apps/api/src/routes/tenant-admin-routes.ts',
+      'apps/api/src/lib/database-release-contract.ts',
+    ];
+    const evidence = [
+      'apps/api/test/callcommand-phase35-live-call-gate.test.ts',
+      'apps/api/test/callcommand-phase35-static.test.ts',
+      'apps/api/test/callcommand-phase35-db.test.ts',
+      'apps/api/test/callcommand-twilio-webhooks.test.ts',
+      'apps/web/e2e/callcommand-phase35.spec.ts',
+      'scripts/phase35/callcommand-contract.test.mjs',
+    ];
+    const sharedBoundary = /(?:routes\/auth|\/auth\/|\/login|\/sign.?in|\/sign.?up|\/logout|\/me\b|billing|subscription|checkout|plan|entitlement|stripe|user.?owner|tenant|membership|session|password|admin|settings\/account|health|openai|provider|integration|secret|object.?storage|storage\/|upload.?url|email.?provider|slack.?provider|operatoros|replit|database.?url|\bport\b)/iu;
+    const sharedSchemaBoundary = /^(?:users|integrations)(?:\.|$)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const sourceText = [capability.title, capability.canonicalSourceIdentity, ...capability.sourcePointers].join(' ');
+      const shared = capability.type === 'integration'
+        || ((capability.type === 'database_table' || capability.type === 'database_column') && sharedSchemaBoundary.test(capability.title))
+        || sharedBoundary.test(sourceText);
+      const typedTargets = capability.type === 'database_table'
+        ? (shared ? ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-services-db-init.ts'] : ['apps/api/src/lib/callcommand-phase35-db-init.ts'])
+        : capability.type === 'ui_page' || capability.type === 'ui_route'
+          ? ['apps/web/src/app/modules/[slug]/[...path]/page.tsx','apps/web/src/components/module-shells/CallCommandShell.tsx']
+          : [];
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...(capability.currentTargets || []), ...(shared ? sharedTargets : nativeTargets), ...typedTargets])].sort(),
+        automatedEvidence: [...new Set([...(capability.automatedEvidence || []), ...evidence])].sort(),
+        note: [capability.note, shared
+          ? 'Phase 35 preserves this outcome through OperatorOS identity, tenant, role, entitlement, billing, provider, encrypted-secret, scanned-storage, signed-webhook, usage, audit, or administration authority.'
+          : 'Phase 35 restores this outcome through additive v44 persistence, signed multi-turn Twilio voice, versioned flow execution traces, structured call intelligence, idempotent action dispatch, protected recording ingestion, live switchboard state, provider-confirmed transfer, PDF reporting, and source-compatible product routes.'].filter(Boolean).join(' '),
+      };
+    });
+  }
+  if (definition.slug === 'ninja-launch-kit') {
+    const nativeTargets = [
+      'apps/api/src/generated/ninja-launch-kit-source-catalog.ts',
+      'apps/api/src/lib/ninja-launch-kit-db-init.ts',
+      'apps/api/src/lib/ninja-launch-kit-phase34-db-init.ts',
+      'apps/api/src/lib/ninja-launch-kit-phase34.ts',
+      'apps/api/src/lib/ninja-launch-kit-access.ts',
+      'apps/api/src/routes/ninja-launch-kit-routes.ts',
+      'apps/api/src/routes/ninja-launch-kit-phase34-routes.ts',
+      'apps/web/src/components/module-shells/NinjaLaunchKitCompleteWorkspace.tsx',
+      'apps/web/src/components/module-shells/NinjaLaunchKitShell.tsx',
+      'apps/web/src/lib/auth.ts',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+      'apps/web/src/app/public/ninja-launch-kit/[page]/page.tsx',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/entitlement-resolver.ts',
+      'apps/api/src/lib/ai-provider.ts',
+      'apps/api/src/lib/shared-usage-activity.ts',
+      'apps/api/src/lib/shared-services-db-init.ts',
+      'apps/api/src/lib/saas-db-init.ts',
+      'apps/api/src/routes/auth-routes.ts',
+      'apps/api/src/routes/billing-routes.ts',
+      'apps/api/src/routes/tenant-admin-routes.ts',
+      'apps/api/src/lib/database-release-contract.ts',
+    ];
+    const evidence = [
+      'scripts/phase34/compile-ninja-launch-kit-source.mjs',
+      'scripts/phase34/ninja-launch-kit-contract.test.mjs',
+      'apps/api/test/ninja-launch-kit-phase34-domain.test.ts',
+      'apps/api/test/ninja-launch-kit-phase34-static.test.ts',
+      'apps/web/e2e/ninja-launch-kit-phase34.spec.ts',
+    ];
+    const sharedBoundary = /(?:routes\/auth|\/auth\/|\/login|\/signup|\/logout|\/profile|account.?delete|billing|subscription|checkout|portal|webhook|stripe|plan.?limit|entitlement|session.?secret|database.?url|anthropic|openai|provider|routes\/admin|platform.?admin|health|operatoros|node.?env|base.?path|repl.?id|\bport\b)/iu;
+    const sharedSchemaBoundary = /^(?:users|sessions|stripe_events|admin_settings|featured_templates)(?:\.|$)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const sourceText = [capability.title,capability.canonicalSourceIdentity,...capability.sourcePointers].join(' ');
+      const shared = capability.type === 'integration'
+        || capability.type === 'background_process'
+        || ((capability.type === 'database_table' || capability.type === 'database_column') && sharedSchemaBoundary.test(capability.title))
+        || sharedBoundary.test(sourceText);
+      const typedTargets = capability.type === 'database_table'
+        ? (shared ? ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-services-db-init.ts'] : ['apps/api/src/lib/ninja-launch-kit-phase34-db-init.ts'])
+        : capability.type === 'ui_page' || capability.type === 'ui_route'
+          ? ['apps/web/src/app/modules/[slug]/[...path]/page.tsx','apps/web/src/components/module-shells/NinjaLaunchKitCompleteWorkspace.tsx','apps/web/src/app/public/ninja-launch-kit/[page]/page.tsx']
+          : [];
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...(capability.currentTargets || []),...(shared ? sharedTargets : nativeTargets),...typedTargets])].sort(),
+        automatedEvidence: [...new Set([...(capability.automatedEvidence || []),...evidence])].sort(),
+        note: [capability.note, shared
+          ? 'Phase 34 preserves this source outcome through OperatorOS identity, tenant, role, entitlement, billing, shared AI-provider, metered usage, legal, runtime, or platform-admin authority.'
+          : 'Phase 34 restores this source outcome through additive v43 persistence, a compiler-derived 20-template and nine-brief catalog, deterministic and schema-validated AI generation, history, soft-delete undo, plan-safe visual briefs, persisted checksum exports, source-compatible deep links, and the responsive dark-crimson product workspace.'].filter(Boolean).join(' '),
+      };
+    });
+  }
+  if (definition.slug === 'studyforge-ai') {
+    const nativeTargets = [
+      'apps/api/src/lib/studyforge-db-init.ts',
+      'apps/api/src/lib/studyforge-phase33-db-init.ts',
+      'apps/api/src/lib/studyforge.ts',
+      'apps/api/src/lib/studyforge-phase33.ts',
+      'apps/api/src/lib/studyforge-access.ts',
+      'apps/api/src/routes/studyforge-routes.ts',
+      'apps/api/src/routes/studyforge-phase33-routes.ts',
+      'apps/web/src/components/module-shells/StudyForgeShell.tsx',
+      'apps/web/src/components/module-shells/StudyForgeCompleteWorkspace.tsx',
+      'apps/web/src/lib/auth.ts',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/entitlement-resolver.ts',
+      'apps/api/src/lib/ai-provider.ts',
+      'apps/api/src/lib/shared-usage-activity.ts',
+      'apps/api/src/lib/shared-services-db-init.ts',
+      'apps/api/src/lib/saas-db-init.ts',
+      'apps/api/src/routes/auth-routes.ts',
+      'apps/api/src/routes/billing-routes.ts',
+      'apps/api/src/routes/tenant-admin-routes.ts',
+      'apps/api/src/lib/database-release-contract.ts',
+    ];
+    const nativeSchemas = ['apps/api/src/lib/studyforge-db-init.ts','apps/api/src/lib/studyforge-phase33-db-init.ts'];
+    const sharedSchemas = ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-services-db-init.ts'];
+    const uiTargets = ['apps/web/src/app/modules/[slug]/page.tsx','apps/web/src/app/modules/[slug]/[...path]/page.tsx','apps/web/src/components/module-shells/StudyForgeCompleteWorkspace.tsx'];
+    const evidence = [
+      'apps/api/test/studyforge-domain.test.ts',
+      'apps/api/test/studyforge-db.test.ts',
+      'apps/api/test/studyforge-phase33-domain.test.ts',
+      'apps/api/test/studyforge-phase33-static.test.ts',
+      'apps/api/test/studyforge-phase33-db.test.ts',
+      'apps/web/e2e/studyforge-phase33.spec.ts',
+    ];
+    const sharedBoundary = /(?:routes\/auth|\/auth\/|\/login|\/signup|\/logout|\/profile|account.?delete|billing|subscription|checkout|portal|webhook|stripe|plan.?limit|entitlement|session.?secret|database.?url|openai|provider|routes\/admin|platform.?admin|health|contact|landing|pricing|terms|privacy|legal|operatoros|node.?env|base.?path|repl.?id|\bport\b)/iu;
+    const sharedSchemaBoundary = /^(?:users|sessions|stripe_events)(?:\.|$)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const sourceText = [capability.title,capability.canonicalSourceIdentity,...capability.sourcePointers].join(' ');
+      const shared = capability.type === 'integration'
+        || capability.type === 'background_process'
+        || capability.type === 'public_flow'
+        || ((capability.type === 'database_table' || capability.type === 'database_column') && sharedSchemaBoundary.test(capability.title))
+        || sharedBoundary.test(sourceText);
+      const typedTargets = capability.type === 'ui_page' || capability.type === 'ui_route'
+        ? uiTargets
+        : capability.type === 'database_table'
+          ? (shared ? sharedSchemas : nativeSchemas)
+          : [];
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...(capability.currentTargets || []),...(shared ? sharedTargets : nativeTargets),...typedTargets])].sort(),
+        automatedEvidence: [...new Set([...(capability.automatedEvidence || []),...evidence])].sort(),
+        note: [capability.note, shared
+          ? 'Phase 33 preserves this outcome through OperatorOS identity, tenant, role, entitlement, billing, shared AI provider, metered usage, runtime, legal, or platform-admin authority.'
+          : 'Phase 33 restores this source outcome through additive v42 StudyForge persistence, transactional complete-set generation, deterministic and validated AI paths, source-compatible deep links, real learning sessions, quiz history, streaks, countdowns, exports, and the responsive learning workspace.'].filter(Boolean).join(' '),
+      };
+    });
+  }
+  if (definition.slug === 'snapproofos') {
+    const nativeTargets = [
+      'apps/api/src/lib/snapproofos-db-init.ts',
+      'apps/api/src/lib/snapproofos-phase32-db-init.ts',
+      'apps/api/src/lib/snapproofos.ts',
+      'apps/api/src/lib/snapproofos-exports.ts',
+      'apps/api/src/lib/snapproofos-media.ts',
+      'apps/api/src/routes/snapproofos-routes.ts',
+      'apps/api/src/routes/snapproofos-phase32-routes.ts',
+      'apps/web/src/components/module-shells/SnapProofWorkspace.tsx',
+      'apps/web/src/components/module-shells/SnapProofFieldWorkspace.tsx',
+      'apps/web/src/lib/snapproof-offline-queue.ts',
+      'apps/web/src/app/public/snapproofos/reports/[token]/page.tsx',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/saas-db-init.ts',
+      'apps/api/src/lib/shared-attachments.ts',
+      'apps/api/src/lib/shared-services-db-init.ts',
+      'apps/api/src/lib/shared-usage-activity.ts',
+      'apps/api/src/routes/auth-routes.ts',
+      'apps/api/src/routes/tenant-admin-routes.ts',
+      'apps/api/src/routes/billing-routes.ts',
+      'apps/api/src/lib/database-release-contract.ts',
+    ];
+    const nativeSchemas = ['apps/api/src/lib/snapproofos-db-init.ts','apps/api/src/lib/snapproofos-phase32-db-init.ts'];
+    const sharedSchemas = ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-services-db-init.ts'];
+    const uiTargets = ['apps/web/src/app/modules/[slug]/page.tsx','apps/web/src/app/modules/[slug]/[...path]/page.tsx'];
+    const evidence = [
+      'apps/api/test/snapproofos-domain.test.ts',
+      'apps/api/test/snapproofos-db.test.ts',
+      'apps/api/test/snapproofos-phase32-domain.test.ts',
+      'apps/api/test/snapproofos-phase32-static.test.ts',
+      'apps/web/e2e/snapproofos-phase32.spec.ts',
+    ];
+    const sharedBoundary = /(?:routes\/auth|\/auth\/|\/login|\/register|\/logout|\/profile|routes\/organizations|organization.?settings|team.?member|membership|user.?role|billing|subscription|plan|pricing|entitlement|session.?secret|database.?url|log.?level|node.?env|base.?path|repl.?id|\bport\b|activity)/iu;
+    const sharedSchemaBoundary = /^(?:users|organizations|team_members|activity)(?:\.|$)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const sourceText = [capability.title,capability.canonicalSourceIdentity,...capability.sourcePointers].join(' ');
+      const shared = capability.type === 'integration'
+        || capability.type === 'public_flow'
+        || ((capability.type === 'database_table' || capability.type === 'database_column') && sharedSchemaBoundary.test(capability.title))
+        || sharedBoundary.test(sourceText);
+      const typedTargets = capability.type === 'ui_page' || capability.type === 'ui_route'
+        ? uiTargets
+        : capability.type === 'database_table'
+          ? (shared ? sharedSchemas : nativeSchemas)
+          : [];
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...(capability.currentTargets || []),...(shared ? sharedTargets : nativeTargets),...typedTargets])].sort(),
+        automatedEvidence: [...new Set([...(capability.automatedEvidence || []),...evidence])].sort(),
+        note: [capability.note, shared
+          ? 'Phase 32 preserves this outcome through OperatorOS identity, tenant, membership, role, entitlement, billing, runtime, shared activity, or private attachment authority.'
+          : 'Phase 32 restores this outcome through additive v41 SnapProofOS persistence, source-compatible field workflows, scanned mobile capture, deterministic PDF/DOCX exports, hashed expiring report shares, and the graphite/crimson product workspace. Source raw file URLs and arbitrary branding HTML are represented by signed private retrieval and structured branded templates without erasing the user outcome.'].filter(Boolean).join(' '),
+      };
+    });
+  }
+  if (definition.slug === 'brandforgeos') {
+    const nativeTargets = [
+      'apps/api/src/lib/brandforgeos-db-init.ts',
+      'apps/api/src/lib/brandforgeos-phase31-db-init.ts',
+      'apps/api/src/lib/brandforgeos.ts',
+      'apps/api/src/routes/brandforgeos-routes.ts',
+      'apps/api/src/routes/brandforgeos-phase31-routes.ts',
+      'apps/web/src/components/module-shells/BrandForgeWorkspace.tsx',
+      'apps/web/src/components/module-shells/BrandForgeCompletePanels.tsx',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/ai-provider.ts',
+      'apps/api/src/lib/shared-platform-control-plane.ts',
+      'apps/api/src/lib/shared-provider-adapters.ts',
+      'apps/api/src/lib/shared-background-jobs.ts',
+      'apps/api/src/lib/shared-notification-outbox.ts',
+      'apps/api/src/lib/shared-usage-activity.ts',
+      'apps/api/src/lib/shared-services-db-init.ts',
+      'apps/api/src/lib/shared-platform-db-init.ts',
+      'apps/api/src/lib/database-release-contract.ts',
+    ];
+    const nativeSchemas = ['apps/api/src/lib/brandforgeos-db-init.ts','apps/api/src/lib/brandforgeos-phase31-db-init.ts'];
+    const sharedSchemas = ['apps/api/src/lib/saas-db-init.ts','apps/api/src/lib/shared-services-db-init.ts','apps/api/src/lib/shared-platform-db-init.ts'];
+    const uiTargets = ['apps/web/src/app/modules/[slug]/page.tsx','apps/web/src/app/modules/[slug]/[...path]/page.tsx'];
+    const evidence = [
+      'apps/api/test/brandforgeos-db.test.ts',
+      'apps/api/test/brandforgeos-phase31-domain.test.ts',
+      'apps/api/test/brandforgeos-phase31-static.test.ts',
+      'apps/web/e2e/brandforgeos-phase31.spec.ts',
+    ];
+    const sharedBoundary = /(?:routes\/auth|\/login|\/register|\/logout|\/session|routes\/tenants|membership|role.?mapping|billing|subscription|plan.?limits|plan.?add.?ons|entitlement|stripe|operatoros|provider|openai|routes\/ai|\/ai\/|integration|oauth|connector|secret|credit|usage|notification|activity|export|job|worker|routes\/admin|feature.?flag|privacy|terms|legal|pricing|health)/iu;
+    const sharedSchemaBoundary = /^(?:add_on_purchases|audit_logs|billing_profiles|credit_packs|export_jobs|feature_flags|integrations|invoices|memberships|notifications|sessions|subscriptions|sync_jobs|tenants|usage_records|users)(?:\.|$)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const alreadyActive = capability.state === 'ACTIVE_NATIVE' || capability.state === 'ACTIVE_SHARED_EQUIVALENT';
+      const sourceText = [capability.title,capability.canonicalSourceIdentity,...capability.sourcePointers].join(' ');
+      const shared = alreadyActive
+        ? capability.state === 'ACTIVE_SHARED_EQUIVALENT'
+        : capability.type === 'integration' || capability.type === 'background_process' || capability.type === 'public_flow' || capability.type === 'mobile_pwa_surface' || ((capability.type === 'database_table' || capability.type === 'database_column') && sharedSchemaBoundary.test(capability.title)) || sharedBoundary.test(sourceText);
+      const typedTargets = capability.type === 'ui_page' || capability.type === 'ui_route'
+        ? uiTargets
+        : capability.type === 'database_table'
+          ? (shared ? sharedSchemas : nativeSchemas)
+          : [];
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...capability.currentTargets,...(shared?sharedTargets:nativeTargets),...typedTargets])].sort(),
+        automatedEvidence: [...new Set([...capability.automatedEvidence,...evidence])].sort(),
+        note: [capability.note,!alreadyActive ? (shared
+          ? 'Phase 31 restores this outcome through OperatorOS identity, tenant, entitlement, shared AI/provider, audited usage, notification, job, platform-admin, legal, or billing authority.'
+          : 'Phase 31 restores this outcome through the tenant-scoped BrandForgeOS API, additive v40 persistence, premium workspace, source-compatible deep links, deterministic scoring, and persisted marketing workflows.') : null].filter(Boolean).join(' '),
+      };
+    });
+  }
+  if (definition.slug === 'ninja-pool-hall') {
+    const nativeTargets = [
+      'apps/api/src/lib/ninja-pool-game.ts',
+      'apps/api/src/lib/ninja-pool-physics.ts',
+      'apps/api/src/lib/ninja-pool-rules.ts',
+      'apps/api/src/lib/ninja-pool-match.ts',
+      'apps/api/src/lib/ninja-pool-online.ts',
+      'apps/api/src/lib/ninja-pool-hall-db-init.ts',
+      'apps/api/src/lib/ninja-pool-online-db-init.ts',
+      'apps/api/src/routes/ninja-pool-hall-routes.ts',
+      'apps/api/src/routes/ninja-pool-online-routes.ts',
+      'apps/web/src/lib/ninja-pool-hall/physics.ts',
+      'apps/web/src/lib/ninja-pool-hall/rules.ts',
+      'apps/web/src/lib/ninja-pool-hall/bot.ts',
+      'apps/web/src/lib/ninja-pool-hall/network.ts',
+      'apps/web/src/lib/ninja-pool-hall/online.ts',
+      'apps/web/src/components/module-shells/NinjaPoolHallPractice.tsx',
+      'apps/web/src/components/module-shells/NinjaPoolHallMatch.tsx',
+      'apps/web/src/components/module-shells/NinjaPoolHallOnline.tsx',
+      'apps/web/src/components/module-shells/NinjaPoolHallShell.tsx',
+      'apps/web/src/app/modules/[slug]/[...path]/route-map.ts',
+    ];
+    const sharedTargets = [
+      'apps/api/src/lib/auth.ts',
+      'apps/api/src/lib/tenant-auth.ts',
+      'apps/api/src/lib/database-release-contract.ts',
+      'apps/web/src/app/ninja-pool-hall.webmanifest/route.ts',
+      'apps/web/public/ninja-pool-hall-sw.js',
+      'packages/sdk/src/catalog.ts',
+    ];
+    const evidence = [
+      'apps/api/test/ninja-pool-physics.test.ts',
+      'apps/api/test/ninja-pool-rules.test.ts',
+      'apps/api/test/ninja-pool-phase30-domain.test.ts',
+      'apps/api/test/ninja-pool-online-db.test.ts',
+      'apps/api/test/ninja-pool-phase10b-contract.test.ts',
+      'apps/web/e2e/ninja-pool-hall-phase30.spec.ts',
+    ];
+    const sharedBoundary = /(?:auth|login|logout|session|tenant|identity|user|account|entitlement|billing|cors|health|operatoros|pwa|manifest|service.?worker|install)/iu;
+    return capabilities.filter(capability => capability.missingSourcePointers.length === 0).map(capability => {
+      const sourceText = [capability.title, capability.canonicalSourceIdentity, ...capability.sourcePointers].join(' ');
+      const shared = capability.state === 'ACTIVE_SHARED_EQUIVALENT' || sharedBoundary.test(sourceText);
+      return {
+        ...capability,
+        state: shared ? 'ACTIVE_SHARED_EQUIVALENT' : 'ACTIVE_NATIVE',
+        blockerCode: null,
+        currentTargets: [...new Set([...capability.currentTargets, ...(shared ? sharedTargets : nativeTargets)])].sort(),
+        automatedEvidence: [...new Set([...capability.automatedEvidence, ...evidence])].sort(),
+        note: [capability.note, shared
+          ? 'Phase 30 restores this outcome through OperatorOS-owned identity, tenant, entitlement, exact-host routing, release, or installable web authority.'
+          : 'Phase 30 restores this outcome through the deterministic Canvas engine, complete 8-ball rules, seeded CPU play, local hot-seat, or durable host-authoritative online room workflow with independent server re-simulation.'].filter(Boolean).join(' '),
+      };
+    });
+  }
   if (definition.slug === 'torqueshed') {
     const nativeTargets = [
       'apps/api/src/lib/torqueshed-db-init.ts',

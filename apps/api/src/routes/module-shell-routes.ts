@@ -80,6 +80,7 @@ import { registerPulseDeskRoutes } from './pulsedesk-routes.js';
 import { registerPulseDeskServiceDeskRoutes } from './pulsedesk-service-desk-routes.js';
 import { registerPulseDeskLiteralRoutes } from './pulsedesk-literal-routes.js';
 import { registerNinjaPoolHallRoutes } from './ninja-pool-hall-routes.js';
+import { registerNinjaPoolOnlineRoutes } from './ninja-pool-online-routes.js';
 import { allocateTradeFlowKitNumber, registerTradeFlowKitRoutes } from './tradeflowkit-routes.js';
 import { registerTechDeckRoutes } from './techdeck-routes.js';
 import { registerTechDeckLiteralRoutes } from './techdeck-literal-routes.js';
@@ -90,10 +91,16 @@ import { registerTorqueShedWebApiRoutes } from './torqueshed-web-api-routes.js';
 import { registerTorqueShedNativeAuthRoutes } from './torqueshed-native-auth-routes.js';
 import { registerFaultlineLabRoutes } from './faultlinelab-routes.js';
 import { registerBrandForgeOsRoutes } from './brandforgeos-routes.js';
+import { registerBrandForgeOsPhase31Routes } from './brandforgeos-phase31-routes.js';
 import { registerStudyForgeRoutes } from './studyforge-routes.js';
+import { registerStudyForgePhase33Routes } from './studyforge-phase33-routes.js';
 import { registerNinjaLaunchKitRoutes } from './ninja-launch-kit-routes.js';
+import { registerNinjaLaunchKitPhase34Routes } from './ninja-launch-kit-phase34-routes.js';
 import { registerCallCommandRoutes } from './callcommand-routes.js';
+import { registerCallCommandPhase35Routes } from './callcommand-phase35-routes.js';
+import { registerCallCommandMspRoutes } from './callcommand-msp-routes.js';
 import { registerNinjamationRoutes } from './ninjamation-routes.js';
+import { registerNinjamationPhase36Routes } from './ninjamation-phase36-routes.js';
 import { registerOutCallRoutes } from './outcall-routes.js';
 import { registerTradeFlowKitLeadOperationsRoutes } from './tradeflowkit-lead-operations-routes.js';
 import { registerTradeFlowKitPublicIntakeRoutes } from './tradeflowkit-public-intake-routes.js';
@@ -573,10 +580,13 @@ async function createLinkedTradeFlowKitCustomer(
 
 export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerCallCommandRoutes(app);
+  await registerCallCommandPhase35Routes(app);
+  await registerCallCommandMspRoutes(app);
   await registerPulseDeskRoutes(app);
   await registerPulseDeskServiceDeskRoutes(app);
   await registerPulseDeskLiteralRoutes(app);
   await registerNinjaPoolHallRoutes(app);
+  await registerNinjaPoolOnlineRoutes(app);
   await registerTradeFlowKitRoutes(app);
   await registerTradeFlowKitLeadOperationsRoutes(app);
   await registerTradeFlowKitPublicIntakeRoutes(app);
@@ -591,9 +601,13 @@ export async function registerModuleShellRoutes(app: FastifyInstance) {
   await registerTorqueShedNativeAuthRoutes(app);
   await registerFaultlineLabRoutes(app);
   await registerBrandForgeOsRoutes(app);
+  await registerBrandForgeOsPhase31Routes(app);
   await registerStudyForgeRoutes(app);
+  await registerStudyForgePhase33Routes(app);
   await registerNinjaLaunchKitRoutes(app);
+  await registerNinjaLaunchKitPhase34Routes(app);
   await registerNinjamationRoutes(app);
+  await registerNinjamationPhase36Routes(app);
   await registerOutCallRoutes(app);
 
   // ===== TradeFlowKit: lead and revenue compatibility routes ==============

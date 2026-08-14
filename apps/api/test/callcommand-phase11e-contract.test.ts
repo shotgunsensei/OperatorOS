@@ -82,13 +82,15 @@ test('Phase 11E schema and routes enforce tenant composite keys, consent, suppre
   assert.doesNotMatch(routes, /request\.body.*tenantId/);
 });
 
-test('Phase 11E shell presents persisted controls without simulated production claims or recording URLs', () => {
+test('Phase 35 shell supersedes the Phase 11E boundary with persisted live-call controls and honest provider state', () => {
   const shell = read('apps/web/src/components/module-shells/CallCommandShell.tsx');
-  assert.match(shell, /moduleShellApi\.callcommand\.workspace/);
-  assert.match(shell, /Record consent/);
-  assert.match(shell, /Suppress number/);
-  assert.match(shell, /Operator disposition/);
-  assert.match(shell, /Save review draft/);
-  assert.match(shell, /Calling setup required/);
+  assert.match(shell, /moduleShellApi\.callcommand\.productWorkspace/);
+  assert.match(shell, /Channels and phone lines/);
+  assert.match(shell, /Receptionist profiles/);
+  assert.match(shell, /Versioned call flows/);
+  assert.match(shell, /Live switchboard/);
+  assert.match(shell, /Rules and action dispatch/);
+  assert.match(shell, /Twilio voice provider unavailable/);
+  assert.match(shell, /fail honestly/);
   assert.doesNotMatch(shell, /simulated with a stub|recordingUrl|openExternal\(.*recording/i);
 });

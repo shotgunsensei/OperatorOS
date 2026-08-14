@@ -48,9 +48,10 @@ import {
   pocketIndexAt,
   rerackAndBreak,
 } from '@/lib/ninja-pool-hall/rules';
-import { chooseBotShot } from '@/lib/ninja-pool-hall/bot';
+import { chooseBotShot, createSeededRandom } from '@/lib/ninja-pool-hall/bot';
 import { sfxClack, sfxCue, sfxLose, sfxPocket, sfxWin, unlockAudio, vibrate } from '@/lib/ninja-pool-hall/audio';
 import type { Ball, GameState, Shot, Vec2 } from '@/lib/ninja-pool-hall/types';
+import { visualQualityProfile } from '@/lib/ninja-pool-hall/performance';
 
 interface Props {
   mode: NinjaPoolMatchMode;
@@ -262,7 +263,8 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
 
   const playFrames = useCallback((frames: SimulationFrame[], ticks: number) => new Promise<void>((resolve) => {
     if (frames.length === 0) return resolve();
-    const duration = Math.max(620, Math.min(4_000, ticks * 4));
+    const quality = visualQualityProfile();
+    const duration = Math.max(480, Math.min(4_000, ticks * 4 * quality.durationScale));
     const startedAt = performance.now();
     const step = (now: number) => {
       const progress = Math.min(1, (now - startedAt) / duration);
@@ -333,10 +335,11 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
       unlockAudio();
       sfxCue(shot.power, preferences.sound);
       vibrate(Math.floor(15 + shot.power * 25), preferences.vibration);
+      const quality = visualQualityProfile();
       const simulation = simulateShot(before, shot, {
         tableSpeed: preferences.tableSpeed,
         recordFrames: true,
-        frameInterval: 3,
+        frameInterval: quality.frameInterval,
       });
       await playFrames(simulation.frames, simulation.ticks);
       if (simulation.events.pocketed.length > 0) sfxPocket(preferences.sound);
@@ -431,7 +434,7 @@ export default function NinjaPoolHallMatch({ mode, profile, onMatchPath }: Props
     }
     if (gameState.currentPlayer !== 1 || gameState.pendingChoice) return;
     botTimerRef.current = window.setTimeout(() => {
-      const shot = chooseBotShot(gameState);
+      const shot = chooseBotShot(gameState, createSeededRandom(3 + gameState.shotCount * 17 + gameState.currentPlayer));
       void executeShot(shot, 1);
     }, 850);
     return () => {

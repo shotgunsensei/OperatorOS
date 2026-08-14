@@ -1,5 +1,231 @@
 # OperatorOS implementation status
 
+## Phase 37 CallCommand MSP intake and Automation Fabric - PHASE 1 SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
+
+ADR-0040 and cumulative release v46 add the owner-specified paid MSP intake
+product without weakening OperatorOS authority or the complete Phase 35
+telephony product. The recognized path verifies the official Twilio signature,
+resolves tenant only from an exact MSP destination number, associates an
+organization through an encrypted/HMAC-indexed approved line, associates an
+eligible Directory contact through a display-once encrypted ten-digit
+Luhn-checksummed SupportLink, creates one local case, and creates one BMS
+outbox/ticket link. The unrecognized A0 path can create a callback case but
+cannot queue BMS or automation.
+
+The responsive MSP workspace adds Operations, Organizations, Contacts,
+Integrations, Policy, Audit, Onboarding, and deterministic intake-lab surfaces.
+The additive Automation Fabric schema covers provider onboarding, Datto
+sites/devices and affinity, directory accounts, action catalog/policies,
+verification challenges, approvals/executions, reset sessions, and durable
+outbox/reconciliation state. BMS live delivery, Datto actions, Graph reset, and
+the AD broker remain explicitly gated; password-reset and RMM-action settings
+are server-forced off.
+
+Focused domain/static/PostgreSQL tests pass 14/14, the complete CallCommand
+regression passes 80/80, workspace typecheck passes, production artifacts
+build, and additive release v46 plans/applies/reapplies cleanly on disposable
+PostgreSQL 16. The isolated journey
+proves forged-webhook denial, tenant isolation, A1 association, encrypted
+display-once secret handling, public-config secret rejection, exactly-once BMS
+test behavior, hash-chain continuity, and zero automation for unrecognized
+callers. The corrected broad API aggregate exercised 1,106 tests: 1,071
+passed, 29 failed, and six intentional HTTP-only cases skipped before repairing
+the two v46-owned cumulative assertions; those repaired release/identity
+contracts pass 13/13 targeted. The remaining 27 failures are existing
+cross-product static/fixture/order-sensitive contracts, so the aggregate is
+not claimed as green. Exact build, release, preflight, and aggregate evidence
+is recorded in
+`docs/phase-37/CALLCOMMAND-MSP-INTAKE-AUTOMATION-FABRIC-REPORT.md`.
+
+Production v46 backup/apply/restore, deployed exact-host acceptance, real
+Twilio, tenant-specific Kaseya BMS contract/mappings/worker, provider
+monitoring, pricing/checkout acceptance, data reconciliation, rollback, merge,
+and deployment remain owner gates. Phase 2-5 RMM and identity automation require
+their separate security/provider acceptance and are not production capabilities.
+
+## Phase 36 Ninjamation complete product restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
+
+Phase 36 pins Ninjamation application commit
+`cca75338d04ed35b89f28d614eb51559735aa32f` and AutomationPacks catalog
+commit `ca0e55fd086f6751a43964927166bfa69db012b6`. The executable ledger maps
+all 189 facets to 111 `ACTIVE_NATIVE` and 78
+`ACTIVE_SHARED_EQUIVALENT`, with zero waived and zero blocked.
+
+Additive release v45 restores the persisted searchable/versioned script
+library, favorites and ownership, exact checksum downloads, format/category
+metadata, fixed-source incremental GitHub synchronization, non-destructive
+deprecation/restore, validated and metered four-format AI generation, account
+usage, plan gates, shared scheduled sync, and parent-authorized admin behavior.
+Static and optional sandbox analysis remain review evidence only; no route or
+service executes script content in the web/API process.
+
+Focused domain/database tests pass 7/7. Static/deep-link/release contracts,
+typecheck, production build, clean/idempotent v45, exact-ledger/report, and the
+compiled exact-host desktop/mobile/public browser gate pass locally.
+Production backup/apply, live GitHub/OpenAI verification, data reconciliation,
+deployed restart, rollback, merge, and deployment remain owner gates. See
+`docs/phase-36/NINJAMATION-COMPLETE-PRODUCT-REPORT.md`.
+
+## Phase 35 CallCommand complete telephony restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
+
+Phase 35 pins CallCommand source commit
+`d49434e1d641d62cc141591c7208539a7afbf11e` and reopens the Phase 11E
+recording, live-receptionist, flow, automation, and switchboard retirements
+under ADR-0039. The executable ledger maps all 589 exact facets to 446
+`ACTIVE_NATIVE` and 143 `ACTIVE_SHARED_EQUIVALENT`, with zero waived and zero
+blocked.
+
+Additive release v44 restores tenant-scoped lines, receptionist profiles,
+versioned/validated flows and traces, signed consent-aware Twilio voice,
+provider-confirmed recording start and protected ingestion, transcription and
+structured intelligence, idempotent rules/actions, generated tickets/leads/
+tasks, live switchboard/transfer, analytics, PDF reports, and source-compatible
+routes. OperatorOS remains the sole identity, tenant, role, entitlement,
+billing, provider-secret, storage, usage, audit, and platform-admin authority.
+
+Root lint/typecheck and production build pass. The restored 42/42 live-call
+gate, 5/5 disposable-PostgreSQL journey, 66/66 focused compatibility/provider
+regression, clean/reapplied v44, 8/8 parity/report gate, and compiled browser
+journey pass locally. The broad API aggregate was exercised and all Phase 35
+tests passed, but unrelated existing Ninja Pool/TradeFlowKit static contracts
+keep the cross-product aggregate non-green.
+
+Production backup/apply, real Twilio/OpenAI/email/Slack/webhook acceptance,
+deployed exact-host acceptance, source-data reconciliation, restart under
+production infrastructure, restore/rollback, merge, and deployment remain
+owner gates. See `docs/phase-35/CALLCOMMAND-COMPLETE-TELEPHONY-REPORT.md`.
+
+## Phase 33 StudyForge complete learning restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-12)
+
+Phase 33 pins StudyForge source commit
+`a607a9f34442b1d0f6bfffbf0293609529494825` and reopens the Phase 11C
+product-boundary retirements under ADR-0037. The executable ledger maps all 317
+exact facets to 192 `ACTIVE_NATIVE` and 125
+`ACTIVE_SHARED_EQUIVALENT`, with zero waived and zero blocked.
+
+Additive release v42 restores user folders; complete transactional study sets;
+summary, key terms, flashcards, MCQs, short answers, review sheet and dated
+plan; learning/quiz sessions and trends; countdown/time-zone behavior;
+streak/activity; edit/archive/restore/delete/duplicate/regenerate; and real
+JSON/entitlement-gated CSV exports. The deterministic generator and strict
+shared-AI path persist validated provenance. Advisory locks, conditional usage
+counters, and business idempotency prevent partial sets, duplicate debits, and
+concurrent limit overruns. OperatorOS remains the sole auth, tenant, role,
+entitlement, billing, provider, credit, usage, and platform-admin authority.
+
+Workspace typecheck, 8/8 domain/static contracts, 7/7 disposable PostgreSQL
+journeys, the combined 29/29 StudyForge regression suite, shared
+integration 28/28, clean/idempotent v42, production build, exact-ledger gate,
+and compiled exact-host Playwright 2/2 pass locally. The broad API aggregate
+remains non-green because of existing unrelated failures, so it is not claimed
+as a pass.
+
+Production backup/apply, live AI-provider acceptance, deployed exact-host
+acceptance, authorized source-data reconciliation, restore/rollback, and
+cutover remain owner-controlled. See
+`docs/phase-33/STUDYFORGE-COMPLETE-PRODUCT-REPORT.md`.
+
+## Phase 32 SnapProofOS complete field proof restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-12)
+
+Phase 32 pins SnapProofOS source commit
+`26bded38c13b5b6361d407462c68052b0c30613d` and re-opens the Phase 11B
+product-boundary retirements under ADR-0036. The executable ledger classifies
+all 341 source facets as 240 `ACTIVE_NATIVE` and 101
+`ACTIVE_SHARED_EQUIVALENT`, with zero `OWNER_WAIVED` and zero `BLOCKED`.
+
+Cumulative additive release v41 restores all sixteen source table domains:
+customers; searchable, assigned, archived field jobs; findings and
+audience-scoped/voice notes; parts and labor totals; scanned mobile files;
+templates; report branding and logos; immutable report review; persisted,
+validated PDF/DOCX exports; revocable hashed public shares; and OperatorOS team,
+billing, entitlement, usage, and activity projections. Offline captures queue in
+IndexedDB and replay exactly once through tenant-scoped client mutation IDs.
+
+Private storage validates signatures and declared MIME, strips JPEG APP1 EXIF,
+enforces scan/quarantine state, verifies SHA-256 on retrieval, and preserves
+retention-aware deletion. Approved report snapshots exclude internal notes and
+retain historical totals/branding. Public view and download enforce the same
+expiry, revocation, no-index/no-store, non-enumeration, and durable rate limit.
+
+Root lint and workspace typecheck pass. Focused source/domain/release contracts
+pass 10/10; the disposable-PostgreSQL customer-to-share workflow passes 4/4,
+including logo/audio bytes, spoof rejection, PDF/DOCX integrity, role/tenant
+denial, revocation, and restart persistence. Clean release v41 apply and
+idempotent reapply pass; the exact ledger gate passes 6/6. The local Next
+production build is currently blocked outside Phase 32 code because Google
+Fonts returns stale `next/font` WOFF2 URLs as HTTP 404; therefore compiled
+browser acceptance is not claimed.
+
+Production v41 backup/apply, scanner readiness, source-data reconciliation,
+compiled/deployed exact-host desktop/tablet/mobile acceptance, rollback, and
+cutover remain owner-controlled gates. Phase 32 does not claim state 5 or a
+production deployment. See
+`docs/phase-32/SNAPPROOFOS-COMPLETE-PRODUCT-REPORT.md`.
+
+## Phase 31 BrandForgeOS complete marketing SaaS restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-11)
+
+Phase 31 pins BrandForgeOS source commit
+`5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e` and re-opens the Phase 11A
+product-boundary retirements. The executable ledger now classifies all 793
+source facets as 463 `ACTIVE_NATIVE` and 330 `ACTIVE_SHARED_EQUIVALENT`, with
+zero `OWNER_WAIVED` and zero `BLOCKED`.
+
+Cumulative additive release v40 restores offers; campaign tasks, comments and
+landing content; six guided workflows; the global/custom template marketplace;
+twelve shared-provider integration projections with durable sync history;
+recommendations and leads; six deterministic report types; asynchronous
+integrity-hashed exports; and atomic OperatorOS generation credits. Copy Studio
+accepts ten source channel modes and eight tones, persists inspectable quality
+scores, and records validated provider output and usage without logging the
+sensitive prompt body. Reports use persisted metrics only—no random or sample
+performance data.
+
+OperatorOS remains the sole identity, tenant, role, plan, billing, entitlement,
+provider-secret, platform-admin, background-job, notification, usage and audit
+authority. Integration connect/sync operations enforce each catalog entry's
+required OperatorOS feature. Cross-tenant brand, campaign, landing, workflow,
+report, and assignee references fail closed; brand-scoped reports exclude other
+brands, report CSVs serialize the persisted snapshot, and export replay reuses
+the original business row as well as the shared job. Local API/web typechecks,
+7/7 focused domain/static contracts, and a combined 15/15 review regression
+suite pass against a disposable loopback PostgreSQL 16 database. The complete
+6/6 PostgreSQL workflow remains green, including deterministic connector sync,
+white-label report/export integrity, concurrent credit exhaustion, replay,
+viewer denial, restart persistence, and tenant isolation.
+
+Production v40 apply, live provider/OAuth setup, exact-host deployed browser
+acceptance, authorized source-data reconciliation, backup/restore, rollback and
+cutover remain owner-controlled gates. Phase 31 does not claim state 5 or a
+production deployment.
+
+## Phase 30 Ninja Pool Hall full game and multiplayer restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-11)
+
+Phase 30 re-opens ADR-0020's online retirement without reactivating the unsafe
+standalone relay. The pinned source commit
+`62439c4018ec551ce2891800351200c8ab2cb9e7` compiles to 56 facets: 50
+`ACTIVE_NATIVE`, 6 `ACTIVE_SHARED_EQUIVALENT`, zero `OWNER_WAIVED`, and zero
+`BLOCKED`. Practice free-shoot, seeded CPU play, local hot-seat, and protected
+online rooms are real mobile-first Canvas gameplay modes.
+
+Cumulative additive release v39 adds durable tenant-scoped rooms, append-only
+room events, and persistent rate windows. Online seats come only from the
+OperatorOS session and tenant membership. Guests submit shot intents; the host
+runs the visible simulation; Fastify independently re-simulates the exact shot
+and accepts only matching deterministic hashes. Versions, sequences,
+idempotency, pending intents, state requests, snapshots, five-minute reconnect,
+one-hour expiry, impossible-shot validation, and bounded rates recover safely
+from disconnects and reject stale or forged actions.
+
+Focused TypeScript, golden physics, full rules, seeded 45-shot CPU-rack, and
+disposable-PostgreSQL two-WebSocket tests pass. The latter proves cross-tenant
+denial, host and guest shots, stale rejection, leave/rejoin, reconnect, host
+disconnect persistence, and reconnect-window abandonment. Responsive deep
+links, touch/English controls, procedural audio/settings, device performance
+quality, exact-host-aware manifest scope, and a no-authenticated-cache offline
+shell are active. Production backup/apply, deployed exact-host two-device play,
+rollback, and promotion remain owner gates. See
+`docs/phase-30/NINJA-POOL-HALL-GAME-REPORT.md` and ADR-0034.
+
 ## Phase 28 TorqueShed complete web/API restoration - SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-11)
 
 Phase 28 replaces the reduced TorqueShed vehicle shell with the pinned complete

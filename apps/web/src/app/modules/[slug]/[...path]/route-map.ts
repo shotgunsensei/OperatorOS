@@ -137,25 +137,54 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/practice': { sectionId: 'ninja-pool-hall-shell', label: 'Free Shoot' },
     '/cpu': { sectionId: 'ninja-pool-hall-shell', label: 'CPU Match' },
     '/local': { sectionId: 'ninja-pool-hall-shell', label: 'Local Match' },
+    '/online': { sectionId: 'ninja-pool-hall-shell', label: 'Online Rooms' },
+    '/host': { sectionId: 'ninja-pool-hall-shell', label: 'Host Online Room' },
+    '/join': { sectionId: 'ninja-pool-hall-shell', label: 'Join Online Room' },
     '/profile': { sectionId: 'ninja-pool-hall-shell', label: 'Player Profile' },
   },
   brandforgeos: {
     '/dashboard': { sectionId: 'brandforgeos-dashboard', label: 'Dashboard' },
     '/brands': { sectionId: 'brandforgeos-brands', label: 'Brand Kits' },
     '/personas': { sectionId: 'brandforgeos-personas', label: 'Audience Personas' },
+    '/offers': { sectionId: 'brandforgeos-offers', label: 'Offers' },
     '/campaigns': { sectionId: 'brandforgeos-campaigns', label: 'Campaigns' },
     '/copy-studio': { sectionId: 'brandforgeos-copy', label: 'Copy Studio' },
     '/calendar': { sectionId: 'brandforgeos-calendar', label: 'Content Calendar' },
     '/analytics': { sectionId: 'brandforgeos-analytics', label: 'Analytics' },
     '/ai-workflows': { sectionId: 'brandforgeos-ai', label: 'AI Workflows' },
+    '/strategy': { sectionId: 'brandforgeos-strategy', label: 'Guided Strategy' },
+    '/templates': { sectionId: 'brandforgeos-templates', label: 'Template Marketplace' },
+    '/integrations': { sectionId: 'brandforgeos-integrations', label: 'Integrations' },
+    '/reports': { sectionId: 'brandforgeos-reports', label: 'Reports and Exports' },
+    '/activity': { sectionId: 'brandforgeos-activity', label: 'Activity and Notifications' },
+    '/admin': { sectionId: 'brandforgeos-admin', label: 'Plan and Security' },
+    '/onboarding': { sectionId: 'brandforgeos-settings', label: 'Onboarding' },
+    '/pricing': { sectionId: 'brandforgeos-admin', label: 'OperatorOS Plan' },
+    '/legal': { sectionId: 'brandforgeos-admin', label: 'Legal and Security' },
+    '/privacy': { sectionId: 'brandforgeos-admin', label: 'Privacy' },
+    '/terms': { sectionId: 'brandforgeos-admin', label: 'Terms' },
+    '/home': { sectionId: 'brandforgeos-dashboard', label: 'Home' },
+    '/login': { sectionId: 'brandforgeos-dashboard', label: 'OperatorOS Login' },
     '/settings': { sectionId: 'brandforgeos-settings', label: 'Settings' },
   },
   snapproofos: {
     '/dashboard': { sectionId: 'snapproofos-dashboard', label: 'Dashboard' },
+    '/customers': { sectionId: 'snapproofos-customers', label: 'Customers' },
+    '/jobs': { sectionId: 'snapproofos-jobs', label: 'Jobs' },
+    '/capture': { sectionId: 'snapproofos-capture', label: 'Mobile Capture' },
+    '/files': { sectionId: 'snapproofos-capture', label: 'Files and Photos' },
+    '/work': { sectionId: 'snapproofos-work', label: 'Findings and Notes' },
+    '/costs': { sectionId: 'snapproofos-costs', label: 'Parts and Labor' },
+    '/templates': { sectionId: 'snapproofos-templates', label: 'Job Templates' },
+    '/team': { sectionId: 'snapproofos-team', label: 'Team' },
+    '/activity': { sectionId: 'snapproofos-activity', label: 'Activity' },
+    '/branding': { sectionId: 'snapproofos-branding', label: 'Organization Branding' },
+    '/profile': { sectionId: 'snapproofos-branding', label: 'Profile and Organization' },
+    '/billing': { sectionId: 'snapproofos-branding', label: 'Plan and Billing' },
     '/cases': { sectionId: 'snapproofos-cases', label: 'Evidence Cases' },
     '/evidence': { sectionId: 'snapproofos-evidence', label: 'Evidence' },
     '/review': { sectionId: 'snapproofos-review', label: 'Review Queue' },
-    '/findings': { sectionId: 'snapproofos-findings', label: 'Findings' },
+    '/findings': { sectionId: 'snapproofos-work', label: 'Findings' },
     '/reports': { sectionId: 'snapproofos-reports', label: 'Reports' },
     '/exports': { sectionId: 'snapproofos-reports', label: 'Defensible Exports' },
     '/custody': { sectionId: 'snapproofos-custody', label: 'Chain of Custody' },
@@ -163,7 +192,15 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
     '/settings': { sectionId: 'snapproofos-settings', label: 'Settings' },
   },
   'studyforge-ai': {
-    '/dashboard': { sectionId: 'studyforge-dashboard', label: 'Dashboard' },
+    '/app': { sectionId: 'studyforge-dashboard', label: 'Learning Home' },
+    '/dashboard': { sectionId: 'studyforge-dashboard', label: 'Learning Home' },
+    '/sets': { sectionId: 'studyforge-sets', label: 'Study Sets' },
+    '/sets/new': { sectionId: 'studyforge-new-set', label: 'New Study Set' },
+    '/folders': { sectionId: 'studyforge-sets', label: 'Folders' },
+    '/exams': { sectionId: 'studyforge-exams', label: 'Exam Countdowns' },
+    '/account': { sectionId: 'studyforge-account', label: 'Plan and Usage' },
+    '/admin': { sectionId: 'studyforge-account', label: 'StudyForge Administration' },
+    '/pricing': { sectionId: 'studyforge-account', label: 'OperatorOS Plan' },
     '/subjects': { sectionId: 'studyforge-subjects', label: 'Subjects and Courses' },
     '/courses': { sectionId: 'studyforge-subjects', label: 'Subjects and Courses' },
     '/sources': { sectionId: 'studyforge-sources', label: 'Authorized Sources' },
@@ -177,30 +214,67 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
   },
   'ninja-launch-kit': {
     '/dashboard': { sectionId: 'launchkit-dashboard', label: 'Launch Dashboard' },
-    '/launches': { sectionId: 'launchkit-launches', label: 'Launch Workspaces' },
+    '/app': { sectionId: 'launchkit-dashboard', label: 'Launch Dashboard' },
+    '/launches': { sectionId: 'launchkit-execution', label: 'Launch Workspaces' },
     '/builder': { sectionId: 'launchkit-builder', label: 'Launch Brief' },
     '/templates': { sectionId: 'launchkit-templates', label: 'Launch Templates' },
-    '/plan': { sectionId: 'launchkit-plan', label: 'Launch Plan' },
-    '/artifacts': { sectionId: 'launchkit-artifacts', label: 'Campaign Artifacts' },
-    '/readiness': { sectionId: 'launchkit-readiness', label: 'Launch Readiness' },
+    '/kits': { sectionId: 'launchkit-kits', label: 'Generated Launch Kits' },
+    '/brands': { sectionId: 'launchkit-brands', label: 'Brand Profiles' },
+    '/visual-promos': { sectionId: 'launchkit-visual-promos', label: 'Visual Promo Briefs' },
+    '/plan': { sectionId: 'launchkit-execution', label: 'Launch Plan' },
+    '/artifacts': { sectionId: 'launchkit-execution', label: 'Campaign Artifacts' },
+    '/readiness': { sectionId: 'launchkit-execution', label: 'Launch Readiness' },
     '/exports': { sectionId: 'launchkit-exports', label: 'Exports' },
+    '/account': { sectionId: 'launchkit-account', label: 'Plan and Usage' },
+    '/admin': { sectionId: 'launchkit-admin', label: 'Ninja Launch Kit Administration' },
+    '/pricing': { sectionId: 'launchkit-account', label: 'OperatorOS Plan' },
   },
   'callcommand-ai': {
-    '/dashboard': { sectionId: 'callcommand-calls', label: 'Call Dashboard' },
+    '/dashboard': { sectionId: 'callcommand-dashboard', label: 'Call Dashboard' },
+    '/app': { sectionId: 'callcommand-dashboard', label: 'CallCommand AI' },
     '/channels': { sectionId: 'callcommand-configuration', label: 'Channels' },
-    '/profiles': { sectionId: 'callcommand-configuration', label: 'Reception Profiles' },
-    '/consent': { sectionId: 'callcommand-consent', label: 'Consent Ledger' },
-    '/suppressions': { sectionId: 'callcommand-consent', label: 'Suppression Controls' },
+    '/profiles': { sectionId: 'callcommand-receptionists', label: 'Reception Profiles' },
+    '/receptionist-profiles': { sectionId: 'callcommand-receptionists', label: 'Receptionist Profiles' },
+    '/flows': { sectionId: 'callcommand-flows', label: 'Call Flows' },
+    '/automation-rules': { sectionId: 'callcommand-automation', label: 'Automation Rules' },
+    '/switchboard': { sectionId: 'callcommand-switchboard', label: 'Live Switchboard' },
+    '/setup/telephony': { sectionId: 'callcommand-settings', label: 'Telephony Setup' },
+    '/integrations': { sectionId: 'callcommand-settings', label: 'Integrations' },
+    '/transfer-targets': { sectionId: 'callcommand-switchboard', label: 'Transfer Targets' },
+    '/simulate': { sectionId: 'callcommand-calls', label: 'Call Simulator' },
+    '/simulate/live-call': { sectionId: 'callcommand-switchboard', label: 'Live Call Simulator' },
+    '/consent': { sectionId: 'callcommand-configuration', label: 'Consent Policy and Ledger' },
+    '/suppressions': { sectionId: 'callcommand-settings', label: 'Suppression Controls' },
     '/calls': { sectionId: 'callcommand-calls', label: 'Call Records' },
-    '/operations': { sectionId: 'callcommand-operations', label: 'Controlled Calling' },
+    '/operations': { sectionId: 'callcommand-calls', label: 'Controlled Calling' },
+    '/tickets': { sectionId: 'callcommand-work', label: 'Call Tickets' },
+    '/leads': { sectionId: 'callcommand-work', label: 'Call Leads' },
+    '/tasks': { sectionId: 'callcommand-work', label: 'Call Tasks' },
+    '/billing': { sectionId: 'callcommand-settings', label: 'OperatorOS Plan and Usage' },
+    '/settings': { sectionId: 'callcommand-settings', label: 'CallCommand Settings' },
+    '/organizations': { sectionId: 'callcommand-msp-organizations', label: 'MSP Organizations' },
+    '/contacts': { sectionId: 'callcommand-msp-contacts', label: 'MSP Support Contacts' },
+    '/integrations/health': { sectionId: 'callcommand-msp-integrations', label: 'MSP Integration Health' },
+    '/action-catalog': { sectionId: 'callcommand-msp-policy', label: 'Approved Action Catalog' },
+    '/policy': { sectionId: 'callcommand-msp-policy', label: 'Automation Policy' },
+    '/audit': { sectionId: 'callcommand-msp-audit', label: 'Call Evidence Ledger' },
+    '/onboarding': { sectionId: 'callcommand-msp-onboarding', label: 'MSP Production Onboarding' },
   },
   ninjamation: {
     '/dashboard': { sectionId: 'ninjamation-dashboard', label: 'Script Dashboard' },
     '/scripts': { sectionId: 'ninjamation-scripts', label: 'Script Library' },
+    '/library': { sectionId: 'ninjamation-library', label: 'Script Library' },
     '/editor': { sectionId: 'ninjamation-editor', label: 'Script Editor' },
     '/review': { sectionId: 'ninjamation-review', label: 'Review Queue' },
+    '/generate': { sectionId: 'ninjamation-generations', label: 'AI Draft Generator' },
     '/generations': { sectionId: 'ninjamation-generations', label: 'AI Draft Generator' },
     '/downloads': { sectionId: 'ninjamation-downloads', label: 'Download Audit' },
+    '/sync': { sectionId: 'ninjamation-sync', label: 'GitHub Synchronization' },
+    '/account': { sectionId: 'ninjamation-account', label: 'Account and Usage' },
+    '/billing': { sectionId: 'ninjamation-account', label: 'OperatorOS Billing' },
+    '/checkout/success': { sectionId: 'ninjamation-account', label: 'OperatorOS Billing Status' },
+    '/checkout/cancel': { sectionId: 'ninjamation-account', label: 'OperatorOS Billing Status' },
+    '/admin': { sectionId: 'ninjamation-admin', label: 'Ninjamation Administration' },
   },
   outcall: {
     '/dashboard': { sectionId: 'outcall-readiness', label: 'Readiness and Safety' },
@@ -299,6 +373,7 @@ export function resolveCoreModuleDeepLink(
   if (slug === 'ninja-pool-hall' && pathSegments.length === 2) {
     const [resource] = pathSegments;
     if (resource === 'matches') return { sectionId: 'ninja-pool-hall-shell', label: 'Saved Match' };
+    if (resource === 'rooms') return { sectionId: 'ninja-pool-hall-shell', label: 'Online Room' };
   }
   if (slug === 'brandforgeos' && pathSegments.length === 2) {
     const [resource] = pathSegments;
@@ -308,15 +383,22 @@ export function resolveCoreModuleDeepLink(
     if (resource === 'copy-assets') return { sectionId: 'brandforgeos-copy', label: 'Copy Asset' };
     if (resource === 'calendar-items') return { sectionId: 'brandforgeos-calendar', label: 'Calendar Item' };
     if (resource === 'generations') return { sectionId: 'brandforgeos-ai', label: 'Generation Result' };
+    if (resource === 'offers') return { sectionId: 'brandforgeos-offers', label: 'Offer' };
+    if (resource === 'templates') return { sectionId: 'brandforgeos-templates', label: 'Template' };
+    if (resource === 'reports' || resource === 'exports') return { sectionId: 'brandforgeos-reports', label: resource === 'reports' ? 'Report' : 'Export' };
+    if (resource === 'workflows') return { sectionId: 'brandforgeos-strategy', label: 'Guided Workflow' };
   }
   if (slug === 'snapproofos' && pathSegments.length === 2) {
     const [resource] = pathSegments;
     if (resource === 'cases') return { sectionId: 'snapproofos-cases', label: 'Evidence Case' };
     if (resource === 'evidence') return { sectionId: 'snapproofos-evidence', label: 'Evidence Item' };
     if (resource === 'reports') return { sectionId: 'snapproofos-reports', label: 'Report' };
+    if (resource === 'jobs') return { sectionId: 'snapproofos-jobs', label: 'Job' };
+    if (resource === 'customers') return { sectionId: 'snapproofos-customers', label: 'Customer' };
   }
-  if (slug === 'studyforge-ai' && pathSegments.length === 2) {
+  if (slug === 'studyforge-ai' && pathSegments.length >= 2) {
     const [resource] = pathSegments;
+    if (resource === 'sets') return { sectionId: 'studyforge-set-workspace', label: 'Study Set' };
     if (resource === 'subjects' || resource === 'courses') return { sectionId: 'studyforge-subjects', label: 'Subject' };
     if (resource === 'sources') return { sectionId: 'studyforge-sources', label: 'Source' };
     if (resource === 'decks' || resource === 'cards') return { sectionId: 'studyforge-decks', label: 'Flashcard Deck' };
@@ -325,21 +407,28 @@ export function resolveCoreModuleDeepLink(
   }
   if (slug === 'ninja-launch-kit' && pathSegments.length === 2) {
     const [resource] = pathSegments;
-    if (resource === 'launches') return { sectionId: 'launchkit-launches', label: 'Launch Workspace' };
-    if (resource === 'tasks' || resource === 'milestones' || resource === 'phases') return { sectionId: 'launchkit-plan', label: 'Launch Plan Record' };
-    if (resource === 'artifacts') return { sectionId: 'launchkit-artifacts', label: 'Campaign Artifact' };
+    if (resource === 'launches') return { sectionId: 'launchkit-execution', label: 'Launch Workspace' };
+    if (resource === 'tasks' || resource === 'milestones' || resource === 'phases') return { sectionId: 'launchkit-execution', label: 'Launch Plan Record' };
+    if (resource === 'artifacts') return { sectionId: 'launchkit-execution', label: 'Campaign Artifact' };
+    if (resource === 'kits') return { sectionId: 'launchkit-visual-promos', label: 'Generated Launch Kit' };
+    if (resource === 'templates') return { sectionId: 'launchkit-templates', label: 'Launch Template' };
+    if (resource === 'brands') return { sectionId: 'launchkit-brands', label: 'Brand Profile' };
+    if (resource === 'exports') return { sectionId: 'launchkit-exports', label: 'Launch Export' };
   }
   if (slug === 'callcommand-ai' && pathSegments.length === 2) {
     const [resource] = pathSegments;
     if (resource === 'calls') return { sectionId: 'callcommand-calls', label: 'Call Record' };
     if (resource === 'channels' || resource === 'profiles') return { sectionId: 'callcommand-configuration', label: 'Call Configuration' };
-    if (resource === 'consents' || resource === 'suppressions') return { sectionId: 'callcommand-consent', label: 'Consent Record' };
+    if (resource === 'consents' || resource === 'suppressions') return { sectionId: 'callcommand-settings', label: 'Consent Record' };
+    if (resource === 'flows') return { sectionId: 'callcommand-flows', label: 'Call Flow' };
+    if (resource === 'tickets' || resource === 'leads' || resource === 'tasks') return { sectionId: 'callcommand-work', label: 'Generated Work Record' };
   }
   if (slug === 'ninjamation' && pathSegments.length === 2) {
     const [resource] = pathSegments;
     if (resource === 'scripts') return { sectionId: 'ninjamation-editor', label: 'Script Record' };
     if (resource === 'generations') return { sectionId: 'ninjamation-generations', label: 'Generation Record' };
     if (resource === 'downloads') return { sectionId: 'ninjamation-downloads', label: 'Download Record' };
+    if (resource === 'sync-runs') return { sectionId: 'ninjamation-sync', label: 'Synchronization Run' };
   }
   return null;
 }

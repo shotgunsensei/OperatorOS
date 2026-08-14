@@ -1,6 +1,6 @@
 export const DATABASE_RELEASE_CONTRACT = Object.freeze({
   contractVersion: 1,
-  releaseVersion: 39,
+  releaseVersion: 47,
   mode: 'idempotent-apply',
   destructive: false,
   rollback: 'restore-to-new-database-and-switch-traffic',
@@ -45,5 +45,13 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'pulsedesk_literal_tables', kind: 'ddl' },
   { id: 'operatoros_messaging_compliance_tables', kind: 'ddl' },
   { id: 'torqueshed_web_api_tables', kind: 'ddl' },
+  { id: 'ninja_pool_online_tables', kind: 'ddl' },
+  { id: 'brandforgeos_complete_product_tables', kind: 'ddl' },
+  { id: 'snapproofos_complete_product_tables', kind: 'ddl' },
+  { id: 'studyforge_complete_product_tables', kind: 'ddl' },
+  { id: 'ninja_launch_kit_complete_product_tables', kind: 'ddl' },
+  { id: 'callcommand_complete_product_tables', kind: 'ddl' },
+  { id: 'ninjamation_complete_product_tables', kind: 'ddl' },
+  { id: 'callcommand_msp_automation_fabric_tables', kind: 'ddl' },
   { id: 'torqueshed_native_tables', kind: 'ddl' },
 ] as const);

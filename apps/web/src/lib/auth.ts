@@ -1,6 +1,6 @@
 'use client';
 
-import type { GameState, ShotEvents } from './ninja-pool-hall/types';
+import type { GameState, Shot, ShotEvents } from './ninja-pool-hall/types';
 
 const API_BASE = '/api';
 
@@ -27,7 +27,11 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers, credentials: 'include' });
   const data = await res.json();
-  if (!res.ok) throw { status: res.status, ...data };
+  if (!res.ok) throw {
+    status: res.status,
+    ...data,
+    requestId: data?.requestId ?? res.headers.get('x-request-id') ?? null,
+  };
   return data;
 }
 
@@ -634,6 +638,31 @@ export interface NinjaPoolMatchActionResponse {
   idempotent: boolean;
 }
 
+export type NinjaPoolOnlineStatus = 'waiting' | 'active' | 'completed' | 'abandoned' | 'expired';
+export type NinjaPoolOnlineRole = 'host' | 'guest';
+
+export interface NinjaPoolOnlineRoom {
+  id: string;
+  code: string;
+  status: NinjaPoolOnlineStatus;
+  role: NinjaPoolOnlineRole;
+  players: [
+    { seat: 0; name: string; role: 'host'; connected: boolean },
+    { seat: 1; name: string; role: 'guest'; joined: boolean; connected: boolean },
+  ];
+  rulesSettings: NinjaPoolPreferences;
+  authoritativeState: GameState;
+  stateHash: string;
+  pendingShot: { expectedVersion: number; clientShotId: string; shooterSeat: 0 | 1; shot: Shot } | null;
+  sequenceNumber: number;
+  version: number;
+  expiresAt: string;
+  lastActivityAt: string;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BrandForgeBrand {
   id: string;
   name: string;
@@ -645,6 +674,8 @@ export interface BrandForgeBrand {
   bodyFont: string | null;
   voiceTone: string | null;
   guidelines: string | null;
+  logoAttachmentId: string | null;
+  assetSummary: string[];
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -696,6 +727,8 @@ export interface BrandForgeCopyAsset {
   tone: string | null;
   status: 'draft' | 'review' | 'approved' | 'published' | 'archived';
   generationId: string | null;
+  favorite: boolean;
+  scores: Record<string, number | string>;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -1089,6 +1122,21 @@ export interface TorqueAssistStatus {
   limits: { userPerMinute: number; tenantPerMinute: number; maximumContextCharacters: number };
   ledgerAuthoritative: true;
 }
+export interface TorqueTokenPurchaseStatus {
+  purchaseId: string;
+  state: 'checkout_created' | 'payment_pending' | 'paid_pending_credit' | 'credited' |
+    'cancelled' | 'expired' | 'failed' | 'refunded' | 'disputed';
+  packageKey: string;
+  units: number;
+  amountMinor: number;
+  currency: string;
+  failureCode: string | null;
+  credited: boolean;
+  balance: number;
+  updatedAt: string;
+  creditedAt: string | null;
+  authority: 'operatoros_ledger';
+}
 
 export interface PulseDeskServiceTicket {
   id: string;
@@ -1420,6 +1468,20 @@ export const moduleShellApi = {
         method: 'POST',
         body: JSON.stringify({ expectedVersion }),
       }) as Promise<NinjaPoolMatch>,
+    listOnlineRooms: (): Promise<{ rooms: NinjaPoolOnlineRoom[] }> =>
+      apiFetch('/modules/ninja-pool-hall/rooms') as Promise<{ rooms: NinjaPoolOnlineRoom[] }>,
+    getOnlineRoom: (id: string): Promise<{ room: NinjaPoolOnlineRoom; events: Array<Record<string, unknown>> }> =>
+      apiFetch(`/modules/ninja-pool-hall/rooms/${encodeURIComponent(id)}`) as Promise<{ room: NinjaPoolOnlineRoom; events: Array<Record<string, unknown>> }>,
+    hostOnlineRoom: (input: { clientRoomId: string }): Promise<NinjaPoolOnlineRoom> =>
+      apiFetch('/modules/ninja-pool-hall/rooms', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<NinjaPoolOnlineRoom>,
+    joinOnlineRoom: (input: { code: string }): Promise<NinjaPoolOnlineRoom> =>
+      apiFetch('/modules/ninja-pool-hall/rooms/join', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<NinjaPoolOnlineRoom>,
   },
   brandforgeos: {
     dashboard: (): Promise<Record<string, any>> =>
@@ -1474,6 +1536,94 @@ export const moduleShellApi = {
       apiFetch('/modules/brandforgeos/generations') as Promise<any>,
     generate: (input: Record<string, unknown>): Promise<{ generation: BrandForgeGeneration }> =>
       apiFetch('/modules/brandforgeos/generations', { method: 'POST', body: JSON.stringify(input) }) as Promise<{ generation: BrandForgeGeneration }>,
+    productContract: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/product-contract') as Promise<any>,
+    productOverview: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/product-overview') as Promise<any>,
+    listOffers: (): Promise<{ offers: Array<Record<string, any>> }> => apiFetch('/modules/brandforgeos/offers') as Promise<any>,
+    createOffer: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/brandforgeos/offers', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    campaignProduction: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/brandforgeos/campaigns/${encodeURIComponent(id)}/production`) as Promise<any>,
+    createCampaignTask: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/campaigns/${encodeURIComponent(id)}/tasks`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    updateCampaignTask: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/campaign-tasks/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    createCampaignComment: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/campaigns/${encodeURIComponent(id)}/comments`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    createLandingPage: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/campaigns/${encodeURIComponent(id)}/landing-pages`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    listWorkflows: (): Promise<{ workflows: Array<Record<string, any>> }> => apiFetch('/modules/brandforgeos/workflows') as Promise<any>,
+    createWorkflow: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/brandforgeos/workflows', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    completeWorkflow: (id: string, generationId: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/workflows/${encodeURIComponent(id)}/complete`, {
+        method: 'POST',
+        body: JSON.stringify({ generationId }),
+      }) as Promise<any>,
+    listTemplates: (): Promise<{ templates: Array<Record<string, any>> }> => apiFetch('/modules/brandforgeos/templates') as Promise<any>,
+    createTemplate: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/brandforgeos/templates', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    useTemplate: (id: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/templates/${encodeURIComponent(id)}/use`, {
+        method: 'POST',
+        body: '{}',
+      }) as Promise<any>,
+    listIntegrations: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/integrations') as Promise<any>,
+    connectIntegration: (provider: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/integrations/${encodeURIComponent(provider)}/connect`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    disconnectIntegration: (provider: string): Promise<void> =>
+      apiFetch(`/modules/brandforgeos/integrations/${encodeURIComponent(provider)}`, {
+        method: 'DELETE',
+      }) as Promise<void>,
+    syncIntegration: (provider: string, idempotencyKey: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/integrations/${encodeURIComponent(provider)}/sync`, {
+        method: 'POST',
+        body: JSON.stringify({ idempotencyKey }),
+      }) as Promise<any>,
+    listRecommendations: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/recommendations') as Promise<any>,
+    listLeads: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/leads') as Promise<any>,
+    listReports: (): Promise<{ reports: Array<Record<string, any>> }> => apiFetch('/modules/brandforgeos/reports') as Promise<any>,
+    createReport: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/brandforgeos/reports', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    generateReport: (id: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/brandforgeos/reports/${encodeURIComponent(id)}/generate`, {
+        method: 'POST',
+        body: '{}',
+      }) as Promise<any>,
+    listExports: (): Promise<{ exports: Array<Record<string, any>> }> => apiFetch('/modules/brandforgeos/exports') as Promise<any>,
+    createExport: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/brandforgeos/exports', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }) as Promise<any>,
+    activity: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/activity') as Promise<any>,
+    notifications: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/notifications') as Promise<any>,
+    planUsage: (): Promise<Record<string, any>> => apiFetch('/modules/brandforgeos/plan-usage') as Promise<any>,
   },
   snapproofos: {
     dashboard: (): Promise<{ counts: Record<string, number> }> =>
@@ -1528,6 +1678,61 @@ export const moduleShellApi = {
       apiFetch(`/modules/snapproofos/reports/${encodeURIComponent(id)}/decision`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
     downloadReport: (id: string, format: 'json' | 'csv'): Promise<Blob> =>
       apiDownload(`/modules/snapproofos/reports/${encodeURIComponent(id)}/export?format=${format}`),
+    organization: (): Promise<Record<string, any>> => apiFetch('/modules/snapproofos/organization') as Promise<any>,
+    billing: (): Promise<Record<string, any>> => apiFetch('/modules/snapproofos/billing') as Promise<any>,
+    team: (): Promise<Record<string, any>> => apiFetch('/modules/snapproofos/team') as Promise<any>,
+    activity: (): Promise<Record<string, any>> => apiFetch('/modules/snapproofos/activity?limit=50') as Promise<any>,
+    customers: (search = ''): Promise<{ customers: Array<Record<string, any>> }> =>
+      apiFetch(`/modules/snapproofos/customers${search ? `?search=${encodeURIComponent(search)}` : ''}`) as Promise<any>,
+    createCustomer: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/snapproofos/customers', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    archiveCustomer: (id: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/customers/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<any>,
+    customer: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/snapproofos/customers/${encodeURIComponent(id)}`) as Promise<any>,
+    jobs: (query = ''): Promise<{ jobs: Array<Record<string, any>> }> =>
+      apiFetch(`/modules/snapproofos/jobs${query ? `?${query}` : ''}`) as Promise<any>,
+    job: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}`) as Promise<any>,
+    createJob: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/snapproofos/jobs', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    updateJob: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<any>,
+    createJobFinding: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}/findings`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    createJobNote: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}/notes`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    downloadVoiceNote: (id: string): Promise<Blob> =>
+      apiDownload(`/modules/snapproofos/notes/${encodeURIComponent(id)}/audio`),
+    createPart: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}/parts`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    createLabor: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}/labor`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    uploadJobFile: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}/files`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    updateJobFile: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/files/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }) as Promise<any>,
+    deleteJobFile: (id: string): Promise<void> =>
+      apiFetch(`/modules/snapproofos/files/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<any>,
+    downloadJobFile: (id: string): Promise<Blob> =>
+      apiDownload(`/modules/snapproofos/files/${encodeURIComponent(id)}/download`),
+    templates: (): Promise<{ templates: Array<Record<string, any>> }> => apiFetch('/modules/snapproofos/templates') as Promise<any>,
+    applyTemplate: (id: string, templateId: string): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/jobs/${encodeURIComponent(id)}/apply-template`, { method: 'POST', body: JSON.stringify({ templateId }) }) as Promise<any>,
+    branding: (): Promise<Record<string, any>> => apiFetch('/modules/snapproofos/branding') as Promise<any>,
+    updateBranding: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/snapproofos/branding', { method: 'PATCH', body: JSON.stringify(input) }) as Promise<any>,
+    uploadBrandingLogo: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/snapproofos/branding/logo', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    downloadBrandingLogo: (): Promise<Blob> => apiDownload('/modules/snapproofos/branding/logo'),
+    generateReport: (input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch('/modules/snapproofos/reports/generate', { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    createReportExport: (id: string, format: 'pdf' | 'docx'): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/reports/${encodeURIComponent(id)}/exports`, { method: 'POST', body: JSON.stringify({ format }) }) as Promise<any>,
+    listExports: (): Promise<{ exports: Array<Record<string, any>> }> => apiFetch('/modules/snapproofos/exports') as Promise<any>,
+    downloadExport: (id: string): Promise<Blob> => apiDownload(`/modules/snapproofos/exports/${encodeURIComponent(id)}/download`),
+    shareLinks: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/snapproofos/reports/${encodeURIComponent(id)}/share-links`) as Promise<any>,
+    createShareLink: (id: string, input: Record<string, unknown>): Promise<Record<string, any>> =>
+      apiFetch(`/modules/snapproofos/reports/${encodeURIComponent(id)}/share-links`, { method: 'POST', body: JSON.stringify(input) }) as Promise<any>,
+    revokeShareLink: (id: string): Promise<Record<string, any>> => apiFetch(`/modules/snapproofos/share-links/${encodeURIComponent(id)}`, { method: 'DELETE' }) as Promise<any>,
   },
   faultlinelab: {
     policy: (): Promise<Record<string, any>> =>
@@ -1709,6 +1914,8 @@ export const moduleShellApi = {
         headers: { 'Idempotency-Key': idempotencyKey },
         body: JSON.stringify(input),
       }) as Promise<any>,
+    getTorqueTokenPurchaseStatus: (purchaseId: string): Promise<TorqueTokenPurchaseStatus> =>
+      apiFetch(`/modules/torqueshed/token-purchases/${encodeURIComponent(purchaseId)}/status`) as Promise<TorqueTokenPurchaseStatus>,
     runTorqueAssist: (
       input: {
         diagnosticSessionId: string;
@@ -2244,6 +2451,65 @@ export const moduleShellApi = {
   },
   callcommand: {
     workspace: () => apiFetch('/modules/callcommand-ai/workspace'),
+    productWorkspace: () => apiFetch('/modules/callcommand-ai/product/workspace'),
+    mspWorkspace: () => apiFetch('/modules/callcommand-ai/product/msp/workspace'),
+    mspUpdateSettings: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/settings', { method: 'PATCH', body: JSON.stringify(input) }),
+    mspConfigureOrganization: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/organizations', { method: 'POST', body: JSON.stringify(input) }),
+    mspConfigureTrustedLine: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/trusted-lines', { method: 'POST', body: JSON.stringify(input) }),
+    mspVerifyTrustedLine: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/msp/trusted-lines/${encodeURIComponent(id)}/verify`, { method: 'POST', body: JSON.stringify(input) }),
+    mspSetTrustedLineStatus: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/msp/trusted-lines/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify(input) }),
+    mspConfigureContact: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/contacts', { method: 'POST', body: JSON.stringify(input) }),
+    mspIssueSupportLink: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/support-links', { method: 'POST', body: JSON.stringify(input) }),
+    mspSetSupportLinkStatus: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/msp/support-links/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify(input) }),
+    mspConfigureIntegration: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/integrations', { method: 'POST', body: JSON.stringify(input) }),
+    mspIntegrationKillSwitch: (id: string, active: boolean) =>
+      apiFetch(`/modules/callcommand-ai/product/msp/integrations/${encodeURIComponent(id)}/kill-switch`, { method: 'POST', body: JSON.stringify({ active }) }),
+    mspCreateActionDraft: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/action-catalog', { method: 'POST', body: JSON.stringify(input) }),
+    mspEvaluatePolicy: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/policy/evaluate', { method: 'POST', body: JSON.stringify(input) }),
+    mspSimulateIntake: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/msp/simulate/intake', { method: 'POST', body: JSON.stringify(input) }),
+    productCall: (id: string) => apiFetch(`/modules/callcommand-ai/product/calls/${encodeURIComponent(id)}`),
+    productCreateChannel: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/channels', { method: 'POST', body: JSON.stringify(input) }),
+    productUpdateChannel: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/channels/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    productCreateProfile: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/profiles', { method: 'POST', body: JSON.stringify(input) }),
+    productCreateTarget: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/transfer-targets', { method: 'POST', body: JSON.stringify(input) }),
+    productCreateFlow: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/flows', { method: 'POST', body: JSON.stringify(input) }),
+    productUpdateFlow: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/flows/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
+    productPublishFlow: (id: string) =>
+      apiFetch(`/modules/callcommand-ai/product/flows/${encodeURIComponent(id)}/publish`, { method: 'POST', body: JSON.stringify({}) }),
+    productCreateRule: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/automation-rules', { method: 'POST', body: JSON.stringify(input) }),
+    productProcessCall: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/calls/${encodeURIComponent(id)}/process`, { method: 'POST', body: JSON.stringify(input) }),
+    productReport: (id: string) =>
+      apiDownload(`/modules/callcommand-ai/product/calls/${encodeURIComponent(id)}/report`, { method: 'POST' }),
+    productSimulate: (input: Record<string, unknown>) =>
+      apiFetch('/modules/callcommand-ai/product/simulate', { method: 'POST', body: JSON.stringify(input) }),
+    productUpdateSession: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/switchboard/sessions/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    productEndSession: (id: string) =>
+      apiFetch(`/modules/callcommand-ai/product/switchboard/sessions/${encodeURIComponent(id)}/end`, { method: 'POST', body: JSON.stringify({}) }),
+    productTransfer: (id: string, targetId: string) =>
+      apiFetch(`/modules/callcommand-ai/product/switchboard/sessions/${encodeURIComponent(id)}/transfer`, { method: 'POST', body: JSON.stringify({ targetId }) }),
+    productUpdateObject: (type: 'tickets' | 'leads' | 'tasks', id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/callcommand-ai/product/${type}/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
     get: (id: string) => apiFetch(`/modules/callcommand-ai/calls/${id}`),
     createChannel: (input: Record<string, unknown>) =>
       apiFetch('/modules/callcommand-ai/channels', { method: 'POST', body: JSON.stringify(input) }),
@@ -2273,6 +2539,35 @@ export const moduleShellApi = {
     telephonyStatus: () => apiFetch('/modules/callcommand-ai/telephony/status'),
   },
   studyforge: {
+    completeWorkspace: () => apiFetch('/modules/studyforge-ai/complete-workspace'),
+    completeSet: (id: string) => apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(id)}`),
+    savePreferences: (input: Record<string, unknown>) =>
+      apiFetch('/modules/studyforge-ai/preferences', { method: 'PUT', body: JSON.stringify(input) }),
+    createFolder: (input: { name: string; color?: string }) =>
+      apiFetch('/modules/studyforge-ai/folders', { method: 'POST', body: JSON.stringify(input) }),
+    createCompleteSet: (input: Record<string, unknown>) =>
+      apiFetch('/modules/studyforge-ai/study-sets', { method: 'POST', body: JSON.stringify(input) }),
+    updateCompleteSet: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    deleteCompleteSet: (id: string) =>
+      apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    copyCompleteSet: (id: string, action: 'duplicate' | 'regenerate', input: Record<string, unknown>) =>
+      apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(id)}/${action}`, { method: 'POST', body: JSON.stringify(input) }),
+    submitCompleteQuiz: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(id)}/quiz-attempts`, { method: 'POST', body: JSON.stringify(input) }),
+    startFlashcardSession: (id: string, idempotencyKey: string) =>
+      apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(id)}/flashcard-sessions`, { method: 'POST', body: JSON.stringify({ idempotencyKey }) }),
+    reviewSessionCard: (sessionId: string, cardId: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/studyforge-ai/flashcard-sessions/${encodeURIComponent(sessionId)}/cards/${encodeURIComponent(cardId)}`, { method: 'POST', body: JSON.stringify(input) }),
+    completeFlashcardSession: (sessionId: string, durationSeconds: number) =>
+      apiFetch(`/modules/studyforge-ai/flashcard-sessions/${encodeURIComponent(sessionId)}/complete`, { method: 'PATCH', body: JSON.stringify({ durationSeconds }) }),
+    completePlanItem: (setId: string, sessionId: string, completed: boolean) =>
+      apiFetch(`/modules/studyforge-ai/study-sets/${encodeURIComponent(setId)}/plan-sessions/${encodeURIComponent(sessionId)}/complete`, { method: 'PATCH', body: JSON.stringify({ completed }) }),
+    createCountdown: (input: Record<string, unknown>) =>
+      apiFetch('/modules/studyforge-ai/exam-countdowns', { method: 'POST', body: JSON.stringify(input) }),
+    deleteCountdown: (id: string) =>
+      apiFetch(`/modules/studyforge-ai/exam-countdowns/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    account: () => apiFetch('/modules/studyforge-ai/account'),
     list: () => apiFetch('/modules/studyforge-ai/sessions'),
     create: (source: string) =>
       apiFetch('/modules/studyforge-ai/sessions', {
@@ -2423,6 +2718,33 @@ export const moduleShellApi = {
       apiDownload(`/modules/ninjamation/scripts/${encodeURIComponent(id)}/downloads`, {
         method: 'POST',
       }),
+    productWorkspace: () => apiFetch('/modules/ninjamation/product/workspace'),
+    productScripts: (query: Record<string, string | number | boolean | null | undefined> = {}) => {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(query)) if (value !== undefined && value !== null && value !== '') params.set(key, String(value));
+      return apiFetch(`/modules/ninjamation/product/scripts${params.size ? `?${params}` : ''}`);
+    },
+    productDetail: (id: string) => apiFetch(`/modules/ninjamation/product/scripts/${encodeURIComponent(id)}`),
+    favorite: (id: string) => apiFetch(`/modules/ninjamation/product/scripts/${encodeURIComponent(id)}/favorite`, { method: 'POST', body: '{}' }),
+    unfavorite: (id: string) => apiFetch(`/modules/ninjamation/product/scripts/${encodeURIComponent(id)}/favorite`, { method: 'DELETE' }),
+    productDownload: (id: string) => apiDownload(`/modules/ninjamation/product/scripts/${encodeURIComponent(id)}/download`, { method: 'POST' }),
+    productGenerate: (input: {
+      idempotencyKey: string;
+      prompt: string;
+      name?: string;
+      description?: string;
+      language: 'powershell' | 'python' | 'batch' | 'bash';
+      category?: string;
+      riskTier?: 'low' | 'medium' | 'high';
+    }) => apiFetch('/modules/ninjamation/product/generations', { method: 'POST', body: JSON.stringify(input) }),
+    queueSync: (input: { idempotencyKey: string; commit?: string }) => apiFetch('/modules/ninjamation/product/sync-runs', { method: 'POST', body: JSON.stringify(input) }),
+    syncRuns: () => apiFetch('/modules/ninjamation/product/sync-runs'),
+    syncDetail: (id: string) => apiFetch(`/modules/ninjamation/product/sync-runs/${encodeURIComponent(id)}`),
+    retrySync: (id: string, idempotencyKey: string) => apiFetch(`/modules/ninjamation/product/sync-runs/${encodeURIComponent(id)}/retry`, { method: 'POST', body: JSON.stringify({ idempotencyKey }) }),
+    account: () => apiFetch('/modules/ninjamation/product/account'),
+    admin: () => apiFetch('/modules/ninjamation/product/admin'),
+    adminScript: (id: string, action: 'deprecate' | 'restore') => apiFetch(`/modules/ninjamation/product/admin/scripts/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ action }) }),
+    updateSyncSchedule: (input: { intervalSeconds: number; enabled: boolean }) => apiFetch('/modules/ninjamation/product/admin/sync-schedule', { method: 'PUT', body: JSON.stringify(input) }),
   },
   outcall: {
     workspace: () => apiFetch('/modules/outcall/workspace'),
@@ -2541,6 +2863,37 @@ export const moduleShellApi = {
         method: 'POST',
         body: JSON.stringify(input),
       }),
+    productOverview: () => apiFetch('/modules/ninja-launch-kit/product/overview'),
+    productTemplates: () => apiFetch('/modules/ninja-launch-kit/product/catalog/templates'),
+    productTemplate: (slug: string) => apiFetch(`/modules/ninja-launch-kit/product/catalog/templates/${encodeURIComponent(slug)}`),
+    previewProductKit: (input: Record<string, unknown>) =>
+      apiFetch('/modules/ninja-launch-kit/product/kits/preview', { method: 'POST', body: JSON.stringify(input) }),
+    productKit: (id: string) => apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}`),
+    productKits: (query = '') => apiFetch(`/modules/ninja-launch-kit/product/kits${query}`),
+    createProductKit: (input: Record<string, unknown>) =>
+      apiFetch('/modules/ninja-launch-kit/product/kits', { method: 'POST', body: JSON.stringify(input) }),
+    updateProductKit: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    duplicateProductKit: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}/duplicate`, { method: 'POST', body: JSON.stringify(input) }),
+    regenerateProductKit: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}/regenerate`, { method: 'POST', body: JSON.stringify(input) }),
+    productKitAction: (id: string, action: 'archive' | 'restore' | 'undo-delete') =>
+      apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}/${action}`, { method: 'POST' }),
+    deleteProductKit: (id: string) =>
+      apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    productBrands: () => apiFetch('/modules/ninja-launch-kit/product/brands'),
+    createProductBrand: (input: Record<string, unknown>) =>
+      apiFetch('/modules/ninja-launch-kit/product/brands', { method: 'POST', body: JSON.stringify(input) }),
+    updateProductBrand: (id: string, input: Record<string, unknown>) =>
+      apiFetch(`/modules/ninja-launch-kit/product/brands/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    deleteProductBrand: (id: string) =>
+      apiFetch(`/modules/ninja-launch-kit/product/brands/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    productExports: () => apiFetch('/modules/ninja-launch-kit/product/exports'),
+    exportProductKit: (id: string, input: { format: 'txt' | 'markdown' | 'json'; idempotencyKey: string }) =>
+      apiFetch(`/modules/ninja-launch-kit/product/kits/${encodeURIComponent(id)}/exports`, { method: 'POST', body: JSON.stringify(input) }),
+    productAccount: () => apiFetch('/modules/ninja-launch-kit/product/account'),
+    productAdmin: () => apiFetch('/modules/ninja-launch-kit/product/admin/stats'),
   },
 };
 

@@ -118,8 +118,8 @@ export const PHASE13_MIGRATION_MANIFESTS: readonly ModuleMigrationManifest[] = O
   {
     slug: 'brandforgeos',
     source: { system: 'C:\\Dev\\BrandForge-OS snapshot', version: 'reviewed source manifest', commit: '5e78bc2ee6c8086ddd589bb7416f1d4560ffbb4e', exportMethod: 'Pinned source evidence; a future data export requires separate authorization.' },
-    targetReleaseStep: 'brandforgeos_tables',
-    mappings: ['tenant/user ownership', 'brands/personas/campaigns/copy/calendar', 'shared AI usage/activity', 'fake counters and child commerce excluded'],
+    targetReleaseStep: 'brandforgeos_complete_product_tables',
+    mappings: ['tenant/user ownership', 'brands/personas/offers/campaign production/copy/calendar', 'templates/workflows/integrations/reports/exports', 'shared AI/provider/usage/activity and parent entitlements'],
     reconciliation: ['source manifest and selected file hashes', 'business row counts and references when export exists', 'zero authority/provider credential imports'],
     conflicts: 'Reject unpinned source, missing ownership, random analytics, child credit state, or implicit duplicates.',
     rollback: sharedRollback, writeFreeze: sharedFreeze,

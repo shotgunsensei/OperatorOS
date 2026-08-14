@@ -11,26 +11,44 @@ import {
   Target,
   Trophy,
   Users,
-  WifiOff,
+  Wifi,
 } from 'lucide-react';
 import { moduleShellApi, type NinjaPoolProfileResponse } from '@/lib/auth';
 import NinjaPoolHallPractice from './NinjaPoolHallPractice';
 import NinjaPoolHallMatch from './NinjaPoolHallMatch';
 import NinjaPoolHallProfile from './NinjaPoolHallProfile';
 import NinjaPoolHallMatchDetail from './NinjaPoolHallMatchDetail';
+import NinjaPoolHallOnline from './NinjaPoolHallOnline';
 
-type View = 'home' | 'practice' | 'bot' | 'local' | 'profile' | 'detail';
+type View = 'home' | 'practice' | 'bot' | 'local' | 'online' | 'host' | 'join' | 'profile' | 'detail';
 
-function routeState(): { view: View; matchId: string | null } {
-  if (typeof window === 'undefined') return { view: 'home', matchId: null };
-  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+function modulePath(path: string): string {
+  const clean = path.replace(/^\/modules\/ninja-pool-hall(?=\/|$)/, '') || '/';
+  return clean.replace(/\/+$/, '') || '/';
+}
+
+function browserPath(path: string): string {
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/modules/ninja-pool-hall')) {
+    return `/modules/ninja-pool-hall${path === '/' ? '' : path}`;
+  }
+  return path;
+}
+
+function routeState(routePath?: string): { view: View; matchId: string | null; roomId: string | null } {
+  if (typeof window === 'undefined') return { view: 'home', matchId: null, roomId: null };
+  const path = modulePath(routePath || window.location.pathname);
   const detail = path.match(/^\/matches\/([a-z0-9-]+)$/i);
-  if (detail) return { view: 'detail', matchId: detail[1]! };
-  if (path === '/practice') return { view: 'practice', matchId: null };
-  if (path === '/cpu') return { view: 'bot', matchId: null };
-  if (path === '/local') return { view: 'local', matchId: null };
-  if (path === '/profile') return { view: 'profile', matchId: null };
-  return { view: 'home', matchId: null };
+  const onlineRoom = path.match(/^\/rooms\/([a-z0-9-]+)$/i);
+  if (detail) return { view: 'detail', matchId: detail[1]!, roomId: null };
+  if (onlineRoom) return { view: 'online', matchId: null, roomId: onlineRoom[1]! };
+  if (path === '/practice') return { view: 'practice', matchId: null, roomId: null };
+  if (path === '/cpu') return { view: 'bot', matchId: null, roomId: null };
+  if (path === '/local') return { view: 'local', matchId: null, roomId: null };
+  if (path === '/online') return { view: 'online', matchId: null, roomId: null };
+  if (path === '/host') return { view: 'host', matchId: null, roomId: null };
+  if (path === '/join') return { view: 'join', matchId: null, roomId: null };
+  if (path === '/profile') return { view: 'profile', matchId: null, roomId: null };
+  return { view: 'home', matchId: null, roomId: null };
 }
 
 const pathFor: Record<Exclude<View, 'detail'>, string> = {
@@ -38,13 +56,17 @@ const pathFor: Record<Exclude<View, 'detail'>, string> = {
   practice: '/practice',
   bot: '/cpu',
   local: '/local',
+  online: '/online',
+  host: '/host',
+  join: '/join',
   profile: '/profile',
 };
 
-export default function NinjaPoolHallShell(_props: { baseUrl?: string }) {
-  const initial = routeState();
+export default function NinjaPoolHallShell({ routePath }: { baseUrl?: string; routePath?: string }) {
+  const initial = routeState(routePath);
   const [view, setView] = useState<View>(initial.view);
   const [matchId, setMatchId] = useState<string | null>(initial.matchId);
+  const [roomId, setRoomId] = useState<string | null>(initial.roomId);
   const [profileData, setProfileData] = useState<NinjaPoolProfileResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,27 +85,49 @@ export default function NinjaPoolHallShell(_props: { baseUrl?: string }) {
       const next = routeState();
       setView(next.view);
       setMatchId(next.matchId);
+      setRoomId(next.roomId);
     };
     syncRoute();
     window.addEventListener('popstate', syncRoute);
     return () => window.removeEventListener('popstate', syncRoute);
   }, [loadProfile]);
 
+  useEffect(() => {
+    const manifest = document.createElement('link');
+    manifest.rel = 'manifest';
+    manifest.href = '/ninja-pool-hall.webmanifest';
+    document.head.appendChild(manifest);
+    if ('serviceWorker' in navigator) {
+      const scope = window.location.hostname === 'ninja-pool-hall.operatoros.net'
+        ? '/'
+        : '/modules/ninja-pool-hall/';
+      void navigator.serviceWorker.register('/ninja-pool-hall-sw.js', { scope }).catch(() => undefined);
+    }
+    return () => { manifest.remove(); };
+  }, []);
+
   const navigate = useCallback((next: Exclude<View, 'detail'>) => {
-    window.history.pushState(null, '', pathFor[next]);
+    window.history.pushState(null, '', browserPath(pathFor[next]));
     setView(next);
     setMatchId(null);
+    setRoomId(null);
   }, []);
 
   const updateMatchPath = useCallback((id: string | null) => {
     const fallback = view === 'local' ? '/local' : '/cpu';
-    window.history.replaceState(null, '', id ? `/matches/${id}` : fallback);
+    window.history.replaceState(null, '', browserPath(id ? `/matches/${id}` : fallback));
   }, [view]);
 
   const openDetail = useCallback((id: string) => {
-    window.history.pushState(null, '', `/matches/${id}`);
+    window.history.pushState(null, '', browserPath(`/matches/${id}`));
     setMatchId(id);
     setView('detail');
+  }, []);
+
+  const updateRoomPath = useCallback((id: string | null) => {
+    window.history.replaceState(null, '', browserPath(id ? `/rooms/${id}` : '/online'));
+    setRoomId(id);
+    setView('online');
   }, []);
 
   return (
@@ -95,12 +139,12 @@ export default function NinjaPoolHallShell(_props: { baseUrl?: string }) {
           <div className="nph-shell-copy">
             <span>SHOTGUN NINJAS // OPERATOR TABLE</span>
             <h1>Ninja <b>Pool Hall</b></h1>
-            <p>Sharpen your 8-ball game with free practice, CPU matches, local two-player play, and saved progress.</p>
+            <p>Sharpen your 8-ball game with free practice, CPU matches, local hot-seat play, and protected online rooms.</p>
           </div>
           <div className="nph-shell-badges" aria-label="Game features">
-            <span><Gamepad2 size={14} /> Practice and local play</span>
-            <span><WifiOff size={14} /> Online rooms coming later</span>
-            <span><ShieldCheck size={14} /> Rules and results tracked</span>
+            <span><Gamepad2 size={14} /> Four playable modes</span>
+            <span><Wifi size={14} /> Authenticated online rooms</span>
+            <span><ShieldCheck size={14} /> Server-verified deterministic results</span>
           </div>
         </header>
 
@@ -109,6 +153,7 @@ export default function NinjaPoolHallShell(_props: { baseUrl?: string }) {
           <button className={view === 'practice' ? 'active' : ''} onClick={() => navigate('practice')}><Crosshair size={15} /> Free Shoot</button>
           <button className={view === 'bot' ? 'active' : ''} onClick={() => navigate('bot')}><Bot size={15} /> Vs CPU</button>
           <button className={view === 'local' ? 'active' : ''} onClick={() => navigate('local')}><Users size={15} /> Local 2P</button>
+          <button className={['online', 'host', 'join'].includes(view) ? 'active' : ''} onClick={() => navigate('online')}><Wifi size={15} /> Online</button>
           <button className={view === 'profile' ? 'active' : ''} onClick={() => navigate('profile')}><Settings size={15} /> Profile</button>
         </nav>
 
@@ -121,7 +166,7 @@ export default function NinjaPoolHallShell(_props: { baseUrl?: string }) {
             <div className="nph-home-hero">
               <span>SYS::TABLE_READY</span>
               <h2>Choose your game</h2>
-              <p>Practice at your own pace, challenge the CPU, or pass the table to a second local player. Completed sessions update your personal stats.</p>
+              <p>Practice at your own pace, challenge the CPU, pass the table locally, or finish a durable online rack with another authorized tenant member.</p>
               <div className="nph-home-stats">
                 <span><b>{profileData.progression.matchesCompleted}</b> matches completed</span>
                 <span><b>{profileData.progression.wins}</b> CPU wins</span>
@@ -132,9 +177,10 @@ export default function NinjaPoolHallShell(_props: { baseUrl?: string }) {
               <button type="button" onClick={() => navigate('practice')}><Crosshair size={24} /><strong>Free Shoot</strong><span>No turns—clear the rack and save your practice summary.</span></button>
               <button type="button" onClick={() => navigate('bot')}><Bot size={24} /><strong>Vs CPU</strong><span>Play a complete 8-ball match against the house opponent.</span></button>
               <button type="button" onClick={() => navigate('local')}><Users size={24} /><strong>Local two-player</strong><span>Pass-and-play 8-ball with saved results.</span></button>
+              <button type="button" onClick={() => navigate('online')}><Wifi size={24} /><strong>Online rooms</strong><span>Host or join a reconnect-safe, server-verified match.</span></button>
               <button type="button" onClick={() => navigate('profile')}><Settings size={24} /><strong>Profile & rules</strong><span>Choose table speed, feedback, and optional rule variations.</span></button>
             </div>
-            <div className="nph-online-disabled"><WifiOff size={20} /><div><strong>Online rooms are coming later</strong><p>For now, enjoy CPU and pass-and-play matches on this device.</p></div></div>
+            <div className="nph-online-disabled"><Wifi size={20} /><div><strong>Room authority is active</strong><p>Guests submit shot intents; the host simulates the visible table and OperatorOS independently verifies and persists every result.</p></div></div>
           </section>
         ) : view === 'practice' ? (
           <NinjaPoolHallPractice />
@@ -142,6 +188,8 @@ export default function NinjaPoolHallShell(_props: { baseUrl?: string }) {
           <NinjaPoolHallMatch mode="bot" profile={profileData.profile} onMatchPath={updateMatchPath} />
         ) : view === 'local' ? (
           <NinjaPoolHallMatch mode="local" profile={profileData.profile} onMatchPath={updateMatchPath} />
+        ) : view === 'online' || view === 'host' || view === 'join' ? (
+          <NinjaPoolHallOnline entry={view} roomId={roomId} profile={profileData.profile} onRoomPath={updateRoomPath} />
         ) : view === 'profile' ? (
           <NinjaPoolHallProfile
             value={profileData.profile}
@@ -167,5 +215,5 @@ export default function NinjaPoolHallShell(_props: { baseUrl?: string }) {
 }
 
 const shellCss = `
-  .nph-shell{min-height:100vh;padding:24px;color:#f8fafc;background:radial-gradient(circle at 8% 0%,rgba(239,68,68,.18),transparent 28%),radial-gradient(circle at 92% 4%,rgba(127,29,29,.14),transparent 24%),linear-gradient(180deg,#09090d,#030305 72%)}.nph-shell-wrap{max-width:1360px;margin:0 auto;display:grid;gap:18px}.nph-shell-header{position:relative;overflow:hidden;border:1px solid rgba(248,113,113,.22);background:linear-gradient(120deg,rgba(24,24,31,.96),rgba(8,8,12,.94));box-shadow:0 24px 70px rgba(0,0,0,.32);border-radius:18px;padding:22px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:18px;align-items:center}.nph-shell-header:after{content:'';position:absolute;inset:auto -8% -48px 42%;height:90px;background:linear-gradient(90deg,transparent,rgba(239,68,68,.2),transparent);transform:skewX(-24deg);pointer-events:none}.nph-shell-mark{width:58px;height:58px;display:grid;place-items:center;border:1px solid rgba(248,113,113,.45);color:#f87171;background:rgba(127,29,29,.18);box-shadow:inset 0 0 22px rgba(239,68,68,.12),0 0 32px rgba(239,68,68,.1);transform:rotate(45deg)}.nph-shell-mark svg{transform:rotate(-45deg)}.nph-shell-copy span{color:#f87171;font:700 10px ui-monospace,monospace;letter-spacing:.2em}.nph-shell-copy h1{margin:5px 0 4px;font-size:clamp(26px,4vw,44px);line-height:1;text-transform:uppercase;letter-spacing:-.04em}.nph-shell-copy h1 b{color:#ef4444}.nph-shell-copy p{margin:0;color:#94a3b8;font-size:13px}.nph-shell-badges{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;max-width:380px}.nph-shell-badges span{padding:7px 9px;border:1px solid rgba(148,163,184,.16);background:rgba(15,23,42,.7);border-radius:999px;display:flex;gap:6px;align-items:center;color:#cbd5e1;font-size:10px;white-space:nowrap}.nph-nav{display:flex;gap:7px;flex-wrap:wrap;padding:8px;border:1px solid rgba(148,163,184,.14);background:rgba(9,9,13,.75);border-radius:12px;position:sticky;top:8px;z-index:20;backdrop-filter:blur(12px)}.nph-nav button{min-height:38px;padding:8px 11px;border:1px solid transparent;background:transparent;color:#94a3b8;border-radius:8px;display:flex;gap:6px;align-items:center;font-weight:700}.nph-nav button.active,.nph-nav button:hover{border-color:rgba(248,113,113,.3);background:rgba(127,29,29,.22);color:#fff}.nph-home{display:grid;gap:16px}.nph-home-hero,.nph-mode-grid button,.nph-online-disabled{border:1px solid rgba(248,113,113,.18);background:rgba(9,9,13,.88);border-radius:16px}.nph-home-hero{padding:26px}.nph-home-hero>span{color:#f87171;font:700 10px ui-monospace,monospace;letter-spacing:.18em}.nph-home-hero h2{margin:7px 0 5px;font-size:clamp(26px,4vw,42px);text-transform:uppercase}.nph-home-hero p{margin:0;color:#94a3b8;max-width:820px;line-height:1.6}.nph-home-stats{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.nph-home-stats span{min-width:150px;padding:11px;border:1px solid rgba(148,163,184,.14);background:rgba(15,23,42,.6);border-radius:9px;color:#94a3b8;font-size:10px;text-transform:uppercase}.nph-home-stats b{display:block;color:#fff;font-size:22px}.nph-mode-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.nph-mode-grid button{padding:18px;text-align:left;color:#f8fafc;display:grid;gap:8px;cursor:pointer}.nph-mode-grid button:hover{border-color:rgba(248,113,113,.5);transform:translateY(-1px)}.nph-mode-grid button svg{color:#f87171}.nph-mode-grid strong{text-transform:uppercase}.nph-mode-grid span{color:#94a3b8;font-size:11px;line-height:1.5}.nph-online-disabled{padding:14px;display:flex;gap:11px;color:#cbd5e1}.nph-online-disabled svg{color:#f87171;flex:none}.nph-online-disabled p{margin:4px 0 0;color:#94a3b8;font-size:11px;line-height:1.5}.nph-shell-loading,.nph-shell-error{padding:22px;border:1px solid rgba(248,113,113,.2);background:rgba(9,9,13,.8);border-radius:12px;display:flex;gap:9px;align-items:center}.nph-shell-error{color:#fecaca}.nph-shell-error button{margin-left:auto}.nph-hidden-detail-link{justify-self:start;padding:9px 11px;border:1px solid rgba(148,163,184,.2);background:rgba(15,23,42,.7);color:#e2e8f0;border-radius:8px;display:flex;gap:7px}.spin{animation:nph-shell-spin .8s linear infinite}@keyframes nph-shell-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.spin{animation:none}.nph-mode-grid button:hover{transform:none}}@media(max-width:900px){.nph-mode-grid{grid-template-columns:1fr 1fr}}@media(max-width:760px){.nph-shell{padding:12px}.nph-shell-header{grid-template-columns:auto 1fr;padding:17px}.nph-shell-badges{grid-column:1/-1;justify-content:flex-start;max-width:none}.nph-shell-mark{width:48px;height:48px}.nph-nav{top:4px}.nph-mode-grid{grid-template-columns:1fr}.nph-home-stats{display:grid;grid-template-columns:1fr 1fr}.nph-home-stats span{min-width:0}}
+  .nph-shell{min-height:100vh;padding:24px;color:#f8fafc;background:radial-gradient(circle at 8% 0%,rgba(239,68,68,.18),transparent 28%),radial-gradient(circle at 92% 4%,rgba(127,29,29,.14),transparent 24%),linear-gradient(180deg,#09090d,#030305 72%)}.nph-shell-wrap{max-width:1360px;margin:0 auto;display:grid;gap:18px}.nph-shell-header{position:relative;overflow:hidden;border:1px solid rgba(248,113,113,.22);background:linear-gradient(120deg,rgba(24,24,31,.96),rgba(8,8,12,.94));box-shadow:0 24px 70px rgba(0,0,0,.32);border-radius:18px;padding:22px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:18px;align-items:center}.nph-shell-header:after{content:'';position:absolute;inset:auto -8% -48px 42%;height:90px;background:linear-gradient(90deg,transparent,rgba(239,68,68,.2),transparent);transform:skewX(-24deg);pointer-events:none}.nph-shell-mark{width:58px;height:58px;display:grid;place-items:center;border:1px solid rgba(248,113,113,.45);color:#f87171;background:rgba(127,29,29,.18);box-shadow:inset 0 0 22px rgba(239,68,68,.12),0 0 32px rgba(239,68,68,.1);transform:rotate(45deg)}.nph-shell-mark svg{transform:rotate(-45deg)}.nph-shell-copy span{color:#f87171;font:700 10px ui-monospace,monospace;letter-spacing:.2em}.nph-shell-copy h1{margin:5px 0 4px;font-size:clamp(26px,4vw,44px);line-height:1;text-transform:uppercase;letter-spacing:-.04em}.nph-shell-copy h1 b{color:#ef4444}.nph-shell-copy p{margin:0;color:#94a3b8;font-size:13px}.nph-shell-badges{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;max-width:380px}.nph-shell-badges span{padding:7px 9px;border:1px solid rgba(148,163,184,.16);background:rgba(15,23,42,.7);border-radius:999px;display:flex;gap:6px;align-items:center;color:#cbd5e1;font-size:10px;white-space:nowrap}.nph-nav{display:flex;gap:7px;flex-wrap:wrap;padding:8px;border:1px solid rgba(148,163,184,.14);background:rgba(9,9,13,.75);border-radius:12px;position:sticky;top:8px;z-index:20;backdrop-filter:blur(12px)}.nph-nav button{min-height:38px;padding:8px 11px;border:1px solid transparent;background:transparent;color:#94a3b8;border-radius:8px;display:flex;gap:6px;align-items:center;font-weight:700}.nph-nav button.active,.nph-nav button:hover{border-color:rgba(248,113,113,.3);background:rgba(127,29,29,.22);color:#fff}.nph-home{display:grid;gap:16px}.nph-home-hero,.nph-mode-grid button,.nph-online-disabled{border:1px solid rgba(248,113,113,.18);background:rgba(9,9,13,.88);border-radius:16px}.nph-home-hero{padding:26px}.nph-home-hero>span{color:#f87171;font:700 10px ui-monospace,monospace;letter-spacing:.18em}.nph-home-hero h2{margin:7px 0 5px;font-size:clamp(26px,4vw,42px);text-transform:uppercase}.nph-home-hero p{margin:0;color:#94a3b8;max-width:820px;line-height:1.6}.nph-home-stats{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.nph-home-stats span{min-width:150px;padding:11px;border:1px solid rgba(148,163,184,.14);background:rgba(15,23,42,.6);border-radius:9px;color:#94a3b8;font-size:10px;text-transform:uppercase}.nph-home-stats b{display:block;color:#fff;font-size:22px}.nph-mode-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.nph-mode-grid button{padding:18px;text-align:left;color:#f8fafc;display:grid;gap:8px;cursor:pointer}.nph-mode-grid button:hover{border-color:rgba(248,113,113,.5);transform:translateY(-1px)}.nph-mode-grid button svg{color:#f87171}.nph-mode-grid strong{text-transform:uppercase}.nph-mode-grid span{color:#94a3b8;font-size:11px;line-height:1.5}.nph-online-disabled{padding:14px;display:flex;gap:11px;color:#cbd5e1}.nph-online-disabled svg{color:#f87171;flex:none}.nph-online-disabled p{margin:4px 0 0;color:#94a3b8;font-size:11px;line-height:1.5}.nph-shell-loading,.nph-shell-error{padding:22px;border:1px solid rgba(248,113,113,.2);background:rgba(9,9,13,.8);border-radius:12px;display:flex;gap:9px;align-items:center}.nph-shell-error{color:#fecaca}.nph-shell-error button{margin-left:auto}.nph-hidden-detail-link{justify-self:start;padding:9px 11px;border:1px solid rgba(148,163,184,.2);background:rgba(15,23,42,.7);color:#e2e8f0;border-radius:8px;display:flex;gap:7px}.spin{animation:nph-shell-spin .8s linear infinite}@keyframes nph-shell-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.spin{animation:none}.nph-mode-grid button:hover{transform:none}}@media(max-width:1100px){.nph-mode-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:900px){.nph-mode-grid{grid-template-columns:1fr 1fr}}@media(max-width:760px){.nph-shell{padding:12px}.nph-shell-header{grid-template-columns:auto 1fr;padding:17px}.nph-shell-badges{grid-column:1/-1;justify-content:flex-start;max-width:none}.nph-shell-mark{width:48px;height:48px}.nph-nav{top:4px}.nph-mode-grid{grid-template-columns:1fr}.nph-home-stats{display:grid;grid-template-columns:1fr 1fr}.nph-home-stats span{min-width:0}}
 `;

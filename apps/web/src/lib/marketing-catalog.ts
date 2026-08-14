@@ -42,9 +42,9 @@ const SOURCE: readonly MarketingCatalogSource[] = [
   { slug: 'snapproofos',      name: 'SnapProofOS',      description: 'Photo-based proof of work',                  planMin: 'elite',   ord: 8,  defaultStatus: 'live' },
   { slug: 'studyforge-ai',    name: 'StudyForge AI',    description: 'AI study & training partner',                planMin: 'elite',   ord: 9,  defaultStatus: 'live' },
   { slug: 'ninja-launch-kit', name: 'Ninja Launch Kit', description: 'Plan, review, and prove launch campaigns are ready', planMin: 'elite', ord: 10, defaultStatus: 'live' },
-  { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'AI phone agent + call automation',           planMin: 'elite',   ord: 11, defaultStatus: 'live' },
+  { slug: 'callcommand-ai',   name: 'CallCommand AI',   description: 'Secure MSP phone intake, ticket orchestration, and policy-gated automation', planMin: 'elite', ord: 11, defaultStatus: 'live' },
   { slug: 'ninjamation',      name: 'Ninjamation',      description: 'Reviewed PC automation scripts + AI drafts', planMin: 'elite',   ord: 12, defaultStatus: 'live' },
-  { slug: 'outcall',          name: 'OutCall',           description: 'Discreet exit-assistance and personal-safety calling', planMin: 'starter', ord: 13, defaultStatus: 'live' },
+  { slug: 'outcall',          name: 'OutCall',           description: 'Discreet exit-assistance and personal-safety calling', planMin: 'starter', ord: 13, defaultStatus: 'coming_soon' },
 ];
 
 export type MarketingStatus = 'Available' | 'Coming Soon' | 'Beta' | 'Locked';
@@ -76,7 +76,7 @@ const OUTCOMES: Record<string, string> = {
   'techdeck':         'Triage tickets while keeping client systems, procedures, evidence, and technician time connected.',
   'pulsedesk':        'Route facility and department requests without losing ownership, deadlines, or escalation history.',
   'faultlinelab':     'Practice difficult troubleshooting scenarios and keep a clear evidence trail for every attempt.',
-  'ninja-pool-hall':  'Track players, matches, results, and community activity in one shared place.',
+  'ninja-pool-hall':  'Play deterministic 8-ball in practice, CPU, local hot-seat, or protected online rooms.',
   'brandforgeos':     'Build campaigns, review brand assets, and keep approved creative work organized.',
   'snapproofos':      'Capture dated proof of work before a customer, auditor, or teammate asks for it.',
   'studyforge-ai':    'Turn team knowledge into guided study sessions that can be reused and reviewed.',
@@ -92,7 +92,7 @@ const AUDIENCES: Record<string, string> = {
   'techdeck':         'MSP teams and field technicians',
   'pulsedesk':        'Healthcare operations teams',
   'faultlinelab':     'Troubleshooters and technical leads',
-  'ninja-pool-hall':  'Operator teams and communities',
+  'ninja-pool-hall':  'Pool players and friendly rivals',
   'brandforgeos':     'Founders, marketers, and creators',
   'snapproofos':      'Teams that need proof and verification',
   'studyforge-ai':    'Training teams and operators',
@@ -108,7 +108,7 @@ const SOLVES: Record<string, string> = {
   'techdeck':         'Technicians jumping between notes, scripts, tickets, and tools.',
   'pulsedesk':        'Escalations and handoffs disappearing between busy departments.',
   'faultlinelab':     'Root-cause analysis that never becomes reusable knowledge.',
-  'ninja-pool-hall':  'Teams lacking a lightweight shared engagement space.',
+  'ninja-pool-hall':  'Browser pool games that fake gameplay or lose the table when a connection drops.',
   'brandforgeos':     'Campaign assets and positioning spread across disconnected docs.',
   'snapproofos':      'Missing evidence when customers, auditors, or teams ask what happened.',
   'studyforge-ai':    'Training material that is hard to reuse, test, or operationalize.',

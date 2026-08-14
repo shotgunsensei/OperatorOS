@@ -32,11 +32,20 @@ function request(url: string, authenticated = true): any {
 }
 
 test('legacy /app redirects to the canonical launcher without forwarding redirect parameters', async () => {
-  for (const host of ['operatoros.net', 'app.operatoros.net', 'techdeck.operatoros.net']) {
+  for (const host of ['operatoros.net', 'app.operatoros.net']) {
     const response = await middleware(request(`https://${host}/app?next=https://evil.example`));
     assert.equal(response.status, 308);
     assert.equal(response.headers.get('location'), DEFAULT_OPERATOROS_APPS_URL);
     assert.equal(response.headers.get('cache-control'), 'no-store');
+  }
+});
+
+test('module-host /app remains a source-compatible module route', async () => {
+  for (const host of ['techdeck.operatoros.net', 'studyforge-ai.operatoros.net']) {
+    const response = await middleware(request(`https://${host}/app`));
+    assert.equal(response.status, 200);
+    const rewrite = new URL(response.headers.get('x-middleware-rewrite')!);
+    assert.equal(rewrite.pathname, `/modules/${host.split('.')[0]}/app`);
   }
 });
 

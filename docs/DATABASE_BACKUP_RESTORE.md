@@ -30,7 +30,7 @@ $env:OPERATOROS_DATABASE_RELEASE_MODE='apply'
 corepack pnpm db:apply
 ```
 
-`db:plan` is read-only and prints 35 ordered step identifiers without secrets
+`db:plan` is read-only and prints 46 ordered step identifiers without secrets
 or a database connection. `db:apply` requires `DATABASE_URL` and the exact
 release mode. The production supervisor executes the compiled apply before
 Fastify starts and then verifies the required authority tables.
@@ -40,11 +40,44 @@ The release is idempotent and additive. Do not run imported child migrations,
 supported destructive down migration. Rollback means restore into a new
 database and switch traffic after validation.
 
-Release v35 appends `techdeck_literal_tables` after the prior v34 plan. Before
-applying it, require a verified backup that covers the new TechDeck portal,
-appointment, license, status, secure-intake, evidence-link, shared schedule,
-shared API-token/webhook, and export records. Rollback remains restore-and-
-switch; there is no destructive down migration.
+Release v44 appends `callcommand_complete_product_tables` after the v43 Ninja
+Launch Kit step. Before applying it, require a verified backup that covers
+CallCommand channels, calls/consent/events, receptionist profiles, flow
+versions/traces, live sessions, protected ingestion, automation rules,
+tickets/leads/tasks, action/transfer logs, reports, and usage. Rollback remains
+restore-and-switch; there is no destructive down migration.
+
+Release v45 appends `ninjamation_complete_product_tables` after the v44
+CallCommand step. Before applying it, require a verified backup that covers the
+existing Ninjamation scripts, immutable versions, reviews, generations, and
+downloads plus the new favorites, catalog provenance, synchronization run/item
+ledger, deprecation state, ownership, and usage counters. Rollback remains
+restore-and-switch; do not run child migrations or delete deprecated catalog
+rows as a rollback substitute.
+
+Release v46 appends `callcommand_msp_automation_fabric_tables` after the v45
+Ninjamation step. Before applying it, require a verified backup that covers
+the complete CallCommand v44 domain plus MSP settings, organization/contact
+profiles, approved lines, SupportLinks, provider connections, call contexts
+and events, local cases, BMS links/outbox, rate limits, policy decisions,
+verification challenges, approvals/executions, device/directory mappings, and
+reset sessions. Emergency application rollback retains these additive tables,
+disables the MSP channel/integrations, and returns traffic to the prior
+artifact. Do not drop v46 tables or treat schema deletion as rollback.
+
+### Phase 37 disposable release rehearsal (2026-08-13)
+
+On an empty loopback PostgreSQL 16 database containing synthetic data only,
+`corepack pnpm db:plan` reported contract v1, release v46, 46 ordered steps,
+`destructive: false`, and final step
+`callcommand_msp_automation_fabric_tables`. With
+`OPERATOROS_DATABASE_RELEASE_MODE=apply`, the first apply completed and
+verified all 46 steps in 5,598 ms; an immediate reapply completed and verified
+all 46 steps in 2,565 ms. No production backup, restore, database, customer
+data, or provider traffic was touched. Production still requires a fresh
+provider snapshot and logical backup with readable TOC/checksum, an isolated
+restore rehearsal, v46 apply/reconciliation, compiled readiness, and an
+authorized traffic decision.
 
 ## Deployment order
 
@@ -313,6 +346,83 @@ production backup artifact. Production apply still requires a fresh provider
 snapshot and logical backup, checksum and restore verification, approved
 source-data reconciliation, authenticated/deployed acceptance, and an explicit
 cutover/rollback decision.
+
+## Phase 30 v39 additive release rehearsal
+
+On 2026-08-11 the 39-step production release plan, apply, and immediate
+idempotent reapply passed against a new disposable loopback PostgreSQL 16
+database. The final `ninja_pool_online_tables` step adds only the durable
+tenant-scoped room, append-only event, and rate-limit tables used by
+authenticated Ninja Pool Hall online matches. Direct catalog verification
+confirmed `ninja_pool_online_rooms`, `ninja_pool_online_events`, and
+`ninja_pool_online_rate_limits` after the reapply.
+
+The focused multiplayer database journey used synthetic OperatorOS tenants,
+users, entitlements, and match state only. It verified host/guest authority,
+independent server shot simulation, sequence and idempotency controls,
+cross-tenant denial, reconnect/rejoin, disconnect persistence, room expiry,
+and durable abuse limits. No production database, customer data, or deployed
+room was read or changed, so this rehearsal did not create a production backup
+artifact. Production apply still requires a fresh provider snapshot and
+logical backup, checksum and restore verification, authenticated exact-host
+two-device acceptance, and an explicit cutover/rollback decision.
+
+## Phase 31 v40 additive release rehearsal
+
+On 2026-08-11 the 40-step production release applied to a disposable
+loopback-only PostgreSQL 16 database and the complete BrandForgeOS database
+journey passed with synthetic tenants and marketing records. The final
+`brandforgeos_complete_product_tables` step adds offers, campaign production,
+landing content, guided workflows, templates, provider projections and sync
+history, recommendations, leads, reports, export jobs, and atomic credit
+counters. It also adds copy favorites/scores and brand asset-reference fields;
+it contains no destructive DDL.
+
+The focused journey verified shared deterministic provider synchronization,
+white-label persisted-fact reports, SHA-256 export integrity, background-job
+completion, concurrent credit exhaustion and replay, viewer denial, restart
+persistence, and cross-tenant non-enumeration. No production database, live
+provider, customer data, or standalone BrandForgeOS export was read or changed,
+so this rehearsal did not create a production backup artifact. Production apply
+still requires a fresh logical backup, checksum and restore verification,
+approved source-data reconciliation, authenticated exact-host/provider
+acceptance, and an explicit cutover/rollback decision.
+
+## Phase 32 v41 additive release rehearsal
+
+On 2026-08-12 the 41-step release applied and immediately reapplied to a clean
+disposable loopback PostgreSQL 16 database. The final
+`snapproofos_complete_product_tables` step adds customers, templates, branding,
+parts, labor, share links, public rate windows, complete field-job columns,
+voice/file metadata, and persisted PDF/DOCX bytes. It contains no table drop or
+truncate operation.
+
+The synthetic journey verified customer/job/work/cost/file/report/share state,
+logo and voice bytes, invalid-content rejection, scan state, export hashes,
+approved history, cross-tenant/viewer denial, revocation, replay, and restart
+persistence. No production database or source export was read or changed, so no
+production backup artifact exists. Production v41 requires a fresh logical
+backup, checksum and restore verification, scanner readiness, approved source
+reconciliation, exact-host acceptance, and an explicit rollback decision.
+
+## Phase 33 v42 additive release rehearsal
+
+On 2026-08-12 the 42-step release applied and immediately reapplied to a clean
+disposable loopback PostgreSQL 16 database. The final
+`studyforge_complete_product_tables` step adds user preferences, folders,
+complete study sets and short answers, exam countdowns, learning sessions,
+card-review mutations, daily activity, and atomic usage counters. It extends
+generation/review records additively and contains no drop or truncate.
+
+The synthetic journey verified complete transactional generation, replay and
+failure cleanup; flashcard/quiz/plan history; owner/role/tenant isolation;
+Free/Pro/Tutor limit and export/countdown gates; concurrent credit exhaustion;
+archive/restore/delete; streak/activity idempotency; and restart-visible
+records. No production database, live AI provider, or standalone source export
+was read or changed, so no production backup artifact exists. Production v42
+requires a fresh logical backup with checksum and restore verification,
+approved source reconciliation, live-provider and deployed exact-host
+acceptance, and an explicit rollback decision.
 
 ## Production recovery
 

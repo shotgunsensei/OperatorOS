@@ -27,12 +27,20 @@ import { ensureTorqueShedWebApiTables } from './torqueshed-web-api-db-init.js';
 import { ensureTorqueShedNativeTables } from './torqueshed-native-db-init.js';
 import { ensureFaultlineLabTables } from './faultlinelab-db-init.js';
 import { ensureNinjaPoolHallTables } from './ninja-pool-hall-db-init.js';
+import { ensureNinjaPoolOnlineTables } from './ninja-pool-online-db-init.js';
 import { ensureBrandForgeOsTables } from './brandforgeos-db-init.js';
+import { ensureBrandForgeOsPhase31Tables } from './brandforgeos-phase31-db-init.js';
 import { ensureSnapProofOsTables } from './snapproofos-db-init.js';
+import { ensureSnapProofOsPhase32Tables } from './snapproofos-phase32-db-init.js';
 import { ensureStudyForgeTables } from './studyforge-db-init.js';
+import { ensureStudyForgePhase33Tables } from './studyforge-phase33-db-init.js';
 import { ensureNinjaLaunchKitTables } from './ninja-launch-kit-db-init.js';
+import { ensureNinjaLaunchKitPhase34Tables } from './ninja-launch-kit-phase34-db-init.js';
 import { ensureCallCommandTables } from './callcommand-db-init.js';
+import { ensureCallCommandPhase35Tables } from './callcommand-phase35-db-init.js';
+import { ensureCallCommandMspTables } from './callcommand-msp-db-init.js';
 import { ensureNinjamationTables } from './ninjamation-db-init.js';
+import { ensureNinjamationPhase36Tables } from './ninjamation-phase36-db-init.js';
 import { ensureOutCallProductTables, ensureOutCallTables } from './outcall-db-init.js';
 import { ensureOperatorOsMessagingComplianceTables } from './operatoros-messaging-compliance-db-init.js';
 import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db-init.js';
@@ -87,6 +95,14 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   outcall_product_operations: ensureOutCallProductTables,
   operatoros_messaging_compliance_tables: ensureOperatorOsMessagingComplianceTables,
   torqueshed_web_api_tables: ensureTorqueShedWebApiTables,
+  ninja_pool_online_tables: ensureNinjaPoolOnlineTables,
+  brandforgeos_complete_product_tables: ensureBrandForgeOsPhase31Tables,
+  snapproofos_complete_product_tables: ensureSnapProofOsPhase32Tables,
+  studyforge_complete_product_tables: ensureStudyForgePhase33Tables,
+  ninja_launch_kit_complete_product_tables: ensureNinjaLaunchKitPhase34Tables,
+  callcommand_complete_product_tables: ensureCallCommandPhase35Tables,
+  ninjamation_complete_product_tables: ensureNinjamationPhase36Tables,
+  callcommand_msp_automation_fabric_tables: ensureCallCommandMspTables,
   torqueshed_native_tables: ensureTorqueShedNativeTables,
 };
 
@@ -153,10 +169,26 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.ninja_pool_player_profiles') IS NOT NULL AS ninja_pool_player_profiles,
       to_regclass('public.ninja_pool_match_sessions') IS NOT NULL AS ninja_pool_match_sessions,
       to_regclass('public.ninja_pool_match_events') IS NOT NULL AS ninja_pool_match_events,
+      to_regclass('public.ninja_pool_online_rooms') IS NOT NULL AS ninja_pool_online_rooms,
+      to_regclass('public.ninja_pool_online_events') IS NOT NULL AS ninja_pool_online_events,
+      to_regclass('public.ninja_pool_online_rate_limits') IS NOT NULL AS ninja_pool_online_rate_limits,
       to_regclass('public.brandforge_brands') IS NOT NULL AS brandforge_brands,
       to_regclass('public.brandforge_campaigns') IS NOT NULL AS brandforge_campaigns,
       to_regclass('public.brandforge_copy_assets') IS NOT NULL AS brandforge_copy_assets,
       to_regclass('public.brandforge_generations') IS NOT NULL AS brandforge_generations,
+      to_regclass('public.brandforge_offers') IS NOT NULL AS brandforge_offers,
+      to_regclass('public.brandforge_campaign_tasks') IS NOT NULL AS brandforge_campaign_tasks,
+      to_regclass('public.brandforge_campaign_comments') IS NOT NULL AS brandforge_campaign_comments,
+      to_regclass('public.brandforge_landing_pages') IS NOT NULL AS brandforge_landing_pages,
+      to_regclass('public.brandforge_ai_workflows') IS NOT NULL AS brandforge_ai_workflows,
+      to_regclass('public.brandforge_templates') IS NOT NULL AS brandforge_templates,
+      to_regclass('public.brandforge_integrations') IS NOT NULL AS brandforge_integrations,
+      to_regclass('public.brandforge_sync_runs') IS NOT NULL AS brandforge_sync_runs,
+      to_regclass('public.brandforge_recommendations') IS NOT NULL AS brandforge_recommendations,
+      to_regclass('public.brandforge_lead_submissions') IS NOT NULL AS brandforge_lead_submissions,
+      to_regclass('public.brandforge_reports') IS NOT NULL AS brandforge_reports,
+      to_regclass('public.brandforge_export_jobs') IS NOT NULL AS brandforge_export_jobs,
+      to_regclass('public.brandforge_credit_counters') IS NOT NULL AS brandforge_credit_counters,
       to_regclass('public.snapproof_cases') IS NOT NULL AS snapproof_cases,
       to_regclass('public.snapproof_evidence_items') IS NOT NULL AS snapproof_evidence_items,
       to_regclass('public.snapproof_custody_events') IS NOT NULL AS snapproof_custody_events,
@@ -168,19 +200,61 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
       to_regclass('public.studyforge_quizzes') IS NOT NULL AS studyforge_quizzes,
       to_regclass('public.studyforge_plans') IS NOT NULL AS studyforge_plans,
       to_regclass('public.studyforge_card_progress') IS NOT NULL AS studyforge_card_progress,
+      to_regclass('public.studyforge_study_sets') IS NOT NULL AS studyforge_study_sets,
+      to_regclass('public.studyforge_short_answers') IS NOT NULL AS studyforge_short_answers,
+      to_regclass('public.studyforge_daily_activity') IS NOT NULL AS studyforge_daily_activity,
+      to_regclass('public.studyforge_generation_reservations') IS NOT NULL AS studyforge_generation_reservations,
       to_regclass('public.launchkit_launches') IS NOT NULL AS launchkit_launches,
       to_regclass('public.launchkit_tasks') IS NOT NULL AS launchkit_tasks,
       to_regclass('public.launchkit_artifacts') IS NOT NULL AS launchkit_artifacts,
       to_regclass('public.launchkit_exports') IS NOT NULL AS launchkit_exports,
+      to_regclass('public.launchkit_brand_profiles') IS NOT NULL AS launchkit_brand_profiles,
+      to_regclass('public.launchkit_product_kits') IS NOT NULL AS launchkit_product_kits,
+      to_regclass('public.launchkit_product_revisions') IS NOT NULL AS launchkit_product_revisions,
+      to_regclass('public.launchkit_product_exports') IS NOT NULL AS launchkit_product_exports,
+      to_regclass('public.launchkit_usage_counters') IS NOT NULL AS launchkit_usage_counters,
       to_regclass('public.callcommand_channels') IS NOT NULL AS callcommand_channels,
       to_regclass('public.callcommand_consents') IS NOT NULL AS callcommand_consents,
       to_regclass('public.callcommand_calls') IS NOT NULL AS callcommand_calls,
       to_regclass('public.callcommand_events') IS NOT NULL AS callcommand_events,
+      to_regclass('public.callcommand_flows') IS NOT NULL AS callcommand_flows,
+      to_regclass('public.callcommand_flow_versions') IS NOT NULL AS callcommand_flow_versions,
+      to_regclass('public.callcommand_flow_traces') IS NOT NULL AS callcommand_flow_traces,
+      to_regclass('public.callcommand_live_sessions') IS NOT NULL AS callcommand_live_sessions,
+      to_regclass('public.callcommand_ingestion_tokens') IS NOT NULL AS callcommand_ingestion_tokens,
+      to_regclass('public.callcommand_ingestion_events') IS NOT NULL AS callcommand_ingestion_events,
+      to_regclass('public.callcommand_upload_intents') IS NOT NULL AS callcommand_upload_intents,
+      to_regclass('public.callcommand_automation_rules') IS NOT NULL AS callcommand_automation_rules,
+      to_regclass('public.callcommand_tickets') IS NOT NULL AS callcommand_tickets,
+      to_regclass('public.callcommand_leads') IS NOT NULL AS callcommand_leads,
+      to_regclass('public.callcommand_tasks') IS NOT NULL AS callcommand_tasks,
+      to_regclass('public.callcommand_action_runs') IS NOT NULL AS callcommand_action_runs,
+      to_regclass('public.callcommand_transfer_logs') IS NOT NULL AS callcommand_transfer_logs,
+      to_regclass('public.callcommand_reports') IS NOT NULL AS callcommand_reports,
+      to_regclass('public.callcommand_msp_settings') IS NOT NULL AS callcommand_msp_settings,
+      to_regclass('public.callcommand_organization_profiles') IS NOT NULL AS callcommand_organization_profiles,
+      to_regclass('public.automation_fabric_integrations') IS NOT NULL AS automation_fabric_integrations,
+      to_regclass('public.callcommand_trusted_originating_lines') IS NOT NULL AS callcommand_trusted_originating_lines,
+      to_regclass('public.callcommand_contact_profiles') IS NOT NULL AS callcommand_contact_profiles,
+      to_regclass('public.callcommand_support_links') IS NOT NULL AS callcommand_support_links,
+      to_regclass('public.callcommand_msp_call_contexts') IS NOT NULL AS callcommand_msp_call_contexts,
+      to_regclass('public.callcommand_msp_call_events') IS NOT NULL AS callcommand_msp_call_events,
+      to_regclass('public.callcommand_local_cases') IS NOT NULL AS callcommand_local_cases,
+      to_regclass('public.automation_fabric_action_catalog') IS NOT NULL AS automation_fabric_action_catalog,
+      to_regclass('public.callcommand_action_requests') IS NOT NULL AS callcommand_action_requests,
+      to_regclass('public.callcommand_policy_decisions') IS NOT NULL AS callcommand_policy_decisions,
+      to_regclass('public.callcommand_verification_challenges') IS NOT NULL AS callcommand_verification_challenges,
+      to_regclass('public.callcommand_reset_sessions') IS NOT NULL AS callcommand_reset_sessions,
+      to_regclass('public.callcommand_integration_outbox') IS NOT NULL AS callcommand_integration_outbox,
       to_regclass('public.ninjamation_scripts') IS NOT NULL AS ninjamation_scripts,
       to_regclass('public.ninjamation_script_versions') IS NOT NULL AS ninjamation_script_versions,
       to_regclass('public.ninjamation_reviews') IS NOT NULL AS ninjamation_reviews,
       to_regclass('public.ninjamation_downloads') IS NOT NULL AS ninjamation_downloads,
       to_regclass('public.ninjamation_generations') IS NOT NULL AS ninjamation_generations,
+      to_regclass('public.ninjamation_favorites') IS NOT NULL AS ninjamation_favorites,
+      to_regclass('public.ninjamation_sync_runs') IS NOT NULL AS ninjamation_sync_runs,
+      to_regclass('public.ninjamation_sync_items') IS NOT NULL AS ninjamation_sync_items,
+      to_regclass('public.ninjamation_usage_counters') IS NOT NULL AS ninjamation_usage_counters,
       to_regclass('public.outcall_settings') IS NOT NULL AS outcall_settings,
       to_regclass('public.outcall_phone_owners') IS NOT NULL AS outcall_phone_owners,
       to_regclass('public.outcall_profiles') IS NOT NULL AS outcall_profiles,

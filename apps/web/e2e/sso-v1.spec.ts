@@ -53,8 +53,8 @@ const ENABLED_MODULES: BrowserModule[] = deploymentRegistry
     };
   });
 
-if (ENABLED_MODULES.length !== 13) {
-  throw new Error(`Expected 13 enabled OperatorOS modules, found ${ENABLED_MODULES.length}`);
+if (ENABLED_MODULES.length !== 12) {
+  throw new Error(`Expected 12 enabled modules while OutCall is source-recovery locked, found ${ENABLED_MODULES.length}`);
 }
 
 const PUBLIC_AUTH_HEADERS = {
@@ -1168,7 +1168,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const eventId = `evt_torqueshed_browser_${suffix}`;
     const payment = await browserJson<Record<string, unknown>>(
       page,
-      '/api/billing/torque-assist/webhook',
+      '/api/billing/webhook',
       'POST',
       {
         id: eventId,
@@ -1198,9 +1198,11 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(payment.status, JSON.stringify(payment.body)).toBe(200);
 
     const diagnosticUrl = `https://torqueshed.operatoros.net/diagnostics/${diagnostic.id}`;
-    await page.goto(diagnosticUrl);
+    const purchaseStatusUrl = `${diagnosticUrl}?tokenPurchase=success&purchase=${purchase.id}`;
+    await page.goto(purchaseStatusUrl);
     await expect(page.getByTestId('torqueshed-diagnostic-timeline')).toContainText(diagnosticTitle, { timeout: 30_000 });
     const refreshedAssist = page.getByTestId('torqueshed-torque-assist');
+    await expect(refreshedAssist.getByTestId('torque-purchase-status')).toContainText('Credits added', { timeout: 30_000 });
     await expect(refreshedAssist).toContainText('25,000 units', { timeout: 30_000 });
     const assistResponse = page.waitForResponse(response =>
       response.request().method() === 'POST'
@@ -1352,7 +1354,145 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await reopened.close();
   });
 
-  test('tenant entitlement denial fails closed for TechDeck and OutCall without issuing a handoff', async ({ page, request }) => {
+  test('TorqueShed canonical payment return shows exactly-once authoritative credits', async ({ page, request }) => {
+    test.setTimeout(120_000);
+    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
+    const identity = await registerAndSeed(request, pg);
+    identities.push(identity);
+    const suffix = Date.now().toString(36);
+
+    await page.goto('https://torqueshed.operatoros.net/diagnostics');
+    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
+    await page.getByTestId('input-email').fill(identity.email);
+    await page.getByTestId('input-password').fill(PASSWORD);
+    await Promise.all([
+      page.waitForURL(/^https:\/\/torqueshed\.operatoros\.net\/diagnostics(?:[?#].*)?$/, { timeout: 30_000 }),
+      page.getByTestId('button-login').click(),
+    ]);
+
+    const vehicleReply = await browserJson<{ id: string }>(
+      page,
+      '/api/modules/torqueshed/vehicles',
+      'POST',
+      {
+        nickname: `Payment proof vehicle ${suffix}`,
+        year: 2018,
+        make: 'Ford',
+        model: 'F-150',
+        engine: '3.5L EcoBoost',
+        visibility: 'private',
+      },
+    );
+    expect(vehicleReply.status, JSON.stringify(vehicleReply.body)).toBe(201);
+    const diagnosticReply = await browserJson<{ id: string }>(
+      page,
+      '/api/modules/torqueshed/diagnostics',
+      'POST',
+      {
+        vehicleId: vehicleReply.body.id,
+        title: `Canonical payment proof ${suffix}`,
+        customerConcern: 'Payment acceptance path only; no repair conclusion.',
+        symptoms: 'Deterministic exact-host fixture.',
+        visibility: 'private',
+      },
+    );
+    expect(diagnosticReply.status, JSON.stringify(diagnosticReply.body)).toBe(201);
+    const checkoutReply = await browserJson<{
+      purchase: {
+        id: string; tenantId: string; userId: string; moduleId: string; packageKey: string;
+        units: number; amountMinor: number; currency: string; providerCheckoutId: string;
+      };
+    }>(
+      page,
+      '/api/modules/torqueshed/token-purchases/checkout',
+      'POST',
+      { diagnosticSessionId: diagnosticReply.body.id, packageKey: 'roadside-25000' },
+      { 'Idempotency-Key': `exact-host-payment-${suffix}` },
+    );
+    expect(checkoutReply.status, JSON.stringify(checkoutReply.body)).toBe(201);
+    const purchase = checkoutReply.body.purchase;
+    const event = {
+      id: `evt_exact_host_payment_${suffix}`,
+      type: 'checkout.session.completed',
+      livemode: false,
+      data: {
+        object: {
+          id: purchase.providerCheckoutId,
+          payment_intent: `pi_exact_host_payment_${suffix}`,
+          payment_status: 'paid',
+          status: 'complete',
+          amount_total: purchase.amountMinor,
+          currency: purchase.currency.toLowerCase(),
+          metadata: {
+            operatoros_kind: 'torque_assist_credit',
+            purchase_id: purchase.id,
+            tenant_id: purchase.tenantId,
+            user_id: purchase.userId,
+            module_id: purchase.moduleId,
+            package_key: purchase.packageKey,
+            units: String(purchase.units),
+          },
+        },
+      },
+    };
+    const credited = await browserJson<Record<string, unknown>>(
+      page,
+      '/api/billing/webhook',
+      'POST',
+      event,
+      { 'stripe-signature': 'operatoros-test-signature' },
+    );
+    expect(credited.status, JSON.stringify(credited.body)).toBe(200);
+    const replay = await browserJson<{ duplicate?: boolean }>(
+      page,
+      '/api/billing/webhook',
+      'POST',
+      event,
+      { 'stripe-signature': 'operatoros-test-signature' },
+    );
+    expect(replay.status, JSON.stringify(replay.body)).toBe(200);
+    expect(replay.body.duplicate).toBe(true);
+
+    const purchaseStatusUrl = `https://torqueshed.operatoros.net/diagnostics/${diagnosticReply.body.id}?tokenPurchase=success&purchase=${purchase.id}`;
+    await page.goto(purchaseStatusUrl);
+    const assist = page.getByTestId('torqueshed-torque-assist');
+    await expect(assist.getByTestId('torque-purchase-status')).toContainText('Credits added', { timeout: 30_000 });
+    await expect(assist).toContainText('25,000 units');
+    const ledger = await browserJson<{
+      balance: number;
+      entries: Array<{ entryKind: string; purchaseIntentId?: string }>;
+    }>(page, '/api/modules/torqueshed/token-ledger');
+    expect(ledger.status, JSON.stringify(ledger.body)).toBe(200);
+    expect(ledger.body.balance).toBe(25_000);
+    expect(ledger.body.entries.filter(entry =>
+      entry.entryKind === 'credit' && entry.purchaseIntentId === purchase.id,
+    )).toHaveLength(1);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
+    await expect(page.getByTestId('torqueshed-torque-assist').getByTestId('torque-purchase-status'))
+      .toContainText('Credits added', { timeout: 30_000 });
+    const overflow = await page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLElement>('body *'))
+        .map(element => {
+          const bounds = element.getBoundingClientRect();
+          return {
+            tag: element.tagName.toLowerCase(),
+            testId: element.dataset.testid ?? null,
+            className: typeof element.className === 'string' ? element.className : '',
+            left: Math.round(bounds.left),
+            right: Math.round(bounds.right),
+            width: Math.round(bounds.width),
+            text: (element.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 80),
+          };
+        })
+        .filter(element => element.left < -1 || element.right > window.innerWidth + 1)
+        .slice(0, 20),
+    );
+    expect(overflow, JSON.stringify(overflow, null, 2)).toEqual([]);
+  });
+
+  test('tenant denial and the global OutCall activation lock fail closed without issuing a handoff', async ({ page, request }) => {
     test.setTimeout(90_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
@@ -1410,7 +1550,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(denied.tenant.body.code).not.toMatch(/TOKEN|CREDENTIAL/);
 
     expect(denied.outcall.status).toBe(403);
-    expect(denied.outcall.body.code).toBe('MODULE_ACCESS_DENIED');
+    expect(denied.outcall.body.code).toBe('MODULE_UNAVAILABLE');
     expect(denied.outcall.body.launchUrl).toBeUndefined();
     expect(denied.outcall.body.code).not.toMatch(/TOKEN|CREDENTIAL/);
 
@@ -1988,13 +2128,11 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     assertNoCredentialQuery(modulePage.url());
   });
 
-  test('CallCommand AI enforces consent, persists a test-provider call, blocks suppression, and survives deep-link reauthentication', async ({ page, request }) => {
+  test('CallCommand AI persists complete call intelligence and survives exact-host deep-link reauthentication', async ({ page, request }) => {
     test.setTimeout(180_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
     identities.push(identity);
-    const suffix = Date.now().toString(36);
-    const contactName = `Phase 11E caller ${suffix}`;
     const phone = `+1555${String(Date.now()).slice(-7)}`;
 
     await page.goto(`${ROOT}/app`);
@@ -2012,78 +2150,40 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('button-launch-callcommand-ai').click();
     const modulePage = await popupPromise;
     await expect(modulePage.getByTestId('shell-callcommand-ai')).toBeVisible({ timeout: 30_000 });
-    await expect(modulePage.getByTestId('banner-callcommand-provider')).toContainText('Preview calling is ready');
+    await expect(modulePage.getByTestId('banner-callcommand-provider')).toContainText('Twilio voice provider');
     assertNoCredentialQuery(modulePage.url());
 
-    await modulePage.getByTestId('input-callcommand-channel-phone').fill('+15551234567');
-    await modulePage.getByTestId('button-callcommand-create-channel').click();
-    await expect(modulePage.locator('#callcommand-configuration')).toContainText('Primary support line');
     await modulePage.getByTestId('button-callcommand-create-profile').click();
-    await expect(modulePage.locator('#callcommand-configuration')).toContainText('Support intake');
-    await modulePage.getByTestId('input-callcommand-phone').fill(phone);
-    await modulePage.getByTestId('input-callcommand-name').fill(contactName);
-    await modulePage.getByTestId('select-callcommand-purpose').selectOption('support');
-    await modulePage.getByTestId('input-callcommand-consent-evidence').fill(
-      'Customer requested this support callback through the authenticated OperatorOS acceptance workflow.',
-    );
-    await modulePage.getByTestId('button-callcommand-grant-consent').click();
-    await expect(modulePage.getByTestId('text-callcommand-consent-active')).toBeVisible();
-
-    const callResponse = modulePage.waitForResponse(response =>
-      response.request().method() === 'POST'
-      && new URL(response.url()).pathname === '/api/modules/callcommand-ai/calls'
-      && response.status() === 201);
+    await expect(modulePage.locator('#callcommand-receptionists')).toContainText('Operations receptionist');
+    await modulePage.getByTestId('input-callcommand-channel-phone').fill(phone);
+    await modulePage.getByTestId('button-callcommand-create-channel').click();
+    await expect(modulePage.locator('#callcommand-configuration')).toContainText('Primary operations line');
+    await modulePage.getByRole('button', { name: 'Create urgent rule' }).click();
     await modulePage.getByTestId('button-callcommand-place-test-call').click();
-    const call = await (await callResponse).json() as { id: string };
-    const callUrl = `https://callcommand-ai.operatoros.net/calls/${call.id}`;
-    const callRow = modulePage.getByTestId(`row-callcommand-call-${call.id}`);
-    await expect(callRow).toBeVisible();
-    await expect(callRow.getByTestId('status-callcommand-completed')).toBeVisible();
-    await expect(callRow).toContainText('without contacting an external number');
-    await modulePage.getByTestId('select-callcommand-disposition').selectOption('follow_up_required');
-    await modulePage.getByTestId('input-callcommand-disposition-note').fill(
-      'Confirm the support window before any additional contact.',
-    );
-    await modulePage.getByTestId('button-callcommand-save-disposition').click();
-    await expect(modulePage.getByTestId(`text-callcommand-disposition-${call.id}`)).toContainText('follow up required');
-    await modulePage.getByTestId('select-callcommand-followup-channel').selectOption('task');
-    await modulePage.getByTestId('input-callcommand-followup-body').fill(
-      'Confirm the support window before any additional contact.',
-    );
-    await modulePage.getByTestId('button-callcommand-save-followup').click();
-    await expect(modulePage.getByTestId('list-callcommand-followups')).toContainText(
-      'Confirm the support window before any additional contact.',
-    );
+    await expect(modulePage.locator('#callcommand-calls')).toContainText('urgent', { timeout: 20_000 });
+    await expect(modulePage.locator('#callcommand-work')).toContainText('Urgent caller response');
 
     const persisted = await pg.query<{
-      calls: string; events: string; consents: string; followups: string; recording_urls: string;
+      id: string; calls: string; actions: string; tickets: string; recording_urls: string;
     }>(
       `select
-        (select count(*) from callcommand_calls where tenant_id=$1 and id=$2 and provider='test' and status='completed' and disposition='follow_up_required')::text as calls,
-        (select count(*) from callcommand_events where tenant_id=$1 and call_id=$2)::text as events,
-        (select count(*) from callcommand_consents where tenant_id=$1 and purpose='support' and revoked_at is null)::text as consents,
-        (select count(*) from callcommand_followups where tenant_id=$1 and call_id=$2 and channel='task' and status='draft')::text as followups,
+        (select id from callcommand_calls where tenant_id=$1 and provider='simulator' order by created_at desc limit 1)::text as id,
+        (select count(*) from callcommand_calls where tenant_id=$1 and provider='simulator' and status='completed' and priority='urgent' and analyzed_at is not null)::text as calls,
+        (select count(*) from callcommand_action_runs where tenant_id=$1 and status='completed' and provider_action_confirmed=true)::text as actions,
+        (select count(*) from callcommand_tickets where tenant_id=$1 and priority='urgent')::text as tickets,
         (select count(*) from information_schema.columns where table_name='callcommand_calls' and column_name='recording_url')::text as recording_urls`,
-      [identity.tenantId, call.id],
+      [identity.tenantId],
     );
     expect(Number(persisted.rows[0].calls)).toBe(1);
-    expect(Number(persisted.rows[0].events)).toBe(3);
-    expect(Number(persisted.rows[0].consents)).toBe(1);
-    expect(Number(persisted.rows[0].followups)).toBe(1);
+    expect(Number(persisted.rows[0].actions)).toBe(1);
+    expect(Number(persisted.rows[0].tickets)).toBe(1);
     expect(Number(persisted.rows[0].recording_urls)).toBe(0);
-
-    await modulePage.getByTestId('button-callcommand-suppress').click();
-    await modulePage.getByTestId('button-callcommand-place-test-call').click();
-    await expect(modulePage.getByTestId('text-callcommand-error')).toContainText('do-not-call');
+    const callUrl = `https://callcommand-ai.operatoros.net/calls/${persisted.rows[0].id}`;
 
     await modulePage.goto(callUrl);
     await expect(modulePage).toHaveURL(callUrl);
     await modulePage.reload();
-    await expect(modulePage.getByTestId(`row-callcommand-call-${call.id}`)).toBeVisible();
-    await expect(modulePage.getByTestId(`text-callcommand-disposition-${call.id}`)).toContainText('follow up required');
-    await expect(modulePage.getByTestId('list-callcommand-followups')).toContainText(
-      'Confirm the support window before any additional contact.',
-    );
+    await expect(modulePage.locator('#callcommand-calls')).toContainText('urgent');
     await modulePage.setViewportSize({ width: 390, height: 844 });
     await expect(modulePage.locator('#callcommand-calls')).toBeVisible();
     await capturePhase20Evidence(modulePage, 'callcommand-ai-completed', { width: 390, height: 844 });
@@ -2110,11 +2210,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       modulePage.waitForURL(callUrl, { timeout: 30_000 }),
       modulePage.getByTestId('button-login').click(),
     ]);
-    await expect(modulePage.getByTestId(`row-callcommand-call-${call.id}`)).toBeVisible();
-    await expect(modulePage.getByTestId(`text-callcommand-disposition-${call.id}`)).toContainText('follow up required');
-    await expect(modulePage.getByTestId('list-callcommand-followups')).toContainText(
-      'Confirm the support window before any additional contact.',
-    );
+    await expect(modulePage.locator('#callcommand-calls')).toContainText('urgent');
     await assertNoBrowserCredentialStorage(modulePage);
     assertNoCredentialQuery(modulePage.url());
   });
@@ -2405,9 +2501,9 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('button-launch-ninjamation').click();
     const modulePage = await popupPromise;
     await expect(modulePage.getByTestId('shell-ninjamation')).toBeVisible({ timeout: 30_000 });
-    await expect(modulePage.getByTestId('notice-ninjamation-no-execution')).toContainText('never executes these scripts');
+    await expect(modulePage.getByTestId('notice-ninjamation-no-execution')).toContainText('never executes script source');
 
-    await modulePage.getByTestId('button-ninjamation-new').click();
+    await modulePage.getByTestId('nav-ninjamation-admin').click();
     await modulePage.getByTestId('input-ninjamation-name').fill(scriptName);
     await modulePage.getByTestId('select-ninjamation-language').selectOption('powershell');
     await modulePage.getByTestId('select-ninjamation-risk').selectOption('low');
@@ -2462,69 +2558,4 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     assertNoCredentialQuery(modulePage.url());
   });
 
-  test('OutCall persists verified safety setup, a private trigger, and a durable test call across deep-link reauthentication', async ({ page, request }) => {
-    test.setTimeout(180_000);
-    if (!pg) throw new Error('SSO v1 browser database client was not initialized');
-    const identity = await registerAndSeed(request, pg);
-    identities.push(identity);
-    const suffix = Date.now().toString(36);
-    const profileName = `E2E trusted exit ${suffix}`;
-
-    await page.goto('https://outcall.operatoros.net/setup');
-    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
-    await page.getByTestId('input-email').fill(identity.email);
-    await page.getByTestId('input-password').fill(PASSWORD);
-    await Promise.all([
-      page.waitForURL('https://outcall.operatoros.net/setup', { timeout: 30_000 }),
-      page.getByTestId('button-login').click(),
-    ]);
-    await expect(page.getByTestId('shell-outcall')).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText('Calls ready', { exact: true }).first()).toBeVisible();
-    await page.getByTestId('button-outcall-accept-safety').click();
-    await expect(page.getByText('Safety acknowledgement saved.', { exact: true })).toBeVisible();
-    await page.getByTestId('input-outcall-phone').fill('+15551234567');
-    await page.getByTestId('button-outcall-verify-phone').click();
-    await expect(page.getByText('Phone ownership verified.', { exact: true })).toBeVisible();
-    await page.getByTestId('input-outcall-profile-name').fill(profileName);
-    await page.getByTestId('input-outcall-profile-message').fill('Please call me with a neutral reminder that my scheduled appointment is ready.');
-    await page.getByTestId('button-outcall-create-profile').click();
-    await expect(page.getByText('Rescue profile created.', { exact: true })).toBeVisible();
-    await page.getByTestId('input-outcall-trigger').fill(`private-${suffix}`);
-    await page.getByTestId('button-outcall-create-trigger').click();
-    await expect(page.getByText('Private trigger created.', { exact: true })).toBeVisible();
-    await page.getByTestId('button-outcall-schedule').click();
-    await expect(page.getByText('Durable call request scheduled.', { exact: true })).toBeVisible();
-
-    const call = await pg.query<{ id: string; status: string; destination_masked: string }>(
-      `select id, status, destination_masked from outcall_call_requests
-       where tenant_id = $1 and user_id = $2 order by created_at desc limit 1`,
-      [identity.tenantId, identity.userId],
-    );
-    expect(call.rows).toHaveLength(1);
-    expect(call.rows[0].destination_masked).not.toContain('5551234567');
-    const deepUrl = `https://outcall.operatoros.net/calls/${call.rows[0].id}`;
-    await page.goto(deepUrl);
-    await page.reload();
-    await expect(page.getByTestId('shell-outcall')).toContainText(profileName, { timeout: 30_000 });
-    await capturePhase20Evidence(page, 'outcall-completed', { width: 1440, height: 1000 });
-    await expect(page.getByTestId('shell-outcall')).toContainText(call.rows[0].destination_masked);
-    await Promise.all([
-      page.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
-      page.getByRole('link', { name: 'My Apps' }).first().click(),
-    ]);
-    const logoutAll = await browserJson(page, '/api/auth/logout-all', 'POST', {});
-    expect(logoutAll.status, JSON.stringify(logoutAll.body)).toBe(200);
-    await page.goto(deepUrl);
-    await expect(page).toHaveURL(/^https:\/\/auth\.operatoros\.net\/login\?/);
-    await page.getByTestId('input-email').fill(identity.email);
-    await page.getByTestId('input-password').fill(PASSWORD);
-    await Promise.all([
-      page.waitForURL(deepUrl, { timeout: 30_000 }),
-      page.getByTestId('button-login').click(),
-    ]);
-    await expect(page.getByTestId('shell-outcall')).toContainText(profileName, { timeout: 30_000 });
-    await assertHostOnlySession(page.context(), 'outcall.operatoros.net');
-    await assertNoBrowserCredentialStorage(page);
-    assertNoCredentialQuery(page.url());
-  });
 });

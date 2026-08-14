@@ -14,12 +14,20 @@ import {
 import {
   subscribeToPlan, cancelSubscription, reactivateSubscription,
   createCheckoutSession, createPortalSession, processWebhookEvent,
-  verifyWebhookSignature, isStripeEnabled, getBillingMode,
+  isStripeEnabled, getBillingMode,
   subscribeToAddon, cancelAddon, processAddonWebhookEvent,
   AddonNotPurchasableError, classifyWebhookEvent, claimStripeEvent,
   markStripeEventProcessed, markStripeEventFailed,
   createStackCheckoutSession,
+  recordTorqueStripeEventDispatch,
 } from '../lib/billing-service.js';
+import {
+  isTorqueTokenStripeEvent,
+  OperatorOsTokenBillingError,
+  receiveVerifiedTorqueTokenStripeEvent,
+  registerTorqueTokenWebhookHandler,
+} from '../lib/operatoros-token-billing.js';
+import { getPaymentProviderAdapter } from '../lib/shared-provider-adapters.js';
 import {
   COMPANION_MODULES,
   COMPANION_MODULE_PRICE_CENTS,
@@ -30,6 +38,7 @@ import {
 import { changeFreeCompanionModule } from '../lib/product-entitlements.js';
 
 export async function registerBillingRoutes(app: FastifyInstance) {
+  registerTorqueTokenWebhookHandler();
   app.get('/v1/billing/catalog', async () => ({
     operatorOsMonthlyPriceCents: 0,
     coreProducts: CORE_PRODUCTS,
@@ -422,7 +431,8 @@ export async function registerBillingRoutes(app: FastifyInstance) {
   });
 
   app.post('/v1/billing/webhook', async (request, reply) => {
-    if (!isStripeEnabled()) {
+    const paymentAdapter = getPaymentProviderAdapter();
+    if (paymentAdapter.status.state === 'disabled') {
       request.log.warn('billing_webhook_rejected_stripe_not_configured');
       return reply.code(503).send({
         error: 'Stripe webhook processing is not configured',
@@ -446,7 +456,32 @@ export async function registerBillingRoutes(app: FastifyInstance) {
         console.error('[billing webhook] Raw body unavailable; rejecting unverifiable webhook');
         return reply.code(400).send({ error: 'Raw body unavailable for signature verification' });
       }
-      const event = verifyWebhookSignature(rawBody, signature);
+      const event = await paymentAdapter.verifyWebhook(rawBody, signature) as any;
+
+      // Canonical revenue dispatcher: Torque credit events are routed before
+      // the generic plan/add-on claim. Signature verification happens exactly
+      // once, and the shared receipt owns exactly-once fulfillment.
+      if (await isTorqueTokenStripeEvent(event)) {
+        const received = await receiveVerifiedTorqueTokenStripeEvent({ event, rawBody });
+        const receipt = received.receipt as Record<string, any>;
+        const payload = (receipt.safe_payload_json ?? {}) as Record<string, any>;
+        await recordTorqueStripeEventDispatch({
+          event,
+          tenantId: String(receipt.tenant_id),
+          userId: String(payload.userId),
+          purchaseId: String(payload.purchaseId),
+          receiptId: String(receipt.id),
+          status: received.status,
+          errorCode: receipt.last_error_code ? String(receipt.last_error_code) : null,
+        });
+        return reply.code(received.status === 'processed' ? 200 : 202).send({
+          received: true,
+          kind: 'torque_assist_credit',
+          handled: received.status === 'processed',
+          duplicate: received.duplicate,
+          status: received.status,
+        });
+      }
 
       // Single idempotency point for ALL Stripe webhook events. Classify
       // first (checks metadata in object / subscription_data /
@@ -486,6 +521,12 @@ export async function registerBillingRoutes(app: FastifyInstance) {
       console.error('[billing webhook] Verification or processing failed', {
         code: typeof err?.code === 'string' ? err.code : 'WEBHOOK_REJECTED',
       });
+      if (err instanceof OperatorOsTokenBillingError) {
+        return reply.code(err.statusCode).send({
+          error: 'Torque payment event validation failed',
+          code: err.code,
+        });
+      }
       return reply.code(400).send({
         error: 'Webhook verification or processing failed',
         code: 'WEBHOOK_REJECTED',

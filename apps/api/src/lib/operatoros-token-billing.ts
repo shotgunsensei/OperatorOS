@@ -1,12 +1,18 @@
 import { sql } from 'drizzle-orm';
 import { db } from '../db.js';
 import { writeAudit } from './audit.js';
-import { createUsageCreditCheckoutSession, getStripeRuntimeMode } from './billing-service.js';
+import {
+  createUsageCreditCheckoutSession,
+  getStripeRuntimeMode,
+  resolveStripePaymentMetadata,
+} from './billing-service.js';
 import { getPaymentProviderAdapter, ProviderDisabledError } from './shared-provider-adapters.js';
 import { isOperatorOSTestEnvironment } from './shared-service-safety.js';
 import {
   registerSharedWebhookHandler,
+  receiveVerifiedWebhook,
   type SharedWebhookContext,
+  type VerifiedWebhookEvent,
   type WebhookVerifier,
 } from './shared-webhooks.js';
 import { torqueTokenPackage, TORQUE_TOKEN_PACKAGES } from './torque-assist-domain.js';
@@ -56,6 +62,7 @@ export async function torqueShedModule(): Promise<{ id: string; baseUrl: string 
 function canonicalReturnUrl(
   baseUrl: string,
   diagnosticSessionId: string,
+  purchaseId: string,
   result: 'success' | 'cancelled',
 ) {
   const url = new URL(`/diagnostics/${encodeURIComponent(diagnosticSessionId)}`, baseUrl);
@@ -67,11 +74,52 @@ function canonicalReturnUrl(
     );
   }
   url.searchParams.set('tokenPurchase', result);
+  url.searchParams.set('purchase', purchaseId);
   return url.toString();
 }
 
 export function listTorqueTokenPackages() {
   return TORQUE_TOKEN_PACKAGES.map((item) => ({ ...item }));
+}
+
+export async function getTorqueTokenPurchaseStatus(input: {
+  tenantId: string;
+  userId: string;
+  purchaseId: string;
+}) {
+  const purchase = first(await db.execute(sql`
+    SELECT id,module_id,package_key,units,amount_minor,currency,status,failure_code,
+      created_at,updated_at,credited_at,refunded_at
+    FROM operatoros_token_purchase_intents
+    WHERE tenant_id=${input.tenantId} AND user_id=${input.userId} AND id=${input.purchaseId}
+    LIMIT 1
+  `));
+  if (!purchase) {
+    throw new OperatorOsTokenBillingError(
+      'Token purchase was not found',
+      'TORQUE_PURCHASE_NOT_FOUND',
+      404,
+    );
+  }
+  const ledger = first(await db.execute(sql`
+    SELECT COUNT(*) FILTER (WHERE purchase_intent_id=${input.purchaseId} AND entry_kind='credit')::int AS credit_count,
+      COALESCE(SUM(CASE WHEN entry_kind IN ('credit','debit_reversal','adjustment_credit') THEN units ELSE -units END),0)::bigint AS balance
+    FROM torqueshed_token_ledger_entries
+    WHERE tenant_id=${input.tenantId} AND module_id=${purchase.module_id} AND user_id=${input.userId}
+  `));
+  const stored = String(purchase.status);
+  const state = stored === 'pending' ? 'payment_pending'
+    : stored === 'partially_refunded' ? 'refunded'
+      : stored;
+  return {
+    purchaseId: String(purchase.id), state, packageKey: String(purchase.package_key),
+    units: Number(purchase.units), amountMinor: Number(purchase.amount_minor),
+    currency: String(purchase.currency), failureCode: purchase.failure_code ?? null,
+    credited: Number(ledger?.credit_count ?? 0) === 1 && stored === 'credited',
+    balance: Number(ledger?.balance ?? 0), createdAt: purchase.created_at,
+    updatedAt: purchase.updated_at, creditedAt: purchase.credited_at,
+    refundedAt: purchase.refunded_at, authority: 'operatoros_ledger',
+  };
 }
 
 export async function createTorqueTokenPurchase(input: {
@@ -101,7 +149,7 @@ export async function createTorqueTokenPurchase(input: {
       ) VALUES (
         ${input.tenantId},${input.userId},${module.id},${selectedPackage.key},
         ${selectedPackage.units},${selectedPackage.amountMinor},${selectedPackage.currency},
-        ${provider},${providerMode},'pending',${input.idempotencyKey}
+        ${provider},${providerMode},'payment_pending',${input.idempotencyKey}
       )
       ON CONFLICT (tenant_id,user_id,module_id,idempotency_key) DO NOTHING
       RETURNING *
@@ -147,14 +195,16 @@ export async function createTorqueTokenPurchase(input: {
           units: selectedPackage.units,
           amountMinor: selectedPackage.amountMinor,
           currency: selectedPackage.currency,
-          successUrl: canonicalReturnUrl(module.baseUrl, input.diagnosticSessionId, 'success'),
-          cancelUrl: canonicalReturnUrl(module.baseUrl, input.diagnosticSessionId, 'cancelled'),
+          successUrl: canonicalReturnUrl(module.baseUrl, input.diagnosticSessionId, String(purchase.id), 'success'),
+          cancelUrl: canonicalReturnUrl(module.baseUrl, input.diagnosticSessionId, String(purchase.id), 'cancelled'),
         });
     const updated = first(
       await db.execute(sql`
         UPDATE operatoros_token_purchase_intents
-        SET provider_checkout_id=${checkout.sessionId},provider_checkout_url=${checkout.url},updated_at=NOW()
-        WHERE tenant_id=${input.tenantId} AND id=${String(purchase.id)} AND status='pending'
+        SET provider_checkout_id=${checkout.sessionId},provider_checkout_url=${checkout.url},
+          status='checkout_created',updated_at=NOW()
+        WHERE tenant_id=${input.tenantId} AND id=${String(purchase.id)}
+          AND status IN ('pending','payment_pending')
         RETURNING *
       `),
     )!;
@@ -181,7 +231,8 @@ export async function createTorqueTokenPurchase(input: {
     await db.execute(sql`
       UPDATE operatoros_token_purchase_intents
       SET status='failed',failure_code=${safeCode(error)},updated_at=NOW()
-      WHERE tenant_id=${input.tenantId} AND id=${String(purchase.id)} AND status='pending'
+      WHERE tenant_id=${input.tenantId} AND id=${String(purchase.id)}
+        AND status IN ('pending','payment_pending')
     `);
     throw error;
   }
@@ -199,13 +250,16 @@ function eventMetadata(eventObject: Record<string, any>): Record<string, any> {
     : {};
 }
 
-function eventKind(type: string): 'credit' | 'refund' | 'failed' {
-  if (type === 'checkout.session.completed') return 'credit';
+type TorqueSettlementKind = 'credit' | 'refund' | 'failed' | 'expired' | 'dispute' | 'dispute_closed';
+
+function eventKind(type: string): TorqueSettlementKind {
+  if (type === 'checkout.session.completed' || type === 'checkout.session.async_payment_succeeded') return 'credit';
   if (type === 'charge.refunded') return 'refund';
+  if (type === 'checkout.session.expired') return 'expired';
+  if (type === 'charge.dispute.created') return 'dispute';
+  if (type === 'charge.dispute.closed') return 'dispute_closed';
   if (
-    type === 'checkout.session.async_payment_failed' ||
-    type === 'checkout.session.expired' ||
-    type === 'payment_intent.payment_failed'
+    type === 'checkout.session.async_payment_failed' || type === 'payment_intent.payment_failed'
   )
     return 'failed';
   throw new OperatorOsTokenBillingError(
@@ -213,6 +267,140 @@ function eventKind(type: string): 'credit' | 'refund' | 'failed' {
     'TORQUE_PAYMENT_EVENT_UNSUPPORTED',
     422,
   );
+}
+
+async function resolvedTorqueMetadata(event: Record<string, any>) {
+  const object = event.data?.object;
+  if (!object || typeof object !== 'object') {
+    throw new OperatorOsTokenBillingError(
+      'Payment event object is invalid',
+      'TORQUE_PAYMENT_EVENT_INVALID',
+      400,
+    );
+  }
+  const direct = eventMetadata(object);
+  if (direct.operatoros_kind === 'torque_assist_credit') {
+    return {
+      object,
+      metadata: direct,
+      paymentIntentId: String(object.payment_intent || (String(object.id || '').startsWith('pi_') ? object.id : '')),
+      chargeId: String(object.charge || (String(object.id || '').startsWith('ch_') ? object.id : '')),
+    };
+  }
+  const resolved = await resolveStripePaymentMetadata(event as any);
+  return { object, ...resolved };
+}
+
+/** Classify after signature verification and before the generic billing claim. */
+export async function isTorqueTokenStripeEvent(event: Record<string, any>): Promise<boolean> {
+  if (!event || typeof event.type !== 'string') return false;
+  if (![
+    'checkout.session.completed', 'checkout.session.async_payment_succeeded',
+    'checkout.session.async_payment_failed', 'checkout.session.expired',
+    'payment_intent.payment_failed', 'charge.refunded',
+    'charge.dispute.created', 'charge.dispute.closed',
+  ].includes(event.type)) return false;
+  const resolved = await resolvedTorqueMetadata(event);
+  return resolved.metadata.operatoros_kind === 'torque_assist_credit';
+}
+
+async function prepareTorqueTokenWebhookEvent(
+  event: Record<string, any>,
+): Promise<Omit<VerifiedWebhookEvent, 'rawBody' | 'handlerKey'>> {
+  if (!event || typeof event.id !== 'string' || typeof event.type !== 'string') {
+    throw new OperatorOsTokenBillingError(
+      'Payment event envelope is invalid',
+      'TORQUE_PAYMENT_EVENT_INVALID',
+      400,
+    );
+  }
+  const { object, metadata, paymentIntentId, chargeId } = await resolvedTorqueMetadata(event);
+  if (metadata.operatoros_kind !== 'torque_assist_credit') {
+    throw new OperatorOsTokenBillingError(
+      'Payment event is not a Torque Assist credit event',
+      'TORQUE_PAYMENT_EVENT_SCOPE_INVALID',
+      422,
+    );
+  }
+  const purchaseId = String(metadata.purchase_id || '');
+  if (!/^[0-9a-f-]{36}$/i.test(purchaseId)) {
+    throw new OperatorOsTokenBillingError(
+      'Payment purchase reference is invalid',
+      'TORQUE_PAYMENT_EVENT_SCOPE_INVALID',
+      422,
+    );
+  }
+  const purchase = first(
+    await db.execute(
+      sql`SELECT * FROM operatoros_token_purchase_intents WHERE id=${purchaseId} LIMIT 1`,
+    ),
+  );
+  if (!purchase) {
+    throw new OperatorOsTokenBillingError(
+      'Payment purchase reference was not found',
+      'TORQUE_PAYMENT_PURCHASE_NOT_FOUND',
+      404,
+    );
+  }
+  for (const [metadataKey, expected] of [
+    ['tenant_id', purchase.tenant_id],
+    ['user_id', purchase.user_id],
+    ['module_id', purchase.module_id],
+    ['package_key', purchase.package_key],
+    ['units', purchase.units],
+  ] as const) {
+    if (String(metadata[metadataKey] || '') !== String(expected)) {
+      throw new OperatorOsTokenBillingError(
+        'Signed payment metadata does not match the purchase intent',
+        'TORQUE_PAYMENT_SCOPE_CONFLICT',
+        409,
+      );
+    }
+  }
+  const incomingMode = event.livemode === true ? 'live' : 'test';
+  if (incomingMode !== purchase.provider_mode) {
+    throw new OperatorOsTokenBillingError(
+      'Payment test/live mode does not match the purchase intent',
+      'TORQUE_PAYMENT_MODE_CONFLICT',
+      409,
+    );
+  }
+  if (
+    event.type.startsWith('checkout.session.') &&
+    String(object.id || '') !== String(purchase.provider_checkout_id || '')
+  ) {
+    throw new OperatorOsTokenBillingError(
+      'Checkout Session does not match the purchase intent',
+      'TORQUE_PAYMENT_CHECKOUT_CONFLICT',
+      409,
+    );
+  }
+  const kind = eventKind(event.type);
+  const adapter = getPaymentProviderAdapter();
+  return {
+    tenantId: String(purchase.tenant_id),
+    moduleId: String(purchase.module_id),
+    provider: adapter.status.name,
+    providerEventId: event.id,
+    eventType: event.type,
+    safePayload: {
+      kind,
+      purchaseId,
+      userId: String(purchase.user_id),
+      amountMinor:
+        kind === 'refund'
+          ? Number(object.amount_refunded ?? 0)
+          : Number(object.amount_total ?? object.amount_received ?? object.amount ?? 0),
+      currency: String(object.currency || '').toUpperCase(),
+      paymentStatus: String(object.payment_status || object.status || ''),
+      checkoutMode: String(object.mode || ''),
+      disputeStatus: String(object.status || ''),
+      providerReference: String(paymentIntentId || object.payment_intent || object.id || ''),
+      providerChargeReference: String(chargeId || ''),
+      incomingMode,
+    },
+    correlationId: null,
+  };
 }
 
 export function torqueTokenWebhookVerifier(): WebhookVerifier {
@@ -230,97 +418,36 @@ export function torqueTokenWebhookVerifier(): WebhookVerifier {
         );
       }
       const event = (await adapter.verifyWebhook(input.rawBody, signature)) as Record<string, any>;
-      if (!event || typeof event.id !== 'string' || typeof event.type !== 'string') {
-        throw new OperatorOsTokenBillingError(
-          'Payment event envelope is invalid',
-          'TORQUE_PAYMENT_EVENT_INVALID',
-          400,
-        );
-      }
-      const object = event.data?.object;
-      if (!object || typeof object !== 'object') {
-        throw new OperatorOsTokenBillingError(
-          'Payment event object is invalid',
-          'TORQUE_PAYMENT_EVENT_INVALID',
-          400,
-        );
-      }
-      const metadata = eventMetadata(object);
-      if (metadata.operatoros_kind !== 'torque_assist_credit') {
-        throw new OperatorOsTokenBillingError(
-          'Payment event is not a Torque Assist credit event',
-          'TORQUE_PAYMENT_EVENT_SCOPE_INVALID',
-          422,
-        );
-      }
-      const purchaseId = String(metadata.purchase_id || '');
-      if (!/^[0-9a-f-]{36}$/i.test(purchaseId)) {
-        throw new OperatorOsTokenBillingError(
-          'Payment purchase reference is invalid',
-          'TORQUE_PAYMENT_EVENT_SCOPE_INVALID',
-          422,
-        );
-      }
-      const purchase = first(
-        await db.execute(
-          sql`SELECT * FROM operatoros_token_purchase_intents WHERE id=${purchaseId} LIMIT 1`,
-        ),
-      );
-      if (!purchase) {
-        throw new OperatorOsTokenBillingError(
-          'Payment purchase reference was not found',
-          'TORQUE_PAYMENT_PURCHASE_NOT_FOUND',
-          404,
-        );
-      }
-      for (const [metadataKey, expected] of [
-        ['tenant_id', purchase.tenant_id],
-        ['user_id', purchase.user_id],
-        ['module_id', purchase.module_id],
-        ['package_key', purchase.package_key],
-      ] as const) {
-        if (String(metadata[metadataKey] || '') !== String(expected)) {
-          throw new OperatorOsTokenBillingError(
-            'Signed payment metadata does not match the purchase intent',
-            'TORQUE_PAYMENT_SCOPE_CONFLICT',
-            409,
-          );
-        }
-      }
-      const incomingMode = event.livemode === true ? 'live' : 'test';
-      if (incomingMode !== purchase.provider_mode) {
-        throw new OperatorOsTokenBillingError(
-          'Payment test/live mode does not match the purchase intent',
-          'TORQUE_PAYMENT_MODE_CONFLICT',
-          409,
-        );
-      }
-      const kind = eventKind(event.type);
-      return {
-        tenantId: String(purchase.tenant_id),
-        moduleId: String(purchase.module_id),
-        provider: adapter.status.name,
-        providerEventId: event.id,
-        eventType: event.type,
-        safePayload: {
-          kind,
-          purchaseId,
-          amountMinor:
-            kind === 'refund'
-              ? Number(object.amount_refunded ?? 0)
-              : Number(object.amount_total ?? object.amount ?? 0),
-          currency: String(object.currency || '').toUpperCase(),
-          paymentStatus: String(object.payment_status || object.status || ''),
-          providerReference: String(object.payment_intent || object.id || ''),
-          incomingMode,
-        },
-        correlationId: null,
-      };
+      return prepareTorqueTokenWebhookEvent(event);
     },
   };
 }
 
-async function handleTokenPurchaseWebhook(context: SharedWebhookContext): Promise<void> {
+export async function receiveVerifiedTorqueTokenStripeEvent(input: {
+  event: Record<string, any>;
+  rawBody: string | Buffer;
+}) {
+  const verified = await prepareTorqueTokenWebhookEvent(input.event);
+  if (verified.safePayload.kind === 'credit') {
+    await db.execute(sql`
+      UPDATE operatoros_token_purchase_intents
+      SET status=CASE
+        WHEN status IN ('credited','partially_refunded','refunded','disputed') THEN status
+        ELSE 'paid_pending_credit' END,
+        updated_at=NOW()
+      WHERE tenant_id=${verified.tenantId}
+        AND id=${String(verified.safePayload.purchaseId)}
+    `);
+  }
+  return receiveVerifiedWebhook({
+    ...verified,
+    rawBody: input.rawBody,
+    handlerKey: HANDLER_KEY,
+    maxAttempts: 5,
+  });
+}
+
+export async function settleTorqueTokenPurchase(context: SharedWebhookContext): Promise<void> {
   const payload = context.payload;
   const purchaseId = String(payload.purchaseId || '');
   const kind = String(payload.kind || '');
@@ -342,9 +469,18 @@ async function handleTokenPurchaseWebhook(context: SharedWebhookContext): Promis
     const eventReference = `${context.provider}:${purchase.provider_mode}:${context.providerEventId}`;
     if (kind === 'credit') {
       if (payload.paymentStatus !== 'paid' && payload.paymentStatus !== 'complete') {
+        await tx.execute(sql`
+          UPDATE operatoros_token_purchase_intents
+          SET status='payment_pending',updated_at=NOW()
+          WHERE tenant_id=${context.tenantId} AND id=${purchaseId}
+            AND status NOT IN ('credited','partially_refunded','refunded','disputed')
+        `);
+        return;
+      }
+      if (payload.checkoutMode && payload.checkoutMode !== 'payment') {
         throw new OperatorOsTokenBillingError(
-          'Checkout event is not paid',
-          'TORQUE_PAYMENT_NOT_PAID',
+          'Checkout Session mode does not match a one-time credit purchase',
+          'TORQUE_PAYMENT_CHECKOUT_MODE_CONFLICT',
           409,
         );
       }
@@ -358,17 +494,33 @@ async function handleTokenPurchaseWebhook(context: SharedWebhookContext): Promis
           409,
         );
       }
-      await tx.execute(sql`
-        INSERT INTO torqueshed_token_ledger_entries (
-          tenant_id,user_id,module_id,entry_kind,operation_type,units,idempotency_key,
-          external_event_ref,purchase_intent_id,metadata_json,created_by_user_id
-        ) VALUES (
-          ${context.tenantId},${purchase.user_id},${context.moduleId},'credit','token_purchase',
-          ${Number(purchase.units)},${`purchase:${context.providerEventId}`},${eventReference},
-          ${purchaseId},${{ packageKey: purchase.package_key, amountMinor: purchase.amount_minor, currency: purchase.currency }},
-          ${purchase.user_id}
-        ) ON CONFLICT DO NOTHING
-      `);
+      const providerReference = String(payload.providerReference || purchase.provider_checkout_id || '');
+      let existingCredit = first(await tx.execute(sql`
+        SELECT id FROM torqueshed_token_ledger_entries
+        WHERE tenant_id=${context.tenantId} AND purchase_intent_id=${purchaseId}
+          AND entry_kind='credit' LIMIT 1 FOR UPDATE
+      `));
+      if (!existingCredit) {
+        existingCredit = first(await tx.execute(sql`
+          INSERT INTO torqueshed_token_ledger_entries (
+            tenant_id,user_id,module_id,entry_kind,operation_type,units,idempotency_key,
+            external_event_ref,purchase_intent_id,metadata_json,created_by_user_id
+          ) VALUES (
+            ${context.tenantId},${purchase.user_id},${context.moduleId},'credit','token_purchase',
+            ${Number(purchase.units)},${`purchase:${purchaseId}`},
+            ${`${context.provider}:${purchase.provider_mode}:${providerReference}`},
+            ${purchaseId},${{ packageKey: purchase.package_key, amountMinor: purchase.amount_minor, currency: purchase.currency }},
+            ${purchase.user_id}
+          ) ON CONFLICT DO NOTHING RETURNING id
+        `));
+      }
+      if (!existingCredit) {
+        throw new OperatorOsTokenBillingError(
+          'Token credit could not be confirmed',
+          'TORQUE_PAYMENT_CREDIT_UNAVAILABLE',
+          409,
+        );
+      }
       await tx.execute(sql`
         UPDATE operatoros_token_purchase_intents
         SET status='credited',credited_at=COALESCE(credited_at,NOW()),failure_code=NULL,updated_at=NOW()
@@ -388,11 +540,13 @@ async function handleTokenPurchaseWebhook(context: SharedWebhookContext): Promis
       );
       return;
     }
-    if (kind === 'failed') {
+    if (kind === 'failed' || kind === 'expired') {
       await tx.execute(sql`
         UPDATE operatoros_token_purchase_intents
-        SET status='failed',failure_code='PAYMENT_FAILED',updated_at=NOW()
-        WHERE tenant_id=${context.tenantId} AND id=${purchaseId} AND status='pending'
+        SET status=${kind === 'expired' ? 'expired' : 'failed'},
+          failure_code=${kind === 'expired' ? 'CHECKOUT_EXPIRED' : 'PAYMENT_FAILED'},updated_at=NOW()
+        WHERE tenant_id=${context.tenantId} AND id=${purchaseId}
+          AND status IN ('pending','payment_pending','checkout_created','paid_pending_credit')
       `);
       await writeAudit(
         {
@@ -400,12 +554,79 @@ async function handleTokenPurchaseWebhook(context: SharedWebhookContext): Promis
           tenantId: context.tenantId,
           targetType: 'operatoros_token_purchase',
           targetId: purchaseId,
-          action: 'token_purchase_failed',
+          action: kind === 'expired' ? 'token_purchase_expired' : 'token_purchase_failed',
           after: { providerEventId: context.providerEventId },
         },
         undefined,
         tx,
       );
+      return;
+    }
+    if (kind === 'dispute' || kind === 'dispute_closed') {
+      const disputeStatus = String(payload.disputeStatus || '');
+      if (kind === 'dispute_closed' && disputeStatus === 'won') {
+        const reversed = first(await tx.execute(sql`
+          SELECT COALESCE(SUM(units),0)::bigint AS units
+          FROM torqueshed_token_ledger_entries
+          WHERE tenant_id=${context.tenantId} AND purchase_intent_id=${purchaseId}
+            AND entry_kind='credit_reversal' AND operation_type='token_purchase_dispute'
+        `));
+        const restoredUnits = Number(reversed?.units ?? 0);
+        if (restoredUnits > 0) {
+          await tx.execute(sql`
+            INSERT INTO torqueshed_token_ledger_entries (
+              tenant_id,user_id,module_id,entry_kind,operation_type,units,idempotency_key,
+              external_event_ref,purchase_intent_id,metadata_json,created_by_user_id
+            ) VALUES (
+              ${context.tenantId},${purchase.user_id},${context.moduleId},'adjustment_credit',
+              'token_purchase_dispute_won',${restoredUnits},${`dispute-won:${purchaseId}`},
+              ${eventReference},${purchaseId},${{ disputeStatus }},${purchase.user_id}
+            ) ON CONFLICT DO NOTHING
+          `);
+        }
+        await tx.execute(sql`
+          UPDATE operatoros_token_purchase_intents SET status='credited',failure_code=NULL,updated_at=NOW()
+          WHERE tenant_id=${context.tenantId} AND id=${purchaseId} AND status='disputed'
+        `);
+        return;
+      }
+      if (kind === 'dispute_closed' && disputeStatus !== 'lost') return;
+      const originalCredit = first(await tx.execute(sql`
+        SELECT id,units FROM torqueshed_token_ledger_entries
+        WHERE tenant_id=${context.tenantId} AND purchase_intent_id=${purchaseId}
+          AND entry_kind='credit' LIMIT 1
+      `));
+      if (originalCredit) {
+        const existingReversals = first(await tx.execute(sql`
+          SELECT COALESCE(SUM(units),0)::bigint AS units
+          FROM torqueshed_token_ledger_entries
+          WHERE tenant_id=${context.tenantId} AND purchase_intent_id=${purchaseId}
+            AND entry_kind='credit_reversal'
+        `));
+        const units = Math.max(0, Number(originalCredit.units) - Number(existingReversals?.units ?? 0));
+        if (units > 0) {
+          await tx.execute(sql`
+            INSERT INTO torqueshed_token_ledger_entries (
+              tenant_id,user_id,module_id,entry_kind,operation_type,units,idempotency_key,
+              external_event_ref,purchase_intent_id,reverses_entry_id,metadata_json,created_by_user_id
+            ) VALUES (
+              ${context.tenantId},${purchase.user_id},${context.moduleId},'credit_reversal',
+              'token_purchase_dispute',${units},${`dispute:${purchaseId}`},${eventReference},
+              ${purchaseId},${String(originalCredit.id)},${{ disputeStatus }},${purchase.user_id}
+            ) ON CONFLICT DO NOTHING
+          `);
+        }
+      }
+      await tx.execute(sql`
+        UPDATE operatoros_token_purchase_intents
+        SET status='disputed',failure_code='PAYMENT_DISPUTED',updated_at=NOW()
+        WHERE tenant_id=${context.tenantId} AND id=${purchaseId}
+      `);
+      await writeAudit({
+        actorUserId: String(purchase.user_id), tenantId: context.tenantId,
+        targetType: 'operatoros_token_purchase', targetId: purchaseId,
+        action: 'token_purchase_disputed', after: { providerEventId: context.providerEventId, disputeStatus },
+      }, undefined, tx);
       return;
     }
     if (kind !== 'refund') {
@@ -494,7 +715,7 @@ async function handleTokenPurchaseWebhook(context: SharedWebhookContext): Promis
 }
 
 export function registerTorqueTokenWebhookHandler(): void {
-  registerSharedWebhookHandler(HANDLER_KEY, handleTokenPurchaseWebhook);
+  registerSharedWebhookHandler(HANDLER_KEY, settleTorqueTokenPurchase);
 }
 
 export function torqueTokenWebhookHandlerKey(): string {

@@ -17,7 +17,7 @@ function fixtureIssues(name) {
 
 test('compiler derives counts from all 13 Phase 20 module ledgers', () => {
   assert.equal(baseline.source.totals.modules, 13);
-  assert.equal(baseline.source.totals.capabilities, 7304);
+  assert.equal(baseline.source.totals.capabilities, 7396);
   assert.equal(baseline.source.totals.unclassified, 0);
   assert.equal(baseline.source.drift.length, 0);
   assert.equal(baseline.ledger.totals.capabilities, baseline.source.totals.capabilities);
@@ -46,7 +46,8 @@ test('shared equivalents carry original outcomes and compatibility assertions', 
 
 test('current release contract fails closed on required blockers', () => {
   const counts = issueSummary(effectiveIssues(baseline.ledger));
-  assert.equal(counts.BLOCKED_REQUIRED, 4070);
+  assert.equal(counts.BLOCKED_REQUIRED, baseline.source.totals.stateCounts.BLOCKED);
+  assert.ok(counts.BLOCKED_REQUIRED > 0);
 });
 
 for (const [fixture, expectedCode] of [

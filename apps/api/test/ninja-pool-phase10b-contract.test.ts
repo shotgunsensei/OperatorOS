@@ -41,24 +41,35 @@ test('Phase 10B persistence has tenant relationships, lifecycle constraints, and
   assert.match(schema, /uniqueIndex\('uq_ninja_pool_event_client'\)/);
 });
 
-test('Phase 10B UI exposes only implemented modes and durable deep links', () => {
+test('Phase 30 UI exposes all playable modes, protected rooms, PWA, and durable deep links', () => {
   const shell = read('apps/web/src/components/module-shells/NinjaPoolHallShell.tsx');
+  const online = read('apps/web/src/components/module-shells/NinjaPoolHallOnline.tsx');
   const routeMap = read('apps/web/src/app/modules/[slug]/[...path]/route-map.ts');
   const match = read('apps/web/src/components/module-shells/NinjaPoolHallMatch.tsx');
   const profile = read('apps/web/src/components/module-shells/NinjaPoolHallProfile.tsx');
   assert.match(shell, /path === '\/practice'/);
   assert.match(shell, /path === '\/cpu'/);
   assert.match(shell, /path === '\/local'/);
+  assert.match(shell, /path === '\/online'/);
+  assert.match(shell, /path === '\/host'/);
+  assert.match(shell, /path === '\/join'/);
   assert.match(shell, /path === '\/profile'/);
   assert.match(shell, /\^\\\/matches\\\/\(\[a-z0-9-\]\+\)\$/i);
   assert.match(shell, /syncRoute\(\)/);
   assert.match(routeMap, /'ninja-pool-hall'/);
   assert.match(routeMap, /resource === 'matches'/);
-  assert.doesNotMatch(routeMap, /'\/host'|'\/join'/);
-  assert.match(shell, /Online rooms are coming later/);
-  assert.match(shell, /For now, enjoy CPU and pass-and-play matches/);
-  assert.doesNotMatch(shell, /Host online room/);
-  assert.doesNotMatch(shell, /Join online room/);
+  assert.match(routeMap, /'\/host'/);
+  assert.match(routeMap, /'\/join'/);
+  assert.match(routeMap, /resource === 'rooms'/);
+  assert.match(shell, /Authenticated online rooms/);
+  assert.match(shell, /Server-verified deterministic results/);
+  assert.match(online, /NinjaPoolRoomSocket/);
+  assert.match(online, /simulateOnlineShot/);
+  assert.match(online, /hostShotResult/);
+  assert.match(online, /shotIntent/);
+  assert.match(online, /Side English/);
+  assert.match(shell, /ninja-pool-hall\.webmanifest/);
+  assert.match(shell, /ninja-pool-hall-sw\.js/);
   assert.match(match, /chooseBotShot/);
   assert.match(match, /applyShotResult/);
   assert.match(match, /saveMatchShot/);
@@ -67,11 +78,18 @@ test('Phase 10B UI exposes only implemented modes and durable deep links', () =>
   assert.match(profile, /Personal progress, no public leaderboard/i);
 });
 
-test('standalone room identity and child server stay quarantined', () => {
+test('standalone room identity stays quarantined while OperatorOS owns room authority', () => {
   const shell = read('apps/web/src/components/module-shells/NinjaPoolHallShell.tsx');
   const client = read('apps/web/src/lib/auth.ts');
+  const onlineRoutes = read('apps/api/src/routes/ninja-pool-online-routes.ts');
   assert.doesNotMatch(shell, /createPoolNet|\/ws\/pool|localStorage/);
   assert.doesNotMatch(client, /\/ws\/pool|clientId.*localStorage/);
   assert.match(client, /credentials: 'include'/);
   assert.match(client, /\/modules\/ninja-pool-hall\/matches/);
+  assert.match(client, /\/modules\/ninja-pool-hall\/rooms/);
+  assert.match(onlineRoutes, /requireTenantModuleAccess\('ninja-pool-hall'\)/);
+  assert.match(onlineRoutes, /requireTenantModuleWriteAccess/);
+  assert.match(onlineRoutes, /simulateOnlineShot/);
+  assert.match(onlineRoutes, /NINJA_POOL_RESULT_HASH_MISMATCH/);
+  assert.doesNotMatch(onlineRoutes, /request\.body.*tenantId|request\.body.*userId/);
 });

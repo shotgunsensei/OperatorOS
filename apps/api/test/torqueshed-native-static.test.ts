@@ -19,7 +19,7 @@ test('native security, offline, association, and release gates are explicit', ()
   const auth = read('apps/torqueshed-native/src/lib/auth.tsx'); const queue = read('apps/torqueshed-native/src/lib/offline-queue.ts'); const server = read('apps/api/src/lib/torqueshed-native-auth.ts');
   assert.match(auth, /SecureStore/); assert.match(auth, /WHEN_UNLOCKED_THIS_DEVICE_ONLY/); assert.match(auth, /codeChallenge/); assert.doesNotMatch(auth, /AsyncStorage\.setItem\([^\n]*(accessToken|refreshToken)/);
   assert.match(queue, /client mutation|idempotency|Idempotency|QueuedMutation/i); assert.match(server, /tsn_a_/); assert.match(server, /resolveTenantModuleAccess/); assert.match(server, /timingSafeEqual/);
-  assert.match(read('apps/api/src/lib/database-release-contract.ts'), /releaseVersion:\s*39/);
+  assert.match(read('apps/api/src/lib/database-release-contract.ts'), /releaseVersion:\s*47/);
   assert.match(read('apps/web/src/app/.well-known/apple-app-site-association/route.ts'), /TORQUESHED_IOS_TEAM_ID/);
   assert.match(read('apps/web/src/app/.well-known/assetlinks.json/route.ts'), /TORQUESHED_ANDROID_SHA256_CERT_FINGERPRINT/);
   assert.doesNotMatch(read('apps/torqueshed-native/app.config.ts'), /YOUR_|PLACEHOLDER|REPLACE_ME|0000000000|AA:AA:AA/i);

@@ -7,7 +7,8 @@ import {
   saasWorkspaces, saasProjects, saasTasks, notes, activityFeed,
   usageTracking, aiActionsLog, aiPromptTemplates,
   ninjaPoolMatchEvents, ninjaPoolMatchSessions, ninjaPoolPlayerProfiles,
-  ninjaPoolPracticeSessions,
+  ninjaPoolPracticeSessions, ninjaPoolOnlineEvents, ninjaPoolOnlineRooms,
+  ninjaPoolOnlineRateLimits,
   moduleWorkflowItems,
   techdeckTickets, techdeckTicketSequences, techdeckAssets, techdeckRunbooks,
   tradeflowkitInvoices, tradeflowkitQuotes, tradeflowkitJobs, tradeflowkitCustomers,
@@ -15,7 +16,7 @@ import {
   brandforgeGenerations, brandforgeCampaigns, brandforgePersonas,
   brandforgeBrands, brandforgeWorkspaceSettings,
 } from '../src/schema.js';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { eq, inArray, or, sql } from 'drizzle-orm';
 
 // DB-backed tests bootstrap production DDL modules dynamically. Provide a
 // non-production, test-process-only signing key before those modules load so
@@ -87,12 +88,16 @@ export async function ensureSchemaReady() {
   await ensureTorqueShedTables();
   const { ensureNinjaPoolHallTables } = await import('../src/lib/ninja-pool-hall-db-init.js');
   await ensureNinjaPoolHallTables();
+  const { ensureNinjaPoolOnlineTables } = await import('../src/lib/ninja-pool-online-db-init.js');
+  await ensureNinjaPoolOnlineTables();
   const { ensureBrandForgeOsTables } = await import('../src/lib/brandforgeos-db-init.js');
   await ensureBrandForgeOsTables();
   const { ensureSharedServiceTables } = await import('../src/lib/shared-services-db-init.js');
   await ensureSharedServiceTables();
   const { ensureSharedPlatformTables } = await import('../src/lib/shared-platform-db-init.js');
   await ensureSharedPlatformTables();
+  const { ensureBrandForgeOsPhase31Tables } = await import('../src/lib/brandforgeos-phase31-db-init.js');
+  await ensureBrandForgeOsPhase31Tables();
   const { ensureTorqueShedWebApiTables } = await import('../src/lib/torqueshed-web-api-db-init.js');
   await ensureTorqueShedWebApiTables();
   const { ensureTorqueShedNativeTables } = await import('../src/lib/torqueshed-native-db-init.js');
@@ -106,6 +111,14 @@ export async function ensureSchemaReady() {
   await ensureOperatorOsMessagingComplianceTables();
   const { ensureSnapProofOsTables } = await import('../src/lib/snapproofos-db-init.js');
   await ensureSnapProofOsTables();
+  const { ensureSnapProofOsPhase32Tables } = await import('../src/lib/snapproofos-phase32-db-init.js');
+  await ensureSnapProofOsPhase32Tables();
+  const { ensureCallCommandTables } = await import('../src/lib/callcommand-db-init.js');
+  await ensureCallCommandTables();
+  const { ensureCallCommandPhase35Tables } = await import('../src/lib/callcommand-phase35-db-init.js');
+  await ensureCallCommandPhase35Tables();
+  const { ensureCallCommandMspTables } = await import('../src/lib/callcommand-msp-db-init.js');
+  await ensureCallCommandMspTables();
   await ensureTestPlans();
 }
 
@@ -172,6 +185,9 @@ export async function cleanupUser(userId: string) {
   try { await db.delete(ninjaPoolMatchSessions).where(eq(ninjaPoolMatchSessions.userId, userId)); } catch {}
   try { await db.delete(ninjaPoolPlayerProfiles).where(eq(ninjaPoolPlayerProfiles.userId, userId)); } catch {}
   try { await db.delete(ninjaPoolPracticeSessions).where(eq(ninjaPoolPracticeSessions.userId, userId)); } catch {}
+  try { await db.delete(ninjaPoolOnlineEvents).where(eq(ninjaPoolOnlineEvents.actorUserId, userId)); } catch {}
+  try { await db.delete(ninjaPoolOnlineRooms).where(or(eq(ninjaPoolOnlineRooms.hostUserId, userId), eq(ninjaPoolOnlineRooms.guestUserId, userId))); } catch {}
+  try { await db.delete(ninjaPoolOnlineRateLimits).where(eq(ninjaPoolOnlineRateLimits.userId, userId)); } catch {}
   try { await db.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.createdByUserId, userId)); } catch {}
   try { await db.delete(techdeckTickets).where(eq(techdeckTickets.createdByUserId, userId)); } catch {}
   try { await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.userId, userId)); } catch {}
@@ -181,6 +197,30 @@ export async function cleanupUser(userId: string) {
     // company tenants the test forgot to clean). Cascade child rows first.
     const owned = await db.select().from(tenants).where(eq(tenants.ownerUserId, userId));
     for (const t of owned) {
+      // StudyForge complete-product rows use restrictive tenant/owner keys.
+      // Remove both Phase 33 and legacy leaves before shared usage/idempotency
+      // records and the owning tenant.
+      try { await db.execute(sql`DELETE FROM studyforge_session_card_reviews WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_learning_sessions WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_exam_countdowns WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_short_answers WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_daily_activity WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_generation_reservations WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_usage_counters WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_card_progress WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_quiz_attempts WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_study_sets WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_cards WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_questions WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_plan_sessions WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_decks WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_quizzes WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_plans WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_generations WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_sources WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_subjects WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_folders WHERE tenant_id = ${t.id}`); } catch {}
+      try { await db.execute(sql`DELETE FROM studyforge_preferences WHERE tenant_id = ${t.id}`); } catch {}
       try {
         await db.transaction(async tx => {
           await tx.execute(sql`SET LOCAL operatoros.tenant_hard_delete = 'on'`);
@@ -256,6 +296,9 @@ export async function cleanupUser(userId: string) {
       try { await db.delete(brandforgePersonas).where(eq(brandforgePersonas.tenantId, t.id)); } catch {}
       try { await db.delete(brandforgeBrands).where(eq(brandforgeBrands.tenantId, t.id)); } catch {}
       try { await db.delete(brandforgeWorkspaceSettings).where(eq(brandforgeWorkspaceSettings.tenantId, t.id)); } catch {}
+      try { await db.delete(ninjaPoolOnlineEvents).where(eq(ninjaPoolOnlineEvents.tenantId, t.id)); } catch {}
+      try { await db.delete(ninjaPoolOnlineRooms).where(eq(ninjaPoolOnlineRooms.tenantId, t.id)); } catch {}
+      try { await db.delete(ninjaPoolOnlineRateLimits).where(eq(ninjaPoolOnlineRateLimits.tenantId, t.id)); } catch {}
       try { await db.delete(tenantUserModuleAccess).where(eq(tenantUserModuleAccess.tenantId, t.id)); } catch {}
       try { await db.delete(moduleWorkflowItems).where(eq(moduleWorkflowItems.tenantId, t.id)); } catch {}
       try { await db.delete(techdeckTickets).where(eq(techdeckTickets.tenantId, t.id)); } catch {}

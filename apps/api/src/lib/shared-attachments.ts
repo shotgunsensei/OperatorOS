@@ -61,6 +61,10 @@ export function detectAttachmentMimeType(content: Buffer, declaredMimeType?: str
   if (content.length >= 8 && content.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
   if (content.length >= 3 && content[0] === 0xff && content[1] === 0xd8 && content[2] === 0xff) return 'image/jpeg';
   if (content.length >= 12 && content.subarray(0, 4).toString('ascii') === 'RIFF' && content.subarray(8, 12).toString('ascii') === 'WEBP') return 'image/webp';
+  if (content.length >= 12 && content.subarray(0, 4).toString('ascii') === 'RIFF' && content.subarray(8, 12).toString('ascii') === 'WAVE') return 'audio/wav';
+  if (content.length >= 3 && content.subarray(0, 3).toString('ascii') === 'ID3') return 'audio/mpeg';
+  if (content.length >= 2 && content[0] === 0xff && (content[1]! & 0xe0) === 0xe0) return 'audio/mpeg';
+  if (content.length >= 12 && content.subarray(4, 8).toString('ascii') === 'ftyp' && /M4A|mp4/i.test(content.subarray(8, 16).toString('ascii'))) return 'audio/mp4';
   if (content.length >= 6 && ['GIF87a', 'GIF89a'].includes(content.subarray(0, 6).toString('ascii'))) return 'image/gif';
   if (content.length >= 4 && content.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]))) return 'application/zip';
   const declared = declaredMimeType?.split(';')[0]?.trim().toLowerCase();
@@ -78,6 +82,9 @@ function assertDeclaredMimeMatches(declared: string | null | undefined, detected
     'image/jpeg': ['image/jpeg', 'image/jpg'],
     'text/csv': ['text/csv', 'application/csv', 'application/vnd.ms-excel'],
     'application/zip': ['application/zip', 'application/x-zip-compressed'],
+    'audio/wav': ['audio/wav', 'audio/wave', 'audio/x-wav'],
+    'audio/mpeg': ['audio/mpeg', 'audio/mp3'],
+    'audio/mp4': ['audio/mp4', 'audio/m4a', 'audio/x-m4a'],
   };
   if (normalized !== detected && !(aliases[detected] || []).includes(normalized)) {
     throw Object.assign(new Error('Declared MIME type does not match the file signature'), { code: 'ATTACHMENT_MIME_MISMATCH' });

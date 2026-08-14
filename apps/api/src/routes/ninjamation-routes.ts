@@ -226,10 +226,12 @@ export async function registerNinjamationRoutes(app: FastifyInstance) {
       const created = await db.transaction(async (tx) => {
         const inserted = await tx.execute(sql`
           INSERT INTO ninjamation_scripts (
-            tenant_id,created_by_user_id,name,description,language,category,risk_tier
+            tenant_id,created_by_user_id,owner_user_id,name,source_display_name,description,
+            language,category,risk_tier,file_name,tags
           ) VALUES (
-            ${tenantId},${userId},${input.name},${input.description},${input.language},
-            ${input.category},${input.riskTier}
+            ${tenantId},${userId},${userId},${input.name},${input.name},${input.description},
+            ${input.language},${input.category},${input.riskTier},
+            ${safeFileName(input.name, input.language)},${JSON.stringify([input.language, 'manual'])}::jsonb
           ) RETURNING *
         `);
         const row = inserted.rows[0] as Row;
@@ -301,8 +303,10 @@ export async function registerNinjamationRoutes(app: FastifyInstance) {
         const result = await tx.execute(sql`
           UPDATE ninjamation_scripts SET
             name=${input.name ?? current.name},
+            source_display_name=${input.name ?? current.source_display_name ?? current.name},
             description=${input.description === undefined ? current.description : input.description},
             language=${input.language ?? current.language},
+            file_name=${safeFileName(input.name ?? current.name, input.language ?? current.language)},
             category=${input.category ?? current.category},
             risk_tier=${input.riskTier ?? current.risk_tier},
             current_version_number=${nextVersionNumber},

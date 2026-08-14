@@ -136,11 +136,11 @@ export function validateReleaseIdentity(payload, expectedCommit) {
   }
   if (
     payload?.databaseRelease?.contractVersion !== 1
-    || payload?.databaseRelease?.releaseVersion !== 39
-    || payload?.databaseRelease?.stepCount !== 39
+    || payload?.databaseRelease?.releaseVersion !== 47
+    || payload?.databaseRelease?.stepCount !== 47
     || payload?.databaseRelease?.lastStep !== 'torqueshed_native_tables'
   ) {
-    issues.push('database release identity does not match version 39');
+    issues.push('database release identity does not match version 47');
   }
   return issues;
 }
@@ -284,11 +284,11 @@ export async function verifyProductionRuntime({ fetchImpl = fetch, registry, exp
   }
 
   const outcall = modules.find((entry) => entry.slug === 'outcall');
-  await runCheck(results, 'outcall active registry', async () => {
-    if (!outcall || outcall.enabled !== true || outcall.status !== 'active') {
-      throw new Error('OutCall must be active in the production registry');
+  await runCheck(results, 'outcall source-recovery activation lock', async () => {
+    if (!outcall || outcall.enabled !== false) {
+      throw new Error('OutCall must remain disabled until source and provider acceptance are proven');
     }
-    return 'active';
+    return 'disabled pending source recovery and provider acceptance';
   });
 
   const passed = results.filter((result) => result.ok).length;

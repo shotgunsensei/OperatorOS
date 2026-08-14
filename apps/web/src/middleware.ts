@@ -113,6 +113,20 @@ function pulseDeskPublicDestination(pathname: string): string | null {
   return intake ? `/public/pulsedesk/intake/${intake[1]}` : null;
 }
 
+function ninjaLaunchKitPublicDestination(pathname: string): string | null {
+  const normalized = pathname === '/' ? 'home' : pathname.replace(/^\//, '').replace(/\/$/, '');
+  return ['home', 'pricing', 'contact', 'terms', 'privacy'].includes(normalized)
+    ? `/public/ninja-launch-kit/${normalized}`
+    : null;
+}
+
+function ninjamationPublicDestination(pathname: string): string | null {
+  const normalized = pathname === '/' ? 'home' : pathname.replace(/^\//, '').replace(/\/$/, '');
+  return ['home', 'pricing'].includes(normalized)
+    ? `/public/ninjamation/${normalized}`
+    : null;
+}
+
 function isSsoCallbackPath(pathname: string): boolean {
   return pathname === '/sso' || pathname.startsWith('/sso/');
 }
@@ -187,7 +201,7 @@ function canonicalizeLegacyAppPath(
   context: ResolvedOperatorOSModuleContext,
 ): NextResponse | null {
   if (req.nextUrl.pathname !== '/app') return null;
-  if (!context.isOperatorOSHost || context.surface === 'auth' || context.surface === 'api') return null;
+  if (!context.isOperatorOSHost || (context.surface !== 'root' && context.surface !== 'app')) return null;
 
   // Local development still mounts the console at /app. Production aliases
   // never inspect or forward next/return/redirect parameters: the only target
@@ -416,6 +430,24 @@ export async function middleware(req: NextRequest) {
   if (context.module?.slug === 'pulsedesk') {
     const destination = pulseDeskPublicDestination(pathname);
     if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));
+  }
+  if (context.module?.slug === 'ninja-launch-kit') {
+    const destination = ninjaLaunchKitPublicDestination(pathname);
+    if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));
+    if (pathname === '/login' || pathname === '/signup') {
+      const mode = pathname === '/signup' ? '&mode=register' : '';
+      const next = encodeURIComponent('https://ninjalaunchkit.operatoros.net/dashboard');
+      return withAuthSecurityHeaders(NextResponse.redirect(new URL(buildPublicUrl(`/login?next=${next}${mode}`, 'root')), 307));
+    }
+  }
+  if (context.module?.slug === 'ninjamation') {
+    const destination = ninjamationPublicDestination(pathname);
+    if (destination) return withAuthSecurityHeaders(rewriteTo(destination, req));
+    if (pathname === '/login' || pathname === '/signup') {
+      const mode = pathname === '/signup' ? '&mode=register' : '';
+      const next = encodeURIComponent('https://ninjamation.operatoros.net/library');
+      return withAuthSecurityHeaders(NextResponse.redirect(new URL(buildPublicUrl(`/login?next=${next}${mode}`, 'root')), 307));
+    }
   }
 
   if (context.surface === 'auth' && pathname === '/') {

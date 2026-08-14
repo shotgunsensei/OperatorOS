@@ -1,49 +1,49 @@
-# StudyForge AI Phase 11C migration and cutover
+# StudyForge AI Phase 33 migration and cutover
 
-Status: deterministic dry-run planning only. No production apply, source write
-freeze, deployment or traffic cutover is authorized.
+Status: source/local implementation only. No production apply, source write
+freeze, provider activation, deployment, or traffic cutover is authorized.
 
-## Source and mappings
+## Pinned source and target
 
-- Source commit:
-  `a607a9f34442b1d0f6bfffbf0293609529494825`
-- `folders` -> reviewed subject/course organization
-- `study_sets.notes` -> private source records
-- `study_sets` -> source plus deck/quiz/plan records
-- `flashcards` -> cards
-- `quiz_questions` -> questions
-- `quiz_attempts` -> attempts after OperatorOS user mapping
-- `study_sessions` -> plan sessions
-- `study_activity` -> recompute from accepted attempts, reviews and sessions
+- Source commit: `a607a9f34442b1d0f6bfffbf0293609529494825`.
+- Source remains read-only evidence under
+  `apps/modules/studyforge-ai/source/`.
+- Cumulative additive target: OperatorOS database release v42,
+  `studyforge_complete_product_tables`.
 
-Users, password hashes, sessions, Stripe events, subscriptions, child roles
-and admin authority are excluded.
+Authorized source rows map to OperatorOS users/tenants first, then folders,
+study sets and raw notes, complete generated artifacts, flashcard progress and
+sessions, quiz attempts, study-plan sessions, countdowns, and daily activity.
+Original source/output provenance, timestamps, archived state, and hashes must
+be retained. Generation must not be rerun during migration.
 
-## Repeatable dry run
+Users, password hashes, sessions, child roles, Stripe records, subscriptions,
+provider credentials, and child admin authority are never imported.
 
-Use:
+## Current no-apply planning path
+
+The existing commit-pinned dry-run planner remains the only imported-data path:
 
 ```powershell
 corepack pnpm import:studyforge:dry-run -- --file <authorized-export.json>
 ```
 
-or the tenant-authorized
-`POST /v1/modules/studyforge-ai/import/dry-run` route. Both require the pinned
-source commit and produce a stable export hash, counts, mappings, exclusions
-and blockers. No apply mode exists in Phase 11C.
+The equivalent tenant-authorized API dry run is
+`POST /v1/modules/studyforge-ai/import/dry-run`. It emits stable hashes, counts,
+mappings, exclusions, and blockers and has no production apply mode.
+No apply mode exists in the imported-data planner.
 
-## Future apply and cutover gate
+## Future authorized cutover
 
-1. Approve OperatorOS tenant/user mappings and freeze standalone writes.
-2. Record source commit, schema version and final export SHA-256.
-3. Back up OperatorOS using `docs/DATABASE_BACKUP_RESTORE.md`.
-4. Import in dependency order with stable source references and per-batch
-   transactions.
-5. Reconcile folders, sets, cards, questions, attempts, sessions, timestamps,
-   archived records and attachment byte hashes.
-6. Regenerate no content during migration; retain original source/output
-   provenance and require human review.
-7. Run tenant isolation, role denial, SSO, return, deep-link, logout,
-   persistence, AI-provider and health acceptance on the exact deployment.
-8. Decide cutover or restore to a new database and switch traffic. Never use a
-   destructive down migration.
+1. Freeze standalone writes and record source commit/schema/export SHA-256.
+2. Approve exact OperatorOS tenant and user ownership mappings.
+3. Back up and restore-test the target database.
+4. Apply cumulative release v42 through the supported release runner.
+5. Import in dependency order with stable source references and per-batch
+   transactions; do not regenerate content.
+6. Reconcile counts, foreign keys, owners, artifact/source hashes, attempts,
+   sessions, activity, archived/deleted state, and usage without double debit.
+7. Run deployed SSO, isolation, limits, generation, learning, export,
+   restart-persistence, mobile/accessibility, provider, and health acceptance.
+8. Promote only after an explicit owner decision. Roll back by restoring into
+   a new database and switching traffic; never use a destructive down migration.

@@ -151,7 +151,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'ninja-pool-hall',
     name: 'Ninja Pool Hall',
-    description: 'Companion engagement experience',
+    description: 'Deterministic Canvas 8-ball with practice, CPU, local and protected online play',
     category: 'support',
     commercialType: 'free',
     canonicalBaseUrl: 'https://ninja-pool-hall.operatoros.net',
@@ -231,7 +231,7 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
   {
     slug: 'callcommand-ai',
     name: 'CallCommand AI',
-    description: 'AI phone agent + call automation',
+    description: 'Secure MSP phone intake, ticket orchestration, and policy-gated automation',
     category: 'ai',
     commercialType: 'addon',
     canonicalBaseUrl: 'https://callcommand-ai.operatoros.net',
@@ -270,7 +270,10 @@ export const MODULE_CATALOG: readonly ModuleCatalogEntry[] = [
     envUrlKeys: ['OUTCALL_URL'],
     stripeAddonEnvKeys: ['STRIPE_PRICE_ADDON_OUTCALL'],
     internal: false,
-    defaultStatus: 'live',
+    // Phase 37: source recovery and a real provider lifecycle are hard
+    // activation gates. The existing reconstructed workload stays in the
+    // tree for evidence, but it must not be sold or launched as source parity.
+    defaultStatus: 'coming_soon',
     component: 'operations-deck',
   },
 ] as const;

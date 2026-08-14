@@ -1,3 +1,5 @@
+import { generateStudyForgeCompleteMaterial } from './studyforge-phase33.js';
+
 export interface AiCompletionRequest {
   systemPrompt: string;
   userPrompt: string;
@@ -121,7 +123,7 @@ export class MockAiProvider implements AiProvider {
     if (systemPrompt.includes('OPERATOROS_TORQUE_ASSIST_V1')) return 'torque_assist';
     if (systemPrompt.includes('OPERATOROS_BRANDFORGE_V1')) return 'brandforge';
     if (systemPrompt.includes('OPERATOROS_STUDYFORGE_V1')) return 'studyforge';
-    if (systemPrompt.includes('OPERATOROS_NINJA_LAUNCH_KIT_V1')) return 'ninja_launch_kit';
+    if (systemPrompt.includes('OPERATOROS_NINJA_LAUNCH_KIT')) return 'ninja_launch_kit';
     if (systemPrompt.includes('OPERATOROS_NINJAMATION_V1')) return 'ninjamation';
     if (systemPrompt.includes('summarize')) return 'summarizer';
     if (systemPrompt.includes('break down') || systemPrompt.includes('task')) return 'task_breakdown';
@@ -178,6 +180,21 @@ export class MockAiProvider implements AiProvider {
     }
     const source = String(input.source ?? '').trim();
     const type = String(input.type ?? 'deck');
+    if (type === 'complete_set') {
+      return JSON.stringify(generateStudyForgeCompleteMaterial({
+        notes: String(input.notes ?? source),
+        title: String(input.title ?? 'Study set'),
+        subject: String(input.subject ?? 'General'),
+        difficulty: ['easy', 'medium', 'hard'].includes(String(input.difficulty))
+          ? String(input.difficulty) as 'easy' | 'medium' | 'hard'
+          : 'medium',
+        examDate: typeof input.examDate === 'string' ? input.examDate : null,
+        maxFlashcards: typeof input.maxFlashcards === 'number' ? input.maxFlashcards : 60,
+        anchorDate: typeof input.anchorDate === 'string'
+          ? input.anchorDate
+          : new Date().toISOString().slice(0, 10),
+      }));
+    }
     const sentences = source
       .split(/(?<=[.!?])\s+/)
       .map((sentence) => sentence.trim())
@@ -219,6 +236,9 @@ export class MockAiProvider implements AiProvider {
       input = JSON.parse(userPrompt) as Record<string, unknown>;
     } catch {
       input = {};
+    }
+    if (input.deterministic && typeof input.deterministic === 'object') {
+      return JSON.stringify(input.deterministic);
     }
     const title = String(input.title ?? 'New launch').slice(0, 180);
     const audience = String(input.audience ?? 'the defined audience').slice(0, 300);

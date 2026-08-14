@@ -48,10 +48,22 @@ export function isModuleSessionPathAllowed(moduleId: string, rawUrl: string): bo
   if (fixed.has(path)) return true;
 
   const encodedModule = encodeURIComponent(moduleId);
-  return [
+  const directModulePath = [
     `/v1/modules/${encodedModule}`,
     `/api/modules/${encodedModule}`,
   ].some(prefix => path === prefix || path.startsWith(`${prefix}/`));
+  if (directModulePath) return true;
+
+  // Browser WebSocket clients cannot add X-Tenant-Id. Permit the same sealed
+  // module surface with tenant context in the path; tenant-auth still checks
+  // this value against the module session before any route handler runs.
+  const segments = path.split('/').filter(Boolean);
+  return segments.length >= 5
+    && (segments[0] === 'v1' || segments[0] === 'api')
+    && segments[1] === 'tenants'
+    && Boolean(segments[2])
+    && segments[3] === 'modules'
+    && segments[4] === encodedModule;
 }
 
 export async function hashPassword(password: string): Promise<string> {

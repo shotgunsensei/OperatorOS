@@ -8,11 +8,10 @@ import {
 } from '../lib/tenant-auth.js';
 import {
   createTorqueTokenPurchase,
+  getTorqueTokenPurchaseStatus,
   listTorqueTokenPackages,
   OperatorOsTokenBillingError,
   registerTorqueTokenWebhookHandler,
-  torqueTokenWebhookHandlerKey,
-  torqueTokenWebhookVerifier,
 } from '../lib/operatoros-token-billing.js';
 import {
   listTorqueAssistHistory,
@@ -30,7 +29,6 @@ import {
   getSharedAiProviderAdapter,
   ProviderDisabledError,
 } from '../lib/shared-provider-adapters.js';
-import { receiveWebhook } from '../lib/shared-webhooks.js';
 
 const readGuards = [requireTenantMember, requireTenantModuleAccess('torqueshed')];
 const writeGuards = [...readGuards, requireTenantModuleWriteAccess];
@@ -173,31 +171,21 @@ export async function registerTorqueAssistRoutes(app: FastifyInstance): Promise<
     },
   );
 
-  app.post('/v1/billing/torque-assist/webhook', async (request, reply) => {
-    try {
-      const rawBody = (request as any).rawBody;
-      if (!Buffer.isBuffer(rawBody) && typeof rawBody !== 'string') {
-        return reply.code(400).send({
-          error: 'Raw body unavailable for signature verification',
-          code: 'TORQUE_PAYMENT_RAW_BODY_REQUIRED',
+  app.get(
+    '/v1/modules/torqueshed/token-purchases/:id/status',
+    { preHandler: readGuards },
+    async (request, reply) => {
+      try {
+        return await getTorqueTokenPurchaseStatus({
+          tenantId: tenant(request),
+          userId: user(request),
+          purchaseId: torqueId((request.params as any).id, 'purchaseId', true)!,
         });
+      } catch (error) {
+        return sendError(reply, error);
       }
-      const received = await receiveWebhook({
-        rawBody,
-        headers: request.headers,
-        handlerKey: torqueTokenWebhookHandlerKey(),
-        verifier: torqueTokenWebhookVerifier(),
-        maxAttempts: 5,
-      });
-      return reply.code(received.status === 'processed' ? 200 : 202).send({
-        received: true,
-        duplicate: received.duplicate,
-        status: received.status,
-      });
-    } catch (error) {
-      return sendError(reply, error);
-    }
-  });
+    },
+  );
 
   app.get(
     '/v1/modules/torqueshed/token-ledger',

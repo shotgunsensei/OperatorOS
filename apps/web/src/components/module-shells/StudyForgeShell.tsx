@@ -3,11 +3,12 @@
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BarChart3, BookOpen, Brain, CalendarDays, CheckCircle2, Download,
-  FileText, GraduationCap, Library, RefreshCw, Sparkles, Upload,
+  FileText, GraduationCap, Layers3, Library, RefreshCw, Sparkles, Upload,
 } from 'lucide-react';
 import { moduleShellApi } from '@/lib/auth';
 import { cardStyle, fontSize, radius, semantic, space } from '@/lib/design-tokens';
 import { ShellLiveBadge } from './ShellChrome';
+import StudyForgeCompleteWorkspace from './StudyForgeCompleteWorkspace';
 
 type Item = Record<string, any>;
 type Workspace = {
@@ -22,7 +23,12 @@ type Workspace = {
 };
 
 const sections = [
-  ['studyforge-dashboard', 'Dashboard', BarChart3],
+  ['studyforge-dashboard', 'Learning home', GraduationCap],
+  ['studyforge-sets', 'Study sets', Layers3],
+  ['studyforge-new-set', 'Generate set', Sparkles],
+  ['studyforge-exams', 'Exam countdowns', CalendarDays],
+  ['studyforge-account', 'Plan & usage', CheckCircle2],
+  ['studyforge-phase11c-dashboard', 'Legacy dashboard', BarChart3],
   ['studyforge-subjects', 'Subjects', GraduationCap],
   ['studyforge-sources', 'Sources', FileText],
   ['studyforge-studio', 'AI Studio', Sparkles],
@@ -33,7 +39,7 @@ const sections = [
 ] as const;
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', boxSizing: 'border-box', background: '#0b1020', color: semantic.text,
+  width: '100%', minWidth: 0, boxSizing: 'border-box', background: '#0b1020', color: semantic.text,
   border: `1px solid ${semantic.border}`, borderRadius: radius.sm, padding: '10px 12px',
 };
 const buttonStyle: React.CSSProperties = {
@@ -49,7 +55,7 @@ function key(prefix: string) {
   return `${prefix}:${Date.now()}:${crypto.randomUUID()}`;
 }
 
-export default function StudyForgeShell() {
+export default function StudyForgeShell({ routePath = '' }: { baseUrl?: string; routePath?: string }) {
   const [data, setData] = useState<Workspace | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -94,7 +100,7 @@ export default function StudyForgeShell() {
       id="studyforge-workspace"
       data-testid="shell-studyforge-ai"
       data-evidence="persisted_records_only"
-      style={{ minHeight: '100vh', background: 'radial-gradient(circle at 85% 0%,rgba(124,58,237,.18),transparent 35%),#070a13', color: semantic.text, padding: `0 ${space.xxl}px ${space.xxl}px` }}
+      style={{ minHeight: '100vh', overflowX: 'clip', background: 'radial-gradient(circle at 85% 0%,rgba(124,58,237,.18),transparent 35%),#070a13', color: semantic.text, padding: `0 clamp(16px, 4vw, ${space.xxl}px) ${space.xxl}px` }}
     >
       <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: `${space.xl}px 0`, flexWrap: 'wrap' }}>
         <div style={{ width: 44, height: 44, display: 'grid', placeItems: 'center', borderRadius: 14, background: 'linear-gradient(135deg,#7c3aed,#2563eb)' }}>
@@ -119,6 +125,7 @@ export default function StudyForgeShell() {
       </nav>
 
       {error && <div role="alert" data-testid="studyforge-error" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger, marginBottom: space.lg }}>{error}</div>}
+      <StudyForgeCompleteWorkspace routePath={routePath} />
       {!data ? <Panel id="studyforge-loading" title="Loading workspace"><p style={{ color: semantic.textMuted }}>Loading your courses and study progress…</p></Panel> : (
         <>
           <Dashboard data={data} />
@@ -163,7 +170,7 @@ function Dashboard({ data }: { data: Workspace }) {
     ['Completed sessions', data.dashboard.completedSessions],
   ];
   return (
-    <Panel id="studyforge-dashboard" title="Learning command dashboard" description="See current subjects, study activity, quiz performance, and upcoming reviews.">
+    <Panel id="studyforge-phase11c-dashboard" title="Learning command dashboard" description="See current subjects, study activity, quiz performance, and upcoming reviews.">
       <Grid>{metrics.map(([label, value]) => <article key={label} style={{ ...cardStyle, borderTop: '3px solid #7c3aed' }}><div style={{ color: semantic.textMuted, fontSize: 13 }}>{label}</div><strong style={{ display: 'block', fontSize: 28, marginTop: 8 }}>{value}</strong></article>)}</Grid>
     </Panel>
   );
@@ -181,7 +188,7 @@ function Subjects({ data, mutate, busy }: { data: Workspace; mutate: (action: ()
   };
   return (
     <Panel id="studyforge-subjects" title="Subjects and courses" description="Organize source material, flashcard decks, quizzes, and study plans by subject.">
-      <form onSubmit={submit} style={{ ...cardStyle, display: 'grid', gridTemplateColumns: 'minmax(180px,2fr) minmax(140px,1fr) auto', gap: 10, marginBottom: space.md }}>
+      <form onSubmit={submit} style={{ ...cardStyle, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(180px,100%),1fr))', gap: 10, marginBottom: space.md }}>
         <input data-testid="input-studyforge-subject-name" aria-label="Subject name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={160} placeholder="Network Fundamentals" style={inputStyle} />
         <input aria-label="Course code" value={code} onChange={(e) => setCode(e.target.value)} maxLength={80} placeholder="NET-201" style={inputStyle} />
         <button data-testid="button-studyforge-subject-create" disabled={busy} style={buttonStyle}>Add subject</button>
@@ -221,11 +228,11 @@ function Sources({ data, mutate, busy }: { data: Workspace; mutate: (action: () 
   return (
     <Panel id="studyforge-sources" title="Authorized sources" description="Private notes and approved documents stay protected, with no public links or fabricated attribution.">
       <form onSubmit={createNote} style={{ ...cardStyle, display: 'grid', gap: 10, marginBottom: space.md }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
-          <input data-testid="input-studyforge-source-title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} placeholder="Source title" style={inputStyle} />
-          <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} style={inputStyle}><option value="">No subject</option>{data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(180px,100%),1fr))', gap: 10 }}>
+          <input data-testid="input-studyforge-source-title" aria-label="Source title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} placeholder="Source title" style={inputStyle} />
+          <select aria-label="Source subject" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} style={inputStyle}><option value="">No subject</option>{data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select>
         </div>
-        <textarea data-testid="textarea-studyforge-source-body" value={body} onChange={(e) => setBody(e.target.value)} minLength={8} maxLength={100000} rows={5} placeholder="Paste private notes or source text…" style={inputStyle} />
+        <textarea data-testid="textarea-studyforge-source-body" aria-label="Source content" value={body} onChange={(e) => setBody(e.target.value)} minLength={8} maxLength={100000} rows={5} placeholder="Paste private notes or source text…" style={inputStyle} />
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button data-testid="button-studyforge-source-create" disabled={busy || body.trim().length < 8} style={buttonStyle}>Save note source</button>
           <label style={{ ...subtleButton, display: 'inline-flex', alignItems: 'center', gap: 7 }}><Upload size={14} /> Select document<input type="file" accept=".txt,.csv,.json,text/plain,text/csv,application/json" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ display: 'none' }} /></label>
@@ -254,13 +261,13 @@ function Studio({ data, mutate, busy }: { data: Workspace; mutate: (action: () =
     <Panel id="studyforge-studio" title="Source-grounded AI studio" description="AI creates review-ready drafts while every quoted excerpt is checked against your sources before saving.">
       <form onSubmit={submit} style={{ ...cardStyle, display: 'grid', gap: 10 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10 }}>
-          <select data-testid="select-studyforge-generation-source" value={sourceId} onChange={(e) => setSourceId(e.target.value)} required style={inputStyle}><option value="">Select source</option>{data.sources.map((source) => <option key={source.id} value={source.id}>{source.title}</option>)}</select>
-          <select value={subjectId} onChange={(e) => setSubjectId(e.target.value)} style={inputStyle}><option value="">Use source subject</option>{data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select>
-          <select data-testid="select-studyforge-generation-type" value={type} onChange={(e) => setType(e.target.value as any)} style={inputStyle}><option value="deck">Flashcard deck</option><option value="quiz">Quiz</option><option value="study_plan">Study plan</option></select>
+          <select data-testid="select-studyforge-generation-source" aria-label="Generation source" value={sourceId} onChange={(e) => setSourceId(e.target.value)} required style={inputStyle}><option value="">Select source</option>{data.sources.map((source) => <option key={source.id} value={source.id}>{source.title}</option>)}</select>
+          <select aria-label="Generation subject" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} style={inputStyle}><option value="">Use source subject</option>{data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select>
+          <select data-testid="select-studyforge-generation-type" aria-label="Generation type" value={type} onChange={(e) => setType(e.target.value as any)} style={inputStyle}><option value="deck">Flashcard deck</option><option value="quiz">Quiz</option><option value="study_plan">Study plan</option></select>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
-          <input data-testid="input-studyforge-generation-title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} placeholder="Material title" style={inputStyle} />
-          <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} style={inputStyle} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(180px,100%),1fr))', gap: 10 }}>
+          <input data-testid="input-studyforge-generation-title" aria-label="Material title" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={200} placeholder="Material title" style={inputStyle} />
+          <input aria-label="Study plan target date" type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} style={inputStyle} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <button data-testid="button-studyforge-generation-create" disabled={busy || !sourceId} style={buttonStyle}><Sparkles size={14} /> Generate draft</button>
@@ -364,7 +371,7 @@ function QuestionEditor({ question, busy, mutate }: {
     <div data-testid={`question-studyforge-${question.id}`} style={{ background: '#0b1020', borderRadius: 8, padding: 12, marginBottom: 10 }}>
       {editing ? <div style={{ display: 'grid', gap: 8 }}>
         <input aria-label="Quiz question" value={prompt} onChange={(event) => setPrompt(event.target.value)} style={inputStyle} />
-        {choices.map((choice, index) => <div key={index} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'center', gap: 8 }}>
+        {choices.map((choice, index) => <div key={index} style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0,1fr)', alignItems: 'center', gap: 8 }}>
           <input aria-label={`Correct choice ${index + 1}`} type="radio" checked={correctIndex === index} onChange={() => setCorrectIndex(index)} />
           <input aria-label={`Choice ${index + 1}`} value={choice} onChange={(event) => setChoices((current) => current.map((value, choiceIndex) => choiceIndex === index ? event.target.value : value))} style={inputStyle} />
         </div>)}
@@ -419,7 +426,7 @@ function PlanSessionEditor({ session, editable, published, busy, mutate }: {
       {editing ? <div style={{ display: 'grid', gap: 8 }}>
         <input aria-label="Study session title" value={title} onChange={(event) => setTitle(event.target.value)} style={inputStyle} />
         <textarea aria-label="Study session focus" value={focus} onChange={(event) => setFocus(event.target.value)} rows={2} style={inputStyle} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(160px,100%),1fr))', gap: 8 }}>
           <input aria-label="Study session date" type="date" value={scheduledFor} onChange={(event) => setScheduledFor(event.target.value)} style={inputStyle} />
           <input aria-label="Study session minutes" type="number" min={5} max={480} value={minutes} onChange={(event) => setMinutes(Number(event.target.value))} style={inputStyle} />
         </div>

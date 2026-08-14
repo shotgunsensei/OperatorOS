@@ -98,7 +98,10 @@ export function sourceFingerprint(sourceRoot) {
   const hash = createHash('sha256');
   let totalBytes = 0;
   for (const file of files) {
-    const bytes = readFileSync(file);
+    const sourceBytes = readFileSync(file);
+    const bytes = new Set(['.jpg', '.jpeg', '.png', '.pdf']).has(extname(file).toLowerCase())
+      ? sourceBytes
+      : Buffer.from(sourceBytes.toString('utf8').replaceAll('\r\n', '\n'), 'utf8');
     const pathBytes = Buffer.from(normalizePath(relative(sourceRoot, file)), 'utf8');
     const length = Buffer.alloc(8);
     length.writeBigUInt64BE(BigInt(bytes.length));
@@ -109,7 +112,7 @@ export function sourceFingerprint(sourceRoot) {
     totalBytes += bytes.length;
   }
   return {
-    algorithm: 'sha256(path NUL uint64be(size) content)',
+    algorithm: 'sha256(path NUL uint64be(canonical-size) canonical-content; text CRLF normalized to LF)',
     treeSha256: hash.digest('hex'),
     fileCount: files.length,
     totalBytes,
