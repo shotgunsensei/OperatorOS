@@ -209,7 +209,7 @@ flush and refresh races. Root authentication gates preserve protected deep
 links, and journal, parts, media, diagnostic, live-bay, and marketplace
 mutations retain stable idempotency identities.
 
-Local native/API typechecks, focused lint, 3/3 queue tests, 2/2 static release
+Local native/API typechecks, 5/5 queue/session-transition tests, 2/2 static release
 contracts, Android prebuild, dual Android/iOS Hermes export, and the 3/3
 disposable-PostgreSQL native auth/tenant/revocation journey pass. GitHub run
 `31813537047` recorded an Android infrastructure failure after the four-ABI APK

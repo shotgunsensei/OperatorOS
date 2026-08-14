@@ -53,7 +53,7 @@ The imported source exposes eight route/layout files: root layout, SSO return, t
 | Gate | Result |
 | --- | --- |
 | Mobile TypeScript | PASS |
-| Mobile unit queue/reconciliation tests | PASS (3/3) |
+| Mobile unit queue/reconciliation/session-transition tests | PASS (5/5) |
 | Expo SDK dependency compatibility | PASS |
 | Expo public configuration / no-placeholder validation | PASS |
 | Android and iOS production JS/Hermes bundles | PASS |

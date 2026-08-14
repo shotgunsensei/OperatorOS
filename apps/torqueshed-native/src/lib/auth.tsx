@@ -6,6 +6,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { nativeConfig } from './config';
+import { SessionTransitionCoordinator } from './session-transition';
 
 const ACCESS_KEY = 'torqueshed.native.access';
 const REFRESH_KEY = 'torqueshed.native.refresh';
@@ -30,6 +31,7 @@ type SessionMeta = Omit<NativeSession, 'accessToken' | 'refreshToken'>;
 type PendingRevocation = { refreshToken: string; deviceId: string };
 let revocationFlushInFlight: Promise<void> | null = null;
 let revocationOperationTail: Promise<void> = Promise.resolve();
+const sessionTransitions = new SessionTransitionCoordinator();
 type AuthContextValue = {
   session: NativeSession | null;
   loading: boolean;
@@ -151,6 +153,7 @@ async function readSession(): Promise<NativeSession | null> {
   try {
     return { ...(JSON.parse(metaRaw) as SessionMeta), accessToken, refreshToken };
   } catch {
+    sessionTransitions.advance();
     await clearSession();
     return null;
   }
@@ -184,7 +187,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }), []);
 
   const refresh = useCallback(async (): Promise<string | null> => {
-    const current = await readSession();
+    const snapshot = await sessionTransitions.serialize(async () => ({
+      current: await readSession(),
+      generation: sessionTransitions.generation,
+    }));
+    const { current } = snapshot;
     if (!current) return null;
     const id = await deviceId();
     try {
@@ -192,20 +199,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refreshToken: current.refreshToken,
         deviceId: id,
       });
-      if (await SecureStore.getItemAsync(REFRESH_KEY) !== current.refreshToken) {
+      const installed = await sessionTransitions.serialize(async () => {
+        if (!sessionTransitions.isCurrent(snapshot.generation)) return false;
+        if (await SecureStore.getItemAsync(REFRESH_KEY) !== current.refreshToken) return false;
+        await writeSession(next);
+        setSession(next);
+        return true;
+      });
+      if (!installed) {
         const superseded = { refreshToken: next.refreshToken, deviceId: id };
         if (await sendRevocation(superseded) === 'retry') await queuePendingRevocation(superseded);
         return null;
       }
-      await writeSession(next);
-      setSession(next);
       return next.accessToken;
     } catch {
-      const activeRefreshToken = await SecureStore.getItemAsync(REFRESH_KEY).catch(() => null);
-      if (activeRefreshToken === current.refreshToken) {
+      await sessionTransitions.serialize(async () => {
+        const activeRefreshToken = await SecureStore.getItemAsync(REFRESH_KEY).catch(() => null);
+        if (!sessionTransitions.isCurrent(snapshot.generation) || activeRefreshToken !== current.refreshToken) return;
+        sessionTransitions.advance();
         await clearSession();
         setSession(null);
-      }
+      });
       return null;
     }
   }, []);
@@ -243,18 +257,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       codeVerifier: verifier,
       deviceId: id,
     });
-    await writeSession(next);
-    setSession(next);
+    await sessionTransitions.serialize(async () => {
+      sessionTransitions.advance();
+      await writeSession(next);
+      setSession(next);
+    });
   }, []);
 
   const logout = useCallback(async () => {
-    const current = await readSession();
-    if (current) {
-      const revocation = { refreshToken: current.refreshToken, deviceId: await deviceId() };
-      if (await sendRevocation(revocation) === 'retry') await queuePendingRevocation(revocation);
-    }
-    await clearSession();
-    setSession(null);
+    const revocation = await sessionTransitions.serialize(async () => {
+      sessionTransitions.advance();
+      const current = await readSession();
+      const entry = current ? { refreshToken: current.refreshToken, deviceId: await deviceId() } : null;
+      await clearSession();
+      setSession(null);
+      return entry;
+    });
+    if (revocation && await sendRevocation(revocation) === 'retry') await queuePendingRevocation(revocation);
   }, []);
 
   const value = useMemo(() => ({ session, loading, login, logout, refresh }), [session, loading, login, logout, refresh]);
