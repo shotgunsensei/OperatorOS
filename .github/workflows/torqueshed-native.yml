@@ -82,9 +82,7 @@ jobs:
         run: ./apps/torqueshed-native/android/gradlew -p apps/torqueshed-native/android assembleDebug -PreactNativeArchitectures=x86_64
       - name: Enable KVM acceleration
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
+          sudo chmod 0666 /dev/kvm
           test -r /dev/kvm && test -w /dev/kvm
       - name: Smoke Android app plus deep link
         uses: reactivecircus/android-emulator-runner@v2
