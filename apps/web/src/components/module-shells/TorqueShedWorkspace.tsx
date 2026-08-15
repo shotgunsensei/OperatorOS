@@ -52,7 +52,14 @@ function errorText(error: unknown): string {
   const status = Number(row.status || 0);
   const messages: Record<string, string> = {
     TORQUE_ASSIST_BALANCE_EXHAUSTED: 'Torque Assist credits are insufficient. Review the balance or buy a credit pack before retrying.',
+    TORQUE_CREDIT_PURCHASES_DISABLED: 'Credit purchases are temporarily unavailable. Nothing was charged; an administrator must reopen the purchase gate.',
     TORQUE_PAYMENT_PROVIDER_DISABLED: 'Credit checkout is temporarily unavailable. Nothing was charged; contact an administrator.',
+    TORQUE_PAYMENT_MODE_MISMATCH: 'Credit checkout is unavailable because its payment environment is not validated. Nothing was charged.',
+    TORQUE_CATALOG_UNAVAILABLE: 'The credit-pack catalog is unavailable. Nothing was charged; contact an administrator.',
+    TORQUE_WEBHOOK_NOT_READY: 'Credit checkout is unavailable while payment confirmation is being repaired. Nothing was charged.',
+    TORQUE_DATABASE_RELEASE_REQUIRED: 'Credit checkout is unavailable while billing storage is being updated. Nothing was charged.',
+    TORQUE_RETURN_ROUTE_INVALID: 'Credit checkout cannot start because the safe return route is unavailable. Nothing was charged.',
+    TORQUE_RELEASE_IDENTITY_MISMATCH: 'Credit checkout is unavailable while the deployed release is being verified. Nothing was charged.',
     TORQUE_ASSIST_PROVIDER_DISABLED: 'Torque Assist is unavailable until an administrator connects the AI provider.',
     TORQUE_ASSIST_PROVIDER_CIRCUIT_OPEN: 'Torque Assist is recovering from a provider outage. Wait one minute, then retry the same request.',
     TORQUE_ASSIST_RATE_LIMITED: 'Torque Assist is rate limited. Wait one minute, then retry the same request.',
@@ -1592,7 +1599,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
     history[0]?.responseJson ??
     null) as TorqueAssistResult | null;
   const providerDisabled = status?.provider.state === 'disabled';
-  const paymentsDisabled = status?.payments.state === 'disabled';
+  const paymentsDisabled = status ? !status.purchaseReadiness.ready : true;
 
   async function runAssist() {
     const requestKey = activeRequestKey || key('torque-assist');
@@ -1890,9 +1897,17 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
             </button>
           ))}
           {paymentsDisabled && (
-            <span style={{ color: semantic.accentDanger }}>
-              Credit purchases are temporarily unavailable. Nothing will be charged. Contact your organization administrator for help.
-            </span>
+            <div style={{ color: semantic.accentDanger }} data-testid="torque-credit-purchase-readiness">
+              <strong>
+                {status?.purchaseReadiness.userMessage
+                  ?? 'Credit purchase readiness is being checked. Nothing will be charged.'}
+              </strong>
+              {status?.purchaseReadiness.code && (
+                <div style={{ color: semantic.textMuted, fontSize: fontSize.sm, marginTop: 4 }}>
+                  {status.purchaseReadiness.code} · {status.purchaseReadiness.administratorAction}
+                </div>
+              )}
+            </div>
           )}
           {history.slice(0, 5).map((item) => (
             <div

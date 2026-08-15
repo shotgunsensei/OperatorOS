@@ -1,5 +1,26 @@
 # OperatorOS implementation status
 
+## Phase 41 TorqueShed revenue containment - SOURCE IMPLEMENTED / DEPLOYED TRANSACTION TRUTH BLOCKED (2026-08-15)
+
+TorqueShed credit checkout now has a fail-closed composite readiness contract
+covering explicit enablement, Stripe configuration and exact mode, durable
+catalog validation, canonical webhook topology/events, required billing
+tables, safe module return URL, and release identity. Blocked attempts stop
+before purchase-intent/Checkout creation, write a redacted audit event, and
+return stable customer/admin diagnostics with request references. The UI obeys
+this server state and cannot claim credits before the authenticated purchase
+status and append-only ledger reach `credited`.
+
+Read-only public evidence identifies deployed commit `6de0648da6d05423ab3bce8cc19460d6ff920d30`,
+build `31d4258255b052bf32692d89`, and database release v44; source began at
+`973885f594f7e66c1ab5c1048d2da7360ad6b825` with v48. The deployed code contains
+the canonical webhook hotfix and still uses inline `price_data`. The new
+reported no-charge attempt has no supplied purchase/provider reference and
+cannot be classified from Git; production/Stripe/database read credentials are
+absent. No charge, credit, refund, replay, reconciliation apply, deployment, or
+production mutation occurred. See
+`docs/phase-41/TORQUESHED-REVENUE-INCIDENT-REPORT.md`.
+
 ## Phase 40 certification - NOT CERTIFIED / NO DEPLOYMENT (2026-08-14)
 
 The exact candidate `4c24d818f5108aa0d049241c7ae386ae7787a211`

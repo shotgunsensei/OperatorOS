@@ -121,6 +121,9 @@ test('all readiness profiles pass with live shared-runtime providers', () => {
     STRIPE_WEBHOOK_ENDPOINT_URL: 'https://api.operatoros.net/v1/billing/webhook',
     STRIPE_WEBHOOK_EVENTS: 'checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired,payment_intent.payment_failed,charge.refunded,charge.dispute.created,charge.dispute.closed',
     STRIPE_EXPECTED_ACCOUNT_ID: 'acct_testplaceholder',
+    TORQUESHED_CREDIT_PURCHASES_ENABLED: '1',
+    TORQUESHED_CREDIT_PURCHASES_MODE: 'live',
+    TORQUESHED_CREDIT_PURCHASES_EXPECTED_RELEASE_COMMIT: 'a'.repeat(40),
     STRIPE_PRICE_TRADEFLOWKIT_MONTHLY: 'price_tradeflowkit',
     STRIPE_PRICE_PULSEDESK_MONTHLY: 'price_pulsedesk',
     STRIPE_PRICE_TECHDECK_MONTHLY: 'price_techdeck',
@@ -161,6 +164,37 @@ test('preflight output contains names and messages but never secret values', () 
   assert.match(output, /STRIPE_SECRET_KEY/);
   assert.match(output, /STRIPE_WEBHOOK_SECRET/);
   assert.doesNotMatch(output, new RegExp(secret));
+});
+
+test('revenue preflight requires the TorqueShed kill switch, mode, and release pin', () => {
+  const report = preflight.evaluateProductionEnvironment({
+    ...coreEnv,
+    STRIPE_MODE: 'live',
+    STRIPE_SECRET_KEY: 'sk_live_test_placeholder',
+    STRIPE_WEBHOOK_SECRET: 'whsec_test_placeholder',
+    STRIPE_WEBHOOK_ENDPOINT_URL: 'https://api.operatoros.net/v1/billing/webhook',
+    STRIPE_WEBHOOK_EVENTS: 'checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired,payment_intent.payment_failed,charge.refunded,charge.dispute.created,charge.dispute.closed',
+    STRIPE_EXPECTED_ACCOUNT_ID: 'acct_testplaceholder',
+    STRIPE_PRICE_TRADEFLOWKIT_MONTHLY: 'price_tradeflowkit',
+    STRIPE_PRICE_PULSEDESK_MONTHLY: 'price_pulsedesk',
+    STRIPE_PRICE_TECHDECK_MONTHLY: 'price_techdeck',
+    STRIPE_PRICE_COMPANION_MODULE_MONTHLY: 'price_companion',
+    STRIPE_PRICE_ADDITIONAL_SEAT_MONTHLY: 'price_seat',
+    TORQUESHED_CREDIT_PURCHASES_ENABLED: '0',
+    TORQUESHED_CREDIT_PURCHASES_MODE: 'test',
+    TORQUESHED_CREDIT_PURCHASES_EXPECTED_RELEASE_COMMIT: 'short',
+  }, ['core', 'revenue']);
+  assert.equal(report.ok, false);
+  assert.deepEqual(
+    report.issues
+      .filter((issue: { name: string }) => issue.name.startsWith('TORQUESHED_'))
+      .map((issue: { name: string }) => issue.name),
+    [
+      'TORQUESHED_CREDIT_PURCHASES_ENABLED',
+      'TORQUESHED_CREDIT_PURCHASES_MODE',
+      'TORQUESHED_CREDIT_PURCHASES_EXPECTED_RELEASE_COMMIT',
+    ],
+  );
 });
 
 test('CallCommand accepts a bound Replit connector without copied Twilio secrets', () => {

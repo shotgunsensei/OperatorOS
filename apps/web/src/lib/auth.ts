@@ -1115,6 +1115,16 @@ export interface TorqueAssistResponse {
 export interface TorqueAssistStatus {
   provider: { name: string; state: 'configured' | 'test' | 'disabled' };
   payments: { name: string; state: 'configured' | 'test' | 'disabled' };
+  purchaseReadiness: {
+    ready: boolean;
+    code: string;
+    userMessage: string;
+    retryable: boolean;
+    administratorAction: string;
+    providerMode: 'test' | 'live' | 'disabled';
+    catalogVersion: string | null;
+    checks: Array<{ key: string; ready: boolean; code: string }>;
+  };
   balance: number;
   packages: Array<{
     key: string;

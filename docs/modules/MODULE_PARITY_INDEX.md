@@ -1,5 +1,17 @@
 # OperatorOS module parity index
 
+## Phase 41 TorqueShed revenue-integrity overlay
+
+TorqueShed credit checkout is source-contained behind a server-authoritative
+composite readiness gate. The existing inline Stripe `price_data` path is
+classified unavailable outside deterministic disposable tests, so production
+purchase creation remains disabled until Phase 42 supplies a validated durable
+catalog. Canonical signed webhook and append-only settlement behavior remain
+preserved. Pure/static/preflight evidence passes; database/browser and exact
+reported-attempt production truth remain open and no state-5 promotion is
+claimed. Exact evidence is in
+`docs/phase-41/TORQUESHED-REVENUE-INCIDENT-REPORT.md`.
+
 ## Current Phase 40 certification overlay - NOT CERTIFIED / RELEASE BLOCKED (2026-08-14)
 
 The clean-candidate compiler reports 7,396 capabilities: 3,515 native, 2,432

@@ -19,6 +19,10 @@ import {
   type WebhookVerifier,
 } from './shared-webhooks.js';
 import { torqueTokenPackage, TORQUE_TOKEN_PACKAGES } from './torque-assist-domain.js';
+import {
+  getTorqueCreditPurchaseReadiness,
+  type TorqueCreditPurchaseReadiness,
+} from './torque-credit-readiness.js';
 
 const HANDLER_KEY = 'operatoros.torque-assist.token-purchase.v1';
 
@@ -27,6 +31,10 @@ export class OperatorOsTokenBillingError extends Error {
     message: string,
     readonly code: string,
     readonly statusCode = 400,
+    readonly diagnostics?: Pick<
+      TorqueCreditPurchaseReadiness,
+      'userMessage' | 'retryable' | 'administratorAction' | 'checks'
+    >,
   ) {
     super(message);
     this.name = 'OperatorOsTokenBillingError';
@@ -85,6 +93,17 @@ export function listTorqueTokenPackages() {
   return TORQUE_TOKEN_PACKAGES.map((item) => ({ ...item }));
 }
 
+export async function torqueTokenPurchaseReadiness(): Promise<TorqueCreditPurchaseReadiness> {
+  let baseUrl: string | null = null;
+  try {
+    baseUrl = (await torqueShedModule()).baseUrl;
+  } catch {
+    // The composite readiness result owns the safe unavailable state. Do not
+    // expose registry or database details through this customer endpoint.
+  }
+  return getTorqueCreditPurchaseReadiness({ moduleBaseUrl: baseUrl });
+}
+
 export async function getTorqueTokenPurchaseStatus(input: {
   tenantId: string;
   userId: string;
@@ -135,6 +154,29 @@ export async function createTorqueTokenPurchase(input: {
 }) {
   const selectedPackage = torqueTokenPackage(input.packageKey);
   const module = await torqueShedModule();
+  const readiness = await getTorqueCreditPurchaseReadiness({ moduleBaseUrl: module.baseUrl });
+  if (!readiness.ready) {
+    await writeAudit(
+      {
+        actorUserId: input.userId,
+        tenantId: input.tenantId,
+        targetType: 'operatoros_token_purchase',
+        targetId: null,
+        action: 'token_purchase_readiness_blocked',
+        after: {
+          code: readiness.code,
+          checks: readiness.checks.map((check) => ({ key: check.key, ready: check.ready })),
+        },
+      },
+      input.request,
+    );
+    throw new OperatorOsTokenBillingError(
+      readiness.userMessage,
+      readiness.code,
+      503,
+      readiness,
+    );
+  }
   const testMode = isOperatorOSDeterministicProviderTestEnvironment();
   const stripeMode = getStripeRuntimeMode();
   if (!testMode && stripeMode === 'disabled') {

@@ -152,7 +152,10 @@ function checkRevenue(env, issues) {
   }
   requirePresent(env, issues, 'revenue', [
     'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_WEBHOOK_ENDPOINT_URL',
-    'STRIPE_WEBHOOK_EVENTS', 'STRIPE_EXPECTED_ACCOUNT_ID', ...REVENUE_PRICE_VARS,
+    'STRIPE_WEBHOOK_EVENTS', 'STRIPE_EXPECTED_ACCOUNT_ID',
+    'TORQUESHED_CREDIT_PURCHASES_ENABLED', 'TORQUESHED_CREDIT_PURCHASES_MODE',
+    'TORQUESHED_CREDIT_PURCHASES_EXPECTED_RELEASE_COMMIT',
+    ...REVENUE_PRICE_VARS,
   ]);
   if (isPresent(env, 'STRIPE_SECRET_KEY') && !env.STRIPE_SECRET_KEY.startsWith('sk_live_')) {
     addIssue(issues, 'revenue', 'STRIPE_SECRET_KEY', 'must be a live Stripe secret key');
@@ -165,6 +168,18 @@ function checkRevenue(env, issues) {
   }
   if (isPresent(env, 'STRIPE_EXPECTED_ACCOUNT_ID') && !/^acct_[A-Za-z0-9]+$/.test(env.STRIPE_EXPECTED_ACCOUNT_ID)) {
     addIssue(issues, 'revenue', 'STRIPE_EXPECTED_ACCOUNT_ID', 'must be the live Stripe account ID');
+  }
+  if (isPresent(env, 'TORQUESHED_CREDIT_PURCHASES_ENABLED') && env.TORQUESHED_CREDIT_PURCHASES_ENABLED !== '1') {
+    addIssue(issues, 'revenue', 'TORQUESHED_CREDIT_PURCHASES_ENABLED', 'must equal 1 only after every TorqueShed revenue readiness gate passes');
+  }
+  if (isPresent(env, 'TORQUESHED_CREDIT_PURCHASES_MODE') && env.TORQUESHED_CREDIT_PURCHASES_MODE !== env.STRIPE_MODE) {
+    addIssue(issues, 'revenue', 'TORQUESHED_CREDIT_PURCHASES_MODE', 'must exactly match STRIPE_MODE');
+  }
+  if (
+    isPresent(env, 'TORQUESHED_CREDIT_PURCHASES_EXPECTED_RELEASE_COMMIT')
+    && !/^[0-9a-f]{40}$/.test(env.TORQUESHED_CREDIT_PURCHASES_EXPECTED_RELEASE_COMMIT)
+  ) {
+    addIssue(issues, 'revenue', 'TORQUESHED_CREDIT_PURCHASES_EXPECTED_RELEASE_COMMIT', 'must be the exact reviewed lowercase Git commit');
   }
   if (isPresent(env, 'STRIPE_WEBHOOK_EVENTS')) {
     const configuredEvents = new Set(env.STRIPE_WEBHOOK_EVENTS.split(',').map((value) => value.trim()).filter(Boolean));
