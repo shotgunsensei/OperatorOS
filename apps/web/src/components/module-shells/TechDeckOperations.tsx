@@ -13,7 +13,9 @@ import {
   type TechDeckWorkspaceResponse,
 } from '@/lib/auth';
 
-interface Props { tenantKey: string; canWrite: boolean; canApprove: boolean }
+export type TechDeckOperationsArea = 'inventory' | 'network' | 'lifecycle' | 'documentation' | 'runbooks' | 'evidence' | 'reports' | 'time';
+
+interface Props { tenantKey: string; canWrite: boolean; canApprove: boolean; area: TechDeckOperationsArea }
 
 const assetTypes: TechDeckAssetType[] = ['server', 'workstation', 'firewall', 'switch', 'access_point', 'vlan', 'subnet', 'ip_address', 'public_ip', 'application', 'domain', 'license', 'certificate', 'credential_reference', 'other'];
 const healthOptions: TechDeckAssetHealth[] = ['unknown', 'healthy', 'warning', 'critical', 'offline'];
@@ -46,7 +48,7 @@ function message(error: unknown): string {
   return 'The TechDeck operation could not be completed.';
 }
 
-export default function TechDeckOperations({ tenantKey, canWrite, canApprove }: Props) {
+export default function TechDeckOperations({ tenantKey, canWrite, canApprove, area }: Props) {
   const [data, setData] = useState<TechDeckWorkspaceResponse | null>(null);
   const [organizations, setOrganizations] = useState<DirectoryOrganization[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,11 +65,16 @@ export default function TechDeckOperations({ tenantKey, canWrite, canApprove }: 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const [workspace, directory] = await Promise.all([moduleShellApi.techdeck.getWorkspace(), directoryApi.organizations.list('techdeck')]);
+      const [workspace, directory] = await Promise.all([
+        moduleShellApi.techdeck.getWorkspace(),
+        ['inventory', 'documentation', 'runbooks'].includes(area)
+          ? directoryApi.organizations.list('techdeck')
+          : Promise.resolve({ organizations: [] }),
+      ]);
       setData(workspace); setOrganizations(directory.organizations);
     } catch (err) { setError(message(err)); }
     finally { setLoading(false); }
-  }, []);
+  }, [area]);
 
   useEffect(() => { void load(); }, [load, tenantKey]);
   useEffect(() => { setRequestedRecord(routeRecord()); }, [tenantKey]);
@@ -157,7 +164,7 @@ export default function TechDeckOperations({ tenantKey, canWrite, canApprove }: 
         <div><div className="td-kicker">Managed infrastructure + knowledge</div><h2>Operations Workspace</h2><p>Manage inventory, networks and IP space, documentation, evidence, reports, and technician time from one console.</p></div>
         <button className="td-button td-secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={14} className={loading ? 'td-spin' : ''} />Refresh</button>
       </header>
-      <div className="td-boundary"><ShieldCheck size={16} /><span><strong>Documentation-only runbooks.</strong> {data?.execution.reason ?? 'Remote execution is disabled.'}</span></div>
+      {area === 'runbooks' && <div className="td-boundary"><ShieldCheck size={16} /><span><strong>Documentation-only runbooks.</strong> {data?.execution.reason ?? 'Remote execution is disabled.'}</span></div>}
       {requestedRecordState && <div className="td-route-context" data-testid="techdeck-route-record-context" data-found={requestedRecordState.found}>
         {requestedRecordState.found
           ? <><CheckCircle2 size={16} /><span>Deep-linked {requestedRecordState.kind}: <strong>{requestedRecordState.label}</strong></span></>
@@ -165,14 +172,14 @@ export default function TechDeckOperations({ tenantKey, canWrite, canApprove }: 
       </div>}
       {error && <div className="td-error" role="alert"><AlertTriangle size={16} />{error}</div>}
 
-      <div className="td-summary">
+      {['inventory', 'network', 'lifecycle'].includes(area) && <div className="td-summary">
         <Summary label="Configuration items" value={data?.configurationItems.length ?? 0} Icon={ServerCog} />
         <Summary label="Network/IPAM" value={networkItems.length} Icon={Network} />
         <Summary label="Active alerts" value={data?.alerts.length ?? 0} Icon={AlertTriangle} warn={!!data?.alerts.length} />
         <Summary label="Lifecycle due" value={data?.lifecycleDue.length ?? 0} Icon={Clock3} warn={!!data?.lifecycleDue.length} />
-      </div>
+      </div>}
 
-      <Panel id="techdeck-inventory" title="Configuration inventory" icon={<ServerCog size={17} />}>
+      {area === 'inventory' && <Panel id="techdeck-inventory" title="Configuration inventory" icon={<ServerCog size={17} />}>
         {canWrite && <form className="td-form td-item-form" onSubmit={createItem} data-testid="techdeck-configuration-create-form">
           <input required aria-label="Configuration item name" placeholder="Name" value={item.name} onChange={event => setItem({ ...item, name: event.target.value })} />
           <select aria-label="Configuration item type" value={item.type} onChange={event => setItem({ ...item, type: event.target.value as TechDeckAssetType })}>{assetTypes.map(value => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select>
@@ -190,10 +197,9 @@ export default function TechDeckOperations({ tenantKey, canWrite, canApprove }: 
           </article>)}
           {!data?.configurationItems.length && <Empty text="No configuration items registered for this organization." />}
         </div>
-      </Panel>
+      </Panel>}
 
-      <div className="td-columns">
-        <Panel id="techdeck-network" title="Network and IPAM relationships" icon={<Network size={17} />}>
+      {area === 'network' && <Panel id="techdeck-network" title="Network and IPAM relationships" icon={<Network size={17} />}>
           {canWrite && data && data.configurationItems.length > 1 && <form className="td-form" onSubmit={createRelationship} data-testid="techdeck-relationship-create-form">
             <select required aria-label="Relationship source item" value={relationship.sourceAssetId} onChange={event => setRelationship({ ...relationship, sourceAssetId: event.target.value })}><option value="">Source item</option>{data.configurationItems.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
             <select required aria-label="Relationship target item" value={relationship.targetAssetId} onChange={event => setRelationship({ ...relationship, targetAssetId: event.target.value })}><option value="">Target item</option>{data.configurationItems.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
@@ -201,14 +207,13 @@ export default function TechDeckOperations({ tenantKey, canWrite, canApprove }: 
             <button className="td-button" disabled={busy === 'relationship-create'}><GitBranch size={14} />Link</button>
           </form>}
           <div className="td-list">{data?.relationships.map(row => <div className="td-row" key={row.id}><span>{data.configurationItems.find(item => item.id === row.sourceAssetId)?.name ?? 'Item'} <b>{row.relationshipType.replaceAll('_', ' ')}</b> {data.configurationItems.find(item => item.id === row.targetAssetId)?.name ?? 'Item'}</span></div>)}{!data?.relationships.length && <Empty text="No configuration relationships recorded." />}</div>
-        </Panel>
+      </Panel>}
 
-        <Panel id="techdeck-lifecycle" title="Lifecycle and posture" icon={<Clock3 size={17} />}>
+      {area === 'lifecycle' && <Panel id="techdeck-lifecycle" title="Lifecycle and posture" icon={<Clock3 size={17} />}>
           <div className="td-list">{data?.lifecycleDue.map(row => <div className="td-row" key={row.id}><div><strong>{row.name}</strong><small>Expiration {row.expirationDate ? new Date(row.expirationDate).toLocaleDateString() : '—'} · renewal {row.renewalDate ? new Date(row.renewalDate).toLocaleDateString() : '—'} · warranty {row.warrantyEndDate ? new Date(row.warrantyEndDate).toLocaleDateString() : '—'}</small></div><Status value={row.health} /></div>)}{!data?.lifecycleDue.length && <Empty text="No lifecycle deadlines fall within the next 30 days." />}</div>
-        </Panel>
-      </div>
+      </Panel>}
 
-      <Panel id="techdeck-documentation" title="Documentation and runbooks" icon={<FileCheck2 size={17} />}>
+      {(area === 'documentation' || area === 'runbooks') && <Panel id={area === 'runbooks' ? 'techdeck-runbooks' : 'techdeck-documentation'} title={area === 'runbooks' ? 'Runbooks' : 'Documentation'} icon={<FileCheck2 size={17} />}>
         {canWrite && <form className="td-form td-doc-form" onSubmit={createDocument} data-testid="techdeck-document-create-form">
           <input required aria-label="Document title" placeholder="Document title" value={document.title} onChange={event => setDocument({ ...document, title: event.target.value })} />
           <select aria-label="Document type" value={document.pageType} onChange={event => setDocument({ ...document, pageType: event.target.value })}>{['documentation', 'runbook', 'knowledge_base', 'procedure', 'network_diagram', 'configuration_standard'].map(value => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select>
@@ -218,27 +223,25 @@ export default function TechDeckOperations({ tenantKey, canWrite, canApprove }: 
           <button className="td-button" disabled={busy === 'document-create'}><Plus size={14} />Save draft</button>
         </form>}
         <div className="td-doc-columns">
-          <DocumentList title="Documentation" rows={docs} requestedDocumentId={requestedRecord?.kind === 'document' ? requestedRecord.id : null} canWrite={canWrite} canApprove={canApprove} busy={busy} onTransition={transitionDocument} />
-          <div id="techdeck-runbooks"><DocumentList title="Runbooks (never executed)" rows={runbooks} requestedDocumentId={requestedRecord?.kind === 'document' ? requestedRecord.id : null} canWrite={canWrite} canApprove={canApprove} busy={busy} onTransition={transitionDocument} /></div>
+          {area === 'documentation' && <DocumentList title="Documentation" rows={docs} requestedDocumentId={requestedRecord?.kind === 'document' ? requestedRecord.id : null} canWrite={canWrite} canApprove={canApprove} busy={busy} onTransition={transitionDocument} />}
+          {area === 'runbooks' && <DocumentList title="Runbooks (never executed)" rows={runbooks} requestedDocumentId={requestedRecord?.kind === 'document' ? requestedRecord.id : null} canWrite={canWrite} canApprove={canApprove} busy={busy} onTransition={transitionDocument} />}
         </div>
-      </Panel>
+      </Panel>}
 
-      <div className="td-columns">
-        <Panel id="techdeck-evidence" title="Evidence register" icon={<FileCheck2 size={17} />}>
+      {area === 'evidence' && <Panel id="techdeck-evidence" title="Evidence register" icon={<FileCheck2 size={17} />}>
           {canWrite && <form className="td-form" onSubmit={createEvidence} data-testid="techdeck-evidence-create-form"><input required aria-label="Evidence title" placeholder="Evidence title" value={evidence.title} onChange={event => setEvidence({ ...evidence, title: event.target.value })} /><select aria-label="Evidence type" value={evidence.evidenceType} onChange={event => setEvidence({ ...evidence, evidenceType: event.target.value })}>{['observation', 'configuration_snapshot', 'test_result', 'photo', 'document', 'other'].map(value => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select><select aria-label="Evidence configuration item" value={evidence.configurationItemId} onChange={event => setEvidence({ ...evidence, configurationItemId: event.target.value })}><option value="">No configuration item</option>{data?.configurationItems.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select><input aria-label="Evidence summary" placeholder="Summary" value={evidence.summary} onChange={event => setEvidence({ ...evidence, summary: event.target.value })} /><button className="td-button" disabled={busy === 'evidence-create'}><Plus size={14} />Record</button></form>}
           <div className="td-list">{data?.evidence.map(row => <div className="td-row" key={row.id} data-record-id={row.id} data-active={requestedRecord?.kind === 'evidence' && requestedRecord.id === row.id}><div><strong>{row.title}</strong><small>{row.evidenceType.replaceAll('_', ' ')} · {new Date(row.createdAt).toLocaleString()}</small></div></div>)}{!data?.evidence.length && <Empty text="No evidence records captured." />}</div>
-        </Panel>
+      </Panel>}
 
-        <Panel id="techdeck-reports" title="Snapshot reports" icon={<BarChart3 size={17} />}>
+      {area === 'reports' && <Panel id="techdeck-reports" title="Snapshot reports" icon={<BarChart3 size={17} />}>
           {canWrite && <form className="td-form" onSubmit={createReport} data-testid="techdeck-report-create-form"><input required aria-label="Report name" value={report.name} onChange={event => setReport({ ...report, name: event.target.value })} /><select aria-label="Report type" value={report.reportType} onChange={event => setReport({ ...report, reportType: event.target.value })}>{['asset_inventory', 'network_inventory', 'lifecycle', 'ticket_summary', 'evidence_register', 'time_summary'].map(value => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select><button className="td-button" disabled={busy === 'report-create'}>Generate</button></form>}
           <div className="td-list">{data?.reports.map(row => <div className="td-row" key={row.id} data-record-id={row.id} data-active={requestedRecord?.kind === 'report' && requestedRecord.id === row.id}><div><strong>{row.name}</strong><small>{row.reportType.replaceAll('_', ' ')} · checksum {row.sha256.slice(0, 12)}…</small></div></div>)}{!data?.reports.length && <Empty text="No immutable report snapshots generated." />}</div>
-        </Panel>
-      </div>
+      </Panel>}
 
-      <Panel id="techdeck-time" title="Technician time" icon={<Clock3 size={17} />}>
+      {area === 'time' && <Panel id="techdeck-time" title="Technician time" icon={<Clock3 size={17} />}>
         {canWrite && <form className="td-form td-time-form" onSubmit={createTime} data-testid="techdeck-time-create-form"><input required aria-label="Work date and time" type="datetime-local" value={time.workedAt} onChange={event => setTime({ ...time, workedAt: event.target.value })} /><input required aria-label="Minutes worked" type="number" min="1" max="1440" value={time.minutes} onChange={event => setTime({ ...time, minutes: event.target.value })} /><select aria-label="Time entry configuration item" value={time.configurationItemId} onChange={event => setTime({ ...time, configurationItemId: event.target.value })}><option value="">General work</option>{data?.configurationItems.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select><input aria-label="Work notes" placeholder="Work notes" value={time.notes} onChange={event => setTime({ ...time, notes: event.target.value })} /><label className="td-check"><input type="checkbox" checked={time.billable} onChange={event => setTime({ ...time, billable: event.target.checked })} />Billable</label><button className="td-button" disabled={busy === 'time-create'}><Plus size={14} />Log time</button></form>}
         <div className="td-list">{data?.timeEntries.map(row => <div className="td-row" key={row.id}><div><strong>{row.minutes} minutes {row.billable ? '· billable' : ''}</strong><small>{new Date(row.workedAt).toLocaleString()} · {row.notes || 'No notes'}</small></div></div>)}{!data?.timeEntries.length && <Empty text="No technician time recorded." />}</div>
-      </Panel>
+      </Panel>}
     </section>
   );
 }
