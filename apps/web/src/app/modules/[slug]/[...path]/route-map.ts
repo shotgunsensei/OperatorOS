@@ -101,25 +101,31 @@ export const CORE_MODULE_DEEP_LINKS: CoreModuleDeepLinkMap = {
   },
   torqueshed: {
     '/native-auth': { sectionId: 'torqueshed-native-authorize', label: 'Native Device Authorization' },
-    '/dashboard': { sectionId: 'torqueshed-dashboard', label: 'Dashboard' },
+    '/dashboard': { sectionId: 'torqueshed-dashboard', label: 'Dashboard', redirectPath: '/' },
     '/garage': { sectionId: 'torqueshed-garage', label: 'Garage' },
-    '/vehicles': { sectionId: 'torqueshed-garage', label: 'Vehicles' },
-    '/maintenance': { sectionId: 'torqueshed-service', label: 'Maintenance' },
-    '/repairs': { sectionId: 'torqueshed-service', label: 'Repairs' },
-    '/reminders': { sectionId: 'torqueshed-service', label: 'Service Reminders' },
+    '/garage/vehicles/new': { sectionId: 'torqueshed-garage', label: 'Add Vehicle' },
+    '/vehicles': { sectionId: 'torqueshed-garage', label: 'Vehicles', redirectPath: '/garage' },
+    '/service': { sectionId: 'torqueshed-service', label: 'Service' },
+    '/maintenance': { sectionId: 'torqueshed-service', label: 'Maintenance', redirectPath: '/service' },
+    '/repairs': { sectionId: 'torqueshed-service', label: 'Repairs', redirectPath: '/service' },
+    '/reminders': { sectionId: 'torqueshed-service', label: 'Service Reminders', redirectPath: '/service' },
     '/builds': { sectionId: 'torqueshed-builds', label: 'Builds' },
     '/journal': { sectionId: 'torqueshed-journal', label: 'Build Journal' },
-    '/build-journal': { sectionId: 'torqueshed-journal', label: 'Build Journal' },
+    '/build-journal': { sectionId: 'torqueshed-journal', label: 'Build Journal', redirectPath: '/journal' },
     '/diagnostics': { sectionId: 'torqueshed-diagnostics', label: 'Diagnostics' },
-    '/live-bay': { sectionId: 'torqueshed-live-bay', label: 'Live Bay' },
+    '/diagnostics/new': { sectionId: 'torqueshed-diagnostics', label: 'New Diagnostic' },
+    '/live-bay': { sectionId: 'torqueshed-live-bay', label: 'Live Bay', redirectPath: '/live-bays' },
     '/live-bays': { sectionId: 'torqueshed-live-bay', label: 'Live Bays' },
-    '/diagnostic-templates': { sectionId: 'torqueshed-templates', label: 'Diagnostic Templates' },
-    '/vendors': { sectionId: 'torqueshed-templates', label: 'Vendors' },
+    '/templates': { sectionId: 'torqueshed-templates', label: 'Templates and Vendors' },
+    '/diagnostic-templates': { sectionId: 'torqueshed-templates', label: 'Diagnostic Templates', redirectPath: '/templates' },
+    '/vendors': { sectionId: 'torqueshed-templates', label: 'Vendors', redirectPath: '/templates' },
     '/marketplace': { sectionId: 'torqueshed-marketplace', label: 'Marketplace' },
     '/community': { sectionId: 'torqueshed-community', label: 'Community' },
+    '/profile': { sectionId: 'torqueshed-tools', label: 'Profile' },
+    '/billing/credits': { sectionId: 'torqueshed-credits-route', label: 'Credits and Usage' },
     '/search': { sectionId: 'torqueshed-tools', label: 'Product Search' },
     '/activity': { sectionId: 'torqueshed-tools', label: 'Activity' },
-    '/notifications': { sectionId: 'torqueshed-tools', label: 'Notifications' },
+    '/notifications': { sectionId: 'torqueshed-tools', label: 'Notifications', redirectPath: '/activity' },
     '/exports': { sectionId: 'torqueshed-tools', label: 'Exports' },
     '/settings': { sectionId: 'torqueshed-tools', label: 'Settings' },
   },
@@ -357,13 +363,29 @@ export function resolveCoreModuleDeepLink(
     return { sectionId: 'pulsedesk-operations', label: 'Report Equipment Issue' };
   }
   if (slug === 'torqueshed' && pathSegments.length === 2) {
-    const [resource] = pathSegments;
-    if (resource === 'vehicles') return { sectionId: 'torqueshed-garage', label: 'Vehicle Record' };
+    const [resource, id] = pathSegments;
+    if (resource === 'vehicles') return { sectionId: 'torqueshed-garage', label: 'Vehicle Record', redirectPath: `/garage/vehicles/${encodeURIComponent(id)}` };
     if (resource === 'builds') return { sectionId: 'torqueshed-builds', label: 'Build Record' };
     if (resource === 'diagnostics') return { sectionId: 'torqueshed-diagnostics', label: 'Diagnostic Session' };
     if (resource === 'marketplace') return { sectionId: 'torqueshed-marketplace', label: 'Marketplace Listing' };
     if (resource === 'community') return { sectionId: 'torqueshed-community', label: 'Community Post' };
     if (resource === 'live-bays') return { sectionId: 'torqueshed-live-bay', label: 'Live Bay Record' };
+  }
+  if (
+    slug === 'torqueshed' &&
+    pathSegments.length === 3 &&
+    pathSegments[0] === 'garage' &&
+    pathSegments[1] === 'vehicles'
+  ) {
+    return { sectionId: 'torqueshed-garage', label: 'Vehicle Record' };
+  }
+  if (
+    slug === 'torqueshed' &&
+    pathSegments.length === 3 &&
+    pathSegments[0] === 'diagnostics' &&
+    pathSegments[2] === 'assist'
+  ) {
+    return { sectionId: 'torqueshed-diagnostics', label: 'Torque Assist' };
   }
   if (slug === 'faultlinelab' && pathSegments.length === 2) {
     const [resource] = pathSegments;

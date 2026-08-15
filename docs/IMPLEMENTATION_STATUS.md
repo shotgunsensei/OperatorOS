@@ -1,5 +1,15 @@
 # OperatorOS implementation status
 
+## Phase 49 TorqueShed route application - SOURCE/LOCAL ACCEPTED / DEPLOYMENT AND LIVE PROVIDERS GATED (2026-08-15)
+
+- Replaced TorqueShed's internal `Tab` workspace with the Phase 48 URL-authoritative application shell and a complete canonical collection/create/detail/Assist/Credits/system route map.
+- Added server-route redirects for legacy dashboard, vehicle, service, journal, live-bay, template/vendor, and notification links while preserving dynamic record recovery.
+- Split Checkout/status/ledger UI into `/billing/credits`; diagnostic detail links to a diagnostic-specific Assist route, and the persistent shell shows authoritative available balance.
+- Replaced eager all-or-nothing workspace/social/tool loading with route-focused partial-success loaders and dynamic route chunks. The compiled Credits journey proves builds, reminders, vendors, and templates are not fetched.
+- Verification: route/static/settlement contracts PASS 12/12; disposable-database foundation, `$5` test settlement/Assist, social, journal/live/search/settings/export workflows PASS 5/5; web TypeScript PASS; API/SDK/Next production builds PASS; exact-host Chromium route/accessibility/responsive gate PASS 1/1 across all 24 canonical routes.
+- Report: `docs/phase-49/TORQUESHED-ROUTE-MIGRATION-REPORT.md`.
+- No deployment, production database mutation, live Stripe charge, or live AI traffic was authorized. Those remain Phase 52/state-5 gates.
+
 ## Phase 48 shared route application shell - SOURCE/LOCAL ACCEPTED / DEPLOYMENT GATED (2026-08-15)
 
 - Added typed instance-scoped module theme tokens, route manifests, capability/role matching, shared application structure, responsive drawer/bottom-nav modes, route-focus behavior, and standard loading/empty/error/forbidden/provider-disabled states.

@@ -1,5 +1,9 @@
 # OperatorOS module parity index
 
+## Phase 49 TorqueShed route-application overlay
+
+TorqueShed retains source/local state 4 and its Phase 28/29 functional scope, while its web product now uses the shared route application structure with a product-specific dark garage/amber theme. All collection, create, record, diagnostic Assist, live-bay, marketplace, Credits, profile, activity, search, export, and settings surfaces are URL-addressable; legacy links redirect; route loaders fail independently; and Credits/Assist preserve the Phase 41-45 revenue authority. Local compiled acceptance covers 24 canonical routes, real disposable records, the `$5` explicit test-provider settlement workflow, responsive/accessibility behavior, Back/reload, and focused request fan-out. This is not a state-5 promotion: deployed authenticated proof, second-tenant deployed denial, live Stripe/AI decisions, backup/rollback, reconciliation, and public monitoring remain open. See `docs/phase-49/TORQUESHED-ROUTE-MIGRATION-REPORT.md`.
+
 ## Phase 48 shared module-shell overlay
 
 TradeFlowKit retains its existing state and source-functional scope while its route framing now consumes typed shared structural primitives. Its desktop/tablet/mobile visuals remain within the pre-existing 0.5% baselines, and the shared token contract is instance-scoped so later products retain distinct themes. No other module is counted as migrated in Phase 48. See `docs/phase-48/MODULE-APPLICATION-SHELL-SPEC.md`.

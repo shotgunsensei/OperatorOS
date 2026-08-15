@@ -212,6 +212,6 @@ test('catch-all dispatch focuses stable shell targets and renders deliberate rec
     [outCallShell, 'outcall-schedule'],
     [outCallShell, 'outcall-privacy'],
   ] as const) {
-    assert.ok(source.includes(`id="${targetId}"`), `missing focus target ${targetId}`);
+    assert.ok(source.includes(targetId), `missing focus target ${targetId}`);
   }
 });

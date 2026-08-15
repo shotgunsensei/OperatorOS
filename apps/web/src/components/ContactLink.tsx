@@ -16,7 +16,7 @@ export const CONTACT_URL = 'https://operatoros.net/john';
 
 export default function ContactLink() {
   return (
-    <>
+    <aside aria-label="Support contact">
       <a
         href={CONTACT_URL}
         className="operatoros-floating-contact"
@@ -48,6 +48,6 @@ export default function ContactLink() {
         <span>Contact</span>
       </a>
       <style>{`@media (max-width: 720px) { .operatoros-floating-contact { bottom: 76px !important; right: 12px !important; } }`}</style>
-    </>
+    </aside>
   );
 }
