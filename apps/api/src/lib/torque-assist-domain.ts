@@ -29,6 +29,8 @@ export const TORQUE_ASSIST_DISCLAIMER =
 
 export const TORQUE_ASSIST_MAX_CONTEXT_CHARS = 48_000;
 export const TORQUE_ASSIST_MAX_PROVIDER_ATTEMPTS = 2;
+export const TORQUE_ASSIST_MAX_OUTPUT_UNITS = 1_200;
+export const TORQUE_ASSIST_RESERVATION_TTL_MS = 3 * 60_000;
 export const TORQUE_ASSIST_USER_LIMIT_PER_MINUTE = 5;
 export const TORQUE_ASSIST_TENANT_LIMIT_PER_MINUTE = 20;
 
@@ -390,8 +392,22 @@ export function summarizeContext(value: unknown): {
     sha256: createHash('sha256').update(json).digest('hex'),
     chars,
     items: Math.max(1, items),
-    estimatedUnits: Math.max(1, Math.ceil(chars / 4) + 1_200),
+    estimatedUnits: estimateTorqueAssistMaximumUnits(chars),
   };
+}
+
+/**
+ * Conservative maximum authorization for one provider request. The context,
+ * fixed system prompt, and bounded serialization overhead are converted using
+ * the conservative four-characters-per-token rule, then the provider's fixed
+ * 1,200 output-token ceiling is added. Provider-reported usage above this
+ * authorization is rejected and never debited.
+ */
+export function estimateTorqueAssistMaximumUnits(contextCharacters: number): number {
+  const boundedCharacters = Math.max(1, Math.min(TORQUE_ASSIST_MAX_CONTEXT_CHARS, Math.floor(contextCharacters)));
+  const fixedPromptAndSerializationCharacters = TORQUE_ASSIST_SYSTEM_PROMPT.length + 4_096;
+  return Math.ceil((boundedCharacters + fixedPromptAndSerializationCharacters) / 4)
+    + TORQUE_ASSIST_MAX_OUTPUT_UNITS;
 }
 
 export function ledgerBalanceExpression(): string {

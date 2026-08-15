@@ -1491,6 +1491,11 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     if (process.env.PHASE43_CAPTURE_SCREENSHOTS === '1') {
       await assist.getByTestId('torque-purchase-status').screenshot({ path: resolve(repoRoot, 'docs/phase-43/screenshots/settlement-credited.png') });
     }
+    if (process.env.PHASE45_CAPTURE_SCREENSHOTS === '1') {
+      const screenshotDirectory = resolve(repoRoot, 'docs/phase-45/screenshots');
+      mkdirSync(screenshotDirectory, { recursive: true });
+      await assist.screenshot({ path: resolve(screenshotDirectory, 'torque-assist-credit-availability.png') });
+    }
     const replay = await browserJson<{ duplicate?: boolean }>(
       page,
       '/api/billing/webhook',
@@ -1514,6 +1519,11 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.reload();
     await expect(page.getByTestId('torqueshed-torque-assist').getByTestId('torque-purchase-status'))
       .toContainText('Credits added', { timeout: 30_000 });
+    if (process.env.PHASE45_CAPTURE_SCREENSHOTS === '1') {
+      await page.getByTestId('torqueshed-torque-assist').screenshot({
+        path: resolve(repoRoot, 'docs/phase-45/screenshots/torque-assist-mobile-availability.png'),
+      });
+    }
     const overflow = await page.evaluate(() =>
       Array.from(document.querySelectorAll<HTMLElement>('body *'))
         .map(element => {

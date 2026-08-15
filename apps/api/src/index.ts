@@ -53,6 +53,10 @@ import { registerCrossModuleDataFabricRoutes } from './routes/cross-module-data-
 import { registerOperatorOsMessagingComplianceRoutes } from './routes/operatoros-messaging-compliance-routes.js';
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
 import {
+  startTorqueAssistReservationReaper,
+  stopTorqueAssistReservationReaper,
+} from './lib/torque-assist-reservation-reaper.js';
+import {
   getSharedServiceWorkerStatus,
   getSharedServiceQueueHealth,
   evaluateSharedServiceWorkerReadiness,
@@ -303,7 +307,9 @@ if (process.env.OPERATOROS_DATABASE_RELEASE_APPLIED === '1') {
 }
 startSsoTokenCleanup();
 startSharedServiceWorker();
+startTorqueAssistReservationReaper();
 app.addHook('onClose', async () => {
+  stopTorqueAssistReservationReaper();
   await stopSharedServiceWorker();
   await closeDatabasePool();
 });

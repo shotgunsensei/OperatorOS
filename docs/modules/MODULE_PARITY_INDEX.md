@@ -1,5 +1,18 @@
 # OperatorOS module parity index
 
+## Phase 45 Torque Assist reservation overlay
+
+Torque Assist uses a durable tenant/user/module reservation before provider
+delivery, computes available balance as immutable ledger minus active
+reservations, and atomically settles one debit plus unused remainder only after
+an accepted response. Failures and three-minute expiry release all units and
+preserve an actionable correlation reference. The UI exposes exact availability
+and maps known failures without collapsing other TorqueShed records. Focused
+contracts pass 22/22, the database workflow and compiled exact-host browser
+fixture pass, and cumulative v52 apply/reapply passes. Real Stripe test funding,
+approved AI provider delivery, and production deployment remain external gates.
+See `docs/phase-45/TORQUE-ASSIST-CREDIT-CONSUMPTION.md`.
+
 ## Phase 44 TorqueShed settlement-integrity overlay
 
 TorqueShed settlement is bound to verified raw Stripe events and complete

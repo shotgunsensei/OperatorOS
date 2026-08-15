@@ -44,8 +44,8 @@ test('Torque Assist uses trusted session context, shared adapters, and transacti
   );
   assert.match(service, /recordUsageEvent/);
   assert.match(service, /completeIdempotentOperation/);
-  assert.match(service, /status='provider_failed'/);
-  assert.match(service, /response_json=NULL,actual_units=NULL/);
+  assert.match(service, /'provider_failed'/);
+  assert.match(service, /response_json=NULL[\s\S]*actual_units=NULL/);
   assert.match(billing, /getPaymentProviderAdapter/);
   assert.match(billing, /amountMinor.*purchase\.amount_minor/s);
   assert.match(billing, /operationType: 'token_purchase_refund'/);
@@ -80,14 +80,14 @@ test('Torque Assist UI/API routes and release verification are registered withou
   assert.doesNotMatch(routes, /body\.tenantId|input\.tenantId|body\.userId|input\.userId/);
   assert.match(web, /data-testid="torqueshed-torque-assist"/);
   assert.match(web, /Retry same request without duplicate charge/);
-  assert.match(web, /Ledger-computed balance/);
+  assert.match(web, /ledger units/);
   assert.match(web, /Facts and assumptions/);
   assert.match(web, /Ranked hypotheses/);
   assert.match(web, /Safety warnings/);
   assert.match(web, /Recommended tests/);
   assert.match(web, /Verifying payment/);
   assert.match(web, /Credits added/);
-  assert.match(web, /reference \$\{requestId\}/);
+  assert.match(read('apps/web/src/lib/torque-error-translator.ts'), /reference \$\{reference\}/);
   assert.match(client, /getTorqueAssistContext/);
   assert.match(client, /purchaseTorqueTokens/);
   assert.match(client, /runTorqueAssist/);
@@ -169,4 +169,42 @@ test('Phase 44 settlement proves provider evidence and prevents unexplained nega
   ]) assert.match(reconciliation, new RegExp(`'${finding}'`));
   assert.match(reconciliation, /REPROCESS_VERIFIED_RECEIPT/);
   assert.doesNotMatch(reconciliation, /INSERT INTO torqueshed_token_ledger_entries/);
+});
+
+test('Phase 45 reserves bounded credits and translates actionable failures', () => {
+  const service = read('apps/api/src/lib/torque-assist-service.ts');
+  const domain = read('apps/api/src/lib/torque-assist-domain.ts');
+  const ddl = read('apps/api/src/lib/torqueshed-reservation-db-init.ts');
+  const routes = read('apps/api/src/routes/torque-assist-routes.ts');
+  const reaper = read('apps/api/src/lib/torque-assist-reservation-reaper.ts');
+  const web = read('apps/web/src/components/module-shells/TorqueShedWorkspace.tsx');
+  const translator = read('apps/web/src/lib/torque-error-translator.ts');
+
+  assert.match(ddl, /CREATE TABLE IF NOT EXISTS torqueshed_token_reservations/);
+  assert.match(ddl, /status IN \('active','settled','released','expired'\)/);
+  assert.match(ddl, /consumed_units \+ released_units <= reserved_units/);
+  assert.match(ddl, /uq_torqueshed_token_reservation_idempotency/);
+  assert.match(domain, /estimateTorqueAssistMaximumUnits/);
+  assert.match(domain, /TORQUE_ASSIST_MAX_OUTPUT_UNITS/);
+  assert.match(service, /availableUnits: Math\.max\(0, ledgerBalance - reservedUnits\)/);
+  assert.match(service, /status='settled',consumed_units=\$\{actualUnits\},released_units=\$\{releasedUnits\}/);
+  assert.match(service, /status='released',consumed_units=0,released_units=reserved_units/);
+  assert.match(service, /ON CONFLICT \(tenant_id,assist_request_id\) WHERE entry_kind='debit' DO NOTHING/);
+  assert.match(service, /provider_receipt_json/);
+  assert.match(service, /TORQUE_ASSIST_PROVIDER_TIMEOUT/);
+  assert.match(service, /TORQUE_ASSIST_RESPONSE_INVALID/);
+  assert.match(routes, /consumptionMode: 'paid_credits_only'/);
+  assert.match(reaper, /setInterval/);
+  assert.match(web, /Promise\.allSettled/);
+  assert.match(web, /No credits were consumed for this failed request/);
+  assert.match(web, /More credits required/);
+  assert.doesNotMatch(web, /function errorText/);
+  for (const code of [
+    'TORQUE_ASSIST_CREDITS_REQUIRED', 'TORQUE_ASSIST_RESERVATION_CONFLICT',
+    'TORQUE_ASSIST_RATE_LIMITED', 'TORQUE_ASSIST_PROVIDER_DISABLED',
+    'TORQUE_ASSIST_PROVIDER_UNAVAILABLE', 'TORQUE_ASSIST_PROVIDER_TIMEOUT',
+    'TORQUE_ASSIST_RESPONSE_INVALID', 'TORQUE_ASSIST_CONTEXT_INVALID',
+    'TORQUE_ASSIST_SESSION_NOT_FOUND', 'TORQUE_ASSIST_FORBIDDEN',
+    'TORQUE_ASSIST_REQUEST_CONFLICT',
+  ]) assert.match(translator, new RegExp(code));
 });

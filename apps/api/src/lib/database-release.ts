@@ -47,6 +47,7 @@ import { ensureCrossModuleDataFabricTables } from './cross-module-data-fabric-db
 import { ensureTorqueShedStripeCatalogTables } from './torqueshed-stripe-catalog-db-init.js';
 import { ensureTorqueShedCheckoutContract } from './torqueshed-checkout-contract-db-init.js';
 import { ensureTorqueShedSettlementContract } from './torqueshed-settlement-db-init.js';
+import { ensureTorqueShedReservationContract } from './torqueshed-reservation-db-init.js';
 import { ensureTradeFlowKitSavedViewTables } from './tradeflowkit-saved-views-db-init.js';
 import { ensureTradeFlowKitLeadOperationsTables } from './tradeflowkit-lead-operations-db-init.js';
 import { ensureTradeFlowKitPublicOperationsTables } from './tradeflowkit-public-operations-db-init.js';
@@ -112,6 +113,7 @@ const OPERATIONS: Readonly<Record<DatabaseReleaseStep['id'], () => Promise<unkno
   torqueshed_stripe_credit_catalog: ensureTorqueShedStripeCatalogTables,
   torqueshed_checkout_contract: ensureTorqueShedCheckoutContract,
   torqueshed_settlement_contract: ensureTorqueShedSettlementContract,
+  torqueshed_reservation_contract: ensureTorqueShedReservationContract,
 };
 
 export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
@@ -295,6 +297,7 @@ export async function verifyOperatorOSDatabaseRelease(): Promise<void> {
           )
       ) AS torqueshed_checkout_contract
       ,to_regclass('public.torqueshed_credit_policy_holds') IS NOT NULL AS torqueshed_settlement_contract
+      ,to_regclass('public.torqueshed_token_reservations') IS NOT NULL AS torqueshed_reservation_contract
   `);
   const row = result.rows[0] as Record<string, boolean> | undefined;
   const missing = Object.entries(row ?? {})

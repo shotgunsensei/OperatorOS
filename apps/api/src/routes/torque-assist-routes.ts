@@ -19,9 +19,10 @@ import {
   listTorqueTokenLedger,
   normalizeFollowUpAnswers,
   runTorqueAssist,
+  expireTorqueAssistReservations,
   torqueAssistContextPreview,
   torqueAssistReconciliation,
-  torqueTokenBalance,
+  torqueTokenAvailability,
   TorqueAssistServiceError,
 } from '../lib/torque-assist-service.js';
 import { torqueId, TorqueShedValidationError } from '../lib/torqueshed-foundation.js';
@@ -122,6 +123,7 @@ function sendError(reply: FastifyReply, error: unknown) {
       code: error.code,
       requestId: reply.request.id,
       retryable: false,
+      charged: false,
       administratorAction: 'Correct the highlighted TorqueShed input and retry.',
     });
   }
@@ -168,15 +170,24 @@ export async function registerTorqueAssistRoutes(app: FastifyInstance): Promise<
     '/v1/modules/torqueshed/torque-assist/status',
     { preHandler: readGuards },
     async (request) => {
-      const [balance, purchaseReadiness] = await Promise.all([
-        torqueTokenBalance({ tenantId: tenant(request), userId: user(request) }),
+      const reaper = await expireTorqueAssistReservations({
+        tenantId: tenant(request),
+        userId: user(request),
+      });
+      const [availability, purchaseReadiness] = await Promise.all([
+        torqueTokenAvailability({ tenantId: tenant(request), userId: user(request) }),
         torqueTokenPurchaseReadiness(),
       ]);
       return {
         provider: getSharedAiProviderAdapter().status,
         payments: getPaymentProviderAdapter().status,
         purchaseReadiness,
-        balance,
+        balance: availability.ledgerBalance,
+        ledgerBalance: availability.ledgerBalance,
+        reservedUnits: availability.reservedUnits,
+        availableBalance: availability.availableUnits,
+        consumptionMode: 'paid_credits_only',
+        reservationReaper: { expiredCount: reaper.expiredCount },
         packages: listTorqueTokenPackages(),
         limits: { userPerMinute: 5, tenantPerMinute: 20, maximumContextCharacters: 48_000 },
         ledgerAuthoritative: true,

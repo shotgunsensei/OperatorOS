@@ -1,5 +1,25 @@
 # OperatorOS implementation status
 
+## Phase 45 Torque Assist reservations and actionable failures - SOURCE/LOCAL IMPLEMENTED / PROVIDERS GATED (2026-08-15)
+
+Torque Assist now reserves a conservative maximum from the tenant/user's
+available balance before any provider call, runs the provider outside the
+transaction, and atomically converts a successful reservation into exactly one
+append-only debit while releasing the remainder. Timeout, provider, invalid
+response, cancellation, and expiry paths release all units and debit zero. A
+three-minute database-time reaper is idempotent and also releases abandoned
+shared idempotency leases. Free runs are explicitly disabled.
+
+The UI exposes ledger/reserved/available/estimated units, keeps non-AI Garage
+records usable when Assist fails, and translates known machine codes into safe
+customer action, administrator action, retryability, no-charge confirmation,
+and a support reference. Focused contracts pass 22/22, the disposable database
+workflow passes 1/1, cumulative v52 clean apply/reapply passes, workspace
+typecheck and production build pass, and compiled exact-host browser acceptance
+passes 1/1 with desktop/mobile screenshots. Real Stripe test purchase and
+approved AI-provider delivery remain external Phase 52 gates. See
+`docs/phase-45/TORQUE-ASSIST-CREDIT-CONSUMPTION.md`.
+
 ## Phase 44 TorqueShed settlement and reconciliation - SOURCE/LOCAL IMPLEMENTED / REAL STRIPE GATED (2026-08-15)
 
 The raw-body, signature-verified canonical billing webhook is now the only

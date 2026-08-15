@@ -1,6 +1,6 @@
 export const DATABASE_RELEASE_CONTRACT = Object.freeze({
   contractVersion: 1,
-  releaseVersion: 51,
+  releaseVersion: 52,
   mode: 'idempotent-apply',
   destructive: false,
   rollback: 'restore-to-new-database-and-switch-traffic',
@@ -58,4 +58,5 @@ export const DATABASE_RELEASE_STEPS = Object.freeze([
   { id: 'torqueshed_stripe_credit_catalog', kind: 'ddl' },
   { id: 'torqueshed_checkout_contract', kind: 'ddl' },
   { id: 'torqueshed_settlement_contract', kind: 'ddl' },
+  { id: 'torqueshed_reservation_contract', kind: 'ddl' },
 ] as const);

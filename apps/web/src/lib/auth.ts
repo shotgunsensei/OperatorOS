@@ -1110,6 +1110,11 @@ export interface TorqueAssistResponse {
   model: string;
   providerVersion: string;
   latencyMs: number;
+  reservationId: string | null;
+  reservedUnits: number;
+  releasedUnits: number;
+  remainingBalance: number;
+  correlationId: string;
   replayed: boolean;
 }
 export interface TorqueAssistStatus {
@@ -1126,6 +1131,11 @@ export interface TorqueAssistStatus {
     checks: Array<{ key: string; ready: boolean; code: string }>;
   };
   balance: number;
+  ledgerBalance: number;
+  reservedUnits: number;
+  availableBalance: number;
+  consumptionMode: 'paid_credits_only';
+  reservationReaper: { expiredCount: number };
   packages: Array<{
     key: string;
     name: string;
@@ -1926,6 +1936,9 @@ export const moduleShellApi = {
       ) as Promise<any>,
     getTokenLedger: (): Promise<{
       balance: number;
+      ledgerBalance: number;
+      reservedUnits: number;
+      availableBalance: number;
       entries: Array<Record<string, any>>;
       purchases: Array<Record<string, any>>;
     }> => apiFetch('/modules/torqueshed/token-ledger?limit=25') as Promise<any>,

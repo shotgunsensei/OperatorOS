@@ -38,45 +38,13 @@ import { ShellLiveBadge } from './ShellChrome';
 import { TorqueShedCommunityPanel, TorqueShedMarketplacePanel } from './TorqueShedSocialPanels';
 import { TorqueShedJournalPanel, TorqueShedLiveBayPanel, TorqueShedUtilityPanel } from './TorqueShedRestorationPanels';
 import TorqueShedNativeAuthorizePanel from './TorqueShedNativeAuthorizePanel';
+import {
+  formatTorqueShedError,
+  translateTorqueShedError,
+  type TorqueErrorPresentation,
+} from '@/lib/torque-error-translator';
 
 type Tab = 'dashboard' | 'garage' | 'service' | 'builds' | 'journal' | 'diagnostics' | 'live' | 'templates' | 'marketplace' | 'community' | 'tools';
-
-function errorText(error: unknown): string {
-  const row = error && typeof error === 'object' ? error as Record<string, unknown> : {};
-  const code = typeof row.code === 'string' && /^[A-Z0-9_:-]{2,120}$/.test(row.code)
-    ? row.code
-    : 'TORQUESHED_UNKNOWN';
-  const requestId = typeof row.requestId === 'string' && /^[A-Za-z0-9_-]{4,120}$/.test(row.requestId)
-    ? row.requestId
-    : null;
-  const status = Number(row.status || 0);
-  const messages: Record<string, string> = {
-    TORQUE_ASSIST_BALANCE_EXHAUSTED: 'Torque Assist credits are insufficient. Review the balance or buy a credit pack before retrying.',
-    TORQUE_CREDIT_PURCHASES_DISABLED: 'Credit purchases are temporarily unavailable. Nothing was charged; an administrator must reopen the purchase gate.',
-    TORQUE_PAYMENT_PROVIDER_DISABLED: 'Credit checkout is temporarily unavailable. Nothing was charged; contact an administrator.',
-    TORQUE_PAYMENT_MODE_MISMATCH: 'Credit checkout is unavailable because its payment environment is not validated. Nothing was charged.',
-    TORQUE_CATALOG_UNAVAILABLE: 'The credit-pack catalog is unavailable. Nothing was charged; contact an administrator.',
-    TORQUE_WEBHOOK_NOT_READY: 'Credit checkout is unavailable while payment confirmation is being repaired. Nothing was charged.',
-    TORQUE_DATABASE_RELEASE_REQUIRED: 'Credit checkout is unavailable while billing storage is being updated. Nothing was charged.',
-    TORQUE_RETURN_ROUTE_INVALID: 'Credit checkout cannot start because the safe return route is unavailable. Nothing was charged.',
-    TORQUE_RELEASE_IDENTITY_MISMATCH: 'Credit checkout is unavailable while the deployed release is being verified. Nothing was charged.',
-    TORQUE_ASSIST_PROVIDER_DISABLED: 'Torque Assist is unavailable until an administrator connects the AI provider.',
-    TORQUE_ASSIST_PROVIDER_CIRCUIT_OPEN: 'Torque Assist is recovering from a provider outage. Wait one minute, then retry the same request.',
-    TORQUE_ASSIST_RATE_LIMITED: 'Torque Assist is rate limited. Wait one minute, then retry the same request.',
-    TORQUE_ASSIST_SESSION_NOT_FOUND: 'This diagnostic is unavailable in the active tenant or your current role cannot access it.',
-    TORQUE_PURCHASE_NOT_FOUND: 'The payment reference is unavailable in this tenant. Refresh from the original diagnostic.',
-    TORQUE_CHECKOUT_NOT_CREATED: 'Checkout was not created and nothing was charged. Review the failure before starting a new attempt.',
-    TORQUE_CHECKOUT_BODY_INVALID: 'Checkout accepts only the selected diagnostic and package. Amounts and Price IDs cannot be supplied by the browser.',
-    TORQUE_PURCHASE_IDEMPOTENCY_CONFLICT: 'That purchase request key is already bound to another diagnostic or package. Refresh its status instead.',
-  };
-  const message = messages[code]
-    ?? (status === 503
-      ? 'Torque Assist could not reach its provider. No credits were charged; retry the same request shortly.'
-      : status === 401 || status === 403 || status === 404
-        ? 'TorqueShed could not access that diagnostic in the active tenant. Return to the garage and reopen it.'
-        : 'TorqueShed could not confirm that action. Your saved records remain available; retry once or contact support.');
-  return `${message} (${code}${requestId ? ` · reference ${requestId}` : ''})`;
-}
 
 function number(value: FormDataEntryValue | null): number | undefined {
   if (value === null || String(value).trim() === '') return undefined;
@@ -194,7 +162,7 @@ export default function TorqueShedWorkspace() {
       setTemplates(templateData.templates);
       setVendors(vendorData.vendors);
     } catch (next) {
-      setError(errorText(next));
+      setError(formatTorqueShedError(next));
     } finally {
       setLoading(false);
     }
@@ -207,7 +175,7 @@ export default function TorqueShedWorkspace() {
       setVehicleDetail(await moduleShellApi.torqueshed.getVehicle(id));
       setTab('garage');
     } catch (next) {
-      setError(errorText(next));
+      setError(formatTorqueShedError(next));
     } finally {
       setBusy('');
     }
@@ -220,7 +188,7 @@ export default function TorqueShedWorkspace() {
       setDiagnosticDetail(await moduleShellApi.torqueshed.getDiagnostic(id));
       setTab('diagnostics');
     } catch (next) {
-      setError(errorText(next));
+      setError(formatTorqueShedError(next));
     } finally {
       setBusy('');
     }
@@ -282,7 +250,7 @@ export default function TorqueShedWorkspace() {
       await load();
       if (refresh) await refresh();
     } catch (next) {
-      setError(errorText(next));
+      setError(formatTorqueShedError(next));
     } finally {
       setBusy('');
     }
@@ -1535,6 +1503,9 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
   const [history, setHistory] = useState<Array<Record<string, any>>>([]);
   const [ledger, setLedger] = useState<{
     balance: number;
+    ledgerBalance: number;
+    reservedUnits: number;
+    availableBalance: number;
     entries: Array<Record<string, any>>;
     purchases: Array<Record<string, any>>;
   } | null>(null);
@@ -1543,26 +1514,24 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
   const [activeRequestKey, setActiveRequestKey] = useState('');
   const [purchaseKeys, setPurchaseKeys] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState('');
-  const [error, setError] = useState('');
+  const [assistError, setAssistError] = useState<TorqueErrorPresentation | null>(null);
   const [notice, setNotice] = useState('');
   const [purchaseStatus, setPurchaseStatus] = useState<TorqueTokenPurchaseStatus | null>(null);
   const [purchaseReference, setPurchaseReference] = useState('');
 
   const load = useCallback(async () => {
-    try {
-      const [nextStatus, nextContext, nextHistory, nextLedger] = await Promise.all([
-        moduleShellApi.torqueshed.getTorqueAssistStatus(),
-        moduleShellApi.torqueshed.getTorqueAssistContext(diagnostic.id),
-        moduleShellApi.torqueshed.getTorqueAssistHistory(diagnostic.id),
-        moduleShellApi.torqueshed.getTokenLedger(),
-      ]);
-      setStatus(nextStatus);
-      setContext(nextContext);
-      setHistory(nextHistory.requests);
-      setLedger(nextLedger);
-    } catch (next) {
-      setError(errorText(next));
-    }
+    const settled = await Promise.allSettled([
+      moduleShellApi.torqueshed.getTorqueAssistStatus(),
+      moduleShellApi.torqueshed.getTorqueAssistContext(diagnostic.id),
+      moduleShellApi.torqueshed.getTorqueAssistHistory(diagnostic.id),
+      moduleShellApi.torqueshed.getTokenLedger(),
+    ] as const);
+    if (settled[0].status === 'fulfilled') setStatus(settled[0].value);
+    if (settled[1].status === 'fulfilled') setContext(settled[1].value);
+    if (settled[2].status === 'fulfilled') setHistory(settled[2].value.requests);
+    if (settled[3].status === 'fulfilled') setLedger(settled[3].value);
+    const failure = settled.find((entry) => entry.status === 'rejected');
+    if (failure?.status === 'rejected') setAssistError(translateTorqueShedError(failure.reason));
   }, [diagnostic.id]);
 
   useEffect(() => {
@@ -1582,6 +1551,16 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
     }
   }, [diagnostic.id]);
 
+  useEffect(() => {
+    try {
+      if (Object.keys(answers).length > 0) {
+        window.sessionStorage.setItem(`torqueshed:checkout-form:${diagnostic.id}`, JSON.stringify(answers));
+      }
+    } catch {
+      // Form recovery is best effort and never carries authority.
+    }
+  }, [answers, diagnostic.id]);
+
   const refreshPurchaseStatus = useCallback(async (purchaseId = purchaseReference) => {
     if (!purchaseId) return null;
     try {
@@ -1593,7 +1572,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
       }
       return next;
     } catch (next) {
-      setError(errorText(next));
+      setAssistError(translateTorqueShedError(next));
       return null;
     }
   }, [load, purchaseReference]);
@@ -1621,7 +1600,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
         if (next.terminal) return;
         if (attempt < delays.length) timer = setTimeout(poll, delays[attempt++]);
       } catch (next) {
-        if (!stopped) setError(errorText(next));
+        if (!stopped) setAssistError(translateTorqueShedError(next));
       }
     };
     void poll();
@@ -1634,14 +1613,18 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
   const result = (response?.result ??
     history[0]?.responseJson ??
     null) as TorqueAssistResult | null;
-  const providerDisabled = status?.provider.state === 'disabled';
+  const providerDisabled = !status || status.provider.state === 'disabled';
   const paymentsDisabled = status ? !status.purchaseReadiness.ready : true;
+  const availableUnits = ledger?.availableBalance ?? status?.availableBalance ?? 0;
+  const estimatedUnits = Number(context?.estimatedUnits ?? 0);
+  const clearlyInsufficient = estimatedUnits > 0 && availableUnits < estimatedUnits;
+  const assistUnavailable = providerDisabled || !context || clearlyInsufficient;
 
   async function runAssist() {
     const requestKey = activeRequestKey || key('torque-assist');
     if (!activeRequestKey) setActiveRequestKey(requestKey);
     setBusy('assist');
-    setError('');
+    setAssistError(null);
     setNotice('');
     try {
       const followUpAnswers = (result?.followUpQuestions ?? [])
@@ -1658,11 +1641,11 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
       setNotice(
         next.replayed
           ? 'The prior accepted result was replayed without another charge.'
-          : `Accepted result recorded. ${next.actualUnits.toLocaleString()} units charged once.`,
+          : `Accepted result recorded. ${next.actualUnits.toLocaleString()} units consumed once; ${next.releasedUnits.toLocaleString()} reserved units released. ${next.remainingBalance.toLocaleString()} units remain.`,
       );
       await load();
     } catch (next) {
-      setError(errorText(next));
+      setAssistError(translateTorqueShedError(next));
     } finally {
       setBusy('');
     }
@@ -1672,7 +1655,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
     const purchaseKey = purchaseKeys[packageKey] || key(`token-purchase:${packageKey}`);
     setPurchaseKeys((current) => ({ ...current, [packageKey]: purchaseKey }));
     setBusy(`purchase:${packageKey}`);
-    setError('');
+    setAssistError(null);
     setNotice('');
     try {
       const next = await moduleShellApi.torqueshed.purchaseTorqueTokens(
@@ -1692,7 +1675,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
       );
       await load();
     } catch (next) {
-      setError(errorText(next));
+      setAssistError(translateTorqueShedError(next));
     } finally {
       setBusy('');
     }
@@ -1730,10 +1713,11 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
         </div>
         <div style={{ color: semantic.text, textAlign: 'right' }}>
           <strong style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <Coins size={17} /> {(ledger?.balance ?? status?.balance ?? 0).toLocaleString()} units
+            <Coins size={17} /> {availableUnits.toLocaleString()} units available
           </strong>
           <span style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
-            Ledger-computed balance · Credits available
+            {(ledger?.ledgerBalance ?? status?.ledgerBalance ?? status?.balance ?? 0).toLocaleString()} ledger units
+            {' · '}{(ledger?.reservedUnits ?? status?.reservedUnits ?? 0).toLocaleString()} reserved
           </span>
         </div>
       </div>
@@ -1748,7 +1732,18 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
           Preview analysis mode is active. Verify every diagnostic recommendation before starting a repair.
         </div>
       )}
-      {error && <div style={{ color: semantic.accentDanger }}>{error}</div>}
+      {assistError && (
+        <div data-testid="torque-assist-error" data-error-code={assistError.code} style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger, padding: 10 }}>
+          <strong>{assistError.message}</strong>
+          {assistError.noCreditsConsumed && <div>No credits were consumed for this failed request.</div>}
+          <div style={{ color: semantic.textMuted }}>{assistError.administratorAction}</div>
+          {(assistError.correlationId || assistError.requestId) && (
+            <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
+              Support reference: {assistError.correlationId ?? assistError.requestId}
+            </div>
+          )}
+        </div>
+      )}
       {notice && <div style={{ color: semantic.accentSuccess }}>{notice}</div>}
       {purchaseStatus && (
         <div data-testid="torque-purchase-status" style={{ ...cardStyle, padding: 10, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
@@ -1784,7 +1779,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
           </div>
         </div>
         <div style={{ ...cardStyle, padding: 10 }}>
-          <strong>Estimated total</strong>
+          <strong>Maximum reservation</strong>
           <div style={{ color: semantic.textMuted, fontSize: fontSize.sm }}>
             {(context?.estimatedUnits ?? 0).toLocaleString()} units ·{' '}
             {(context?.contextCharacters ?? 0).toLocaleString()} context characters
@@ -1814,8 +1809,8 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
       <button
         type="button"
         onClick={() => void runAssist()}
-        disabled={providerDisabled || busy === 'assist'}
-        style={{ ...button, opacity: providerDisabled || busy === 'assist' ? 0.55 : 1 }}
+        disabled={assistUnavailable || busy === 'assist'}
+        style={{ ...button, opacity: assistUnavailable || busy === 'assist' ? 0.55 : 1 }}
       >
         <Activity size={16} />
         {busy === 'assist'
@@ -1824,7 +1819,9 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
             ? 'Retry same request without duplicate charge'
             : result?.status === 'follow_up_required'
               ? 'Submit follow-up evidence'
-              : 'Generate diagnostic plan'}
+              : clearlyInsufficient
+                ? 'More credits required'
+                : 'Generate diagnostic plan'}
       </button>
 
       {result && (

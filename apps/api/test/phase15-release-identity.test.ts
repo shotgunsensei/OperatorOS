@@ -70,9 +70,9 @@ test('runtime identity binds the build to deployment time and database release v
       deployedAt: '2026-07-29T20:05:00.000Z',
       databaseRelease: {
         contractVersion: 1,
-        releaseVersion: 51,
-        stepCount: 51,
-        lastStep: 'torqueshed_settlement_contract',
+        releaseVersion: 52,
+        stepCount: 52,
+        lastStep: 'torqueshed_reservation_contract',
       },
     },
   );

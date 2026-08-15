@@ -20,6 +20,7 @@ import {
   type SharedAiProviderAdapter,
 } from '../src/lib/shared-provider-adapters.js';
 import { __setTorqueCheckoutCreatorForTests } from '../src/lib/operatoros-token-billing.js';
+import { expireTorqueAssistReservations } from '../src/lib/torque-assist-service.js';
 
 let app: any;
 let ownerA: any;
@@ -237,6 +238,7 @@ after(async () => {
       'shared_idempotency_keys',
       'torqueshed_assist_rate_windows',
       'torqueshed_ai_provider_circuits',
+      'torqueshed_token_reservations',
       'torqueshed_assist_requests',
       'operatoros_token_purchase_intents',
       'billing_events',
@@ -287,7 +289,8 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
     { 'idempotency-key': 'phase8:no-balance:0001' },
   );
   assert.equal(noBalance.statusCode, 402, noBalance.body);
-  assert.equal(noBalance.json().code, 'TORQUE_ASSIST_BALANCE_EXHAUSTED');
+  assert.equal(noBalance.json().code, 'TORQUE_ASSIST_CREDITS_REQUIRED');
+  assert.equal(noBalance.json().charged, false);
 
   const injectedCheckout = await inject(
     'POST',
@@ -545,7 +548,8 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
     { diagnosticSessionId: diagnosticA.id },
     { 'idempotency-key': retryKey },
   );
-  assert.equal(failed.statusCode, 503, failed.body);
+  assert.equal(failed.statusCode, 504, failed.body);
+  assert.equal(failed.json().code, 'TORQUE_ASSIST_PROVIDER_TIMEOUT');
   assert.equal(failed.json().charged, false);
   const debitAfterFailure = await db.execute(sql`
     SELECT COUNT(*)::int AS count FROM torqueshed_token_ledger_entries l
@@ -560,7 +564,7 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
     WHERE tenant_id=${ownerA.currentTenantId} AND idempotency_key=${retryKey}
   `);
   assert.equal(failedStorage.rows[0]!.status, 'provider_failed');
-  assert.equal(failedStorage.rows[0]!.error_code, 'TEST_PROVIDER_TIMEOUT');
+  assert.equal(failedStorage.rows[0]!.error_code, 'TORQUE_ASSIST_PROVIDER_TIMEOUT');
   assert.equal(failedStorage.rows[0]!.response_json, null);
   assert.ok(!String(failedStorage.rows[0]!.serialized).includes('sensitive provider detail'));
 
@@ -581,6 +585,48 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
   `);
   assert.equal(recoveredDebits.rows[0]!.count, 1);
 
+  setSharedAiProviderAdapterForTests({
+    status: { kind: 'ai', name: 'invalid-response-test', state: 'test' },
+    async complete() {
+      return {
+        text: JSON.stringify({ status: 'not-an-accepted-status' }),
+        tokenCount: 200,
+        durationMs: 1,
+        provider: 'invalid-response-test',
+        model: 'invalid-v1',
+        version: 'test-v1',
+      };
+    },
+  });
+  const invalidKey = 'phase45:assist:invalid:0001';
+  const invalid = await inject(
+    'POST',
+    '/v1/modules/torqueshed/torque-assist',
+    ownerA,
+    { diagnosticSessionId: diagnosticA.id },
+    { 'idempotency-key': invalidKey },
+  );
+  assert.equal(invalid.statusCode, 502, invalid.body);
+  assert.equal(invalid.json().code, 'TORQUE_ASSIST_RESPONSE_INVALID');
+  assert.equal(invalid.json().charged, false);
+  const invalidReservation = await db.execute(sql`
+    SELECT reservation.status,COUNT(ledger.id)::int AS debit_count
+    FROM torqueshed_token_reservations reservation
+    LEFT JOIN torqueshed_token_ledger_entries ledger
+      ON ledger.tenant_id=reservation.tenant_id
+      AND ledger.assist_request_id=reservation.assist_request_id
+      AND ledger.entry_kind='debit'
+    WHERE reservation.tenant_id=${ownerA.currentTenantId}
+      AND reservation.idempotency_key=${invalidKey}
+    GROUP BY reservation.status
+  `);
+  assert.equal(invalidReservation.rows[0]!.status, 'released');
+  assert.equal(invalidReservation.rows[0]!.debit_count, 0);
+  await db.execute(sql`
+    DELETE FROM torqueshed_assist_rate_windows WHERE tenant_id=${ownerA.currentTenantId}
+  `);
+  setSharedAiProviderAdapterForTests(defaultAi);
+
   const foreign = await inject(
     'POST',
     '/v1/modules/torqueshed/torque-assist',
@@ -590,21 +636,27 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
   );
   assert.equal(foreign.statusCode, 404, foreign.body);
 
-  const raceUnits = 10_000;
-  let waitingCompletions = 0;
-  let releaseCompletions!: () => void;
-  const bothCompletionsReady = new Promise<void>((resolve) => {
-    releaseCompletions = resolve;
-  });
+  const racePreview = await inject(
+    'GET',
+    `/v1/modules/torqueshed/diagnostics/${diagnosticB.id}/torque-assist/context`,
+    ownerB,
+  );
+  assert.equal(racePreview.statusCode, 200, racePreview.body);
+  const raceUnits = Number(racePreview.json().estimatedUnits);
+  let providerCalls = 0;
+  let signalProviderStarted!: () => void;
+  let releaseProvider!: () => void;
+  const providerStarted = new Promise<void>((resolve) => { signalProviderStarted = resolve; });
+  const providerRelease = new Promise<void>((resolve) => { releaseProvider = resolve; });
   const raceAdapter: SharedAiProviderAdapter = {
     status: { kind: 'ai', name: 'concurrency-barrier-test', state: 'test' },
     async complete() {
-      waitingCompletions += 1;
-      if (waitingCompletions === 2) releaseCompletions();
-      await bothCompletionsReady;
+      providerCalls += 1;
+      signalProviderStarted();
+      await providerRelease;
       return {
         text: JSON.stringify(result.result),
-        tokenCount: raceUnits,
+        tokenCount: Math.max(1, Math.floor(raceUnits / 2)),
         durationMs: 1,
         provider: 'concurrency-barrier-test',
         model: 'fixed-cost-v1',
@@ -613,8 +665,8 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
     },
   };
   setSharedAiProviderAdapterForTests(raceAdapter);
-  // Both requests pass the pre-provider estimate check against the same balance,
-  // but only one fixed-cost completion can consume it after the barrier releases.
+  // The first request reserves the exact available maximum before provider
+  // work. The second request must fail before it calls the provider.
   const raceCredit = raceUnits;
   await db.execute(sql`
     INSERT INTO torqueshed_token_ledger_entries (
@@ -625,22 +677,23 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
       ${raceCredit},'phase8:race-credit:0001','{}'::jsonb,${ownerB.id}
     )
   `);
-  const race = await Promise.all([
-    inject(
-      'POST',
-      '/v1/modules/torqueshed/torque-assist',
-      ownerB,
-      { diagnosticSessionId: diagnosticB.id },
-      { 'idempotency-key': 'phase8:race:0001' },
-    ),
-    inject(
-      'POST',
-      '/v1/modules/torqueshed/torque-assist',
-      ownerB,
-      { diagnosticSessionId: diagnosticB.id },
-      { 'idempotency-key': 'phase8:race:0002' },
-    ),
-  ]);
+  const firstRace = inject(
+    'POST',
+    '/v1/modules/torqueshed/torque-assist',
+    ownerB,
+    { diagnosticSessionId: diagnosticB.id },
+    { 'idempotency-key': 'phase8:race:0001' },
+  );
+  await providerStarted;
+  const secondRace = await inject(
+    'POST',
+    '/v1/modules/torqueshed/torque-assist',
+    ownerB,
+    { diagnosticSessionId: diagnosticB.id },
+    { 'idempotency-key': 'phase8:race:0002' },
+  );
+  releaseProvider();
+  const race = [await firstRace, secondRace];
   assert.deepEqual(
     race.map((response) => response.statusCode).sort(),
     [200, 402],
@@ -655,6 +708,16 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
   `);
   assert.ok(Number(raceMath.rows[0]!.balance) >= 0);
   assert.equal(raceMath.rows[0]!.debits, 1);
+  const reservationMath = await db.execute(sql`
+    SELECT status,reserved_units,consumed_units,released_units
+    FROM torqueshed_token_reservations
+    WHERE tenant_id=${ownerB.currentTenantId} AND idempotency_key='phase8:race:0001'
+  `);
+  assert.equal(reservationMath.rows[0]!.status, 'settled');
+  assert.equal(
+    Number(reservationMath.rows[0]!.consumed_units) + Number(reservationMath.rows[0]!.released_units),
+    Number(reservationMath.rows[0]!.reserved_units),
+  );
   setSharedAiProviderAdapterForTests(defaultAi);
 
   let rateLimited = false;
@@ -673,9 +736,46 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
       assert.equal(response.json().code, 'TORQUE_ASSIST_RATE_LIMITED');
       break;
     }
-    assert.equal(response.statusCode, 402, response.body);
+    assert.ok([200, 402].includes(response.statusCode), response.body);
   }
   assert.equal(rateLimited, true);
+
+  const expiringRequestKey = 'phase45:reservation-expiry:0001';
+  const expiringRequest = await db.execute(sql`
+    INSERT INTO torqueshed_assist_requests (
+      tenant_id,user_id,diagnostic_session_id,status,context_sha256,context_chars,
+      context_items,estimated_units,idempotency_key,correlation_id
+    ) VALUES (
+      ${ownerA.currentTenantId},${ownerA.id},${diagnosticA.id},'reserved',${'a'.repeat(64)},
+      100,1,500,${expiringRequestKey},'phase45-expiry-correlation'
+    ) RETURNING id
+  `);
+  await db.execute(sql`
+    INSERT INTO torqueshed_token_reservations (
+      tenant_id,user_id,module_id,diagnostic_session_id,assist_request_id,idempotency_key,
+      status,reserved_units,correlation_id,expires_at
+    ) VALUES (
+      ${ownerA.currentTenantId},${ownerA.id},${moduleRow.id},${diagnosticA.id},
+      ${String(expiringRequest.rows[0]!.id)},${expiringRequestKey},'active',500,
+      'phase45-expiry-correlation',NOW()-INTERVAL '1 minute'
+    )
+  `);
+  const reaped = await expireTorqueAssistReservations({
+    tenantId: ownerA.currentTenantId,
+    userId: ownerA.id,
+  });
+  assert.equal(reaped.expiredCount, 1);
+  const expiredReservation = await db.execute(sql`
+    SELECT reservation.status,reservation.released_units,request.status AS request_status
+    FROM torqueshed_token_reservations reservation
+    JOIN torqueshed_assist_requests request
+      ON request.tenant_id=reservation.tenant_id AND request.id=reservation.assist_request_id
+    WHERE reservation.tenant_id=${ownerA.currentTenantId}
+      AND reservation.idempotency_key=${expiringRequestKey}
+  `);
+  assert.equal(expiredReservation.rows[0]!.status, 'expired');
+  assert.equal(Number(expiredReservation.rows[0]!.released_units), 500);
+  assert.equal(expiredReservation.rows[0]!.request_status, 'expired');
 
   const failedCheckout = await inject(
     'POST',
@@ -709,6 +809,8 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
     { diagnosticSessionId: diagnosticA.id, packageKey: 'roadside-25000' },
     { 'idempotency-key': 'phase43:checkout-creation-failure:0001' },
   );
+  assert.equal(providerCalls, 1);
+  assert.equal(secondRace.json().code, 'TORQUE_ASSIST_CREDITS_REQUIRED');
   __setTorqueCheckoutCreatorForTests(null);
   assert.equal(creationFailure.statusCode, 502, creationFailure.body);
   assert.equal(creationFailure.json().code, 'TORQUE_CHECKOUT_NOT_CREATED');
