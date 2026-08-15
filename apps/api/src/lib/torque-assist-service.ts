@@ -148,17 +148,19 @@ export async function torqueAssistReconciliation(tenantId: string) {
       GROUP BY user_id ORDER BY user_id
     `),
     db.execute(sql`
-      SELECT p.id,p.user_id,p.status,p.units,
+      SELECT p.id,p.user_id,p.status,p.units,p.settlement_policy_state,p.settlement_policy_units,
         COALESCE(SUM(CASE WHEN l.entry_kind='credit' THEN l.units ELSE 0 END),0)::bigint AS credited_units,
         COALESCE(SUM(CASE WHEN l.entry_kind='credit_reversal' THEN l.units ELSE 0 END),0)::bigint AS reversed_units
       FROM operatoros_token_purchase_intents p
       LEFT JOIN torqueshed_token_ledger_entries l
         ON l.tenant_id=p.tenant_id AND l.purchase_intent_id=p.id
       WHERE p.tenant_id=${tenantId} AND p.module_id=${module.id}
-      GROUP BY p.id,p.user_id,p.status,p.units
+      GROUP BY p.id,p.user_id,p.status,p.units,p.settlement_policy_state,p.settlement_policy_units
       HAVING
         (p.status='credited' AND COALESCE(SUM(CASE WHEN l.entry_kind='credit' THEN l.units ELSE 0 END),0)<>p.units)
-        OR (p.status='refunded' AND COALESCE(SUM(CASE WHEN l.entry_kind='credit_reversal' THEN l.units ELSE 0 END),0)<>p.units)
+        OR (p.status='refunded' AND
+          COALESCE(SUM(CASE WHEN l.entry_kind='credit_reversal' THEN l.units ELSE 0 END),0)
+            + p.settlement_policy_units <> p.units)
         OR COALESCE(SUM(CASE WHEN l.entry_kind='credit_reversal' THEN l.units ELSE 0 END),0) >
            COALESCE(SUM(CASE WHEN l.entry_kind='credit' THEN l.units ELSE 0 END),0)
       ORDER BY p.id

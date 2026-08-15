@@ -1150,6 +1150,11 @@ export interface TorqueTokenPurchaseStatus {
   terminal: boolean;
   catalogVersion: string | null;
   providerMode: 'test' | 'live';
+  paymentIntentId: string | null;
+  settlementPolicy: {
+    state: 'none' | 'refund_review' | 'dispute_frozen' | 'dispute_lost';
+    units: number;
+  };
   balance: number;
   updatedAt: string;
   creditedAt: string | null;

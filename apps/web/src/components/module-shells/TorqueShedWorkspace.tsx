@@ -104,7 +104,13 @@ function purchaseMessage(status: TorqueTokenPurchaseStatus): string {
   if (status.state === 'cancelled') return 'Checkout cancelled; no credits were added';
   if (status.state === 'expired') return 'Checkout expired; no credits were added';
   if (status.state === 'failed') return 'Payment failed; no credits were added';
+  if (status.state === 'refunded' && status.settlementPolicy.state === 'refund_review') {
+    return `Payment refunded; available credits were reversed and ${status.settlementPolicy.units.toLocaleString()} spent units require administrator review`;
+  }
   if (status.state === 'refunded') return 'Payment refunded; purchased credits were reversed under policy';
+  if (status.settlementPolicy.state === 'dispute_lost') {
+    return `Payment dispute lost; ${status.settlementPolicy.units.toLocaleString()} spent units require administrator review`;
+  }
   return 'Payment disputed; purchased credits are frozen';
 }
 

@@ -1,5 +1,18 @@
 # OperatorOS module parity index
 
+## Phase 44 TorqueShed settlement-integrity overlay
+
+TorqueShed settlement is bound to verified raw Stripe events and complete
+provider/catalog/purchase scope. The receipt, exactly-once grant, purchase
+state, and audit now commit atomically; explicit refund/dispute holds prevent
+negative balances. Dry-run reconciliation detects provider/local and ledger
+drift, while its separately gated repair can only replay an existing verified
+receipt and refuses ambiguity. Focused tests pass 22/22, compiled exact-host
+acceptance passes 1/1, and cumulative v51 apply/reapply passes. Real Stripe
+test-mode delivery, refund/dispute, and final green reconciliation remain
+external provider gates. See
+`docs/phase-44/TORQUESHED-SETTLEMENT-AND-RECONCILIATION.md`.
+
 ## Phase 43 TorqueShed checkout-contract overlay
 
 TorqueShed has one canonical package-key checkout endpoint and additive v50

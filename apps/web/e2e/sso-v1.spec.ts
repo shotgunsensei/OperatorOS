@@ -1163,6 +1163,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
         id: string; tenantId: string; userId: string; moduleId: string; packageKey: string;
         units: number; amountMinor: number; currency: string; providerCheckoutId: string;
         diagnosticSessionId: string; catalogVersion: string; providerMode: 'test' | 'live';
+        stripeAccountId: string; providerProductId: string; providerPriceId: string;
       };
     };
     const purchase = purchaseBody.purchase;
@@ -1195,6 +1196,16 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
               environment: purchase.providerMode,
               module_slug: 'torqueshed',
               operatoros_source: 'server_authoritative_catalog',
+              stripe_account_id: purchase.stripeAccountId,
+              provider_product_id: purchase.providerProductId,
+              provider_price_id: purchase.providerPriceId,
+            },
+            mode: 'payment',
+            line_items: {
+              data: [{ quantity: 1, price: {
+                id: purchase.providerPriceId,
+                product: { id: purchase.providerProductId },
+              } }],
             },
           },
         },
@@ -1408,6 +1419,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
         id: string; tenantId: string; userId: string; moduleId: string; packageKey: string;
         units: number; amountMinor: number; currency: string; providerCheckoutId: string;
         diagnosticSessionId: string; catalogVersion: string; providerMode: 'test' | 'live';
+        stripeAccountId: string; providerProductId: string; providerPriceId: string;
       };
     }>(
       page,
@@ -1452,6 +1464,16 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
             environment: purchase.providerMode,
             module_slug: 'torqueshed',
             operatoros_source: 'server_authoritative_catalog',
+            stripe_account_id: purchase.stripeAccountId,
+            provider_product_id: purchase.providerProductId,
+            provider_price_id: purchase.providerPriceId,
+          },
+          mode: 'payment',
+          line_items: {
+            data: [{ quantity: 1, price: {
+              id: purchase.providerPriceId,
+              product: { id: purchase.providerProductId },
+            } }],
           },
         },
       },

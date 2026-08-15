@@ -147,6 +147,16 @@ function signedPaymentEvent(input: {
         payment_intent: `pi_${input.purchase.id}`,
         payment_status: refund ? 'succeeded' : 'paid',
         status: refund ? 'succeeded' : 'complete',
+        mode: 'payment',
+        line_items: {
+          data: [{
+            quantity: 1,
+            price: {
+              id: input.purchase.providerPriceId,
+              product: { id: input.purchase.providerProductId },
+            },
+          }],
+        },
         ...(refund ? { amount_refunded: input.amountMinor } : { amount_total: input.amountMinor }),
         currency: 'usd',
         metadata: {
@@ -162,6 +172,9 @@ function signedPaymentEvent(input: {
           environment: input.purchase.providerMode,
           module_slug: 'torqueshed',
           operatoros_source: 'server_authoritative_catalog',
+          stripe_account_id: input.purchase.stripeAccountId,
+          provider_product_id: input.purchase.providerProductId,
+          provider_price_id: input.purchase.providerPriceId,
         },
       },
     },
@@ -339,6 +352,72 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
   );
   assert.equal(wrongMode.statusCode, 409, wrongMode.body);
   assert.equal(wrongMode.json().code, 'TORQUE_PAYMENT_MODE_CONFLICT');
+
+  const badSignatureEvent = signedPaymentEvent({
+    id: 'evt_phase44_bad_signature',
+    type: 'checkout.session.completed',
+    purchase,
+    amountMinor: 500,
+  });
+  const badSignature = await app.inject({
+    method: 'POST', url: '/v1/billing/webhook',
+    headers: { 'content-type': 'application/json', 'stripe-signature': 'forged' },
+    payload: JSON.stringify(badSignatureEvent),
+  });
+  assert.equal(badSignature.statusCode, 400, badSignature.body);
+
+  const wrongTenantEvent = signedPaymentEvent({
+    id: 'evt_phase44_wrong_tenant', type: 'checkout.session.completed', purchase, amountMinor: 500,
+  });
+  wrongTenantEvent.data.object.metadata.tenant_id = ownerB.currentTenantId;
+  const wrongTenant = await sendPaymentEvent(wrongTenantEvent);
+  assert.equal(wrongTenant.statusCode, 409, wrongTenant.body);
+  assert.equal(wrongTenant.json().code, 'TORQUE_PAYMENT_SCOPE_CONFLICT');
+
+  const wrongPriceEvent = signedPaymentEvent({
+    id: 'evt_phase44_wrong_price', type: 'checkout.session.completed', purchase, amountMinor: 500,
+  });
+  wrongPriceEvent.data.object.line_items.data[0].price.id = 'price_wrong_catalog';
+  const wrongPrice = await sendPaymentEvent(wrongPriceEvent);
+  assert.equal(wrongPrice.statusCode, 409, wrongPrice.body);
+  assert.equal(wrongPrice.json().code, 'TORQUE_PAYMENT_PRICE_CONFLICT');
+
+  const wrongProductEvent = signedPaymentEvent({
+    id: 'evt_phase44_wrong_product', type: 'checkout.session.completed', purchase, amountMinor: 500,
+  });
+  wrongProductEvent.data.object.line_items.data[0].price.product.id = 'prod_wrong_catalog';
+  const wrongProduct = await sendPaymentEvent(wrongProductEvent);
+  assert.equal(wrongProduct.statusCode, 409, wrongProduct.body);
+  assert.equal(wrongProduct.json().code, 'TORQUE_PAYMENT_PRODUCT_CONFLICT');
+
+  const wrongAccountEvent = signedPaymentEvent({
+    id: 'evt_phase44_wrong_account', type: 'checkout.session.completed', purchase, amountMinor: 500,
+  });
+  (wrongAccountEvent as any).account = 'acct_wrong_environment';
+  const wrongAccount = await sendPaymentEvent(wrongAccountEvent);
+  assert.equal(wrongAccount.statusCode, 409, wrongAccount.body);
+  assert.equal(wrongAccount.json().code, 'TORQUE_PAYMENT_ACCOUNT_CONFLICT');
+
+  const wrongAmountEvent = signedPaymentEvent({
+    id: 'evt_phase44_wrong_amount', type: 'checkout.session.completed', purchase, amountMinor: 499,
+  });
+  const wrongAmount = await sendPaymentEvent(wrongAmountEvent);
+  assert.equal(wrongAmount.statusCode, 409, wrongAmount.body);
+  assert.equal(wrongAmount.json().code, 'TORQUE_PAYMENT_AMOUNT_CONFLICT');
+
+  const wrongCurrencyEvent = signedPaymentEvent({
+    id: 'evt_phase44_wrong_currency', type: 'checkout.session.completed', purchase, amountMinor: 500,
+  });
+  wrongCurrencyEvent.data.object.currency = 'eur';
+  const wrongCurrency = await sendPaymentEvent(wrongCurrencyEvent);
+  assert.equal(wrongCurrency.statusCode, 409, wrongCurrency.body);
+  assert.equal(wrongCurrency.json().code, 'TORQUE_PAYMENT_CURRENCY_CONFLICT');
+
+  const noMaliciousCredit = await db.execute(sql`
+    SELECT COUNT(*)::int AS count FROM torqueshed_token_ledger_entries
+    WHERE purchase_intent_id=${purchase.id} AND entry_kind='credit'
+  `);
+  assert.equal(noMaliciousCredit.rows[0]!.count, 0);
 
   await db.execute(sql`UPDATE operatoros_token_purchase_intents SET status='paid_pending_credit' WHERE id=${purchase.id}`);
   const paidPending = await inject('GET', `/v1/modules/torqueshed/token-purchases/${purchase.id}/status`, ownerA);
@@ -688,6 +767,10 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
   `);
   assert.equal(expiredCredits.rows[0]!.count, 0);
 
+  const preRefundLedger = await inject('GET', '/v1/modules/torqueshed/token-ledger', ownerA);
+  assert.equal(preRefundLedger.statusCode, 200, preRefundLedger.body);
+  const availableBeforeRefund = Number(preRefundLedger.json().balance);
+  assert.ok(availableBeforeRefund > 0 && availableBeforeRefund < 25_000);
   const refund = await sendPaymentEvent(
     signedPaymentEvent({
       id: 'evt_phase8_refund_0001',
@@ -704,7 +787,16 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
       AND entry_kind='credit_reversal'
   `);
   assert.equal(reversal.rows[0]!.count, 1);
-  assert.equal(Number(reversal.rows[0]!.units), 25_000);
+  assert.equal(Number(reversal.rows[0]!.units), availableBeforeRefund);
+  const refundedStatus = await inject(
+    'GET',
+    `/v1/modules/torqueshed/token-purchases/${purchase.id}/status`,
+    ownerA,
+  );
+  assert.equal(refundedStatus.statusCode, 200, refundedStatus.body);
+  assert.equal(refundedStatus.json().state, 'refunded');
+  assert.equal(refundedStatus.json().settlementPolicy.state, 'refund_review');
+  assert.equal(refundedStatus.json().settlementPolicy.units, 25_000 - availableBeforeRefund);
 
   const exhausted = await inject(
     'POST',
@@ -718,15 +810,15 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
   const ledger = await inject('GET', '/v1/modules/torqueshed/token-ledger', ownerA);
   assert.equal(ledger.statusCode, 200, ledger.body);
   assert.ok(ledger.json().entries.length >= 4);
-  assert.ok(ledger.json().balance < 0);
+  assert.equal(ledger.json().balance, 0);
   const reconciliation = await inject(
     'GET',
     '/v1/modules/torqueshed/token-ledger/reconciliation',
     ownerA,
   );
   assert.equal(reconciliation.statusCode, 200, reconciliation.body);
-  assert.equal(reconciliation.json().mathematicallyReconciled, false);
-  assert.equal(reconciliation.json().findings.negativeBalances.length, 1);
+  assert.equal(reconciliation.json().mathematicallyReconciled, true);
+  assert.equal(reconciliation.json().findings.negativeBalances.length, 0);
 
   const ledgerId = ledger.json().entries[0].id;
   await assert.rejects(

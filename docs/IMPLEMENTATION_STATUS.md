@@ -1,5 +1,26 @@
 # OperatorOS implementation status
 
+## Phase 44 TorqueShed settlement and reconciliation - SOURCE/LOCAL IMPLEMENTED / REAL STRIPE GATED (2026-08-15)
+
+The raw-body, signature-verified canonical billing webhook is now the only
+external settlement trigger. Catalog-backed purchases require matching Stripe
+account/mode, Session, PaymentIntent, Product, Price, quantity, amount,
+currency, metadata, purchase, tenant, user, module, and diagnostic evidence.
+The provider receipt claim, purchase lock, balance lock, one append-only
+credit, purchase state, audit, and receipt completion commit atomically.
+Refunds and disputes reverse only available units and record explicit review
+or freeze holds instead of creating a negative balance.
+
+The v2 reconciliation command is dry-run by default, reports provider/local
+identity, payment, ledger, receipt, policy, audit, orphan, duplicate, stuck,
+and negative-balance inconsistencies, and can only repair by replaying one
+existing signature-verified receipt under exact apply confirmation. Focused
+tests pass 22/22; workspace typecheck, production build, disposable v51
+apply/reapply, and compiled exact-host browser 1/1 pass. Real Stripe test
+Checkout/refund/dispute delivery remains provider-gated and no live repair or
+production mutation was attempted. See
+`docs/phase-44/TORQUESHED-SETTLEMENT-AND-RECONCILIATION.md`.
+
 ## Phase 43 canonical TorqueShed checkout - SOURCE/LOCAL IMPLEMENTED / STRIPE TEST JOURNEY BLOCKED (2026-08-15)
 
 TorqueShed now has one server-owned checkout contract accepting only an owned

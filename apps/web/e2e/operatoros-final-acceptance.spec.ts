@@ -303,6 +303,16 @@ test.describe('OperatorOS final ecosystem acceptance', () => {
               environment: String(purchase.providerMode ?? ''),
               module_slug: 'torqueshed',
               operatoros_source: 'server_authoritative_catalog',
+              stripe_account_id: purchase.stripeAccountId,
+              provider_product_id: purchase.providerProductId,
+              provider_price_id: purchase.providerPriceId,
+            },
+            mode: 'payment',
+            line_items: {
+              data: [{ quantity: 1, price: {
+                id: purchase.providerPriceId,
+                product: { id: purchase.providerProductId },
+              } }],
             },
           },
         },

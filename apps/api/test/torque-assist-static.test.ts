@@ -48,7 +48,7 @@ test('Torque Assist uses trusted session context, shared adapters, and transacti
   assert.match(service, /response_json=NULL,actual_units=NULL/);
   assert.match(billing, /getPaymentProviderAdapter/);
   assert.match(billing, /amountMinor.*purchase\.amount_minor/s);
-  assert.match(billing, /'credit_reversal','token_purchase_refund'/);
+  assert.match(billing, /operationType: 'token_purchase_refund'/);
   assert.doesNotMatch(service, /console\.(?:log|error|warn).*Prompt/i);
 });
 
@@ -101,9 +101,10 @@ test('Torque payment reconciliation is dry-run first and live apply is explicitl
   const pkg = JSON.parse(read('package.json'));
   assert.match(pkg.scripts['billing:reconcile:torque'], /torque-payment-reconcile/);
   assert.match(command, /--dry-run/);
-  assert.match(command, /BILLING_RECONCILIATION_LIVE_APPLY/);
+  assert.match(command, /BILLING_RECONCILIATION_APPLY_CONFIRM/);
   assert.match(reconciliation, /retrieveTorqueStripeReconciliationSnapshot/);
-  assert.match(reconciliation, /settleTorqueTokenPurchase/);
+  assert.match(reconciliation, /processWebhookReceiptById/);
+  assert.match(reconciliation, /REPROCESS_VERIFIED_RECEIPT/);
   assert.match(dbInit, /uq_torqueshed_token_ledger_purchase_credit/);
   assert.doesNotMatch(reconciliation, /INSERT INTO torqueshed_token_ledger_entries/);
 });
@@ -136,4 +137,36 @@ test('Phase 43 checkout is server-authoritative, durable, and browser returns ar
   assert.match(web, /Credits added/);
   assert.match(web, /Refresh status/);
   assert.match(web, /sessionStorage/);
+});
+
+test('Phase 44 settlement proves provider evidence and prevents unexplained negative refunds', () => {
+  const billingRoutes = read('apps/api/src/routes/billing-routes.ts');
+  const billing = read('apps/api/src/lib/operatoros-token-billing.ts');
+  const stripe = read('apps/api/src/lib/billing-service.ts');
+  const shared = read('apps/api/src/lib/shared-webhooks.ts');
+  const ddl = read('apps/api/src/lib/torqueshed-settlement-db-init.ts');
+  const reconciliation = read('apps/api/src/lib/operatoros-token-reconciliation.ts');
+
+  assert.match(billingRoutes, /Buffer\.isBuffer\(rawBody\)/);
+  assert.match(billingRoutes, /verifyWebhook\(rawBody, signature\)/);
+  assert.match(stripe, /listLineItems\(checkoutSessionId/);
+  for (const evidence of [
+    'stripe_account_id', 'provider_product_id', 'provider_price_id',
+    'catalog_version', 'diagnostic_session_id',
+  ]) assert.match(billing, new RegExp(evidence));
+  assert.match(billing, /status='processed'.*attempt_count=attempt_count\+1/s);
+  assert.match(billing, /pg_advisory_xact_lock/);
+  assert.match(shared, /atomically complete its receipt/);
+  assert.match(ddl, /torqueshed_credit_policy_holds/);
+  assert.match(ddl, /refund_debt/);
+  assert.match(ddl, /dispute_freeze/);
+  assert.match(billing, /Math\.min\(outstanding, Math\.max\(0,/);
+  for (const finding of [
+    'PAID_SESSION_NO_CREDIT', 'CREDIT_WITHOUT_PAID_SESSION', 'DUPLICATE_PURCHASE_CREDIT',
+    'PAYMENT_AMOUNT_MISMATCH', 'CHECKOUT_PRICE_MISMATCH', 'PURCHASE_STUCK_PENDING',
+    'REFUND_WITHOUT_POLICY_STATE', 'STRIPE_ACCOUNT_MISMATCH', 'ORPHAN_PROVIDER_SESSION',
+    'NEGATIVE_LEDGER_BALANCE',
+  ]) assert.match(reconciliation, new RegExp(`'${finding}'`));
+  assert.match(reconciliation, /REPROCESS_VERIFIED_RECEIPT/);
+  assert.doesNotMatch(reconciliation, /INSERT INTO torqueshed_token_ledger_entries/);
 });
