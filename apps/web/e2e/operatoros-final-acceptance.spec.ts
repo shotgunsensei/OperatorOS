@@ -130,11 +130,9 @@ async function login(page: Page, email: string) {
 
 async function launch(page: Page, slug: typeof MODULES[number], shellTestId: string): Promise<Page> {
   await expect(page.getByTestId(`button-launch-${slug}`)).toBeVisible();
-  const popupPromise = page.waitForEvent('popup');
   await page.getByTestId(`button-launch-${slug}`).click();
-  const modulePage = await popupPromise;
-  await expect(modulePage.getByTestId(shellTestId)).toBeVisible({ timeout: 30_000 });
-  return modulePage;
+  await expect(page.getByTestId(shellTestId)).toBeVisible({ timeout: 30_000 });
+  return page;
 }
 
 async function returnToApps(modulePage: Page) {

@@ -1,5 +1,9 @@
 # OperatorOS module parity index
 
+## Phase 46 same-tab launch overlay
+
+All twelve currently enabled child modules retain state 4 and their existing product/parity evidence. Phase 46 changes only the shared launch/navigation contract: ordinary launches reuse the current page, normal browser modifier/context-menu behavior remains available, and separately labelled new-tab actions are opener-isolated. Compiled exact-host Chromium exercised every active module shell and explicit page-count assertions. Deployment, provider, migration/cutover, and state-5 gates remain unchanged. See `docs/phase-46/MODULE-LAUNCH-NAVIGATION-CONTRACT.md`.
+
 ## Phase 45 Torque Assist reservation overlay
 
 Torque Assist uses a durable tenant/user/module reservation before provider

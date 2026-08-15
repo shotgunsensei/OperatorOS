@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { createWriteStream } from 'node:fs';
+import { closeSync, createWriteStream, openSync } from 'node:fs';
 import net from 'node:net';
 
 export const PNPM = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
@@ -80,16 +80,23 @@ export function requiredTestExitCode(processStatus, summary) {
 }
 
 export function spawnLogged(command, args, {
-  cwd = process.cwd(), env = process.env, logPath, mirrorToParent = true,
+  cwd = process.cwd(), env = process.env, logPath, mirrorToParent = true, directToLog = false,
 } = {}) {
   const invocation = executableInvocation(command, args);
+  const directLogDescriptor = directToLog ? openSync(logPath, 'w') : null;
   const child = spawn(invocation.command, invocation.args, {
     cwd,
     env,
     shell: false,
     windowsHide: true,
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: directLogDescriptor == null
+      ? ['ignore', 'pipe', 'pipe']
+      : ['ignore', directLogDescriptor, directLogDescriptor],
   });
+  if (directLogDescriptor != null) {
+    closeSync(directLogDescriptor);
+    return child;
+  }
   const stream = createWriteStream(logPath, { flags: 'w' });
   child.stdout.pipe(stream);
   child.stderr.pipe(stream);

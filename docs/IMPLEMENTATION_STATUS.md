@@ -1,5 +1,14 @@
 # OperatorOS implementation status
 
+## Phase 46 same-tab module launch contract - SOURCE/LOCAL ACCEPTED / DEPLOYMENT GATED (2026-08-15)
+
+- All primary module entry points now render the shared `ModuleLaunchLink` real-anchor contract with no `target`, so ordinary activation uses the current page and native browser history. My Apps and the Apps catalog expose separately labelled new-tab controls with `_blank` plus `noopener noreferrer`.
+- The web/native boundary is explicit: module fallback navigation uses `window.location.assign` on web and Capacitor Browser on native; external billing/documents use the separately named `openExternalDocument` path.
+- My Apps, recent apps, catalog, ecosystem, module fallback, and shared module-shell return launchers were migrated. Recent-app tracking remains synchronous and does not prevent native anchor navigation.
+- The exact-host production-artifact gate now gives long-running child processes direct log file descriptors. This preserves complete logs without allowing parent-stream backpressure to pause Fastify during the twelve-module journey.
+- Focused source contracts PASS 6/6; workspace typecheck PASS; production build PASS; and compiled local HTTPS exact-host Chromium PASS 1/1 in 27.6 seconds. The browser gate proves twelve ordinary launches keep `context.pages()` at one, Back returns to My Apps, intentional Ctrl/middle/explicit actions create exactly one extra page, the explicit page has no opener, and global logout invalidates the final module journey.
+- This is local source/runtime evidence. No public deployment or deployed authenticated acceptance was authorized, so no state-5 claim is made.
+
 ## Phase 45 Torque Assist reservations and actionable failures - SOURCE/LOCAL IMPLEMENTED / PROVIDERS GATED (2026-08-15)
 
 Torque Assist now reserves a conservative maximum from the tenant/user's

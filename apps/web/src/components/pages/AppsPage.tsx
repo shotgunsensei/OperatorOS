@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Filter, Settings as SettingsIcon, Lock } from 'lucide-react';
+import { Search, Filter, Settings as SettingsIcon, Lock, ExternalLink } from 'lucide-react';
 import { modulesApi, meApi } from '@/lib/auth';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/components/AuthProvider';
 import { colors } from '@/lib/design-tokens';
 import { MARKETING_MODULES } from '@/lib/marketing-catalog';
-import { friendlyModuleLaunchError, launchModuleViaSso } from '@/lib/module-launch';
 import { EmptyState, ErrorState, PageHeader } from '@/components/ExperiencePrimitives';
+import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 
 type AccessSource = 'plan' | 'addon' | 'override' | 'admin_role' | null;
 type ModuleCta = 'open' | 'upgrade' | 'buy_addon' | 'coming_soon' | 'disabled';
@@ -93,7 +93,6 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
   const [modules, setModules] = useState<ModuleSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [launching, setLaunching] = useState<string | null>(null);
   const [warningShown, setWarningShown] = useState(false);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -151,18 +150,6 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
   };
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const launch = async (slug: string) => {
-    setLaunching(slug);
-    try {
-      await launchModuleViaSso(slug);
-      toast('Opening your tool securely', 'success');
-    } catch (err: any) {
-      toast(friendlyModuleLaunchError(err), 'error');
-    } finally {
-      setLaunching(null);
-    }
-  };
 
   const subscribe = async (slug: string) => {
     try {
@@ -318,18 +305,35 @@ export default function AppsPage({ onNavigate }: { onNavigate?: (page: string) =
 
         <div style={{ display: 'flex', gap: 8, marginTop: 'auto', padding: '0 20px 20px' }}>
           {cta === 'open' && (
-            <button
+            <ModuleLaunchLink
+              moduleId={m.id || m.slug}
               data-testid={`button-launch-${m.slug}`}
-              onClick={() => launch(m.slug)}
-              disabled={launching === m.slug}
               style={{
                 flex: 1, minHeight: 40, padding: '8px 14px', borderRadius: 8, border: 'none',
                 background: colors.accent, color: '#fff', fontWeight: 600,
-                fontSize: 13, cursor: launching === m.slug ? 'wait' : 'pointer',
+                fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              {launching === m.slug ? `Opening ${m.name}…` : `Open ${m.name}`}
-            </button>
+              Open {m.name}
+            </ModuleLaunchLink>
+          )}
+          {cta === 'open' && (
+            <ModuleLaunchLink
+              moduleId={m.id || m.slug}
+              openInNewTab
+              data-testid={`button-launch-new-tab-${m.slug}`}
+              aria-label={`Open ${m.name} in new tab`}
+              title={`Open ${m.name} in new tab`}
+              style={{
+                minHeight: 40, padding: '8px 12px', borderRadius: 8,
+                border: `1px solid ${colors.border}`, background: 'transparent',
+                color: colors.textMuted, textDecoration: 'none',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <ExternalLink size={14} aria-hidden="true" />
+            </ModuleLaunchLink>
           )}
           {isTenantAdmin && (
             <button

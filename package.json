@@ -81,6 +81,7 @@
     "audit:revenue:torqueshed": "node scripts/phase41/audit-torqueshed-revenue.mjs",
     "stripe:provision:torqueshed": "tsx apps/api/src/scripts/torqueshed-stripe-catalog.ts",
     "test:hotfix:torque-exact-host": "node scripts/hotfix/verify-torqueshed-payment-exact-host.mjs",
+    "test:phase46:same-tab": "node scripts/hotfix/verify-torqueshed-payment-exact-host.mjs \"one credential entry establishes the canonical app host\"",
     "export:tradeflowkit:snapshot": "tsx apps/api/src/scripts/tradeflowkit-export.ts --read-only",
     "import:tradeflowkit:dry-run": "tsx apps/api/src/scripts/tradeflowkit-import.ts --dry-run",
     "import:tradeflowkit:apply": "tsx apps/api/src/scripts/tradeflowkit-import.ts --apply",

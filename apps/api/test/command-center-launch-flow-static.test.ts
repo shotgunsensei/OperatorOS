@@ -14,6 +14,8 @@ function readRepoFile(path: string): string {
 test('Command Center launchpad is registry-driven and starts authorization on the target host', () => {
   const page = readRepoFile('apps/web/src/components/pages/MyAppsPage.tsx');
   const launchHelper = readRepoFile('apps/web/src/lib/module-launch.ts');
+  const launchComponent = readRepoFile('apps/web/src/components/ModuleLaunchLink.tsx');
+  const launchRuntime = readRepoFile('apps/web/src/lib/launch.ts');
   const login = readRepoFile('apps/web/src/app/login/page.tsx');
   const registry = readRepoFile('apps/web/src/lib/operatoros-registry.ts');
 
@@ -27,7 +29,16 @@ test('Command Center launchpad is registry-driven and starts authorization on th
   assert.match(page, /More tools you can add/);
   assert.doesNotMatch(page, /Planned for OperatorOS/);
 
-  assert.match(launchHelper, /openExternal\(module\.launchUrl\)/);
+  assert.match(page, /ModuleLaunchLink/);
+  assert.match(page, /button-launch-new-tab-/);
+  assert.match(launchComponent, /href=\{destination\}/);
+  assert.match(launchComponent, /target=\{openInNewTab \? '_blank' : undefined\}/);
+  assert.match(launchComponent, /rel=\{openInNewTab \? 'noopener noreferrer' : undefined\}/);
+  assert.match(launchComponent, /!event\.metaKey && !event\.ctrlKey && !event\.shiftKey/);
+  assert.match(launchComponent, /if \(ordinaryPrimaryActivation && isNativeLaunchRuntime\(\)\) \{\s*event\.preventDefault\(\)/);
+  assert.match(launchRuntime, /window\.location\.assign\(url\)/);
+  assert.match(launchRuntime, /Browser\.open\(\{ url, presentationStyle: 'fullscreen' \}\)/);
+  assert.doesNotMatch(launchHelper, /openExternal/);
   assert.match(launchHelper, /launchUrl:\s*module\.launchUrl/);
   assert.match(login, /issueModuleLaunch\(module\.id/);
   assert.match(login, /codeChallengeMethod:\s*'S256'/);
@@ -41,11 +52,13 @@ test('Command Center launchpad is registry-driven and starts authorization on th
   assert.doesNotMatch(page, /meApi\.modules/);
 });
 
-test('Marketplace launch uses the same SSO issue helper as the Command Center', () => {
+test('Marketplace launch uses the shared real-anchor module contract', () => {
   const appsPage = readRepoFile('apps/web/src/components/pages/AppsPage.tsx');
 
-  assert.match(appsPage, /launchModuleViaSso/);
-  assert.match(appsPage, /friendlyModuleLaunchError/);
+  assert.match(appsPage, /ModuleLaunchLink/);
+  assert.match(appsPage, /button-launch-new-tab-/);
+  assert.doesNotMatch(appsPage, /launchModuleViaSso/);
+  assert.doesNotMatch(appsPage, /friendlyModuleLaunchError/);
   assert.doesNotMatch(appsPage, /modulesApi\.handoff/);
 });
 

@@ -4,6 +4,7 @@ import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import FinalCta from '@/components/marketing/sections/FinalCta';
+import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 import { brand } from '@/lib/brand';
 import {
   getAllModules,
@@ -339,11 +340,9 @@ function ModuleCard({ module: m }: { module: EcosystemModule }) {
         {m.description}
       </p>
 
-      <a
-        href={launchable ? m.ecosystemUrl : undefined}
+      <ModuleLaunchLink
+        href={m.ecosystemUrl}
         data-testid={`ecosystem-launch-${m.slug}`}
-        target={launchable ? '_blank' : undefined}
-        rel={launchable ? 'noreferrer' : undefined}
         aria-disabled={!launchable}
         style={{
           marginTop: 'auto',
@@ -371,7 +370,7 @@ function ModuleCard({ module: m }: { module: EcosystemModule }) {
           </span>
         </span>
         <ArrowUpRight size={14} />
-      </a>
+      </ModuleLaunchLink>
     </div>
   );
 }

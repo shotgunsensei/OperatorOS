@@ -7,6 +7,8 @@ if (process.env.PARITY_DATABASE_IS_DISPOSABLE !== '1') {
   throw new Error('PARITY_DATABASE_IS_DISPOSABLE=1 is required');
 }
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
+const testGrep = process.argv.slice(2).join(' ').trim()
+  || 'TorqueShed canonical payment return';
 
 const webRoot = join(REPOSITORY_ROOT, 'apps/web');
 const playwright = join(
@@ -57,6 +59,8 @@ try {
       cwd: REPOSITORY_ROOT,
       env: runtimeEnv,
       logPath: join(BUILD_ROOT, 'hotfix-torque-api.log'),
+      mirrorToParent: false,
+      directToLog: true,
     },
   );
   await waitForHttp('http://127.0.0.1:5001/readyz', api, 120_000);
@@ -68,6 +72,8 @@ try {
       cwd: webRoot,
       env: { ...runtimeEnv, PORT: '5002' },
       logPath: join(BUILD_ROOT, 'hotfix-torque-web.log'),
+      mirrorToParent: false,
+      directToLog: true,
     },
   );
   await waitForHttp('http://127.0.0.1:5002/healthz', web, 120_000);
@@ -79,6 +85,8 @@ try {
       cwd: REPOSITORY_ROOT,
       env: { ...runtimeEnv, PORT: '5000', NEXT_INTERNAL_PORT: '5002' },
       logPath: join(BUILD_ROOT, 'hotfix-torque-gateway.log'),
+      mirrorToParent: false,
+      directToLog: true,
     },
   );
   await waitForPort(5000);
@@ -90,13 +98,15 @@ try {
       cwd: REPOSITORY_ROOT,
       env: runtimeEnv,
       logPath: join(BUILD_ROOT, 'hotfix-torque-exact-host-proxy.log'),
+      mirrorToParent: false,
+      directToLog: true,
     },
   );
   await waitForPort(443);
 
   exitCode = run(
     playwright,
-    ['test', 'e2e/sso-v1.spec.ts', '--grep', 'TorqueShed canonical payment return'],
+    ['test', 'e2e/sso-v1.spec.ts', '--grep', testGrep],
     { cwd: webRoot, env: runtimeEnv },
   );
 } finally {

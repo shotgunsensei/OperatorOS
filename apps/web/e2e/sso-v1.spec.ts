@@ -467,7 +467,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await pg.end().catch(() => undefined);
   });
 
-  test('one credential entry establishes the canonical app host then silently launches all thirteen enabled modules', async ({ page, request }) => {
+  test('one credential entry establishes the canonical app host then launches all active modules in the current page', async ({ page, request }) => {
     test.setTimeout(180_000);
     if (!pg) throw new Error('SSO v1 browser database client was not initialized');
     const identity = await registerAndSeed(request, pg);
@@ -506,20 +506,23 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
     await capturePhase20Evidence(page, 'platform-tool-catalog', { width: 1440, height: 1000 });
 
-    let lastModulePage: Page | null = null;
     const evidenceViewports = [
       { width: 390, height: 844 },
       { width: 768, height: 1024 },
       { width: 1440, height: 1000 },
     ] as const;
+    const initialPageCount = context.pages().length;
+    expect(initialPageCount).toBe(1);
+    let lastModuleUrl = '';
     for (const [index, module] of ENABLED_MODULES.entries()) {
       const collection = navigationCollector(context);
-      const popupPromise = page.waitForEvent('popup');
       await page.getByTestId(`button-launch-${module.slug}`).click();
-      const modulePage = await popupPromise;
+      const modulePage = page;
       await expect(modulePage.getByTestId(module.shellTestId)).toBeVisible({ timeout: 30_000 });
+      await modulePage.waitForLoadState('networkidle', { timeout: 10_000 });
       collection.stop();
 
+      expect(context.pages(), `${module.slug} ordinary launch must reuse the current page`).toHaveLength(initialPageCount);
       expect(loginPosts, `${module.slug} must use the existing auth-host session`).toBe(1);
       expect(new URL(modulePage.url()).hostname).toBe(module.host);
       assertNoCredentialQuery(modulePage.url());
@@ -541,22 +544,52 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       await assertHostOnlySession(context, module.host);
       await assertNoBrowserCredentialStorage(modulePage);
 
-      await modulePage.reload();
-      await expect(modulePage.getByTestId(module.shellTestId)).toBeVisible({ timeout: 20_000 });
-      expect(new URL(modulePage.url()).hostname).toBe(module.host);
-      assertNoCredentialQuery(modulePage.url());
-      await capturePhase20Evidence(
-        modulePage,
-        `${module.slug}-first-useful`,
-        evidenceViewports[index % evidenceViewports.length],
-      );
-
-      if (index < ENABLED_MODULES.length - 1) {
-        await modulePage.close();
-      } else {
-        lastModulePage = modulePage;
+      if (index < evidenceViewports.length) {
+        await capturePhase20Evidence(
+          modulePage,
+          `${module.slug}-same-tab`,
+          evidenceViewports[index],
+        );
       }
+
+      lastModuleUrl = modulePage.url();
+      await modulePage.goBack();
+      await expect(modulePage.getByTestId('page-my-apps')).toBeVisible({ timeout: 30_000 });
+      expect(context.pages()).toHaveLength(initialPageCount);
     }
+
+    const intentionalLaunch = page.getByTestId(`button-launch-${ENABLED_MODULES[0]!.slug}`);
+    const modifierPagePromise = context.waitForEvent('page');
+    await intentionalLaunch.click({ modifiers: ['Control'] });
+    const modifierPage = await modifierPagePromise;
+    await modifierPage.waitForURL(url => (
+      url.hostname === ENABLED_MODULES[0]!.host && url.pathname !== '/sso'
+    ), { timeout: 30_000 });
+    assertNoCredentialQuery(modifierPage.url());
+    expect(context.pages()).toHaveLength(initialPageCount + 1);
+    await modifierPage.close();
+
+    const middlePagePromise = context.waitForEvent('page');
+    await intentionalLaunch.click({ button: 'middle' });
+    const middlePage = await middlePagePromise;
+    await middlePage.waitForURL(url => (
+      url.hostname === ENABLED_MODULES[0]!.host && url.pathname !== '/sso'
+    ), { timeout: 30_000 });
+    assertNoCredentialQuery(middlePage.url());
+    expect(context.pages()).toHaveLength(initialPageCount + 1);
+    await middlePage.close();
+
+    const explicitPagePromise = context.waitForEvent('page');
+    await page.getByTestId(`button-launch-new-tab-${ENABLED_MODULES[0]!.slug}`).click();
+    const explicitPage = await explicitPagePromise;
+    await explicitPage.waitForURL(url => (
+      url.hostname === ENABLED_MODULES[0]!.host && url.pathname !== '/sso'
+    ), { timeout: 30_000 });
+    assertNoCredentialQuery(explicitPage.url());
+    expect(context.pages()).toHaveLength(initialPageCount + 1);
+    expect(await explicitPage.evaluate(() => window.opener)).toBeNull();
+    await explicitPage.close();
+    expect(context.pages()).toHaveLength(initialPageCount);
 
     const expectedSessionHosts = new Set([
       'auth.operatoros.net',
@@ -578,11 +611,10 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       return { status: response.status, body: await response.text() };
     });
     expect(logoutAll.status, logoutAll.body).toBe(200);
-    expect(lastModulePage).toBeTruthy();
-    await lastModulePage!.reload();
-    await lastModulePage!.waitForURL(/^https:\/\/auth\.operatoros\.net\/login\?/, { timeout: 30_000 });
+    await page.goto(lastModuleUrl);
+    await page.waitForURL(/^https:\/\/auth\.operatoros\.net\/login\?/, { timeout: 30_000 });
     expect(loginPosts).toBe(1);
-    assertNoCredentialQuery(lastModulePage!.url());
+    assertNoCredentialQuery(page.url());
   });
 
   test('direct deep link survives login, a sibling tab uses silent SSO, back does not loop, and local logout is host-only', async ({ page, request }) => {
@@ -942,16 +974,14 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('techdeck-return-command-center').click();
     await expect(page).toHaveURL(/^https:\/\/app\.operatoros\.net\//, { timeout: 30_000 });
     await expect(page.getByTestId('page-my-apps')).toBeVisible({ timeout: 30_000 });
-    const popupPromise = page.waitForEvent('popup');
     await page.getByTestId('button-launch-techdeck').click();
-    const reopened = await popupPromise;
+    const reopened = page;
     await expect(reopened.getByTestId('techdeck-module-shell')).toBeVisible({ timeout: 30_000 });
     await reopened.goto(`https://techdeck.operatoros.net/assets/${firewall.id}`);
     await expect(reopened.getByTestId('techdeck-route-record-context')).toContainText(firewallName);
     await reopened.goto('https://techdeck.operatoros.net/logout');
     await expect(reopened).toHaveURL(/^https:\/\/operatoros\.net\/signed-out\?signed_out=local$/);
     expect((await sessionCookies(context)).some(cookie => cookie.domain === 'techdeck.operatoros.net')).toBe(false);
-    await reopened.close();
   });
 
   test('TechDeck literal restoration is usable across exact-host desktop, public, and mobile surfaces', async ({ browser, page, request }) => {
@@ -1357,9 +1387,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       page.getByRole('link', { name: 'My Apps' }).first().click(),
     ]);
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
-    const popupPromise = page.waitForEvent('popup');
     await page.getByTestId('button-launch-torqueshed').click();
-    const reopened = await popupPromise;
+    const reopened = page;
     await expect(reopened.getByTestId('torqueshed-module-shell')).toBeVisible({ timeout: 30_000 });
     await reopened.goto('https://torqueshed.operatoros.net/marketplace');
     await expect(reopened.getByTestId('torqueshed-marketplace')).toBeVisible({ timeout: 30_000 });
@@ -1368,7 +1397,6 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await reopened.goto('https://torqueshed.operatoros.net/logout');
     await expect(reopened).toHaveURL(/^https:\/\/operatoros\.net\/signed-out\?signed_out=local$/);
     expect((await sessionCookies(context)).some(cookie => cookie.domain === 'torqueshed.operatoros.net')).toBe(false);
-    await reopened.close();
   });
 
   test('TorqueShed canonical payment return shows exactly-once authoritative credits', async ({ page, request }) => {
@@ -1630,9 +1658,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('nav-my-apps').click();
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
 
-    const popupPromise = page.waitForEvent('popup');
     await page.getByTestId('button-launch-faultlinelab').click();
-    const modulePage = await popupPromise;
+    const modulePage = page;
     await expect(modulePage.getByTestId('faultlinelab-module-shell')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.getByTestId('faultlinelab-challenge-card').first()).toBeVisible();
 
@@ -1724,9 +1751,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('nav-my-apps').click();
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
 
-    const popupPromise = page.waitForEvent('popup');
     await page.getByTestId('button-launch-brandforgeos').click();
-    const modulePage = await popupPromise;
+    const modulePage = page;
     await expect(modulePage.getByTestId('brandforgeos-workspace')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.locator('#brandforgeos-dashboard')).toBeVisible();
     expect(await modulePage.getByTestId('brandforgeos-workspace').getAttribute('data-evidence')).toBe('persisted_records_only');
@@ -1875,9 +1901,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('nav-my-apps').click();
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
 
-    const popupPromise = page.waitForEvent('popup');
     await page.getByTestId('button-launch-studyforge-ai').click();
-    const modulePage = await popupPromise;
+    const modulePage = page;
     const workspace = modulePage.getByTestId('shell-studyforge-ai');
     await expect(workspace).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.locator('#studyforge-dashboard')).toBeVisible();
@@ -2062,9 +2087,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('nav-my-apps').click();
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
 
-    const popupPromise = page.waitForEvent('popup');
     await page.getByTestId('button-launch-ninja-launch-kit').click();
-    const modulePage = await popupPromise;
+    const modulePage = page;
     await expect(modulePage.getByTestId('shell-ninja-launch-kit-complete')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.locator('#launchkit-dashboard')).toBeVisible();
     assertNoCredentialQuery(modulePage.url());
@@ -2200,9 +2224,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('nav-my-apps').click();
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
 
-    const popupPromise = page.waitForEvent('popup');
     await page.getByTestId('button-launch-callcommand-ai').click();
-    const modulePage = await popupPromise;
+    const modulePage = page;
     await expect(modulePage.getByTestId('shell-callcommand-ai')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.getByTestId('banner-callcommand-provider')).toContainText('Twilio voice provider');
     assertNoCredentialQuery(modulePage.url());
@@ -2293,9 +2316,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('nav-my-apps').click();
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
 
-    const popupPromise = page.waitForEvent('popup');
     await page.getByTestId('button-launch-snapproofos').click();
-    const modulePage = await popupPromise;
+    const modulePage = page;
     const workspace = modulePage.getByTestId('snapproofos-workspace');
     await expect(workspace).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.locator('#snapproofos-dashboard')).toBeVisible();
@@ -2453,9 +2475,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await page.getByTestId('nav-my-apps').click();
     await expect(page.getByTestId('page-my-apps')).toBeVisible();
 
-    const popupPromise = page.waitForEvent('popup');
     await page.getByTestId('button-launch-ninja-pool-hall').click();
-    const modulePage = await popupPromise;
+    const modulePage = page;
     await expect(modulePage.getByTestId('ninja-pool-hall-shell')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.getByTestId('ninja-pool-dashboard')).toBeVisible();
     await expect(modulePage.getByRole('button', { name: 'Online', exact: true })).toBeVisible();
@@ -2552,9 +2573,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       page.getByTestId('button-login').click(),
     ]);
     await page.getByTestId('nav-my-apps').click();
-    const popupPromise = page.waitForEvent('popup');
     await page.getByTestId('button-launch-ninjamation').click();
-    const modulePage = await popupPromise;
+    const modulePage = page;
     await expect(modulePage.getByTestId('shell-ninjamation')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.getByTestId('notice-ninjamation-no-execution')).toContainText('never executes script source');
 

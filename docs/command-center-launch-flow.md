@@ -29,8 +29,11 @@ the active tenant's server-resolved module access from `GET /api/modules`.
    - More tools you can add
    Planned and unavailable catalog entries remain discoverable under
    **Browse tools** without competing with the primary Home workflow.
-6. The user chooses **Open {module name}** and the frontend opens the registry's exact module base
-   URL. The frontend does not mint or carry a handoff code.
+6. The user chooses **Open {module name}** through a real anchor to the
+   registry's exact module launch URL. Ordinary activation reuses the current
+   browser page; Ctrl/Cmd-click, Shift-click, middle-click, context-menu, and
+   the explicitly labelled new-tab action retain normal browser behavior. The
+   frontend does not mint or carry a handoff code.
 7. When that host lacks its own `operatoros_session`, middleware creates
    host-only HttpOnly state, nonce, and PKCE verifier cookies and redirects to
    `auth.operatoros.net/login` with the exact callback and S256 challenge.
@@ -71,7 +74,8 @@ Your tools:
 
 - Registry status is `active`.
 - Server summary says the module is unlocked.
-- The specific **Open {module name}** button opens the module host, which begins the authorization flow.
+- The specific **Open {module name}** anchor opens the module host in the
+  current page, which begins the authorization flow.
 
 More tools you can add:
 
@@ -91,7 +95,6 @@ does not grant root access by email string.
 
 ## Error States
 
-- launching: the launch button shows an in-progress state.
 - access denied: SSO issue returns `MODULE_ACCESS_DENIED`.
 - module disabled: SSO issue returns `MODULE_DISABLED`.
 - SSO failure: issue or browser exchange returns a bounded error and does not
@@ -106,15 +109,18 @@ does not grant root access by email string.
 2. Confirm Workspace home shows the active organization.
 3. Switch organizations when multiple memberships are available.
 4. Confirm available tools render specific **Open {tool name}** buttons.
-5. Open an entitled module and confirm the target host redirects to
+5. Ordinary-click an entitled module and confirm the same browser page reaches
+   the target host, without adding a browser context page, and redirects to
    auth with state, nonce, and S256 challenge; `/api/sso/issue` then returns the
    exact callback.
-6. Confirm a tool that is not included explains whether a plan, add-on, or
+6. Use Ctrl/Cmd-click, middle-click, and the explicit new-tab action and confirm
+   each deliberately creates exactly one additional page with no opener.
+7. Confirm a tool that is not included explains whether a plan, add-on, or
    administrator grant is needed under **Browse tools**.
-7. Confirm planned tools cannot be opened and do not crowd Home.
-8. Confirm organization admins see **Manage tool access** buttons.
-9. Confirm normal users do not see Platform administration.
-10. Confirm platform admins see Platform administration.
+8. Confirm planned tools cannot be opened and do not crowd Home.
+9. Confirm organization admins see **Manage tool access** buttons.
+10. Confirm normal users do not see Platform administration.
+11. Confirm platform admins see Platform administration.
 
 ## Cross-Subdomain Handoff (Task #140)
 

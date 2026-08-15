@@ -27,6 +27,7 @@ import FaultlineLabWorkspace from '@/components/module-shells/FaultlineLabWorksp
 import BrandForgeWorkspace from '@/components/module-shells/BrandForgeWorkspace';
 import SnapProofWorkspace from '@/components/module-shells/SnapProofWorkspace';
 import OperatorOSEcosystemHeader from '@/components/module-shells/OperatorOSEcosystemHeader';
+import ModuleLaunchLink from '@/components/ModuleLaunchLink';
 import { useModuleDeepLinkTarget } from './ModuleDeepLinkTarget';
 import { DEFAULT_OPERATOROS_NAVIGATION_URLS } from '../../../../../../packages/modules/navigation.js';
 
@@ -233,15 +234,9 @@ function InternalAppContent() {
         )}
         <div style={{ marginTop: space.lg, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {isExternal ? (
-            <a
+            <ModuleLaunchLink
               href={mod.baseUrl!}
-              target="_blank"
-              rel="noopener noreferrer"
               data-testid={`link-launch-${mod.slug}`}
-              onClick={(e) => {
-                e.preventDefault();
-                import('@/lib/launch').then(({ openExternal }) => openExternal(mod.baseUrl!));
-              }}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 padding: '10px 18px', borderRadius: radius.sm,
@@ -250,7 +245,7 @@ function InternalAppContent() {
               }}
             >
               Open {mod.name} <ExternalLink size={14} />
-            </a>
+            </ModuleLaunchLink>
           ) : (
             <span
               data-testid={`text-no-baseurl-${mod.slug}`}

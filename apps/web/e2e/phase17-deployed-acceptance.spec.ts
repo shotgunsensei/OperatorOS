@@ -120,16 +120,16 @@ test.describe('Phase 17 deployed production acceptance', () => {
 
     let lastModulePage: Page | null = null;
     for (const [index, module] of ENABLED_MODULES.entries()) {
-      const popupPromise = page.waitForEvent('popup');
       await page.getByTestId(`button-launch-${module.slug}`).click();
-      const modulePage = await popupPromise;
+      const modulePage = page;
       await expect(modulePage.getByTestId(module.shellTestId)).toBeVisible({ timeout: 30_000 });
       expect(new URL(modulePage.url()).origin).toBe(new URL(module.productionBaseUrl).origin);
       assertNoCredentialQuery(modulePage.url());
       await assertNoBrowserCredentialStorage(modulePage);
       await assertHostOnlySession(modulePage.context(), new URL(module.productionBaseUrl).hostname);
       if (index < ENABLED_MODULES.length - 1) {
-        await modulePage.close();
+        await modulePage.getByRole('link', { name: 'My Apps' }).first().click();
+        await expect(modulePage.getByTestId('page-my-apps')).toBeVisible({ timeout: 30_000 });
       } else {
         lastModulePage = modulePage;
       }
@@ -156,12 +156,12 @@ test.describe('Phase 17 deployed production acceptance', () => {
     await page.getByTestId('nav-my-apps').click();
 
     const techDeckPopup = page.waitForEvent('popup');
-    await page.getByTestId('button-launch-techdeck').click();
+    await page.getByTestId('button-launch-new-tab-techdeck').click();
     const techDeck = await techDeckPopup;
     await expect(techDeck.getByTestId('techdeck-module-shell')).toBeVisible({ timeout: 30_000 });
 
     const pulseDeskPopup = page.waitForEvent('popup');
-    await page.getByTestId('button-launch-pulsedesk').click();
+    await page.getByTestId('button-launch-new-tab-pulsedesk').click();
     const pulseDesk = await pulseDeskPopup;
     await expect(pulseDesk.getByTestId('pulsedesk-module-shell')).toBeVisible({ timeout: 30_000 });
 

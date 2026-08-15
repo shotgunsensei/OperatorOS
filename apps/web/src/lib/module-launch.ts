@@ -1,7 +1,7 @@
 'use client';
 
 import { getActiveTenantId } from './auth';
-import { openExternal } from './launch';
+import { navigateToModuleProgrammatically } from './launch';
 import { getModuleById } from '../../../../packages/modules/registry.js';
 
 export interface SsoAuthorizationRequest {
@@ -124,7 +124,7 @@ export async function launchModuleViaSso(
   // Enter the module host first. Its middleware owns the state/nonce/PKCE
   // transaction cookies, then performs a central-auth round trip only when
   // that host does not already have a valid local session.
-  await openExternal(module.launchUrl);
+  await navigateToModuleProgrammatically(module.launchUrl);
   return {
     launchUrl: module.launchUrl,
     redirectUrl: module.launchUrl,
@@ -136,4 +136,12 @@ export async function launchModuleViaSso(
       entitlementKey: module.entitlementKey,
     },
   };
+}
+
+export function canonicalModuleLaunchUrl(moduleId: string): string {
+  const module = getModuleById(moduleId);
+  if (!module || module.status !== 'active') {
+    throw new ModuleLaunchError('Module is not available for launch.', 404, 'MODULE_UNAVAILABLE');
+  }
+  return module.launchUrl;
 }
