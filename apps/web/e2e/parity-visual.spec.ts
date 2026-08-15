@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
@@ -22,7 +22,12 @@ test('module-owned source-faithful visual contracts', async ({ page }) => {
     if (!detail.includes('ERR_ABORTED')) failedRequests.push(`${request.method()} ${request.url()} ${detail}`);
   });
 
-  for (const contract of contracts.modules) {
+  const requestedModule = process.env.PARITY_MODULE_FILTER;
+  const selectedContracts = requestedModule
+    ? contracts.modules.filter((contract: { moduleSlug: string }) => contract.moduleSlug === requestedModule)
+    : contracts.modules;
+  expect(selectedContracts.length, `visual contract for ${requestedModule || 'all modules'}`).toBeGreaterThan(0);
+  for (const contract of selectedContracts) {
     for (const viewport of contract.viewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       const response = await page.goto(`${WEB}${contract.criticalRoute}`, { waitUntil: 'domcontentloaded', timeout: 45_000 });
@@ -69,6 +74,28 @@ test('module-owned source-faithful visual contracts', async ({ page }) => {
         animations: 'disabled',
         maxDiffPixelRatio: 0.005,
       });
+      if (process.env.PHASE48_CAPTURE_TRADEFLOWKIT === '1' && contract.moduleSlug === 'tradeflowkit') {
+        const evidenceRoot = resolve(process.cwd(), '../../docs/phase-48/screenshots');
+        mkdirSync(evidenceRoot, { recursive: true });
+        await page.screenshot({
+          path: resolve(evidenceRoot, `tradeflowkit-after-${viewport.name}.png`),
+          fullPage: true,
+          animations: 'disabled',
+        });
+      }
+      if (process.env.PHASE48_CAPTURE_TRADEFLOWKIT === '1' && contract.moduleSlug === 'tradeflowkit' && viewport.name === 'desktop') {
+        await expect(page.getByTestId('tradeflowkit-sidebar-dashboard')).toHaveAttribute('aria-current', 'page');
+        const leadsLink = page.getByTestId('tradeflowkit-sidebar-leads');
+        await leadsLink.focus();
+        await page.keyboard.press('Enter');
+        await expect(page.getByTestId('tradeflowkit-module-shell')).toHaveAttribute('data-tradeflowkit-screen', 'leads');
+        await expect(page.getByRole('navigation', { name: 'TradeFlowKit breadcrumb' })).toContainText('Leads');
+        await expect(page.locator('#tradeflowkit-overview')).toBeFocused();
+        await page.reload();
+        await expect(page.getByTestId('tradeflowkit-sidebar-leads')).toHaveAttribute('aria-current', 'page');
+        await page.goBack();
+        await expect(page.getByTestId('tradeflowkit-sidebar-dashboard')).toHaveAttribute('aria-current', 'page');
+      }
     }
   }
   expect(consoleErrors, 'browser console errors').toEqual([]);

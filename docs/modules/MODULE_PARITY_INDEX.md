@@ -1,5 +1,9 @@
 # OperatorOS module parity index
 
+## Phase 48 shared module-shell overlay
+
+TradeFlowKit retains its existing state and source-functional scope while its route framing now consumes typed shared structural primitives. Its desktop/tablet/mobile visuals remain within the pre-existing 0.5% baselines, and the shared token contract is instance-scoped so later products retain distinct themes. No other module is counted as migrated in Phase 48. See `docs/phase-48/MODULE-APPLICATION-SHELL-SPEC.md`.
+
 ## Phase 47 Platform Command navigation overlay
 
 All module parity states remain unchanged. Phase 47 changes the shared super-admin command workspace around the module registry, tenant, user, billing, health, audit, and SSO views: persistent path-addressable navigation, global My Apps escape, route-derived breadcrumbs, safe release context, responsive drawer behavior, and record-free 403 handling are locally accepted. It neither widens platform authority nor changes module entitlements. See `docs/phase-47/PLATFORM-COMMAND-NAVIGATION-REPORT.md`.
