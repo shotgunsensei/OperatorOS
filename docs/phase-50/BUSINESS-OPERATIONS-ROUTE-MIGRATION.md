@@ -106,7 +106,7 @@ Each module receives an independent checkpoint only after its focused source/API
 | --- | --- | --- | --- |
 | TechDeck | Complete: 19 canonical owner routes plus record paths and compatibility redirects | 23/23 focused API/static checks; root typecheck; production build; 1/1 exact-host route/browser/accessibility check | This commit |
 | PulseDesk | Complete: 10 canonical owner routes, durable request detail routes, and compatibility redirects | 38/38 focused API/static/domain checks; root typecheck; production build; 1/1 exact-host route/browser/accessibility check | This commit |
-| FaultlineLab | Pending | Pending | Pending |
+| FaultlineLab | Complete: 9 canonical owner routes, challenge/session record paths, and compatibility redirects | 8/8 focused catalog/domain/import/static/workflow checks; root typecheck; production build; 1/1 exact-host route/browser/accessibility check | This commit |
 | SnapProofOS | Pending | Pending | Pending |
 | CallCommand AI | Pending | Pending | Pending |
 | OutCall | Pending | Pending | Pending |
@@ -181,3 +181,37 @@ node scripts/phase50-business-operations-browser.mjs
 ```
 
 The browser gate exercised all canonical routes and a request record deep link, four compatibility redirects, ticket creation, same-tab shell navigation, refresh/back history, route-active state, focused knowledge loading, desktop/tablet/mobile overflow, control labeling, six axe scans, and console/HTTP error collection. No PulseDesk waiver remains open. This is compiled exact-host local evidence; deployment, authenticated public-host acceptance, and live-provider acceptance remain separate gates.
+
+## FaultlineLab implementation evidence
+
+- Identity: violet diagnostic evidence grid with cyan fault signals (`faultlinelab-violet-evidence-grid`). It uses the shared Phase 48 shell while retaining FaultlineLab’s proving-ground language, evidence trails, and lab visual system.
+- Route ownership: overview, challenge library and challenge records, investigation sessions, assignments, runs, evidence, authoring, reports, and settings are URL-owned. The previous internal tab state and manual `history.pushState` path mutation were removed; Next route navigation now owns refresh, back/forward history, active navigation, and session deep links.
+- Focused loading: each route requests only the catalog, runs, progress, assignments, daily challenge, members, or manager analytics it consumes. Settings mounts no FaultlineLab API workload. Challenge and session records are loaded only for their record routes.
+- Preserved capabilities: all 56 compiler-published cases, catalog search/facets/sort, daily selection, standard/assignment/chaos runs, allowlisted diagnostic actions, sealed evidence, hints, server-only scoring, debriefs, private proof, assignment creation/cancellation, personal progress, badges, CSV export, versioned challenge authoring, validation, preview, import/export, publication, retirement, and author assets remain wired to existing tenant-scoped APIs.
+- Access and safety: OperatorOS remains identity, tenant, role, entitlement, and audit authority. Viewers cannot start or mutate attempts, managers retain assignment/publication controls, arbitrary host commands remain unavailable, and scores explicitly do not imply a certificate, production authorization, or live-system access.
+- Source corrections: the route migration replaced the monolithic full-workspace loader, corrected heading hierarchy in challenge detail, added programmatic names to proof/command controls, and fixed an authoring file input whose hidden width was being overridden and causing a 566 px horizontal overflow.
+- Visual evidence: [FaultlineLab challenge library desktop](./evidence/faultlinelab-challenges-desktop.png) and [FaultlineLab evidence mobile navigation](./evidence/faultlinelab-evidence-mobile.png).
+
+Verification performed from `C:\Dev\OperatorOS` against the disposable PostgreSQL database on `127.0.0.1:55441`:
+
+```powershell
+corepack pnpm --dir apps/api exec tsx --test --test-concurrency=1 `
+  test/faultlinelab-static.test.ts test/faultlinelab-domain.test.ts `
+  test/faultlinelab-full-catalog.test.ts test/faultlinelab-import-plan.test.ts `
+  test/faultlinelab-workflow.test.ts
+# 8 passed, 0 failed
+
+corepack pnpm typecheck
+# 4 workspace projects passed
+
+$env:INTERNAL_API_URL='http://127.0.0.1:5001'
+corepack pnpm build:production
+# catalog drift gate, API, runner gateway, and Next production build passed
+
+$env:PARITY_DATABASE_IS_DISPOSABLE='1'
+$env:PHASE50_BROWSER_SPEC='faultlinelab'
+node scripts/phase50-business-operations-browser.mjs
+# phase50-faultlinelab-routes.spec.ts: 1 passed
+```
+
+The browser gate exercised nine canonical routes, challenge and session record deep links, four compatibility redirects, a real start-and-action investigation journey, same-tab navigation, refresh/back history, route-active state, zero-API settings loading, desktop/tablet/mobile overflow, control labeling, six axe scans, and console/HTTP error collection. No FaultlineLab waiver remains open. This is compiled exact-host local evidence; deployment and authenticated public-host acceptance remain separate gates.

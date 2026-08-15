@@ -9,9 +9,11 @@ const read = (path: string) => readFileSync(resolve(repoRoot, path), 'utf8');
 
 test('FaultlineLab has a dedicated persistent workspace rather than the generic workflow shell', () => {
   const page = read('apps/web/src/app/apps/[slug]/page.tsx');
+  const shell = read('apps/web/src/components/module-shells/FaultlineLabShell.tsx');
   const workspace = read('apps/web/src/components/module-shells/FaultlineLabWorkspace.tsx');
+  const routeContract = read('apps/web/src/components/module-shells/FaultlineLabRoute.contract.ts');
   const generic = read('apps/web/src/components/module-shells/WorkflowModuleShell.tsx');
-  assert.match(page, /'faultlinelab':\s+FaultlineLabWorkspace/);
+  assert.match(page, /'faultlinelab':\s+FaultlineLabShell/);
   assert.doesNotMatch(page, /WorkflowModuleShell moduleSlug="faultlinelab"/);
   assert.doesNotMatch(generic, /faultlinelab/);
   for (const section of [
@@ -23,14 +25,20 @@ test('FaultlineLab has a dedicated persistent workspace rather than the generic 
     'faultlinelab-authoring',
     'faultlinelab-analytics',
   ]) assert.ok(workspace.includes(`id="${section}"`), `missing ${section}`);
+  for (const path of ['/', '/challenges', '/sessions', '/assignments', '/runs', '/evidence', '/authoring', '/reports', '/settings']) {
+    assert.ok(routeContract.includes(`'${path}'`), `missing canonical route ${path}`);
+  }
   assert.match(workspace, /faultlinelab\.startSession/);
   assert.match(workspace, /faultlinelab\.addAction/);
   assert.match(workspace, /faultlinelab\.submit/);
   assert.match(workspace, /faultlinelab\.createAssignment/);
   assert.match(workspace, /faultlinelab\.createChallenge/);
-  assert.match(workspace, /data-testid="faultlinelab-module-shell"/);
-  assert.match(workspace, /data-module-shell="faultlinelab-shell"/);
-  assert.match(workspace, /window\.history\.pushState\(null, '', `\/sessions\/\$\{bundle\.session\.id\}`\)/);
+  assert.match(shell, /ModuleApplicationShell/);
+  assert.match(shell, /data-faultlinelab-route/);
+  assert.match(shell, /data-testid="faultlinelab-settings-route"/);
+  assert.match(workspace, /data-testid="faultlinelab-route-workspace"/);
+  assert.doesNotMatch(workspace, /setTab\(/);
+  assert.match(workspace, /router\.push\(hrefFor\(`\/sessions\/\$\{bundle\.session\.id\}`\)\)/);
 });
 
 test('FaultlineLab API preserves OperatorOS authority and server-only scoring', () => {

@@ -23,7 +23,7 @@ import TradeFlowKitShell from '@/components/module-shells/TradeFlowKitShell';
 import NinjaPoolHallShell from '@/components/module-shells/NinjaPoolHallShell';
 import WorkflowModuleShell from '@/components/module-shells/WorkflowModuleShell';
 import TorqueShedWorkspace from '@/components/module-shells/TorqueShedWorkspace';
-import FaultlineLabWorkspace from '@/components/module-shells/FaultlineLabWorkspace';
+import FaultlineLabShell from '@/components/module-shells/FaultlineLabShell';
 import BrandForgeWorkspace from '@/components/module-shells/BrandForgeWorkspace';
 import SnapProofWorkspace from '@/components/module-shells/SnapProofWorkspace';
 import OperatorOSEcosystemHeader from '@/components/module-shells/OperatorOSEcosystemHeader';
@@ -59,7 +59,7 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string; ro
   'outcall':          OutCallShell,
   'ninja-pool-hall':  NinjaPoolHallShell,
   'torqueshed':       TorqueShedWorkspace,
-  'faultlinelab':     FaultlineLabWorkspace,
+  'faultlinelab':     FaultlineLabShell,
   'brandforgeos':     BrandForgeWorkspace,
   'snapproofos':      SnapProofWorkspace,
 };
