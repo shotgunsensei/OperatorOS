@@ -1,5 +1,20 @@
 # OperatorOS ecosystem final E2E acceptance report
 
+## Phase 40 superseding release boundary - 2026-08-14
+
+Verdict: **NOT CERTIFIED — NO DEPLOYMENT**.
+
+The Phase 40 candidate passed all 25 selected exact-host functional, SSO,
+visual, accessibility, performance, and module browser cases with zero skips.
+That local browser result is preserved, but the complete root gate is 11/14:
+strict parity fails with 2,458 issues, API source integrity fails on the
+TorqueShed 181-versus-165 snapshot count, and static route/control integrity
+fails with 118 defects. No owner performed and signed all thirteen acceptance
+journeys, no live provider matrix or production backup was approved, and no
+deployment occurred. The historical local-acceptance sections below retain
+their original scope but cannot be used as current release certification. See
+`docs/phase-40/FINAL-PRODUCT-CERTIFICATION.md`.
+
 Assessment date: 2026-08-03
 Target: local production-mode HTTPS topology backed by disposable PostgreSQL 16
 Scope: Phase 20 source/local public-launch functional closure

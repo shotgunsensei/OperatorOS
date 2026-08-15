@@ -2,6 +2,19 @@
 
 Baseline refreshed: 2026-08-08
 
+## Current Phase 40 certification overlay
+
+Candidate `4c24d818f5108aa0d049241c7ae386ae7787a211` is **not
+certified**. The clean-clone/fresh-database root gate passed 11/14 stages but
+failed strict parity (2,458 issues), API source integrity (TorqueShed 181 files
+versus 165 declared), and static route/control integrity (118 defects). The
+current compiler total is 7,396 capabilities with 1,449 required blockers and
+zero owner waivers. No module can be promoted to production state 5 from the
+local exact-host, build, database, or hardening passes alone. No owner journeys,
+live-provider acceptance, production backup, tag, release, deployment, or
+cutover were recorded. The Phase 40 report supersedes historical consolidation
+claims for release decisions.
+
 ## Current Phase 37 CallCommand MSP intake overlay
 
 Release v46 extends the complete Phase 35 CallCommand product with the

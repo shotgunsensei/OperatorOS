@@ -1,5 +1,25 @@
 # OperatorOS implementation status
 
+## Phase 40 certification - NOT CERTIFIED / NO DEPLOYMENT (2026-08-14)
+
+The exact candidate `4c24d818f5108aa0d049241c7ae386ae7787a211`
+completed the root release protocol from a detached clean clone and fresh
+disposable PostgreSQL 16 database. Eleven of fourteen release stages passed,
+including typecheck, lint, 34/34 unit tests, 28/28 database apply/reapply tests,
+production build, 25/25 exact-host browser/visual/accessibility tests, static
+visual contracts, security hardening, and production preflight. The API suite
+passed 1,125 of 1,126 tests with zero skips.
+
+Certification remains blocked by 2,458 strict parity issues (1,449 required
+blockers, 84 missing target routes, and 925 missing test IDs), one TorqueShed
+source snapshot mismatch (181 imported files versus 165 declared), and 118
+static route/control defects. There are zero owner waivers and zero recorded
+owner-accepted module journeys. Deterministic provider evidence is not live
+provider acceptance, and no production backup, tag, release, push, merge,
+deployment, or cutover was performed. This Phase 40 overlay supersedes any
+broader completion wording below. See
+`docs/phase-40/FINAL-PRODUCT-CERTIFICATION.md`.
+
 ## Phase 39 production hardening - SOURCE/LOCAL IMPLEMENTED / PLATFORM RELEASE BLOCKED (2026-08-14)
 
 Phase 39 adds executable security/dependency/secret scanning, a 1,217-component

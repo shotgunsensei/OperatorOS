@@ -5,6 +5,18 @@ Status: current execution plan
 Authority: `docs/IMPLEMENTATION_STATUS.md` records the latest evidence and
 `docs/modules/MODULE_PARITY_INDEX.md` records module state.
 
+## Phase 40 certification status
+
+Phase 40 evaluated candidate
+`4c24d818f5108aa0d049241c7ae386ae7787a211` from a clean clone and fresh
+disposable PostgreSQL 16 database. The root gate is 11/14 and the disposition
+is **NOT CERTIFIED**: strict parity has 2,458 issues, TorqueShed source integrity
+has one 181-versus-165 snapshot failure, and static route/control integrity has
+118 failures. No owner waivers or owner-accepted module journeys exist. No
+signed tag, release, production backup, provider acceptance, deployment, or
+cutover was performed. Remediation must continue in a new bounded phase before
+Phase 40 is rerun. See `docs/phase-40/FINAL-PRODUCT-CERTIFICATION.md`.
+
 ## Release invariant
 
 No module reaches consolidation state 5 until its approved product workflows,

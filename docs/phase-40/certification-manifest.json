@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "phase": 40,
+  "assessedAtUtc": "2026-08-15T02:40:41.217Z",
+  "decision": "NOT_CERTIFIED",
+  "releaseEligible": false,
+  "deploymentAuthorized": false,
+  "releaseCandidate": {
+    "commit": "4c24d818f5108aa0d049241c7ae386ae7787a211",
+    "buildId": "d995857632dc77493a250ba7",
+    "builtAt": "2026-08-15T02:31:44.676Z",
+    "lockfileSha256": "5b72b16f727bd8852868b7d9af9e5598ee5f1b861da0afc1d66fc2265f20c6f7",
+    "branch": "codex/phase-40-final-certification",
+    "upstreamMainObserved": "0baa9e9"
+  },
+  "environment": {
+    "cleanClone": true,
+    "freshDisposableDatabase": true,
+    "databaseEngine": "postgres:16-alpine",
+    "databaseName": "operatoros_phase40_cert_test",
+    "databaseRelease": 48,
+    "databasePlanSteps": 48,
+    "deterministicProviderMode": true,
+    "runnerMode": "disabled",
+    "productionDataUsed": false,
+    "productionMutationPerformed": false
+  },
+  "releaseGate": {
+    "steps": 14,
+    "passed": 11,
+    "failed": 3,
+    "failedSteps": [
+      "parity",
+      "api",
+      "route-control-static"
+    ],
+    "results": [
+      { "id": "faultlinelab-source-catalog", "status": "PASS", "durationMs": 2339 },
+      { "id": "phase39-production-hardening", "status": "PASS", "durationMs": 5746 },
+      { "id": "parity-report", "status": "PASS", "durationMs": 11417 },
+      { "id": "parity", "status": "FAIL", "durationMs": 12369 },
+      { "id": "typecheck", "status": "PASS", "durationMs": 21576 },
+      { "id": "lint", "status": "PASS", "durationMs": 13178 },
+      { "id": "unit", "status": "PASS", "durationMs": 69601 },
+      { "id": "api", "status": "FAIL", "durationMs": 651032 },
+      { "id": "integration-apply-reapply", "status": "PASS", "durationMs": 43175 },
+      { "id": "production-build", "status": "PASS", "durationMs": 64268 },
+      { "id": "route-control-static", "status": "FAIL", "durationMs": 9843 },
+      { "id": "visual-contract-static", "status": "PASS", "durationMs": 385 },
+      { "id": "exact-host-visual-accessibility", "status": "PASS", "durationMs": 464810 },
+      { "id": "production-preflight", "status": "PASS", "durationMs": 74 }
+    ]
+  },
+  "parity": {
+    "modules": 13,
+    "capabilities": 7396,
+    "stateCounts": {
+      "ACTIVE_NATIVE": 3515,
+      "ACTIVE_SHARED_EQUIVALENT": 2432,
+      "OWNER_WAIVED": 0,
+      "BLOCKED": 1449
+    },
+    "issueCounts": {
+      "BLOCKED_REQUIRED": 1449,
+      "MISSING_TARGET_ROUTE": 84,
+      "MISSING_TEST_ID": 925
+    },
+    "sourceDiscoveryDigestSha256": "0a18ec91d59ea3aa9d21d6046193d1a22e98725e69d6c23d1ad606d482ea20a0",
+    "targetDiscoveryDigestSha256": "e9a9613cbd54c01fb44aa74dc11134a253911b24481a96fb90a5670723d58fe3",
+    "waiverDigestSha256": "6cfc43e1127229f2aac653f6b52ea56c593704ceb437eb9e2096295c1dcd46b3",
+    "modules": [
+      { "slug": "brandforgeos", "total": 793, "native": 463, "shared": 330, "waived": 0, "blocked": 0, "missingTargetRoutes": 58, "missingTestIds": 0, "releaseEligible": false },
+      { "slug": "callcommand-ai", "total": 589, "native": 446, "shared": 143, "waived": 0, "blocked": 0, "missingTargetRoutes": 0, "missingTestIds": 589, "releaseEligible": false },
+      { "slug": "faultlinelab", "total": 557, "native": 56, "shared": 0, "waived": 0, "blocked": 501, "missingTargetRoutes": 0, "missingTestIds": 0, "releaseEligible": false },
+      { "slug": "ninja-launch-kit", "total": 336, "native": 225, "shared": 111, "waived": 0, "blocked": 0, "missingTargetRoutes": 0, "missingTestIds": 336, "releaseEligible": false },
+      { "slug": "ninja-pool-hall", "total": 56, "native": 50, "shared": 6, "waived": 0, "blocked": 0, "missingTargetRoutes": 0, "missingTestIds": 0, "releaseEligible": true },
+      { "slug": "ninjamation", "total": 189, "native": 111, "shared": 78, "waived": 0, "blocked": 0, "missingTargetRoutes": 0, "missingTestIds": 0, "releaseEligible": true },
+      { "slug": "outcall", "total": 1, "native": 0, "shared": 0, "waived": 0, "blocked": 1, "missingTargetRoutes": 0, "missingTestIds": 0, "releaseEligible": false },
+      { "slug": "pulsedesk", "total": 840, "native": 324, "shared": 516, "waived": 0, "blocked": 0, "missingTargetRoutes": 0, "missingTestIds": 0, "releaseEligible": true },
+      { "slug": "snapproofos", "total": 341, "native": 240, "shared": 101, "waived": 0, "blocked": 0, "missingTargetRoutes": 0, "missingTestIds": 0, "releaseEligible": true },
+      { "slug": "studyforge-ai", "total": 317, "native": 192, "shared": 125, "waived": 0, "blocked": 0, "missingTargetRoutes": 0, "missingTestIds": 0, "releaseEligible": true },
+      { "slug": "techdeck", "total": 1309, "native": 764, "shared": 545, "waived": 0, "blocked": 0, "missingTargetRoutes": 0, "missingTestIds": 0, "releaseEligible": true },
+      { "slug": "torqueshed", "total": 952, "native": 502, "shared": 450, "waived": 0, "blocked": 0, "missingTargetRoutes": 0, "missingTestIds": 0, "releaseEligible": true },
+      { "slug": "tradeflowkit", "total": 1116, "native": 142, "shared": 27, "waived": 0, "blocked": 947, "missingTargetRoutes": 26, "missingTestIds": 0, "releaseEligible": false }
+    ]
+  },
+  "sourceIntegrity": {
+    "passed": false,
+    "module": "torqueshed",
+    "manifestExpectedFiles": 165,
+    "actualImportedFiles": 181,
+    "compilerFingerprintFilesIncludingManifest": 182,
+    "pinnedSourceCommit": "508b384b6f66a1eacd3d4cd8d9c5edd4bf47fe75",
+    "currentTreeSha256": "b2e1495ebbdeeb9d88e8571ca9b97d94ddbcaec6b63d64cc1b771ea752f95a9a"
+  },
+  "controlIntegrity": {
+    "passed": false,
+    "total": 118,
+    "counts": {
+      "ROUTE_NOT_CRAWLABLE": 84,
+      "DEAD_BUTTON_STATIC": 31,
+      "HARD_CODED_FEATURE_COUNT": 2,
+      "COMING_SOON_COMPLETION_MARKER": 1
+    }
+  },
+  "tests": {
+    "unit": { "tests": 34, "passed": 34, "failed": 0, "skipped": 0 },
+    "api": { "tests": 1126, "passed": 1125, "failed": 1, "skipped": 0 },
+    "integration": { "tests": 28, "passed": 28, "failed": 0, "skipped": 0 },
+    "exactHostBrowser": { "tests": 25, "passed": 25, "failed": 0, "skipped": 0 },
+    "staticVisualModules": { "modules": 13, "failures": 0 }
+  },
+  "security": {
+    "passed": true,
+    "scannedFiles": 1163,
+    "findings": 0,
+    "dependencies": 1257,
+    "unresolvedAdvisories": 0,
+    "sbomComponents": 1217
+  },
+  "waivers": {
+    "count": 0,
+    "ownerApproved": false
+  },
+  "ownerAcceptance": {
+    "requiredJourneys": 13,
+    "acceptedJourneys": 0,
+    "statusByModule": {
+      "tradeflowkit": "NOT_OWNER_ACCEPTED",
+      "torqueshed": "NOT_OWNER_ACCEPTED",
+      "techdeck": "NOT_OWNER_ACCEPTED",
+      "pulsedesk": "NOT_OWNER_ACCEPTED",
+      "faultlinelab": "NOT_OWNER_ACCEPTED",
+      "ninja-pool-hall": "NOT_OWNER_ACCEPTED",
+      "brandforgeos": "NOT_OWNER_ACCEPTED",
+      "snapproofos": "NOT_OWNER_ACCEPTED",
+      "studyforge-ai": "NOT_OWNER_ACCEPTED",
+      "ninja-launch-kit": "NOT_OWNER_ACCEPTED",
+      "callcommand-ai": "NOT_OWNER_ACCEPTED",
+      "ninjamation": "NOT_OWNER_ACCEPTED",
+      "outcall": "NOT_OWNER_ACCEPTED_BLOCKED"
+    }
+  },
+  "releaseActions": {
+    "branchPushed": false,
+    "pullRequestCreated": false,
+    "signedTagCreated": false,
+    "githubReleasePublished": false,
+    "productionBackupVerified": false,
+    "deploymentPerformed": false,
+    "trafficCutoverPerformed": false
+  },
+  "artifactSha256": {
+    "releaseMetadata": "e903fb5647cd024d13041839ba8a75a4c5c148554462fd21faffd5a60b84e3af",
+    "releaseGateResults": "7f1e89b66eae68146cc6d34558ac8999454a6e6e0fc016ea246962fae027270c",
+    "compiledLedger": "6ab8836c9ec594ba281a70e527869e51c78e6e6cab71bea756a78f54dc1d3108",
+    "parityIssues": "217fdeba34858ecaac11331ae790528262dd7c57f8752956a8865d658c8cba0c",
+    "apiSummary": "76d229524fb3cdada352a6044b89706389c15d8b1ec29a90d76d175ddcf212e5",
+    "unitSummary": "c6db873a17270476a05afc1e081b4edc2b76126d30c5156e2bea13990c027137",
+    "integrationSummary": "6da6dcc7aec7d82ca08dfc0e3a2d904af360190a71c54fe5480d590b8162eb09",
+    "controlIntegrity": "76c6b255d5b9d14c8f2dea500f4769e97c0e072997b6aee3d1c15845cf8a3280",
+    "securityScan": "4dddaed8a1d8f299f678f662910893f295aed12dae6cfddd0f5548933ad51f11",
+    "sbom": "13a030e55a1701c2c25c3576fede023cbb274e6e1ebcd073edd7a60e422dedc2"
+  },
+  "trackingIssue": "https://github.com/shotgunsensei/OperatorOS/issues/75"
+}

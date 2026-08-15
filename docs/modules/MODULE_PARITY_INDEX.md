@@ -1,5 +1,21 @@
 # OperatorOS module parity index
 
+## Current Phase 40 certification overlay - NOT CERTIFIED / RELEASE BLOCKED (2026-08-14)
+
+The clean-candidate compiler reports 7,396 capabilities: 3,515 native, 2,432
+shared-equivalent, zero owner-waived, and 1,449 blocked. Strict release issues
+total 2,458: FaultlineLab, OutCall, and TradeFlowKit own the required blockers;
+BrandForgeOS and TradeFlowKit have 84 missing target routes; CallCommand AI and
+Ninja Launch Kit have 925 missing test IDs. The separate control gate reports
+118 errors, and TorqueShed's source snapshot test finds 181 imported files
+against a manifest count of 165.
+
+The exact-host 25/25, database 28/28, unit 34/34, build, hardening, and visual
+passes are valid local evidence but do not override those failures. No owner
+journey or waiver was signed, and no live provider or production deployment was
+accepted. See `docs/phase-40/FINAL-PRODUCT-CERTIFICATION.md`; this overlay is
+the current platform release truth for every module.
+
 ## Current Phase 39 platform-hardening overlay - SOURCE/LOCAL IMPLEMENTED / PLATFORM RELEASE BLOCKED (2026-08-14)
 
 Phase 39 hardens the shared platform and every active module without retiring
