@@ -13,7 +13,7 @@ import ContactLink from '@/components/ContactLink';
 import LoginPage from '@/components/pages/LoginPage';
 import OperatorLoader from '@/components/brand/OperatorLoader';
 import StudyForgeShell from '@/components/module-shells/StudyForgeShell';
-import NinjaLaunchKitCompleteWorkspace from '@/components/module-shells/NinjaLaunchKitCompleteWorkspace';
+import NinjaLaunchKitProductShell from '@/components/module-shells/NinjaLaunchKitProductShell';
 import CallCommandShell from '@/components/module-shells/CallCommandShell';
 import NinjamationShell from '@/components/module-shells/NinjamationShell';
 import OutCallShell from '@/components/module-shells/OutCallShell';
@@ -52,7 +52,7 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string; ro
   'pulsedesk':        PulseDeskShell,
   'tradeflowkit':     TradeFlowKitShell,
   'studyforge-ai':    StudyForgeShell,
-  'ninja-launch-kit': NinjaLaunchKitCompleteWorkspace,
+  'ninja-launch-kit': NinjaLaunchKitProductShell,
   'callcommand-ai':   CallCommandShell,
   'ninjamation':      NinjamationShell,
   'outcall':          OutCallShell,
@@ -61,6 +61,13 @@ const POLISHED_SHELLS: Record<string, React.ComponentType<{ baseUrl?: string; ro
   'faultlinelab':     FaultlineLabWorkspace,
   'brandforgeos':     BrandForgeWorkspace,
   'snapproofos':      SnapProofWorkspace,
+};
+const POLISHED_SHELL_NAMES: Record<string, string> = {
+  techdeck: 'TechDeck', pulsedesk: 'PulseDesk', tradeflowkit: 'TradeFlowKit',
+  'studyforge-ai': 'StudyForge AI', 'ninja-launch-kit': 'Ninja Launch Kit',
+  'callcommand-ai': 'CallCommand AI', ninjamation: 'Ninjamation', outcall: 'OutCall',
+  'ninja-pool-hall': 'Ninja Pool Hall', torqueshed: 'TorqueShed', faultlinelab: 'FaultlineLab',
+  brandforgeos: 'BrandForgeOS', snapproofos: 'SnapProofOS',
 };
 
 function InternalAppContent() {
@@ -179,7 +186,11 @@ function InternalAppContent() {
           <AlertTriangle size={18} color={semantic.accentDanger} />
           <div>
             <h1 style={{ color: semantic.accentDanger, fontWeight: 600, fontSize: fontSize.lg, margin: 0 }}>
-              {err ? 'This tool could not be opened' : 'This tool is not available for this organization'}
+              {err
+                ? 'This tool could not be opened'
+                : POLISHED_SHELL_NAMES[slug]
+                  ? `${POLISHED_SHELL_NAMES[slug]} is not available for this organization`
+                  : 'This tool is not available for this organization'}
             </h1>
             <div style={{ color: semantic.textMuted, fontSize: fontSize.sm, marginTop: 4 }}>
               {err ?? 'Browse other tools or ask your organization administrator to add access. OperatorOS checks access again every time a tool opens.'}

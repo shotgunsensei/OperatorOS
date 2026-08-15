@@ -80,3 +80,19 @@ export function boundedRetryDelayMs(attempt: number): number {
 export function isOperatorOSTestEnvironment(): boolean {
   return process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test';
 }
+
+/**
+ * Production-artifact acceptance may use deterministic AI/payment adapters,
+ * but only inside CI against a database explicitly declared disposable. The
+ * three-part gate prevents a lone production environment variable from ever
+ * activating test provider behavior in a deployed runtime.
+ */
+export function isOperatorOSDeterministicProviderTestEnvironment(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return env.NODE_ENV === 'test' || env.APP_ENV === 'test' || (
+    env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE === '1'
+    && env.PARITY_DATABASE_IS_DISPOSABLE === '1'
+    && env.CI === 'true'
+  );
+}

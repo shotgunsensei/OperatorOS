@@ -50,6 +50,7 @@ const tabs: Array<{ id: Tab; label: string; Icon: typeof LayoutDashboard }> = [
   { id: 'activity', label: 'Activity', Icon: Activity },
   { id: 'cases', label: 'Proof cases', Icon: FolderLock },
   { id: 'evidence', label: 'Integrity', Icon: FileCheck2 },
+  { id: 'findings', label: 'Evidence findings', Icon: ShieldCheck },
   { id: 'custody', label: 'Custody', Icon: Fingerprint },
   { id: 'retention', label: 'Retention', Icon: Archive },
   { id: 'branding', label: 'Branding', Icon: Settings },
@@ -70,8 +71,8 @@ const inputStyle: React.CSSProperties = {
 const buttonStyle: React.CSSProperties = {
   border: 0,
   borderRadius: radius.sm,
-  background: semantic.accent,
-  color: semantic.text,
+  background: '#b91c1c',
+  color: '#ffffff',
   fontWeight: 750,
   padding: '10px 15px',
   cursor: 'pointer',

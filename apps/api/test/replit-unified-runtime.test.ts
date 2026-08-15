@@ -22,6 +22,7 @@ test('unified Replit launcher validates production authority and port separation
     INTERNAL_API_URL: 'http://localhost:5001',
     OPERATOROS_DATABASE_RELEASE_MODE: 'apply',
     TRUST_PROXY: 'true',
+    RUNNER_MODE: 'disabled',
     SHARED_SECRET_ENCRYPTION_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
   };
   assert.doesNotThrow(() => launcher.validateDeploymentEnvironment(valid));
@@ -30,6 +31,7 @@ test('unified Replit launcher validates production authority and port separation
   assert.throws(() => launcher.validateDeploymentEnvironment({ ...valid, APP_ENV: 'dev' }), /production/);
   assert.throws(() => launcher.validateDeploymentEnvironment({ ...valid, APP_URL: 'https://legacy.invalid' }), /APP_URL/);
   assert.throws(() => launcher.validateDeploymentEnvironment({ ...valid, TECHDECK_URL: '' }), /TECHDECK_URL/);
+  assert.throws(() => launcher.validateDeploymentEnvironment({ ...valid, RUNNER_MODE: 'local' }), /RUNNER_MODE/);
   assert.throws(() => launcher.validateDeploymentEnvironment({ ...valid, INTERNAL_API_URL: 'https://api.operatoros.net' }), /INTERNAL_API_URL/);
   assert.throws(() => launcher.resolveRuntimeConfig({ PORT: '5001', API_PORT: '5001' }), /different/);
   assert.deepEqual(launcher.resolveRuntimeConfig({ PORT: '5000', API_PORT: '5001' }), {

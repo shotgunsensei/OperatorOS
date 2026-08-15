@@ -19,7 +19,8 @@
       "OPERATOROS_BASE_URL": "https://operatoros.net",
       "OPERATOROS_APPS_URL": "https://app.operatoros.net/",
       "INTERNAL_API_URL": "http://localhost:5001",
-      "OPERATOROS_DATABASE_RELEASE_MODE": "apply"
+      "OPERATOROS_DATABASE_RELEASE_MODE": "apply",
+      "RUNNER_MODE": "disabled"
     },
     "unset": [
       "APP_URL",

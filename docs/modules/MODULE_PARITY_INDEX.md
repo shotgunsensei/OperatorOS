@@ -1,5 +1,25 @@
 # OperatorOS module parity index
 
+## Current Phase 39 platform-hardening overlay - SOURCE/LOCAL IMPLEMENTED / PLATFORM RELEASE BLOCKED (2026-08-14)
+
+Phase 39 hardens the shared platform and every active module without retiring
+module outcomes. The overlay covers refreshed threat models, RBAC/entitlement
+evidence, tenant and public-token boundaries, dependency/SAST/secret gates,
+SBOM, runner/AI/telephony/storage controls, worker/readiness telemetry,
+backup/restore/reapply, performance budgets, exact-host WCAG checks, and 39
+desktop/tablet/mobile visual baselines. Ninja Launch Kit now intentionally
+exposes both the complete Phase 34 kit product and its earlier persisted
+execution/readiness workspace, preventing a restoration phase from erasing a
+valid workflow.
+
+Focused Phase 39 security, database/reliability, build, accessibility,
+performance, and visual gates pass locally. Platform release acceptance remains
+red because the current repository compiler reports 2,459 inherited parity
+failures across 7,396 capabilities, including 1,449 blocked records. No Phase
+39 control suppresses those records. Production provider/backup/PITR/alert and
+human-review evidence remains external. See the Phase 39 hardening report and
+the platform/module threat-model register.
+
 ## Current Phase 37 CallCommand MSP intake overlay - PHASE 1 SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
 
 The owner-spec matrix contains 27 outcomes: 19 active-native, two

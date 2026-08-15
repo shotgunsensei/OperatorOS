@@ -73,7 +73,12 @@ export default function OutCallShell() {
   }
 
   if (!workspace) {
-    return <div style={{ padding: space.xxl, color: semantic.textMuted }}><Loader2 size={18} /> Loading OutCall…</div>;
+    return <main style={{ padding: space.xxl, color: semantic.text }} data-testid="shell-outcall" aria-busy={!error}>
+      <h1 style={{ margin: '0 0 10px', fontSize: 28 }}>OutCall</h1>
+      {error
+        ? <div role="alert" style={{ ...cardStyle, borderColor: semantic.accentDanger, color: semantic.accentDanger }}>{error}</div>
+        : <div role="status" style={{ color: semantic.textMuted, display: 'flex', alignItems: 'center', gap: 8 }}><Loader2 size={18} aria-hidden="true" /> Loading the verified exit-assistance workspace…</div>}
+    </main>;
   }
 
   const accepted = !!workspace.settings?.disclaimerAcceptedAt;

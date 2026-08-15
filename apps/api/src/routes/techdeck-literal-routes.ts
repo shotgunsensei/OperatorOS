@@ -185,15 +185,28 @@ async function dispatchTechDeckEvent(input: {
 async function consumeDurableLimit(table: 'techdeck_license_rate_limits' | 'techdeck_intake_rate_limits', key: string, limit: number, windowMs: number) {
   const bucket = hash(key);
   const expiresAt = new Date(Date.now() + windowMs);
-  const result = await db.execute(sql.raw(`
-    INSERT INTO ${table} (bucket_hash, request_count, expires_at)
-    VALUES ('${bucket}', 1, '${expiresAt.toISOString()}')
-    ON CONFLICT (bucket_hash) DO UPDATE SET
-      request_count = CASE WHEN ${table}.expires_at <= NOW() THEN 1 ELSE ${table}.request_count + 1 END,
-      expires_at = CASE WHEN ${table}.expires_at <= NOW() THEN EXCLUDED.expires_at ELSE ${table}.expires_at END,
-      updated_at = NOW()
-    RETURNING request_count
-  `));
+  // Keep the finite table choice in code and all values parameterized. This is
+  // intentionally duplicated so a future caller cannot turn a rate-limit key
+  // into an interpolated SQL identifier or literal.
+  const result = table === 'techdeck_license_rate_limits'
+    ? await db.execute(sql`
+        INSERT INTO techdeck_license_rate_limits (bucket_hash, request_count, expires_at)
+        VALUES (${bucket}, 1, ${expiresAt.toISOString()})
+        ON CONFLICT (bucket_hash) DO UPDATE SET
+          request_count = CASE WHEN techdeck_license_rate_limits.expires_at <= NOW() THEN 1 ELSE techdeck_license_rate_limits.request_count + 1 END,
+          expires_at = CASE WHEN techdeck_license_rate_limits.expires_at <= NOW() THEN EXCLUDED.expires_at ELSE techdeck_license_rate_limits.expires_at END,
+          updated_at = NOW()
+        RETURNING request_count
+      `)
+    : await db.execute(sql`
+        INSERT INTO techdeck_intake_rate_limits (bucket_hash, request_count, expires_at)
+        VALUES (${bucket}, 1, ${expiresAt.toISOString()})
+        ON CONFLICT (bucket_hash) DO UPDATE SET
+          request_count = CASE WHEN techdeck_intake_rate_limits.expires_at <= NOW() THEN 1 ELSE techdeck_intake_rate_limits.request_count + 1 END,
+          expires_at = CASE WHEN techdeck_intake_rate_limits.expires_at <= NOW() THEN EXCLUDED.expires_at ELSE techdeck_intake_rate_limits.expires_at END,
+          updated_at = NOW()
+        RETURNING request_count
+      `);
   return Number((result.rows[0] as Dict | undefined)?.request_count ?? limit + 1) <= limit;
 }
 

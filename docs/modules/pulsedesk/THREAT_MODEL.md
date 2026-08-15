@@ -1,5 +1,13 @@
 # PulseDesk privacy and threat model
 
+## Phase 39 platform-hardening overlay (2026-08-14)
+
+No EHR or compliance certification is implied. PHI-minimizing logs and
+fixtures, tenant alias routing, authenticated/idempotent email intake,
+attachment quarantine, OAuth state/revocation, and limited-public intake abuse
+controls are governed by the platform threat model and
+[Phase 39 register](../../phase-39/THREAT-MODEL-REGISTER.md).
+
 Assessment date: 2026-07-18
 
 ## Protected assets and boundaries

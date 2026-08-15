@@ -9,8 +9,8 @@
   --tfk-muted-foreground: hsl(215 16% 40%);
   --tfk-border: hsl(0 0% 89%);
   --tfk-border-strong: hsl(214 24% 80%);
-  --tfk-primary: hsl(25 95% 44%);
-  --tfk-primary-hover: hsl(25 95% 38%);
+  --tfk-primary: hsl(25 95% 36%);
+  --tfk-primary-hover: hsl(25 95% 30%);
   --tfk-primary-soft: hsl(25 95% 95%);
   --tfk-primary-foreground: hsl(0 0% 100%);
   --tfk-navy: hsl(220 45% 14%);
@@ -578,8 +578,9 @@
     --tfk-border: hsl(220 25% 18%);
     --tfk-border-strong: hsl(220 24% 28%);
     --tfk-primary: hsl(25 95% 52%);
-    --tfk-primary-hover: hsl(25 95% 60%);
+    --tfk-primary-hover: hsl(25 100% 72%);
     --tfk-primary-soft: hsl(25 90% 15%);
+    --tfk-primary-foreground: hsl(220 45% 10%);
     --tfk-navy: hsl(214 45% 92%);
     --tfk-navy-soft: hsl(220 35% 14%);
     --tfk-blue: hsl(214 88% 65%);
@@ -618,8 +619,9 @@
   --tfk-border: hsl(220 25% 18%);
   --tfk-border-strong: hsl(220 24% 28%);
   --tfk-primary: hsl(25 95% 52%);
-  --tfk-primary-hover: hsl(25 95% 60%);
+  --tfk-primary-hover: hsl(25 100% 72%);
   --tfk-primary-soft: hsl(25 90% 15%);
+  --tfk-primary-foreground: hsl(220 45% 10%);
   --tfk-navy: hsl(214 45% 92%);
   --tfk-navy-soft: hsl(220 35% 14%);
   --tfk-blue: hsl(214 88% 65%);

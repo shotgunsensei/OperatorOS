@@ -38,7 +38,7 @@ const colors = {
   bg: '#07111b',
   ink: '#eaf4ff',
   muted: '#9bb0c6',
-  dim: '#6e849b',
+  dim: '#a6b9cd',
   panel: '#0e1a27',
   panelSoft: '#132536',
   border: 'rgba(125, 211, 252, 0.16)',
@@ -253,6 +253,15 @@ const shellCss = `
   .pulsedesk-shell .pds-ack {
     background: rgba(251, 191, 36, 0.10);
     color: ${colors.amber};
+  }
+  .pulsedesk-shell .pds-warning strong {
+    color: #3f2d00 !important;
+  }
+  .pulsedesk-shell .pds-metrics span {
+    color: ${colors.muted} !important;
+  }
+  .pulsedesk-shell .directory-tabs button[aria-selected='true'] {
+    color: #07111b !important;
   }
   .pulsedesk-card-grid {
     display: grid;

@@ -45,8 +45,14 @@ test('Phase 11D replaces the unfinished scaffold surface with real workspace and
   assert.doesNotMatch(shell, /Math\.random|Generate scaffold|starter stack/i);
   assert.match(client, /\/modules\/ninja-launch-kit\/launches/);
   assert.doesNotMatch(moduleRoutes, /ninja-launch-kit\/scaffolds/);
-  for (const section of ['dashboard', 'launches', 'builder', 'templates', 'plan', 'artifacts', 'readiness', 'exports']) {
-    assert.match(deepLinks, new RegExp(`launchkit-${section}`));
+  for (const sectionId of [
+    'launchkit-dashboard',
+    'launchkit-execution',
+    'launchkit-builder',
+    'launchkit-templates',
+    'launchkit-exports',
+  ]) {
+    assert.match(deepLinks, new RegExp(sectionId));
   }
 });
 

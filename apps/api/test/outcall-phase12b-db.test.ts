@@ -32,7 +32,6 @@ let ownerA: Awaited<ReturnType<typeof createTestUser>>;
 let ownerB: Awaited<ReturnType<typeof createTestUser>>;
 let viewer: Awaited<ReturnType<typeof createTestUser>>;
 let moduleRow: typeof modules.$inferSelect;
-let createdModule = false;
 let signToken: typeof import('../src/lib/auth.js').signToken;
 let profileId = '';
 let callId = '';
@@ -82,9 +81,9 @@ before(async () => {
   ownerA = await createTestUser();
   ownerB = await createTestUser();
   viewer = await createTestUser();
-  const [existing] = await db.select().from(modules).where(eq(modules.slug, 'outcall')).limit(1);
-  moduleRow = existing ?? await createTestModule('outcall');
-  createdModule = !existing;
+  // Borrow the catalog row as a live test fixture without changing the
+  // production registry contract; cleanupModule restores its coming-soon state.
+  moduleRow = await createTestModule('outcall');
   await db.insert(tenantModules).values([
     { tenantId: ownerA.currentTenantId, moduleId: moduleRow.id, status: 'enabled', source: 'admin', allowAllMembers: true },
     { tenantId: ownerB.currentTenantId, moduleId: moduleRow.id, status: 'enabled', source: 'admin', allowAllMembers: true },
@@ -112,7 +111,7 @@ after(async () => {
     await db.delete(tenantModules).where(eq(tenantModules.moduleId, moduleRow.id));
   }
   for (const user of [viewer, ownerA, ownerB]) if (user) await cleanupUser(user.id);
-  if (createdModule && moduleRow) await cleanupModule(moduleRow.id);
+  if (moduleRow) await cleanupModule(moduleRow.id);
 });
 
 test('OutCall enforces OperatorOS auth, entitlement, write access, and trusted tenant authority', async () => {

@@ -55,7 +55,7 @@
       "moduleName": "OutCall",
       "criticalRoute": "/app/apps/outcall",
       "sourceReferences": ["apps/modules/outcall/source/README.md"],
-      "brandTokens": [],
+      "brandTokens": [{"name":"primary","value":"#2f6feb"},{"name":"accent","value":"#58a6ff"},{"name":"surface","value":"#0d1117"}],
       "viewports": [{"name":"desktop","width":1440,"height":1000,"baselinePath":"apps/web/e2e/visual-baselines/outcall-desktop.png"},{"name":"tablet","width":1024,"height":900,"baselinePath":"apps/web/e2e/visual-baselines/outcall-tablet.png"},{"name":"mobile","width":390,"height":844,"baselinePath":"apps/web/e2e/visual-baselines/outcall-mobile.png"}]
     },
     {

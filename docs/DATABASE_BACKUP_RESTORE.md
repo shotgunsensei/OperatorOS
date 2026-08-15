@@ -293,6 +293,35 @@ No archive left the local container and no provider traffic was enabled.
 This is current local restore evidence, not authorization to back up, restore,
 or switch a production database.
 
+## Phase 39 cumulative v48 restore rehearsal
+
+On 2026-08-14 the cumulative 48-step release was applied to a clean,
+loopback-only PostgreSQL 16 database and archived in PostgreSQL custom format.
+The readable archive was restored into a separately named disposable database,
+the complete schema/data vector matched exactly, zero unvalidated constraints
+or cross-module reference/attachment invariants were found, and the supported
+v48 release reapplied successfully to the restored target.
+
+| Field | Recorded value |
+| --- | --- |
+| Scope | Local disposable PostgreSQL 16; no production/customer data |
+| Archive | 1,753,870 bytes; 3,276 readable TOC entries |
+| SHA-256 | `bf25267ab707935cbad3100b4c74bee92dd7a1461bec59b73565fa5c119b2fba` |
+| Public tables | Source/restored 378 |
+| Foreign keys | Source/restored 1,191 |
+| Unvalidated constraints | Source/restored 0 |
+| Core rows before reapply | Exact source/restored match: 1 user, 1 tenant, 0 memberships, 13 modules, 0 tenant modules |
+| Forward-fix/reapply | First reapply repaired 1 missing membership and 3 free-module grants; second reapply produced the identical vector |
+| Cross-module/attachment reconciliation | 0 orphan resource links; 0 orphan workflow sources; 0 invalid attachment hashes/sizes |
+| Release on restored target | PASS; cumulative v48 idempotent reapply |
+| Cleanup | Restore database and local/container archive deleted after checksum/evidence capture |
+| Provider traffic | None |
+
+This rehearsal is reproducible with `pnpm phase39:recovery` only when all
+disposable guards and exact `operatoros_phase39*` database/container names are
+present. It does not authorize a production backup, restore, release apply or
+traffic switch; those remain explicit owner/operator gates.
+
 ## Phase 16A v31 additive release rehearsal
 
 On 2026-08-01 the v31 release plan, clean apply, and idempotent reapply passed

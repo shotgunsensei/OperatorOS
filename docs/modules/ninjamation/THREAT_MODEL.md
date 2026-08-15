@@ -1,5 +1,12 @@
 # Ninjamation threat model
 
+## Phase 39 platform-hardening overlay (2026-08-14)
+
+GitHub provenance/checksums, bounded downloads, generated-script safety
+metadata, owner/admin isolation, and the strict no-execution-in-web/API
+boundary are release-gated by the platform threat model and
+[Phase 39 register](../../phase-39/THREAT-MODEL-REGISTER.md).
+
 Assessment date: 2026-07-27
 
 ## Protected assets and boundaries

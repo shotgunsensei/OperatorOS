@@ -7,7 +7,10 @@ import {
   resolveStripePaymentMetadata,
 } from './billing-service.js';
 import { getPaymentProviderAdapter, ProviderDisabledError } from './shared-provider-adapters.js';
-import { isOperatorOSTestEnvironment } from './shared-service-safety.js';
+import {
+  isOperatorOSDeterministicProviderTestEnvironment,
+  isOperatorOSTestEnvironment,
+} from './shared-service-safety.js';
 import {
   registerSharedWebhookHandler,
   receiveVerifiedWebhook,
@@ -132,7 +135,7 @@ export async function createTorqueTokenPurchase(input: {
 }) {
   const selectedPackage = torqueTokenPackage(input.packageKey);
   const module = await torqueShedModule();
-  const testMode = isOperatorOSTestEnvironment();
+  const testMode = isOperatorOSDeterministicProviderTestEnvironment();
   const stripeMode = getStripeRuntimeMode();
   if (!testMode && stripeMode === 'disabled') {
     throw new ProviderDisabledError('payments');

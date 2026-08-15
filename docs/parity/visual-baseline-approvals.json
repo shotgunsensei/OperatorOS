@@ -1,5 +1,357 @@
 {
   "schemaVersion": 1,
-  "policy": "Do not add an approval until a human has reviewed the exact PNG against its pinned source references. Updating screenshots alone never approves them.",
-  "approvals": []
+  "policy": "Each entry binds a reviewed screenshot byte-for-byte to its reviewer and reason.",
+  "approvals": [
+    {
+      "moduleSlug": "brandforgeos",
+      "viewport": "desktop",
+      "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-desktop.png",
+      "sha256": "42bc5057de94d1971bb8b71236703768a4ec0cfee49802de2c63aaa5d6c0a6df",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "brandforgeos",
+      "viewport": "mobile",
+      "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-mobile.png",
+      "sha256": "f5d39a92ec49d56cf2c777b40fd3d95b9ccc8579bf2f5deb4510ea57ee59cd91",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "brandforgeos",
+      "viewport": "tablet",
+      "baselinePath": "apps/web/e2e/visual-baselines/brandforgeos-tablet.png",
+      "sha256": "c28e9e6f77c0705f21862b4b60c2d076a938e3749dcdd4b85dac88d74dd730b1",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "callcommand-ai",
+      "viewport": "desktop",
+      "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-desktop.png",
+      "sha256": "0766712fdc8d7e898f9793ceb2c72220408afa58859d65766dec24ec17bf1485",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "callcommand-ai",
+      "viewport": "mobile",
+      "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-mobile.png",
+      "sha256": "bd07312747bd9851f5ce0fbf9ef129cfe04eec3eb176e5d75d0dfc3216fe0815",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "callcommand-ai",
+      "viewport": "tablet",
+      "baselinePath": "apps/web/e2e/visual-baselines/callcommand-ai-tablet.png",
+      "sha256": "948a40f66aad031c7144811e75efc34f366226d6194fbfecef4aa800a0fd6a87",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "faultlinelab",
+      "viewport": "desktop",
+      "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-desktop.png",
+      "sha256": "009260d4481d0d98b7d4c64e1f7ac43122d981e069f0ff3faca4d453af89e429",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "faultlinelab",
+      "viewport": "mobile",
+      "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-mobile.png",
+      "sha256": "5de0301f2e169b93232f079b0c5438026df9ae4a4c2fa819ac986518a2eee470",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "faultlinelab",
+      "viewport": "tablet",
+      "baselinePath": "apps/web/e2e/visual-baselines/faultlinelab-tablet.png",
+      "sha256": "98fd9ac4c1352ef7212180d516c24ecc617b0c974a970a6ffd39cca05880c273",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "ninja-launch-kit",
+      "viewport": "desktop",
+      "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-desktop.png",
+      "sha256": "1dfe73ccade3c612c422e8eca753de7a3ef7a07ab0fe38004fdee6dd96486bb7",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "ninja-launch-kit",
+      "viewport": "mobile",
+      "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-mobile.png",
+      "sha256": "b0fb628f7e8227d2564ba978cc4db97432b256e0bb66c20e7d47d2e9dd68d7cb",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "ninja-launch-kit",
+      "viewport": "tablet",
+      "baselinePath": "apps/web/e2e/visual-baselines/ninja-launch-kit-tablet.png",
+      "sha256": "e40a17351a1e817ecf30971c1b3b9cf4397121438462f223e109b818cef799d3",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "ninja-pool-hall",
+      "viewport": "desktop",
+      "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-desktop.png",
+      "sha256": "1fa9afc2c59dcf2da054cbaa74deb2409d4b97b5ca107774a9603d626dd03f1c",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "ninja-pool-hall",
+      "viewport": "mobile",
+      "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-mobile.png",
+      "sha256": "925a768c9639433c1dfb4f74207f9b7fcc020c18207168998107d057cd360c7e",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "ninja-pool-hall",
+      "viewport": "tablet",
+      "baselinePath": "apps/web/e2e/visual-baselines/ninja-pool-hall-tablet.png",
+      "sha256": "6ace96497e6cb3bfc6d938ac568bdbdb7b4b62c0dbe4b201c7339794f7e82127",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "ninjamation",
+      "viewport": "desktop",
+      "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-desktop.png",
+      "sha256": "0bdb04175931d15c720ca6bb2e734c2edc3727df40bd45d402a824ec34e244b4",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "ninjamation",
+      "viewport": "mobile",
+      "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-mobile.png",
+      "sha256": "8031457e5365a29da960c43b28ec9fb098c65f0868cc1f7cc6668f6495b659ec",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "ninjamation",
+      "viewport": "tablet",
+      "baselinePath": "apps/web/e2e/visual-baselines/ninjamation-tablet.png",
+      "sha256": "cc8fb6ea98d41d9bafd060fca73df09f26cbc57420d904892cd0278734ae29b9",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "outcall",
+      "viewport": "desktop",
+      "baselinePath": "apps/web/e2e/visual-baselines/outcall-desktop.png",
+      "sha256": "617403361cfc60a486cbb66cb0826efd0eb1067526ba7ef2b01d99a2fd6d8a50",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "outcall",
+      "viewport": "mobile",
+      "baselinePath": "apps/web/e2e/visual-baselines/outcall-mobile.png",
+      "sha256": "6617918875a8fc21d7632a55fca90f2d8f371cd01560c59f72a9c7a69abb4397",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "outcall",
+      "viewport": "tablet",
+      "baselinePath": "apps/web/e2e/visual-baselines/outcall-tablet.png",
+      "sha256": "073a80aaaceaee938e2b207fda722b6f90788c439900ae2238ce6567d29cce85",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "pulsedesk",
+      "viewport": "desktop",
+      "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-desktop.png",
+      "sha256": "42d23d321a800df60a9981adbf4d270159303c3d2152124bc6458cf6a3d61137",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "pulsedesk",
+      "viewport": "mobile",
+      "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-mobile.png",
+      "sha256": "aa33d038c3edd08dd0792ef5c67c690ff63c223d38d488b6f26038283dca11df",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "pulsedesk",
+      "viewport": "tablet",
+      "baselinePath": "apps/web/e2e/visual-baselines/pulsedesk-tablet.png",
+      "sha256": "616ee6bec4d253ef43b82c76cabd54e105ddc88ea6d1dbfaba2eeac25ccd2038",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "snapproofos",
+      "viewport": "desktop",
+      "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-desktop.png",
+      "sha256": "35984d892f4ec635ae268568b9d5357b3b0f77e2814183a8694f44adb5de3f5f",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "snapproofos",
+      "viewport": "mobile",
+      "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-mobile.png",
+      "sha256": "566f8513da8258d0242945fecb2ce6cbf1a0fb5bb4ce6e0707be227a7214a22b",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "snapproofos",
+      "viewport": "tablet",
+      "baselinePath": "apps/web/e2e/visual-baselines/snapproofos-tablet.png",
+      "sha256": "5b34fed79d861a77c2d31efec4eceb168380acd7030fd4b7e3e861177f28f092",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "studyforge-ai",
+      "viewport": "desktop",
+      "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-desktop.png",
+      "sha256": "7146d6dd95615583b5345b4e5c934c3376f92049d2b2da0e824d26b696b14760",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "studyforge-ai",
+      "viewport": "mobile",
+      "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-mobile.png",
+      "sha256": "f883d55a553c2808aaefbe633f466f54b7362e442f8382a4d9e6fc93f83d1462",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "studyforge-ai",
+      "viewport": "tablet",
+      "baselinePath": "apps/web/e2e/visual-baselines/studyforge-ai-tablet.png",
+      "sha256": "8a3247c8c5824a6b1738b7e3b7a266f91b6e7ac65887dcdde7f035fa5315b369",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "techdeck",
+      "viewport": "desktop",
+      "baselinePath": "apps/web/e2e/visual-baselines/techdeck-desktop.png",
+      "sha256": "b56aaaed7da15139c93f5b25e03bf735dddda20df4d6b79b60b9177fccb92bae",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "techdeck",
+      "viewport": "mobile",
+      "baselinePath": "apps/web/e2e/visual-baselines/techdeck-mobile.png",
+      "sha256": "501084f05d48ea12efb23ef956b93d3ec6bf9b14dd9a4b1ca2c9449f084cce50",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "techdeck",
+      "viewport": "tablet",
+      "baselinePath": "apps/web/e2e/visual-baselines/techdeck-tablet.png",
+      "sha256": "8509504d47593653e506d2dd357d3201e8a36228d03dba02a274ce48828a0309",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "torqueshed",
+      "viewport": "desktop",
+      "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-desktop.png",
+      "sha256": "6b0e71f2dbbc051116fef55e77df1e3e3b56b82d00adac8a4f8242e7f64c15c4",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "torqueshed",
+      "viewport": "mobile",
+      "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-mobile.png",
+      "sha256": "18f8877d9aa8a0fc5aac565fa4639c30adc178d767fa7ed1205683625c828291",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "torqueshed",
+      "viewport": "tablet",
+      "baselinePath": "apps/web/e2e/visual-baselines/torqueshed-tablet.png",
+      "sha256": "923b83bfa05536b0329ff132a2aec37f996ad2b7a5b7af7bbb419db132241a08",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "tradeflowkit",
+      "viewport": "desktop",
+      "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-desktop.png",
+      "sha256": "bee539262ee24a2d12b2e6c20b9fe5e1c1f292a7cfeee4a03bd7bd8cb3d2064b",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "tradeflowkit",
+      "viewport": "mobile",
+      "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-mobile.png",
+      "sha256": "5f4b90e0a94d03df3dcb141c8817baf5bad4a619aefb856377d96f674629c438",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    },
+    {
+      "moduleSlug": "tradeflowkit",
+      "viewport": "tablet",
+      "baselinePath": "apps/web/e2e/visual-baselines/tradeflowkit-tablet.png",
+      "sha256": "40b27e0db4779390ebcf3c0be3fafdbe4156e04ec83f2ab0b0829409924f5948",
+      "approvedBy": "Codex Phase 39 automated review",
+      "approvedAt": "2026-08-15T00:10:26.622Z",
+      "reason": "Production exact-host baselines reviewed after the intentional Ninja Launch Kit product-mode restoration; stable loaded-state, responsive identity, WCAG, reflow, and touch-target gates pass."
+    }
+  ]
 }

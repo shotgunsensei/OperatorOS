@@ -10,7 +10,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { eq } from 'drizzle-orm';
 import { db } from '../src/db.js';
-import { ssoHandoffTokens, tenantEntitlements, tenants, users } from '../src/schema.js';
+import { modules, ssoHandoffTokens, tenantEntitlements, tenants, users } from '../src/schema.js';
 import {
   cleanupModule,
   cleanupUser,
@@ -33,6 +33,8 @@ let rootToken: string;
 let rootCreated = false;
 let techdeckModule: any;
 let pulsedeskModule: any;
+let techdeckModuleCreated = false;
+let pulsedeskModuleCreated = false;
 let dbReady = false;
 let setupFailure: unknown = null;
 
@@ -59,8 +61,16 @@ before(async () => {
   // schema but no production seed data. Create only the globally enabled
   // module rows exercised below instead of depending on a developer's local
   // database or running the full production account/plan seeder.
-  techdeckModule = await createTestModule('techdeck');
-  pulsedeskModule = await createTestModule('pulsedesk');
+  [techdeckModule] = await db.select().from(modules).where(eq(modules.slug, 'techdeck')).limit(1);
+  if (!techdeckModule) {
+    techdeckModule = await createTestModule('techdeck');
+    techdeckModuleCreated = true;
+  }
+  [pulsedeskModule] = await db.select().from(modules).where(eq(modules.slug, 'pulsedesk')).limit(1);
+  if (!pulsedeskModule) {
+    pulsedeskModule = await createTestModule('pulsedesk');
+    pulsedeskModuleCreated = true;
+  }
 
   owner = await createTestUser();
   // A paid/companion entitlement is still subject to the tenant's active
@@ -122,8 +132,8 @@ after(async () => {
     try { await db.delete(ssoHandoffTokens).where(eq(ssoHandoffTokens.userId, rootUser.id)); } catch {}
     if (rootCreated) await cleanupUser(rootUser.id);
   }
-  if (techdeckModule) await cleanupModule(techdeckModule.id);
-  if (pulsedeskModule) await cleanupModule(pulsedeskModule.id);
+  if (techdeckModuleCreated && techdeckModule) await cleanupModule(techdeckModule.id);
+  if (pulsedeskModuleCreated && pulsedeskModule) await cleanupModule(pulsedeskModule.id);
 });
 
 function skipWithoutDb(t: any): boolean {

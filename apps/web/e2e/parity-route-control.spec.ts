@@ -3,7 +3,9 @@ import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { establishParitySession } from './parity-auth';
 
-const WEB = process.env.E2E_WEB_URL ?? 'http://127.0.0.1:5000';
+const WEB = process.env.E2E_PRODUCTION_HOSTS === '1'
+  ? 'https://127.0.0.1'
+  : (process.env.E2E_WEB_URL ?? 'http://127.0.0.1:5000');
 const contracts = JSON.parse(readFileSync(resolve(process.cwd(), '../../docs/parity/visual-contracts.json'), 'utf8'));
 
 test('every module critical route has live controls and no page, console, network, placeholder, or HTTP failure', async ({ page }) => {
@@ -15,7 +17,16 @@ test('every module critical route has live controls and no page, console, networ
   const failedResponses: string[] = [];
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('pageerror', error => pageErrors.push(error.message));
-  page.on('requestfailed', request => failedRequests.push(`${request.method()} ${request.url()} ${request.failure()?.errorText ?? ''}`));
+  page.on('requestfailed', request => {
+    const failure = request.failure()?.errorText ?? '';
+    const url = new URL(request.url());
+    // Next cancels speculative RSC prefetches when this contract immediately
+    // advances to the next module. The user navigation and final document
+    // response remain successful, so these client-side cancellations are not
+    // transport failures.
+    if (request.method() === 'GET' && failure === 'net::ERR_ABORTED' && url.searchParams.has('_rsc')) return;
+    failedRequests.push(`${request.method()} ${request.url()} ${failure}`);
+  });
   page.on('response', response => {
     if (response.status() >= 400) failedResponses.push(`${response.status()} ${response.request().method()} ${response.url()}`);
   });
@@ -30,7 +41,11 @@ test('every module critical route has live controls and no page, console, networ
       const anchor = element as HTMLAnchorElement;
       const style = getComputedStyle(html);
       const visible = style.display !== 'none' && style.visibility !== 'hidden' && html.getBoundingClientRect().width > 0 && html.getBoundingClientRect().height > 0;
-      const name = html.getAttribute('aria-label') || html.getAttribute('title') || html.textContent?.trim() || (element as HTMLInputElement).placeholder || '';
+      const labelledText = Array.from((element as HTMLInputElement).labels ?? [])
+        .map(label => label.textContent?.trim() ?? '')
+        .filter(Boolean)
+        .join(' ');
+      const name = html.getAttribute('aria-label') || html.getAttribute('title') || html.textContent?.trim() || labelledText || (element as HTMLInputElement).placeholder || '';
       return { tag: element.tagName, visible, name, href: anchor.href || null, disabled: (element as HTMLButtonElement).disabled || false };
     }));
     const visibleControls = controls.filter(control => control.visible && !control.disabled);

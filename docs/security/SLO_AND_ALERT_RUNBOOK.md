@@ -1,6 +1,6 @@
-# OperatorOS initial SLO and alert runbook
+# OperatorOS production SLO and alert runbook
 
-Effective date: 2026-07-27
+Effective date: 2026-08-14 (Phase 39 refresh)
 
 These are internal release objectives, not contractual customer SLAs. The
 target deployment must retain request ID, user ID, tenant ID, module ID, route
@@ -22,12 +22,15 @@ payloads.
 | Jobs | Oldest ready job under 5 minutes; dead-letter growth is zero during steady state | Shared worker health/database metric |
 | SSO | Exchange failure/replay anomaly below 1% excluding deliberate negative tests | SSO audit event counters |
 | Backup | RPO 24 hours, restore rehearsal at least quarterly, RTO 4 hours | Backup provider plus rehearsal record |
+| Browser experience | LCP at or below 2.5 s, CLS at or below 0.1 and INP at or below 200 ms on representative exact-host flows | Browser performance artifact and deployed RUM |
+| Realtime/game | p95 message latency below 250 ms; target/max frame time 16.7/33.4 ms | room traces and deterministic performance fixtures |
 
 ## Alerts
 
 - Page: `/healthz` unavailable for 2 minutes on two probes.
-- Page: `/readyz` fails database/auth/SSO/module registry for 2 minutes outside
-  a declared deployment drain.
+- Page: `/readyz` fails database/auth/SSO/module registry, live-provider health,
+  worker heartbeat, or queue-age checks for 2 minutes outside a declared
+  deployment drain.
 - Page: suspected cross-tenant denial anomaly, webhook signature acceptance
   anomaly, audit-write failure on privileged mutation, or session revocation
   failure.
@@ -35,6 +38,11 @@ payloads.
   saturation above 90%, worker stopped, or dead-letter growth above 10.
 - Ticket: p95 objective breach for 15 minutes, provider degradation, backup
   missed by 2 hours, or dependency audit produces a new moderate issue.
+
+The exact machine-readable limits are in
+[`config/production-budgets.json`](../../config/production-budgets.json). A
+budget change requires a reviewed reason and matching test/runbook update; it
+must not be raised simply to make a regression green.
 
 Every alert must attach environment, canonical host, request/correlation IDs,
 route template, module, sanitized error code, deployment commit, and first/last

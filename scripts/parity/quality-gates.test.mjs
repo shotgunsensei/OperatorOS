@@ -19,10 +19,10 @@ test('visual contract covers 13 module-owned suites at desktop, tablet, and mobi
   }
 });
 
-test('current visual approval gate fails closed on missing baselines and missing OutCall source branding', () => {
+test('current visual approval gate binds every module viewport to a reviewed baseline', () => {
   const issues = validateVisualContracts(readVisualContracts(), readVisualApprovals());
-  assert.equal(issues.filter((entry) => entry.code === 'MISSING_VISUAL_BASELINE').length, 39);
-  assert.ok(issues.some((entry) => entry.code === 'MISSING_MODULE_BRANDING_TOKENS' && entry.moduleSlug === 'outcall'));
+  assert.equal(readVisualApprovals().approvals.length, 39);
+  assert.deepEqual(issues, []);
 });
 
 for (const [fixtureName, expectedCode] of [

@@ -1,4 +1,6 @@
 process.env.SESSION_SECRET ||= 'operatoros-tradeflowkit-state5-test-v1';
+process.env.NODE_ENV = 'test';
+process.env.APP_ENV = 'test';
 process.env.TRADEFLOWKIT_PAYMENT_PROVIDER = 'test';
 
 import { after, before, test } from 'node:test';

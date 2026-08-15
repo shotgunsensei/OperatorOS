@@ -4,6 +4,13 @@ packages:
 allowBuilds:
   bufferutil: true
   esbuild: true
+auditConfig:
+  # Both advisories are mitigated by the reviewed local patch below. Keep the
+  # ignore list tied to regression fixtures so a future unpatched resolution
+  # cannot silently inherit the exception.
+  ignoreGhsas:
+    - GHSA-5p2g-fcmc-qvqq
+    - GHSA-w3rx-r6r6-pgpr
 minimumReleaseAgeExclude:
   - '@expo/cli@57.0.14'
   - '@expo/fingerprint@0.20.7'
@@ -46,3 +53,4 @@ overrides:
   "@esbuild-kit/core-utils>esbuild": ">=0.25.0"
 patchedDependencies:
   '@expo/plist@0.8.1': patches/@expo__plist@0.8.1.patch
+  'image-size@1.2.1': patches/image-size@1.2.1.patch

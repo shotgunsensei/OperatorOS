@@ -112,13 +112,13 @@ export default function CallCommandMspWorkspace() {
   const activeCases = data?.cases.filter(item => !['RESOLVED', 'CLOSED'].includes(item.status)) ?? [];
   const blockedOutbox = data?.outbox.filter(item => ['BLOCKED', 'DEAD_LETTER', 'RETRY'].includes(item.status)) ?? [];
 
-  if (!data && !error) return <section aria-label="CallCommand MSP intake and automation fabric" aria-busy="true" style={{ marginBottom: space.xxl }}>
-    <div role="status" style={{ ...panel, display: 'flex', gap: 10, alignItems: 'center', color: semantic.textMuted }}>
-      <Loader2 size={18} aria-hidden="true"/>Loading the MSP intake command center…
-    </div>
-  </section>;
+  const loading = !data && !error;
 
-  return <section aria-label="CallCommand MSP intake and automation fabric" style={{ marginBottom: space.xxl }}>
+  return <section aria-label="CallCommand MSP intake and automation fabric" aria-busy={loading} style={{ marginBottom: space.xxl, position: 'relative' }}>
+    {loading && <div role="status" style={{ ...panel, position: 'absolute', inset: '12px 12px auto', zIndex: 2, display: 'flex', gap: 10, alignItems: 'center', color: semantic.textMuted, boxShadow: '0 18px 55px rgba(0,0,0,.42)' }}>
+      <Loader2 size={18} aria-hidden="true"/>Loading the MSP intake command center…
+    </div>}
+    <div inert={loading ? true : undefined} aria-hidden={loading || undefined} style={{ pointerEvents: loading ? 'none' : 'auto' }}>
     <div style={{ ...panel, padding: 0, overflow: 'hidden', marginBottom: space.lg, borderColor: 'rgba(52,211,153,.36)' }}>
       <div style={{ padding: '22px 24px', background: 'radial-gradient(circle at 88% 0,rgba(16,185,129,.22),transparent 38%),linear-gradient(135deg,rgba(6,78,59,.3),rgba(5,15,22,.2))' }}>
         <div style={{ display: 'flex', gap: 15, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -166,7 +166,7 @@ export default function CallCommandMspWorkspace() {
         <SectionHeading icon={<Siren/>} title="Global safety controls" subtitle="Ticket-only is the safe default. Incident mode immediately narrows the product to human-reviewed intake." badge={<Badge tone={data?.settings.incidentMode?'bad':'good'}>{data?.settings.incidentMode?'incident mode':'normal mode'}</Badge>}/>
         <div style={{display:'grid',gap:11}}>
           <Label title="Automation mode"><select style={field} value={data?.settings.automationMode || 'TICKET_ONLY'} onChange={event=>setData(current=>current?{...current,settings:{...current.settings,automationMode:event.target.value}}:current)}><option value="TICKET_ONLY">Ticket only</option><option value="READ_ONLY">Read-only health</option><option value="STANDARD">Standard policy-gated</option><option value="MANUAL_ONLY">Manual only</option></select></Label>
-          <label style={{display:'flex',gap:9,alignItems:'center',fontSize:13,color:semantic.textMuted}}><input type="checkbox" checked={Boolean(data?.settings.incidentMode)} onChange={event=>setData(current=>current?{...current,settings:{...current.settings,incidentMode:event.target.checked}}:current)}/>Incident mode / automation kill switch</label>
+          <label style={{display:'flex',gap:9,alignItems:'center',minHeight:24,fontSize:13,color:semantic.textMuted}}><input type="checkbox" checked={Boolean(data?.settings.incidentMode)} onChange={event=>setData(current=>current?{...current,settings:{...current.settings,incidentMode:event.target.checked}}:current)}/>Incident mode / automation kill switch</label>
           <button style={data?.settings.incidentMode?quietButton:primaryButton} disabled={!!busy||!data} onClick={()=>void run('settings',()=>moduleShellApi.callcommand.mspUpdateSettings({automationMode:data?.settings.automationMode,incidentMode:data?.settings.incidentMode,recordingDefault:data?.settings.recordingDefault,transcriptRetentionHours:data?.settings.transcriptRetentionHours}),'MSP safety settings updated.')}>{busy==='settings'?<Loader2 size={15}/>:<ShieldCheck size={15}/>}Save safety controls</button>
         </div>
       </section>
@@ -241,7 +241,7 @@ export default function CallCommandMspWorkspace() {
 
     <section id="callcommand-msp-audit" style={{...panel,marginBottom:space.lg}}>
       <SectionHeading icon={<ScrollText/>} title="Hash-linked call evidence" subtitle="Each call context has a monotonic, previous-hash-linked event ledger. Sensitive raw associations and provider credentials are excluded from browser responses." badge={<Badge>{data?.audit.length ?? 0} recent events</Badge>}/>
-      <div style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:12,minWidth:720}}><thead><tr>{['Time','Event','Actor','Outcome','Sequence','Event hash'].map(item=><th key={item} style={{textAlign:'left',padding:8,color:semantic.textMuted,borderBottom:'1px solid rgba(94,234,212,.2)'}}>{item}</th>)}</tr></thead><tbody>{data?.audit.slice(0,40).map(item=><tr key={item.id}><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)',whiteSpace:'nowrap'}}>{new Date(item.createdAt).toLocaleString()}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)'}}>{item.eventType}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)'}}>{item.actorType}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)'}}>{item.outcome}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)'}}>{item.sequence}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)',fontFamily:'monospace'}}>{String(item.eventHash).slice(0,16)}…</td></tr>)}</tbody></table></div>
+      <div role="region" aria-label="CallCommand audit events" tabIndex={0} style={{overflowX:'auto'}}><table style={{width:'100%',borderCollapse:'collapse',fontSize:12,minWidth:720}}><thead><tr>{['Time','Event','Actor','Outcome','Sequence','Event hash'].map(item=><th key={item} style={{textAlign:'left',padding:8,color:semantic.textMuted,borderBottom:'1px solid rgba(94,234,212,.2)'}}>{item}</th>)}</tr></thead><tbody>{data?.audit.slice(0,40).map(item=><tr key={item.id}><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)',whiteSpace:'nowrap'}}>{new Date(item.createdAt).toLocaleString()}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)'}}>{item.eventType}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)'}}>{item.actorType}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)'}}>{item.outcome}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)'}}>{item.sequence}</td><td style={{padding:8,borderBottom:'1px solid rgba(94,234,212,.08)',fontFamily:'monospace'}}>{String(item.eventHash).slice(0,16)}…</td></tr>)}</tbody></table></div>
     </section>
 
     <section id="callcommand-msp-onboarding" style={panel}>
@@ -256,5 +256,6 @@ export default function CallCommandMspWorkspace() {
       ].map(([title,text])=><article key={title} style={{padding:12,border:'1px solid rgba(94,234,212,.13)',borderRadius:10,background:'#07151c'}}><strong>{title}</strong><p style={{color:semantic.textMuted,fontSize:12,lineHeight:1.5,margin:'6px 0 0'}}>{text}</p></article>)}</div>
       <p style={{color:semantic.textMuted,fontSize:11,margin:'14px 0 0'}}>Contract: {data?.contract || 'loading'} · Password reset and RMM action toggles are server-forced off in this delivery.</p>
     </section>
+    </div>
   </section>;
 }

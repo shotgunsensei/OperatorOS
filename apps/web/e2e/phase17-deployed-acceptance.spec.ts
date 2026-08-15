@@ -37,7 +37,7 @@ const SHELL_TEST_IDS: Record<string, string> = {
   brandforgeos: 'brandforgeos-workspace',
   snapproofos: 'snapproofos-workspace',
   'studyforge-ai': 'shell-studyforge-ai',
-  'ninja-launch-kit': 'shell-ninja-launch-kit',
+  'ninja-launch-kit': 'shell-ninja-launch-kit-complete',
   'callcommand-ai': 'shell-callcommand-ai',
   ninjamation: 'shell-ninjamation',
   outcall: 'shell-outcall',

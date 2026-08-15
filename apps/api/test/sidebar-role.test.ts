@@ -82,7 +82,7 @@ test('snapshot: tenant admin sidebar IA', () => {
   const snap = sectionShape(buildNavSections({ isSuperAdmin: false, isTenantAdmin: true }));
   assert.deepEqual(snap, [
     { label: 'Workspace', ids: ['my-apps', 'apps', 'ai-tools'] },
-    { label: 'Organization', ids: ['command-center', 'tenant-users', 'tenant-modules', 'tenant-billing', 'tenant-settings'] },
+    { label: 'Organization', ids: ['command-center', 'tenant-users', 'tenant-modules', 'tenant-billing', 'tenant-settings', 'tenant-shared-services'] },
     { label: 'Account', ids: ['billing', 'settings', 'contact'] },
   ]);
 });
@@ -91,7 +91,7 @@ test('snapshot: super admin sidebar IA', () => {
   const snap = sectionShape(buildNavSections({ isSuperAdmin: true, isTenantAdmin: true }));
   assert.deepEqual(snap, [
     { label: 'Workspace', ids: ['my-apps', 'apps', 'ai-tools'] },
-    { label: 'Organization', ids: ['command-center', 'tenant-users', 'tenant-modules', 'tenant-billing', 'tenant-settings'] },
+    { label: 'Organization', ids: ['command-center', 'tenant-users', 'tenant-modules', 'tenant-billing', 'tenant-settings', 'tenant-shared-services'] },
     { label: 'Platform', ids: ['platform'] },
     { label: 'Account',  ids: ['billing', 'settings', 'contact'] },
   ]);

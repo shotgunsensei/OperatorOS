@@ -36,6 +36,7 @@ export default defineConfig({
       launchOptions: {
         args: [
           '--host-resolver-rules=MAP operatoros.net 127.0.0.1, MAP *.operatoros.net 127.0.0.1, EXCLUDE localhost',
+          '--ignore-certificate-errors',
         ],
       },
     } : {}),

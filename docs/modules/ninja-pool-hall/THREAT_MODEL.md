@@ -1,5 +1,12 @@
 # Ninja Pool Hall Phase 10B threat model
 
+## Phase 39 platform-hardening overlay (2026-08-14)
+
+Authenticated room membership, host-authoritative shot validation, sequence
+and replay rejection, reconnect snapshots, room expiry/rate controls, and
+frame/realtime budgets are release-gated by the platform threat model and
+[Phase 39 register](../../phase-39/THREAT-MODEL-REGISTER.md).
+
 ## Protected assets
 
 - OperatorOS identity, session, tenant membership, module entitlement, role,

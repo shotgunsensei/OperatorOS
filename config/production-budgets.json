@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "api": {
+    "readP95Ms": 300,
+    "writeP95Ms": 500,
+    "p99Ms": 1500,
+    "loadConcurrency": 10,
+    "loadRequestsPerRoute": 100
+  },
+  "workers": {
+    "heartbeatStaleSeconds": 120,
+    "oldestReadySeconds": 300,
+    "gracefulShutdownSeconds": 10
+  },
+  "uploads": {
+    "defaultRawBytes": 10485760,
+    "absoluteRawBytes": 26214400,
+    "base64EnvelopeBytes": 35000000
+  },
+  "browser": {
+    "largestContentfulPaintMs": 2500,
+    "cumulativeLayoutShift": 0.1,
+    "interactionToNextPaintMs": 200,
+    "javascriptTransferBytes": 3145728,
+    "horizontalOverflowPixels": 1,
+    "minimumTouchTargetPixels": 24
+  },
+  "realtime": {
+    "messageP95Ms": 250,
+    "gameTargetFrameMs": 16.7,
+    "gameMaxFrameMs": 33.4
+  },
+  "mobile": {
+    "offlineMutationMaxAttempts": 8,
+    "offlineQueueMaxItems": 250,
+    "mediaUploadConcurrency": 2
+  }
+}

@@ -233,7 +233,10 @@ const WEB_BASE = process.env.WEB_BASE_URL ?? 'http://localhost:5000';
 
 async function probe(path: string, init?: RequestInit) {
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 5000);
+  // Next development mode compiles a route on first request. Keep this
+  // availability contract tolerant of that one-time compile; production
+  // artifact latency is enforced separately by the Phase 39 browser budgets.
+  const timer = setTimeout(() => ctl.abort(), 15_000);
   try {
     return await fetch(`${WEB_BASE}${path}`, { ...init, signal: ctl.signal });
   } finally {

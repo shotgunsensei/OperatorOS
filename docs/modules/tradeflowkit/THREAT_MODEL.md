@@ -1,5 +1,12 @@
 # TradeFlowKit threat model
 
+## Phase 39 platform-hardening overlay (2026-08-14)
+
+Tenant-shared business records, server-derived money and invoice invariants,
+public-intake abuse controls, Stripe authority, export/import idempotency, and
+SnapProof attachment/provenance reconciliation are governed by the platform
+threat model and [Phase 39 register](../../phase-39/THREAT-MODEL-REGISTER.md).
+
 Assessment date: 2026-07-27
 
 ## Protected assets and boundaries

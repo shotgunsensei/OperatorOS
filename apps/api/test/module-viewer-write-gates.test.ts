@@ -122,10 +122,11 @@ test('shared-runtime module mutations use write guards while GET routes remain r
     [
       '/v1/modules/callcommand-ai/webhooks/twilio/incoming',
       '/v1/modules/callcommand-ai/webhooks/twilio/intake',
+      '/v1/modules/callcommand-ai/webhooks/twilio/messaging',
       '/v1/modules/callcommand-ai/webhooks/twilio/recording',
       '/v1/modules/callcommand-ai/webhooks/twilio/status',
     ],
-    'only the four signed Twilio provider callbacks remain outside first-party session guards',
+    'only the five signed Twilio provider callbacks remain outside first-party session guards',
   );
 
   const firstPartyRoutes = routes.filter((route) => !route.path.includes('/webhooks/twilio/'));

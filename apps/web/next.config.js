@@ -2,6 +2,29 @@
 const isMobileBuild = process.env.MOBILE_BUILD === '1';
 const isDev = process.env.NODE_ENV !== 'production';
 
+// Next.js currently emits inline bootstrap/style content for this mixed
+// server/client application. Keep that compatibility explicit while closing
+// every other browser content channel. Phase 39 tracks removal of
+// `unsafe-inline` as a dated medium-risk follow-up; adopting per-request nonces
+// would force the entire application into dynamic rendering and must be done as
+// a measured migration rather than an unreviewed production switch.
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.operatoros.net wss://*.operatoros.net",
+  "media-src 'self' data: blob:",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  ...(isDev ? [] : ['upgrade-insecure-requests']),
+].join('; ');
+
 const SHARED_SECURITY_HEADERS = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'DENY' },
@@ -14,9 +37,11 @@ const SHARED_SECURITY_HEADERS = [
     key: 'Strict-Transport-Security',
     value: 'max-age=31536000; includeSubDomains',
   },
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+  { key: 'Cross-Origin-Resource-Policy', value: 'same-site' },
   {
     key: 'Content-Security-Policy',
-    value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+    value: CONTENT_SECURITY_POLICY,
   },
 ];
 

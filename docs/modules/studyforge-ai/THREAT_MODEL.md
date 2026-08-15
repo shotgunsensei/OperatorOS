@@ -1,5 +1,12 @@
 # StudyForge AI Phase 11C threat model
 
+## Phase 39 platform-hardening overlay (2026-08-14)
+
+Transactional generation, structured AI validation, deterministic-fallback
+provenance, credit/idempotency races, learner/tutor isolation, export limits,
+and account deletion cascades are governed by the platform threat model and
+[Phase 39 register](../../phase-39/THREAT-MODEL-REGISTER.md).
+
 | Threat | Control |
 | --- | --- |
 | Browser tenant/user/role override | Parsers reject unknown authority fields; trusted OperatorOS session scopes every query |

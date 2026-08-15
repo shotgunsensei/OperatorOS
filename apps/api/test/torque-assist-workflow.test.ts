@@ -458,8 +458,32 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
   );
   assert.equal(foreign.statusCode, 404, foreign.body);
 
-  assert.ok(result.actualUnits * 2 > result.estimatedUnits);
-  const raceCredit = result.actualUnits * 2 - 1;
+  const raceUnits = 10_000;
+  let waitingCompletions = 0;
+  let releaseCompletions!: () => void;
+  const bothCompletionsReady = new Promise<void>((resolve) => {
+    releaseCompletions = resolve;
+  });
+  const raceAdapter: SharedAiProviderAdapter = {
+    status: { kind: 'ai', name: 'concurrency-barrier-test', state: 'test' },
+    async complete() {
+      waitingCompletions += 1;
+      if (waitingCompletions === 2) releaseCompletions();
+      await bothCompletionsReady;
+      return {
+        text: JSON.stringify(result.result),
+        tokenCount: raceUnits,
+        durationMs: 1,
+        provider: 'concurrency-barrier-test',
+        model: 'fixed-cost-v1',
+        version: 'test-v1',
+      };
+    },
+  };
+  setSharedAiProviderAdapterForTests(raceAdapter);
+  // Both requests pass the pre-provider estimate check against the same balance,
+  // but only one fixed-cost completion can consume it after the barrier releases.
+  const raceCredit = raceUnits;
   await db.execute(sql`
     INSERT INTO torqueshed_token_ledger_entries (
       tenant_id,user_id,module_id,entry_kind,operation_type,units,idempotency_key,
@@ -499,6 +523,7 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
   `);
   assert.ok(Number(raceMath.rows[0]!.balance) >= 0);
   assert.equal(raceMath.rows[0]!.debits, 1);
+  setSharedAiProviderAdapterForTests(defaultAi);
 
   let rateLimited = false;
   // Six attempts guarantee that the sixth request crosses the five-per-minute

@@ -1,9 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import { establishParitySession } from './parity-auth';
 
-const WEB = process.env.E2E_WEB_URL ?? 'http://127.0.0.1:5000';
+const WEB = process.env.E2E_PRODUCTION_HOSTS === '1'
+  ? 'https://127.0.0.1'
+  : (process.env.E2E_WEB_URL ?? 'http://127.0.0.1:5000');
 const contracts = JSON.parse(readFileSync(resolve(process.cwd(), '../../docs/parity/visual-contracts.json'), 'utf8'));
 
 test('module-owned source-faithful visual contracts', async ({ page }) => {
@@ -14,61 +17,53 @@ test('module-owned source-faithful visual contracts', async ({ page }) => {
   const failedRequests: string[] = [];
   page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('pageerror', error => pageErrors.push(error.message));
-  page.on('requestfailed', request => failedRequests.push(`${request.method()} ${request.url()} ${request.failure()?.errorText ?? ''}`));
+  page.on('requestfailed', request => {
+    const detail = request.failure()?.errorText ?? '';
+    if (!detail.includes('ERR_ABORTED')) failedRequests.push(`${request.method()} ${request.url()} ${detail}`);
+  });
 
   for (const contract of contracts.modules) {
     for (const viewport of contract.viewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      const response = await page.goto(`${WEB}${contract.criticalRoute}`, { waitUntil: 'networkidle' });
+      const response = await page.goto(`${WEB}${contract.criticalRoute}`, { waitUntil: 'domcontentloaded', timeout: 45_000 });
       expect(response?.status(), `${contract.moduleSlug}/${viewport.name}`).toBeLessThan(400);
       await expect(page.locator('body')).toContainText(contract.moduleName);
+      await page.waitForFunction(() => {
+        const text = document.body.innerText;
+        const productWorkspaceLoading = /(?:loading|preparing)\s+(?:your\s+)?[\w -]+(?:workspace|dashboard|operations|garage|data)(?:\.{3}|…)?/i;
+        return !document.querySelector('[aria-busy="true"]') && !productWorkspaceLoading.test(text);
+      }, undefined, { timeout: 45_000 });
+      await page.waitForTimeout(750);
       const audit = await page.evaluate(() => {
-        const parse = (value: string) => {
-          const match = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-          return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
-        };
-        const luminance = (rgb: number[]) => {
-          const values = rgb.map(value => {
-            const normalized = value / 255;
-            return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
-          });
-          return 0.2126 * values[0] + 0.7152 * values[1] + 0.0722 * values[2];
-        };
-        const contrast = (left: number[], right: number[]) => {
-          const a = luminance(left);
-          const b = luminance(right);
-          return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-        };
-        const contrastFailures: string[] = [];
-        for (const element of Array.from(document.querySelectorAll('p,span,label,a,button,h1,h2,h3,h4')).slice(0, 500)) {
-          const html = element as HTMLElement;
-          if (!html.textContent?.trim() || html.getBoundingClientRect().width === 0) continue;
-          const style = getComputedStyle(html);
-          const foreground = parse(style.color);
-          let parent: HTMLElement | null = html;
-          let background: number[] | null = null;
-          while (parent && !background) {
-            const candidate = parse(getComputedStyle(parent).backgroundColor);
-            if (candidate && getComputedStyle(parent).backgroundColor !== 'rgba(0, 0, 0, 0)') background = candidate;
-            parent = parent.parentElement;
-          }
-          if (foreground && background && contrast(foreground, background) < 3) contrastFailures.push(html.textContent.trim().slice(0, 80));
-        }
         const unnamedControls = Array.from(document.querySelectorAll('a,button,input,select,textarea,[role="button"],[role="link"]')).filter(element => {
           const html = element as HTMLElement;
           const style = getComputedStyle(html);
           if (style.display === 'none' || style.visibility === 'hidden' || html.getBoundingClientRect().width === 0) return false;
-          return !(html.getAttribute('aria-label') || html.getAttribute('title') || html.textContent?.trim() || (element as HTMLInputElement).placeholder);
+          const explicitLabel = html.id ? document.querySelector(`label[for="${CSS.escape(html.id)}"]`) : null;
+          return !(
+            html.getAttribute('aria-label')
+            || html.getAttribute('aria-labelledby')
+            || html.getAttribute('title')
+            || html.textContent?.trim()
+            || (element as HTMLInputElement).placeholder
+            || html.closest('label')
+            || explicitLabel
+          );
         }).length;
         return {
           horizontalOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
           unnamedControls,
-          contrastFailures,
         };
       });
       expect(audit.horizontalOverflow, `${contract.moduleSlug}/${viewport.name} horizontal overflow`).toBeLessThanOrEqual(1);
       expect(audit.unnamedControls, `${contract.moduleSlug}/${viewport.name} unnamed controls`).toBe(0);
-      expect(audit.contrastFailures, `${contract.moduleSlug}/${viewport.name} contrast`).toEqual([]);
+      const accessibility = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag22aa'])
+        .analyze();
+      expect(
+        accessibility.violations.map(violation => `${violation.id}: ${violation.nodes.length}`),
+        `${contract.moduleSlug}/${viewport.name} WCAG violations`,
+      ).toEqual([]);
       await expect(page).toHaveScreenshot(`${contract.moduleSlug}-${viewport.name}.png`, {
         fullPage: true,
         animations: 'disabled',

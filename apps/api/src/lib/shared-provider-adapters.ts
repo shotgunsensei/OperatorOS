@@ -1,6 +1,9 @@
 import { getAiProvider, getProviderInfo, type AiCompletionRequest, type AiCompletionResponse } from './ai-provider.js';
 import { resolveTelephonyConfig, restAuthHeader } from './telephony.js';
-import { isOperatorOSTestEnvironment } from './shared-service-safety.js';
+import {
+  isOperatorOSDeterministicProviderTestEnvironment,
+  isOperatorOSTestEnvironment,
+} from './shared-service-safety.js';
 import { sanitizeSharedMetadata } from './shared-service-safety.js';
 
 export type ProviderKind = 'email' | 'sms' | 'payments' | 'ai';
@@ -153,7 +156,7 @@ export async function getOutboundProviderAdapter(channel: 'email' | 'sms'): Prom
 }
 
 export function getPaymentProviderAdapter(): PaymentProviderAdapter {
-  if (isOperatorOSTestEnvironment()) {
+  if (isOperatorOSDeterministicProviderTestEnvironment()) {
     return {
       status: { kind: 'payments', name: 'deterministic-test', state: 'test' },
       async verifyWebhook(rawBody, signature) {

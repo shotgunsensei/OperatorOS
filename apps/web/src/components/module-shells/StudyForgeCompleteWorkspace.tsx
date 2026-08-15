@@ -95,7 +95,7 @@ export default function StudyForgeCompleteWorkspace({ routePath = '' }: { routeP
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routePath]);
 
-  return <div data-testid="studyforge-phase33-complete" style={{ marginBottom: 36 }}>
+  return <div data-testid="studyforge-phase33-complete" style={{ marginBottom: 36, minHeight: '100vh' }}>
     {error && <div role="alert" style={{ ...shellCard, borderColor: 'rgba(248,113,113,.7)', color: '#fecaca', marginBottom: 16 }}>{error}</div>}
     {!workspace ? <div style={shellCard}>Loading complete StudyForge learning records…</div> : <>
       {!workspace.preferences.onboardingComplete && <Onboarding busy={busy} act={act} />}

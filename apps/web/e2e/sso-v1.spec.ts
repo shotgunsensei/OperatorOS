@@ -19,7 +19,7 @@ const SHELL_TEST_IDS: Record<string, string> = {
   brandforgeos: 'brandforgeos-workspace',
   snapproofos: 'snapproofos-workspace',
   'studyforge-ai': 'shell-studyforge-ai',
-  'ninja-launch-kit': 'shell-ninja-launch-kit',
+  'ninja-launch-kit': 'shell-ninja-launch-kit-complete',
   'callcommand-ai': 'shell-callcommand-ai',
   ninjamation: 'shell-ninjamation',
   outcall: 'shell-outcall',
@@ -1689,7 +1689,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       modulePage.waitForResponse(response => response.request().method() === 'POST'
         && new URL(response.url()).pathname === '/api/modules/brandforgeos/brands'
         && response.status() === 201),
-      modulePage.getByRole('button', { name: 'Create brand kit' }).click(),
+      modulePage.getByRole('button', { name: 'Create brand system' }).click(),
     ]);
     await expect(modulePage.getByRole('heading', { name: brandName })).toBeVisible();
 
@@ -1706,7 +1706,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.getByLabel('Brand kit').selectOption({ label: brandName });
     await modulePage.getByLabel('Persona').selectOption({ label: personaName });
     await modulePage.getByRole('button', { name: 'Create campaign' }).click();
-    await expect(modulePage.getByRole('heading', { name: campaignName })).toBeVisible();
+    await expect(modulePage.getByRole('heading', { name: campaignName, exact: true })).toBeVisible();
     await modulePage.getByRole('button', { name: 'Move to planning' }).click();
     await expect(modulePage.getByText('planning', { exact: true })).toBeVisible();
 
@@ -1790,9 +1790,9 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       modulePage.waitForURL(campaignUrl, { timeout: 30_000 }),
       modulePage.getByTestId('button-login').click(),
     ]);
-    await expect(modulePage.getByRole('heading', { name: campaignName })).toBeVisible();
+    await expect(modulePage.getByRole('heading', { name: campaignName, exact: true })).toBeVisible();
     await modulePage.reload();
-    await expect(modulePage.getByRole('heading', { name: campaignName })).toBeVisible();
+    await expect(modulePage.getByRole('heading', { name: campaignName, exact: true })).toBeVisible();
     await capturePhase20Evidence(modulePage, 'brandforgeos-completed', { width: 1440, height: 1000 });
     await assertHostOnlySession(modulePage.context(), 'brandforgeos.operatoros.net');
     await assertNoBrowserCredentialStorage(modulePage);
@@ -1955,7 +1955,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
 
     await modulePage.setViewportSize({ width: 390, height: 844 });
     await expect(modulePage.getByRole('navigation', { name: 'StudyForge workspace' })).toBeVisible();
-    await expect(modulePage.getByRole('button', { name: 'Dashboard', exact: true })).toBeVisible();
+    await expect(modulePage.getByRole('button', { name: 'Learning home', exact: true })).toBeVisible();
     await Promise.all([
       modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
       modulePage.getByRole('link', { name: 'My Apps' }).first().click(),
@@ -2013,10 +2013,12 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const popupPromise = page.waitForEvent('popup');
     await page.getByTestId('button-launch-ninja-launch-kit').click();
     const modulePage = await popupPromise;
-    await expect(modulePage.getByTestId('shell-ninja-launch-kit')).toBeVisible({ timeout: 30_000 });
+    await expect(modulePage.getByTestId('shell-ninja-launch-kit-complete')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.locator('#launchkit-dashboard')).toBeVisible();
     assertNoCredentialQuery(modulePage.url());
 
+    await modulePage.getByRole('button', { name: 'Execution workspaces', exact: true }).click();
+    await expect(modulePage.getByTestId('input-launchkit-title')).toBeVisible();
     await modulePage.getByTestId('input-launchkit-title').fill(launchTitle);
     await modulePage.getByTestId('input-launchkit-product-type').fill('SaaS service');
     await modulePage.getByTestId('select-launchkit-template').selectOption('it-support-msp');
@@ -2169,7 +2171,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       `select
         (select id from callcommand_calls where tenant_id=$1 and provider='simulator' order by created_at desc limit 1)::text as id,
         (select count(*) from callcommand_calls where tenant_id=$1 and provider='simulator' and status='completed' and priority='urgent' and analyzed_at is not null)::text as calls,
-        (select count(*) from callcommand_action_runs where tenant_id=$1 and status='completed' and provider_action_confirmed=true)::text as actions,
+        (select count(*) from callcommand_action_runs where tenant_id=$1 and action_type='ticket' and status='completed' and provider_reference is not null)::text as actions,
         (select count(*) from callcommand_tickets where tenant_id=$1 and priority='urgent')::text as tickets,
         (select count(*) from information_schema.columns where table_name='callcommand_calls' and column_name='recording_url')::text as recording_urls`,
       [identity.tenantId],
@@ -2245,10 +2247,10 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const workspace = modulePage.getByTestId('snapproofos-workspace');
     await expect(workspace).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.locator('#snapproofos-dashboard')).toBeVisible();
-    expect(await workspace.getAttribute('data-evidence')).toBe('persisted-private-evidence-only');
+    expect(await workspace.getAttribute('data-evidence')).toBe('persisted-field-proof-and-private-evidence');
     assertNoCredentialQuery(modulePage.url());
 
-    await modulePage.getByRole('button', { name: 'Cases', exact: true }).click();
+    await modulePage.getByRole('button', { name: 'Proof cases', exact: true }).click();
     await modulePage.getByLabel('Case reference').fill(reference);
     await modulePage.getByLabel('Title', { exact: true }).fill(caseTitle);
     await modulePage.getByLabel('Description').fill('A real persisted evidence lifecycle exercised through the production-host proxy.');
@@ -2263,7 +2265,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const caseUrl = `https://snapproofos.operatoros.net/cases/${createdCase.id}`;
     await expect(modulePage).toHaveURL(caseUrl);
 
-    await modulePage.getByRole('button', { name: 'Evidence', exact: true }).click();
+    await modulePage.getByRole('button', { name: 'Integrity', exact: true }).click();
     await modulePage.getByLabel('Evidence type').selectOption('note');
     await modulePage.getByLabel('Title', { exact: true }).fill(noteTitle);
     await modulePage.getByLabel('Source type').fill('acceptance_test');
@@ -2298,7 +2300,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       return result.rows[0]?.scan_status;
     }, { timeout: 30_000 }).toMatch(/^(clean|unavailable)$/);
 
-    await modulePage.getByRole('button', { name: 'Findings', exact: true }).click();
+    await modulePage.getByRole('button', { name: 'Evidence findings', exact: true }).click();
     await modulePage.getByLabel('Finding title').fill(findingTitle);
     await modulePage.getByLabel('Description').fill('The private evidence hash and review state remain server authoritative.');
     await modulePage.getByLabel('Severity').selectOption('high');
@@ -2308,14 +2310,14 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.getByRole('button', { name: 'Add internal note' }).click();
     await expect(modulePage.getByText('Internal reviewer context is append-only and custody linked.')).toBeVisible();
 
-    await modulePage.getByRole('button', { name: 'Evidence', exact: true }).click();
+    await modulePage.getByRole('button', { name: 'Integrity', exact: true }).click();
     await noteCard.getByRole('button', { name: 'Submit for review' }).click();
     await fileCard.getByRole('button', { name: 'Submit for review' }).click();
     await modulePage.getByRole('button', { name: 'Review', exact: true }).click();
     await modulePage.locator('article').filter({ hasText: noteTitle }).getByRole('button', { name: 'Verify' }).click();
     await modulePage.locator('article').filter({ hasText: fileTitle }).getByRole('button', { name: 'Verify' }).click();
 
-    await modulePage.getByRole('button', { name: 'Cases', exact: true }).click();
+    await modulePage.getByRole('button', { name: 'Proof cases', exact: true }).click();
     await modulePage.getByRole('button', { name: 'Submit case for review' }).click();
     await modulePage.getByRole('button', { name: 'Review', exact: true }).click();
     await modulePage.getByRole('button', { name: 'Approve case' }).click();
@@ -2347,7 +2349,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await expect(modulePage.getByRole('button', { name: 'Release legal hold' })).toBeVisible();
     await modulePage.setViewportSize({ width: 390, height: 844 });
     await expect(modulePage.getByRole('navigation', { name: 'SnapProofOS workspace' })).toBeVisible();
-    await expect(modulePage.getByRole('button', { name: 'Cases', exact: true })).toBeVisible();
+    await expect(modulePage.getByRole('button', { name: 'Proof cases', exact: true })).toBeVisible();
 
     await Promise.all([
       modulePage.waitForURL(/^https:\/\/app\.operatoros\.net\/(?:[?#].*)?$/, { timeout: 30_000 }),
@@ -2404,7 +2406,8 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     const modulePage = await popupPromise;
     await expect(modulePage.getByTestId('ninja-pool-hall-shell')).toBeVisible({ timeout: 30_000 });
     await expect(modulePage.getByTestId('ninja-pool-dashboard')).toBeVisible();
-    await expect(modulePage.getByText('Online rooms are coming later', { exact: true })).toBeVisible();
+    await expect(modulePage.getByRole('button', { name: 'Online', exact: true })).toBeVisible();
+    await expect(modulePage.getByText('Online rooms are coming later', { exact: true })).toHaveCount(0);
     assertNoCredentialQuery(modulePage.url());
 
     await modulePage.getByRole('button', { name: 'Profile', exact: true }).click();
@@ -2509,7 +2512,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     await modulePage.getByTestId('select-ninjamation-risk').selectOption('low');
     await modulePage.getByTestId('textarea-ninjamation-content').fill('Get-Process | Select-Object -First 5');
     await modulePage.getByTestId('button-ninjamation-save').click();
-    await expect(modulePage.getByTestId('text-ninjamation-notice')).toContainText('Draft created.');
+    await expect(modulePage.getByTestId('text-ninjamation-notice')).toContainText('Manual script draft created.');
 
     const script = await pg.query<{ id: string; status: string }>(
       `select id, status from ninjamation_scripts where tenant_id = $1 and name = $2 and deleted_at is null`,
@@ -2518,9 +2521,9 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(script.rows).toHaveLength(1);
     const scriptId = script.rows[0].id;
     await modulePage.getByTestId('button-ninjamation-submit-review').click();
-    await expect(modulePage.getByTestId('text-ninjamation-notice')).toContainText('Submitted for tenant-admin review.');
+    await expect(modulePage.getByTestId('text-ninjamation-notice')).toContainText('Submitted for organization-admin review.');
     await modulePage.getByTestId('button-ninjamation-approve').click();
-    await expect(modulePage.getByTestId('text-ninjamation-notice')).toContainText('Approved current version');
+    await expect(modulePage.getByTestId('text-ninjamation-notice')).toContainText('Approved current immutable version.');
     const downloadPromise = modulePage.waitForEvent('download');
     await modulePage.getByTestId('button-ninjamation-download').click();
     const download = await downloadPromise;

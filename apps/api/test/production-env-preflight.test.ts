@@ -18,6 +18,7 @@ const coreEnv = {
   OPERATOROS_APPS_URL: 'https://app.operatoros.net/',
   INTERNAL_API_URL: 'http://localhost:5001',
   OPERATOROS_DATABASE_RELEASE_MODE: 'apply',
+  RUNNER_MODE: 'disabled',
   TRUST_PROXY: 'true',
 };
 
@@ -26,6 +27,7 @@ test('production environment contract is machine-readable and owns core deployme
   assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.deploymentTarget, 'replit-autoscale');
   assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact.INTERNAL_API_URL, 'http://localhost:5001');
   assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact.OPERATOROS_DATABASE_RELEASE_MODE, 'apply');
+  assert.equal(preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.exact.RUNNER_MODE, 'disabled');
   assert.deepEqual(
     preflight.PRODUCTION_ENVIRONMENT_CONTRACT.core.unset,
     ['APP_URL', 'COOKIE_DOMAIN', 'NEXT_PUBLIC_API_URL'],
@@ -59,6 +61,7 @@ test('production preflight defaults to core and rejects unsafe authority configu
     NEXT_PUBLIC_API_URL: 'http://localhost:5001',
     INTERNAL_API_URL: 'http://127.0.0.1:5001',
     OPERATOROS_DATABASE_RELEASE_MODE: 'skip',
+    RUNNER_MODE: 'local',
     ALLOW_LEGACY_SSO_ROLLBACK: 'true',
     ALLOW_UNSAFE_COMMANDS: 'true',
   });
@@ -69,6 +72,7 @@ test('production preflight defaults to core and rejects unsafe authority configu
       'SESSION_SECRET',
       'INTERNAL_API_URL',
       'OPERATOROS_DATABASE_RELEASE_MODE',
+      'RUNNER_MODE',
       'APP_URL',
       'COOKIE_DOMAIN',
       'NEXT_PUBLIC_API_URL',

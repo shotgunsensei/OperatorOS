@@ -1,6 +1,6 @@
 # OperatorOS incident and rollback runbook
 
-Effective date: 2026-07-27
+Effective date: 2026-08-14 (Phase 39 refresh)
 
 ## Immediate response
 
@@ -52,6 +52,16 @@ Effective date: 2026-07-27
   callbacks without signature verification.
 - For job recovery, inspect leases and dead-letter state, classify retryable
   errors, and cap replay batches to prevent retry storms.
+- A stale/missing worker heartbeat or ready item older than five minutes makes
+  `/readyz` fail. Drain traffic before lease repair; replay by durable ID and
+  confirm the destination idempotency claim/provenance record before closing.
+- Never enable `RUNNER_MODE=local` in production to restore workspace
+  execution. Keep execution routes truthfully unavailable until the separately
+  isolated runner gateway, signing and approval policy are operational.
+- For dependency exception incidents, reproduce the malicious fixture, verify
+  the exact patch hash and GHSA allowlist, replace the exception when an
+  upstream fixed version becomes compatible, regenerate the SBOM, then rerun
+  the complete hardening/release gates.
 
 ## Closure
 

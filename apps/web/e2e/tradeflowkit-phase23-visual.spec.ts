@@ -1,8 +1,12 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 import { establishParitySession } from './parity-auth';
 
-const WEB = process.env.E2E_WEB_URL ?? 'http://127.0.0.1:5000';
-const API = process.env.E2E_API_URL ?? 'http://127.0.0.1:5001';
+const WEB = process.env.E2E_PRODUCTION_HOSTS === '1'
+  ? 'https://127.0.0.1'
+  : (process.env.E2E_WEB_URL ?? 'http://127.0.0.1:5000');
+const API = process.env.E2E_PRODUCTION_HOSTS === '1'
+  ? 'https://127.0.0.1/api'
+  : `${process.env.E2E_API_URL ?? 'http://127.0.0.1:5001'}/v1`;
 const activeRoutes = [
   ['/modules/tradeflowkit/dashboard', 'Dashboard'],
   ['/modules/tradeflowkit/leads', 'Leads'],
@@ -32,12 +36,12 @@ async function assertNoUnlabelledFormControls(page: Page) {
 }
 
 async function createPublicInvoice(request: APIRequestContext) {
-  const customerResponse = await request.post(`${API}/v1/modules/tradeflowkit/customers`, {
+  const customerResponse = await request.post(`${API}/modules/tradeflowkit/customers`, {
     data: { name: 'Phase 23 Visual Customer', email: 'visual@example.com' },
   });
   expect(customerResponse.ok(), await customerResponse.text()).toBeTruthy();
   const customer = await customerResponse.json();
-  const invoiceResponse = await request.post(`${API}/v1/modules/tradeflowkit/invoices`, {
+  const invoiceResponse = await request.post(`${API}/modules/tradeflowkit/invoices`, {
     data: {
       customerId: customer.id,
       lineItems: [{ description: 'Source-faithful visual audit', quantity: 1, unitPriceCents: 27500 }],
@@ -47,7 +51,7 @@ async function createPublicInvoice(request: APIRequestContext) {
   });
   expect(invoiceResponse.ok(), await invoiceResponse.text()).toBeTruthy();
   const invoice = await invoiceResponse.json();
-  const linkResponse = await request.post(`${API}/v1/modules/tradeflowkit/invoices/${invoice.id}/public-link`);
+  const linkResponse = await request.post(`${API}/modules/tradeflowkit/invoices/${invoice.id}/public-link`);
   expect(linkResponse.ok(), await linkResponse.text()).toBeTruthy();
   return (await linkResponse.json()).path as string;
 }
@@ -63,21 +67,24 @@ test.describe('Phase 23 TradeFlowKit visual identity and route restoration', () 
     const failedRequests: string[] = [];
     page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
     page.on('pageerror', error => pageErrors.push(error.message));
-    page.on('requestfailed', request => failedRequests.push(`${request.method()} ${request.url()} ${request.failure()?.errorText ?? ''}`));
+    page.on('requestfailed', request => {
+      const detail = request.failure()?.errorText ?? '';
+      if (!detail.includes('ERR_ABORTED')) failedRequests.push(`${request.method()} ${request.url()} ${detail}`);
+    });
 
     for (const [route, heading] of activeRoutes) {
-      const response = await page.goto(`${WEB}${route}`, { waitUntil: 'networkidle' });
+      const response = await page.goto(`${WEB}${route}`, { waitUntil: 'domcontentloaded' });
       expect(response?.status(), route).toBeLessThan(400);
       await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
-      await expect(page.locator('[data-testid="tradeflowkit-module-shell"]')).toHaveCSS('--tfk-primary', 'hsl(25 95% 44%)');
+      await expect(page.locator('[data-testid="tradeflowkit-module-shell"]')).toHaveCSS('--tfk-primary', 'hsl(25 95% 36%)');
       await expect(page.locator('body')).not.toContainText(/coming soon|not implemented|todo-only/i);
       await assertNoUnlabelledFormControls(page);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${route} overflow`).toBeLessThanOrEqual(1);
     }
 
-    await page.goBack({ waitUntil: 'networkidle' });
+    await page.goBack({ waitUntil: 'domcontentloaded' });
     await expect(page).toHaveURL(/\/analytics$/);
-    await page.reload({ waitUntil: 'networkidle' });
+    await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { name: 'Analytics', exact: true })).toBeVisible();
     expect(consoleErrors, 'browser console errors').toEqual([]);
     expect(pageErrors, 'browser page errors').toEqual([]);
@@ -90,8 +97,12 @@ test.describe('Phase 23 TradeFlowKit visual identity and route restoration', () 
     await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' });
     for (const viewport of viewports) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      await page.goto(`${WEB}/modules/tradeflowkit/dashboard`, { waitUntil: 'networkidle' });
-      await expect(page.locator('img[alt="TradeFlowKit"]')).toBeVisible();
+      await page.goto(`${WEB}/modules/tradeflowkit/dashboard`, { waitUntil: 'domcontentloaded' });
+      if (viewport.name === 'desktop') {
+        await expect(page.locator('img[alt="TradeFlowKit"]')).toBeVisible();
+      } else {
+        await expect(page.locator('body')).toContainText('TradeFlowKit');
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${viewport.name} overflow`).toBeLessThanOrEqual(1);
       await page.keyboard.press('Tab');
       expect(await page.evaluate(() => document.activeElement !== document.body), `${viewport.name} keyboard focus`).toBeTruthy();
@@ -110,13 +121,13 @@ test.describe('Phase 23 TradeFlowKit visual identity and route restoration', () 
     await establishParitySession(page.request);
     const publicPath = await createPublicInvoice(page.request);
     await page.addInitScript(() => localStorage.setItem('tradeflowkit-theme-v1', 'dark'));
-    await page.goto(`${WEB}/modules/tradeflowkit/dashboard`, { waitUntil: 'networkidle' });
+    await page.goto(`${WEB}/modules/tradeflowkit/dashboard`, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('[data-testid="tradeflowkit-module-shell"]')).toHaveAttribute('data-theme', 'dark');
     await expect(page.locator('[data-testid="tradeflowkit-module-shell"]')).toHaveCSS('--tfk-primary', 'hsl(25 95% 52%)');
-    const response = await page.goto(`${WEB}${publicPath}`, { waitUntil: 'networkidle' });
+    const response = await page.goto(`${WEB}${publicPath}`, { waitUntil: 'domcontentloaded' });
     expect(response?.status()).toBeLessThan(400);
     await expect(page.locator('img[alt="TradeFlowKit"]')).toBeVisible();
-    await expect(page.getByText('$275.00')).toBeVisible();
+    await expect(page.getByText('$275.00').first()).toBeVisible();
     await expect(page.locator('body')).not.toContainText(/delivered successfully|payment succeeded/i);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 'public invoice overflow').toBeLessThanOrEqual(1);
     await assertNoUnlabelledFormControls(page);

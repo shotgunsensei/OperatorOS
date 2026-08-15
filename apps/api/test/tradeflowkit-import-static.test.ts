@@ -245,6 +245,9 @@ test('OperatorOS module route shell wires TradeFlowKit host/local fallback to th
   const moduleFallback = readRepoFile('apps/web/src/app/modules/[slug]/page.tsx');
   const webTsconfig = readRepoFile('apps/web/tsconfig.json');
   const shell = readRepoFile('apps/web/src/components/module-shells/TradeFlowKitShell.tsx');
+  const operations = readRepoFile(
+    'apps/web/src/components/module-shells/TradeFlowKitOperations.tsx',
+  );
 
   assert.match(appSlugPage, /TradeFlowKitShell/);
   assert.match(appSlugPage, /'tradeflowkit':\s*TradeFlowKitShell/);
@@ -254,16 +257,16 @@ test('OperatorOS module route shell wires TradeFlowKit host/local fallback to th
 
   assert.match(shell, /createTradeFlowKitAdapterContext/);
   assert.match(shell, /hasPlatformAdminAuthority/);
-  assert.match(shell, /tradeflowkit-platform-manage-link/);
+  assert.match(shell, /const routePrefix = '\/modules\/tradeflowkit'/);
+  assert.match(shell, /const hrefFor = \(href: string\) => `\$\{routePrefix\}\$\{href\}`/);
   assert.match(shell, /data-testid="tradeflowkit-module-shell"/);
   assert.match(shell, /data-testid="tradeflowkit-module-header"/);
   assert.match(shell, /data-testid="tradeflowkit-module-sidebar"/);
-  assert.match(shell, /tradeflowkit-return-command-center/);
   assert.match(shell, /tradeflowkit-loading-state/);
   assert.match(shell, /tradeflowkit-empty-state/);
-  assert.match(shell, /tradeflowkit-error-state/);
+  assert.match(operations, /tradeflowkit-operations-error/);
+  assert.match(operations, /role="alert"/);
   assert.match(shell, /tradeflowkit-settings-panel/);
-  assert.match(shell, /adapter\.hostnames\.production/);
 
   assert.equal(getModuleById('tradeflowkit')?.hostname, 'tradeflowkit.operatoros.net');
   assert.equal(getModuleByHost('https://tradeflowkit.operatoros.net/sso?code=probe')?.id, 'tradeflowkit');

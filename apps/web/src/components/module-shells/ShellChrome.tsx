@@ -23,7 +23,9 @@ export function ShellLiveBadge() {
         display: 'inline-flex', alignItems: 'center', gap: 4,
         padding: '2px 8px', borderRadius: 999,
         ...badgeStyles.success,
-        background: `${semantic.accentSuccess}18`,
+        background: '#14532d',
+        color: '#dcfce7',
+        borderColor: '#22c55e',
         fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4,
       }}
     >

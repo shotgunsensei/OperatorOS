@@ -1,5 +1,12 @@
 # SnapProofOS Phase 32 threat model
 
+## Phase 39 platform-hardening overlay (2026-08-14)
+
+Content/MIME/size validation, quarantine and signed retrieval, EXIF/privacy
+policy, immutable approved financial/report history, high-entropy hashed share
+tokens, expiry/revocation, and cross-module evidence provenance are governed by
+the platform threat model and [Phase 39 register](../../phase-39/THREAT-MODEL-REGISTER.md).
+
 ## Phase 32 additions
 
 - Public shares: 256-bit random token, SHA-256 at rest, one approved report,

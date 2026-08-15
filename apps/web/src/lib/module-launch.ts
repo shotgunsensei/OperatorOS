@@ -124,10 +124,10 @@ export async function launchModuleViaSso(
   // Enter the module host first. Its middleware owns the state/nonce/PKCE
   // transaction cookies, then performs a central-auth round trip only when
   // that host does not already have a valid local session.
-  await openExternal(module.productionBaseUrl);
+  await openExternal(module.launchUrl);
   return {
-    launchUrl: module.productionBaseUrl,
-    redirectUrl: module.productionBaseUrl,
+    launchUrl: module.launchUrl,
+    redirectUrl: module.launchUrl,
     module: {
       id: module.id,
       slug: module.slug,

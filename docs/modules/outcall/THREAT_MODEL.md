@@ -1,5 +1,12 @@
 # OutCall threat model
 
+## Phase 39 platform-hardening overlay (2026-08-14)
+
+The module remains disabled until authoritative source and live-provider gates
+pass. Verification, country policy, encrypted phone lookup, signed/replay-safe
+provider events, cancellation races, and truthful provider state are governed
+by the platform threat model and [Phase 39 register](../../phase-39/THREAT-MODEL-REGISTER.md).
+
 Assessment date: 2026-07-27
 
 ## Protected assets and boundaries

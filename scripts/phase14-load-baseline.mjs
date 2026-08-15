@@ -1,4 +1,6 @@
 import { performance } from 'node:perf_hooks';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
 const baseUrl = new URL(process.env.PHASE14_LOAD_BASE_URL || 'http://127.0.0.1:5001');
 const allowedHosts = new Set(['127.0.0.1', 'localhost', '::1']);
@@ -19,6 +21,7 @@ const authHeaders = {
   'x-forwarded-host': authHost,
   'x-forwarded-proto': 'https',
 };
+const results = [];
 
 function boundedInteger(name, fallback, minimum, maximum) {
   const raw = process.env[name]?.trim();
@@ -119,6 +122,7 @@ async function runScenario(scenario) {
     p99Ms: Number(percentile(durations, 0.99).toFixed(2)),
   };
   process.stdout.write(`${JSON.stringify(result)}\n`);
+  results.push(result);
   if (failures || result.p95Ms > p95LimitMs) process.exitCode = 1;
 }
 
@@ -180,6 +184,19 @@ if (cookie) {
 }
 
 for (const scenario of scenarios) await runScenario(scenario);
+
+if (process.env.PHASE14_LOAD_OUTPUT?.trim()) {
+  const output = resolve(process.env.PHASE14_LOAD_OUTPUT.trim());
+  mkdirSync(dirname(output), { recursive: true });
+  writeFileSync(output, `${JSON.stringify({
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    baseUrl: baseUrl.origin,
+    p95LimitMs,
+    passed: process.exitCode !== 1,
+    results,
+  }, null, 2)}\n`);
+}
 
 if (!cookie) {
   process.stderr.write(

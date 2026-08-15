@@ -1,5 +1,12 @@
 # BrandForgeOS Phase 11A threat model
 
+## Phase 39 platform-hardening overlay (2026-08-14)
+
+Tenant/role/entitlement negatives, metered AI idempotency, provider secret
+references, webhook/redirect validation, report/export integrity, and
+BrandForgeOS-to-Launch-Kit provenance are release-gated by the platform threat
+model and [Phase 39 register](../../phase-39/THREAT-MODEL-REGISTER.md).
+
 | Threat | Control |
 | --- | --- |
 | Browser tenant override | No tenant route/body/header field is accepted as authority; validated session context scopes every query |

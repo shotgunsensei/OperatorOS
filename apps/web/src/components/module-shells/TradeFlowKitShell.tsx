@@ -164,7 +164,6 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
   const { user, loading: authLoading } = useAuth();
   const { activeTenant, activeRole, loading: tenantLoading } = useTenant();
   const pathname = usePathname();
-  const [routePrefix, setRoutePrefix] = useState('');
   const [theme, setTheme] = useState<'system' | 'light' | 'dark'>('system');
   const [systemDark, setSystemDark] = useState(false);
   const fallbackTenantId = user?.currentTenantId ?? getActiveTenantId();
@@ -172,9 +171,13 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
   const platformAdmin = hasPlatformAdminAuthority(user);
   const adapterRole = platformAdmin ? 'admin' : activeRole ?? 'member';
   const route = resolveRoute(routePath || pathname);
+  // All embedded and source-compatible entry points navigate through the
+  // canonical record-capable module route. Relative root links (for example
+  // `/jobs`) are not OperatorOS routes and caused broken Next prefetches from
+  // `/app/apps/tradeflowkit`.
+  const routePrefix = '/modules/tradeflowkit';
 
   useEffect(() => {
-    setRoutePrefix(window.location.pathname.startsWith('/modules/tradeflowkit') ? '/modules/tradeflowkit' : '');
     const stored = window.localStorage.getItem('tradeflowkit-theme-v1');
     if (stored === 'light' || stored === 'dark') setTheme(stored);
     const media = window.matchMedia('(prefers-color-scheme: dark)');
@@ -262,8 +265,8 @@ export default function TradeFlowKitShell({ routePath }: TradeFlowKitShellProps)
               <Link className={styles.iconButton} href={`${hrefFor('/dashboard')}#tradeflowkit-global-search-input`} aria-label="Open TradeFlowKit search"><Search size={17} /></Link>
               <Link className={styles.iconButton} href={hrefFor('/settings')} aria-label="TradeFlowKit settings"><Settings size={17} /></Link>
               <button className={styles.iconButton} type="button" onClick={toggleTheme} aria-label={`Use ${darkThemeActive ? 'light' : 'dark'} TradeFlowKit theme`} title={`Use ${darkThemeActive ? 'light' : 'dark'} TradeFlowKit theme`}>{darkThemeActive ? <Sun size={17} /> : <Moon size={17} />}</button>
-              <span className={styles.iconButton} aria-label="Protected by OperatorOS" title="Protected by OperatorOS"><ShieldCheck size={17} /></span>
-              <span className={styles.iconButton} aria-label="Notifications are delivered by OperatorOS" title="Notifications are delivered by OperatorOS"><Bell size={17} /></span>
+              <span className={styles.iconButton} role="img" aria-label="Protected by OperatorOS" title="Protected by OperatorOS"><ShieldCheck size={17} /></span>
+              <span className={styles.iconButton} role="img" aria-label="Notifications are delivered by OperatorOS" title="Notifications are delivered by OperatorOS"><Bell size={17} /></span>
             </div>
           </div>
 

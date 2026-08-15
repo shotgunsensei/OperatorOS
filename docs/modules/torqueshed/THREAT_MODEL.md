@@ -1,5 +1,12 @@
 # TorqueShed privacy and threat model
 
+## Phase 39 platform-hardening overlay (2026-08-14)
+
+Private-garage/public-community separation, realtime authorization and rate
+limits, media scanning, marketplace moderation boundaries, AI provenance, and
+native opaque-token/offline-replay controls are governed by the platform
+threat model and [Phase 39 register](../../phase-39/THREAT-MODEL-REGISTER.md).
+
 Assessment date: 2026-07-18
 
 ## Protected assets and boundaries

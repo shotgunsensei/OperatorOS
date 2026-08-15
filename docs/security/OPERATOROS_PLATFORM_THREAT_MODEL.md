@@ -1,6 +1,6 @@
 # OperatorOS platform threat model
 
-Assessment date: 2026-07-27
+Assessment date: 2026-08-14 (Phase 39 refresh)
 
 ## Scope and assets
 
@@ -18,6 +18,11 @@ secrets, audit evidence, and the ordered database release history.
 4. OperatorOS to Stripe, Twilio, email, and AI providers.
 5. HTTP process to durable jobs, private attachments, and database releases.
 6. Operator-controlled migration input to the isolated migration tooling.
+7. Versioned cross-module outbox/inbox events to destination-module records.
+8. Browser/native offline queues to authenticated replay-safe mutation APIs.
+9. Public share/intake/status surfaces to token, abuse-control, and redaction boundaries.
+10. Unified API to the separately isolated runner gateway. The public production
+    contract sets `RUNNER_MODE=disabled`; host execution is never a fallback.
 
 ## Principal threats and controls
 
@@ -36,6 +41,11 @@ secrets, audit evidence, and the ordered database release history.
 | Resource exhaustion | Authentication and mutation limits, bounded database pool/timeouts, paginated queries, bounded workers, leases and retry limits |
 | Supply-chain compromise | Frozen pnpm lockfile, high-severity audit gate, reviewed overrides, no committed live secrets |
 | Failed restart or partial migration | Readiness gate, graceful worker/database drain, ordered idempotent release manifest, backup/restore and rollback rehearsals |
+| Cross-module event replay, loop, or tenant pivot | Tenant-bound references, signed envelopes, correlation/causation IDs, inbox uniqueness, hop limits, destination authorization, dead-letter repair audit |
+| Queue silently stalled while the process is alive | Readiness requires a current successful worker heartbeat and no ready item older than five minutes; operational response exposes only bounded counts/ages |
+| Host command execution from the unified runtime | Production preflight requires `RUNNER_MODE=disabled`; execution/control routes return a truthful 503 until a separately approved isolated gateway exists |
+| Malicious image metadata exhausting a build/runtime worker | Reviewed `image-size@1.2.1` patch rejects non-advancing ICNS/JXL entries; malicious-input regression fixtures and exact GHSA exception integrity are release gates |
+| Browser content injection or framing | Comprehensive CSP, no object/frame embedding, form/base restriction, HSTS, COOP/CORP, server-side sanitization and no raw user HTML |
 
 ## Privacy boundaries
 

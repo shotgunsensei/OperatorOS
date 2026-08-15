@@ -153,7 +153,11 @@ function localFallbackFor(slug: string): string {
 function toRegistryEntry(module: EcosystemModule): OperatorOSModuleRegistryEntry {
   const catalog = MODULE_CATALOG_BY_SLUG[module.slug] as ModuleCatalogEntry | undefined;
   const baseUrl = module.ecosystemUrl.replace(/\/+$/, '');
-  const launchPath = module.slug === 'pulsedesk' || module.slug === 'tradeflowkit' ? '/dashboard' : '/';
+  const launchPath = module.slug === 'pulsedesk' || module.slug === 'tradeflowkit' || module.slug === 'ninja-launch-kit'
+    ? '/dashboard'
+    : module.slug === 'ninjamation'
+      ? '/library'
+      : '/';
   return {
     id: module.slug,
     name: module.name,

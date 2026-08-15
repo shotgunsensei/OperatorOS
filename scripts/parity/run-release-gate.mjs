@@ -18,6 +18,7 @@ const productionEnv = {
 };
 const steps = [
   { id: 'faultlinelab-source-catalog', command: PNPM, args: ['verify:faultlinelab:catalog'], env: process.env },
+  { id: 'phase39-production-hardening', command: PNPM, args: ['verify:hardening:phase39'], env: testEnv },
   { id: 'parity-report', command: process.execPath, args: ['scripts/parity/report-parity.mjs'], env: process.env },
   { id: 'parity', command: PNPM, args: ['verify:parity'], env: process.env },
   { id: 'typecheck', command: PNPM, args: ['typecheck'], env: process.env },

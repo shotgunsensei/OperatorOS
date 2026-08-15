@@ -15,6 +15,9 @@ let stopping = false;
 let lastStartedAt: Date | null = null;
 let lastCompletedAt: Date | null = null;
 let lastErrorCode: string | null = null;
+let completedCycles = 0;
+let consecutiveFailures = 0;
+let lastCycleCounts: Record<string, number> | null = null;
 
 export function getSharedServiceWorkerStatus() {
   return {
@@ -26,7 +29,29 @@ export function getSharedServiceWorkerStatus() {
     lastStartedAt,
     lastCompletedAt,
     lastErrorCode,
+    completedCycles,
+    consecutiveFailures,
+    lastCycleCounts,
   };
+}
+
+export function evaluateSharedServiceWorkerReadiness(
+  status = getSharedServiceWorkerStatus(),
+  now = Date.now(),
+) {
+  if (!status.enabled) return { ready: false, reasonCode: 'WORKER_DISABLED' as const, heartbeatAgeMs: null };
+  if (!status.started) return { ready: false, reasonCode: 'WORKER_NOT_STARTED' as const, heartbeatAgeMs: null };
+  if (status.stopping) return { ready: false, reasonCode: 'WORKER_STOPPING' as const, heartbeatAgeMs: null };
+  if (status.lastErrorCode || status.consecutiveFailures > 0) {
+    return { ready: false, reasonCode: 'WORKER_CYCLE_FAILED' as const, heartbeatAgeMs: null };
+  }
+  const heartbeat = status.lastCompletedAt ?? status.lastStartedAt;
+  if (!heartbeat) return { ready: false, reasonCode: 'WORKER_HEARTBEAT_MISSING' as const, heartbeatAgeMs: null };
+  const heartbeatAgeMs = Math.max(0, now - heartbeat.getTime());
+  if (heartbeatAgeMs > 120_000) {
+    return { ready: false, reasonCode: 'WORKER_HEARTBEAT_STALE' as const, heartbeatAgeMs };
+  }
+  return { ready: true, reasonCode: 'READY' as const, heartbeatAgeMs };
 }
 
 export async function getSharedServiceQueueHealth() {
@@ -39,7 +64,11 @@ export async function getSharedServiceQueueHealth() {
       (SELECT COUNT(*)::int FROM shared_outbox_messages WHERE status IN ('pending','retry','processing')) AS outbox_open,
       (SELECT COUNT(*)::int FROM shared_jobs WHERE status IN ('pending','retry','processing')) AS jobs_open,
       (SELECT COUNT(*)::int FROM shared_webhook_receipts WHERE status IN ('pending','retry','processing')) AS webhooks_open
-      ,(SELECT COUNT(*)::int FROM shared_webhook_deliveries WHERE status IN ('pending','retry','processing')) AS outbound_webhooks_open
+      ,(SELECT COUNT(*)::int FROM shared_webhook_deliveries WHERE status IN ('pending','retry','processing')) AS outbound_webhooks_open,
+      (SELECT COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(run_at)), 0)::int FROM shared_jobs WHERE status IN ('pending','retry') AND run_at <= NOW()) AS jobs_oldest_ready_seconds,
+      (SELECT COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(available_at)), 0)::int FROM shared_outbox_messages WHERE status IN ('pending','retry') AND available_at <= NOW()) AS outbox_oldest_ready_seconds,
+      (SELECT COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(next_attempt_at)), 0)::int FROM shared_webhook_receipts WHERE status IN ('pending','retry') AND next_attempt_at <= NOW()) AS webhooks_oldest_ready_seconds,
+      (SELECT COALESCE(EXTRACT(EPOCH FROM NOW() - MIN(available_at)), 0)::int FROM shared_webhook_deliveries WHERE status IN ('pending','retry') AND available_at <= NOW()) AS outbound_webhooks_oldest_ready_seconds
   `);
   return result.rows[0] ?? {};
 }
@@ -66,10 +95,15 @@ export async function runSharedServiceCycle(): Promise<{
     ]);
     lastCompletedAt = new Date();
     lastErrorCode = null;
+    consecutiveFailures = 0;
+    completedCycles += 1;
+    lastCycleCounts = { outbox, jobs, webhooks, outboundWebhooks, schedules, purgedAttachments };
     return { outbox, jobs, webhooks, outboundWebhooks, schedules, purgedAttachments };
   } catch {
     lastCompletedAt = new Date();
     lastErrorCode = 'SHARED_SERVICE_CYCLE_FAILED';
+    consecutiveFailures += 1;
+    lastCycleCounts = null;
     return { outbox: 0, jobs: 0, webhooks: 0, outboundWebhooks: 0, schedules: 0, purgedAttachments: 0 };
   } finally {
     running = false;

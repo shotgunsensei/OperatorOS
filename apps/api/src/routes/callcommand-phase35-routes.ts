@@ -459,11 +459,14 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
     } catch (error) { return fail(reply,error); }
   });
 
-  app.post(`${base}/upload-intents/:id/content`, { preHandler: writes, bodyLimit: 70_000_000 }, async (request, reply) => {
+  // Shared attachment storage rejects raw objects above 25 MiB. The JSON/base64
+  // envelope needs ~4/3 overhead, so 35 MiB admits the supported maximum while
+  // preventing the old 70 MB request-memory amplification path.
+  app.post(`${base}/upload-intents/:id/content`, { preHandler: writes, bodyLimit: 35_000_000 }, async (request, reply) => {
     try {
       const value = body(request); const intentId = id(request); const loaded = await db.execute(sql`SELECT * FROM callcommand_upload_intents WHERE tenant_id=${tenant(request)} AND user_id=${actor(request)} AND id=${intentId} AND status='created' AND expires_at>NOW() LIMIT 1`);
       if (!loaded.rows[0]) throw new CallCommandPhase35Error('Upload intent is missing or expired','CALLCOMMAND_UPLOAD_INTENT_INVALID',404);
-      const intent = loaded.rows[0] as Row; const content = Buffer.from(cleanText(value.contentBase64,'contentBase64',70_000_000)!,'base64');
+      const intent = loaded.rows[0] as Row; const content = Buffer.from(cleanText(value.contentBase64,'contentBase64',35_000_000)!,'base64');
       if (content.length !== Number(intent.size_bytes) || (intent.content_sha256 && hashValue(content) !== intent.content_sha256)) throw new CallCommandPhase35Error('Uploaded audio integrity check failed','CALLCOMMAND_UPLOAD_INTEGRITY_FAILED');
       const attachment = await createAttachment({ tenantId: tenant(request), moduleId: await moduleId(), objectType: 'call_recording', objectId: String(intent.call_id ?? intent.id), originalName: String(intent.file_name), declaredMimeType: String(intent.mime_type), content, createdByUserId: actor(request), correlationId: request.id });
       await db.execute(sql`UPDATE callcommand_upload_intents SET status='scanning',attachment_id=${String((attachment as Row).id)},consumed_at=NOW() WHERE tenant_id=${tenant(request)} AND id=${intentId}`);
@@ -482,7 +485,7 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
     } catch (error) { return fail(reply,error); }
   });
 
-  app.post(`${base}/ingest/:source`, { bodyLimit: 70_000_000 }, async (request, reply) => {
+  app.post(`${base}/ingest/:source`, { bodyLimit: 35_000_000 }, async (request, reply) => {
     try {
       const source = String(params(request).source ?? ''); if (!['generic','email','twilio'].includes(source)) throw new CallCommandPhase35Error('source is invalid');
       const bearer = String(request.headers.authorization ?? '').replace(/^Bearer\s+/i,''); if (!bearer.startsWith('cci_')) throw new CallCommandPhase35Error('Ingestion token is required','CALLCOMMAND_INGESTION_UNAUTHORIZED',401);
@@ -502,7 +505,7 @@ export async function registerCallCommandPhase35Routes(app: FastifyInstance) {
       if (!transcript && value.contentBase64) {
         const mime = String(value.mimeType ?? 'audio/mpeg');
         if (!['audio/mpeg','audio/wav','audio/mp4','audio/x-m4a'].includes(mime)) throw new CallCommandPhase35Error('Ingested audio MIME type is unsupported');
-        const content = Buffer.from(cleanText(value.contentBase64,'contentBase64',70_000_000)!,'base64');
+        const content = Buffer.from(cleanText(value.contentBase64,'contentBase64',35_000_000)!,'base64');
         if (!content.length || content.length > 52_428_800) throw new CallCommandPhase35Error('Ingested audio is outside the supported size limit');
         const attachment = await createAttachment({ tenantId:String(configuration.tenant_id),moduleId:await moduleId(),objectType:'call_recording',objectId:callId,originalName:cleanText(value.fileName,'fileName',240,true) ?? `${source}-${eventId}.mp3`,declaredMimeType:mime,content,createdByUserId:String(configuration.created_by_user_id),correlationId:request.id });
         const transcribed = await transcribeCallAudio(content,String((attachment as Row).original_name ?? `${source}-${eventId}.mp3`));

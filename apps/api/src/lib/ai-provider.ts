@@ -1,4 +1,5 @@
 import { generateStudyForgeCompleteMaterial } from './studyforge-phase33.js';
+import { isOperatorOSDeterministicProviderTestEnvironment } from './shared-service-safety.js';
 
 export interface AiCompletionRequest {
   systemPrompt: string;
@@ -489,7 +490,7 @@ let currentProviderKey = '';
 
 export function getAiProvider(): AiProvider {
   const apiKey = process.env.OPENAI_API_KEY;
-  const testEnvironment = process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test';
+  const testEnvironment = isOperatorOSDeterministicProviderTestEnvironment();
   const providerKey = apiKey ? `openai:${process.env.OPENAI_MODEL || 'gpt-4o-mini'}` : (testEnvironment ? 'test' : 'disabled');
   if (currentProvider && currentProviderKey === providerKey) return currentProvider;
 
@@ -506,7 +507,7 @@ export function getAiProvider(): AiProvider {
 
 export function getProviderInfo(): { name: 'openai' | 'test' | 'disabled'; configured: boolean } {
   const apiKey = process.env.OPENAI_API_KEY;
-  const testEnvironment = process.env.NODE_ENV === 'test' || process.env.APP_ENV === 'test';
+  const testEnvironment = isOperatorOSDeterministicProviderTestEnvironment();
   return {
     name: apiKey ? 'openai' : (testEnvironment ? 'test' : 'disabled'),
     configured: !!apiKey,

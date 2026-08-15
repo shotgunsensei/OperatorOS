@@ -11,22 +11,34 @@ export interface ParitySession {
 }
 
 export async function establishParitySession(request: APIRequestContext): Promise<ParitySession> {
+  const productionHosts = process.env.E2E_PRODUCTION_HOSTS === '1';
+  // Production sessions are Secure. Route setup through the local TLS proxy so
+  // Playwright stores and reuses that cookie without weakening production
+  // cookie policy or contacting a deployed host.
+  const apiBase = productionHosts ? 'https://127.0.0.1/api' : `${API}/v1`;
   const nonce = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   const email = `phase21-parity-${nonce}@example.com`;
   const password = 'Phase21-Disposable-Only-9!';
-  const registration = await request.post(`${API}/v1/auth/register`, {
+  const authHeaders = productionHosts ? {
+    host: 'operatoros.net',
+    'x-forwarded-host': 'operatoros.net',
+    'x-forwarded-proto': 'https',
+    'x-forwarded-for': `10.89.0.${10 + Math.floor(Math.random() * 200)}`,
+  } : undefined;
+  const registration = await request.post(`${apiBase}/auth/register`, {
+    headers: authHeaders,
     data: { email, password, name: 'Phase 21 Parity' },
   });
   expect(registration.ok(), `register: ${registration.status()} ${await registration.text()}`).toBeTruthy();
-  const login = await request.post(`${API}/v1/auth/login`, { data: { email, password } });
+  const login = await request.post(`${apiBase}/auth/login`, { headers: authHeaders, data: { email, password } });
   expect(login.ok(), `login: ${login.status()} ${await login.text()}`).toBeTruthy();
   const loginBody = await login.json();
-  const tenantsResponse = await request.get(`${API}/v1/me/tenants`);
+  const tenantsResponse = await request.get(`${apiBase}/me/tenants`);
   expect(tenantsResponse.ok(), `tenants: ${tenantsResponse.status()} ${await tenantsResponse.text()}`).toBeTruthy();
   const tenants = await tenantsResponse.json();
   const tenantId = tenants.current ?? tenants.tenants?.[0]?.id;
   expect(tenantId, 'registration must provision a personal tenant').toBeTruthy();
-  const switched = await request.post(`${API}/v1/tenants/${tenantId}/switch`);
+  const switched = await request.post(`${apiBase}/tenants/${tenantId}/switch`);
   expect(switched.ok(), `tenant switch: ${switched.status()} ${await switched.text()}`).toBeTruthy();
 
   const databaseUrl = process.env.DATABASE_URL;

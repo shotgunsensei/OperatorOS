@@ -1,5 +1,12 @@
 # TechDeck Phase 5 threat model
 
+## Phase 39 platform-hardening overlay (2026-08-14)
+
+API-token scopes, public validation/intake abuse controls, HMAC/SSRF-safe
+webhooks, evidence/export integrity, tenant-safe topology, secret references,
+and the no-host-execution runner boundary are governed by the platform threat
+model and [Phase 39 register](../../phase-39/THREAT-MODEL-REGISTER.md).
+
 Assessment date: 2026-07-18
 
 ## Protected assets

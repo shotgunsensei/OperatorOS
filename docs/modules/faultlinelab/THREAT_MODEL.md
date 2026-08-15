@@ -1,5 +1,11 @@
 # FaultlineLab threat model
 
+## Phase 39 platform-hardening overlay (2026-08-14)
+
+Author approval, training-case redaction, immutable evidence/version history,
+tenant/public visibility separation, and cross-module opt-in provenance are
+release-gated by the platform threat model and [Phase 39 register](../../phase-39/THREAT-MODEL-REGISTER.md).
+
 Assessment date: 2026-07-27
 
 ## Protected assets and boundaries

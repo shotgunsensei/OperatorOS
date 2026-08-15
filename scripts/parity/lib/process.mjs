@@ -79,7 +79,9 @@ export function requiredTestExitCode(processStatus, summary) {
     : 1;
 }
 
-export function spawnLogged(command, args, { cwd = process.cwd(), env = process.env, logPath } = {}) {
+export function spawnLogged(command, args, {
+  cwd = process.cwd(), env = process.env, logPath, mirrorToParent = true,
+} = {}) {
   const invocation = executableInvocation(command, args);
   const child = spawn(invocation.command, invocation.args, {
     cwd,
@@ -91,8 +93,10 @@ export function spawnLogged(command, args, { cwd = process.cwd(), env = process.
   const stream = createWriteStream(logPath, { flags: 'w' });
   child.stdout.pipe(stream);
   child.stderr.pipe(stream);
-  child.stdout.pipe(process.stdout);
-  child.stderr.pipe(process.stderr);
+  if (mirrorToParent) {
+    child.stdout.pipe(process.stdout);
+    child.stderr.pipe(process.stderr);
+  }
   child.once('exit', () => stream.end());
   return child;
 }
@@ -131,6 +135,21 @@ export async function waitForPort(port, host = '127.0.0.1', timeoutMs = 30_000) 
 
 export async function stopChild(child) {
   if (!child || child.exitCode != null) return;
+  if (process.platform === 'win32' && child.pid) {
+    // Windows command shims create a cmd -> pnpm -> node process tree. Killing
+    // only the shim leaves Next/runtime descendants holding inherited pipes and
+    // the release gate never exits. Terminate only the exact spawned tree.
+    spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], {
+      stdio: 'ignore',
+      windowsHide: true,
+      shell: false,
+    });
+    await Promise.race([
+      new Promise(resolve => child.once('exit', resolve)),
+      new Promise(resolve => setTimeout(resolve, 10_000)),
+    ]);
+    return;
+  }
   child.kill('SIGTERM');
   await Promise.race([
     new Promise(resolve => child.once('exit', resolve)),

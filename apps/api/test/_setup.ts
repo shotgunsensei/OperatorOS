@@ -138,6 +138,23 @@ export function uniqueId(prefix: string) {
   return `${prefix}_${crypto.randomBytes(6).toString('hex')}`;
 }
 
+type TestModuleRow = typeof modules.$inferSelect;
+
+const createdTestModuleIds = new Set<string>();
+const shadowedTestModules = new Map<string, { original: TestModuleRow; shadowSlug: string }>();
+
+function testModuleFixtureValues() {
+  return {
+    name: 'Test Module',
+    description: 'fixture',
+    baseUrl: 'https://example.test',
+    status: 'live' as const,
+    planMin: 'starter' as const,
+    ord: 0,
+    archivedAt: null,
+  };
+}
+
 // Gate 2: every user lives in a tenant. createTestUser provisions a
 // personal tenant + owner membership and points current_tenant_id at it,
 // so any test that exercises a tenant-scoped route resolves a real
@@ -164,15 +181,27 @@ export async function createTestUser() {
 
 export async function createTestModule(slug?: string) {
   const s = slug ?? uniqueId('test-mod');
+  const [existing] = await db.select().from(modules).where(eq(modules.slug, s)).limit(1);
+  if (existing) {
+    if (createdTestModuleIds.has(existing.id)) return existing;
+    const shadowSlug = uniqueId('fixture-shadow').replaceAll('_', '-');
+    const fixture = await db.transaction(async (tx) => {
+      await tx.update(modules).set({ slug: shadowSlug }).where(eq(modules.id, existing.id));
+      const [created] = await tx.insert(modules).values({
+        slug: s,
+        ...testModuleFixtureValues(),
+      }).returning();
+      return created;
+    });
+    createdTestModuleIds.add(fixture.id);
+    shadowedTestModules.set(fixture.id, { original: existing, shadowSlug });
+    return fixture;
+  }
   const [m] = await db.insert(modules).values({
     slug: s,
-    name: 'Test Module',
-    description: 'fixture',
-    baseUrl: 'https://example.test',
-    status: 'live',
-    planMin: 'starter',
-    ord: 0,
+    ...testModuleFixtureValues(),
   }).returning();
+  createdTestModuleIds.add(m.id);
   return m;
 }
 
@@ -351,6 +380,42 @@ export async function cleanupUser(userId: string) {
 
 export async function cleanupModule(moduleId: string) {
   try { await db.delete(addonSubscriptions).where(eq(addonSubscriptions.moduleId, moduleId)); } catch {}
+  const shadowed = shadowedTestModules.get(moduleId);
+  if (shadowed) {
+    const original = shadowed.original;
+    const orphanSlug = uniqueId('fixture-cleanup').replaceAll('_', '-');
+    await db.transaction(async (tx) => {
+      // Free the canonical slug first. If a test forgot a dependent fixture,
+      // the production-shaped catalog row is still restored before deletion is
+      // attempted and the leaked dependency remains visible as a test failure.
+      await tx.update(modules).set({ slug: orphanSlug }).where(eq(modules.id, moduleId));
+      await tx.update(modules).set({
+        slug: original.slug,
+        name: original.name,
+        description: original.description,
+        iconUrl: original.iconUrl,
+        category: original.category,
+        componentId: original.componentId,
+        baseUrl: original.baseUrl,
+        status: original.status,
+        planMin: original.planMin,
+        requiresOrg: original.requiresOrg,
+        ord: original.ord,
+        metadata: original.metadata,
+        entitlementWebhookUrl: original.entitlementWebhookUrl,
+        pushShape: original.pushShape,
+        pushAuthMode: original.pushAuthMode,
+        pushBearerEnvVar: original.pushBearerEnvVar,
+        archivedAt: original.archivedAt,
+        updatedAt: original.updatedAt,
+      }).where(eq(modules.id, original.id));
+    });
+    shadowedTestModules.delete(moduleId);
+    createdTestModuleIds.delete(moduleId);
+    await db.delete(modules).where(eq(modules.id, moduleId));
+    return;
+  }
+  createdTestModuleIds.delete(moduleId);
   try { await db.delete(modules).where(eq(modules.id, moduleId)); } catch {}
 }
 

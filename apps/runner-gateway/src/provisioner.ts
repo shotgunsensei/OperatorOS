@@ -13,10 +13,16 @@ import {
   localExec,
 } from './local-provider.js';
 
-function detectRunnerMode(): 'k8s' | 'docker' | 'local' {
-  const env = process.env.RUNNER_MODE;
-  if (env === 'k8s' || env === 'docker' || env === 'local') return env;
-  return 'local';
+export type RunnerMode = 'disabled' | 'k8s' | 'docker' | 'local';
+
+export function detectRunnerMode(env: NodeJS.ProcessEnv = process.env): RunnerMode {
+  const configured = env.RUNNER_MODE;
+  if (configured === 'disabled' || configured === 'k8s' || configured === 'docker' || configured === 'local') {
+    return configured;
+  }
+  // The unified web/API process must never fall back to host execution in
+  // production. Local mode remains an explicit development convenience only.
+  return env.NODE_ENV === 'production' || env.APP_ENV === 'production' ? 'disabled' : 'local';
 }
 
 const RUNNER_MODE = detectRunnerMode();
@@ -228,7 +234,7 @@ async function k8sExec(
   });
 }
 
-export function getRunnerMode(): 'k8s' | 'docker' | 'local' {
+export function getRunnerMode(): RunnerMode {
   return RUNNER_MODE;
 }
 
@@ -239,6 +245,9 @@ export async function createWorkspaceRunner(
   gitUrl: string,
   gitRef: string,
 ): Promise<{ success: boolean; message: string; containerId?: string }> {
+  if (RUNNER_MODE === 'disabled') {
+    return { success: false, message: 'Runner execution is disabled in this runtime' };
+  }
   if (RUNNER_MODE === 'local') {
     return localCreateRunner(workspaceId, profileId, profileImage, gitUrl, gitRef);
   }
@@ -251,6 +260,9 @@ export async function createWorkspaceRunner(
 export async function stopWorkspaceRunner(
   workspaceId: string,
 ): Promise<{ success: boolean; message: string }> {
+  if (RUNNER_MODE === 'disabled') {
+    return { success: false, message: 'Runner execution is disabled in this runtime' };
+  }
   if (RUNNER_MODE === 'local') {
     return localStopRunner(workspaceId);
   }
@@ -263,6 +275,7 @@ export async function stopWorkspaceRunner(
 export async function getWorkspaceRunnerStatus(
   workspaceId: string,
 ): Promise<RunnerStatus | null> {
+  if (RUNNER_MODE === 'disabled') return null;
   if (RUNNER_MODE === 'local') {
     return localGetStatus(workspaceId);
   }
@@ -280,6 +293,14 @@ export async function execInRunner(
   onStderr?: (line: string) => void,
   stdin?: string,
 ): Promise<{ exitCode: number; stdout: string; stderr: string; durationMs: number }> {
+  if (RUNNER_MODE === 'disabled') {
+    return {
+      exitCode: 126,
+      stdout: '',
+      stderr: 'Runner execution is disabled in this runtime',
+      durationMs: 0,
+    };
+  }
   if (RUNNER_MODE === 'local') {
     return localExec(workspaceId, command, timeoutSec, onStdout, onStderr, stdin);
   }

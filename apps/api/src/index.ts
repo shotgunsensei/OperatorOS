@@ -54,6 +54,8 @@ import { registerOperatorOsMessagingComplianceRoutes } from './routes/operatoros
 import { startSsoTokenCleanup } from './lib/sso-cleanup.js';
 import {
   getSharedServiceWorkerStatus,
+  getSharedServiceQueueHealth,
+  evaluateSharedServiceWorkerReadiness,
   startSharedServiceWorker,
   stopSharedServiceWorker,
 } from './lib/shared-service-worker.js';
@@ -209,6 +211,31 @@ app.addHook('onRequest', async (request, reply) => {
       code: 'ORIGIN_HOST_MISMATCH',
     });
   }
+});
+
+const RUNNER_CONTROL_PATHS = [
+  /^\/v1\/workspaces\/[^/]+\/(?:start|stop|exec|apply-patch|git-status|create-branch|commit|verify)$/,
+  /^\/v1\/verify\/run$/,
+  /^\/v1\/tasks\/[^/]+\/run$/,
+  /^\/v1\/runner\/stream\/[^/]+$/,
+  /^\/v1\/publish\/(?:analyze|plan|artifacts|proof|explain)$/,
+];
+
+// Workspace execution is a separate trust boundary. The public unified
+// runtime may retain workspace records and history, but it cannot invoke the
+// host process when the isolated runner plane is unavailable. This prevents a
+// missing RUNNER_MODE value from turning the API process into a shell broker.
+app.addHook('onRequest', async (request, reply) => {
+  if (!isProductionEnv() || getRunnerMode() !== 'disabled') return;
+  const path = String(request.url || '').split('?', 1)[0];
+  if (!RUNNER_CONTROL_PATHS.some(pattern => pattern.test(path))) return;
+  return reply.code(503)
+    .header('Retry-After', '300')
+    .send({
+      error: 'Workspace execution is unavailable until the isolated runner gateway is enabled.',
+      code: 'RUNNER_GATEWAY_DISABLED',
+      requestId: request.id,
+    });
 });
 
 // Replace the default JSON parser with one that preserves the raw buffer on
@@ -445,6 +472,7 @@ app.get('/readyz', async (_req, reply) => {
   let database: 'healthy' | 'unavailable' = 'healthy';
   let liveProviderCount = 0;
   let blockedLiveProviderCount = 0;
+  let queueHealth: Record<string, unknown> = {};
   try {
     await db.execute(sql`select 1 as operatoros_readiness`);
     const providerReadiness = await db.execute(sql`
@@ -454,6 +482,7 @@ app.get('/readyz', async (_req, reply) => {
     `);
     liveProviderCount = Number(providerReadiness.rows[0]?.live_count || 0);
     blockedLiveProviderCount = Number(providerReadiness.rows[0]?.blocked_count || 0);
+    queueHealth = await getSharedServiceQueueHealth();
   } catch {
     database = 'unavailable';
     // Do not serialize driver errors here: connection strings and credentials
@@ -462,6 +491,17 @@ app.get('/readyz', async (_req, reply) => {
   }
 
   const sharedSecretVault = getSharedSecretVaultReadiness();
+  const workerStatus = getSharedServiceWorkerStatus();
+  const workerReadiness = evaluateSharedServiceWorkerReadiness(workerStatus);
+  const oldestReadySeconds = Math.max(
+    ...[
+      'jobs_oldest_ready_seconds',
+      'outbox_oldest_ready_seconds',
+      'webhooks_oldest_ready_seconds',
+      'outbound_webhooks_oldest_ready_seconds',
+    ].map(key => Number(queueHealth[key] || 0)),
+  );
+  const queuesReady = database === 'healthy' && oldestReadySeconds <= 300;
 
   const checks = {
     database,
@@ -470,7 +510,8 @@ app.get('/readyz', async (_req, reply) => {
     moduleRegistry: OPERATOROS_MODULE_REGISTRY.filter(module => module.status === 'active').length > 0
       ? 'configured'
       : 'missing',
-    sharedServiceWorker: getSharedServiceWorkerStatus().started ? 'configured' : 'missing',
+    sharedServiceWorker: workerReadiness.ready ? 'ready' : workerReadiness.reasonCode,
+    sharedServiceQueues: queuesReady ? 'ready' : 'stalled',
     sharedSecretEncryption: sharedSecretVault.mode,
     sharedProviderControlPlane: liveProviderCount === 0 ? 'not_configured'
       : blockedLiveProviderCount > 0 ? 'blocked'
@@ -484,7 +525,8 @@ app.get('/readyz', async (_req, reply) => {
     openai: process.env.OPENAI_API_KEY ? 'configured' : 'disabled',
   };
   const ready = database === 'healthy'
-    && getSharedServiceWorkerStatus().started
+    && workerReadiness.ready
+    && queuesReady
     && (!isProductionEnv() || (
       ssoCodeEncryptionConfigured
       && releaseIdentity.status === 'identified'
@@ -494,6 +536,17 @@ app.get('/readyz', async (_req, reply) => {
   return reply.code(ready ? 200 : 503).send({
     ready,
     checks,
+    operations: {
+      worker: {
+        completedCycles: workerStatus.completedCycles,
+        consecutiveFailures: workerStatus.consecutiveFailures,
+        heartbeatAgeMs: workerReadiness.heartbeatAgeMs,
+      },
+      queues: {
+        status: queuesReady ? 'ready' : 'stalled',
+        oldestReadySeconds,
+      },
+    },
     externalDependencies,
     release: releaseIdentity,
     requestId: _req.id,
@@ -594,6 +647,15 @@ app.post<{ Params: { id: string } }>(
     const ws = await getAuthorizedWorkspace(id, user, reply);
     if (!ws) return;
 
+    const runnerMode = getRunnerMode();
+    if (runnerMode === 'disabled') {
+      return reply.code(503).header('Retry-After', '300').send({
+        error: 'Workspace execution is unavailable until the isolated runner gateway is enabled.',
+        code: 'RUNNER_GATEWAY_DISABLED',
+        requestId: req.id,
+      });
+    }
+
     const profileImage = getProfileImage(ws.profileId);
     await db.update(workspaces).set({ status: 'provisioning', updatedAt: new Date() }).where(eq(workspaces.id, id));
 
@@ -605,13 +667,13 @@ app.post<{ Params: { id: string } }>(
       if (result.success) {
         await db.insert(runners).values({
           workspaceId: id,
-          mode: getRunnerMode(),
+          mode: runnerMode,
           containerId: result.containerId ?? null,
           status: 'running',
           startedAt: new Date(),
         }).onConflictDoUpdate({
           target: runners.workspaceId,
-          set: { mode: getRunnerMode(), status: 'running', containerId: result.containerId ?? null, startedAt: new Date(), stoppedAt: null },
+          set: { mode: runnerMode, status: 'running', containerId: result.containerId ?? null, startedAt: new Date(), stoppedAt: null },
         });
       }
 

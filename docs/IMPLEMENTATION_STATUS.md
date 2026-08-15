@@ -1,5 +1,26 @@
 # OperatorOS implementation status
 
+## Phase 39 production hardening - SOURCE/LOCAL IMPLEMENTED / PLATFORM RELEASE BLOCKED (2026-08-14)
+
+Phase 39 adds executable security/dependency/secret scanning, a 1,217-component
+CycloneDX SBOM, exact patched-advisory regression tests, fail-closed runner and
+deterministic-provider policies, dependency-aware readiness and worker state,
+production budgets, a clean-database backup/restore/reapply rehearsal, and
+refreshed platform plus thirteen-module threat models, SLOs, incident response,
+RBAC, and entitlement evidence. The exact-host accessibility sweep passes
+26/26 representative desktop/mobile cases with zero axe violations; all 39
+desktop/tablet/mobile visual comparisons and four visual contracts pass.
+
+Typecheck, lint, production build, the Phase 39 hardening gate, focused
+database/reliability tests, local load budgets, and disposable PostgreSQL 16
+restore/reapply pass. The release is still blocked: the compiler inventory has
+7,396 capabilities and reports 2,459 inherited parity failures, including
+1,449 blocked records. Phase 39 intentionally leaves that release gate red
+instead of reclassifying source outcomes. Production backup/PITR, live-provider
+chaos, alert delivery, human visual approval, deployed exact-host acceptance,
+merge, and promotion remain owner-controlled gates. See
+`docs/phase-39/PRODUCTION-HARDENING-REPORT.md`.
+
 ## Phase 37 CallCommand MSP intake and Automation Fabric - PHASE 1 SOURCE/LOCAL IMPLEMENTED / RELEASE BLOCKED (2026-08-13)
 
 ADR-0040 and cumulative release v46 add the owner-specified paid MSP intake

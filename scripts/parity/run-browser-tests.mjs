@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { BUILD_ROOT, REPOSITORY_ROOT } from './lib/compiler.mjs';
-import { run, spawnLogged, stopChild, waitForHttp, waitForPort } from './lib/process.mjs';
+import { runCaptured, spawnLogged, stopChild, waitForHttp, waitForPort } from './lib/process.mjs';
 
 const suiteIndex = process.argv.indexOf('--suite');
 const suite = suiteIndex >= 0 ? process.argv[suiteIndex + 1] : 'all';
@@ -18,6 +18,7 @@ const runtimeEnv = {
   NODE_ENV: 'production',
   INTERNAL_API_URL: 'http://localhost:5001',
   OPERATOROS_DATABASE_RELEASE_MODE: 'apply',
+  OPERATOROS_DETERMINISTIC_PROVIDER_MODE: '1',
   PORT: '5000',
   API_PORT: '5001',
 };
@@ -29,15 +30,17 @@ try {
     cwd: REPOSITORY_ROOT,
     env: runtimeEnv,
     logPath: join(BUILD_ROOT, 'runtime.log'),
+    mirrorToParent: false,
   });
   await waitForHttp('http://127.0.0.1:5000/api/health', runtime, 180_000);
+  proxy = spawnLogged(process.execPath, ['apps/web/e2e/production-host-proxy.mjs'], {
+    cwd: REPOSITORY_ROOT,
+    env: { ...runtimeEnv, E2E_PROXY_PORT: '443' },
+    logPath: join(BUILD_ROOT, 'exact-host-proxy.log'),
+    mirrorToParent: false,
+  });
+  await waitForPort(443);
   if (suite === 'e2e' || suite === 'all') {
-    proxy = spawnLogged(process.execPath, ['apps/web/e2e/production-host-proxy.mjs'], {
-      cwd: REPOSITORY_ROOT,
-      env: { ...runtimeEnv, E2E_PROXY_PORT: '443' },
-      logPath: join(BUILD_ROOT, 'exact-host-proxy.log'),
-    });
-    await waitForPort(443);
     const browserArgs = [
       'test',
       'e2e/sso-v1.spec.ts',
@@ -46,10 +49,11 @@ try {
       'e2e/torqueshed-phase28.spec.ts',
       'e2e/ninja-pool-hall-phase30.spec.ts',
       'e2e/brandforgeos-phase31.spec.ts',
+      'e2e/phase39-accessibility-performance.spec.ts',
     ];
     const focusedPattern = process.env.PARITY_BROWSER_GREP?.trim();
     if (focusedPattern) browserArgs.push('--grep', focusedPattern);
-    exitCode = run(playwright, browserArgs, {
+    const browserResult = await runCaptured(playwright, browserArgs, {
       cwd: webRoot,
       env: {
         ...runtimeEnv,
@@ -59,19 +63,21 @@ try {
         E2E_WEB_URL: 'http://127.0.0.1:5000',
       },
     });
+    exitCode = browserResult.status;
   }
   if (suite === 'visual' || suite === 'all') {
-    const visualCode = run(playwright, [
-      'test', '--config', 'playwright.visual.config.ts',
-    ], {
+    const visualArgs = ['test', '--config', 'playwright.visual.config.ts'];
+    if (process.env.PARITY_UPDATE_SNAPSHOTS === '1') visualArgs.push('--update-snapshots');
+    const visualResult = await runCaptured(playwright, visualArgs, {
       cwd: webRoot,
       env: {
         ...runtimeEnv,
+        E2E_PRODUCTION_HOSTS: '1',
         E2E_API_URL: 'http://127.0.0.1:5001',
         E2E_WEB_URL: 'http://127.0.0.1:5000',
       },
     });
-    if (exitCode === 0) exitCode = visualCode;
+    if (exitCode === 0) exitCode = visualResult.status;
   }
 } finally {
   await stopChild(proxy);

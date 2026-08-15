@@ -16,8 +16,8 @@ const starter = FAULTLINELAB_STARTER_CHALLENGES[0]!;
 test('FaultlineLab starter content is validated and canonically hashed', () => {
   const parsed = parseFaultlineChallengeContent(starter.content);
   assert.equal(faultlineContentHash(parsed), starter.contentHash);
-  const aliased = parsed.commands.find((command) => command.aliases.length > 0)!;
-  assert.equal(matchFaultlineCommand(parsed, aliased.aliases[0]!), aliased);
+  const command = parsed.commands[0]!;
+  assert.equal(matchFaultlineCommand(parsed, command.command), command);
 
   const safe = safeFaultlineChallenge(parsed);
   assert.equal('rootCause' in safe, false);

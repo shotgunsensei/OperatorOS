@@ -27,7 +27,8 @@ test('Command Center launchpad is registry-driven and starts authorization on th
   assert.match(page, /More tools you can add/);
   assert.doesNotMatch(page, /Planned for OperatorOS/);
 
-  assert.match(launchHelper, /openExternal\(module\.productionBaseUrl\)/);
+  assert.match(launchHelper, /openExternal\(module\.launchUrl\)/);
+  assert.match(launchHelper, /launchUrl:\s*module\.launchUrl/);
   assert.match(login, /issueModuleLaunch\(module\.id/);
   assert.match(login, /codeChallengeMethod:\s*'S256'/);
   assert.match(login, /sanitizeReturnTo\(destination, ''\)/);

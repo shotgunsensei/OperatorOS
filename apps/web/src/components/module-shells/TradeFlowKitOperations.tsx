@@ -357,15 +357,15 @@ function TaskRow({ task, selected, pending, canManage, run, routePrefix }: {
 const css = `
   .tfk-ops { margin-top:18px; padding:18px; display:grid; gap:15px; }
   .tfk-ops-head { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; }
-  .tfk-ops-head span { color:var(--tfk-primary); font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+  .tfk-ops-head span { color:var(--tfk-primary-hover); font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
   .tfk-ops-head h2 { margin:4px 0; font-size:20px; color:#10231d; }
   .tfk-ops-head p { margin:0; color:#587067; font-size:13px; }
   .tfk-ops-head button,.tfk-task-form button,.tfk-settings button { border:0; border-radius:7px; background:var(--tfk-primary-hover); color:white; padding:9px 12px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; }
   .tfk-ops-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }.tfk-ops-actions a { border:1px solid color-mix(in srgb, var(--tfk-primary) 25%, transparent); border-radius:7px; color:var(--tfk-primary-hover); padding:8px 9px; font-size:11px; font-weight:800; text-decoration:none; background:white; }
   .tfk-ops-metrics { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; }
   .tfk-ops-metrics div { border:1px solid color-mix(in srgb, var(--tfk-primary) 14%, transparent); background:var(--tfk-card); border-radius:8px; padding:10px; display:grid; gap:3px; }
-  .tfk-ops-metrics span { color:#6d847c; font-size:10px; font-weight:800; text-transform:uppercase; }
-  .tfk-ops-metrics strong { color:#10231d; font-size:15px; }
+  .tfk-ops-metrics span { color:var(--tfk-muted-foreground); font-size:10px; font-weight:800; text-transform:uppercase; }
+  .tfk-ops-metrics strong { color:var(--tfk-foreground); font-size:15px; }
   .tfk-accounting-exports { border:1px solid rgba(3,105,161,.18); background:#f0f9ff; border-radius:8px; padding:11px; display:grid; gap:10px; }
   .tfk-accounting-exports>div { display:flex; gap:8px; align-items:flex-start; color:#0369a1; }.tfk-accounting-exports>div div { display:grid; gap:2px; }.tfk-accounting-exports>div span { color:#526b76; font-size:11px; line-height:1.45; }
   .tfk-accounting-exports nav { display:flex; flex-wrap:wrap; gap:6px; }.tfk-accounting-exports a { border:1px solid rgba(3,105,161,.23); border-radius:7px; background:white; color:#0369a1; padding:7px 9px; font-size:11px; font-weight:800; text-decoration:none; }
