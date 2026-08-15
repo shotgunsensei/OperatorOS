@@ -7,8 +7,10 @@ if (process.env.PARITY_DATABASE_IS_DISPOSABLE !== '1') throw new Error('PARITY_D
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
 const webRoot = join(REPOSITORY_ROOT, 'apps/web');
 const playwright = join(webRoot, 'node_modules', '.bin', process.platform === 'win32' ? 'playwright.cmd' : 'playwright');
+const requestedSpec = process.env.PHASE50_BROWSER_SPEC?.trim();
 const phaseSpecs = readdirSync(join(webRoot, 'e2e'))
   .filter(name => /^phase50-.*\.spec\.ts$/u.test(name))
+  .filter(name => !requestedSpec || name.includes(requestedSpec))
   .map(name => `e2e/${name}`);
 if (!phaseSpecs.length) throw new Error('No Phase 50 browser specifications were found');
 const runtimeEnv = {

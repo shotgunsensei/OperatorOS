@@ -17,9 +17,10 @@ test('PulseDesk shell mounts the live tenant-scoped department escalation queue'
   assert.match(shell, /department-queue-\$\{adapter\.tenantId\}/);
   assert.match(shell, /tenantKey=\{adapter\.tenantId\}/);
   assert.match(shell, /const hasTenantContext = !!adapter\.tenantId/);
-  assert.match(shell, /pulsedesk-operations-panel/);
-  assert.match(shell, /pulsedesk-empty-state/);
-  assert.match(shell, /pulsedesk-error-state/);
+  assert.match(shell, /ModuleApplicationShell/);
+  assert.match(shell, /pulsedesk-assignments-route/);
+  assert.match(shell, /state=\{isLoading \? 'loading' : !hasTenantContext \? 'empty'/);
+  assert.match(shell, /dynamic\(\(\) => import\('\.\/PulseDeskDepartmentEscalationQueue'\)/);
 });
 
 test('PulseDesk queue exposes the live PHI-minimized workflow states', () => {

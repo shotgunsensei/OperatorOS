@@ -49,6 +49,7 @@ test('PulseDesk routes enforce module guards, privacy acknowledgement, concurren
 test('PulseDesk UI exposes real persisted workflows, privacy guidance, responsive states, and supported deep links', () => {
   const shell = read('apps/web/src/components/module-shells/PulseDeskShell.tsx');
   const workspace = read('apps/web/src/components/module-shells/PulseDeskServiceDeskWorkspace.tsx');
+  const routeContract = read('apps/web/src/components/module-shells/PulseDeskRoute.contract.ts');
   const auth = read('apps/web/src/lib/auth.ts');
   const routeMap = read('apps/web/src/app/modules/[slug]/[...path]/route-map.ts');
   assert.match(shell, /PulseDeskServiceDeskWorkspace/);
@@ -67,7 +68,12 @@ test('PulseDesk UI exposes real persisted workflows, privacy guidance, responsiv
   for (const path of ['/app', '/assets', '/submit', '/supply-requests', '/facility-requests', '/knowledge', '/service-desk/admin', '/service-desk-admin', '/analytics']) assert.ok(routeMap.includes(`'${path}'`));
   assert.match(workspace, /assetIssueMatch/);
   assert.match(workspace, /requestedAssetId/);
-  assert.match(workspace, /service-desk-admin/);
+  assert.match(shell, /data-pulsedesk-route/);
+  assert.doesNotMatch(workspace, /role="tablist"/);
+  for (const path of ['requests', 'assignments', 'contacts', 'operations', 'inbound', 'analytics', 'knowledge', 'integrations', 'settings']) {
+    assert.match(routeContract, new RegExp(`canonicalPath: '/${path}'`));
+  }
+  assert.match(routeContract, /service-desk-admin/);
   assert.match(workspace, /Reporting an issue for the equipment selected by this deep link/);
   assert.match(read('apps/web/src/components/module-shells/BusinessDirectory.tsx'), /organizationMatch/);
   assert.doesNotMatch(workspace, /Math\.random|mock ticket|fake CRUD|TODO/);
