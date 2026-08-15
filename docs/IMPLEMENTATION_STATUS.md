@@ -1,5 +1,23 @@
 # OperatorOS implementation status
 
+## Phase 42 TorqueShed durable Stripe catalog - SOURCE/LOCAL IMPLEMENTED / PROVIDER APPLY BLOCKED (2026-08-15)
+
+The approved Roadside, Workshop, and Fleet credit packages now live in one
+typed `torqueshed-credit-v1` manifest with stable SKUs/lookup keys and exact
+metadata. Additive database release v49 persists environment/account-specific
+Product/Price mappings. Non-test checkout resolves only an active validated
+persistent Price and no longer uses inline TorqueShed `price_data`. An
+idempotent dry-run/apply/validate command, drift detection, duplicate/mode
+guards, two-part live apply confirmation, and a super-admin read-only Platform
+Command catalog are implemented.
+
+Focused tests pass 20/20 plus 2/2 database workflows and 16/16 static/admin
+checks; typecheck, production build, exact-host browser 1/1, and v49
+apply/reapply pass on disposable PostgreSQL 16. No Stripe test or live credential was available, so
+the real provider catalog was not created and the Phase 41 kill switch remains
+closed outside deterministic tests. See
+`docs/phase-42/TORQUESHED-STRIPE-CATALOG-REPORT.md`.
+
 ## Phase 41 TorqueShed revenue containment - SOURCE IMPLEMENTED / DEPLOYED TRANSACTION TRUTH BLOCKED (2026-08-15)
 
 TorqueShed credit checkout now has a fail-closed composite readiness contract

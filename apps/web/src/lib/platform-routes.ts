@@ -8,6 +8,7 @@ export type PlatformView =
   | { kind: 'user'; id: string }
   | { kind: 'billing' }
   | { kind: 'pricing' }
+  | { kind: 'credit-catalog' }
   | { kind: 'health' }
   | { kind: 'audit' }
   | { kind: 'sso' };
@@ -36,6 +37,7 @@ export function pathToPlatformView(slug: string[] | string | null | undefined): 
       return { kind: 'users' };
     case 'billing': return { kind: 'billing' };
     case 'pricing': return { kind: 'pricing' };
+    case 'credit-catalog': return { kind: 'credit-catalog' };
     case 'health': return { kind: 'health' };
     case 'audit': return { kind: 'audit' };
     case 'sso': return { kind: 'sso' };
@@ -54,6 +56,7 @@ export function platformViewToPath(view: PlatformView): string {
     case 'user': return `${PLATFORM_COMMAND_BASE}/users/${view.id}`;
     case 'billing': return `${PLATFORM_COMMAND_BASE}/billing`;
     case 'pricing': return `${PLATFORM_COMMAND_BASE}/pricing`;
+    case 'credit-catalog': return `${PLATFORM_COMMAND_BASE}/credit-catalog`;
     case 'health': return `${PLATFORM_COMMAND_BASE}/health`;
     case 'audit': return `${PLATFORM_COMMAND_BASE}/audit`;
     case 'sso': return `${PLATFORM_COMMAND_BASE}/sso`;

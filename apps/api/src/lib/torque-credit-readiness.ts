@@ -3,6 +3,7 @@ import { db } from '../db.js';
 import { getPaymentProviderAdapter, type ProviderState } from './shared-provider-adapters.js';
 import { loadReleaseMetadata } from './release-metadata.js';
 import { isOperatorOSDeterministicProviderTestEnvironment } from './shared-service-safety.js';
+import { torqueShedCatalogReadiness } from './torqueshed-credit-catalog.js';
 
 export const TORQUE_CREDIT_REQUIRED_WEBHOOK_EVENTS = Object.freeze([
   'checkout.session.completed',
@@ -218,6 +219,7 @@ export async function getTorqueCreditPurchaseReadiness(input: {
   const deterministic = isOperatorOSDeterministicProviderTestEnvironment(env);
   const metadata = loadReleaseMetadata(env);
   const expectedCommit = env.TORQUESHED_CREDIT_PURCHASES_EXPECTED_RELEASE_COMMIT?.trim().toLowerCase() || null;
+  const configuredMode = env.STRIPE_MODE === 'test' || env.STRIPE_MODE === 'live' ? env.STRIPE_MODE : null;
   const release: ReleaseReadiness = metadata.status === 'identified'
     ? { status: 'identified', commit: metadata.commit, expectedCommit }
     : { status: 'unavailable', expectedCommit };
@@ -226,12 +228,11 @@ export async function getTorqueCreditPurchaseReadiness(input: {
     paymentProviderState: getPaymentProviderAdapter().status.state,
     databaseReady: await torqueBillingDatabaseReady(),
     moduleBaseUrl: input.moduleBaseUrl,
-    // Phase 41 deliberately treats the existing inline price_data path as
-    // unavailable outside deterministic tests. Phase 42 supplies the durable,
-    // validated environment-specific catalog mapping.
     catalog: input.catalog ?? (deterministic
-      ? { state: 'test', version: 'phase41-deterministic-v1', mode: 'test' }
-      : { state: 'unavailable', version: null, mode: null }),
+      ? { state: 'test', version: 'phase42-deterministic-v1', mode: 'test' }
+      : configuredMode
+        ? await torqueShedCatalogReadiness(configuredMode)
+        : { state: 'unavailable', version: null, mode: null }),
     release,
   });
 }

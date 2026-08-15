@@ -55,6 +55,6 @@ test('Phase 38 exposes an entitlement-filtered provenance console and SnapProof 
 
 test('database release v48 appends the data fabric after v47', () => {
   const release = read('apps/api/src/lib/database-release-contract.ts');
-  assert.match(release,/releaseVersion:\s*48/);
+  assert.match(release,/releaseVersion:\s*(?:4[9]|[5-9][0-9])/);
   assert.ok(release.indexOf('cross_module_data_fabric_tables') > release.indexOf('torqueshed_native_tables'));
 });

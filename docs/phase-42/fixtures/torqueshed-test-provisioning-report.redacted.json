@@ -1,0 +1,46 @@
+{
+  "contractVersion": 1,
+  "catalogVersion": "torqueshed-credit-v1",
+  "mode": "test",
+  "operation": "apply",
+  "accountId": "acct_REDACTED_TEST_ACCOUNT",
+  "status": "validated",
+  "created": {
+    "products": 3,
+    "prices": 3
+  },
+  "items": [
+    {
+      "packageKey": "roadside-25000",
+      "lookupKey": "operatoros_torqueshed_roadside_25000_v1",
+      "productId": "prod_REDACTED_ROADSIDE",
+      "priceId": "price_REDACTED_ROADSIDE",
+      "action": "created_product_and_price",
+      "status": "validated",
+      "driftCodes": []
+    },
+    {
+      "packageKey": "workshop-100000",
+      "lookupKey": "operatoros_torqueshed_workshop_100000_v1",
+      "productId": "prod_REDACTED_WORKSHOP",
+      "priceId": "price_REDACTED_WORKSHOP",
+      "action": "created_product_and_price",
+      "status": "validated",
+      "driftCodes": []
+    },
+    {
+      "packageKey": "fleet-500000",
+      "lookupKey": "operatoros_torqueshed_fleet_500000_v1",
+      "productId": "prod_REDACTED_FLEET",
+      "priceId": "price_REDACTED_FLEET",
+      "action": "created_product_and_price",
+      "status": "validated",
+      "driftCodes": []
+    }
+  ],
+  "legacyLookupKeys": [],
+  "databaseMappingMatch": true,
+  "safeToEnablePurchases": true,
+  "secretValuesIncluded": false,
+  "fixtureOnly": true
+}

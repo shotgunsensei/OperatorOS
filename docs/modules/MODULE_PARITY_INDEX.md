@@ -1,5 +1,16 @@
 # OperatorOS module parity index
 
+## Phase 42 TorqueShed durable-catalog overlay
+
+TorqueShed now has one typed v1 commercial manifest, additive v49
+environment/account-specific Stripe mappings, persistent-Price checkout, a
+safe idempotent provision/validate command, and read-only Platform Command
+visibility. Manifest, drift, mode, duplicate, inactive Price, database
+resolution, and no-inline-price behavior are locally executable. Actual
+Stripe test-mode provisioning and all live mutation remain owner/provider
+gates, so purchases stay disabled outside deterministic tests. Evidence is in
+`docs/phase-42/TORQUESHED-STRIPE-CATALOG-REPORT.md`.
+
 ## Phase 41 TorqueShed revenue-integrity overlay
 
 TorqueShed credit checkout is source-contained behind a server-authoritative
@@ -10,7 +21,9 @@ catalog. Canonical signed webhook and append-only settlement behavior remain
 preserved. Pure/static/preflight evidence passes; database/browser and exact
 reported-attempt production truth remain open and no state-5 promotion is
 claimed. Exact evidence is in
-`docs/phase-41/TORQUESHED-REVENUE-INCIDENT-REPORT.md`.
+`docs/phase-41/TORQUESHED-REVENUE-INCIDENT-REPORT.md`. Phase 41 database-backed
+workflow and exact-host browser evidence subsequently passed locally; only the
+reported production attempt classification remains externally blocked.
 
 ## Current Phase 40 certification overlay - NOT CERTIFIED / RELEASE BLOCKED (2026-08-14)
 

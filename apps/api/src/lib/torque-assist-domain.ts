@@ -1,4 +1,9 @@
 import { createHash } from 'node:crypto';
+import {
+  TORQUESHED_CREDIT_CATALOG,
+  torqueShedCreditPackage,
+  type TorqueShedCreditPackage,
+} from './torqueshed-credit-catalog.js';
 
 export const TORQUE_ASSIST_SYSTEM_PROMPT = `OPERATOROS_TORQUE_ASSIST_V1
 You are an evidence-driven automotive diagnostic planning assistant. Return only one JSON object.
@@ -27,13 +32,8 @@ export const TORQUE_ASSIST_MAX_PROVIDER_ATTEMPTS = 2;
 export const TORQUE_ASSIST_USER_LIMIT_PER_MINUTE = 5;
 export const TORQUE_ASSIST_TENANT_LIMIT_PER_MINUTE = 20;
 
-export const TORQUE_TOKEN_PACKAGES = Object.freeze([
-  { key: 'roadside-25000', name: 'Roadside', units: 25_000, amountMinor: 500, currency: 'USD' },
-  { key: 'workshop-100000', name: 'Workshop', units: 100_000, amountMinor: 1_500, currency: 'USD' },
-  { key: 'fleet-500000', name: 'Fleet', units: 500_000, amountMinor: 5_000, currency: 'USD' },
-]);
-
-export type TorqueTokenPackage = (typeof TORQUE_TOKEN_PACKAGES)[number];
+export const TORQUE_TOKEN_PACKAGES = TORQUESHED_CREDIT_CATALOG;
+export type TorqueTokenPackage = TorqueShedCreditPackage;
 
 export interface TorqueAssistFact {
   source: 'observed' | 'user_entered';
@@ -343,18 +343,11 @@ function mergeSafetyWarnings(
 }
 
 export function torqueTokenPackage(packageKey: unknown): TorqueTokenPackage {
-  if (typeof packageKey !== 'string') {
-    throw new TorqueAssistDomainError(
-      'packageKey is required',
-      'TORQUE_TOKEN_PACKAGE_INVALID',
-      400,
-    );
-  }
-  const found = TORQUE_TOKEN_PACKAGES.find((item) => item.key === packageKey.trim());
-  if (!found) {
+  try {
+    return torqueShedCreditPackage(packageKey);
+  } catch {
     throw new TorqueAssistDomainError('Unknown token package', 'TORQUE_TOKEN_PACKAGE_INVALID', 400);
   }
-  return found;
 }
 
 export function summarizeContext(value: unknown): {

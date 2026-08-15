@@ -6,6 +6,7 @@
   "packageManager": "pnpm@10.34.5",
   "scripts": {
     "preflight:production": "node scripts/production-env-preflight.mjs",
+    "preflight:revenue:torqueshed": "node scripts/production-env-preflight.mjs --revenue-ready && pnpm stripe:provision:torqueshed -- --mode live --validate",
     "verify:production": "node scripts/verify-production-runtime.mjs",
     "verify:tradeflowkit:phase16": "node scripts/tradeflowkit-phase16-ledger.mjs",
     "verify:tradeflowkit:recurring": "tsx --test --test-concurrency=1 apps/api/test/tradeflowkit-recurring-jobs.test.ts",
@@ -78,6 +79,7 @@
     "db:apply": "tsx apps/api/src/scripts/database-release.ts --apply",
     "billing:reconcile:torque": "tsx apps/api/src/scripts/torque-payment-reconcile.ts",
     "audit:revenue:torqueshed": "node scripts/phase41/audit-torqueshed-revenue.mjs",
+    "stripe:provision:torqueshed": "tsx apps/api/src/scripts/torqueshed-stripe-catalog.ts",
     "test:hotfix:torque-exact-host": "node scripts/hotfix/verify-torqueshed-payment-exact-host.mjs",
     "export:tradeflowkit:snapshot": "tsx apps/api/src/scripts/tradeflowkit-export.ts --read-only",
     "import:tradeflowkit:dry-run": "tsx apps/api/src/scripts/tradeflowkit-import.ts --dry-run",

@@ -23,6 +23,7 @@ import {
   getTorqueCreditPurchaseReadiness,
   type TorqueCreditPurchaseReadiness,
 } from './torque-credit-readiness.js';
+import { getValidatedTorqueShedPrice } from './torqueshed-credit-catalog.js';
 
 const HANDLER_KEY = 'operatoros.torque-assist.token-purchase.v1';
 
@@ -185,6 +186,10 @@ export async function createTorqueTokenPurchase(input: {
   const provider = testMode ? 'deterministic-test' : 'stripe';
   const providerMode = testMode ? 'test' : stripeMode;
   if (providerMode === 'disabled') throw new ProviderDisabledError('payments');
+  const catalogMapping = testMode ? null : await getValidatedTorqueShedPrice({
+    environment: providerMode,
+    packageKey: selectedPackage.key,
+  });
 
   const inserted = first(
     await db.execute(sql`
@@ -237,6 +242,7 @@ export async function createTorqueTokenPurchase(input: {
           moduleId: module.id,
           packageKey: selectedPackage.key,
           packageName: selectedPackage.name,
+          priceId: catalogMapping!.stripePriceId,
           units: selectedPackage.units,
           amountMinor: selectedPackage.amountMinor,
           currency: selectedPackage.currency,

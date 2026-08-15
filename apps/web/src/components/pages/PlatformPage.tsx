@@ -70,6 +70,7 @@ export default function PlatformPage(props: { view?: View; onNavigate?: (v: View
     { key: 'modules',   label: 'Modules' },
     { key: 'billing',   label: 'Billing Events' },
     { key: 'pricing',   label: 'Pricing' },
+    { key: 'credit-catalog', label: 'Credit Catalog' },
     { key: 'health',    label: 'Health' },
     { key: 'audit',     label: 'Audit' },
     { key: 'sso',       label: 'SSO' },
@@ -113,6 +114,7 @@ export default function PlatformPage(props: { view?: View; onNavigate?: (v: View
       {view.kind === 'user'      && <UserDetail id={view.id} onBack={() => setView({ kind: 'users' })} />}
       {view.kind === 'billing'   && <BillingEvents />}
       {view.kind === 'pricing'   && <Pricing />}
+      {view.kind === 'credit-catalog' && <TorqueShedCreditCatalog />}
       {view.kind === 'health'    && <Health />}
       {view.kind === 'audit'     && <AuditLog />}
       {view.kind === 'sso'       && <SsoSettings />}
@@ -2363,6 +2365,52 @@ function Pricing() {
               );
             })}
           </tbody>
+        </table>
+      </Card>
+    </div>
+  );
+}
+
+function TorqueShedCreditCatalog() {
+  const [data, setData] = useState<any>(null);
+  const [err, setErr] = useState<any>(null);
+  const load = () => {
+    setErr(null);
+    return apiCall('/platform/torqueshed/credit-catalog').then(setData).catch(setErr);
+  };
+  useEffect(() => { load(); }, []);
+  if (err && !data) return <ErrorBlock err={err} onRetry={load} />;
+  if (!data) return <div style={{ color: colors.textMuted }}>Loading TorqueShed catalog…</div>;
+  return (
+    <div data-testid="torqueshed-credit-catalog">
+      <ErrorBlock err={err} />
+      <div style={{ marginBottom: 12, padding: 12, background: colors.bgSecondary, border: `1px solid ${data.ready ? colors.accentGreen : colors.accentYellow}`, borderRadius: 6 }}>
+        <strong>TorqueShed durable credit catalog</strong>{' '}
+        <Pill tone={data.ready ? 'green' : 'yellow'}>{data.ready ? 'validated' : 'purchases disabled'}</Pill>{' '}
+        <Pill tone={data.stripeMode === 'live' ? 'green' : 'yellow'}>{data.stripeMode}</Pill>
+        <div style={{ marginTop: 6, color: colors.textMuted, fontSize: 12 }}>
+          {data.catalogVersion}. Object IDs are safe operational identifiers; no Stripe secrets are exposed here.
+        </div>
+      </div>
+      <Card style={{ padding: 0, overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 980 }}>
+          <thead><tr style={{ background: colors.bgHover, color: colors.textMuted }}>
+            <Th>Package</Th><Th>Amount</Th><Th>Units</Th><Th>Lookup key</Th><Th>Product</Th><Th>Price</Th><Th>State</Th><Th>Last validation</Th>
+          </tr></thead>
+          <tbody>{data.packages.map((item: any) => (
+            <tr key={item.packageKey} style={{ borderTop: `1px solid ${colors.border}` }} data-testid={`row-credit-catalog-${item.packageKey}`}>
+              <Td><strong>{item.name}</strong><div style={{ color: colors.textMuted }}>{item.packageKey}</div></Td>
+              <Td>{new Intl.NumberFormat('en-US', { style: 'currency', currency: item.currency }).format(item.amountMinor / 100)}</Td>
+              <Td>{Number(item.units).toLocaleString()}</Td>
+              <Td><code>{item.lookupKey}</code></Td>
+              <Td><code>{item.productId ?? '—'}</code></Td>
+              <Td><code>{item.priceId ?? '—'}</code></Td>
+              <Td>{item.active && item.validationStatus === 'validated'
+                ? <Pill tone="green">validated</Pill>
+                : <Pill tone="red">{item.driftCode ?? item.validationStatus}</Pill>}</Td>
+              <Td>{item.validatedAt ? new Date(item.validatedAt).toLocaleString() : 'Never'}</Td>
+            </tr>
+          ))}</tbody>
         </table>
       </Card>
     </div>

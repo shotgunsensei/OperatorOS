@@ -51,6 +51,15 @@ type StripeClient = {
   charges: { retrieve: (id: string) => Promise<any> };
   events: { list: (args: unknown) => Promise<{ data: any[] }> };
   accounts: { retrieve: () => Promise<any> };
+  products: {
+    list: (args: unknown) => Promise<{ data: any[] }>;
+    create: (args: unknown) => Promise<any>;
+    retrieve: (id: string) => Promise<any>;
+  };
+  prices: {
+    list: (args: unknown) => Promise<{ data: any[] }>;
+    create: (args: unknown) => Promise<any>;
+  };
 };
 let __stripeSingleton: StripeClient | null = null;
 
@@ -108,6 +117,14 @@ function getStripe() {
   } catch (err) {
     throw new Error(`Stripe SDK could not be loaded: ${(err as Error)?.message ?? 'unknown'}`);
   }
+}
+
+/** Narrow server-only access for the versioned catalog provisioner. */
+export function getStripeCatalogClient(): Pick<StripeClient, 'accounts' | 'products' | 'prices'> {
+  if (!isStripeEnabled()) {
+    throw Object.assign(new Error('Stripe is not configured'), { code: 'STRIPE_NOT_CONFIGURED' });
+  }
+  return getStripe();
 }
 
 // Task #66: monthly + annual price resolution. STRIPE_PRICE_<PLAN>_<INTERVAL>
@@ -431,6 +448,7 @@ export interface UsageCreditCheckoutInput {
   moduleId: string;
   packageKey: string;
   packageName: string;
+  priceId: string;
   units: number;
   amountMinor: number;
   currency: string;
@@ -456,7 +474,7 @@ export async function createUsageCreditCheckoutSession(
     input.units <= 0 ||
     !Number.isSafeInteger(input.amountMinor) ||
     input.amountMinor <= 0 ||
-    !/^[A-Z]{3}$/.test(input.currency)
+    !/^[A-Z]{3}$/.test(input.currency) || !/^price_[A-Za-z0-9_]+$/.test(input.priceId)
   ) {
     throw Object.assign(new Error('Usage-credit package snapshot is invalid'), {
       code: 'USAGE_CREDIT_PACKAGE_INVALID',
@@ -475,11 +493,7 @@ export async function createUsageCreditCheckoutSession(
     mode: 'payment',
     line_items: [
       {
-        price_data: {
-          currency: input.currency.toLowerCase(),
-          unit_amount: input.amountMinor,
-          product_data: { name: `Torque Assist ${input.packageName} credits` },
-        },
+        price: input.priceId,
         quantity: 1,
       },
     ],
