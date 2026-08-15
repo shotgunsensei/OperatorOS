@@ -1,5 +1,25 @@
 # OperatorOS implementation status
 
+## Phase 43 canonical TorqueShed checkout - SOURCE/LOCAL IMPLEMENTED / STRIPE TEST JOURNEY BLOCKED (2026-08-15)
+
+TorqueShed now has one server-owned checkout contract accepting only an owned
+diagnostic ID, canonical package key, and idempotency header. Additive release
+v50 persists the complete catalog/provider/return snapshot before Session
+creation, uses only a validated durable Price, exposes a tenant/user-scoped
+safe state machine, and makes identifier-only browser returns read-only. The
+UI distinguishes verifying, paid-pending-credit, credited, cancellation,
+expiration, failure, refund, and dispute; `Credits added` requires the actual
+append-only grant. Bounded polling, manual refresh, server-backed recent
+purchase recovery, and diagnostic follow-up draft preservation are included.
+
+Focused release/static/database tests pass 8/8; typecheck, clean v50
+apply/reapply, production build, and compiled exact-host browser 1/1 pass. The
+browser evidence includes verifying and credited screenshots and authoritative
+balance persistence. No Stripe test credential was available, so the real
+provider Checkout journey remains Phase 44/52-gated and purchases stay closed
+outside deterministic tests. See
+`docs/phase-43/TORQUESHED-CHECKOUT-STATE-MACHINE.md`.
+
 ## Phase 42 TorqueShed durable Stripe catalog - SOURCE/LOCAL IMPLEMENTED / PROVIDER APPLY BLOCKED (2026-08-15)
 
 The approved Roadside, Workshop, and Fleet credit packages now live in one

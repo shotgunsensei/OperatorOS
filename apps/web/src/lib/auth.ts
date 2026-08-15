@@ -1138,17 +1138,22 @@ export interface TorqueAssistStatus {
 }
 export interface TorqueTokenPurchaseStatus {
   purchaseId: string;
-  state: 'checkout_created' | 'payment_pending' | 'paid_pending_credit' | 'credited' |
+  state: 'creating_checkout' | 'checkout_open' | 'payment_pending' | 'paid_pending_credit' | 'credited' |
     'cancelled' | 'expired' | 'failed' | 'refunded' | 'disputed';
+  diagnosticSessionId: string | null;
   packageKey: string;
   units: number;
   amountMinor: number;
   currency: string;
   failureCode: string | null;
   credited: boolean;
+  terminal: boolean;
+  catalogVersion: string | null;
+  providerMode: 'test' | 'live';
   balance: number;
   updatedAt: string;
   creditedAt: string | null;
+  checkoutCreatedAt: string | null;
   authority: 'operatoros_ledger';
 }
 

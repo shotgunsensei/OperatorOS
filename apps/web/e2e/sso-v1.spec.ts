@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext, type BrowserContext, type Page, type Request } from '@playwright/test';
 import { Client } from 'pg';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -1162,6 +1162,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       purchase: {
         id: string; tenantId: string; userId: string; moduleId: string; packageKey: string;
         units: number; amountMinor: number; currency: string; providerCheckoutId: string;
+        diagnosticSessionId: string; catalogVersion: string; providerMode: 'test' | 'live';
       };
     };
     const purchase = purchaseBody.purchase;
@@ -1189,6 +1190,11 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
               module_id: purchase.moduleId,
               package_key: purchase.packageKey,
               units: String(purchase.units),
+              diagnostic_session_id: purchase.diagnosticSessionId,
+              catalog_version: purchase.catalogVersion,
+              environment: purchase.providerMode,
+              module_slug: 'torqueshed',
+              operatoros_source: 'server_authoritative_catalog',
             },
           },
         },
@@ -1198,7 +1204,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     expect(payment.status, JSON.stringify(payment.body)).toBe(200);
 
     const diagnosticUrl = `https://torqueshed.operatoros.net/diagnostics/${diagnostic.id}`;
-    const purchaseStatusUrl = `${diagnosticUrl}?tokenPurchase=success&purchase=${purchase.id}`;
+    const purchaseStatusUrl = `${diagnosticUrl}?purchase=${purchase.id}`;
     await page.goto(purchaseStatusUrl);
     await expect(page.getByTestId('torqueshed-diagnostic-timeline')).toContainText(diagnosticTitle, { timeout: 30_000 });
     const refreshedAssist = page.getByTestId('torqueshed-torque-assist');
@@ -1401,6 +1407,7 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       purchase: {
         id: string; tenantId: string; userId: string; moduleId: string; packageKey: string;
         units: number; amountMinor: number; currency: string; providerCheckoutId: string;
+        diagnosticSessionId: string; catalogVersion: string; providerMode: 'test' | 'live';
       };
     }>(
       page,
@@ -1411,6 +1418,15 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     );
     expect(checkoutReply.status, JSON.stringify(checkoutReply.body)).toBe(201);
     const purchase = checkoutReply.body.purchase;
+    const purchaseStatusUrl = `https://torqueshed.operatoros.net/diagnostics/${diagnosticReply.body.id}?purchase=${purchase.id}`;
+    await page.goto(purchaseStatusUrl);
+    const assist = page.getByTestId('torqueshed-torque-assist');
+    await expect(assist.getByTestId('torque-purchase-status')).toContainText('Verifying payment', { timeout: 30_000 });
+    if (process.env.PHASE43_CAPTURE_SCREENSHOTS === '1') {
+      const screenshotDirectory = resolve(repoRoot, 'docs/phase-43/screenshots');
+      mkdirSync(screenshotDirectory, { recursive: true });
+      await assist.getByTestId('torque-purchase-status').screenshot({ path: resolve(screenshotDirectory, 'settlement-verifying.png') });
+    }
     const event = {
       id: `evt_exact_host_payment_${suffix}`,
       type: 'checkout.session.completed',
@@ -1431,6 +1447,11 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
             module_id: purchase.moduleId,
             package_key: purchase.packageKey,
             units: String(purchase.units),
+            diagnostic_session_id: purchase.diagnosticSessionId,
+            catalog_version: purchase.catalogVersion,
+            environment: purchase.providerMode,
+            module_slug: 'torqueshed',
+            operatoros_source: 'server_authoritative_catalog',
           },
         },
       },
@@ -1443,6 +1464,11 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
       { 'stripe-signature': 'operatoros-test-signature' },
     );
     expect(credited.status, JSON.stringify(credited.body)).toBe(200);
+    await expect(assist.getByTestId('torque-purchase-status')).toContainText('Credits added', { timeout: 30_000 });
+    await expect(assist).toContainText('25,000 units');
+    if (process.env.PHASE43_CAPTURE_SCREENSHOTS === '1') {
+      await assist.getByTestId('torque-purchase-status').screenshot({ path: resolve(repoRoot, 'docs/phase-43/screenshots/settlement-credited.png') });
+    }
     const replay = await browserJson<{ duplicate?: boolean }>(
       page,
       '/api/billing/webhook',
@@ -1452,12 +1478,6 @@ test.describe('OperatorOS SSO contract v1 — production hosts', () => {
     );
     expect(replay.status, JSON.stringify(replay.body)).toBe(200);
     expect(replay.body.duplicate).toBe(true);
-
-    const purchaseStatusUrl = `https://torqueshed.operatoros.net/diagnostics/${diagnosticReply.body.id}?tokenPurchase=success&purchase=${purchase.id}`;
-    await page.goto(purchaseStatusUrl);
-    const assist = page.getByTestId('torqueshed-torque-assist');
-    await expect(assist.getByTestId('torque-purchase-status')).toContainText('Credits added', { timeout: 30_000 });
-    await expect(assist).toContainText('25,000 units');
     const ledger = await browserJson<{
       balance: number;
       entries: Array<{ entryKind: string; purchaseIntentId?: string }>;

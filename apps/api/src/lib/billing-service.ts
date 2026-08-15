@@ -449,6 +449,9 @@ export interface UsageCreditCheckoutInput {
   packageKey: string;
   packageName: string;
   priceId: string;
+  diagnosticSessionId: string;
+  catalogVersion: string;
+  environment: 'test' | 'live';
   units: number;
   amountMinor: number;
   currency: string;
@@ -486,8 +489,13 @@ export async function createUsageCreditCheckoutSession(
     tenant_id: input.tenantId,
     user_id: input.userId,
     module_id: input.moduleId,
+    module_slug: 'torqueshed',
+    diagnostic_session_id: input.diagnosticSessionId,
     package_key: input.packageKey,
     units: String(input.units),
+    catalog_version: input.catalogVersion,
+    environment: input.environment,
+    operatoros_source: 'server_authoritative_catalog',
   };
   const session = await getStripe().checkout.sessions.create({
     mode: 'payment',

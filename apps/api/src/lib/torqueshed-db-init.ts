@@ -246,7 +246,7 @@ export async function ensureTorqueShedTables(): Promise<void> {
       CONSTRAINT operatoros_token_purchase_amount_check CHECK (amount_minor > 0),
       CONSTRAINT operatoros_token_purchase_mode_check CHECK (provider_mode IN ('test','live')),
       CONSTRAINT operatoros_token_purchase_status_check CHECK (status IN (
-        'pending','payment_pending','checkout_created','paid_pending_credit','credited',
+        'pending','creating_checkout','checkout_open','payment_pending','checkout_created','paid_pending_credit','credited',
         'cancelled','expired','failed','partially_refunded','refunded','disputed'
       ))
     );
@@ -256,7 +256,7 @@ export async function ensureTorqueShedTables(): Promise<void> {
       DROP CONSTRAINT IF EXISTS operatoros_token_purchase_status_check;
     ALTER TABLE operatoros_token_purchase_intents
       ADD CONSTRAINT operatoros_token_purchase_status_check CHECK (status IN (
-        'pending','payment_pending','checkout_created','paid_pending_credit','credited',
+        'pending','creating_checkout','checkout_open','payment_pending','checkout_created','paid_pending_credit','credited',
         'cancelled','expired','failed','partially_refunded','refunded','disputed'
       ));
     CREATE UNIQUE INDEX IF NOT EXISTS uq_operatoros_token_purchase_checkout

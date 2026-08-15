@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 import { db } from '../db.js';
 import { writeAudit } from './audit.js';
 import {
@@ -23,9 +24,19 @@ import {
   getTorqueCreditPurchaseReadiness,
   type TorqueCreditPurchaseReadiness,
 } from './torque-credit-readiness.js';
-import { getValidatedTorqueShedPrice } from './torqueshed-credit-catalog.js';
+import {
+  getValidatedTorqueShedPrice,
+  TORQUESHED_CREDIT_CATALOG_VERSION,
+} from './torqueshed-credit-catalog.js';
 
 const HANDLER_KEY = 'operatoros.torque-assist.token-purchase.v1';
+
+type CheckoutCreator = typeof createUsageCreditCheckoutSession;
+let checkoutCreatorForTests: CheckoutCreator | null = null;
+export function __setTorqueCheckoutCreatorForTests(creator: CheckoutCreator | null) {
+  if (!isOperatorOSTestEnvironment()) throw new Error('Torque checkout test override is test-only');
+  checkoutCreatorForTests = creator;
+}
 
 export class OperatorOsTokenBillingError extends Error {
   constructor(
@@ -75,7 +86,6 @@ function canonicalReturnUrl(
   baseUrl: string,
   diagnosticSessionId: string,
   purchaseId: string,
-  result: 'success' | 'cancelled',
 ) {
   const url = new URL(`/diagnostics/${encodeURIComponent(diagnosticSessionId)}`, baseUrl);
   if (url.protocol !== 'https:' && !(isOperatorOSTestEnvironment() && url.protocol === 'http:')) {
@@ -85,7 +95,6 @@ function canonicalReturnUrl(
       503,
     );
   }
-  url.searchParams.set('tokenPurchase', result);
   url.searchParams.set('purchase', purchaseId);
   return url.toString();
 }
@@ -111,7 +120,8 @@ export async function getTorqueTokenPurchaseStatus(input: {
   purchaseId: string;
 }) {
   const purchase = first(await db.execute(sql`
-    SELECT id,module_id,package_key,units,amount_minor,currency,status,failure_code,
+    SELECT id,module_id,diagnostic_session_id,package_key,units,amount_minor,currency,
+      catalog_version,provider_mode,status,failure_code,checkout_created_at,
       created_at,updated_at,credited_at,refunded_at
     FROM operatoros_token_purchase_intents
     WHERE tenant_id=${input.tenantId} AND user_id=${input.userId} AND id=${input.purchaseId}
@@ -131,15 +141,22 @@ export async function getTorqueTokenPurchaseStatus(input: {
     WHERE tenant_id=${input.tenantId} AND module_id=${purchase.module_id} AND user_id=${input.userId}
   `));
   const stored = String(purchase.status);
+  const creditCount = Number(ledger?.credit_count ?? 0);
   const state = stored === 'pending' ? 'payment_pending'
-    : stored === 'partially_refunded' ? 'refunded'
-      : stored;
+    : stored === 'checkout_created' ? 'checkout_open'
+      : stored === 'partially_refunded' ? 'refunded'
+        : stored === 'credited' && creditCount !== 1 ? 'paid_pending_credit'
+          : stored;
+  const terminal = ['credited', 'cancelled', 'expired', 'failed', 'refunded', 'disputed'].includes(state);
   return {
     purchaseId: String(purchase.id), state, packageKey: String(purchase.package_key),
+    diagnosticSessionId: purchase.diagnostic_session_id ? String(purchase.diagnostic_session_id) : null,
     units: Number(purchase.units), amountMinor: Number(purchase.amount_minor),
     currency: String(purchase.currency), failureCode: purchase.failure_code ?? null,
-    credited: Number(ledger?.credit_count ?? 0) === 1 && stored === 'credited',
+    catalogVersion: purchase.catalog_version ?? null, providerMode: purchase.provider_mode,
+    credited: creditCount === 1 && stored === 'credited', terminal,
     balance: Number(ledger?.balance ?? 0), createdAt: purchase.created_at,
+    checkoutCreatedAt: purchase.checkout_created_at,
     updatedAt: purchase.updated_at, creditedAt: purchase.credited_at,
     refundedAt: purchase.refunded_at, authority: 'operatoros_ledger',
   };
@@ -190,16 +207,24 @@ export async function createTorqueTokenPurchase(input: {
     environment: providerMode,
     packageKey: selectedPackage.key,
   });
+  const purchaseId = randomUUID();
+  const returnUrl = canonicalReturnUrl(module.baseUrl, input.diagnosticSessionId, purchaseId);
+  const catalogVersion = catalogMapping?.catalogVersion ?? TORQUESHED_CREDIT_CATALOG_VERSION;
+  const stripeAccountId = catalogMapping?.stripeAccountId ?? 'deterministic-test-account';
+  const productId = catalogMapping?.stripeProductId ?? 'deterministic-test-product';
+  const priceId = catalogMapping?.stripePriceId ?? 'price_deterministic_test_catalog';
 
   const inserted = first(
     await db.execute(sql`
       INSERT INTO operatoros_token_purchase_intents (
-        tenant_id,user_id,module_id,package_key,units,amount_minor,currency,
-        provider,provider_mode,status,idempotency_key
+        id,tenant_id,user_id,module_id,diagnostic_session_id,package_key,units,amount_minor,currency,
+        provider,provider_mode,catalog_version,stripe_account_id,provider_product_id,
+        provider_price_id,success_return_url,cancel_return_url,status,idempotency_key
       ) VALUES (
-        ${input.tenantId},${input.userId},${module.id},${selectedPackage.key},
+        ${purchaseId},${input.tenantId},${input.userId},${module.id},${input.diagnosticSessionId},${selectedPackage.key},
         ${selectedPackage.units},${selectedPackage.amountMinor},${selectedPackage.currency},
-        ${provider},${providerMode},'payment_pending',${input.idempotencyKey}
+        ${provider},${providerMode},${catalogVersion},${stripeAccountId},${productId},${priceId},
+        ${returnUrl},${returnUrl},'creating_checkout',${input.idempotencyKey}
       )
       ON CONFLICT (tenant_id,user_id,module_id,idempotency_key) DO NOTHING
       RETURNING *
@@ -222,7 +247,7 @@ export async function createTorqueTokenPurchase(input: {
         409,
       );
     }
-    if (purchase.package_key !== selectedPackage.key) {
+    if (purchase.package_key !== selectedPackage.key || purchase.diagnostic_session_id !== input.diagnosticSessionId) {
       throw new OperatorOsTokenBillingError(
         'Idempotency key was reused for another package',
         'TORQUE_PURCHASE_IDEMPOTENCY_CONFLICT',
@@ -233,29 +258,33 @@ export async function createTorqueTokenPurchase(input: {
   }
 
   try {
-    const checkout = testMode
+    const checkoutCreator = checkoutCreatorForTests ?? createUsageCreditCheckoutSession;
+    const checkout = testMode && !checkoutCreatorForTests
       ? { sessionId: `test_checkout_${purchase.id}`, url: null }
-      : await createUsageCreditCheckoutSession({
+      : await checkoutCreator({
           purchaseId: String(purchase.id),
           tenantId: input.tenantId,
           userId: input.userId,
           moduleId: module.id,
           packageKey: selectedPackage.key,
           packageName: selectedPackage.name,
-          priceId: catalogMapping!.stripePriceId,
+          priceId,
+          diagnosticSessionId: input.diagnosticSessionId,
+          catalogVersion,
+          environment: providerMode,
           units: selectedPackage.units,
           amountMinor: selectedPackage.amountMinor,
           currency: selectedPackage.currency,
-          successUrl: canonicalReturnUrl(module.baseUrl, input.diagnosticSessionId, String(purchase.id), 'success'),
-          cancelUrl: canonicalReturnUrl(module.baseUrl, input.diagnosticSessionId, String(purchase.id), 'cancelled'),
+          successUrl: returnUrl,
+          cancelUrl: returnUrl,
         });
     const updated = first(
       await db.execute(sql`
         UPDATE operatoros_token_purchase_intents
         SET provider_checkout_id=${checkout.sessionId},provider_checkout_url=${checkout.url},
-          status='checkout_created',updated_at=NOW()
+          status='checkout_open',checkout_created_at=NOW(),updated_at=NOW()
         WHERE tenant_id=${input.tenantId} AND id=${String(purchase.id)}
-          AND status IN ('pending','payment_pending')
+          AND status='creating_checkout'
         RETURNING *
       `),
     )!;
@@ -281,11 +310,21 @@ export async function createTorqueTokenPurchase(input: {
   } catch (error) {
     await db.execute(sql`
       UPDATE operatoros_token_purchase_intents
-      SET status='failed',failure_code=${safeCode(error)},updated_at=NOW()
+      SET status='failed',failure_code=${safeCode(error)},failed_at=NOW(),updated_at=NOW()
       WHERE tenant_id=${input.tenantId} AND id=${String(purchase.id)}
-        AND status IN ('pending','payment_pending')
+        AND status='creating_checkout'
     `);
-    throw error;
+    throw new OperatorOsTokenBillingError(
+      'Checkout was not created. Nothing was charged.',
+      'TORQUE_CHECKOUT_NOT_CREATED',
+      502,
+      {
+        userMessage: 'Checkout was not created. Nothing was charged.',
+        retryable: false,
+        administratorAction: `Inspect the failed purchase intent using code ${safeCode(error)} before allowing a new idempotency key.`,
+        checks: readiness.checks,
+      },
+    );
   }
 }
 
@@ -406,6 +445,27 @@ async function prepareTorqueTokenWebhookEvent(
         'TORQUE_PAYMENT_SCOPE_CONFLICT',
         409,
       );
+    }
+  }
+  // Purchases created before the Phase 43 contract do not have the new
+  // immutable snapshots. Keep those already-open sessions settleable under
+  // their original signed metadata, while requiring the expanded contract for
+  // every purchase created after the catalog version snapshot was introduced.
+  if (purchase.catalog_version) {
+    for (const [metadataKey, expected] of [
+      ['diagnostic_session_id', purchase.diagnostic_session_id],
+      ['catalog_version', purchase.catalog_version],
+      ['environment', purchase.provider_mode],
+      ['module_slug', 'torqueshed'],
+      ['operatoros_source', 'server_authoritative_catalog'],
+    ] as const) {
+      if (String(metadata[metadataKey] || '') !== String(expected)) {
+        throw new OperatorOsTokenBillingError(
+          'Signed payment metadata does not match the purchase intent',
+          'TORQUE_PAYMENT_SCOPE_CONFLICT',
+          409,
+        );
+      }
     }
   }
   const incomingMode = event.livemode === true ? 'live' : 'test';
@@ -597,7 +657,7 @@ export async function settleTorqueTokenPurchase(context: SharedWebhookContext): 
         SET status=${kind === 'expired' ? 'expired' : 'failed'},
           failure_code=${kind === 'expired' ? 'CHECKOUT_EXPIRED' : 'PAYMENT_FAILED'},updated_at=NOW()
         WHERE tenant_id=${context.tenantId} AND id=${purchaseId}
-          AND status IN ('pending','payment_pending','checkout_created','paid_pending_credit')
+          AND status IN ('pending','creating_checkout','checkout_open','payment_pending','checkout_created','paid_pending_credit')
       `);
       await writeAudit(
         {

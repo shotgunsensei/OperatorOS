@@ -11,13 +11,18 @@ process.env.SESSION_SECRET ||= 'database-release-contract-test-secret-32-plus';
 test('database release plan is explicit, ordered, additive, and reusable by startup', async () => {
   const release = await import('../src/lib/database-release.js');
   assert.equal(release.DATABASE_RELEASE_CONTRACT.contractVersion, 1);
-  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 49);
+  assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, 50);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.releaseVersion, release.DATABASE_RELEASE_STEPS.length);
   assert.equal(release.DATABASE_RELEASE_CONTRACT.destructive, false);
-  assert.equal(release.DATABASE_RELEASE_STEPS.length, 49);
-  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 49);
+  assert.equal(release.DATABASE_RELEASE_STEPS.length, 50);
+  assert.equal(new Set(release.DATABASE_RELEASE_STEPS.map((step: { id: string }) => step.id)).size, 50);
   assert.equal(release.DATABASE_RELEASE_STEPS[0].id, 'base_tables');
-  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'torqueshed_stripe_credit_catalog');
+  assert.equal(release.DATABASE_RELEASE_STEPS.at(-1).id, 'torqueshed_checkout_contract');
+  assert.ok(
+    release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'torqueshed_checkout_contract')
+      > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'torqueshed_stripe_credit_catalog'),
+    'canonical checkout snapshots must be an additive release step after v49',
+  );
   assert.ok(
     release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'torqueshed_stripe_credit_catalog')
       > release.DATABASE_RELEASE_STEPS.findIndex((step: { id: string }) => step.id === 'cross_module_data_fabric_tables'),

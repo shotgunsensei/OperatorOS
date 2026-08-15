@@ -107,3 +107,33 @@ test('Torque payment reconciliation is dry-run first and live apply is explicitl
   assert.match(dbInit, /uq_torqueshed_token_ledger_purchase_credit/);
   assert.doesNotMatch(reconciliation, /INSERT INTO torqueshed_token_ledger_entries/);
 });
+
+test('Phase 43 checkout is server-authoritative, durable, and browser returns are read-only', () => {
+  const routes = read('apps/api/src/routes/torque-assist-routes.ts');
+  const billing = read('apps/api/src/lib/operatoros-token-billing.ts');
+  const checkout = read('apps/api/src/lib/billing-service.ts');
+  const ddl = read('apps/api/src/lib/torqueshed-checkout-contract-db-init.ts');
+  const web = read('apps/web/src/components/module-shells/TorqueShedWorkspace.tsx');
+
+  assert.match(routes, /!\['diagnosticSessionId', 'packageKey'\]\.includes\(key\)/);
+  assert.match(routes, /TORQUE_CHECKOUT_BODY_INVALID/);
+  assert.match(billing, /status,idempotency_key[\s\S]*'creating_checkout'/);
+  assert.match(billing, /status='checkout_open',checkout_created_at=NOW\(\)/);
+  assert.match(billing, /url\.searchParams\.set\('purchase', purchaseId\)/);
+  assert.doesNotMatch(billing, /url\.searchParams\.set\('(?:success|tokenPurchase)'/);
+  assert.match(checkout, /price: input\.priceId/);
+  assert.doesNotMatch(checkout.slice(checkout.indexOf('createUsageCreditCheckoutSession')), /price_data/);
+  for (const snapshot of [
+    'diagnostic_session_id', 'catalog_version', 'stripe_account_id',
+    'provider_product_id', 'provider_price_id', 'success_return_url', 'cancel_return_url',
+  ]) assert.match(ddl, new RegExp(snapshot));
+  for (const state of [
+    'creating_checkout', 'checkout_open', 'payment_pending', 'paid_pending_credit',
+    'credited', 'cancelled', 'expired', 'failed', 'refunded', 'disputed',
+  ]) assert.match(ddl, new RegExp(`'${state}'`));
+  assert.match(web, /Verifying payment/);
+  assert.match(web, /Payment received; credits are being applied/);
+  assert.match(web, /Credits added/);
+  assert.match(web, /Refresh status/);
+  assert.match(web, /sessionStorage/);
+});

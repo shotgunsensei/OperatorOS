@@ -65,6 +65,9 @@ function errorText(error: unknown): string {
     TORQUE_ASSIST_RATE_LIMITED: 'Torque Assist is rate limited. Wait one minute, then retry the same request.',
     TORQUE_ASSIST_SESSION_NOT_FOUND: 'This diagnostic is unavailable in the active tenant or your current role cannot access it.',
     TORQUE_PURCHASE_NOT_FOUND: 'The payment reference is unavailable in this tenant. Refresh from the original diagnostic.',
+    TORQUE_CHECKOUT_NOT_CREATED: 'Checkout was not created and nothing was charged. Review the failure before starting a new attempt.',
+    TORQUE_CHECKOUT_BODY_INVALID: 'Checkout accepts only the selected diagnostic and package. Amounts and Price IDs cannot be supplied by the browser.',
+    TORQUE_PURCHASE_IDEMPOTENCY_CONFLICT: 'That purchase request key is already bound to another diagnostic or package. Refresh its status instead.',
   };
   const message = messages[code]
     ?? (status === 503
@@ -92,6 +95,17 @@ function money(value: unknown): string {
   return Number.isFinite(minor)
     ? new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(minor / 100)
     : '$0.00';
+}
+
+function purchaseMessage(status: TorqueTokenPurchaseStatus): string {
+  if (status.state === 'credited' && status.credited) return 'Credits added';
+  if (status.state === 'paid_pending_credit') return 'Payment received; credits are being applied';
+  if (['creating_checkout', 'checkout_open', 'payment_pending'].includes(status.state)) return 'Verifying payment';
+  if (status.state === 'cancelled') return 'Checkout cancelled; no credits were added';
+  if (status.state === 'expired') return 'Checkout expired; no credits were added';
+  if (status.state === 'failed') return 'Payment failed; no credits were added';
+  if (status.state === 'refunded') return 'Payment refunded; purchased credits were reversed under policy';
+  return 'Payment disputed; purchased credits are frozen';
 }
 
 const input: React.CSSProperties = {
@@ -1516,6 +1530,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
   const [ledger, setLedger] = useState<{
     balance: number;
     entries: Array<Record<string, any>>;
+    purchases: Array<Record<string, any>>;
   } | null>(null);
   const [response, setResponse] = useState<TorqueAssistResponse | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -1548,26 +1563,41 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
     void load();
   }, [load]);
 
+  useEffect(() => {
+    try {
+      const saved = window.sessionStorage.getItem(`torqueshed:checkout-form:${diagnostic.id}`);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<string, unknown>;
+        setAnswers(Object.fromEntries(Object.entries(parsed).filter((entry): entry is [string, string] => typeof entry[1] === 'string')));
+      }
+    } catch {
+      // Session-scoped form recovery is optional; persistent diagnostic data
+      // remains authoritative when storage is unavailable.
+    }
+  }, [diagnostic.id]);
+
   const refreshPurchaseStatus = useCallback(async (purchaseId = purchaseReference) => {
     if (!purchaseId) return null;
-    const next = await moduleShellApi.torqueshed.getTorqueTokenPurchaseStatus(purchaseId);
-    setPurchaseStatus(next);
-    if (next.state === 'credited' && next.credited) {
-      setNotice(`Credits added. Your authoritative balance is ${next.balance.toLocaleString()} units.`);
-      await load();
+    try {
+      const next = await moduleShellApi.torqueshed.getTorqueTokenPurchaseStatus(purchaseId);
+      setPurchaseStatus(next);
+      if (next.state === 'credited' && next.credited) {
+        setNotice(`Credits added. Your authoritative balance is ${next.balance.toLocaleString()} units.`);
+        await load();
+      }
+      return next;
+    } catch (next) {
+      setError(errorText(next));
+      return null;
     }
-    return next;
   }, [load, purchaseReference]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
     const purchaseId = url.searchParams.get('purchase') ?? '';
-    const returned = url.searchParams.get('tokenPurchase');
-    if (!/^[0-9a-f-]{36}$/i.test(purchaseId) || !returned) return;
+    if (!/^[0-9a-f-]{36}$/i.test(purchaseId)) return;
     setPurchaseReference(purchaseId);
-    setNotice(returned === 'cancelled'
-      ? 'Checkout was closed. This return link grants no credits; checking the authoritative payment status now.'
-      : 'Verifying payment. Credits appear only after OperatorOS records the signed settlement.');
+    setNotice('Verifying payment. This return link cannot change payment or credit state.');
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let attempt = 0;
@@ -1582,7 +1612,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
           await load();
           return;
         }
-        if (['failed', 'expired', 'refunded', 'disputed'].includes(next.state)) return;
+        if (next.terminal) return;
         if (attempt < delays.length) timer = setTimeout(poll, delays[attempt++]);
       } catch (next) {
         if (!stopped) setError(errorText(next));
@@ -1618,6 +1648,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
       setResponse(next);
       setActiveRequestKey('');
       setAnswers({});
+      try { window.sessionStorage.removeItem(`torqueshed:checkout-form:${diagnostic.id}`); } catch {}
       setNotice(
         next.replayed
           ? 'The prior accepted result was replayed without another charge.'
@@ -1644,6 +1675,9 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
       );
       const checkoutUrl = next.purchase.providerCheckoutUrl;
       if (typeof checkoutUrl === 'string' && checkoutUrl.startsWith('https://')) {
+        try {
+          window.sessionStorage.setItem(`torqueshed:checkout-form:${diagnostic.id}`, JSON.stringify(answers));
+        } catch {}
         window.location.assign(checkoutUrl);
         return;
       }
@@ -1713,17 +1747,7 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
       {purchaseStatus && (
         <div data-testid="torque-purchase-status" style={{ ...cardStyle, padding: 10, display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <span style={{ color: semantic.text }}>
-            {purchaseStatus.state === 'credited' && purchaseStatus.credited
-              ? 'Credits added'
-              : purchaseStatus.state === 'paid_pending_credit'
-                ? 'Payment received · adding credits'
-                : purchaseStatus.state === 'checkout_created' || purchaseStatus.state === 'payment_pending'
-                  ? 'Verifying payment'
-                  : purchaseStatus.state === 'refunded'
-                    ? 'Payment refunded · credits reversed under policy'
-                    : purchaseStatus.state === 'disputed'
-                      ? 'Payment disputed · purchased credits are frozen'
-                      : `Payment ${purchaseStatus.state.replaceAll('_', ' ')}`}
+            {purchaseMessage(purchaseStatus)}
           </span>
           <button type="button" onClick={() => void refreshPurchaseStatus()} style={{ ...button, minHeight: 36, padding: '7px 10px' }}>
             <RefreshCw size={14} /> Refresh status
@@ -1924,6 +1948,20 @@ function TorqueAssistPanel({ diagnostic }: { diagnostic: TorqueShedDiagnostic })
           ))}
           {!history.length && (
             <span style={{ color: semantic.textMuted }}>No Torque Assist usage yet.</span>
+          )}
+          {!!ledger?.purchases?.length && (
+            <div style={{ borderTop: `1px solid ${semantic.border}`, paddingTop: 8 }}>
+              <strong style={{ color: semantic.text }}>Recent credit purchases</strong>
+              {ledger.purchases.slice(0, 5).map((item) => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginTop: 6, color: semantic.textMuted }}>
+                  <span>{item.packageKey} · {String(item.status).replaceAll('_', ' ')} · {new Date(item.createdAt).toLocaleString()}</span>
+                  <button type="button" style={{ ...button, minHeight: 32, padding: '5px 8px' }} onClick={() => {
+                    setPurchaseReference(String(item.id));
+                    void refreshPurchaseStatus(String(item.id));
+                  }}>View status</button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </details>

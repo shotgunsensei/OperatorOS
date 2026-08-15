@@ -136,11 +136,11 @@ export function validateReleaseIdentity(payload, expectedCommit) {
   }
   if (
     payload?.databaseRelease?.contractVersion !== 1
-    || payload?.databaseRelease?.releaseVersion !== 49
-    || payload?.databaseRelease?.stepCount !== 49
-    || payload?.databaseRelease?.lastStep !== 'torqueshed_stripe_credit_catalog'
+    || payload?.databaseRelease?.releaseVersion !== 50
+    || payload?.databaseRelease?.stepCount !== 50
+    || payload?.databaseRelease?.lastStep !== 'torqueshed_checkout_contract'
   ) {
-    issues.push('database release identity does not match version 49');
+    issues.push('database release identity does not match version 50');
   }
   return issues;
 }

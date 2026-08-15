@@ -190,6 +190,15 @@ export async function registerTorqueAssistRoutes(app: FastifyInstance): Promise<
     async (request, reply) => {
       try {
         const input = body(request);
+        const unexpected = Object.keys(input).filter((key) => !['diagnosticSessionId', 'packageKey'].includes(key));
+        if (unexpected.length) {
+          throw new TorqueAssistServiceError(
+            'Checkout accepts only diagnosticSessionId and packageKey',
+            'TORQUE_CHECKOUT_BODY_INVALID',
+            400,
+            { unexpectedFields: unexpected.sort() },
+          );
+        }
         const diagnosticSessionId = torqueId(
           input.diagnosticSessionId,
           'diagnosticSessionId',

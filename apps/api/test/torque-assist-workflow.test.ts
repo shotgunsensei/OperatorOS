@@ -19,6 +19,7 @@ import {
   setSharedAiProviderAdapterForTests,
   type SharedAiProviderAdapter,
 } from '../src/lib/shared-provider-adapters.js';
+import { __setTorqueCheckoutCreatorForTests } from '../src/lib/operatoros-token-billing.js';
 
 let app: any;
 let ownerA: any;
@@ -156,6 +157,11 @@ function signedPaymentEvent(input: {
           module_id: input.purchase.moduleId,
           package_key: input.purchase.packageKey,
           units: String(input.purchase.units),
+          diagnostic_session_id: input.purchase.diagnosticSessionId,
+          catalog_version: input.purchase.catalogVersion,
+          environment: input.purchase.providerMode,
+          module_slug: 'torqueshed',
+          operatoros_source: 'server_authoritative_catalog',
         },
       },
     },
@@ -270,6 +276,16 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
   assert.equal(noBalance.statusCode, 402, noBalance.body);
   assert.equal(noBalance.json().code, 'TORQUE_ASSIST_BALANCE_EXHAUSTED');
 
+  const injectedCheckout = await inject(
+    'POST',
+    '/v1/modules/torqueshed/token-purchases/checkout',
+    ownerA,
+    { diagnosticSessionId: diagnosticA.id, packageKey: 'roadside-25000', amountMinor: 1, priceId: 'attacker-controlled' },
+    { 'idempotency-key': 'phase43:injected-checkout:0001' },
+  );
+  assert.equal(injectedCheckout.statusCode, 400, injectedCheckout.body);
+  assert.equal(injectedCheckout.json().code, 'TORQUE_CHECKOUT_BODY_INVALID');
+
   const checkout = await inject(
     'POST',
     '/v1/modules/torqueshed/token-purchases/checkout',
@@ -279,9 +295,38 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
   );
   assert.equal(checkout.statusCode, 201, checkout.body);
   const purchase = checkout.json().purchase;
-  assert.equal(purchase.status, 'checkout_created');
+  assert.equal(purchase.status, 'checkout_open');
   assert.equal(purchase.providerMode, 'test');
   assert.equal(purchase.providerCheckoutUrl, null);
+  assert.equal(purchase.diagnosticSessionId, diagnosticA.id);
+  assert.equal(purchase.catalogVersion, 'torqueshed-credit-v1');
+  assert.equal(purchase.amountMinor, 500);
+
+  const checkoutReplay = await inject(
+    'POST',
+    '/v1/modules/torqueshed/token-purchases/checkout',
+    ownerA,
+    { diagnosticSessionId: diagnosticA.id, packageKey: 'roadside-25000' },
+    { 'idempotency-key': 'phase8:purchase:0001' },
+  );
+  assert.equal(checkoutReplay.statusCode, 200, checkoutReplay.body);
+  assert.equal(checkoutReplay.json().purchase.id, purchase.id);
+  assert.equal(checkoutReplay.json().purchase.providerCheckoutId, purchase.providerCheckoutId);
+  const checkoutConflict = await inject(
+    'POST',
+    '/v1/modules/torqueshed/token-purchases/checkout',
+    ownerA,
+    { diagnosticSessionId: diagnosticA.id, packageKey: 'workshop-100000' },
+    { 'idempotency-key': 'phase8:purchase:0001' },
+  );
+  assert.equal(checkoutConflict.statusCode, 409, checkoutConflict.body);
+  assert.equal(checkoutConflict.json().code, 'TORQUE_PURCHASE_IDEMPOTENCY_CONFLICT');
+  const foreignPurchase = await inject(
+    'GET',
+    `/v1/modules/torqueshed/token-purchases/${purchase.id}/status`,
+    ownerB,
+  );
+  assert.equal(foreignPurchase.statusCode, 404, foreignPurchase.body);
 
   const wrongMode = await sendPaymentEvent(
     signedPaymentEvent({
@@ -294,6 +339,14 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
   );
   assert.equal(wrongMode.statusCode, 409, wrongMode.body);
   assert.equal(wrongMode.json().code, 'TORQUE_PAYMENT_MODE_CONFLICT');
+
+  await db.execute(sql`UPDATE operatoros_token_purchase_intents SET status='paid_pending_credit' WHERE id=${purchase.id}`);
+  const paidPending = await inject('GET', `/v1/modules/torqueshed/token-purchases/${purchase.id}/status`, ownerA);
+  assert.equal(paidPending.statusCode, 200, paidPending.body);
+  assert.equal(paidPending.json().state, 'paid_pending_credit');
+  assert.equal(paidPending.json().credited, false);
+  assert.equal(paidPending.json().terminal, false);
+  await db.execute(sql`UPDATE operatoros_token_purchase_intents SET status='checkout_open' WHERE id=${purchase.id}`);
 
   const creditEvent = signedPaymentEvent({
     id: 'evt_phase8_credit_0001',
@@ -560,12 +613,38 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
     ownerA,
   );
   assert.equal(browserReturnOnly.statusCode, 200, browserReturnOnly.body);
-  assert.equal(browserReturnOnly.json().state, 'checkout_created');
+  assert.equal(browserReturnOnly.json().state, 'checkout_open');
   const browserReturnCredits = await db.execute(sql`
     SELECT COUNT(*)::int AS count FROM torqueshed_token_ledger_entries
     WHERE purchase_intent_id=${failedPurchase.id} AND entry_kind='credit'
   `);
   assert.equal(browserReturnCredits.rows[0]!.count, 0);
+
+  __setTorqueCheckoutCreatorForTests(async () => {
+    throw Object.assign(new Error('simulated provider connection failure'), { code: 'STRIPE_TEST_CONNECTION_FAILED' });
+  });
+  const creationFailure = await inject(
+    'POST',
+    '/v1/modules/torqueshed/token-purchases/checkout',
+    ownerA,
+    { diagnosticSessionId: diagnosticA.id, packageKey: 'roadside-25000' },
+    { 'idempotency-key': 'phase43:checkout-creation-failure:0001' },
+  );
+  __setTorqueCheckoutCreatorForTests(null);
+  assert.equal(creationFailure.statusCode, 502, creationFailure.body);
+  assert.equal(creationFailure.json().code, 'TORQUE_CHECKOUT_NOT_CREATED');
+  assert.match(creationFailure.json().error, /nothing was charged/i);
+  const creationFailureRow = await db.execute(sql`
+    SELECT id,status,failure_code FROM operatoros_token_purchase_intents
+    WHERE tenant_id=${ownerA.currentTenantId} AND idempotency_key='phase43:checkout-creation-failure:0001'
+  `);
+  assert.equal(creationFailureRow.rows[0]!.status, 'failed');
+  assert.equal(creationFailureRow.rows[0]!.failure_code, 'STRIPE_TEST_CONNECTION_FAILED');
+  const creationFailureCredits = await db.execute(sql`
+    SELECT COUNT(*)::int AS count FROM torqueshed_token_ledger_entries
+    WHERE purchase_intent_id=${String(creationFailureRow.rows[0]!.id)}
+  `);
+  assert.equal(creationFailureCredits.rows[0]!.count, 0);
   const paymentFailed = await sendPaymentEvent(
     signedPaymentEvent({
       id: 'evt_phase8_payment_failed_0001',
@@ -579,6 +658,35 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
     SELECT status FROM operatoros_token_purchase_intents WHERE id=${failedPurchase.id}
   `);
   assert.equal(failedPurchaseRow.rows[0]!.status, 'failed');
+
+  const expiringCheckout = await inject(
+    'POST',
+    '/v1/modules/torqueshed/token-purchases/checkout',
+    ownerA,
+    { diagnosticSessionId: diagnosticA.id, packageKey: 'roadside-25000' },
+    { 'idempotency-key': 'phase43:purchase:expired:0001' },
+  );
+  assert.equal(expiringCheckout.statusCode, 201, expiringCheckout.body);
+  const expiringPurchase = expiringCheckout.json().purchase;
+  const expired = await sendPaymentEvent(signedPaymentEvent({
+    id: 'evt_phase43_expired_0001',
+    type: 'checkout.session.expired',
+    purchase: expiringPurchase,
+    amountMinor: 500,
+  }));
+  assert.equal(expired.statusCode, 200, expired.body);
+  const expiredStatus = await inject(
+    'GET',
+    `/v1/modules/torqueshed/token-purchases/${expiringPurchase.id}/status`,
+    ownerA,
+  );
+  assert.equal(expiredStatus.statusCode, 200, expiredStatus.body);
+  assert.equal(expiredStatus.json().state, 'expired');
+  const expiredCredits = await db.execute(sql`
+    SELECT COUNT(*)::int AS count FROM torqueshed_token_ledger_entries
+    WHERE purchase_intent_id=${expiringPurchase.id} AND entry_kind='credit'
+  `);
+  assert.equal(expiredCredits.rows[0]!.count, 0);
 
   const refund = await sendPaymentEvent(
     signedPaymentEvent({
@@ -659,6 +767,12 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
   assert.equal(legacyCheckout.statusCode, 201, legacyCheckout.body);
   const legacyPurchase = legacyCheckout.json().purchase;
   await db.execute(sql`
+    UPDATE operatoros_token_purchase_intents
+    SET diagnostic_session_id=NULL,catalog_version=NULL,stripe_account_id=NULL,
+      provider_product_id=NULL,provider_price_id=NULL
+    WHERE id=${legacyPurchase.id}
+  `);
+  await db.execute(sql`
     INSERT INTO torqueshed_token_ledger_entries (
       tenant_id,user_id,module_id,entry_kind,operation_type,units,idempotency_key,
       external_event_ref,purchase_intent_id,metadata_json,created_by_user_id
@@ -668,12 +782,20 @@ test('Torque Assist credits, charges, retries, refunds, isolates tenants, and re
       ${legacyPurchase.id},${{ legacyEventScopedCredit: true }},${ownerB.id}
     )
   `);
-  const legacyReplay = await sendPaymentEvent(signedPaymentEvent({
+  const legacyEvent = signedPaymentEvent({
     id: 'evt_phase8_legacy_credit_replay_0001',
     type: 'checkout.session.completed',
     purchase: legacyPurchase,
     amountMinor: 500,
-  }));
+  });
+  for (const key of [
+    'diagnostic_session_id',
+    'catalog_version',
+    'environment',
+    'module_slug',
+    'operatoros_source',
+  ]) delete legacyEvent.data.object.metadata[key];
+  const legacyReplay = await sendPaymentEvent(legacyEvent);
   assert.equal(legacyReplay.statusCode, 200, legacyReplay.body);
   const legacyCreditCount = await db.execute(sql`
     SELECT COUNT(*)::int AS count FROM torqueshed_token_ledger_entries

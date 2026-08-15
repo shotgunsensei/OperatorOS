@@ -1,5 +1,18 @@
 # OperatorOS module parity index
 
+## Phase 43 TorqueShed checkout-contract overlay
+
+TorqueShed has one canonical package-key checkout endpoint and additive v50
+purchase snapshots. Session creation is idempotent, durable-Price-only, and
+fail-safe; browser returns carry only a purchase ID and cannot grant credits.
+The authenticated status endpoint and UI expose the full truthful settlement
+state machine, recover state after refresh/relogin, and show completion only
+after the exactly-once ledger grant. Focused tests pass 8/8, compiled
+exact-host browser acceptance passes 1/1 with screenshots, and clean v50
+apply/reapply passes. Real Stripe test Checkout and provider settlement remain
+explicit external gates. See
+`docs/phase-43/TORQUESHED-CHECKOUT-STATE-MACHINE.md`.
+
 ## Phase 42 TorqueShed durable-catalog overlay
 
 TorqueShed now has one typed v1 commercial manifest, additive v49
