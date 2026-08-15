@@ -43,7 +43,7 @@ type View = PlatformView;
 // Top-level
 // -------------------------------------------------------------------------
 
-export default function PlatformPage(props: { view?: View; onNavigate?: (v: View) => void } = {}) {
+export default function PlatformPage(props: { view?: View; onNavigate?: (v: View) => void; showNavigation?: boolean } = {}) {
   const { user } = useAuth();
   // Controlled mode: parent owns view (used by /platform/[[...slug]] route
   // for path-addressable URLs). Uncontrolled mode: internal state (used
@@ -76,35 +76,41 @@ export default function PlatformPage(props: { view?: View; onNavigate?: (v: View
     { key: 'sso',       label: 'SSO' },
   ];
 
+  const showNavigation = props.showNavigation !== false;
+
   return (
     <div style={{ padding: 24, color: colors.text, background: colors.bg, minHeight: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 16 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Platform Command</h1>
-        <div style={{ color: colors.textMuted, fontSize: 13 }}>Super admin control surface</div>
-      </div>
-      <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${colors.border}`, marginBottom: 16, flexWrap: 'wrap' }}>
-        {tabs.map(t => {
-          const active = view.kind === t.key
-            || (t.key === 'tenants' && view.kind === 'tenant')
-            || (t.key === 'modules' && view.kind === 'module')
-            || (t.key === 'users'   && view.kind === 'user');
-          return (
-            <button
-              key={t.key}
-              onClick={() => setView({ kind: t.key } as View)}
-              data-testid={`tab-platform-${t.key}`}
-              style={{
-                background: 'transparent',
-                color: active ? colors.accent : colors.textMuted,
-                border: 'none',
-                borderBottom: `2px solid ${active ? colors.accent : 'transparent'}`,
-                padding: '8px 14px', fontSize: 13, cursor: 'pointer',
-              }}>
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
+      {showNavigation && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 16 }}>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Platform Command</h1>
+            <div style={{ color: colors.textMuted, fontSize: 13 }}>Super admin control surface</div>
+          </div>
+          <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${colors.border}`, marginBottom: 16, flexWrap: 'wrap' }}>
+            {tabs.map(t => {
+              const active = view.kind === t.key
+                || (t.key === 'tenants' && view.kind === 'tenant')
+                || (t.key === 'modules' && view.kind === 'module')
+                || (t.key === 'users'   && view.kind === 'user');
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => setView({ kind: t.key } as View)}
+                  data-testid={`tab-platform-${t.key}`}
+                  style={{
+                    background: 'transparent',
+                    color: active ? colors.accent : colors.textMuted,
+                    border: 'none',
+                    borderBottom: `2px solid ${active ? colors.accent : 'transparent'}`,
+                    padding: '8px 14px', fontSize: 13, cursor: 'pointer',
+                  }}>
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
       {view.kind === 'dashboard' && <Dashboard onNavigate={setView} />}
       {view.kind === 'tenants'   && <TenantList onOpen={(id) => setView({ kind: 'tenant', id })} />}
       {view.kind === 'tenant'    && <TenantDetail id={view.id} onBack={() => setView({ kind: 'tenants' })} />}
@@ -1693,21 +1699,21 @@ function UserDetail({ id, onBack }: { id: string; onBack: () => void }) {
           {data.subscription?.currentPeriodEnd && <> · ends: {new Date(data.subscription.currentPeriodEnd).toLocaleString()}</>}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <select data-testid="select-change-plan" defaultValue="" disabled={busy} onChange={e => { const v = e.target.value; e.target.value = ''; changePlan(v); }} style={inp}>
+          <select aria-label="Change subscription plan" data-testid="select-change-plan" defaultValue="" disabled={busy} onChange={e => { const v = e.target.value; e.target.value = ''; changePlan(v); }} style={inp}>
             <option value="">Change plan…</option>
             {planOptions.map((p: any) => (
               <option key={p.slug} value={p.slug}>{p.slug}</option>
             ))}
           </select>
-          <select data-testid="select-change-role" value={u.role} disabled={busy} onChange={e => changeRole(e.target.value)} style={inp}>
+          <select aria-label="Change tenant role" data-testid="select-change-role" value={u.role} disabled={busy} onChange={e => changeRole(e.target.value)} style={inp}>
             <option value="user">user</option>
             <option value="admin">admin</option>
           </select>
-          <select data-testid="select-change-platform-role" value={u.platformRole ?? 'user'} disabled={busy} onChange={e => changePlatformRole(e.target.value)} style={inp}>
+          <select aria-label="Change platform role" data-testid="select-change-platform-role" value={u.platformRole ?? 'user'} disabled={busy} onChange={e => changePlatformRole(e.target.value)} style={inp}>
             <option value="user">platform user</option>
             <option value="super_admin">super_admin</option>
           </select>
-          <select data-testid="select-sub-status" defaultValue="" disabled={busy} onChange={e => { const v = e.target.value; e.target.value = ''; if (v) setSubStatus(v); }} style={inp}>
+          <select aria-label="Change subscription status" data-testid="select-sub-status" defaultValue="" disabled={busy} onChange={e => { const v = e.target.value; e.target.value = ''; if (v) setSubStatus(v); }} style={inp}>
             <option value="">Force sub status…</option>
             <option value="active">active</option>
             <option value="trialing">trialing</option>

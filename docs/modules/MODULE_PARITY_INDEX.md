@@ -1,5 +1,9 @@
 # OperatorOS module parity index
 
+## Phase 47 Platform Command navigation overlay
+
+All module parity states remain unchanged. Phase 47 changes the shared super-admin command workspace around the module registry, tenant, user, billing, health, audit, and SSO views: persistent path-addressable navigation, global My Apps escape, route-derived breadcrumbs, safe release context, responsive drawer behavior, and record-free 403 handling are locally accepted. It neither widens platform authority nor changes module entitlements. See `docs/phase-47/PLATFORM-COMMAND-NAVIGATION-REPORT.md`.
+
 ## Phase 46 same-tab launch overlay
 
 All twelve currently enabled child modules retain state 4 and their existing product/parity evidence. Phase 46 changes only the shared launch/navigation contract: ordinary launches reuse the current page, normal browser modifier/context-menu behavior remains available, and separately labelled new-tab actions are opener-isolated. Compiled exact-host Chromium exercised every active module shell and explicit page-count assertions. Deployment, provider, migration/cutover, and state-5 gates remain unchanged. See `docs/phase-46/MODULE-LAUNCH-NAVIGATION-CONTRACT.md`.

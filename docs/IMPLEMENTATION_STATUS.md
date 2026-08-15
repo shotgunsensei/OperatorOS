@@ -1,5 +1,15 @@
 # OperatorOS implementation status
 
+## Phase 47 Platform Command persistent navigation - SOURCE/LOCAL ACCEPTED / DEPLOYMENT GATED (2026-08-15)
+
+- Replaced route-mirrored tab state with a URL-authoritative shared command shell for every `/app/platform/**` collection and detail route.
+- Added global My Apps/Home/profile/help/sign-out escape, active section context, collection/detail breadcrumbs, persistent command navigation, safe release/environment identity, and a responsive keyboard drawer.
+- Preserved the super-admin page and API boundary. Compiled exact-host acceptance proved an ordinary authenticated user receives a record-free page 403 plus API 403.
+- Added labelled user-detail selects after focused accessibility acceptance and committed desktop/mobile screenshot evidence.
+- Verification: Phase 47 static contracts 2/2; web TypeScript PASS; production API/SDK/Next builds PASS; compiled exact-host Playwright 2/2 including all command routes, detail Back/refresh/history, current-tab My Apps, axe, mobile bounding-box/overflow, and 403 behavior.
+- Report: `docs/phase-47/PLATFORM-COMMAND-NAVIGATION-REPORT.md`.
+- Public deployment and deployed authenticated acceptance were not authorized and remain open.
+
 ## Phase 46 same-tab module launch contract - SOURCE/LOCAL ACCEPTED / DEPLOYMENT GATED (2026-08-15)
 
 - All primary module entry points now render the shared `ModuleLaunchLink` real-anchor contract with no `target`, so ordinary activation uses the current page and native browser history. My Apps and the Apps catalog expose separately labelled new-tab controls with `_blank` plus `noopener noreferrer`.
