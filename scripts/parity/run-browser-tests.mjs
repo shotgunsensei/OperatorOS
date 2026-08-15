@@ -6,7 +6,7 @@ import { runCaptured, spawnLogged, stopChild, waitForHttp, waitForPort } from '.
 const suiteIndex = process.argv.indexOf('--suite');
 const suite = suiteIndex >= 0 ? process.argv[suiteIndex + 1] : 'all';
 const webRoot = join(REPOSITORY_ROOT, 'apps/web');
-const playwright = join(webRoot, 'node_modules', '.bin', process.platform === 'win32' ? 'playwright.cmd' : 'playwright');
+const playwrightCli = join(webRoot, 'node_modules', '@playwright', 'test', 'cli.js');
 if (!['e2e', 'visual', 'all'].includes(suite)) throw new Error('--suite must be e2e, visual, or all');
 if (process.env.PARITY_DATABASE_IS_DISPOSABLE !== '1') throw new Error('PARITY_DATABASE_IS_DISPOSABLE=1 is required');
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
@@ -53,7 +53,7 @@ try {
     ];
     const focusedPattern = process.env.PARITY_BROWSER_GREP?.trim();
     if (focusedPattern) browserArgs.push('--grep', focusedPattern);
-    const browserResult = await runCaptured(playwright, browserArgs, {
+    const browserResult = await runCaptured(process.execPath, [playwrightCli, ...browserArgs], {
       cwd: webRoot,
       env: {
         ...runtimeEnv,
@@ -68,7 +68,7 @@ try {
   if (suite === 'visual' || suite === 'all') {
     const visualArgs = ['test', '--config', 'playwright.visual.config.ts'];
     if (process.env.PARITY_UPDATE_SNAPSHOTS === '1') visualArgs.push('--update-snapshots');
-    const visualResult = await runCaptured(playwright, visualArgs, {
+    const visualResult = await runCaptured(process.execPath, [playwrightCli, ...visualArgs], {
       cwd: webRoot,
       env: {
         ...runtimeEnv,

@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 const listenHost = process.env.E2E_PROXY_HOST || '127.0.0.1';
 const listenPort = Number(process.env.E2E_PROXY_PORT || '443');
@@ -11,11 +11,29 @@ const artifactDir = resolve(process.env.E2E_ARTIFACT_DIR || 'test-results/sso-e2
 const certPath = resolve(process.env.E2E_TLS_CERT || `${artifactDir}/operatoros.test.crt`);
 const keyPath = resolve(process.env.E2E_TLS_KEY || `${artifactDir}/operatoros.test.key`);
 
+function resolveOpenSsl() {
+  const configured = process.env.OPENSSL_BIN?.trim();
+  if (configured) return configured;
+  if (process.platform !== 'win32') return 'openssl';
+
+  const gitLookup = spawnSync('where.exe', ['git.exe'], { encoding: 'utf8', windowsHide: true });
+  const gitRoots = gitLookup.status === 0
+    ? gitLookup.stdout.split(/\r?\n/).map((entry) => entry.trim()).filter(Boolean)
+      .map((entry) => resolve(dirname(entry), '..'))
+    : [];
+  const programFiles = [process.env.ProgramFiles, process.env['ProgramFiles(x86)']].filter(Boolean);
+  const candidates = [
+    ...gitRoots.flatMap((root) => [join(root, 'usr', 'bin', 'openssl.exe'), join(root, 'mingw64', 'bin', 'openssl.exe')]),
+    ...programFiles.flatMap((root) => [join(root, 'Git', 'usr', 'bin', 'openssl.exe'), join(root, 'Git', 'mingw64', 'bin', 'openssl.exe')]),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? 'openssl';
+}
+
 function ensureCertificate() {
   if (existsSync(certPath) && existsSync(keyPath)) return;
   mkdirSync(artifactDir, { recursive: true });
 
-  const openssl = process.env.OPENSSL_BIN || 'openssl';
+  const openssl = resolveOpenSsl();
   const result = spawnSync(openssl, [
     'req', '-x509', '-newkey', 'rsa:2048', '-sha256', '-nodes', '-days', '2',
     '-keyout', keyPath,

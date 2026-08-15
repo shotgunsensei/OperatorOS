@@ -98,6 +98,8 @@ export async function ensureSchemaReady() {
   await ensureSharedServiceTables();
   const { ensureSharedPlatformTables } = await import('../src/lib/shared-platform-db-init.js');
   await ensureSharedPlatformTables();
+  const { ensurePulseDeskLiteralTables } = await import('../src/lib/pulsedesk-literal-db-init.js');
+  await ensurePulseDeskLiteralTables();
   const { ensureBrandForgeOsPhase31Tables } = await import('../src/lib/brandforgeos-phase31-db-init.js');
   await ensureBrandForgeOsPhase31Tables();
   const { ensureTorqueShedWebApiTables } = await import('../src/lib/torqueshed-web-api-db-init.js');
