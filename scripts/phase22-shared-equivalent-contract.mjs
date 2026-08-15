@@ -122,7 +122,7 @@ if (write) {
   console.log(`[phase22-shared-equivalent] wrote ${contract.mappingCount} mappings (${contract.mappingDigestSha256})`);
 } else if (!existsSync(outputPath)) {
   fail('generated contract is missing; run pnpm shared-services:write');
-} else if (readFileSync(outputPath, 'utf8') !== rendered) {
+} else if (readFileSync(outputPath, 'utf8').replace(/\r\n?/g, '\n') !== rendered) {
   fail('generated contract is stale; run pnpm shared-services:write and review the diff');
 } else if (!process.exitCode) {
   console.log(`[phase22-shared-equivalent] verified ${contract.mappingCount} mappings (${contract.mappingDigestSha256})`);

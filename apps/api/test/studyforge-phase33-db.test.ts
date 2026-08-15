@@ -84,15 +84,18 @@ async function withUnavailableAiProvider<T>(action: () => Promise<T>): Promise<T
   const previousNodeEnv = process.env.NODE_ENV;
   const previousAppEnv = process.env.APP_ENV;
   const previousApiKey = process.env.OPENAI_API_KEY;
+  const previousDeterministicProviderMode = process.env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE;
   process.env.NODE_ENV = 'production';
   process.env.APP_ENV = 'production';
   delete process.env.OPENAI_API_KEY;
+  delete process.env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE;
   try {
     return await action();
   } finally {
     if (previousNodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousNodeEnv;
     if (previousAppEnv === undefined) delete process.env.APP_ENV; else process.env.APP_ENV = previousAppEnv;
     if (previousApiKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previousApiKey;
+    if (previousDeterministicProviderMode === undefined) delete process.env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE; else process.env.OPERATOROS_DETERMINISTIC_PROVIDER_MODE = previousDeterministicProviderMode;
   }
 }
 

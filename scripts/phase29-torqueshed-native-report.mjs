@@ -95,4 +95,4 @@ The repository-level product, security, persistence, config, dual bundle, and An
 
 const output = resolve(root, 'docs/phase-29/TORQUESHED-NATIVE-RELEASE-REPORT.md');
 if (process.argv.includes('--write')) { mkdirSync(resolve(root, 'docs/phase-29'), { recursive: true }); writeFileSync(output, report); console.log(`wrote ${output}`); }
-else { if (!existsSync(output) || readFileSync(output, 'utf8') !== report) throw new Error('Phase 29 report is missing or stale; run pnpm phase29:report:write'); console.log('Phase 29 TorqueShed native report verified'); }
+else { if (!existsSync(output) || readFileSync(output, 'utf8').replace(/\r\n?/g, '\n') !== report) throw new Error('Phase 29 report is missing or stale; run pnpm phase29:report:write'); console.log('Phase 29 TorqueShed native report verified'); }

@@ -369,5 +369,5 @@ if (write) {
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, output);
 }
-else if (!existsSync(outputPath) || readFileSync(outputPath, 'utf8') !== output) throw new Error('Generated FaultlineLab source catalog is stale; run pnpm faultlinelab:catalog:write');
+else if (!existsSync(outputPath) || normalizedText(readFileSync(outputPath, 'utf8')) !== normalizedText(output)) throw new Error('Generated FaultlineLab source catalog is stale; run pnpm faultlinelab:catalog:write');
 console.log(JSON.stringify({ sourceCommit: manifest.sourceCommit, discoveredCount: manifest.discoveredCount, categoryCounts: manifest.categoryCounts, difficultyCounts: manifest.difficultyCounts, repairs: repairs.length, sourceManifestHash: manifest.sourceManifestHash, output: outputPath.slice(root.length + 1), mode: write ? 'write' : 'check' }, null, 2));

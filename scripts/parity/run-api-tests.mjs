@@ -31,13 +31,15 @@ async function reserveLoopbackPort() {
 
 const webPort = await reserveLoopbackPort();
 const webBaseUrl = `http://127.0.0.1:${webPort}`;
-const next = join(
+const nextCli = join(
   REPOSITORY_ROOT,
   'apps',
   'web',
   'node_modules',
-  '.bin',
-  process.platform === 'win32' ? 'next.cmd' : 'next',
+  'next',
+  'dist',
+  'bin',
+  'next',
 );
 const env = {
   ...process.env,
@@ -49,8 +51,8 @@ let web;
 let result;
 try {
   web = spawnLogged(
-    next,
-    ['dev', '-H', '127.0.0.1', '-p', String(webPort)],
+    process.execPath,
+    [nextCli, 'dev', '-H', '127.0.0.1', '-p', String(webPort)],
     {
       cwd: join(REPOSITORY_ROOT, 'apps', 'web'),
       env: { ...process.env, APP_ENV: 'test', NODE_ENV: 'development' },

@@ -123,10 +123,10 @@ if (write) {
   writeFileSync(markdownPath, markdown);
   writeFileSync(jsonPath, json);
 } else {
-  if (!existsSync(markdownPath) || readFileSync(markdownPath, 'utf8') !== markdown) {
+  if (!existsSync(markdownPath) || readFileSync(markdownPath, 'utf8').replace(/\r\n?/g, '\n') !== markdown) {
     throw new Error('Phase 25 Markdown report is stale; run pnpm phase25:report:write');
   }
-  if (!existsSync(jsonPath) || readFileSync(jsonPath, 'utf8') !== json) {
+  if (!existsSync(jsonPath) || readFileSync(jsonPath, 'utf8').replace(/\r\n?/g, '\n') !== json) {
     throw new Error('Phase 25 machine-readable report is stale; run pnpm phase25:report:write');
   }
 }

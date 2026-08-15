@@ -17,10 +17,14 @@ function splitPackageKey(key) {
   return { name, version };
 }
 
-export function compileSbom(lockText = readFileSync(lockPath, 'utf8')) {
+export function compileSbom(
+  lockText = readFileSync(lockPath, 'utf8'),
+  { timestamp = new Date().toISOString() } = {},
+) {
+  const normalizedLockText = lockText.replace(/\r\n?/g, '\n');
   const components = new Map();
   let inPackages = false;
-  for (const line of lockText.split(/\r?\n/)) {
+  for (const line of normalizedLockText.split('\n')) {
     if (line === 'packages:') { inPackages = true; continue; }
     if (line === 'snapshots:') break;
     if (!inPackages) continue;
@@ -36,7 +40,7 @@ export function compileSbom(lockText = readFileSync(lockPath, 'utf8')) {
       purl: `pkg:npm/${encodeURIComponent(parsed.name)}@${encodeURIComponent(parsed.version)}`,
     });
   }
-  const lockHash = createHash('sha256').update(lockText).digest('hex');
+  const lockHash = createHash('sha256').update(normalizedLockText).digest('hex');
   const serial = `${lockHash.slice(0, 8)}-${lockHash.slice(8, 12)}-4${lockHash.slice(13, 16)}-a${lockHash.slice(17, 20)}-${lockHash.slice(20, 32)}`;
   return {
     bomFormat: 'CycloneDX',
@@ -44,7 +48,7 @@ export function compileSbom(lockText = readFileSync(lockPath, 'utf8')) {
     serialNumber: `urn:uuid:${serial}`,
     version: 1,
     metadata: {
-      timestamp: new Date().toISOString(),
+      timestamp,
       component: { type: 'application', name: 'OperatorOS', version: 'phase-39' },
       properties: [{ name: 'operatoros:pnpm-lock-sha256', value: lockHash }],
     },
@@ -52,7 +56,12 @@ export function compileSbom(lockText = readFileSync(lockPath, 'utf8')) {
   };
 }
 
-const sbom = compileSbom();
-mkdirSync(dirname(outputPath), { recursive: true });
-writeFileSync(outputPath, `${JSON.stringify(sbom, null, 2)}\n`);
-process.stdout.write(`${JSON.stringify({ components: sbom.components.length, output: 'docs/phase-39/OPERATOROS-SBOM.cdx.json' }, null, 2)}\n`);
+export function writeSbom() {
+  const sbom = compileSbom();
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, `${JSON.stringify(sbom, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ components: sbom.components.length, output: 'docs/phase-39/OPERATOROS-SBOM.cdx.json' }, null, 2)}\n`);
+  return sbom;
+}
+
+if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) writeSbom();
